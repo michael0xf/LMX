@@ -67,9 +67,31 @@ including null, and whole Arrays are captured through their true records.
 
 ### Callable construction, composition and lifetime
 
+`f :: (int -> int int)` and `f :: int -> int int` produce the same two-input
+signature. The constructor is CODE Expression, and `::` keeps its declaration
+contract ([context invariance](LMX_semantics.en.md#receiver-context-invariance)).
+The weaker `sys\priority(":=")` of `::` groups the whole `->` constructor,
+whose priority is `sys\priority("+")`. Explicit DATA templates keep unexecuted initializers;
+ready descriptions retain their positional profile, not service fields as formals.
+
+This outer grouping is distinct from `int -> (int int)`, which has one whole
+right group whose TYPE admission is separate. The nested value Expression
+`int -> (int -> int)` produces one callable result, while `` `->`(int) ``
+is the ordinary nullary constructor. `int -> ()` has a present empty right
+Structure, not a nullary shorthand. The [group rules](LMX_semantics.en.md#signature-grouping)
+separate whole TYPE admission from Expression evaluation. No constructor-specific algorithm or automatic currying is added.
+The built-in `::` implementation is not supplied, and execution is **NOT_RUN**.
+
+The [common Expression grouper](LMX_semantics.en.md#expression-structural-grouping)
+handles priorities and groups in the clean graph. In CODE/Expression, anonymous or named different-parent Structures are groups; named Structures with the current lexical owner as parent use ordinary receiver/call handling. The actual parent is preserved.
+A separate application adapter packages one left actual and the current-level
+right sequence; complete TYPE/model and whole-value contracts keep their objects whole, while a graph received as CODE/Expression follows the same grouping through its references.
+`1 + ((2))` follows ordinary scalar grouping, while `int -> (int int)` retains
+one whole TYPE candidate. No special TYPE-tail constructor rule is added.
+
 | Function / operand | Contract | LMX source |
 | --- | --- | --- |
-| `to(T0; ...; TN; R)` / `T0 to ... TN R` | Full input TYPE tokens followed by the result token; `to(R)` is nullary | [fn_operand.lmx](patterns/LMX_Fn_Receivers/src/fn_operand.lmx) |
+| `` `->`(T0; ...; TN; R) `` / `T0 -> ... TN R` | Full input TYPE tokens followed by the result token; `` `->`(R) `` is nullary | [fn_operand.lmx](patterns/LMX_Fn_Receivers/src/fn_operand.lmx) |
 | `curry(operation)` | arbitrary finite arity, exact stage input type and terminal result | [generic_functions.lmx](patterns/LMX_Fn_Receivers/src/generic_functions.lmx) |
 | `apply(operation; args)` | arbitrary actual record vector; result record including explicit void | [generic_runtime.lmx](patterns/LMX_Fn_Receivers/src/generic_runtime.lmx) |
 | `partial(operation; prefix)` | prefix 0..N; exact residual signature, complete prefix yields thunk | [generic_functions.lmx](patterns/LMX_Fn_Receivers/src/generic_functions.lmx) |

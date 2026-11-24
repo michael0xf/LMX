@@ -4,6 +4,7 @@ import json
 import re
 from collections import Counter
 from assemble import assembled, PARTS
+from identifier_spelling import IDENT, decode, spell
 
 ROOT = Path(__file__).resolve().parents[1]
 source_path = ROOT / 'LMX_Receivers.lmx'
@@ -112,8 +113,8 @@ for entry in migration['entries']:
     if row is None or entry['new_api'] not in {v['api'] for v in row['variants']}:
         errors.append('migration target absent from canonical family '+entry['old'])
 for row in catalog:
-    if not re.fullmatch(r'[a-z][A-Za-z0-9]*', row['name']):
-        errors.append('public function is not lowerCamelCase: ' + row['name'])
+    if row['name'] != '->' and not re.fullmatch(r'[a-z][A-Za-z0-9]*', row['name']):
+        errors.append('public function is neither lowerCamelCase nor the canonical -> symbol: ' + row['name'])
 expected_entries = {
     'replaceRange': ('FxSeqReplaceRange\\replaceRange', 'replaceRange(target; begin; end; values)'),
     'splice': ('FxSeqSplice\\splice', 'splice(target; begin; end; values)'),
@@ -139,7 +140,7 @@ for row in catalog:
         if not variant.get('roles') or not variant.get('implementation_contract'):
             errors.append('variant lacks role/actual contract '+row['name'])
 
-for required in ['(a b c) := (b c a)', '(a b c) := (copy(s))']:
+for required in ['(a b c) := (b c a)', '(a b c) := copy(s)']:
     if required not in code:
         errors.append(f'missing current assignment example: {required}')
 
@@ -157,12 +158,15 @@ if 'fun:\n    const:\n' not in public:
 if re.search(r'^\s*@:\s+fn\s',public,re.M):
     errors.append('removed public fn alias remains')
 for row in catalog:
-    if '        @: '+row['name']+' '+row['api'] not in public:
+    if '        @: '+spell(row['name'])+' '+row['api'] not in public:
         errors.append('missing constant export '+row['name'])
-public_names = re.findall(r'^        @: (\w+) ', public, re.M)
+public_names = [decode(n) for n in re.findall(r'^        @: ('+IDENT+r') ', public, re.M)]
+if set(public_names) != {row['name'] for row in catalog}:
+    errors.append('public constant names differ from the canonical catalogue')
 if len(public_names) != len(set(public_names)):
     errors.append('duplicate canonical public constant')
-for entry in migration['entries']:
+all_migrations = migration['entries'] + [entry for revision in migration.get('previous_revisions', []) for entry in revision['entries']]
+for entry in all_migrations:
     if entry['old'] != entry['new'] and not entry.get('name_reused_for') and entry['old'] in public_names:
         errors.append('retired callable alias remains '+entry['old'])
 if re.search(r'RxInt|IntUnary|IntBinary|IntCurried|RxCollectionInt',code):
@@ -189,7 +193,7 @@ report = {
     'prepared_assertions': len(re.findall(r'\bsys\\assert\(', code)),
     'checks': ['literal and bracket balance', 'four-space indentation',
                'explicit multi-level cutters', 'qualified root coverage',
-               'single-file assembly equality', 'complete unique callable/operand catalog coverage and lowerCamelCase names',
+               'single-file assembly equality', 'complete unique callable/operand catalog coverage and canonical word/symbol names',
                'no active obsolete receiver', 'two current assignment examples',
                'ordinary copied operand data with explicit ready priorities; no undocumented system template',
                'exact documented provider dependencies'],

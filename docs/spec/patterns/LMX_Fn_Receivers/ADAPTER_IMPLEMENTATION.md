@@ -16,7 +16,7 @@ The authoritative contract is the integrated [semantics, adapter behavior](../..
 | Compare memo keys made only from explicit input presence | Explicitly snapshot all accepted input values before key comparison and body execution |
 | Build every intermediate uncurry stage as `Ti → @` | Inspect and invoke the actual reached callable, retaining its full requirement; stop after the contract's N calls |
 
-The adapters use the current canonical public names in [the migration inventory](CANONICAL_MIGRATION.json); retired spellings are not callable aliases. No new parser, public function kind, user-facing frame API or optional library version is introduced. `record` and `to` keep their existing `OPERANDS_TEMPLATE` contracts. Ordinary `map`, `apply`, `compose` and the adapters remain ordinary callable operations.
+The adapters use the current canonical public names in [the migration inventory](CANONICAL_MIGRATION.json); retired spellings are not callable aliases. No new parser, public function kind, user-facing frame API or optional library version is introduced. `record` and `->` keep their existing `OPERANDS_TEMPLATE` contracts. Ordinary `map`, `apply`, `compose` and the adapters remain ordinary callable operations.
 
 ## Source layout
 

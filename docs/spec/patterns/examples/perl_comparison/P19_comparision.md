@@ -24,7 +24,7 @@
 | Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
 | --- | ---: | ---: | ---: |
 | LMX процедурный | 390 | 754 | 31 |
-| LMX функциональный | 342 | 429 | 12 |
+| LMX функциональный | 304 | 391 | 12 |
 | Perl | 88 | 114 | 6 |
 
 Обе LMX-формы опубликованы и считаются независимо. Все определения, обработчики и ссылки на throws входят в полный размер. Выбор единственного LMX-варианта по длине не выполняется.
@@ -83,11 +83,11 @@ Example:
     char[]: text
     return: char[]
     run:
-        throws: copy(RxByteText\byteText\throws) copy(RxRepeatOperands\atLeast\throws) copy(RxReplace\replace\throws) copy(Mask\make\throws)
+        throws: copy(byteText\throws) copy(atLeast\throws) copy(replace\throws) copy(Mask\make\throws)
         return: replace(byteText(text); (asciiDigit atLeast 1); Mask\make)
 ```
 
-[Полный исходник](source/lmx/P19.lm3). 342 непробельных символов; 12 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/P19.lm3). 304 непробельных символов; 12 непустых строк. Все объявления и Throws включены.
 
 ## Perl
 

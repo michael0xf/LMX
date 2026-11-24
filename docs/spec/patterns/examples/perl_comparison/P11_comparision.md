@@ -65,8 +65,8 @@
 
 | Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
 | --- | ---: | ---: | ---: |
-| LMX процедурный | 447 | 730 | 22 |
-| LMX функциональный | 241 | 341 | 16 |
+| LMX процедурный | 430 | 713 | 22 |
+| LMX функциональный | 225 | 325 | 16 |
 | Perl | 218 | 305 | 12 |
 
 Обе LMX-формы опубликованы и считаются независимо. Все определения, обработчики и ссылки на throws входят в полный размер. Выбор единственного LMX-варианта по длине не выполняется.
@@ -78,7 +78,7 @@ Example:
     @: items
     return: @
     run:
-        throws: copy(FxSeqInfo\get\throws) copy(FxSeqRead\read\throws) copy(FxSeqPush\append\throws) copy(FxRecordOperands\record\throws)
+        throws: copy(FxSeqInfo\get\throws) copy(FxSeqRead\read\throws) copy(FxSeqPush\append\throws) copy(record\throws)
         FxSeqInfo\get(items)
         @[]: out []
         int: i 0
@@ -98,7 +98,7 @@ Example:
         return: out
 ```
 
-[Полный исходник](source/lmx/procedural/P11.lm3). 447 непробельных символов; 22 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/procedural/P11.lm3). 430 непробельных символов; 22 непустых строк. Все объявления и Throws включены.
 
 ## LMX — функциональный
 
@@ -119,11 +119,11 @@ Example:
     @: items
     return: @
     run:
-        throws: copy(FxMap\map\throws) copy(FxGroupBy\groupBy\throws)
+        throws: copy(map\throws) copy(groupBy\throws)
         return: map(groupBy(items; Key\get); GroupRow\row)
 ```
 
-[Полный исходник](source/lmx/P11.lm3). 241 непробельных символов; 16 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/P11.lm3). 225 непробельных символов; 16 непустых строк. Все объявления и Throws включены.
 
 ## Perl
 

@@ -51,7 +51,7 @@ def main():
         ('zero-width match repeated/split/replace','Progress policy prevents loops and retains one ordinary algorithm'),
         ('ASCII/line/boundary text profiles applied to Array','Admit explicit declared profile or reject; never guess text from fields or element values')]:add('PAT',scenario,expected)
     for scenario,expected in [
-        ('to inputs then final result token','Both forms construct identical full input/result requirements; void and nullary contracts preserved'),
+        ('-> inputs then final result token','Both forms construct identical full input/result requirements; void and nullary contracts preserved'),
         ('type(value) including uninitialised record','Observe the record type without reading payload'),
         ('pipe empty/type-changing/callable result','Empty R=T; exact final R, no fixed-@ public result, no invocation of a returned callable'),
         ('pipe invalid stage signature','Builder rejects non-unary or no-result stages before publishing; actual value admission occurs at reached call'),

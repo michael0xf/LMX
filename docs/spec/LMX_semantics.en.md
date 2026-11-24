@@ -200,16 +200,16 @@ These ordinary non-declaring receivers accept one Structure S, including an Arra
 | `sys\storage(S)` | The pointer to element storage, the value of `storage` | `sys\storage()` — `sys\storage(D)` |
 | `sys\capacity(S)` | Capacity in elements from the arena table keyed by S's address | `sys\capacity()` — `sys\capacity(D)` |
 
-Here `D` is the DATA of the current call, where it exists: for executable `C` it is actual `parent(C)`. An inline body does not substitute another DATA. `call(A C)` supplies actuals A and does not replace D. R0 has no fabricated default D. Explicit arguments select other Structures, including the selected code itself. Colon and parenthesized receiver forms have the same contract; a bare name invokes nothing. The reserved lexical `node` is a different operation and is not a zero-argument parent query.
+Here `D` is the DATA of the current call, where it exists: for executable `C` it is actual `parent(C)`. An inline body does not substitute another DATA. `call(A C)` supplies actuals A and does not replace D. R0 has no fabricated default D. Explicit arguments select other Structures, including the selected code itself. Colon and parenthesized receiver forms have the same contract. A name consumed as a value invokes nothing; CODE/Expression traversal of Structure nodes follows the [name/parent guard](#expression-structure-parent-guard). The reserved lexical `node` is a different operation and is not a zero-argument parent query.
 
-In the role of `code` the receiver executes; in the role of `data` a same-headed structural form remains data. With one occurrence, `D\parent`, `D\native`, `D\length` and `D\storage` select the written Structures just as `D\for` does; repeated names require the ordinary occurrence index. Paths gain no header pseudo-fields. The DATA namespace pass interprets root declarations and consumes explicitly specified `import`, `copy` and `merge` where their contracts require it; those three use standard CODE source arguments. It does not execute arbitrary DATA bodies. Code explicitly consumed by a receiver follows that receiver's contract ([rule](#data-root-declaration-execution)).
+These resolved receivers keep their contracts in DATA and CODE ([context invariance](#receiver-context-invariance)); a stored source form is not executed merely by inspection. With one occurrence, `D\parent`, `D\native`, `D\length` and `D\storage` select the written Structures just as `D\for` does; repeated names require the ordinary occurrence index. Paths gain no header pseudo-fields. The DATA namespace pass interprets root declarations and consumes explicitly specified `import`, `copy` and `merge` where their contracts require it; those three use standard CODE source arguments. It does not execute arbitrary DATA bodies. Code explicitly consumed by a receiver follows that receiver's contract ([rule](#data-root-declaration-execution)).
 
 In Lmx's physical header the former `size` and `data` are renamed to `length` and `storage`; the final order is `parent/length/storage`. Native descriptors reside in call tables in the Thread's arena; capacity resides in another table of the same arena. `data` and `code` are the names of roles ([the roles `data` and `code`](#data-code-roles)); there is no special name `data` ([the name `data`](#ordinary-var)), while `code` is the name of a parameter of the `call` receiver for an executable Structure ([structural call](#call-receivers)). Their meaning is separate from the storage pointer. `node` keeps its existing contract as the reserved activation context, unchanged throughout nested bodies; no `node(S)` receiver is introduced.
 
 Reading parent/length/storage accesses its header field directly; native/capacity use their corresponding arena tables. These queries construct no auxiliary descriptor. `sys\descriptor` returns addresses of actual fields for explicit writes under the [L2 descriptor contract](L2_spec_en.md#get-descriptor).
 
 <a id="get-descriptor"></a>
-`sys\descriptor(S)` and `sys\descriptor: S` select an explicitly supplied Structure. With no argument, `sys\descriptor()` and `sys\descriptor:` equal `sys\descriptor(D)` for the data `D` of the current launch (for an executable `C` it is `parent(C)`, [structural call](#call-receivers)), including inside nested control bodies; code requires an explicit argument. In data, a same-headed form remains an ordinary Structure. Both variants return the selected Structure's field addresses under the same contract. Author's decision.
+`sys\descriptor(S)` and `sys\descriptor: S` select an explicitly supplied Structure. With no argument, `sys\descriptor()` and `sys\descriptor:` equal `sys\descriptor(D)` for the data `D` of the current launch (for an executable `C` it is `parent(C)`, [structural call](#call-receivers)), including inside nested control bodies; code requires an explicit argument. This resolved receiver retains that contract in DATA as well; storing or inspecting its source does not itself invoke it. Both variants return the selected Structure's field addresses under the same contract. Author's decision.
 
 Ordinary receiver `sys\descriptor: S` returns a Structure d containing addresses of S's three actual header fields: `parent`, `length`, `storage`, in that order, without nested VoidArray. Address types are `Lmx **`, `size_t *`, `void **`. `\(d\length) := n` directly changes S.length; `d\length := p` changes only the pointer inside d. These are live field addresses, not a copy or proxy. A direct length write does not allocate storage; `sys\resize` performs coordinated resizing. The descriptor neither extends S's lifetime nor transfers ownership. Native and capacity are not its fields; `S\native` selects an ordinary field if present. [L2 contract](L2_spec_en.md#get-descriptor).
 
@@ -469,20 +469,61 @@ A receiver applies its declared contract to the written tail: it may declare a p
 <a id="resolved-head-consumption"></a>
 #### One model, one resolution, one consumption
 
-First, the complete written structural head/arguments model is formed in translator memory, without knowing what the head denotes. Neither its name, signature, nor entity category determines that model's boundaries or permits collecting additional arguments. Only after the model has been formed is the form read by the role of the Structure in the launch ([the roles `data` and `code`](#data-code-roles)) and the resolved receiver contract. An ordinary DATA form declares a Structure; a place-declaration receiver declares a place. A CODE headed form is a call. Receivers such as `import`, `copy` and `merge` retain their own argument and field-stream contracts when their written records occur in DATA. In every case, the common resolution algorithm in the single namespace finds the head: a receiver, a callable or a Structure. Such a form does not write a value into a known place ([structural forms](#forms-declare-or-call)). One common consumption mechanism applies the resolved entity's contract; differing contracts do not create separate parsers, namespaces, or resolution routes.
+First, the complete written structural head/arguments model is formed in translator memory, without knowing what the head denotes. Neither its name, signature, nor entity category determines that model's boundaries or permits collecting additional arguments. Only after the model has been formed is the form read by the role of the Structure in the launch ([the roles `data` and `code`](#data-code-roles)) and the resolved receiver contract. An ordinary user DATA form outside Expression can declare a Structure; a resolved receiver keeps its own contract. Expression is CODE, where an ordinary user headed form is a call. Declaration receivers still perform their declared actions ([context invariance](#receiver-context-invariance)). Receivers such as `import`, `copy` and `merge` retain their own argument and field-stream contracts when their written records occur in DATA. In every case, the common resolution algorithm in the single namespace finds the head: a receiver, a callable or a Structure. Such a form does not write a value into a known place ([structural forms](#forms-declare-or-call)). One common consumption mechanism applies the resolved entity's contract; differing contracts do not create separate parsers, namespaces, or resolution routes.
+
+<a id="receiver-context-invariance"></a>
+#### Receiver contracts and Expression context
+
+A resolved receiver keeps its own semantic contract wherever its source form
+is stored. Placing a system or special receiver in DATA does not turn it into
+an ordinary user Structure declaration. This does not make every receiver an
+ordinary function call: `::` declares a signature, `const` and `private` apply
+their modifiers, and `return` keeps its specified result-description or
+control-transfer behavior. Those differences belong to each receiver's
+contract, not to a blanket replacement of its meaning by the enclosing role.
+
+**Expression is CODE.** An ordinary user headed form consumed within an
+Expression is a call, not an implicit declaration of a new Structure.
+The general DATA-to-Structure-declaration rule applies only to an ordinary
+user structural form outside Expression, not to an application governed by
+a resolved receiver's own contract. P0 still builds the same written model
+without a head-name-specific parser.
+
+The role of the operation is distinct from the role of each supplied argument.
+A receiver may consume NAME, an explicit DATA template, a retained declaration,
+a body or a value. Thus `::` remains a signature declaration in Expression
+while its formal DATA template is inspected without executing initializers;
+a supplied declaration actual likewise retains its whole form. An ordinary
+producer Expression can supply one ready description without spreading its
+fields. `PASS_ARGS_AS_IS 1` postpones consumption of an original occurrence:
+it does not reclassify the held CODE Expression as a DATA declaration.
+
+Contract invariance does not make source inspection eager. Parsing, reading a
+path, retaining a raw form, or inspecting a signature does not by itself
+execute stored operations, defaults or bodies. When consumption reaches an
+operation, its own timing and argument contracts apply. The existing deferred
+initializer, once-per-evaluation, namespace and source-graph rules remain.
 
 <a id="data-code-roles"></a>
 ### The roles `data` and `code`
 
 DATA and CODE name semantic roles, not new keywords or permanent kinds of Structure. For a selected executable Structure `C`, CODE is `C` and DATA is its actual `parent(C)`, where present. `call(C)` and `C()` execute that occurrence without explicit actuals; `call(A C)` and a by-name call with the same selected actuals execute it with arguments `A`. A call cannot substitute another DATA. R0 is an entry without DATA or user actuals ([structural call](#call-receivers), [root entry](#root-entry)).
 
-In DATA, an ordinary headed structural form declares a Structure with its written content. Thus `S()` declares an empty `S`, `S(D)` contains the reference atom `D`, and an `if:` record remains a Structure addressed through its head. Place-declaration receivers such as `int` and `@` instead declare their respective places through the namespace. An assignment `:=` is retained source material and is not executed merely because it occurs in DATA. Repeated DATA declarations remain separate occurrences; ordinary repeated-declaration and occurrence-selection rules apply.
+Outside Expression, an ordinary user structural form in DATA declares a
+Structure with its written content: in that declaration role, `S()` declares
+an empty `S` and `S(D)` contains the reference atom `D`. This is not a rule for
+reinterpreting a resolved system or special receiver. In particular, `if`,
+`::`, `const` and `private` keep their own contracts; an assignment Expression
+keeps its CODE meaning. None is executed merely by reading or retaining its
+source. Place-declaration receivers such as `int` and `@` establish their
+places under their own namespace and initializer contracts. Repeated actual
+DATA declarations remain separate occurrences under the existing rules.
 
 In CODE, a headed form applies its resolved head. `S(args)`, `S: args` and its vertical form execute `S` with the selected actuals; they do not assign to `S` or declare a new Structure. A declaration receiver such as `int: i 6` establishes or updates its logical place under the receiver's contract. A numeric or null head is not callable. A call used for its value must have an admitted result described by `return` in its actual DATA. Bare `S` is a reference and does not call it.
 
 These role rules are applied by the resolved receiving contract. In particular, a [place-declaration receiver supplied as a CODE argument](#declaration-arguments) is read as DATA and preserves its form. This does not change an ordinary `Producer()` or `Producer: tail` into a declaration: its head is an ordinary callable, so it remains a CODE call.
 
-`import`, `copy` and `merge` always consume standard CODE arguments through the common translator algorithm, whether their receiver records occur in DATA or CODE. Ordinary W/E selection applies wherever these arguments are consumed. A bare Structure reference or an anonymous Structure supplied as a source is not itself a call. Its contents may contain calls or initializers governed by their ordinary consuming contracts; the group neither quotes them nor forces them all early. An explicit `Producer()` is a call when that receiver is consumed. Their selected or computed fields are consumed through the namespace; the source forms remain intact. For example, DATA `Struct: merge(A B)` is an ordinary declaration of `Struct` containing a receiver record; `merge` supplies a field stream for that DATA reading. The declaration is made by `Struct:`, not by a special merge-declaration syntax. Multiple such operations are independent, and `Struct` is never an implicit merge source or model ([composition](#composition), [import](#import-receiver)).
+`import`, `copy` and `merge` always consume standard CODE arguments through the common translator algorithm, whether their receiver records occur in DATA or CODE. Ordinary W/E selection applies wherever these arguments are consumed. A Structure reference or anonymous Structure admitted as a whole source value is not invoked merely by that VALUE reception. CODE/Expression node traversal otherwise uses the name/parent guard. Its contents may contain calls or initializers governed by their ordinary consuming contracts; the group neither quotes them nor forces them all early. An explicit `Producer()` is a call when that receiver is consumed. Their selected or computed fields are consumed through the namespace; the source forms remain intact. For example, DATA `Struct: merge(A B)` is an ordinary declaration of `Struct` containing a receiver record; `merge` supplies a field stream for that DATA reading. The declaration is made by `Struct:`, not by a special merge-declaration syntax. Multiple such operations are independent, and `Struct` is never an implicit merge source or model ([composition](#composition), [import](#import-receiver)).
 
 <a id="data-root-declaration-execution"></a>
 #### Direct data traversal and receiver execution
@@ -493,9 +534,41 @@ Namespace preparation interprets root declarations of DATA and CODE without exec
 
 Terminal primitive declarations may be represented directly as typed values. Every other receiver, written group and source order remains as written, including after its DATA result has been obtained through the namespace. Neither namespace construction nor execution serializes a transformed replacement graph over the source.
 
+<a id="receiver-structure-sequences"></a>
+#### Structure fields consumed as a sequence
+
+When a receiving contract requires a sequence of declarations or fields, the
+common namespace/field-consumption mechanism reads the immediate ordered
+fields of the supplied anonymous Structure, or follows the supplied reference
+to the target DATA Structure and reads that level. DATA or CODE determines
+how those elements are consumed; it does not independently forbid or require
+opening a container. The receiving contract determines whether a whole value
+or a sequence is required.
+
+`::` uses this common mechanism for its DATA list of signature declarations.
+It is not a special opening exception or another parser. Modifiers apply their
+DATA contracts through the same namespace machinery. A whole TYPE, structural
+model or value contract still receives its object whole. Nested models,
+declarations and structured `return` descriptions are not recursively flattened
+by the sequence mechanism; their own established contracts apply.
+
+Reading this sequence preserves the source graph, field order, identities and
+lexical owners. It does not call an anonymous Structure or execute formal
+initializers. Execution of an anonymous CODE/Expression body is in place, not
+a callable invocation or a new activation.
+
+This internal field consumption does not change the external actual-argument
+vector, positional/named mapping, ordinary CODE [W/E selection](#whole-arguments),
+or [common operand preparation](#operand-right-only-opening). In particular,
+`int -> (int int)` still has one right argument. The mechanism is the same
+declaration/namespace consumption described [above](#data-root-declaration-execution)
+and for [field streams](#composition), under the
+[resolved receiver contract](#resolved-head-consumption); no API or hidden flag
+is added.
+
 #### Anonymous Structures and value positions
 
-An unnamed Structure has no head and is not a call with arguments. As a standalone CODE body it executes its written records in the current activation, with ordinary nested visibility. As a value or argument it remains a written Structure whose consumer determines its reading. A numeric consumer can read a group as an expression; a DATA consumer reads it as data; a body consumer executes it. P0 does not remove a group merely because it has zero or one field. An anonymous Structure can contain calls or initializers; its boundary alone neither suppresses them nor executes them all early.
+An unnamed Structure has no head and is never invoked as a callable. Its execution in CODE or Expression is in place, without a new call activation. As a standalone CODE body it executes its written records in the current activation, with ordinary nested visibility. As a value or argument it remains a written Structure whose consumer determines its reading. A numeric consumer can read a group as an expression; a DATA consumer reads it as data; a body consumer executes it. P0 does not remove a group merely because it has zero or one field. An anonymous Structure can contain calls or initializers; its boundary alone neither suppresses them nor executes them all early.
 
 ```lmx
 Holder:
@@ -522,7 +595,7 @@ A place with a requirement is declared by the receiver's own argument form: `int
 
 The composed form `name: receiver: value` does not declare a variable named by the outer head. In DATA, `timeout: ms: int: time 500` declares timeout containing ms containing the primitive time; its path is `timeout\ms\time`. In CODE the same outer form calls timeout. Likewise `i: int: 5` in DATA is a Structure i containing the receiver form, not an int variable i; in CODE it applies i and is invalid if i is a noncallable numeric place. Declaring a primitive or reference is done with its receiver, not by replacing that receiver's parent. `:=` assigns an existing place; it does not declare one.
 
-A bare atom does not add an unwritten receiver or callable invocation. If the resolved field contains a computed declaration, an explicit path reads the record of the declaration and executes nothing ([explicit path](#path-reads-no-execution)); the written expression is evaluated by a call when it reads its local place by a bare name, and that does not call the returned callable with no arguments. The expression is formed and evaluated the same way whether its result is consumed or not; a write into a place is an effect of an unconsumed declaring form, not a special parse of the right operand. Thus `Model: 0` consumed by another expression does not change `Model`: in arguments it is a call of `Model` -- formerly it yielded a candidate under the requirement `Model`, now the requirement is in the typed head, `Model@: ptr 0` ([the roles `data` and `code`](#data-code-roles)); if `Model` is a Structure, this is its call with the argument `0`, and at a place where a value is needed (an operand of an expression, an actual argument of a call, an initial value, an operand of `merge`) it yields a value only if the data of `Model` describe a result by the field `return` ([`return` in DATA](#return-in-data)); as a statement of its own, `Model: 0` still calls the selected Structure under its ordinary argument contract and discards any unconsumed result. If `Model` is instead a noncallable primitive place, the form is an error; in neither case does the colon assign ([structural forms](#forms-declare-or-call)).
+In a receiving VALUE/TYPE/DATA position, a bare atom does not add an unwritten receiver or callable invocation. If the resolved field contains a computed declaration, an explicit path reads the record of the declaration and executes nothing ([explicit path](#path-reads-no-execution)); the written expression is evaluated by a call when it reads its local place by a bare name, and that does not call the returned callable with no arguments. The expression is formed and evaluated the same way whether its result is consumed or not; a write into a place is an effect of an unconsumed declaring form, not a special parse of the right operand. Thus `Model: 0` consumed by another expression does not change `Model`: in arguments it is a call of `Model` -- formerly it yielded a candidate under the requirement `Model`, now the requirement is in the typed head, `Model@: ptr 0` ([the roles `data` and `code`](#data-code-roles)); if `Model` is a Structure, this is its call with the argument `0`, and at a place where a value is needed (an operand of an expression, an actual argument of a call, an initial value, an operand of `merge`) it yields a value only if the data of `Model` describe a result by the field `return` ([`return` in DATA](#return-in-data)); as a statement of its own, `Model: 0` still calls the selected Structure under its ordinary argument contract and discards any unconsumed result. If `Model` is instead a noncallable primitive place, the form is an error; in neither case does the colon assign ([structural forms](#forms-declare-or-call)).
 
 Two-field `int: x 5` declares place `x` with an `int` requirement and value `5`: in data it creates the place, in code it is a call of the receiver -- a check of the type with an assignment to the local namespace place `x` ([the roles `data` and `code`](#data-code-roles)). Unary `int: x` describes place `x` with an `int` requirement and no invented initial value: a first definition creates the place; with an already known `x` the same form in code checks its compatibility by ordinary admission without a new write or second field, and in data it stays one more occurrence of the name, which is addressed only with the index of an occurrence after that. An uninitialized graph place contains only the distinct type code `uninit:int`, with `sizeof(value) = 0`, not a reserved int cell, numeric zero or an external initialization mark; every primitive has such a type, alike in code, data and a signature, where it distinguishes a formal without a default `int: q` from the default `int: q 0`: such a formal is not mandatory -- an input without a value, to which no value is supplied, does not make the call refuse: it is filled by [autofill](#binding-autofill), and where that is inapplicable it holds this type (the author's decision of 2026-11-16), and the receiver [`required`](#required-receiver) checks that a given field is initialized; [explicit graph assignment](#graph-fragment-assignment) (`D\a := 5`) replaces the fragment at that structural place: `{uninit_int}` becomes `{int 5}`. It does not retag a preallocated T cell, require in-place expansion, or preserve a raw payload address across replacement ([L2 §3.1](L2_spec_en.md#uninit-record-control)). An assignment to a local of the call -- `a := 5` for a formal that received no value -- writes into the place of the call: the graph does not change and the data are not published. The absence of a value is written as a value of that separate type: `nil: T` (`nil: int`; any other primitive type in place of `int`), and simply `nil` where possible. `int: var` declares a variable without initialization, and a separate type exists for that; it was introduced for passing arguments and stays needed with `required`. A variable can be compared with `nil` by its absence state; no numeric sentinel or imaginary value bytes are introduced. The graph holds nothing but Structures and primitives: a primitive is the declaration of its type with a value or with the absence of a value, and everything else is written as Structures. The null pointer stays `0` where that is possible; a pointer declared without a value (`@: ptr`) is not zero and is written with the same `nil` (the author's decision of 2026-11-17). Every receiver that used to be written without arguments in the place of a type has a one-argument form: `int: i` is written instead of `i: int` (the author's decision of 2026-11-10). With `i` already declared, `int: i` in code is not an error but a check that the type conforms: repeated declarations are allowed. The one-argument form given the primitive itself instead of a name, `int: 54554878477838734`, returns the number in an expression or throws a failure that `catch` receives. In a signature these forms describe a formal, and a written value supplies a default when an actual argument is absent; describing a formal does not execute it as a body. This is one mechanism for primitives, references, Structures, and callables, with no parser branch for a receiver's name. The constructed source graph fixes its physical slots until an explicit graph operation changes them. Logical namespace places and bare-name visibility follow sequential declarations, lexical scopes and explicit receiver-stream consumption; reaching a branch does not append a hidden slot to the source `Lmx`.
 
@@ -532,7 +605,7 @@ The named declaration contract is `R: name [initializer]`, with the complete req
 
 A typed reference declaration is `Model@: ptr Other`, and `Model@: ptr 0` initializes a null pointer of that requirement. The old `@: ptr Model Other` reading is withdrawn. `@: ptr Model: Other` contains a nested call in a CODE-reading position, not a special typed-candidate pair. Normal admission neither writes to Model nor invents an addressable temporary target. The candidate is evaluated once before the ordinary binding/write. An outer `ptr: ...` remains a DATA declaration of a Structure or a CODE call; it does not replace the reference receiver's own declared NAME role.
 
-In evaluation position, a bare identifier enters the same resolution flow but does not itself form a call or supply an empty argument list. It denotes the resolved value, a reference to a Structure or callable, or a receiver name according to the receiving position's contract; bare `merge` and `int` likewise do not execute. If that position requires a value the named entity does not provide, this is an error, not a hidden nullary call or free input. Applying a resolved head requires an explicit Frame with `()` or `:` and a structural tail, possibly empty; that head's contract still determines the Frame's role. A named Structure is executed through the receiver `call: A` or, in code, by a form with its name as the head, `A()` or `A(args)` ([the roles `data` and `code`](#data-code-roles)). Neighboring atoms are not captured. In `if: p`, bare `p` is only read: even if it points to a method, that method is not called. This rule does not decide whether the value of `p` is admissible as a condition.
+A bare identifier follows ordinary resolution and the receiving role. In a whole VALUE, TYPE, NAME or DATA position it does not invent a call or an empty actual list: a value/reference is consumed under that position's contract. An incompatible value is rejected rather than repaired by a nullary call. When a resolved Structure is actually reached in CODE/Expression, the [name/actual-parent guard](#expression-structure-parent-guard) applies: anonymous and named different-parent nodes are groups; a named same-parent node uses ordinary receiver/call handling. This is semantic traversal of the existing graph, not a call Frame fabricated by P0. Explicit Frames `A()`, `A(args)` and `call: A` retain their ordinary contracts. Mere value lookup captures no neighboring atoms. In `if: p` the condition's value contract reads p; passing a callable as that value does not call it to manufacture a condition. Admission of that value is a separate check.
 
 
 <a id="colon-declares"></a>
@@ -557,7 +630,7 @@ Historical note: earlier specifications used a reserved data reference and allow
 
 In data the sequence `data(int: x 2); data(int: x 5)` is two declarations: two occurrences of the name `data`, each with its own content; the second neither replaces the first nor writes into it. A declaration, first or repeated, does not by itself execute the content of a Structure: its execution is given by a launch -- an explicit `call` or, in code, a form with the name of that Structure as the head, `A()` or `A(args)`. In executable `code` the name `data` follows the common rules of names and places, with no separate algorithm.
 
-In this chapter DATA names the role of actual `parent(C)`, while a user name `data` follows ordinary resolution. `call` has no separate data argument: `call(C)` and `call(A C)` execute the selected `C` over `parent(C)`, and `A` is its actual arguments ([structural call](#call-receivers)). A call creates a local namespace without appending code places to the source graph. An ordinary Structure in code is launched also by a form with its name as the head -- `A()` and `A(args)`; this is a form of its own, not a form of a receiver, and its arguments are supplied by the general rules ([structural forms](#forms-declare-or-call)). A form `data(...)` in data declares a Structure under the same rules as any other declaration; this does not launch the Structure's content. Bare atom `data`, like any bare atom, only names what stands under that name and invokes nothing, including when a method reference stands in its place.
+In this chapter DATA names the role of actual `parent(C)`, while a user name `data` follows ordinary resolution. `call` has no separate data argument: `call(C)` and `call(A C)` execute the selected `C` over `parent(C)`, and `A` is its actual arguments ([structural call](#call-receivers)). A call creates a local namespace without appending code places to the source graph. An ordinary Structure in code is launched also by a form with its name as the head -- `A()` and `A(args)`; this is a form of its own, not a form of a receiver, and its arguments are supplied by the general rules ([structural forms](#forms-declare-or-call)). A form `data(...)` in data declares a Structure under the same rules as any other declaration; this does not launch the Structure's content. Bare atom `data` has no reserved launch meaning. In a value-reading position it denotes the resolved value without calling it; a Structure reached in CODE/Expression follows the [name/parent guard](#expression-structure-parent-guard).
 
 If `put` is already defined as a callable Structure, the following declaration of `Batch`, written in data, retains a body with the statement `put: 7` without executing it. The example is written in the forms of the norm of 2026-11-19: the input `n` and the result -- the field `return` -- are described in the data `Context`, the code `put` is a nested Structure, and `Batch` lies next to it:
 
@@ -600,7 +673,7 @@ In DATA, `b: merge(A C)` ordinarily declares `b`, and the enclosed receiver supp
 The `@:` receiver takes the place name as its first field; both a new place and a write to an existing one use the same resolver and ordinary [admission](#admission). In a signature the same receiver describes an input requirement. The candidate's place is determined by common resolution; after admission, accesses use the resulting addresses and maps without repeating textual name lookup. A known method pointer `b` is invoked as `b: args`, `b(args)` or `(\b)(args)`; `\b(args)` dereferences the call result under ordinary precedence. Unary `@b` separately addresses the reference cell.
 
 <a id="method-reference-assignment"></a>
-A method reference is assigned through `@`, which comes first: `@: ptr method`. The first argument `ptr` is a place-name atom; the second, `method`, is an atom denoting the method value. **A bare atom is not a call**, so neither `ptr` nor `method` is invoked here. The `@` receiver consumes these arguments under its two-field contract: the first definition creates a reference place; on an already declared place, in code a new value is assigned to that same place after admission, while in data a repeated declaration stays one more occurrence of the name ([names and paths](#fields)). Likewise, `@: ptr 0` supplies an explicit null candidate. In contrast, `ptr(args)` or `ptr: args` explicitly applies a callable to arguments; if `ptr` holds a reference to an ordinary Structure, the same forms launch it by the launch forms of a Structure ([structural forms](#forms-declare-or-call)). The form `ptr: @: method` is not an assignment, whatever `ptr` is: in code it is a call of `ptr`, in data a declaration of a Structure `ptr` ([the roles `data` and `code`](#data-code-roles)); an `@` in the nested argument does not change that, and assignment uses `@: ptr method`.
+A method reference is assigned through `@`, which comes first: `@: ptr method`. The first argument `ptr` is a place-name atom; the second, `method`, is an atom denoting the method value. **These NAME and VALUE arguments are not calls**, so neither `ptr` nor `method` is invoked here. The `@` receiver consumes these arguments under its two-field contract: the first definition creates a reference place; on an already declared place, in code a new value is assigned to that same place after admission, while in data a repeated declaration stays one more occurrence of the name ([names and paths](#fields)). Likewise, `@: ptr 0` supplies an explicit null candidate. In contrast, `ptr(args)` or `ptr: args` explicitly applies a callable to arguments; if `ptr` holds a reference to an ordinary Structure, the same forms launch it by the launch forms of a Structure ([structural forms](#forms-declare-or-call)). The form `ptr: @: method` is not an assignment, whatever `ptr` is: in code it is a call of `ptr`, in data a declaration of a Structure `ptr` ([the roles `data` and `code`](#data-code-roles)); an `@` in the nested argument does not change that, and assignment uses `@: ptr method`.
 
 Unary `@ptr` selects the address of the variable cell ptr, distinct from its stored target reference; it is not the assignment `@: ptr method` and does not replace the stored method reference with its cell address. An explicitly supplied argument, an autofilled value and a value of the former binding (the fallback) have their own local activation cells: `@x` addresses the same local variable that bare `x` reads and writes. Where the selected level admits dereferencing this numeric address, after a local `x := 9`, reading `\(@x)` yields `9`; writing through that address changes its own cell, not the binding's source ([own place](#binding-places), [autofill](#binding-autofill), [former binding](#binding-fallback)). If the name is bound as a transparent caller place ([caller's place](#binding-caller-place)), then `x`, `x := 9` and `@x` act on that place at once: `@x` is the address of the caller's place, and the write is visible to the caller without copying back. An external place is addressed explicitly, for example `(@node\x)`. Taking an address does not extend cell lifetime; an object reference and the variable cell holding it are distinct.
 
@@ -608,7 +681,7 @@ Candidate conversion and admission follow the receiving contract; reference stor
 
 ### A signature is not executed
 
-A named `name :: data` signature describes ordered input types and, where there is a result, the field `return`; the forms written in it are not executed as the body of a callable. The identifier and signature description are consumed in their declaration/DATA roles, and the nested records only describe ([named signature](#fn-signature)); the description of inputs in the data of a called Structure is arranged the same way ([structural call](#call-receivers)). Input places are described by declarations by receivers. For nonprimitive `A`, a formal requiring `A` is written `A@: p`, admits a candidate through `satisfies(c, A, Consumer)` and transports its descriptor reference without copying or implicit `merge`. Value and reference requirements are written with the same receiver forms as in a body, but describing a formal does not assign a place while the callable is built. A value written in the description is a default, not a result of executing the body.
+A named `name :: data` signature describes ordered input types and, where there is a result, the field `return`; the forms written in it are not executed as the body of a callable. In the DATA-template form, the identifier and signature description are consumed in their declaration/DATA roles, and the nested records only describe ([named signature](#fn-signature)); the description of inputs in the data of a called Structure is arranged the same way ([structural call](#call-receivers)). Supplying a ready description follows its existing profile; an inline producer follows the [CODE Expression and receiver contract](#signature-description-consumption). Neither is permission to execute a template's formal initializers. Input places are described by declarations by receivers. For nonprimitive `A`, a formal requiring `A` is written `A@: p`, admits a candidate through `satisfies(c, A, Consumer)` and transports its descriptor reference without copying or implicit `merge`. Value and reference requirements are written with the same receiver forms as in a body, but describing a formal does not assign a place while the callable is built. A value written in the description is a default, not a result of executing the body.
 
 For structural `c`, `mytest(c)` passes its ordinary reference, while `mytest(@c)` explicitly obtains an address under the prefix-@ contract; these are not interchangeable arguments. No extra level is removed to fit a formal. This applies equally to a Structure, a pointer variable and a nonprimitive formal; the target is its own language storage, not a transport-ABI box. A primitive value and a reference to its cell are not synonyms either. Passing and returning nonprimitives never use C by-value aggregates.
 
@@ -711,37 +784,320 @@ The header is an ordinary structural requirement: its names and entire explicitl
 
 A positional callable-signature requirement remains a different check. For example, `PairSignature :: (@: first; @[]: rest; return: int)` can admit compatible inputs named `lhs/rhs`, but this does not establish the named structural header `left/right/PASS_ARGS_AS_IS/PRIORITY`. A callable reference is not called just because a consumer needs a value: `@: ptr add` stores the method reference, `add(...)` calls it explicitly, `a add b` applies its operator contract, and `\ptr` only dereferences.
 
+
+<a id="expression-structural-grouping"></a>
+### Expression: structural grouping and operand application
+
+There are exactly two argument-placement forms: `operand arg0 arg1 arg2` with no left atom, and `arg0 operand arg1 arg2` with one left atom. A structural group occupies that same single position. Both forms retain a right tail; no free left sequence or arbitrary operand position is introduced.
+
+Expression uses the ordinary LMX Structure graph and a semantic **grouper**.
+The grouper handles both operator priorities and groups in that graph; it is
+not a parenthesis parser and sees no parentheses. Any representation of the same relevant clean graph under the same receiving context follows the same rule. P0 retains the original containers, spans and receiver records.
+There is no additional persistent node kind, lexical flag, source rewrite or
+operator-name-specific grouping branch.
+
+LMX permits `arg0 operand arg1 arg2 arg3`. An ordinary binary expression is
+the subset with one right item; the receiver's concrete contract then requires
+`length(right) = 1`. Multiple right items do not imply an automatic fold.
+A prefix occurrence has no written left item; grouping, binding and delivery never move its first right item into `left`. A method may consume that right item under its own prefix contract, without changing the delivered vector.
+
+The structural analogy is `head: arg0 arg1 arg2`: one initial head/left position followed by a right tail. LMX Expression admits an operand in the analogous separating position and adds common priority grouping. This explains the one-left/Array-right interface; it does not turn `:` into a new public operand or change Frame grammar. The established public interface remains one reference in left and an Array of references in right; the two internal plan sequences do not change it.
+
+Two different pieces of work must be distinguished:
+
+1. **Structural grouping** produces operation units, their dependencies and
+   ordered sequences at the **current structural level**. It preserves each
+   source occurrence and its context and does not build the operand ABI.
+2. **Expression analysis / application adaptation** turns the selected left
+   sequence into **one** left actual (an existing whole occurrence or an ordinary
+   reference/bundle), and the right sequence into an Array of references. This
+   packaging is not the grouping pass. It does not copy the referred places,
+   create another activation or insert a wrapper into P0.
+
+The receiving contract determines whether a position consumes one whole
+value/model/description or a sequence at the selected level. That distinction
+already exists for [group assignment](#group-assign), [Structure field
+consumption](#receiver-structure-sequences), field streams and ordinary calls.
+The ABI alone cannot establish it for an unknown receiver. In particular,
+a scalar place, a complete TYPE model and a named whole reference do not acquire
+a sequence contract just because the adjacent source uses a group.
+
+In an Expression position, a graph group containing **one complete
+expression** contributes that expression's value. This follows the graph and
+resolved references through the admitted group levels: `1 + ((2))` is 3, `2 + (47)` is 49, and `(1) + (2 * 3)` is 7.
+The group is executed in place, never invoked as a callable. Grouping is settled
+without effects; ordinary demand, short-circuiting and once-per-occurrence
+evaluation decide when its operations run.
+
+The grouper recursively normalizes every group in the admitted Expression
+graph. One resulting unit is transparent; several units form one subgroup
+of the enclosing level; an empty group remains present. Thus `(((1 2)))`
+represents one subgroup `(1 2)`, not a chain of single-unit wrappers.
+`(1 2 3 4)` remains a material subgroup: no operation is invented between
+its atoms. A complete operation is one unit: `2 * (3 + 4)` does not splice
+its inner tokens into the enclosing level. Source graph and contexts survive.
+
+`1 + 2 (((5 6))) (4) 5` and `1 + 2 (5 6) 4 5` have the same plan:
+the right items are `2`, subgroup `(5 6)`, `4`, `5`. Planning does not check
+numeric admission; the author's arithmetic example is refused by `+` itself.
+`1 + 2 (+ 5 6) 4 5` explicitly supplies the inner operation as one computable
+unit. The inner prefix `+` receives absent left and both right arguments;
+equivalent addition is implemented inside the method.
+[Algorithm and atomic plan view](EXPRESSION_ALGORITHM.md).
+
+The number of plan units is not the number of emitted runtime values.
+The result contract matters: `(copy(Model))` collects a **field stream**
+into a Structure even when that stream produces zero or one field. It is not
+reclassified as a scalar expression after counting the output. Thus
+`ptr := (copy(()))` supplies one empty Structure to the existing reference
+place `ptr`; an empty stream and one empty Structure are different values.
+
+<a id="expression-structure-parent-guard"></a>
+The grouper consumes the **clean graph**, not source characters or a
+“written group versus referenced object” flag. After a graph reference is
+resolved, CODE/Expression traversal distinguishes the target's actual name and
+`parent` relative to the **current lexical owner of that traversal**:
+
+| Reached Structure in CODE/Expression | Handling |
+| --- | --- |
+| Anonymous, regardless of its parent | Group; execution is in place, not an anonymous call |
+| Named, actual `parent` differs from the current lexical owner | Group |
+| Named, actual `parent` equals the current lexical owner | Ordinary receiver/call handling under the resolved entity's contract |
+
+Reference resolution itself neither reparents nor copies the target. It also
+does not suppress the third row: “all references are noncalling groups” is
+incorrect. Declaration receivers and other resolved special receivers retain
+their own ordinary actions when that row dispatches them. The check uses the
+actual graph relation, not the presence of parentheses, where the graph was
+created, or the spelling of the reference.
+
+A ready Structure consumed as a whole VALUE, TYPE or DATA description keeps
+that receiving contract; it is not automatically reclassified as CODE. The
+table applies when a node is reached **in CODE/Expression**, not to a stored
+callable passed as a value or to formal initializers in a DATA description.
+If that graph is subsequently consumed as CODE/Expression, the same
+name/actual-parent rule applies then. Complete TYPE/model positions retain
+their full requirements without reading a missing primitive payload.
+
+With an available `S: a b c d` whose actual `parent` is **different** from the current lexical owner, the grouper treats the reference in
+`print: 1 + S + 2` as the next group, just as in
+`print: 1 + (a b c d) + 2`. The referenced group keeps its actual `parent`
+and lexical/evaluation context. The different-parent condition is necessary for this named-group case; if S has the current lexical owner as its parent, ordinary receiver/call handling applies instead.
+No lexical `S: ...` declaration is substituted at the use site. This equality
+of grouping rules asserts neither that
+the selected `+` admits the material nor a particular numeric result.
+It does not insert `S()`, copy the graph or synthesize a call activation.
+The receiving contracts of `+` and `print` remain their actual contracts.
+
+Modifiers, including `::`, retain DATA consumption. A DATA template's
+declarations and deferred initializers are not traversed as executable
+Expression merely because the surrounding operation is in CODE. An actual
+nested operation in Expression follows the common grouping and demand policy;
+`::` does not acquire its own RHS evaluator. The [DATA-only signature
+contract](#signature-description-consumption) and [common field reader](#receiver-structure-sequences)
+remain in force.
+
+The following pseudocode names analysis steps, **not new public APIs or graph
+fields**:
+
+```text
+groupTree(graph, receivingContext):
+    retain graph identity, structural levels and evaluation context
+    resolve graph references without changing their actual parent
+    in CODE/Expression: anonymous or named with a different actual parent -> group
+    in CODE/Expression: named with the current lexical owner as parent -> ordinary receiver/call
+    retain whole VALUE/TYPE/DATA contracts before this CODE classification
+    resolve operation contracts and ready priorities without running bodies
+    recursively group dependencies and complete units in the admitted Expression graph
+    represent a group result: one unit is transparent; zero or several units form one subgroup
+    retain one enclosing atom boundary, original occurrences and contexts
+    retain DATA/model material and declared field-stream collectors
+    select elements of a sole normalized group when the receiver consumes a sequence
+    otherwise retain neighboring normalized items without splicing subgroup fields
+    retain the same LeftView(focus, valuePlan, context) for every present left
+    return structured operation/sequence plan with original occurrences
+
+prepareOperandApplication(applicationPlan, receivingContract):
+    leftPlan  = the plan's selected left sequence, or absence
+    rightPlan = the plan's selected current-level right sequence
+    leftActual = retain/package leftPlan as one reference or bundle, if present
+    rightActual = Array of references to the rightPlan items in source order
+    preserve the delivered positions; do not move prefix right[0] into left
+    retain role/mode information and return the delivered actuals
+
+insideResolvedOperandMethod(deliveredActuals):
+    use the common namespace to consume LeftView and right items by this contract
+    obtain demanded values once or retain RAW occurrences
+    apply ordinary admission and this method's declared result contract
+    resume any unconsumed context with that result
+```
+
+There is no subsequent “if left is anonymous, open right again” pass.
+The familiar right-hand sequence results are explained
+[below](#operand-right-only-opening) by grouping plus this application adapter.
+Ordinary callable W/E remains its separate admission rule; the new explanation
+does not recursively apply W/E or distribute a value whose receiving contract keeps it whole.
+
+For RAW user operands the prepared plan keeps the **original whole occurrence**
+of a complete inner expression and its live context. Planning never runs it.
+Explicit ordinary `sys\eval` evaluates it under the same grouper. Old code
+that counted the physical tokens of a complete grouped expression as multiple
+RAW arguments must use the prepared whole occurrence instead; this is a
+documented argument-shape correction, not an eager-evaluation change.
+Field/material sequence cases retain their specified current-level outcomes.
+
+[Architecture and compatibility](EXPRESSION_GROUPING.md) and
+[acceptance targets](validation/expression_grouping_cases_20261124.json)
+record these boundaries. Parser, translator and runtime execution are **NOT_RUN**.
+
+
+
+
+<a id="operand-left-view"></a>
+#### One left view and ordinary method consumption
+
+Every present left position retains the same internal information: its selected
+graph occurrence (**focus**), the complete priority-based **value plan**, and
+the surrounding unfinished **context**. This is a temporary `LeftView` of
+the ordinary analysis, not a public input type, graph field, operand property
+or second left argument. It is retained for **all** operations. The parser and
+grouper do not branch on `:=` or on a PLACE/NAME receiver category.
+
+The operation method uses the common namespace consumption mechanism under its
+own receiving contract. VALUE consumption requests the complete left value
+plan. PLACE or declaration-NAME consumption retains the selected occurrence;
+if the operation supplies a result, the unfinished context resumes with that
+result at the consumed occurrence. This preserves the existing demand rule
+without giving assignment a different parser or a higher priority.
+
+| Expression | Consumption and remaining computation |
+| --- | --- |
+| `10 * 2 + 3` | `+` consumes the complete VALUE plan `10 * 2`, then adds 3: result 23 |
+| `1 + v := 2 + 3` | `:=` consumes PLACE `v`; its RHS/result is 5; the pending `1 + …` resumes: result 6, v=5 |
+| `10 * v := 2 + 3` | The same PLACE consumption resumes `10 * …`: result 50, v=5 |
+| `v := v + 1` | The right-hand v is a different occurrence and reads the previous value; no dependency is inferred merely from equal names |
+
+No trial execution chooses a role. Normal admission, visibility, addressability,
+declared result, short-circuiting and once-per-occurrence effects remain in
+force. A generic reference input does not automatically obtain a PLACE contract.
+The separate application adapter preserves the original actual positions.
+
+<a id="operand-prefix-method-policy"></a>
+#### Prefix and one-left forms: equivalence belongs to the method
+
+The two applications below have different delivered actuals:
+
+| Expression | Delivered `left` | Delivered `right` |
+| --- | --- | --- |
+| `(:= a 1)` | ABSENT | Two items: a, 1 |
+| `(a := 1)` | a | One item: 1 |
+
+The assignment operand method itself can consume the first right item as its
+destination when left is absent and implement the same assignment effect.
+For these assignment forms, that is where equivalence is established:
+**inside the operand method**, not in the parser, grouper, binder or transfer
+of arguments to that method. The delivered left remains absent in the first
+form. The method may select local destination/value views without rewriting
+the caller's actual vector.
+
+This is not an automatic permutation for all operands. Another method may
+reject absent left or interpret its right sequence differently. Ordinary
+omission/default/required rules still apply; a method that admits the prefix
+form handles it under its own contract.
+
+Illustrative internal steps, not new public APIs:
+
+```text
+for every operation:
+    leftView = ABSENT or (focusOccurrence, completeValuePlan, pendingContext)
+    deliver exactly one left actual if present, and the original right Array
+
+inside the resolved operand method:
+    choose consumption by this method's ordinary contract
+    VALUE: consume completeValuePlan
+    PLACE/NAME: consume focusOccurrence
+    apply the method to its consumed arguments
+    resume any unconsumed context with its declared result
+
+inside the assignment method's own prefix handling:
+    if left is ABSENT:
+        destinationView = right[0]
+        valueViews = right[1:]
+    else:
+        destinationView = left
+        valueViews = right
+    perform ordinary assignment consumption and admission
+```
+
+Attached unary forms are the existing **general classes** “attached to the
+left of one atom” and “attached to the right of one atom”. Each has exactly
+one atom, including an admitted whole group in that position. The class is
+not a list of special cases limited to `++`/`--`, and it does not grant
+ordinary `:=` a parser exception. The class preserves its established
+binding direction; receiver consumption still determines VALUE versus PLACE.
+
+
 <a id="prepared-operands"></a>
 #### Prepared values: `PASS_ARGS_AS_IS 0`
 
-Expression analysis identifies the written left occurrence and the right occurrence sequence using groups and priorities. Needed occurrences are evaluated once. The reference to the left value is supplied to `left`, and references to the right values form `right` in source order. `(1 foo 2 3 4)` therefore supplies a reference to 1 and an Array of three references. `(foo 1 2 3 4)` has no written left actual and four right occurrences; the first right value is not moved into `left`. Omitted inputs, defaults and requiredness remain ordinary call rules. A present empty right Array differs from an omitted actual. The name of the operation and its constant properties are not included in the array of values, and the left value is not duplicated there.
+The [common grouper](#expression-structural-grouping) determines structured
+left/right plans from the clean graph, resolved graph references, ready priorities and receiving contracts.
+Expression application adaptation supplies one reference/bundle to `left` and
+an Array of references to the current-level right items, in source order.
+Needed occurrences are evaluated once, preserving their non-VALUE roles.
+`(1 foo 2 3 4)` supplies one left and three right references.
+`(foo 1 2 3 4)` has no written left actual and four right items; it does not
+move the first value into `left`. Omission, defaults and requiredness remain
+ordinary call rules. A present empty right Array differs from an omitted actual.
 
-Each written container is one operand: `(foo A)` with an Array `A` gives one reference in `right`, and `(A foo B C)` gives one left and two right references. No general Array/string expansion is introduced. The ordinary single-Structure W/E rule keeps its defined call-selection scope. An operand opens exactly one outer level of its RIGHT container only when all three conditions hold: `left` is an unnamed Structure, `right` contains exactly one argument, and that argument is an unnamed Structure too. That argument's immediate contents become the elements of `right`. **`left` is not opened or changed**; its form is only a condition for this rule. The rule is applied once at operand-argument preparation, not repeatedly until no containers remain. It is not a P0 transformation. A Structure returned from a function is not opened merely because it is a Structure (the author's decisions of 2026-11-21 and 2026-11-22). `a foo b` cannot be textually replaced by `foo(a; b)`, because the second operator input is an Array of references.
+A ready Array, string, returned Structure or named whole value stays one item.
+An expression group contributes one expression result; a material sequence is
+read only at the level required by the receiving contract. Application
+adaptation performs no second group-opening pass and does not duplicate left
+in right. `a foo b` cannot be textually replaced by `foo(a; b)`: the operand's
+second input is an Array of references. A binary implementation checks its one
+right item under ordinary admission; the ABI does not imply a fold.
 
 <a id="operand-right-only-opening"></a>
-#### The single conditional RHS opening
+#### Current-level sequences and the one-left-actual contract
 
-This rule belongs to expression-operand argument preparation. It is distinct
-from short/compact receiver notation and from ordinary callable W/E selection.
-Before this one rule, every written container contributes one operand. No rule
-opens a sole Array, string or Structure merely because it is the sole argument.
-The source graph and P0 retain every written container in all cases.
+The former “anonymous left and sole anonymous right” wording describes familiar
+sequence-consuming applications; it is not an extra transformation after
+grouping. The grouper exposes the selected current-level stream, and the
+Expression application adapter packages the left sequence as one actual.
+The container needed for that one left slot belongs to application adaptation,
+not to the grouper. P0 remains unchanged.
 
-| Written expression | `left` delivered to the operand | Prepared `right` |
+For example, the analysis of `(a b c) := (a c b)` has the structural sequences
+`a b c` and `a c b` around the assignment operation. These are plan units, not
+a replacement source string. The application then delivers one left bundle
+`(a b c)` and three right references. Three sibling RHS groups instead remain
+three items at that level. Every group is processed recursively, but fields
+of neighboring material subgroups are not spliced. Single-unit wrappers
+are transparent. A sequence consumer of a sole normalized group reads its
+elements; application adaptation does not restart that recursion.
+
+| Written expression | Receiving contract / one left actual | Right sequence or whole item |
 | --- | --- | --- |
-| `name op (a b)` | the identifier/value `name`, unchanged | one Structure `(a b)` |
-| `(x y) op (a b)` | the whole unnamed Structure `(x y)` | two immediate elements `a`, `b` |
-| `(x y) op ((a b))` | the whole unnamed Structure `(x y)` | one inner Structure `(a b)`; no second opening |
-| `(x y) op (a b) (c d)` | the whole unnamed Structure `(x y)` | two Structures; the sole-right-argument condition is false |
-| `name op ()` | `name`, unchanged | one present empty Structure |
-| `(x y) op ()` | the whole unnamed Structure `(x y)` | an empty right vector after the one permitted opening |
-| `Name :: A B` | the declaration identifier `Name` | two right occurrences, `A` and `B` |
-| `Name :: (A B)` | the declaration identifier `Name` | one unnamed Structure; `Name` is not an unnamed Structure |
+| `(a b c) := (a c b)` | One bundle of three PLACE targets | Three value occurrences `a`, `c`, `b` |
+| `(a b c) := (f g h) (f g h) (f g h)` | One bundle of three PLACE targets | Three Structure values, one for each written group |
+| `(a b) := (((x y)))` | One bundle of two PLACE targets | Values `x`, `y` after normalization of the sole group |
+| `(a b) := (((x y))) z` | One bundle of two PLACE targets | Subgroup `(x y)` and value `z` |
+| `(a b c) := (x + 1) (y * 2) (z - 3)` | One bundle of three PLACE targets | Three computable units with their inner operations processed |
+| `(a b) := copy(Pair)` | Two-place sequence consumer | The emitted field stream |
+| `(a b) := (copy(Pair))` | The same two-place consumer | The same current-level fields, with the collector preserved in P0 |
+| `ptr := (copy(Pair))` | One ordinary reference place | One collected Structure |
+| `(1) + (2 * 3)` | The ordinary scalar numeric contract | One complete inner Expression, result 6 |
+| `Name :: A B` | One declaration NAME | Two external DATA occurrences |
+| `Name :: (A B)` | One declaration NAME | One DATA description; its immediate declaration fields are read by the receiving contract |
 
-These rows specify argument shape; each receiver still applies its own admission
-contract. In particular, a named-signature declaration does not silently accept
-every arbitrary sequence as a valid signature. Inspecting the fields of its one
-explicit DATA template is not unwrapping the operand argument vector.
+The rows do not grant an unknown `op` a sequence contract merely from its
+spelling or the shape of its left source. The ordinary receiver decides what
+it consumes. In particular, whole TYPE/model positions and prefix whole-value
+arguments keep their boundaries. This qualification prevents the ABI from
+silently opening signature models. Ordinary CODE W/E and internal DATA field
+reading keep their separate defined scopes; neither is a second pass over this
+operand vector.
 
 <a id="operand-storage"></a>
 References point at values of typed storage records, with the type code immediately before the value. A reference to a container addresses its typed descriptor. A dense `Array<T>` is not reinterpreted as `Array<@>`, and an untagged native temporary is not treated as an arena record by reading four bytes before its address. The common value-storage mechanism materializes a suitable record only when required, with ordinary lifetime.
@@ -773,10 +1129,10 @@ The required results are 7 for `Example\calculate(2)`, 13 for `Example\calculate
 <a id="raw-operands"></a>
 #### Original occurrences: `PASS_ARGS_AS_IS 1`
 
-The same expression analysis determines argument boundaries but supplies references to original occurrences without executing them. Occurrences can contain literals, names, calls, assignments or groups. A handler for arbitrary source forms uses general references `@: left` and `@[]: right`, not a physical-int requirement. Merely reading or retaining such a reference executes nothing. An unconsumed occurrence has no effects; explicit repeated evaluation repeats effects. Written groups do not force eager evaluation or remove the raw contract. Restrictions on the admissible source forms are checked without executing them in order to obtain another type.
+The same expression analysis determines argument boundaries but supplies references to original occurrences without executing them. Occurrences can contain literals, names, calls, assignments or groups. A handler for arbitrary source forms uses general references `@: left` and `@[]: right`, not a physical-int requirement. Merely reading or retaining such a reference executes nothing. An unconsumed occurrence has no effects; explicit repeated evaluation repeats effects. Written groups do not force eager evaluation or remove the raw contract. Retaining a raw occurrence postpones its consumption; it does not turn its CODE Expression or resolved receiver into a DATA declaration. Restrictions on the admissible source forms are checked without executing them in order to obtain another type.
 
 <a id="expression-eval"></a>
-`sys\eval(fragment)` uses the single expression executor to obtain the ordinary value of a raw occurrence. Literals yield values, names resolve normally, and written calls execute; a stored callable reference remains a reference unless the form calls it. `\fragment` is not shorthand for evaluation. Each explicit `sys\eval` is a new evaluation with once-per-occurrence effects within that evaluation, not a persistent cache.
+`sys\eval(fragment)` uses the single expression executor to obtain the ordinary value of a raw occurrence. Literals yield values, names resolve normally, and written calls execute; a callable received as a whole value remains a reference. A Structure reached in CODE/Expression follows the [name/parent guard](#expression-structure-parent-guard), including ordinary receiver/call handling for a named same-parent node. `\fragment` is not shorthand for evaluation. Each explicit `sys\eval` is a new evaluation with once-per-occurrence effects within that evaluation, not a persistent cache.
 
 The occurrence retains its source evaluation context for the duration of the application, including when passed to a helper. The helper's same-named locals cannot capture it. Embedded assignments keep their receiving-DATA rule, and the original binding/private access is preserved without granting the operand new implicit access to private places. A physical source address alone does not identify a live activation; the existing context transport must retain that distinction. Raw passing extends no activation lifetime and cannot restore a finished frame. Statically known fragments may use the same prepared native implementation; neither a second parser nor a second VM is required. A long-lived computation is formed by an ordinary callable with its DATA and, where needed, by explicit composition/`merge`.
 
@@ -1047,10 +1403,56 @@ it is not a wildcard for lookup and is independent of x's actual name.
 
 The compound assignments `+=`, `-=`, `*=`, `/=`, `%=`, `<<=`, `>>=`, `&=`, `^=`, `|=`, `**=` and the power operator `**` for expressions join `:=`. A compound assignment writes a place already known with the result of the operation over its current value and the right operand: `a += b` corresponds to `a := (a + b)`, `a -= b` to `a := (a - b)`, `a *= b` to `a := (a * b)`, `a /= b` to `a := (a / b)`, `a %= b` to `a := (a % b)`, `a <<= b` to `a := (a << b)`, `a >>= b` to `a := (a >> b)`, `a &= b` to `a := (a & b)`, `a ^= b` to `a := (a ^ b)`, `a |= b` to `a := (a | b)`, `a **= b` to `a := (a ** b)`; the author's spelling of these equivalences with a C-like `=` is kept in the journal, and in LMX `=` stays a comparison. The left side is a place already known under every rule of `:=`, the `satisfies` admission and the error of an unknown left side included; `:=` keeps its general narrow meaning of writing a known place, method references and the named supply included, and is not narrowed to numbers. `**` is the power; `^` stays the bitwise exclusive or. The associativity and precedence of `**` are Python's (the author's clarification of 2026-11-07): `**` groups to the right -- `a ** b ** c` is `a ** (b ** c)`; it binds tighter than `*`, `/`, `%`, `+` and `-`; a call, an index and a field access form the operand before `**`; on its left `**` binds tighter than the unary `+`, `-`, `~`, on its right a unary operand is admitted -- `-2 ** 2` is `-(2 ** 2)`, `(-2) ** 2` keeps its parentheses, `2 ** -2` is `2 ** (-2)`, `2 * 3 ** 2` is `2 * (3 ** 2)`; the right side of `**=` groups the same way. Grouping and execution are distinct: reached effects follow the common LMX demand and written-order rules, not C's unspecified operand order. A compound assignment evaluates its destination once and obtains the operation result before the write; the equivalences are not textual macros that repeat destination effects. Numeric types and conversions of `**` and `**=`, negative or fractional exponents, `0 ** 0`, numeric failures and atomicity follow the selected numeric and write contracts. The selected numeric contract of integers (the author's decision of 2026-11-22): the interpreter refuses whenever the exact result of an operation does not fit the type -- `2147483647 + 1` over `int` refuses; the machine profile of L2 computes under the machine contract ([L2](L2_spec_en.md)). Numeric operations, the types of expressions and admission are not tied to `int`: the analysis and the types of expressions are the ordinary ones of typed languages, for every numeric type (the same decision). Only power grouping is taken from Python; no other Python numeric policy is implied. Implementation must preserve these results on each supported execution path; this specification is not an implementation report.
 
+
 <a id="group-assign"></a>
 #### Group positional assignment
 
-Author's decisions of 2026-11-10. The left side of the `:=` operator may be an unnamed Structure of places: `(a b c) := (c, a, b)` assigns by position — the first value to the first place, the second to the second, the third to the third. The author first wrote this form with a colon, `(a b c): c, a, b`; after the rule that structural forms do not assign ([structural forms](#forms-declare-or-call)) it is written with `:=`, this assignment rule does not give a grouped colon head assignment semantics. Grouped heads themselves follow the ordinary [head grammar](LMX_grammar.en.md#structure). All right-hand values are computed before the first write, so this statement rotates the three values. Each position is written by the rules of `:=`: the place must be available at the assignment site under the [common visibility rule](#declaration-visibility). Variables and `const` are visible sequentially; grouping does not change that rule. An explicit path selects a field under the ordinary path rules; this does not make its bare name visible before declaration. For name-based access, an unknown name, the name of a Structure or a function name on the left is an error, and each value passes the ordinary admission of its place. The left side is an unnamed Structure and remains whole. The unnamed Structure written on the right is the sole `right` argument of `:=`, so exactly its one outer level is opened and its immediate positions populate `right`; the left container is not opened. When the left side is not an unnamed Structure, the parentheses on the right are not opened: `struct := (copy(args))` assigns one Structure to the reference `struct` (the author's decision of 2026-11-22). This is an assignment between unnamed Structures, the general case of assignment and not a special form (the author's decisions of 2026-11-16 and 2026-11-21). A Structure returned from a function is not opened: in `(a, b, c) := myFn()` the right side is one value ([Structure result](#structure-result)). A different number of places and values is a refusal: at translation when the number is known, otherwise at execution before the first write. A Structure on the left holds at least one place; the head `()` with empty parentheses remains the earlier separate form ([grammar](LMX_grammar.en.md#bounded)). A field stream is written inside an explicit group, which is opened the same way: `(a b) := (copy(Pair))` assigns the two resulting fields by position; the bare stream `(a b) := copy(Pair)` is an error (the author's decision of 2026-11-21). The right side of a group assignment is one unnamed Structure written in parentheses, the form `() := ()`; several values written without the group are an error (the author's decision of 2026-11-21). In `(c b d a) := (a b c d)`, starting from a=1, b=2, c=3, d=4, the final values are c=1, b=2, d=3, a=4. All RHS values precede the first write; this promises no rollback of effects already produced while computing them. The names of the right-hand fields do not change the positional correspondence.
+The left side of `:=` may be an unnamed Structure of at least one PLACE:
+`(a b c) := (c a b)` assigns by position. The [common grouper and application
+adapter](#expression-structural-grouping) expose the current-level RHS sequence
+and deliver the whole left PLACE sequence as **one** operand actual.
+The grouper does not build that left ABI bundle and P0 does not lose the
+written groups. This is the ordinary assignment contract for a sequence of
+places, not a separate parser or an additional conditional unwrapping pass.
+
+All RHS values are obtained and retained before the first write. Each target
+must be available under the [common visibility rule](#declaration-visibility)
+and each value passes its normal admission. A count mismatch is refused
+before any assignment, statically when known and otherwise at execution.
+Earlier effects of obtaining RHS values are not rolled back. Names of RHS
+fields do not change their positional correspondence. Target identity is
+preserved; an explicit path does not make an undeclared bare name visible.
+
+| Source | Prepared values before writes |
+| --- | --- |
+| `(a b c) := (a c b)` | Three snapshot values; swaps `b` and `c` |
+| `(a b c) := (f g h) (f g h) (f g h)` | Three Structure values, not nine fields |
+| `(a b) := copy(Pair)` | The two emitted fields of `Pair` |
+| `(a b) := (copy(Pair))` | The same two fields through the explicit collector |
+| `(a b) := (((x y)))` | Values `x`, `y` for two targets |
+| `(a b c) := (((x y)))` | Two values for three targets; refusal before the first write |
+| `(a b c) := myFn()` | One returned value; a returned Structure is not automatically opened |
+
+The two `copy` forms are equivalent for this sequence-consuming assignment
+when `Pair` supplies the two admitted fields. The outer collector is optional;
+the former prohibition of bare `(a b) := copy(Pair)` and the former requirement
+that every group assignment have exactly one written RHS group are superseded
+by the author's clarification of 2026-11-24. Several current-level RHS items
+are allowed. Their groups are processed recursively: single-unit wrappers
+are transparent and several units remain one subgroup; fields of neighboring
+subgroups are never spliced.
+
+For a single ordinary reference place, `ptr := (copy(Pair))` still assigns one
+collected Structure. Bare `ptr := copy(Pair)` remains a field stream and follows
+that place's actual receiving contract; it is not silently boxed as one object.
+`ptr := (copy(()))` supplies one present empty Structure, not an absent actual.
+
+In `(c b d a) := (a b c d)`, starting with a=1, b=2, c=3, d=4, the final values
+are c=1, b=2, d=3, a=4. Unknown target names and names of nonassignable Structures
+or functions remain errors. The earlier colon spelling of this operation is
+historical: a grouped head before `:` follows the [head grammar](LMX_grammar.en.md#structure)
+and does not acquire assignment semantics. The empty head `()` retains its
+separate existing meaning; this contract requires at least one PLACE.
 
 <a id="qualification"></a>
 ## 10. const, immutable and independent
@@ -1117,7 +1519,7 @@ An explicit `call` uses the same fresh-namespace model. The root declarations of
 
 Neither call entry nor a graph write clears native. A local write changes only the namespace; an explicit write changes the source graph. Updating machine execution requires [explicit compilation](#explicit-compilation); endturn alone does not perform it.
 
-An executable body is a structural expression. A declaration does not run it; a bare name denotes its reference; `A()` or `call(A)` explicitly executes it, subject to the common argument selection. `A()` has no written actual, whereas `A: ()` contains one empty Structure and follows the receiving contract. A result is described by the parent's `return` field; without that description the call supplies no result value. Declared throws and other call restrictions remain those of the candidate, not policies transferred from a fn template.
+An executable body is a structural expression. A declaration does not run it; a name in a whole-value position denotes its reference. Explicit `A()` or `call(A)` executes it under common argument selection, while a node reached by CODE/Expression traversal follows the [name/parent guard](#expression-structure-parent-guard). `A()` has no written actual, whereas `A: ()` contains one empty Structure and follows the receiving contract. A result is described by the parent's `return` field; without that description the call supplies no result value. Declared throws and other call restrictions remain those of the candidate, not policies transferred from a fn template.
 
 Bare `return` exits without a value; `return: value` is admitted only where the result is described by the `return` field of the data ([`return` in data](#return-in-data)). At the opening level, `return` may also be a trailer for any callable Structure under the general grammar rule; it is not a closer for a non-callable Structure. Explicit `end: Name` is optional, and reaching the end of a body without `return` does not synthesize a return node.
 
@@ -1234,25 +1636,121 @@ Historical migration note: in current `call(D C)`, D is the actual-argument Stru
 #### Named signature declaration: `name :: data`
 
 `name :: data` is the named-signature use of the ordinary expression operand
-`::`. It follows the general LMX operand header, ready-priority, grouping and
-raw-occurrence contracts; it is not a separate short-form or compact-call
+`::`. It follows common Expression grouping and its ready-priority and DATA-argument contracts; it is not a separate short-form or compact-call
 syntax. The declaration consumes the left occurrence as an identifier to
-declare, without resolving or assigning an existing place. Its defined
-single-template form takes **one** right DATA description, whose fields describe
-the signature without executing its initializers or an executable body.
+declare, without resolving or assigning an existing place. Its single-description
+form takes **one** right description. An admitted DATA template describes the
+signature without executing its formal initializers or an executable body;
+a ready signature description is also accepted under the
+[interchangeability contract](#fn-forms-equivalent). An inline producer follows ordinary CODE Expression semantics; the receiver's own DATA-template argument contract is retained as described below.
 
-`Name :: A B` has two right arguments, while `Name :: (A B)` has one argument
-that is an unnamed Structure. These are different expression inputs. The
-left identifier is not an unnamed Structure, so the [single conditional RHS
-opening](#operand-right-only-opening) does not apply. A reference such as
-`Name :: DataTemplate` supplies one right occurrence as well. Reading that
-template's fields under the declaration contract does not flatten the operand
-arguments or change their written grouping. The signature contract determines
-admission; a parser must not invent an equivalence between the two spellings.
+The ready `PRIORITY` of `::` is `sys\priority(":=")`; the signature constructor
+`->` keeps `sys\priority("+")`. Ordinary Expression grouping therefore places
+the whole constructor on the right in `f :: int -> int int`, just as in
+`f :: (int -> int int)`. The constructor Expression supplies one description whose constant name is
+declared by `::` under its own receiving contract; no separate DATA/value
+selector is introduced. **Priority determines Expression grouping; preparation of nested operations
+follows the common policy, not an evaluator inside `::`.** Obtaining the description does
+not execute the described formals, their initializers or a function body.
+Sharing the assignment priority does not give `::` assignment semantics.
+This composition does not introduce a bare TYPE-vector form such as
+`f :: int int int`.
+
+This low priority follows the familiar scope of a type annotation: the
+[Haskell expression grammar](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html)
+places the annotation outside an infix expression, and the
+[Scala expression grammar](https://www.scala-lang.org/files/archive/spec/2.13/06-expressions.html)
+likewise adds an ascription to a completed postfix expression. LMX retains its
+own NAME-plus-DATA declaration meaning. The choice adds no declaration chaining,
+new global associativity or assignment action; existing expression boundaries apply.
+
+`Name :: A B` has two external right occurrences; `Name :: (A B)` has one DATA description. This follows the receiving contract and preserved structural level, not a test of the left identifier's physical type. A reference such as `Name :: DataTemplate` also supplies one description. The common DATA field reader consumes its immediate declarations without changing external arity, recursively flattening models or executing their initializers. Ordinary [Expression grouping and application adaptation](#expression-structural-grouping) prepare these boundaries; signature admission does not invent an equivalence between one description and two separate inputs.
+
+<a id="signature-description-consumption"></a>
+**The receiver `::` consumes DATA only.** Every argument has the DATA contract,
+including the left identifier to declare. That identifier is not looked up as
+a value. The single-description form receives one whole right DATA description:
+a supplied Structure remains one external actual. Under its own DATA contract,
+`::` opens the anonymous Structure, or follows a reference to its DATA, into
+an ordered list of signature declarations. This uses the **common Structure-to-sequence mechanism** under the receiving
+DATA contract ([rule](#receiver-structure-sequences)), distinct from CODE W/E
+and common operand-argument preparation.
+It reads only that declaration level: nested models and `return` descriptions
+retain their internal structure and existing formal mapping. It does not call
+the Structure, execute formal initializers or create a function body.
+
+`::` retains this declaration contract when written in CODE Expression.
+Modifiers such as `const` and `private` likewise always consume their arguments
+as DATA. DATA consumption may open a declaration list where that receiver's
+own contract requires it; DATA is not a blanket prohibition on opening. This is each receiver's own rule; it is not a universal rule imposing
+three DATA/value/producer branches on every receiver
+([context invariance](#receiver-context-invariance)).
+
+The common Expression priority policy determines how nested operations are
+grouped and prepared. It accounts for the composition below; `::` does not
+contain a second evaluator or a DATA/value selector. In particular it does
+not run `sys\eval` on its received description. The weaker `sys\priority(":=")`
+of `::` groups the whole constructor with `sys\priority("+")` of `->`.
+
+```lmx
+f :: (int -> int int)
+```
+
+```lmx
+f :: int -> int int
+```
+
+These are independent alternatives yielding the same two-input int-to-int
+signature. P0 preserves the written group. Preparing one complete Expression
+result does not make `(int int)` into two arguments or introduce TYPE-tail
+flattening. An anonymous Structure is never invoked as a callable: where it
+executes as CODE or within Expression, it executes in place, without a new
+call activation.
+
+A ready signature is an ordinary Structure with its established positional
+description. It is consumed by that profile, including public labels and
+complete input/result requirements, not by reinterpreting physical service
+fields as new formals. Defaults, requiredness, throws and later calls retain
+their existing contracts. Naming a description does not transfer template
+defaults or execution policy to a candidate. `FxSignatures\make` builds `data`
+through `signatureData`, performs `Built :: data` and returns `Built`; no
+`signature(result)` reflection of that returned storage is needed.
+
+```lmx
+S :: (int: a; int: b; return: int)
+F :: S
+```
+
+`F` preserves the positional description and public labels of `S`. The
+equivalent explicit intermediate remains available, but is not mandatory:
+
+```lmx
+@: description (int -> int int)
+f :: description
+```
+
+For `S :: (int: x touch(); return: int)`, the DATA formal initializer is
+retained and `touch` does not run merely to inspect the signature.
+`S :: functionRef` never auto-invokes the reference. A nested ordinary producer
+such as `signature(Existing\run)` or `makeSignature()` follows common Expression
+preparation and its resolved contract; `::` still receives DATA, not a producer
+to execute itself. The name `->` does not force a particular implementation:
+ordinary resolution and description admission continue to apply.
+
+The package contains no executable built-in implementation or verified operand
+metadata for `::`. This specification therefore does not invent its
+`PASS_ARGS_AS_IS` value or derive a new evaluator from an assumed raw mode.
+The generic RAW contract remains unchanged. Parsing, graph/path inspection and
+signature inspection are not eager execution of defaults, bodies or stored
+operations. The [acceptance cases](validation/signature_expression_cases_20261124.json)
+are normative targets with parser, translator and runtime **NOT_RUN**.
+The [clarification review](SIGNATURE_EXPRESSION_REVIEW.md) records these
+boundaries; no signature-specific classifier, extra group-opening pass, hidden flag or constructor
+algorithm is added.
 
 The lexer recognizes `::` as one operand token before `:`. The common expression
 parse and the standard operand contract with the ready priority and with the
-transfer of the needed raw forms are used, preserving the graph and the groups. No
+preservation of its DATA arguments are used, keeping the graph and the groups. No
 separate grammar of the signature, no special short or parenthesized form and no
 automatic `end` by the left name are introduced: `::` by itself opens no Frame. The
 new notation changes the form of the declaration, not the order of the formals,
@@ -1357,7 +1855,7 @@ The result of a call is described by the `return` field of the data (the norm of
 <a id="named-actuals"></a>
 ### Named, positional and declaration-form actuals
 
-A standalone actual `a := value` selects formal `a` and supplies the RHS under its receiving contract. Through a fn-constrained reference, `a` is the public label of that signature and maps to the candidate's position; direct calls use the candidate's own names. `f(a := a(5))` evaluates the explicit inner call once. An ordinary `a(5)` or `a: 5` actual is a call whose result is supplied positionally, not a named actual merely because its head matches a formal. A bare callable name is a reference and invokes nothing.
+A standalone actual `a := value` selects formal `a` and supplies the RHS under its receiving contract. Through a fn-constrained reference, `a` is the public label of that signature and maps to the candidate's position; direct calls use the candidate's own names. `f(a := a(5))` evaluates the explicit inner call once. An ordinary `a(5)` or `a: 5` actual is a call whose result is supplied positionally, not a named actual merely because its head matches a formal. A callable passed in this whole-value actual position remains a reference; this does not override the CODE/Expression name/parent guard.
 
 The positional counter follows one rule. Naming the formal at the current position still counts as positional and leaves the counter active. Naming a different position disables it; all subsequent actuals must be named. It never restarts. Unknown explicit names, duplicate supply and excess actuals are errors. Separate named actuals with `;`: `f(a := 1; b := 2)` supplies two actuals; a comma does not necessarily terminate the first assignment's RHS.
 
@@ -1366,7 +1864,7 @@ The positional counter follows one rule. Naming the formal at the current positi
 
 **A declaration passed as an argument is a data Structure; passing it does not execute it as a call.** The complete declaration form is the supplied value. Its initializer remains written material until that form is actually executed or consumed under its contract. This also applies to `int(item expression)` and `int: item expression`. An ordinary `Producer()` actual is still a call and follows the ordinary CODE argument contract.
 
-The written record of a call and of the declaration of a Structure is one record: `Producer()` calls in the role of CODE and declares a Structure in the role of DATA, and the parse does not tell the two apart. Which operation is performed is decided by the contract of the resolved head and by the role of the place where the record stands. An anonymous Structure among the arguments is not a call: it is passed as it is, and the passing executes nothing of it.
+P0 uses one written Frame model for calls and structural declarations. In Expression, `Producer()` is CODE and calls its resolved callable. Only an ordinary user structural form outside Expression can take the DATA declaration role; a system or special receiver is not reinterpreted as that declaration ([context invariance](#receiver-context-invariance)). Which operation is performed is decided by the contract of the resolved head and by the role of the place where the record stands. An anonymous Structure among the arguments is not a call: it is passed as it is, and the passing executes nothing of it.
 
 The receiving variable is chosen by the same positional and explicit-name rules as for any other argument. **The name declared inside the supplied form is never searched for in the receiving DATA or interface.** It remains part of that form and describes what the declaration will do when executed. Whether a same-named receiving variable happens to exist changes nothing about argument mapping.
 
@@ -1497,7 +1995,7 @@ Any Structure `C` is compiled by the common body and frame mechanism. A call doe
 
 A CODE consumer considers two equal readings of a sole Structure actual, provided it was not explicitly assigned to a formal: **W**, the Structure as written and whole; and **E**, its immediate fields as an argument sequence. Exactly one admitted combination of declaration, reading and map is selected. There is no preference for W, a particular arity or the first declaration. E occurs once, at one level, and never rewrites the graph. A reference to a prepared Structure is eligible just as a written group is. `f(arg0 := S)` explicitly supplies the whole value and excludes E.
 
-P0 preserves `f(a b)` as two written fields and `f((a b))` as one group. They can produce the same selected argument sequence when E is uniquely admitted, but are not unconditionally interchangeable. An empty Frame `f()` differs from a Frame containing one empty Structure `f(())`. A receiver whose argument contract is DATA receives the written boundaries without CODE's W/E expansion. This does not include `import`, `copy` or `merge`, whose arguments are always CODE.
+P0 preserves `f(a b)` as two written fields and `f((a b))` as one group. They can produce the same selected argument sequence when E is uniquely admitted, but are not unconditionally interchangeable. An empty Frame `f()` differs from a Frame containing one empty Structure `f(())`. A receiver whose argument contract is DATA receives the written outer boundaries without CODE's W/E selection. If its receiving contract requires a declaration/field sequence, it uses [common Structure field consumption](#receiver-structure-sequences) inside that boundary. This does not include `import`, `copy` or `merge`, whose arguments are always CODE.
 
 `copy`, `merge` and nested `import` supply **field streams** to their surrounding consumer. `f(copy(A))` receives the resulting stream; `f((copy(A)))` first collects it into one written Structure. Grouping does not turn off W/E at `f`; use `f(arg0 := (copy(A)))` when an actual formal `arg0` must receive the whole result without E. An empty stream differs from a grouped empty Structure. No general Array/string expansion follows from these receiver contracts ([composition](#composition)).
 
@@ -1507,11 +2005,11 @@ P0 preserves `f(a b)` as two written fields and `f((a b))` as one group. They ca
 | Receiver/contract | Argument reading | Single-Structure expansion |
 | --- | --- | --- |
 | Ordinary callable; CODE-consuming receiver such as `call` | CODE, subject to each argument's declared consuming role | Ordinary W/E selection |
-| Level receiver `L2`; `required`, `private`, `const`, `immutable`, `independent`; `name :: data` | DATA | Preserve written arguments; no W/E |
+| Level receiver `L2`; `required`, `private`, `const`, `immutable`, `independent`; `name :: data` | DATA | Preserve outer actuals; sequence contracts consume immediate fields through the [common mechanism](#receiver-structure-sequences), not CODE W/E |
 | `import`, `copy`, `merge` in any placement | Standard CODE | Ordinary W/E over the admitted source sequence |
 | Place-declaration receiver supplied as a CODE actual | DATA declaration form | Preserve and map it under [declaration-argument rules](#declaration-arguments) |
 
-The role belongs to the contract, not the spelling of parentheses or the number of arguments. A bare Structure name always denotes a reference and invokes nothing. `import` accepts one or more sources, `copy` exactly one, and `merge` two or more; source arity is distinct from output field count. `merge(S)` is not rejected syntactically merely because one Structure was written: E may admit its fields as multiple sources under the same CODE algorithm in any placement. If both W and E fit, the call is ambiguous. Hidden binding supplies no missing source. The order of positional and named passing, the requiredness of sources and their admission follow the general rules; implicit binding takes no part in choosing the variant.
+The role belongs to the contract, not the spelling of parentheses or the number of arguments. A Structure received as a whole source value is read as a reference without invoking that value; CODE/Expression traversal otherwise follows the [name/parent guard](#expression-structure-parent-guard). `import` accepts one or more sources, `copy` exactly one, and `merge` two or more; source arity is distinct from output field count. `merge(S)` is not rejected syntactically merely because one Structure was written: E may admit its fields as multiple sources under the same CODE algorithm in any placement. If both W and E fit, the call is ambiguous. Hidden binding supplies no missing source. The order of positional and named passing, the requiredness of sources and their admission follow the general rules; implicit binding takes no part in choosing the variant.
 
 ```lmx
 Defaults:
@@ -2879,7 +3377,7 @@ This illustrates the application request, parsed through ordinary Frames. The in
 <a id="edit-api-copy"></a>
 ### Copy a prepared Structure
 
-Copying receives a reference to one already prepared source and uses ordinary `copy(Source)` without text round-tripping. Like `import` and `merge`, it always consumes CODE arguments, even in DATA placement. A bare reference or anonymous container remains a value rather than an implicit invocation. Its contents can still include explicit calls or computed initializers handled by the common contracts; grouping adds neither quotation nor eager initialization. It emits fields; when placement requires one Structure, a written group `(copy(Source))` collects them. Multi-source composition uses `merge(A B ...)`, and the placement target is never an implicit source or model. DATA acceptance alone does not physically replace the source receiver with its output; explicit admitted owner-side placement changes the target graph. One operation map preserves shared targets and cycles and redirects ordinary references and lexical parents to corresponding copies. Qualified `independent: immutable` retention and reusable native implementation references follow the general contract. Copying does not compile, register a new implementation, capture a caller frame, or make the recipient the lexical `node`.
+Copying receives a reference to one already prepared source and uses ordinary `copy(Source)` without text round-tripping. Like `import` and `merge`, it always consumes CODE arguments, even in DATA placement. The already prepared source is received as a whole value; this does not bypass the name/parent guard when another position traverses a Structure as CODE/Expression. Its contents can still include explicit calls or computed initializers handled by the common contracts; grouping adds neither quotation nor eager initialization. It emits fields; when placement requires one Structure, a written group `(copy(Source))` collects them. Multi-source composition uses `merge(A B ...)`, and the placement target is never an implicit source or model. DATA acceptance alone does not physically replace the source receiver with its output; explicit admitted owner-side placement changes the target graph. One operation map preserves shared targets and cycles and redirects ordinary references and lexical parents to corresponding copies. Qualified `independent: immutable` retention and reusable native implementation references follow the general contract. Copying does not compile, register a new implementation, capture a caller frame, or make the recipient the lexical `node`.
 
 <a id="edit-api-placement"></a>
 ### Placement in a live application
@@ -3118,17 +3616,81 @@ identity. A named callable with different parameter names still matches by the
 existing positional rule. Neither form becomes executable merely by describing
 a signature, and existing named-signature/call dispatch is not altered.
 
-The type-token form uses the standard operand contract and canonical name `to`.
-`to(A0; A1; R)` and `A0 to A1 R` construct the same signature: the last full TYPE
+<a id="signature-arrow"></a>
+The type-token form uses the standard operand contract and canonical name `->`.
+`` `->`(A0; A1; R) `` and `A0 -> A1 R` construct the same signature: the last full TYPE
 token is the result requirement and preceding tokens are ordered input
-requirements. `to(R)` constructs a nullary signature. A token is consumed whole;
-a nested model or signature is not expanded into fields. `A to (B to C)` retains
+requirements. `` `->`(R) `` constructs a nullary signature. A token is consumed whole;
+a nested model or signature is not expanded into fields. `A -> (B -> C)` retains
 the explicit nested result. The common descriptor builder is unchanged.
 `Name :: DATA` remains the named signature declaration, and `signature(C)`
 reflects an existing callable. `type(x)` instead captures one value and returns
 its actual physical type code through `sys\typeof`; `x type` uses the same
 consumer. None of these meanings replaces DATA/CODE `return`. Superseded
 constructor spellings are not retained as callable aliases.
+
+The receiver spelling uses the exact identifier, for example `` `->`(int; int; int) ``;
+a qualified reference quotes only the symbolic path segment, for example
+`` FxToTokens\`->` ``. The descriptor is flat: `int -> int int` has two input
+positions and one result, not an implicitly curried chain. A callable result is
+written explicitly as `int -> (int -> int)`. The former constructor name `to`
+has no executable compatibility alias.
+
+<a id="signature-grouping"></a>
+#### Signature expressions and argument boundaries
+
+The complete constructor expression can be grouped:
+
+```lmx
+f :: (int -> int int)
+```
+
+This direct declaration and `f :: int -> int int` yield the same description:
+two int inputs and an int result. The constructor is CODE Expression; `::`
+keeps its own signature-declaration contract. Its weaker `sys\priority(":=")`,
+below `sys\priority("+")` of `->`, groups the complete constructor without outer
+parentheses. P0 keeps the written outer group; equal results do not make the source graphs
+or DATA containers identical ([consumption](#signature-description-consumption)).
+
+These are independent normative examples, with parser/translator/runtime
+execution **NOT_RUN**. `Model` is an available valid complete model.
+None creates an executable body or automatic currying.
+
+| Declaration | Ordered inputs | Result |
+| --- | --- | --- |
+| `f :: (int -> int int)` | `int`, `int` | `int` |
+| `fFlat :: int -> int int` | `int`, `int` | `int` |
+| `f3 :: (int -> int int int)` | `int`, `int`, `int` | `int` |
+| `fNested :: int -> (int -> int)` | `int` | One callable signature `int -> int` |
+| `` f0 :: `->`(int) `` | None | `int` |
+| `fModel :: int -> Model` | `int` | The complete `Model` requirement |
+
+The right sequence has variable length. The [common structural grouper](#expression-structural-grouping) distinguishes one complete source Expression from whole TYPE/model material under the receiving contract. An inner expression can supply one descriptor; neighboring TYPE atoms inside one material group do not become extra tokens. The current-level sequence rule is not an operation-specific TYPE-tail expansion:
+
+| Operand fragment | Right occurrences supplied under the common rule |
+| --- | --- |
+| `int -> int int` | Two separate TYPE occurrences, `int` and `int` |
+| `int -> (int int)` | One whole group `(int int)`; not the two preceding occurrences |
+| `int -> (int -> int)` | One inner Expression producing one signature descriptor |
+| `int -> ()` | One present empty Structure, not an empty right vector |
+| `int -> ((int int))` | One outer Structure containing an inner Structure; no automatic opening |
+| `(int int) -> ((char char))` | Whole TYPE candidates under their receiving contract; neither TYPE validity nor opening an inner model follows from the left group shape |
+
+The shape rows do not assert that each group is a valid TYPE. In
+`int -> (int int)`, the shared collector retains `[int, whole group]` as two
+logical tokens. Only if ordinary `normalizeType` admits that whole group can
+it serve as the result requirement of a one-input signature. It is not
+implicitly a tuple of two ints, a list of extra inputs or a curried result.
+Likewise, `int -> ()` is not the nullary receiver form `` `->`(int) ``;
+admission of the empty group is a separate TYPE question.
+
+`f` to the left of `::` is a declaration NAME; the leading expression of `->`
+is a TYPE occurrence. Resolving a type name does not retrospectively change
+its written grouping. No TYPE-list expansion profile, repeated opening or
+operation-name-specific parser rule is added. The current collector and builder
+keep their existing algorithms. [Acceptance cases](validation/signature_expression_cases_20261124.json)
+cover description results, preserved argument shapes and receiver-context invariance;
+parser, translator and runtime execution is **NOT_RUN**.
 
 An initialized integer token denotes the type code in its payload. An
 `uninit:T` token denotes T from its code without reading nonexistent value
@@ -3178,7 +3740,7 @@ failure policy and the documented boundaries of each operation.
 | `types` | physical field type codes; int[] by language contract | [reflection.lmx](patterns/LMX_Fn_Receivers/src/reflection.lmx) |
 | `names` | physical canonical names; anonymous entries retain typed absence | [reflection_bridges.lmx](patterns/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
 | `signature` | ordinary positional signature description | [reflection_bridges.lmx](patterns/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
-| `to` | Complete TYPE tokens, ordered inputs followed by the result; same signature kind | [fn_operand.lmx](patterns/LMX_Fn_Receivers/src/fn_operand.lmx) |
+| `->` | Complete TYPE tokens, ordered inputs followed by the result; same signature kind | [fn_operand.lmx](patterns/LMX_Fn_Receivers/src/fn_operand.lmx) |
 | `curry` | arbitrary finite arity, exact stage input type and terminal result | [generic_functions.lmx](patterns/LMX_Fn_Receivers/src/generic_functions.lmx) |
 | `apply` | arbitrary actual record vector; result record including explicit void | [generic_runtime.lmx](patterns/LMX_Fn_Receivers/src/generic_runtime.lmx) |
 | `partial` | prefix 0..N; exact residual signature, complete prefix yields thunk | [generic_functions.lmx](patterns/LMX_Fn_Receivers/src/generic_functions.lmx) |
@@ -3356,12 +3918,7 @@ errors, not a negative predicate result. See the [unified Pattern contract](CORE
 
 ### Construction, source rules and verification
 
-P0 keeps all written containers. The current operand rule remains in force:
-only the specified pair of written anonymous Structures triggers the special
-opening of the single right group. A Structure returned by a function is not
-opened by this rule. Ordinary method W/E selection remains separate. The
-receiver library must follow the current rules rather than reinstating the
-older transferred package's broader spreading proposal.
+Expression is the ordinary Structure graph interpreted with a [structural grouper](#expression-structural-grouping): it determines priorities, complete expression units and streams at the current tree level, independently of source spelling. A separate Expression application adapter packages left as one actual/reference bundle and right as an Array of references. `arg0 operand arg1 arg2 arg3` is the general form; a binary contract uses one right item, with no automatic fold or movement of the first right item into an absent left. The receiving contract selects whole-value or current-level sequence consumption. `(a b c) := (a c b)` therefore has one left bundle and three right values; three sibling material RHS groups remain three subgroup items. Recursive in-memory normalization already belongs to the grouper; the application adapter adds no conditional unwrapping pass. The grouper reads the clean graph. In CODE/Expression, anonymous Structures and named Structures whose actual parent differs from the current lexical owner are groups; named same-parent Structures use ordinary receiver/call handling. Reference resolution preserves the actual parent. Whole VALUE/TYPE/DATA material is not automatically reclassified as CODE. `1 + ((2))` is 3; field collectors such as `(copy(Model))` remain containers for zero, one or many fields. `::` and modifiers keep DATA consumption and the common immediate-field reader; they gain no RHS evaluator. P0, ordinary callable W/E and the existing lifetime/effect rules remain intact. See [architecture and acceptance](EXPRESSION_GROUPING.md); execution is **NOT_RUN**.
 
 Capture and generated source keep actual parents, private state and the normal
 lifetime rules. Code generation must respect blank-line root termination and
@@ -3401,7 +3958,7 @@ Defaults are not taken from an arbitrary named signature template: a template do
 not replace the rules of the actual candidate. In a call through a named requirement
 the public names of actuals are mapped to positions by the earlier rules, and
 permitted autofill uses the candidate's own names and declarations, not the
-arbitrary `pN` of a generator. `Name :: DATA` and `to` remain
+arbitrary `pN` of a generator. `Name :: DATA` and `->` remain
 descriptions of one signature kind; no public `fn` returns; the existing
 relationship of a named signature with `call` is not rewritten.
 
@@ -3648,11 +4205,7 @@ silent transfer of the whole test to the interpreter does not count as coverage.
 | B10 | A chain from `curry` and an independent user chain | Both use one ordinary mechanism; no private mark "created by our library" is needed |
 | B11 | The obtained stage outlives the creation of the wrapper; a native/walker transition; a permitted graph change | There is no reference to a finished C-stack local; the ordinary lifetime and the boundaries of validity of compiled entries apply |
 
-Separately the regressions of the common parser/operand handler are kept: an
-anonymous left plus one anonymous right argument opens one outer level **only on the
-right**; the left is whole, P0 removes nothing and there is no recursive opening.
-`Name :: (A B)` keeps one right template; W/E of an ordinary callable remains its
-own rule.
+Common grouping regressions preserve source groups, scalar nested expressions, field collectors and current-level sequences. Grouped assignment packages its whole left sequence as one actual; three sibling right groups remain three items. Whole TYPE/model and whole VALUE contracts preserve their objects; a CODE/Expression graph reference follows the name/actual-parent guard, including named same-parent receiver/call handling, and `Name :: (A B)` keeps one DATA description. Ordinary callable W/E remains separate. See [structural grouping](#expression-structural-grouping) and its NOT_RUN acceptance targets.
 
 The work on the adapters is complete only when the mandatory observations A and B
 are confirmed on the real kernel, the ordinary signatures and the named-call

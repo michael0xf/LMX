@@ -17,7 +17,7 @@ from lmx_style_variants import STYLES, measure, validate_variants
 
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES = ROOT / 'examples'
-DATE = '2026-11-23'
+DATE = '2026-11-24'
 LANGUAGES = ['LMX', 'Python', 'Java', 'C++', 'C#', 'TypeScript', 'Go', 'Rust']
 STATUS = {'complete_pair':'Полная пара', 'related_analogy':'Аналогия', 'lmx_only':'Только LMX'}
 METHOD = (
@@ -265,7 +265,7 @@ def publish_text(model):
         # Suite-specific narrative/source comparisons belong to their own builders.
         # Only publication summary tables are emitted here.
         target=ROOT/(doc['stem']+'.md')
-        lines=['# '+doc['title'],'Редакция 23 ноября 2026 года. Полные размеры листингов.']
+        lines=['# '+doc['title'],'Редакция 24 ноября 2026 года. Полные размеры листингов.']
         for view in doc['sheets']:
             lines.extend(['## '+view['title']])
             for tab in view['tables']:

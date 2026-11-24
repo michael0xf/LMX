@@ -10,9 +10,90 @@ Use one parser, one complete source graph, ordinary owner/DATA/CODE and existing
 
 Signature inspection and `satisfies` execute no candidate, default, test or converter. Source expressions and declaration actuals keep their normal effect timing. Compilation remains explicit; a new ABI never borrows an incompatible native entry. Plain graph mutation and subsequent interpretation require neither compilation nor `endturn`. Installing a newly compiled machine implementation follows the existing explicit compilation and `endturn` rules; graph editing alone does not patch an old native caller.
 
-P0 retains every written group. The common operand handler opens one outer RHS group only when the written left is anonymous, there is exactly one right argument, and that right argument is a written anonymous Structure. The left remains whole. Returned Structures and references do not satisfy that source-form exception. Ordinary callable W/E remains separate.
+P0 retains the graph and diagnostic provenance. The Expression **grouper** handles priorities,
+groups and field streams in the supplied pure graph, regardless of notation or origin; its result is
+a structured operation/stream plan, not rewritten text to parse again.
+The distinct **application adapter** packages the left side as one actual and
+the current-level right stream as an Array of references. Left grouping is
+preserved by this packaging, not by making the grouper a left-argument wrapper.
+The familiar argument vectors follow from this plan and ABI; there is no
+conditional container-opening pass after grouping. `RxLogicalArguments` and
+library `asOperand` forward the prepared vector without traversing its elements.
+Logical argument collection is explicitly requested inside the operand method
+body. The two common forms retain an absent left or one left atom at method
+entry; neither parser nor transport moves the first right item into left.
+Equivalent assignment forms are handled by the assignment method itself,
+without an assignment-specific parser branch or a universal pre-call binder.
+See [grouping and application](../../LMX_semantics.en.md#expression-structural-grouping)
+and the [accepted vector outcomes](../../LMX_semantics.en.md#operand-right-only-opening).
 
-`Name :: DATA` uses the general Expression/`OPERANDS_TEMPLATE` mechanism and one whole right DATA argument. It does not open a Frame or invent an `end:` target. `to` retains its existing operand and explicit named-call forms. Both create the same positional signature kind, with the existing named-signature/`call` relationship unchanged.
+For `(a b c) := (a c b)`, the plan contains the two ordered streams and the
+adapter supplies one whole left argument with three right values. For
+`(a b c) := (f g h) (f g h) (f g h)`, the current right level has three whole
+Structures, never their nine fields. An explicit field stream may be written
+directly: `(a b c) := copy(d)` and the grouped RHS spelling have the same
+group-assignment effect. A scalar whole-Structure receiver still retains its
+`(copy(d))` container.
+
+Recursive scalar Expression grouping gives `1 + ((2)) = 3` on either side.
+In a graph consumed as CODE/Expression, an ordinary named Structure with the
+current lexical parent follows the ordinary call path. A named Structure with
+a different parent, and every anonymous Structure, is traversed as a group.
+The actual parent is retained; the decision uses the graph name and parent
+relative to the traversal owner, not reference provenance.
+VALUE/TYPE/DATA boundaries do not become CODE merely because their
+objects are Structures. No source-origin or parenthesis flag decides grouping.
+With `S: a b c d` owned by a different parent, `1 + S + 2` therefore sees the
+same group as its direct graph equivalent. With the current parent, named S
+follows ordinary call admission instead. Neither case asserts numeric admission
+of four neighboring atoms by `+`.
+Planning does not spread whole-value inputs, run DATA initializers or force RAW input.
+RAW retains a complete inner Expression as one original occurrence with its
+context, not a list of that Expression's physical source tokens.
+Ordinary callable W/E remains separate. These are required integration
+behaviors; the package contains no executable common grouper or application adapter.
+
+`Name :: DATA` uses the general Expression mechanism and one
+whole right description. It does not open a Frame or invent an `end:` target.
+Its [description-consumption contract](../../LMX_semantics.en.md#signature-description-consumption)
+consumes **all arguments exclusively as DATA**: the left datum is the NAME to
+declare, and the right is one description. A single Structure remains one whole
+external operand actual. When the receiving contract requires a declaration or
+field list, the [common namespace/field-consumption mechanism](../../LMX_semantics.en.md#receiver-structure-sequences)
+reads the ordered immediate fields of that Structure or of the target DATA
+selected by a reference. `::` uses this common mechanism for signature declarations;
+modifiers use it under their own DATA contracts. DATA or CODE governs the handling
+of the elements, while the receiver contract chooses a list or a whole value.
+This is not a special `::` helper and does not change the outer argument vector,
+extend CODE W/E to DATA, call that Structure or recursively flatten nested models
+and `return` descriptions. Whole TYPE/model/value contracts preserve the object.
+A ready positional profile is also DATA and is not reopened by reflecting its
+service fields. If the common Expression mechanism has prepared a
+constructor result, `::` consumes that ready result. Reading a DATA template does not
+execute its formal initializers or an associated executable body. Ready signatures are consumed
+by their positional profile, not by reinterpreting service fields as inputs.
+The [resolved receiver keeps its own contract](../../LMX_semantics.en.md#receiver-context-invariance):
+a system operation is not reclassified as an ordinary user Structure by an
+outer DATA context. `::` still declares a signature in CODE. Modifiers such as
+`const` and `private` retain their own contracts and always consume DATA
+arguments. Expression is CODE; an ordinary
+explicit callable form inside it remains a call. RAW delays execution without
+changing that meaning. Grouping, priorities and expression preparation belong
+to the common Expression mechanism; `::` has no CODE-argument branch, DATA/value
+selector or `sys\eval` of its RHS. Thus the two spellings
+`f :: int -> int int` and `f :: (int -> int int)` are normative equivalents;
+any needed constructor preparation belongs to that common mechanism, while `::`
+receives the resulting profile as DATA. An anonymous Structure is not called;
+it may execute in place in CODE/Expression under the ordinary rules. No selector
+by operator spelling, declaration contents or field streams is introduced.
+An ordinary value declaration followed by
+`f :: description` remains an explicit equivalent path.
+The builtin consumer's executable implementation and mode metadata are absent
+here; no `PASS_ARGS_AS_IS` value is inferred for it. Runtime verification is
+**NOT_RUN**. This adds no
+bridge or parser profile. `->` retains its existing
+operand and explicit named-call forms. Both create the same positional
+signature kind, with the existing named-signature/`call` relationship unchanged.
 
 All public receivers are part of the one current kernel namespace. `fun\const` is a physical source export group, not an optional package version or second registry. Service inputs remain private; source user inputs retain their individual policy.
 

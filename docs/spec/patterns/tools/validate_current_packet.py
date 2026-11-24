@@ -31,6 +31,10 @@ BRIDGES = {'attempt','callable','fieldNames','normalizeType','raise','renameFiel
            'releaseCall','arrayInfo','arrayRead','arrayAdmit','arrayWrite',
            'attemptAccepted','acceptsRequirement'}
 MARKER = re.compile(r'^# BEGIN (?:PROCEDURAL|ALTERNATIVE) LMX \(excluded from character counts\)',re.M)
+IDENTIFIER = r'(?:[A-Za-z_][A-Za-z0-9_]*|`(?:``|[^`\x00])+`)'
+
+def identifier_name(text):
+    return text[1:-1].replace('``','`') if text.startswith('`') else text
 
 def canonical(code): return code.replace('\r\n','\n').replace('\r','\n').strip()+'\n'
 def primary(code): return canonical(MARKER.split(code,1)[0])
@@ -50,6 +54,9 @@ def check_packet(patterns,baseline):
     reviewed=json.loads((patterns/'validation/reviewed_source_changes_20261123.json').read_text())
     shared_review={x['id']:x for x in reviewed['shared_implementation_clients']}
     reviewed_helpers={x['id']:x for x in reviewed['shared_implementations']}
+    revision_path=patterns/'validation/source_revision_20261124.json'
+    revision=json.loads(revision_path.read_text()) if revision_path.is_file() else {}
+    approved_foreign_changes={row['path']:row for row in revision.get('foreign_changes',[])}
     import_allowances={}
     def check(ok,label,details=None):
         row={'check':label,'status':'PASS' if ok else 'FAIL'}
@@ -146,7 +153,8 @@ def check_packet(patterns,baseline):
         for key in ('public_count_added','new_public_count'):
             if key in document:check(document[key]==len(entries),'addition manifest count: '+manifest['file']+'/'+key)
     pub=(library/'src/public.lmx').read_text()
-    exports=re.findall(r'^\s+@:\s+([A-Za-z][A-Za-z0-9_]*)\s+([A-Za-z][A-Za-z0-9_]*\\[A-Za-z][A-Za-z0-9_]*)\s*$',pub,re.M)
+    exports=[(identifier_name(name),target) for name,target in re.findall(
+        r'^\s+@:\s+('+IDENTIFIER+r')\s+('+IDENTIFIER+r'(?:\\'+IDENTIFIER+r')+)\s*$',pub,re.M)]
     export_map=dict(exports)
     check(len(exports)==len(export_map)==len(name_set) and set(export_map)==name_set,'core: catalog/ordinary-export identity')
     check(all(export_map.get(x['name'])==x['api'] for x in catalog),'core: exact callable export targets')
@@ -248,7 +256,14 @@ def check_packet(patterns,baseline):
                     check(published_legacy.get('characters')==metric(code)['nonwhitespace'],'aggregate compatibility-source full metric: '+stem)
                 else:
                     baseline_source=baseline_patterns/source.relative_to(patterns)
-                    check(baseline_source.is_file() and source.read_bytes()==baseline_source.read_bytes(),'foreign group source unchanged from upload: '+stem+'/'+language)
+                    change=approved_foreign_changes.get(source.relative_to(patterns).as_posix())
+                    if change:
+                        check(ident==85 and language in {'Haskell','Scala'} and baseline_source.is_file()
+                              and hashlib.sha256(baseline_source.read_bytes()).hexdigest()==change['before_sha256']
+                              and hashlib.sha256(source.read_bytes()).hexdigest()==change['after_sha256'],
+                              'foreign group source: reviewed symmetric 085 shortening: '+stem+'/'+language)
+                    else:
+                        check(baseline_source.is_file() and source.read_bytes()==baseline_source.read_bytes(),'foreign group source unchanged from upload: '+stem+'/'+language)
                     if styled:check(published.get('foreign',{}).get(language)==full_metric(code),'functional publication foreign metric: '+stem+'/'+language)
                 if ident<=90 and language!='LMX':
                     label=f'group/{stem}/{language}';foreign_clients.append((code,label))
@@ -587,7 +602,7 @@ def check_packet(patterns,baseline):
             receipt=read_json(path) or {}
             receipts[label]={'file':path.relative_to(patterns).as_posix(),'file_sha256':hashlib.sha256(path.read_bytes()).hexdigest(),'reported_status':receipt.get('status'),'executed_cases':receipt.get('executed_cases'),'executed_checks':receipt.get('executed_checks'),'provenance':'Existing separate receipt; not executed by this validator.'}
     runtime={'executed_by_this_validator':[],'LMX':'NOT_RUN','Julia':'NOT_RUN','Haskell':'NOT_RUN','Scala':'NOT_RUN','separate_receipts':receipts}
-    return {'edition':'2026-11-23','status':'PASS' if not errors else 'FAIL','scope':'Комплектность, идентичность исходников, зеркала публикации и границы импортов; это не разбор, компиляция, runtime или проверка скорости.','source_root':str(spec),'immutable_baseline':str(baseline),'uploaded_archive_sha256':provenance['base_archive']['sha256'],'historical_provenance':provenance.get('historical_provenance',{}),'summary':summary,'checks_count':len(checks),'checks':checks,'errors':errors,'warnings':warnings,'runtime':runtime}
+    return {'edition':'2026-11-24','status':'PASS' if not errors else 'FAIL','scope':'Комплектность, идентичность исходников, зеркала публикации и границы импортов; это не разбор, компиляция, runtime или проверка скорости.','source_root':str(spec),'immutable_baseline':str(baseline),'uploaded_archive_sha256':provenance['base_archive']['sha256'],'historical_provenance':provenance.get('historical_provenance',{}),'summary':summary,'checks_count':len(checks),'checks':checks,'errors':errors,'warnings':warnings,'runtime':runtime}
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)

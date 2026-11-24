@@ -13,7 +13,7 @@ Postfix type constructors return ordinary int codes. Normalization reads an init
 | Source | Role |
 | --- | --- |
 | [kernel_contracts.lmx](src/kernel_contracts.lmx) | Thin existing analyzer/builder/call hooks and five phase hooks for ordinary invocation |
-| [fn_operand.lmx](src/fn_operand.lmx) | Existing `to` operand with explicitly composed left/right, mode and priority |
+| [fn_operand.lmx](src/fn_operand.lmx) | Existing `->` operand with explicitly composed left/right, mode and priority |
 | [generic_functions.lmx](src/generic_functions.lmx) | Exact signature construction, prefix admission, partial/curry/flip/uncurry |
 | [adapter_frames.lmx](src/adapter_frames.lmx) | Real source input policies, projection entries, one-place reads, observation and snapshots |
 | [generic_runtime.lmx](src/generic_runtime.lmx) | Ready-actual apply and wrapper entry without eager argument capture |

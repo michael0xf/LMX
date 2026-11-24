@@ -114,9 +114,11 @@ def main():
         text=text.replace('При равном договоре выбирается кратчайшая полноценная запись; размещение функции в ядре не даёт её клиенту приоритета.','Обе стилевые записи одного договора сравниваются полностью; одна не исключается ради краткости.')
         text=text.replace('Самый короткий полный вариант','Обе полные стилевые записи')
         heading='## Процедурная и функциональная формы'
-        text=re.sub(r'^'+re.escape(heading)+r'\n[\s\S]*?(?=^## |\Z)','',text,flags=re.M)
         rel='../OPTIMIZATION_REVIEW.md' if name.startswith('haskell/') else 'OPTIMIZATION_REVIEW.md'
-        text+='\n'+heading+'\n\nВсе24 сценария опубликованы в двух полных LMX-записях с одним договором. [Таблица и ссылки]('+rel+'). Оба текста, включая все Throws, входят в сравнение. Минимальные формы copy/raw/place/Message могут совпадать; для каждого такого случая дано объяснение. Иностранные исходники и статус аналогий не изменяются.\n'
+        # Preserve authored scope/methodology in an existing section. Refreshing
+        # metrics does not authorize replacing the all-suite scope with 24 roots.
+        if heading not in text:
+            text+='\n'+heading+'\n\nВсе24 исходных сценария опубликованы в двух полных LMX-записях с одним договором. [Таблица и ссылки]('+rel+'). Оба текста, включая все Throws, входят в сравнение. Минимальные формы copy/raw/place/Message могут совпадать; для каждого такого случая дано объяснение. Иностранные исходники и статус аналогий не изменяются.\n'
         text=ensure_startup_note(text,os.path.relpath(ROOT.parent/'LMX_semantics.en.md',path.parent)+'#source-entry-profiles')
         path.write_text(text)
     print(json.dumps({'root_scenarios':len(entries),'compared_style_records':2*len(entries),'unique_lmx_sources':len({v['source_file'] for e in entries for v in e['lmx_variants'].values()}),'same_minimal_form':sum(e['style_relation']=='same_minimal_form' for e in entries),'foreign_sources_changed':False}))

@@ -44,7 +44,7 @@ for(const source of model.documents){
     sh.getRange(`A1:${last}2`).format={fill:ink,font:{name:'Arial',size:18,bold:true,color:'#FFFFFF'},verticalAlignment:'center'};
     sh.getRange(`A1:${last}2`).format.rowHeight=24;
     sh.getRange(`A3:${last}3`).merge();
-    sh.getRange('A3').values=[['23 ноября 2026 · полные листинги · все объявления и Throws включены']];
+    sh.getRange('A3').values=[['24 ноября 2026 · полные листинги · все объявления и Throws включены']];
     sh.getRange(`A3:${last}3`).format={font:{name:'Arial',size:10,color:'#526575'},rowHeight:30,wrapText:true};
     const widths=view.tables[0].widths;
     for(let c=0;c<maxColumns;c++)sh.getRange(`${column(c)}:${column(c)}`).format.columnWidth=Math.max(8,(widths[c]||1)*13);

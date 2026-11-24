@@ -28,7 +28,7 @@ make_counter — определение предметного объекта п
 
 | Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
 | --- | ---: | ---: | ---: |
-| LMX процедурный | 539 | 794 | 26 |
+| LMX процедурный | 522 | 777 | 26 |
 | LMX функциональный | 290 | 436 | 16 |
 | Perl | 224 | 288 | 12 |
 
@@ -53,7 +53,7 @@ Example:
     int: initial
     return: @
     run:
-        throws: copy(FxSeqPush\append\throws) copy(FxRecordOperands\record\throws)
+        throws: copy(FxSeqPush\append\throws) copy(record\throws)
         @: first (merge(Counter; (int: value initial)))
         @: second (merge(Counter; (int: value 100)))
         @[]: out []
@@ -68,7 +68,7 @@ Example:
         return: out
 ```
 
-[Полный исходник](source/lmx/procedural/P22.lm3). 539 непробельных символов; 26 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/procedural/P22.lm3). 522 непробельных символов; 26 непустых строк. Все объявления и Throws включены.
 
 ## LMX — функциональный
 

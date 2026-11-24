@@ -60,7 +60,7 @@ Addition:
 ClosureProbe:
     return: int
     run:
-        throws: copy(FxPartial\partial\throws)
+        throws: copy(partial\throws)
         @: add5 partial(Addition\add; (5))
         @: add100 partial(Addition\add; (100))
         int: saved 1000
@@ -87,7 +87,7 @@ closureExample =
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
 | LMX — процедурный | 495 | 31 |
-| LMX — функциональный | 249 | 14 |
+| LMX — функциональный | 239 | 14 |
 | Haskell | **143** | 7 |
 
 Обе LMX-записи учитываются целиком, включая объявления, общие локальные helpers и Throws. Ошибки не исключаются из подсчёта. Общая реализация ядра не размножается ради стилей. Существующий статус иностранной пары/аналогии сохранён.

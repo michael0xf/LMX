@@ -58,7 +58,7 @@ Success: log 123 and the action result. Body failure: log 123 and propagation. A
 
 Independent captured prefixes: direct environments and the common curry operation.
 
-Declare addition and create two independent bindings add5/add100 through staged curry or partial. Native Haskell application and Scala Function2.curried provide the control clients. Keep saved=1000 and the repeated add5(1); the result is 6101006.
+Declare addition and create independent prefixes 5 and 100 through staged curry or partial. Reuse add5 twice and immediately call the one-use 100 branch. Native Haskell application and Scala Function2.curried provide the control clients; the result is 6101006.
 
 6, 101, 6; demo returns 6101006. The returned function has exactly one explicit int input. The LMX library prototype is unchanged and the two created functions are independent.
 
@@ -72,7 +72,7 @@ The general case retains input order/types, exact R and declared failures. The a
 
 ## Методика / Method
 
-Two complete LMX style clients are compared for082–085; neither is removed by a shortest-source selection. All declarations and Throws count in full. Shared implementation records091/092/098/099 retain one canonical LMX body; foreign sources are unchanged.
+Two complete LMX style clients are compared for082–085; neither is removed by a shortest-source selection. All declarations and Throws count in full. Shared implementation records091/092/098/099 retain one canonical LMX body; foreign clients retain their observable contract; 085 removes the same unused and single-use locals in Haskell and Scala.
 
 [Comparison](LMX_Comparison_09_functional_computation.md) · [Excel](LMX_Comparison_09_functional_computation.xlsx) · [PDF](LMX_Comparison_09_functional_computation.pdf) · [CSV](LMX_Comparison_09_functional_computation.csv)
 

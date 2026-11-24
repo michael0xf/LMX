@@ -26,6 +26,7 @@ Repository:
         return: int
         accepts:
             return: row\id = id
+    ---
     find:
         throws: copy(FxThrows\predicate)
         @: found findFirst(rows; Match\accepts)

@@ -4,7 +4,7 @@
 # 212 вызовных имён и отдельно готовые Pattern/config/type значения. Каждая Structure — @[].
 # FxKernel: 8 исходных границ + 5 фаз вызова + 4 доступа к Array + AE01 + AR01.
 # Это проект интеграции; реальное ядро и LMX-fixtures здесь не исполнялись.
-# Name :: DATA и to взаимозаменяемы, кроме сохранённого отношения именованной сигнатуры с call.
+# Name :: DATA и -> строят одинаковый позиционный тип, кроме сохранённого отношения именованной сигнатуры с call.
 # Ни автоматического запуска, ни новой VM, ни автоматической компиляции.
 # Загружать сборку ИЛИ отдельные файлы, не оба варианта вместе.
 
@@ -837,7 +837,7 @@ FxSlice:
         return: FxSeqSlice\slice(source := values; begin := start; end := start + count)
 
 # Name :: DATA создаёт описание сигнатуры, не исполняемое тело.
-# Used by the existing to operand and the general factories.
+# Used by the existing -> operand and the general factories.
 # Normalized @ references point to canonical int type-code records; the current
 # type registry retains full models, and no public boxed Type kind is added.
 FxSignatures:
@@ -1110,7 +1110,7 @@ FxUncurry:
         return: FxWrap\make(flatContract; FxUncurryEngine\run; state; failures; FxOwnPolicy\make(flatContract))
 
 # SOURCE: src/fn_operand.lmx
-# Shared signature construction. Public to uses inputs first and result last.
+# Shared signature construction. Public -> uses inputs first and result last.
 # FxSignatureOperand is the private result/inputs engine; FxToTypes and
 # FxToTokens map both public forms into that one body. TYPE tokens remain
 # complete requirements, including uninitialised records and exact void.
@@ -1142,7 +1142,7 @@ FxToTypes:
         @: result
     required: inputs result
     return: @
-    to:
+    `->`:
         throws: copy(FxThrows\selection)
         return: FxSignatureOperand\make(
             left := result;
@@ -1153,22 +1153,22 @@ FxToTokens:
     private: @[]: tokens
     required: tokens
     return: @
-    to:
+    `->`:
         throws: FxArity copy(FxThrows\selection)
         if: length(tokens) = 0
             throw: FxArity()
         private: int: last length(tokens) - 1
         private: @[]: inputs FxSeqSlice\slice(tokens; 0; last)
-        return: FxToTypes\to(inputs := inputs; result := tokens[last])
+        return: FxToTypes\`->`(inputs := inputs; result := tokens[last])
 
 FxToOperand:
     copy: FxPreparedOperands
     const: int: PRIORITY sys\priority("+")
     required: left right
     return: @
-    to:
+    `->`:
         throws: FxArity copy(FxThrows\selection)
-        return: FxToTokens\to(
+        return: FxToTokens\`->`(
             tokens := RxLogicalArguments\collect(left := left; right := right)
         )
 
@@ -6353,8 +6353,11 @@ RxSplit:
         return: parts
 
 # SOURCE: src/regex/operands.lmx
-# The common executor already prepares left/right exactly once, including the
-# one conditional RIGHT-only opening. Nothing in this file opens a container.
+# The Expression grouper resolves the supplied graph, priorities and field streams.
+# Its application adapter packs left as one actual and the current right stream
+# as an Array of references. This collector only copies that prepared vector;
+# there is no additional opening pass.
+# See ../../../../LMX_semantics.en.md#expression-structural-grouping.
 # An absent left stays nil; it is not replaced by null/zero or autofill.
 
 RxLogicalArguments:
@@ -8481,10 +8484,10 @@ PublishedFamilies:
             @: call RxSignature\signature
             @: operand StandardOperands\signature
     ---
-    to:
+    `->`:
         default:
-            @: call FxToTokens\to
-            @: operand FxToOperand\to
+            @: call FxToTokens\`->`
+            @: operand FxToOperand\`->`
     ---
     curry:
         default:
@@ -9571,7 +9574,7 @@ fun:
         @: types RxTypes\types
         @: names RxNames\names
         @: signature RxSignature\signature
-        @: to FxToTokens\to
+        @: `->` FxToTokens\`->`
         @: curry FxLambda\lambda
         @: apply FxApply\apply
         @: partial FxPartial\partial
@@ -9906,7 +9909,7 @@ FxGenericExamples:
         int: pairNumber 0
         char[]: pairText ""
         @: pairValue pairLast(p0 := "seven")
-        (pairNumber pairText) := (copy(pairValue))
+        (pairNumber pairText) := copy(pairValue)
         sys\assert(pairNumber = 7)
         sys\assert(length(pairText) = 5)
         @: procedure FxLambda\lambda(operation := FxProcedureTarget\run)
@@ -9992,8 +9995,8 @@ RxStructureExamples:
 # SOURCE: examples/fn_and_assignment.lmx
 # Подготовленные проверки приёмки, а не отчёт о выполненном прогоне ядра.
 # Нужны generic_functions.lmx, fn_operand.lmx и поставщик FxKernel из KERNEL_REQUIREMENTS.md.
-# Реальный метод операнда — FxToOperand\to. Каноническое написание
-# T0 to T1 R — обычное ядерное имя в стандартном namespace ядра.
+# Реальный метод операнда — FxToOperand\`->`. Каноническое написание
+# T0 -> T1 R — обычное ядерное имя в стандартном namespace ядра.
 # Именованное объявление полностью перенесено в Name :: Signature.
 # Пустые строки разделяют только корневые формы.
 # Каждый run возвращает 1 при выполнении всех проверок.
@@ -10040,7 +10043,7 @@ FxFnReadyCodesExample:
     return: int
     run:
         throws: copy(FxThrows\fixture)
-        @: made (sys\typeof(FxFnReadySamples[0]) FxToOperand\to sys\typeof(FxFnReadySamples[1]) sys\typeof(FxFnReadySamples[2]) sys\typeof(FxFnReadySamples[0]))
+        @: made (sys\typeof(FxFnReadySamples[0]) FxToOperand\`->` sys\typeof(FxFnReadySamples[1]) sys\typeof(FxFnReadySamples[2]) sys\typeof(FxFnReadySamples[0]))
         @: info FxKernel\signature(subject := made)
         sys\assert(length(info\inputTypes) = 3)
         sys\assert(info\hasResult = 1)
@@ -10066,7 +10069,7 @@ FxFnUninitExample:
         tokens[0] := FxFnUninitSamples\integral[0]
         tokens[1] := FxFnUninitSamples\real[0]
         tokens[2] := FxFnUninitSamples\reference[0]
-        @: made FxToTypes\to(inputs := tokens; result := FxFnUninitSamples\integral[0])
+        @: made FxToTypes\`->`(inputs := tokens; result := FxFnUninitSamples\integral[0])
         @: info FxKernel\signature(subject := made)
         sys\assert(length(info\inputTypes) = 3)
         sys\assert(info\hasResult = 1)
@@ -10098,7 +10101,7 @@ FxFnProcedureExample:
         @: original FxKernel\signature(subject := FxFnProcedureTarget\run)
         sys\assert(original\hasResult = 0)
         @[]: tokens []
-        @: made FxToTypes\to(inputs := tokens; result := original\resultType)
+        @: made FxToTypes\`->`(inputs := tokens; result := original\resultType)
         @: info FxKernel\signature(subject := made)
         sys\assert(length(info\inputTypes) = 0)
         sys\assert(info\hasResult = 0)
@@ -10130,9 +10133,9 @@ FxAssignmentSource:
     int: second 5
     int: third 6
 
-# 5. Сохранённая P0 группа содержит copy(s), а общий механизм потребления
-# получает его поля для позиционной записи. Не требуется снимать группу
-# при разборе и не разрешается рекурсивно раскрывать произвольные контейнеры.
+# 5. copy(s) даёт явный поток полей для позиционной записи; внешняя группа
+# справа не нужна. Группировщик сохраняет дерево и текущий уровень потока,
+# а адаптер применения собирает левую группу в один аргумент.
 FxGroupCopyExample:
     return: int
     run:
@@ -10141,7 +10144,7 @@ FxGroupCopyExample:
         int: b 0
         int: c 0
         @: s FxAssignmentSource
-        (a b c) := (copy(s))
+        (a b c) := copy(s)
         sys\assert(a = 4)
         sys\assert(b = 5)
         sys\assert(c = 6)
@@ -10165,7 +10168,7 @@ FxFnAndAssignmentExamples:
 # - инструментировать чтение uninit: ни make, ни normalizeType не читают payload;
 # - проверить qualified operand в interpreter/native и всех переходах между ними;
 # - обеспечить lifetime материализованных ready int-токенов;
-# - повторить операндный пример с прямым ядерным именем to и проверить
+# - повторить операндный пример с прямым ядерным именем -> и проверить
 #   совместимость с FxFnExpectedMixed :: (...);
 # - неизвестный код типа отказывает с FxTypeToken, не создавая успешный descriptor;
 # - mismatch длины в групповом присваивании обнаруживается до первой записи;
@@ -10192,7 +10195,7 @@ FxFnEquivalenceExamples:
         throws: copy(FxThrows\capture)
         private: @: empty (copy(()))
         private: @: originalInfo FxKernel\signature(subject := FxMixedTarget\evaluate)
-        private: @: tokenContract FxToTypes\to(inputs := originalInfo\inputTypes; result := originalInfo\resultType)
+        private: @: tokenContract FxToTypes\`->`(inputs := originalInfo\inputTypes; result := originalInfo\resultType)
         # Новое fn-требование принимает callable с прежним именованным DATA.
         private: tokenContract@: acceptsNamed FxMixedTarget\evaluate
         sys\assert(acceptsNamed(p0 := 2; p1 := 1.5; p2 := "abc") = 6.0)
@@ -10209,7 +10212,7 @@ FxFnEquivalenceExamples:
         sys\assert(generatedForToken(p0 := 1; p1 := 2.0; p2 := "x") = 3.0)
         # void остаётся отсутствием return, не @0, int0 или пустой Structure.
         private: @: procedureInfo FxKernel\signature(subject := FxProcedureTarget\run)
-        private: @: procedureType FxToTypes\to(inputs := procedureInfo\inputTypes; result := procedureInfo\resultType)
+        private: @: procedureType FxToTypes\`->`(inputs := procedureInfo\inputTypes; result := procedureInfo\resultType)
         private: procedureType@: newAcceptsOldProcedure FxProcedureTarget\run
         private: @: generatedProcedure FxPartial\partial(FxProcedureTarget\run; prefix := empty)
         private: FxLegacyProcedureContract@: oldAcceptsNewProcedure generatedProcedure
@@ -10219,7 +10222,7 @@ FxFnEquivalenceExamples:
         sys\assert(FxGenericCounter\calls = before + 8)
         # Нулевая арность не подменяется одним фиктивным void-параметром.
         private: @: nullaryInfo FxKernel\signature(subject := FxNullaryTarget\value)
-        private: @: nullaryType FxToTypes\to(inputs := empty; result := nullaryInfo\resultType)
+        private: @: nullaryType FxToTypes\`->`(inputs := empty; result := nullaryInfo\resultType)
         private: nullaryType@: typedNullary FxNullaryTarget\value
         private: @: generatedNullary FxPartial\partial(FxNullaryTarget\value; prefix := empty)
         private: FxLegacyNullaryContract@: legacyNullary generatedNullary

@@ -33,8 +33,8 @@ accumulate не возвращает init отдельным первым эле
 
 | Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
 | --- | ---: | ---: | ---: |
-| LMX процедурный | 250 | 396 | 15 |
-| LMX функциональный | 136 | 184 | 7 |
+| LMX процедурный | 233 | 379 | 15 |
+| LMX функциональный | 113 | 161 | 7 |
 | Julia | 50 | 57 | 1 |
 
 Обе LMX-формы опубликованы и считаются независимо. Все определения, обработчики и ссылки на throws входят в полный размер. Выбор единственного LMX-варианта по длине не выполняется.
@@ -47,7 +47,7 @@ Example:
     int: seed
     return: @
     run:
-        throws: copy(FxSeqPush\append\throws) copy(FxRecordOperands\record\throws)
+        throws: copy(FxSeqPush\append\throws) copy(record\throws)
         @[]: out []
         int: total seed
         FxSeqPush\append(out; (total record))
@@ -59,7 +59,7 @@ Example:
         return: out
 ```
 
-[Полный исходник](source/lmx/procedural/J08.lm3). 250 непробельных символов; 15 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/procedural/J08.lm3). 233 непробельных символов; 15 непустых строк. Все объявления и Throws включены.
 
 ## LMX — функциональный
 
@@ -69,11 +69,11 @@ Example:
     int: seed
     return: @
     run:
-        throws: copy(FxScan\scan\throws) copy(FxRecordOperands\record\throws)
+        throws: copy(scanl\throws) copy(record\throws)
         return: scanl(xs; (seed record); `+`)
 ```
 
-[Полный исходник](source/lmx/J08.lm3). 136 непробельных символов; 7 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/J08.lm3). 113 непробельных символов; 7 непустых строк. Все объявления и Throws включены.
 
 ## Julia
 

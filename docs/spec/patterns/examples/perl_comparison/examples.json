@@ -183,7 +183,7 @@
           "expected": []
         }
       ],
-      "lmx": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(FxSeqCompress\\compress\\throws)\n        return: compress(items; items % 2 = 0)\n",
+      "lmx": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(compress\\throws)\n        return: compress(items; items % 2 = 0)\n",
       "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($items) = @_;\n    return [grep { $_ % 2 == 0 } @$items];\n}\n",
       "core_functions": [
         "compress"
@@ -205,8 +205,8 @@
       },
       "counts": {
         "lmx": {
-          "characters": 148,
-          "nonwhitespace": 105,
+          "characters": 134,
+          "nonwhitespace": 91,
           "nonblank_lines": 6
         },
         "foreign": {
@@ -236,16 +236,16 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(FxRecordOperands\\record\\throws)\n        int[]: out []\n        int: i 0\n        while: i < length(items)\n            if: items[i] % 2 = 0\n                FxSeqPush\\append(out; (items[i] record))\n            i += 1\n        return: out\n",
+          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        int[]: out []\n        int: i 0\n        while: i < length(items)\n            if: items[i] % 2 = 0\n                FxSeqPush\\append(out; (items[i] record))\n            i += 1\n        return: out\n",
           "source_file": "source/lmx/procedural/P02.lm3",
           "contract_id": "P02",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 208,
-            "characters_with_whitespace": 333,
+            "characters": 191,
+            "characters_with_whitespace": 316,
             "nonblank_lines": 12,
-            "utf8_bytes": 333,
-            "sha256": "3f0528cafa13ae7b7fc03e67fe43f6e74edea03f2f2ff937a3598c8c03f2f526"
+            "utf8_bytes": 316,
+            "sha256": "c90a163d7121b9f7dc35a665a18f25f9b3024e818321aa7144a15f03611def92"
           },
           "core_functions": [
             "copy",
@@ -256,16 +256,16 @@
           ]
         },
         "functional": {
-          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(FxSeqCompress\\compress\\throws)\n        return: compress(items; items % 2 = 0)\n",
+          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(compress\\throws)\n        return: compress(items; items % 2 = 0)\n",
           "source_file": "source/lmx/P02.lm3",
           "contract_id": "P02",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 105,
-            "characters_with_whitespace": 148,
+            "characters": 91,
+            "characters_with_whitespace": 134,
             "nonblank_lines": 6,
-            "utf8_bytes": 148,
-            "sha256": "e468e32609f40d55520fcac972af2b64de80bab8abc412290dfa2e6365fd4c42"
+            "utf8_bytes": 134,
+            "sha256": "3ea18546902b1da243ac5f1f776013c095c8cd6309b9951c06363be151acab8b"
           },
           "core_functions": [
             "compress"
@@ -451,7 +451,7 @@
           ]
         }
       ],
-      "lmx": "Example:\n    int[]: deltas\n    int: initial\n    return: @\n    run:\n        throws: copy(FxScan\\scan\\throws) copy(FxRecordOperands\\record\\throws)\n        return: scanl(deltas; (initial record); `+`)\n",
+      "lmx": "Example:\n    int[]: deltas\n    int: initial\n    return: @\n    run:\n        throws: copy(scanl\\throws) copy(record\\throws)\n        return: scanl(deltas; (initial record); `+`)\n",
       "foreign": "use strict;\nuse warnings;\nuse List::Util qw(reductions);\nsub example {\n    my ($deltas, $initial) = @_;\n    return [reductions { $a + $b } $initial, @$deltas];\n}\n",
       "core_functions": [
         "scanl"
@@ -475,8 +475,8 @@
       },
       "counts": {
         "lmx": {
-          "characters": 198,
-          "nonwhitespace": 150,
+          "characters": 175,
+          "nonwhitespace": 127,
           "nonblank_lines": 7
         },
         "foreign": {
@@ -511,16 +511,16 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: deltas\n    int: initial\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(FxRecordOperands\\record\\throws)\n        @[]: out []\n        int: total initial\n        FxSeqPush\\append(out; (total record))\n        int: i 0\n        while: i < length(deltas)\n            total += deltas[i]\n            FxSeqPush\\append(out; (total record))\n            i += 1\n        return: out\n",
+          "code": "Example:\n    int[]: deltas\n    int: initial\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        @[]: out []\n        int: total initial\n        FxSeqPush\\append(out; (total record))\n        int: i 0\n        while: i < length(deltas)\n            total += deltas[i]\n            FxSeqPush\\append(out; (total record))\n            i += 1\n        return: out\n",
           "source_file": "source/lmx/procedural/P04.lm3",
           "contract_id": "P04",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 268,
-            "characters_with_whitespace": 414,
+            "characters": 251,
+            "characters_with_whitespace": 397,
             "nonblank_lines": 15,
-            "utf8_bytes": 414,
-            "sha256": "42f4d5227edcf9af0076bce6caf66c53b2aa01524ce6313ae25c4deac987dc57"
+            "utf8_bytes": 397,
+            "sha256": "2a7df92e14d1c9a53b3132b1db65b93935bde2209c81cd7d8b64872490741df5"
           },
           "core_functions": [
             "copy",
@@ -531,16 +531,16 @@
           ]
         },
         "functional": {
-          "code": "Example:\n    int[]: deltas\n    int: initial\n    return: @\n    run:\n        throws: copy(FxScan\\scan\\throws) copy(FxRecordOperands\\record\\throws)\n        return: scanl(deltas; (initial record); `+`)\n",
+          "code": "Example:\n    int[]: deltas\n    int: initial\n    return: @\n    run:\n        throws: copy(scanl\\throws) copy(record\\throws)\n        return: scanl(deltas; (initial record); `+`)\n",
           "source_file": "source/lmx/P04.lm3",
           "contract_id": "P04",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 150,
-            "characters_with_whitespace": 198,
+            "characters": 127,
+            "characters_with_whitespace": 175,
             "nonblank_lines": 7,
-            "utf8_bytes": 198,
-            "sha256": "9cd69d7164fa55ccfc581694eacd5d9d5fa6ab699e660c55bbf38a80434d1561"
+            "utf8_bytes": 175,
+            "sha256": "69890793a56d830eaebbc81b505c94b3c80302b667b8d7435c83016c617a3557"
           },
           "core_functions": [
             "scanl"
@@ -607,7 +607,7 @@
           ]
         }
       ],
-      "lmx": "Below:\n    int: value\n    return: int\n    test:\n        return: value < threshold\n\nExample:\n    int[]: items\n    return: @\n    run:\n        throws: copy(FxSeqAny\\any\\throws) copy(FxSeqAll\\all\\throws)\n        int: threshold 0\n        int: negative any(items; Below\\test)\n        threshold := 10\n        return: (negative; all(items; Below\\test))\n",
+      "lmx": "Below:\n    int: value\n    return: int\n    test:\n        return: value < threshold\n\nExample:\n    int[]: items\n    return: @\n    run:\n        throws: copy(any\\throws) copy(all\\throws)\n        int: threshold 0\n        int: negative any(items; Below\\test)\n        threshold := 10\n        return: (negative; all(items; Below\\test))\n",
       "foreign": "use strict;\nuse warnings;\nuse List::Util qw(any all);\nsub example {\n    my ($items) = @_;\n    return [0 + (any { $_ < 0 } @$items), 0 + (all { $_ < 10 } @$items)];\n}\n",
       "core_functions": [
         "any",
@@ -637,8 +637,8 @@
       },
       "counts": {
         "lmx": {
-          "characters": 345,
-          "nonwhitespace": 239,
+          "characters": 327,
+          "nonwhitespace": 221,
           "nonblank_lines": 14
         },
         "foreign": {
@@ -708,16 +708,16 @@
           "low_level_operations": []
         },
         "functional": {
-          "code": "Below:\n    int: value\n    return: int\n    test:\n        return: value < threshold\n\nExample:\n    int[]: items\n    return: @\n    run:\n        throws: copy(FxSeqAny\\any\\throws) copy(FxSeqAll\\all\\throws)\n        int: threshold 0\n        int: negative any(items; Below\\test)\n        threshold := 10\n        return: (negative; all(items; Below\\test))\n",
+          "code": "Below:\n    int: value\n    return: int\n    test:\n        return: value < threshold\n\nExample:\n    int[]: items\n    return: @\n    run:\n        throws: copy(any\\throws) copy(all\\throws)\n        int: threshold 0\n        int: negative any(items; Below\\test)\n        threshold := 10\n        return: (negative; all(items; Below\\test))\n",
           "source_file": "source/lmx/P05.lm3",
           "contract_id": "P05",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 239,
-            "characters_with_whitespace": 345,
+            "characters": 221,
+            "characters_with_whitespace": 327,
             "nonblank_lines": 14,
-            "utf8_bytes": 345,
-            "sha256": "154d678a87a40a467f3c55e29bdeb05c3ec90832878c453528be286cf0135f3e"
+            "utf8_bytes": 327,
+            "sha256": "775db0bcc77ac2c9fe480f72fc111b8bb5f346df9b8806034865247e0c826ff0"
           },
           "core_functions": [
             "any",
@@ -795,7 +795,7 @@
           "expected": []
         }
       ],
-      "lmx": "Example:\n    @: items\n    int[]: positions\n    return: @\n    run:\n        throws: copy(RxSelect\\select\\throws)\n        return: select(items; positions)\n",
+      "lmx": "Example:\n    @: items\n    int[]: positions\n    return: @\n    run:\n        throws: copy(select\\throws)\n        return: select(items; positions)\n",
       "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($items, $positions) = @_;\n    return [@$items[@$positions]];\n}\n",
       "core_functions": [
         "select"
@@ -819,8 +819,8 @@
       },
       "counts": {
         "lmx": {
-          "characters": 152,
-          "nonwhitespace": 107,
+          "characters": 143,
+          "nonwhitespace": 98,
           "nonblank_lines": 7
         },
         "foreign": {
@@ -876,16 +876,16 @@
           ]
         },
         "functional": {
-          "code": "Example:\n    @: items\n    int[]: positions\n    return: @\n    run:\n        throws: copy(RxSelect\\select\\throws)\n        return: select(items; positions)\n",
+          "code": "Example:\n    @: items\n    int[]: positions\n    return: @\n    run:\n        throws: copy(select\\throws)\n        return: select(items; positions)\n",
           "source_file": "source/lmx/P06.lm3",
           "contract_id": "P06",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 107,
-            "characters_with_whitespace": 152,
+            "characters": 98,
+            "characters_with_whitespace": 143,
             "nonblank_lines": 7,
-            "utf8_bytes": 152,
-            "sha256": "8ebe1d1d6d637103110b6751056a09f15b1b3e79afd9442e4226c4c0fdf98134"
+            "utf8_bytes": 143,
+            "sha256": "47bdb3ef9623e8d72dc2f80db3b8b1ac5f7671b917ad942908c8831b2925ec45"
           },
           "core_functions": [
             "select"
@@ -1004,7 +1004,7 @@
           ]
         }
       ],
-      "lmx": "Example:\n    @: items\n    int: begin\n    int: end\n    @: values\n    return: @\n    run:\n        throws: copy(FxSeqSplice\\splice\\throws)\n        @: removed splice(items; begin; end; values)\n        return: (items; removed)\n",
+      "lmx": "Example:\n    @: items\n    int: begin\n    int: end\n    @: values\n    return: @\n    run:\n        throws: copy(splice\\throws)\n        @: removed splice(items; begin; end; values)\n        return: (items; removed)\n",
       "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($items, $begin, $end, $values) = @_;\n    my @removed = splice @$items, $begin, $end - $begin, @$values;\n    return [$items, \\@removed];\n}\n",
       "core_functions": [
         "splice"
@@ -1028,8 +1028,8 @@
       },
       "counts": {
         "lmx": {
-          "characters": 221,
-          "nonwhitespace": 150,
+          "characters": 209,
+          "nonwhitespace": 138,
           "nonblank_lines": 10
         },
         "foreign": {
@@ -1091,16 +1091,16 @@
           ]
         },
         "functional": {
-          "code": "Example:\n    @: items\n    int: begin\n    int: end\n    @: values\n    return: @\n    run:\n        throws: copy(FxSeqSplice\\splice\\throws)\n        @: removed splice(items; begin; end; values)\n        return: (items; removed)\n",
+          "code": "Example:\n    @: items\n    int: begin\n    int: end\n    @: values\n    return: @\n    run:\n        throws: copy(splice\\throws)\n        @: removed splice(items; begin; end; values)\n        return: (items; removed)\n",
           "source_file": "source/lmx/P07.lm3",
           "contract_id": "P07",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 150,
-            "characters_with_whitespace": 221,
+            "characters": 138,
+            "characters_with_whitespace": 209,
             "nonblank_lines": 10,
-            "utf8_bytes": 221,
-            "sha256": "67d4db5ab0ec1eafc4e85e10b2fb462d32f4b0e33e1e9acf9bead5fad498c4eb"
+            "utf8_bytes": 209,
+            "sha256": "c2223678f514c5784f71602f22b6272afe5f172d80005740e2bbf877bea598f7"
           },
           "core_functions": [
             "splice"
@@ -1222,7 +1222,7 @@
           ]
         }
       ],
-      "lmx": "Order:\n    @: first\n    @: second\n    return: int\n    compare:\n        return: (first\\priority > second\\priority) - (first\\priority < second\\priority)\n\nExample:\n    @: items\n    return: @\n    run:\n        throws: copy(FxSort\\sort\\throws)\n        return: sort(items; Order\\compare)\n",
+      "lmx": "Order:\n    @: first\n    @: second\n    return: int\n    compare:\n        return: (first\\priority > second\\priority) - (first\\priority < second\\priority)\n\nExample:\n    @: items\n    return: @\n    run:\n        throws: copy(sort\\throws)\n        return: sort(items; Order\\compare)\n",
       "foreign": "use strict;\nuse warnings;\nuse sort 'stable';\nsub example {\n    my ($items) = @_;\n    return [sort { $a->{priority} <=> $b->{priority} } @$items];\n}\n",
       "core_functions": [
         "sort"
@@ -1248,8 +1248,8 @@
       },
       "counts": {
         "lmx": {
-          "characters": 281,
-          "nonwhitespace": 201,
+          "characters": 274,
+          "nonwhitespace": 194,
           "nonblank_lines": 12
         },
         "foreign": {
@@ -1310,16 +1310,16 @@
           ]
         },
         "functional": {
-          "code": "Order:\n    @: first\n    @: second\n    return: int\n    compare:\n        return: (first\\priority > second\\priority) - (first\\priority < second\\priority)\n\nExample:\n    @: items\n    return: @\n    run:\n        throws: copy(FxSort\\sort\\throws)\n        return: sort(items; Order\\compare)\n",
+          "code": "Order:\n    @: first\n    @: second\n    return: int\n    compare:\n        return: (first\\priority > second\\priority) - (first\\priority < second\\priority)\n\nExample:\n    @: items\n    return: @\n    run:\n        throws: copy(sort\\throws)\n        return: sort(items; Order\\compare)\n",
           "source_file": "source/lmx/P08.lm3",
           "contract_id": "P08",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 201,
-            "characters_with_whitespace": 281,
+            "characters": 194,
+            "characters_with_whitespace": 274,
             "nonblank_lines": 12,
-            "utf8_bytes": 281,
-            "sha256": "39845161c186b58475cc21b16fdc3a8b4e220f8ae0e2215b53bba3f69e795932"
+            "utf8_bytes": 274,
+            "sha256": "922d69a663f32ac1b339b759cc65f35e3a1871ece5c0195ac64c86d4a1e70db8"
           },
           "core_functions": [
             "sort"
@@ -1391,7 +1391,7 @@
           ]
         }
       ],
-      "lmx": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(FxUnique\\unique\\throws)\n        return: unique(items)\n",
+      "lmx": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(unique\\throws)\n        return: unique(items)\n",
       "foreign": "use strict;\nuse warnings;\nuse List::Util qw(uniq);\nsub example {\n    my ($items) = @_;\n    return [uniq @$items];\n}\n",
       "core_functions": [
         "unique"
@@ -1415,8 +1415,8 @@
       },
       "counts": {
         "lmx": {
-          "characters": 124,
-          "nonwhitespace": 86,
+          "characters": 115,
+          "nonwhitespace": 77,
           "nonblank_lines": 6
         },
         "foreign": {
@@ -1458,16 +1458,16 @@
       "lmx_runtime_execution": "NOT_RUN",
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(FxRecordOperands\\record\\throws)\n        int[]: out []\n        int: i 0\n        while: i < length(items)\n            int: j 0\n            while: j < length(out) && out[j] != items[i]\n                j += 1\n            if: j = length(out)\n                FxSeqPush\\append(out; (items[i] record))\n            i += 1\n        return: out\n",
+          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        int[]: out []\n        int: i 0\n        while: i < length(items)\n            int: j 0\n            while: j < length(out) && out[j] != items[i]\n                j += 1\n            if: j = length(out)\n                FxSeqPush\\append(out; (items[i] record))\n            i += 1\n        return: out\n",
           "source_file": "source/lmx/procedural/P09.lm3",
           "contract_id": "P09",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 256,
-            "characters_with_whitespace": 433,
+            "characters": 239,
+            "characters_with_whitespace": 416,
             "nonblank_lines": 15,
-            "utf8_bytes": 433,
-            "sha256": "23710e1f030bf92023bf634ceaccad243f86ff8d5f50a764d9cf39c639a4f883"
+            "utf8_bytes": 416,
+            "sha256": "04fe508141b041d3ff4cc830926260c7822f9b84e046dc425f8ee3cb68ceff68"
           },
           "core_functions": [
             "copy",
@@ -1478,16 +1478,16 @@
           ]
         },
         "functional": {
-          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(FxUnique\\unique\\throws)\n        return: unique(items)\n",
+          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(unique\\throws)\n        return: unique(items)\n",
           "source_file": "source/lmx/P09.lm3",
           "contract_id": "P09",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 86,
-            "characters_with_whitespace": 124,
+            "characters": 77,
+            "characters_with_whitespace": 115,
             "nonblank_lines": 6,
-            "utf8_bytes": 124,
-            "sha256": "1d6992b2af4cbc109bb0ec1c0adf28df32f30fb87cb6d581cd6ac2014640a208"
+            "utf8_bytes": 115,
+            "sha256": "4bb96a8694223476e368c2e0d9967627a18143a784afc994591a454536e4907f"
           },
           "core_functions": [
             "unique"
@@ -1581,7 +1581,7 @@
           ]
         }
       ],
-      "lmx": "Frequency:\n    FxGroup@: group\n    return: @\n    row:\n        return: (\\group\\key; length(group\\items))\n\nExample:\n    int[]: items\n    return: @\n    run:\n        throws: copy(FxMap\\map\\throws) copy(FxGroupBy\\groupBy\\throws)\n        return: map(groupBy(items); Frequency\\row)\n",
+      "lmx": "Frequency:\n    FxGroup@: group\n    return: @\n    row:\n        return: (\\group\\key; length(group\\items))\n\nExample:\n    int[]: items\n    return: @\n    run:\n        throws: copy(map\\throws) copy(groupBy\\throws)\n        return: map(groupBy(items); Frequency\\row)\n",
       "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($items) = @_;\n    my (%count, @order);\n    for (@$items) {\n        push @order, $_ unless exists $count{$_};\n        ++$count{$_};\n    }\n    return [map { [0 + $_, $count{$_}] } @order];\n}\n",
       "core_functions": [
         "groupBy",
@@ -1613,8 +1613,8 @@
       },
       "counts": {
         "lmx": {
-          "characters": 275,
-          "nonwhitespace": 205,
+          "characters": 259,
+          "nonwhitespace": 189,
           "nonblank_lines": 11
         },
         "foreign": {
@@ -1680,16 +1680,16 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(FxRecordOperands\\record\\throws)\n        @[]: out []\n        int: i 0\n        while: i < length(items)\n            int: j 0\n            while: j < length(out) && \\out[j]\\[0] != items[i]\n                j += 1\n            if: j = length(out)\n                FxSeqPush\\append(out; ((items[i]; 0) record))\n            @: row out[j]\n            int: count \\row[1]\n            row[1] := ((count + 1) record)\n            i += 1\n        return: out\n",
+          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        @[]: out []\n        int: i 0\n        while: i < length(items)\n            int: j 0\n            while: j < length(out) && \\out[j]\\[0] != items[i]\n                j += 1\n            if: j = length(out)\n                FxSeqPush\\append(out; ((items[i]; 0) record))\n            @: row out[j]\n            int: count \\row[1]\n            row[1] := ((count + 1) record)\n            i += 1\n        return: out\n",
           "source_file": "source/lmx/procedural/P10.lm3",
           "contract_id": "P10",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 315,
-            "characters_with_whitespace": 541,
+            "characters": 298,
+            "characters_with_whitespace": 524,
             "nonblank_lines": 18,
-            "utf8_bytes": 541,
-            "sha256": "6ac0eeb4421839327acd5fb8c7226151f926fa3d7d640025ac6d7a8e78eb9e74"
+            "utf8_bytes": 524,
+            "sha256": "cd33f72af9229750cd439b77223ddd72c94ebb60a01be1c76faaab7840c224a3"
           },
           "core_functions": [
             "copy",
@@ -1700,16 +1700,16 @@
           ]
         },
         "functional": {
-          "code": "Frequency:\n    FxGroup@: group\n    return: @\n    row:\n        return: (\\group\\key; length(group\\items))\n\nExample:\n    int[]: items\n    return: @\n    run:\n        throws: copy(FxMap\\map\\throws) copy(FxGroupBy\\groupBy\\throws)\n        return: map(groupBy(items); Frequency\\row)\n",
+          "code": "Frequency:\n    FxGroup@: group\n    return: @\n    row:\n        return: (\\group\\key; length(group\\items))\n\nExample:\n    int[]: items\n    return: @\n    run:\n        throws: copy(map\\throws) copy(groupBy\\throws)\n        return: map(groupBy(items); Frequency\\row)\n",
           "source_file": "source/lmx/P10.lm3",
           "contract_id": "P10",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 205,
-            "characters_with_whitespace": 275,
+            "characters": 189,
+            "characters_with_whitespace": 259,
             "nonblank_lines": 11,
-            "utf8_bytes": 275,
-            "sha256": "db2fef507395fe0cb493c5234cdfa8d9bc3697d1033ec46768830ee99f523eb3"
+            "utf8_bytes": 259,
+            "sha256": "1baeae5c23ebed2e68656a614ef237aeb58c8c3555cadcf53b35288a5eb60d01"
           },
           "core_functions": [
             "groupBy",
@@ -1857,7 +1857,7 @@
           ]
         }
       ],
-      "lmx": "Key:\n    @: event\n    return: int\n    get:\n        return: event\\kind\n\nGroupRow:\n    FxGroup@: group\n    return: @\n    row:\n        return: (\\group\\key; group\\items)\n\nExample:\n    @: items\n    return: @\n    run:\n        throws: copy(FxMap\\map\\throws) copy(FxGroupBy\\groupBy\\throws)\n        return: map(groupBy(items; Key\\get); GroupRow\\row)\n",
+      "lmx": "Key:\n    @: event\n    return: int\n    get:\n        return: event\\kind\n\nGroupRow:\n    FxGroup@: group\n    return: @\n    row:\n        return: (\\group\\key; group\\items)\n\nExample:\n    @: items\n    return: @\n    run:\n        throws: copy(map\\throws) copy(groupBy\\throws)\n        return: map(groupBy(items; Key\\get); GroupRow\\row)\n",
       "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($items) = @_;\n    my (%groups, @order);\n    for my $event (@$items) {\n        my $key = $event->{kind};\n        push @order, $key unless exists $groups{$key};\n        push @{$groups{$key}}, $event;\n    }\n    return [map { [0 + $_, $groups{$_}] } @order];\n}\n",
       "core_functions": [
         "groupBy",
@@ -1888,8 +1888,8 @@
       },
       "counts": {
         "lmx": {
-          "characters": 341,
-          "nonwhitespace": 241,
+          "characters": 325,
+          "nonwhitespace": 225,
           "nonblank_lines": 16
         },
         "foreign": {
@@ -1955,16 +1955,16 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    @: items\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqRead\\read\\throws) copy(FxSeqPush\\append\\throws) copy(FxRecordOperands\\record\\throws)\n        FxSeqInfo\\get(items)\n        @[]: out []\n        int: i 0\n        while: i < length(items)\n            @: held FxSeqRead\\read(items; i)\n            @: event \\held\n            int: key event\\kind\n            int: j 0\n            while: j < length(out) && \\out[j]\\[0] != key\n                j += 1\n            if: j = length(out)\n                @: group (copy(()))\n                FxSeqPush\\append(out; ((key; group) record))\n            @: group \\out[j]\\[1]\n            FxSeqPush\\append(group; held)\n            i += 1\n        return: out\n",
+          "code": "Example:\n    @: items\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqRead\\read\\throws) copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        FxSeqInfo\\get(items)\n        @[]: out []\n        int: i 0\n        while: i < length(items)\n            @: held FxSeqRead\\read(items; i)\n            @: event \\held\n            int: key event\\kind\n            int: j 0\n            while: j < length(out) && \\out[j]\\[0] != key\n                j += 1\n            if: j = length(out)\n                @: group (copy(()))\n                FxSeqPush\\append(out; ((key; group) record))\n            @: group \\out[j]\\[1]\n            FxSeqPush\\append(group; held)\n            i += 1\n        return: out\n",
           "source_file": "source/lmx/procedural/P11.lm3",
           "contract_id": "P11",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 447,
-            "characters_with_whitespace": 730,
+            "characters": 430,
+            "characters_with_whitespace": 713,
             "nonblank_lines": 22,
-            "utf8_bytes": 730,
-            "sha256": "146a01bd5d4d10408833b763486252e6b687cf3543b815e2c7d8c3fc7a03a017"
+            "utf8_bytes": 713,
+            "sha256": "a574d077ffe9bdc0cd6affc7c2f9b747b62f2048130e8563393d0254af77536d"
           },
           "core_functions": [
             "copy",
@@ -1977,16 +1977,16 @@
           ]
         },
         "functional": {
-          "code": "Key:\n    @: event\n    return: int\n    get:\n        return: event\\kind\n\nGroupRow:\n    FxGroup@: group\n    return: @\n    row:\n        return: (\\group\\key; group\\items)\n\nExample:\n    @: items\n    return: @\n    run:\n        throws: copy(FxMap\\map\\throws) copy(FxGroupBy\\groupBy\\throws)\n        return: map(groupBy(items; Key\\get); GroupRow\\row)\n",
+          "code": "Key:\n    @: event\n    return: int\n    get:\n        return: event\\kind\n\nGroupRow:\n    FxGroup@: group\n    return: @\n    row:\n        return: (\\group\\key; group\\items)\n\nExample:\n    @: items\n    return: @\n    run:\n        throws: copy(map\\throws) copy(groupBy\\throws)\n        return: map(groupBy(items; Key\\get); GroupRow\\row)\n",
           "source_file": "source/lmx/P11.lm3",
           "contract_id": "P11",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 241,
-            "characters_with_whitespace": 341,
+            "characters": 225,
+            "characters_with_whitespace": 325,
             "nonblank_lines": 16,
-            "utf8_bytes": 341,
-            "sha256": "7e2bb13e0f865c9904c0e1d57b0408693d3e0c1bb3e4c1adc0bf97359e208d0e"
+            "utf8_bytes": 325,
+            "sha256": "ab24cadbe3ac7ee17f4bcf57a82114369f218acfc8adb2bed9191a22f9a2ff57"
           },
           "core_functions": [
             "groupBy",
@@ -2221,7 +2221,7 @@
           ]
         }
       ],
-      "lmx": "Example:\n    @: rows\n    return: @\n    run:\n        throws: copy(FxSeqConcat\\concat\\throws)\n        return: concat(rows)\n",
+      "lmx": "Example:\n    @: rows\n    return: @\n    run:\n        throws: copy(concat\\throws)\n        return: concat(rows)\n",
       "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($rows) = @_;\n    return [map { @$_ } @$rows];\n}\n",
       "core_functions": [
         "concat"
@@ -2244,8 +2244,8 @@
       },
       "counts": {
         "lmx": {
-          "characters": 121,
-          "nonwhitespace": 83,
+          "characters": 109,
+          "nonwhitespace": 71,
           "nonblank_lines": 6
         },
         "foreign": {
@@ -2298,16 +2298,16 @@
           ]
         },
         "functional": {
-          "code": "Example:\n    @: rows\n    return: @\n    run:\n        throws: copy(FxSeqConcat\\concat\\throws)\n        return: concat(rows)\n",
+          "code": "Example:\n    @: rows\n    return: @\n    run:\n        throws: copy(concat\\throws)\n        return: concat(rows)\n",
           "source_file": "source/lmx/P13.lm3",
           "contract_id": "P13",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 83,
-            "characters_with_whitespace": 121,
+            "characters": 71,
+            "characters_with_whitespace": 109,
             "nonblank_lines": 6,
-            "utf8_bytes": 121,
-            "sha256": "d7f69bf04f089cbdd26053a6f27f868a59f426266afbe1af4b335bb4fc94b387"
+            "utf8_bytes": 109,
+            "sha256": "ae176cdcce4a956db3503891300a16d29040e1b745f4e36d855618e8b8b8bc4e"
           },
           "core_functions": [
             "concat"
@@ -2368,7 +2368,7 @@
           ]
         }
       ],
-      "lmx": "Example:\n    char[]: text\n    return: @\n    run:\n        throws: copy(RxByteText\\byteText\\throws) copy(RxSplit\\split\\throws)\n        return: split(byteText(text); \",\")\n",
+      "lmx": "Example:\n    char[]: text\n    return: @\n    run:\n        throws: copy(byteText\\throws) copy(split\\throws)\n        return: split(byteText(text); \",\")\n",
       "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($text) = @_;\n    return length($text) ? [split /,/, $text, -1] : [''];\n}\n",
       "core_functions": [
         "split"
@@ -2395,8 +2395,8 @@
       },
       "counts": {
         "lmx": {
-          "characters": 168,
-          "nonwhitespace": 128,
+          "characters": 149,
+          "nonwhitespace": 109,
           "nonblank_lines": 6
         },
         "foreign": {
@@ -2465,16 +2465,16 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    char[]: text\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws) copy(FxSeqPush\\append\\throws) copy(FxRecordOperands\\record\\throws)\n        @[]: out []\n        int: begin 0\n        int: i 0\n        while: 1\n            if: i = length(text) || text[i] = ','\n                char[]: part []\n                sys\\resize(part; i - begin)\n                int: j 0\n                while: j < length(part)\n                    part[j] := text[begin + j]\n                    j += 1\n                FxSeqPush\\append(out; (part record))\n                if: i = length(text)\n                    return: out\n                begin := i + 1\n            i += 1\n",
+          "code": "Example:\n    char[]: text\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws) copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        @[]: out []\n        int: begin 0\n        int: i 0\n        while: 1\n            if: i = length(text) || text[i] = ','\n                char[]: part []\n                sys\\resize(part; i - begin)\n                int: j 0\n                while: j < length(part)\n                    part[j] := text[begin + j]\n                    j += 1\n                FxSeqPush\\append(out; (part record))\n                if: i = length(text)\n                    return: out\n                begin := i + 1\n            i += 1\n",
           "source_file": "source/lmx/procedural/P14.lm3",
           "contract_id": "P14",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 352,
-            "characters_with_whitespace": 668,
+            "characters": 335,
+            "characters_with_whitespace": 651,
             "nonblank_lines": 21,
-            "utf8_bytes": 668,
-            "sha256": "274ece6a4e9b0deffcd736d4d25e1e29224d2630882459ee0ce66d79a225bc0f"
+            "utf8_bytes": 651,
+            "sha256": "6aada5e6db9b2a869c195c24e765bad9cb28e8accdd54f301de506ff0904cee9"
           },
           "core_functions": [
             "copy",
@@ -2486,16 +2486,16 @@
           ]
         },
         "functional": {
-          "code": "Example:\n    char[]: text\n    return: @\n    run:\n        throws: copy(RxByteText\\byteText\\throws) copy(RxSplit\\split\\throws)\n        return: split(byteText(text); \",\")\n",
+          "code": "Example:\n    char[]: text\n    return: @\n    run:\n        throws: copy(byteText\\throws) copy(split\\throws)\n        return: split(byteText(text); \",\")\n",
           "source_file": "source/lmx/P14.lm3",
           "contract_id": "P14",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 128,
-            "characters_with_whitespace": 168,
+            "characters": 109,
+            "characters_with_whitespace": 149,
             "nonblank_lines": 6,
-            "utf8_bytes": 168,
-            "sha256": "db935f3140fc2c50185a68b5aca3955bfe776372cdd75ec10768fd163aa40290"
+            "utf8_bytes": 149,
+            "sha256": "f427a4d62ee87930d331c8a70783a5b8a6ca2be0f3fe8d82a1800e2a3bd1c7c4"
           },
           "core_functions": [
             "split"
@@ -2547,7 +2547,7 @@
           "expected": 0
         }
       ],
-      "lmx": "Example:\n    char[]: text\n    return: int\n    run:\n        throws: copy(RxByteText\\byteText\\throws) copy(RxRepeatOperands\\atLeast\\throws) copy(RxThenOperand\\then\\throws) copy(RxMatches\\matches\\throws)\n        return: matches(byteText(text); (then asciiLetter (asciiWord atLeast 0)))\n",
+      "lmx": "Example:\n    char[]: text\n    return: int\n    run:\n        throws: copy(byteText\\throws) copy(atLeast\\throws) copy(RxThenOperand\\then\\throws) copy(matches\\throws)\n        return: matches(byteText(text); (then asciiLetter (asciiWord atLeast 0)))\n",
       "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($text) = @_;\n    return 0 + ($text =~ /\\A[A-Za-z][A-Za-z0-9_]*\\z/);\n}\n",
       "core_functions": [
         "matches"
@@ -2578,8 +2578,8 @@
       },
       "counts": {
         "lmx": {
-          "characters": 283,
-          "nonwhitespace": 237,
+          "characters": 245,
+          "nonwhitespace": 199,
           "nonblank_lines": 6
         },
         "foreign": {
@@ -2657,16 +2657,16 @@
           "low_level_operations": []
         },
         "functional": {
-          "code": "Example:\n    char[]: text\n    return: int\n    run:\n        throws: copy(RxByteText\\byteText\\throws) copy(RxRepeatOperands\\atLeast\\throws) copy(RxThenOperand\\then\\throws) copy(RxMatches\\matches\\throws)\n        return: matches(byteText(text); (then asciiLetter (asciiWord atLeast 0)))\n",
+          "code": "Example:\n    char[]: text\n    return: int\n    run:\n        throws: copy(byteText\\throws) copy(atLeast\\throws) copy(RxThenOperand\\then\\throws) copy(matches\\throws)\n        return: matches(byteText(text); (then asciiLetter (asciiWord atLeast 0)))\n",
           "source_file": "source/lmx/P15.lm3",
           "contract_id": "P15",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 237,
-            "characters_with_whitespace": 283,
+            "characters": 199,
+            "characters_with_whitespace": 245,
             "nonblank_lines": 6,
-            "utf8_bytes": 283,
-            "sha256": "054cb49814640826d4d8675f047b6090669d8366cdbf2e1fe29e9a0dd5be8533"
+            "utf8_bytes": 245,
+            "sha256": "9411e99cc8d611f46282afbe167c243c403bf50acf2f2accd790df421105e2cf"
           },
           "core_functions": [
             "matches"
@@ -2738,7 +2738,7 @@
           ]
         }
       ],
-      "lmx": "Example:\n    char[]: text\n    return: @\n    run:\n        throws: copy(RxByteText\\byteText\\throws) copy(RxRepeatOperands\\atLeast\\throws) copy(RxCapture\\capture\\throws) copy(RxThenOperand\\then\\throws) copy(RxWholeMatch\\wholeMatch\\throws) copy(RxCaptureValue\\captureValue\\throws)\n        @: parsed wholeMatch(byteText(text); (then capture(\"key\"; (asciiLetter atLeast 1)) \"=\" capture(\"value\"; (asciiDigit atLeast 1))))\n        if: parsed\\present = 0\n            return: (0; \"\"; \"\")\n        @: key captureValue(parsed\\value; \"key\")\n        @: value captureValue(parsed\\value; \"value\")\n        return: (1; \\key\\value; \\value\\value)\n",
+      "lmx": "Example:\n    char[]: text\n    return: @\n    run:\n        throws: copy(byteText\\throws) copy(atLeast\\throws) copy(capture\\throws) copy(RxThenOperand\\then\\throws) copy(wholeMatch\\throws) copy(captureValue\\throws)\n        @: parsed wholeMatch(byteText(text); (then capture(\"key\"; (asciiLetter atLeast 1)) \"=\" capture(\"value\"; (asciiDigit atLeast 1))))\n        if: parsed\\present = 0\n            return: (0; \"\"; \"\")\n        @: key captureValue(parsed\\value; \"key\")\n        @: value captureValue(parsed\\value; \"value\")\n        return: (1; \\key\\value; \\value\\value)\n",
       "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($text) = @_;\n    return [0, '', ''] unless $text =~ /\\A(?<key>[A-Za-z]+)=(?<value>[0-9]+)\\z/;\n    return [1, $+{key}, $+{value}];\n}\n",
       "core_functions": [
         "wholeMatch",
@@ -2774,8 +2774,8 @@
       },
       "counts": {
         "lmx": {
-          "characters": 626,
-          "nonwhitespace": 508,
+          "characters": 560,
+          "nonwhitespace": 442,
           "nonblank_lines": 11
         },
         "foreign": {
@@ -2890,16 +2890,16 @@
           ]
         },
         "functional": {
-          "code": "Example:\n    char[]: text\n    return: @\n    run:\n        throws: copy(RxByteText\\byteText\\throws) copy(RxRepeatOperands\\atLeast\\throws) copy(RxCapture\\capture\\throws) copy(RxThenOperand\\then\\throws) copy(RxWholeMatch\\wholeMatch\\throws) copy(RxCaptureValue\\captureValue\\throws)\n        @: parsed wholeMatch(byteText(text); (then capture(\"key\"; (asciiLetter atLeast 1)) \"=\" capture(\"value\"; (asciiDigit atLeast 1))))\n        if: parsed\\present = 0\n            return: (0; \"\"; \"\")\n        @: key captureValue(parsed\\value; \"key\")\n        @: value captureValue(parsed\\value; \"value\")\n        return: (1; \\key\\value; \\value\\value)\n",
+          "code": "Example:\n    char[]: text\n    return: @\n    run:\n        throws: copy(byteText\\throws) copy(atLeast\\throws) copy(capture\\throws) copy(RxThenOperand\\then\\throws) copy(wholeMatch\\throws) copy(captureValue\\throws)\n        @: parsed wholeMatch(byteText(text); (then capture(\"key\"; (asciiLetter atLeast 1)) \"=\" capture(\"value\"; (asciiDigit atLeast 1))))\n        if: parsed\\present = 0\n            return: (0; \"\"; \"\")\n        @: key captureValue(parsed\\value; \"key\")\n        @: value captureValue(parsed\\value; \"value\")\n        return: (1; \\key\\value; \\value\\value)\n",
           "source_file": "source/lmx/P16.lm3",
           "contract_id": "P16",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 508,
-            "characters_with_whitespace": 626,
+            "characters": 442,
+            "characters_with_whitespace": 560,
             "nonblank_lines": 11,
-            "utf8_bytes": 626,
-            "sha256": "99314b086a6122468ebc9ccb40f46b8d823fc8e70f85b9819eea27506eefdc55"
+            "utf8_bytes": 560,
+            "sha256": "bb9b5ed921d90314896ea85aa2dd6c73a67b450600e9181542b294090af61670"
           },
           "core_functions": [
             "wholeMatch",
@@ -2954,7 +2954,7 @@
           "expected": []
         }
       ],
-      "lmx": "Example:\n    char[]: text\n    return: @\n    run:\n        throws: copy(RxByteText\\byteText\\throws) copy(RxRepeatOperands\\atLeast\\throws) copy(RxEachMatch\\eachMatch\\throws) copy(FxStdCollect\\collect\\throws) copy(FxMap\\map\\throws) copy(RxMatchedValue\\matchedValue\\throws)\n        return: map(collect(eachMatch(byteText(text); (asciiLetter atLeast 1))); matchedValue)\n",
+      "lmx": "Example:\n    char[]: text\n    return: @\n    run:\n        throws: copy(byteText\\throws) copy(atLeast\\throws) copy(eachMatch\\throws) copy(collect\\throws) copy(map\\throws) copy(matchedValue\\throws)\n        return: map(collect(eachMatch(byteText(text); (asciiLetter atLeast 1))); matchedValue)\n",
       "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($text) = @_;\n    return [$text =~ /[A-Za-z]+/g];\n}\n",
       "core_functions": [
         "eachMatch",
@@ -2992,8 +2992,8 @@
       },
       "counts": {
         "lmx": {
-          "characters": 364,
-          "nonwhitespace": 317,
+          "characters": 290,
+          "nonwhitespace": 243,
           "nonblank_lines": 6
         },
         "foreign": {
@@ -3123,16 +3123,16 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Ascii:\n    char: value\n    return: int\n    letter:\n        return: (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z')\n\n\nExample:\n    char[]: text\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws) copy(FxSeqPush\\append\\throws) copy(FxRecordOperands\\record\\throws)\n        @[]: out []\n        int: i 0\n        while: i < length(text)\n            while: i < length(text) && Ascii\\letter(text[i]) = 0\n                i += 1\n            int: begin i\n            while: i < length(text) && Ascii\\letter(text[i]) != 0\n                i += 1\n            if: i > begin\n                char[]: word []\n                sys\\resize(word; i - begin)\n                int: j 0\n                while: j < length(word)\n                    word[j] := text[begin + j]\n                    j += 1\n                FxSeqPush\\append(out; (word record))\n        ---\n        return: out\n",
+          "code": "Ascii:\n    char: value\n    return: int\n    letter:\n        return: (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z')\n\n\nExample:\n    char[]: text\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws) copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        @[]: out []\n        int: i 0\n        while: i < length(text)\n            while: i < length(text) && Ascii\\letter(text[i]) = 0\n                i += 1\n            int: begin i\n            while: i < length(text) && Ascii\\letter(text[i]) != 0\n                i += 1\n            if: i > begin\n                char[]: word []\n                sys\\resize(word; i - begin)\n                int: j 0\n                while: j < length(word)\n                    word[j] := text[begin + j]\n                    j += 1\n                FxSeqPush\\append(out; (word record))\n        ---\n        return: out\n",
           "source_file": "source/lmx/procedural/P17.lm3",
           "contract_id": "P17",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 506,
-            "characters_with_whitespace": 887,
+            "characters": 489,
+            "characters_with_whitespace": 870,
             "nonblank_lines": 28,
-            "utf8_bytes": 887,
-            "sha256": "0cdb3e389a5d177f78c2ddcc741acf46ea2c4099cc001fb4a16fb489c3f460b8"
+            "utf8_bytes": 870,
+            "sha256": "741c0b118b9bd0d67d8587b373a220ad3b8ceb284063c1f0be2b96bc2d293020"
           },
           "core_functions": [
             "copy",
@@ -3144,16 +3144,16 @@
           ]
         },
         "functional": {
-          "code": "Example:\n    char[]: text\n    return: @\n    run:\n        throws: copy(RxByteText\\byteText\\throws) copy(RxRepeatOperands\\atLeast\\throws) copy(RxEachMatch\\eachMatch\\throws) copy(FxStdCollect\\collect\\throws) copy(FxMap\\map\\throws) copy(RxMatchedValue\\matchedValue\\throws)\n        return: map(collect(eachMatch(byteText(text); (asciiLetter atLeast 1))); matchedValue)\n",
+          "code": "Example:\n    char[]: text\n    return: @\n    run:\n        throws: copy(byteText\\throws) copy(atLeast\\throws) copy(eachMatch\\throws) copy(collect\\throws) copy(map\\throws) copy(matchedValue\\throws)\n        return: map(collect(eachMatch(byteText(text); (asciiLetter atLeast 1))); matchedValue)\n",
           "source_file": "source/lmx/P17.lm3",
           "contract_id": "P17",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 317,
-            "characters_with_whitespace": 364,
+            "characters": 243,
+            "characters_with_whitespace": 290,
             "nonblank_lines": 6,
-            "utf8_bytes": 364,
-            "sha256": "3c27646d609f7eb5599124c5b92c9bba3e313b45d56a774235542f88ed30a5bf"
+            "utf8_bytes": 290,
+            "sha256": "189c69ffcbccdbd8c24a2aee0ff21039b3028a44e18d568f8a15555ccbad59dd"
           },
           "core_functions": [
             "eachMatch",
@@ -3219,7 +3219,7 @@
           "prime_empty_pattern": true
         }
       ],
-      "lmx": "Example:\n    char[]: text\n    char[]: needle\n    char[]: replacement\n    return: char[]\n    run:\n        throws: copy(RxByteText\\byteText\\throws) copy(RxReplace\\replace\\throws)\n        return: replace(byteText(text); needle; replacement)\n",
+      "lmx": "Example:\n    char[]: text\n    char[]: needle\n    char[]: replacement\n    return: char[]\n    run:\n        throws: copy(byteText\\throws) copy(replace\\throws)\n        return: replace(byteText(text); needle; replacement)\n",
       "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($text, $needle, $replacement) = @_;\n    return $text =~ s/(?:\\Q$needle\\E)/$replacement/gr;\n}\n",
       "core_functions": [
         "replace"
@@ -3247,8 +3247,8 @@
       },
       "counts": {
         "lmx": {
-          "characters": 238,
-          "nonwhitespace": 185,
+          "characters": 217,
+          "nonwhitespace": 164,
           "nonblank_lines": 8
         },
         "foreign": {
@@ -3325,16 +3325,16 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    char[]: text\n    char[]: needle\n    char[]: replacement\n    return: char[]\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(FxRecordOperands\\record\\throws)\n        char[]: out []\n        int: i 0\n        while: 1\n            int: same length(needle) <= length(text) - i\n            int: j 0\n            while: same != 0 && j < length(needle)\n                if: text[i + j] != needle[j]\n                    same := 0\n                j += 1\n            if: same != 0\n                j := 0\n                while: j < length(replacement)\n                    FxSeqPush\\append(out; (replacement[j] record))\n                    j += 1\n                if: length(needle) != 0\n                    i += length(needle)\n                    continue\n            ---\n            if: i = length(text)\n                return: out\n            FxSeqPush\\append(out; (text[i] record))\n            i += 1\n",
+          "code": "Example:\n    char[]: text\n    char[]: needle\n    char[]: replacement\n    return: char[]\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        char[]: out []\n        int: i 0\n        while: 1\n            int: same length(needle) <= length(text) - i\n            int: j 0\n            while: same != 0 && j < length(needle)\n                if: text[i + j] != needle[j]\n                    same := 0\n                j += 1\n            if: same != 0\n                j := 0\n                while: j < length(replacement)\n                    FxSeqPush\\append(out; (replacement[j] record))\n                    j += 1\n                if: length(needle) != 0\n                    i += length(needle)\n                    continue\n            ---\n            if: i = length(text)\n                return: out\n            FxSeqPush\\append(out; (text[i] record))\n            i += 1\n",
           "source_file": "source/lmx/procedural/P18.lm3",
           "contract_id": "P18",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 478,
-            "characters_with_whitespace": 911,
+            "characters": 461,
+            "characters_with_whitespace": 894,
             "nonblank_lines": 29,
-            "utf8_bytes": 911,
-            "sha256": "35894d91b47cd82b3e267b31e9327ba0737e2ce563e85fee7f3255c5d1b44fc5"
+            "utf8_bytes": 894,
+            "sha256": "6c883a008af35c1c1dcabaf1756ab3478e02b375e0669ebafecfdb037fc918f3"
           },
           "core_functions": [
             "copy",
@@ -3345,16 +3345,16 @@
           ]
         },
         "functional": {
-          "code": "Example:\n    char[]: text\n    char[]: needle\n    char[]: replacement\n    return: char[]\n    run:\n        throws: copy(RxByteText\\byteText\\throws) copy(RxReplace\\replace\\throws)\n        return: replace(byteText(text); needle; replacement)\n",
+          "code": "Example:\n    char[]: text\n    char[]: needle\n    char[]: replacement\n    return: char[]\n    run:\n        throws: copy(byteText\\throws) copy(replace\\throws)\n        return: replace(byteText(text); needle; replacement)\n",
           "source_file": "source/lmx/P18.lm3",
           "contract_id": "P18",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 185,
-            "characters_with_whitespace": 238,
+            "characters": 164,
+            "characters_with_whitespace": 217,
             "nonblank_lines": 8,
-            "utf8_bytes": 238,
-            "sha256": "406a0f4b5ef486f4f93bf17d8a187958770aada69ded13601333d7c03b3c8d53"
+            "utf8_bytes": 217,
+            "sha256": "50d17b032594cc358c7a6ec71e3522c4764fd9897f9c094082043d871b345d30"
           },
           "core_functions": [
             "replace"
@@ -3400,7 +3400,7 @@
           "expected": "abc"
         }
       ],
-      "lmx": "Mask:\n    Match@: matched\n    return: char[]\n    make:\n        throws: copy(FxTextCycle\\cycle\\throws)\n        return: cycle(\"*\"; matched\\end - matched\\begin)\n\nExample:\n    char[]: text\n    return: char[]\n    run:\n        throws: copy(RxByteText\\byteText\\throws) copy(RxRepeatOperands\\atLeast\\throws) copy(RxReplace\\replace\\throws) copy(Mask\\make\\throws)\n        return: replace(byteText(text); (asciiDigit atLeast 1); Mask\\make)\n",
+      "lmx": "Mask:\n    Match@: matched\n    return: char[]\n    make:\n        throws: copy(FxTextCycle\\cycle\\throws)\n        return: cycle(\"*\"; matched\\end - matched\\begin)\n\nExample:\n    char[]: text\n    return: char[]\n    run:\n        throws: copy(byteText\\throws) copy(atLeast\\throws) copy(replace\\throws) copy(Mask\\make\\throws)\n        return: replace(byteText(text); (asciiDigit atLeast 1); Mask\\make)\n",
       "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($text) = @_;\n    return $text =~ s/[0-9]+/'*' x length($&)/ger;\n}\n",
       "core_functions": [
         "replace",
@@ -3432,8 +3432,8 @@
       },
       "counts": {
         "lmx": {
-          "characters": 429,
-          "nonwhitespace": 342,
+          "characters": 391,
+          "nonwhitespace": 304,
           "nonblank_lines": 12
         },
         "foreign": {
@@ -3553,16 +3553,16 @@
           }
         },
         "functional": {
-          "code": "Mask:\n    Match@: matched\n    return: char[]\n    make:\n        throws: copy(FxTextCycle\\cycle\\throws)\n        return: cycle(\"*\"; matched\\end - matched\\begin)\n\nExample:\n    char[]: text\n    return: char[]\n    run:\n        throws: copy(RxByteText\\byteText\\throws) copy(RxRepeatOperands\\atLeast\\throws) copy(RxReplace\\replace\\throws) copy(Mask\\make\\throws)\n        return: replace(byteText(text); (asciiDigit atLeast 1); Mask\\make)\n",
+          "code": "Mask:\n    Match@: matched\n    return: char[]\n    make:\n        throws: copy(FxTextCycle\\cycle\\throws)\n        return: cycle(\"*\"; matched\\end - matched\\begin)\n\nExample:\n    char[]: text\n    return: char[]\n    run:\n        throws: copy(byteText\\throws) copy(atLeast\\throws) copy(replace\\throws) copy(Mask\\make\\throws)\n        return: replace(byteText(text); (asciiDigit atLeast 1); Mask\\make)\n",
           "source_file": "source/lmx/P19.lm3",
           "contract_id": "P19",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 342,
-            "characters_with_whitespace": 429,
+            "characters": 304,
+            "characters_with_whitespace": 391,
             "nonblank_lines": 12,
-            "utf8_bytes": 429,
-            "sha256": "97095b19ec829892586e73f0662ad4d32f32305869cc11bd2ea533229e952c3a"
+            "utf8_bytes": 391,
+            "sha256": "b8fa5060173203a65b83b5d8408577c861d5b5e2c9c71d4134252caf3d900e38"
           },
           "core_functions": [
             "replace",
@@ -3627,7 +3627,7 @@
           "expected": 0
         }
       ],
-      "lmx": "Example:\n    char[]: text\n    return: int\n    run:\n        throws: copy(RxByteText\\byteText\\throws) copy(RxRepeatOperands\\atLeast\\throws) copy(RxCapture\\capture\\throws) copy(RxSameAs\\sameAs\\throws) copy(RxThenOperand\\then\\throws) copy(RxMatches\\matches\\throws)\n        return: matches(byteText(text); (then capture(\"word\"; (asciiLetter atLeast 1)) \" \" sameAs(\"word\")))\n",
+      "lmx": "Example:\n    char[]: text\n    return: int\n    run:\n        throws: copy(byteText\\throws) copy(atLeast\\throws) copy(capture\\throws) copy(sameAs\\throws) copy(RxThenOperand\\then\\throws) copy(matches\\throws)\n        return: matches(byteText(text); (then capture(\"word\"; (asciiLetter atLeast 1)) \" \" sameAs(\"word\")))\n",
       "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($text) = @_;\n    return 0 + ($text =~ /\\A(?<word>[A-Za-z]+) \\k<word>\\z/);\n}\n",
       "core_functions": [
         "matches"
@@ -3658,8 +3658,8 @@
       },
       "counts": {
         "lmx": {
-          "characters": 369,
-          "nonwhitespace": 318,
+          "characters": 312,
+          "nonwhitespace": 261,
           "nonblank_lines": 6
         },
         "foreign": {
@@ -3737,16 +3737,16 @@
           "low_level_operations": []
         },
         "functional": {
-          "code": "Example:\n    char[]: text\n    return: int\n    run:\n        throws: copy(RxByteText\\byteText\\throws) copy(RxRepeatOperands\\atLeast\\throws) copy(RxCapture\\capture\\throws) copy(RxSameAs\\sameAs\\throws) copy(RxThenOperand\\then\\throws) copy(RxMatches\\matches\\throws)\n        return: matches(byteText(text); (then capture(\"word\"; (asciiLetter atLeast 1)) \" \" sameAs(\"word\")))\n",
+          "code": "Example:\n    char[]: text\n    return: int\n    run:\n        throws: copy(byteText\\throws) copy(atLeast\\throws) copy(capture\\throws) copy(sameAs\\throws) copy(RxThenOperand\\then\\throws) copy(matches\\throws)\n        return: matches(byteText(text); (then capture(\"word\"; (asciiLetter atLeast 1)) \" \" sameAs(\"word\")))\n",
           "source_file": "source/lmx/P20.lm3",
           "contract_id": "P20",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 318,
-            "characters_with_whitespace": 369,
+            "characters": 261,
+            "characters_with_whitespace": 312,
             "nonblank_lines": 6,
-            "utf8_bytes": 369,
-            "sha256": "4d518c02c18b77005f3f4f85ebe6028607be1bdc152d3491d27d1e54d876afdf"
+            "utf8_bytes": 312,
+            "sha256": "1b18a931153ce4df535f8d7e03d4eb4d752ea474cd936c649b027428af2a7777"
           },
           "core_functions": [
             "matches"
@@ -3792,7 +3792,7 @@
           "expected": ""
         }
       ],
-      "lmx": "Example:\n    char[]: text\n    return: char[]\n    run:\n        throws: copy(FxTranslate\\translate\\throws)\n        return: translate(text; \"ACGT\"; \"TGCA\")\n",
+      "lmx": "Example:\n    char[]: text\n    return: char[]\n    run:\n        throws: copy(translate\\throws)\n        return: translate(text; \"ACGT\"; \"TGCA\")\n",
       "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($text) = @_;\n    return $text =~ tr/ACGT/TGCA/r;\n}\n",
       "core_functions": [
         "translate"
@@ -3814,8 +3814,8 @@
       },
       "counts": {
         "lmx": {
-          "characters": 153,
-          "nonwhitespace": 113,
+          "characters": 141,
+          "nonwhitespace": 101,
           "nonblank_lines": 6
         },
         "foreign": {
@@ -3877,16 +3877,16 @@
           ]
         },
         "functional": {
-          "code": "Example:\n    char[]: text\n    return: char[]\n    run:\n        throws: copy(FxTranslate\\translate\\throws)\n        return: translate(text; \"ACGT\"; \"TGCA\")\n",
+          "code": "Example:\n    char[]: text\n    return: char[]\n    run:\n        throws: copy(translate\\throws)\n        return: translate(text; \"ACGT\"; \"TGCA\")\n",
           "source_file": "source/lmx/P21.lm3",
           "contract_id": "P21",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 113,
-            "characters_with_whitespace": 153,
+            "characters": 101,
+            "characters_with_whitespace": 141,
             "nonblank_lines": 6,
-            "utf8_bytes": 153,
-            "sha256": "020dae55b01234bb75ee53073484e6799886aabe4ff820be75ed73b8663953fe"
+            "utf8_bytes": 141,
+            "sha256": "974d97f3c814054e1837212a4e6acdaae7312cee7dc6a1f1ae803200fba2a251"
           },
           "core_functions": [
             "translate"
@@ -3985,16 +3985,16 @@
       "core_sources": {},
       "lmx_variants": {
         "procedural": {
-          "code": "Counter:\n    int: value 0\n    Add:\n        int: delta\n        return: int\n        add:\n            @: owner parent(node)\n            owner\\value += delta\n            return: owner\\value\n\n\n\nExample:\n    int: initial\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(FxRecordOperands\\record\\throws)\n        @: first (merge(Counter; (int: value initial)))\n        @: second (merge(Counter; (int: value 100)))\n        @[]: out []\n        int: value first\\Add\\add(1)\n        FxSeqPush\\append(out; (value record))\n        value := first\\Add\\add(3)\n        FxSeqPush\\append(out; (value record))\n        value := second\\Add\\add(2)\n        FxSeqPush\\append(out; (value record))\n        value := first\\Add\\add(-2)\n        FxSeqPush\\append(out; (value record))\n        return: out\n",
+          "code": "Counter:\n    int: value 0\n    Add:\n        int: delta\n        return: int\n        add:\n            @: owner parent(node)\n            owner\\value += delta\n            return: owner\\value\n\n\n\nExample:\n    int: initial\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        @: first (merge(Counter; (int: value initial)))\n        @: second (merge(Counter; (int: value 100)))\n        @[]: out []\n        int: value first\\Add\\add(1)\n        FxSeqPush\\append(out; (value record))\n        value := first\\Add\\add(3)\n        FxSeqPush\\append(out; (value record))\n        value := second\\Add\\add(2)\n        FxSeqPush\\append(out; (value record))\n        value := first\\Add\\add(-2)\n        FxSeqPush\\append(out; (value record))\n        return: out\n",
           "source_file": "source/lmx/procedural/P22.lm3",
           "contract_id": "P22",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 539,
-            "characters_with_whitespace": 794,
+            "characters": 522,
+            "characters_with_whitespace": 777,
             "nonblank_lines": 26,
-            "utf8_bytes": 794,
-            "sha256": "326a0449498fc34c8c6c46f9c57244cf8e2e2e950f40f7ecaa96b599e9c0cfd7"
+            "utf8_bytes": 777,
+            "sha256": "3cf3a7166a86565314d1dd0599c6508fdfb4d3129ed2007de79d7e8804a70d1a"
           },
           "core_functions": [
             "copy",
@@ -4071,7 +4071,7 @@
           ]
         }
       ],
-      "lmx": "Squares:\n    int: limit 0\n    Next:\n        return: int\n        next:\n            throws: Stop\n            @: owner parent(node)\n            int: i 0\n            while: i < owner\\limit\n                yield: i * i\n                i += 1\n            throw: Stop()\n\nExample:\n    int: limit\n    return: @\n    run:\n        throws: copy(FxStdCollect\\collect\\throws)\n        @: source (merge(Squares; (int: limit limit)))\n        return: collect(source\\Next\\next)\n",
+      "lmx": "Squares:\n    int: limit 0\n    Next:\n        return: int\n        next:\n            throws: Stop\n            @: owner parent(node)\n            int: i 0\n            while: i < owner\\limit\n                yield: i * i\n                i += 1\n            throw: Stop()\n\nExample:\n    int: limit\n    return: @\n    run:\n        throws: copy(collect\\throws)\n        @: source (merge(Squares; (int: limit limit)))\n        return: collect(source\\Next\\next)\n",
       "foreign": "use strict;\nuse warnings;\nsub squares {\n    my ($limit) = @_;\n    my $i = 0;\n    return sub { return undef if $i >= $limit; my $n = $i++; return $n * $n };\n}\nsub example {\n    my ($limit) = @_;\n    my $next = squares($limit);\n    my @result;\n    while (defined(my $value = $next->())) {\n        push @result, $value;\n    }\n    return \\@result;\n}\n",
       "core_functions": [
         "collect"
@@ -4095,8 +4095,8 @@
       },
       "counts": {
         "lmx": {
-          "characters": 458,
-          "nonwhitespace": 260,
+          "characters": 445,
+          "nonwhitespace": 247,
           "nonblank_lines": 19
         },
         "foreign": {
@@ -4136,16 +4136,16 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Squares:\n    int: limit 0\n    Next:\n        return: int\n        next:\n            throws: Stop\n            @: owner parent(node)\n            int: i 0\n            while: i < owner\\limit\n                yield: i * i\n                i += 1\n            throw: Stop()\n\n\n\nExample:\n    int: limit\n    return: @\n    run:\n        throws: copy(Squares\\Next\\next\\throws) copy(FxSeqPush\\append\\throws) copy(FxRecordOperands\\record\\throws)\n        @: source (merge(Squares; (int: limit limit)))\n        @[]: out []\n        while: 1\n            int: value source\\Next\\next()\n            FxSeqPush\\append(out; (value record))\n        catch: Stop()\n            return: out\n",
+          "code": "Squares:\n    int: limit 0\n    Next:\n        return: int\n        next:\n            throws: Stop\n            @: owner parent(node)\n            int: i 0\n            while: i < owner\\limit\n                yield: i * i\n                i += 1\n            throw: Stop()\n\n\n\nExample:\n    int: limit\n    return: @\n    run:\n        throws: copy(Squares\\Next\\next\\throws) copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        @: source (merge(Squares; (int: limit limit)))\n        @[]: out []\n        while: 1\n            int: value source\\Next\\next()\n            FxSeqPush\\append(out; (value record))\n        catch: Stop()\n            return: out\n",
           "source_file": "source/lmx/procedural/P23.lm3",
           "contract_id": "P23",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 390,
-            "characters_with_whitespace": 657,
+            "characters": 373,
+            "characters_with_whitespace": 640,
             "nonblank_lines": 24,
-            "utf8_bytes": 657,
-            "sha256": "c8f32938819406c68f6a633d49342fed40e20faba9c262e9d5274da1fceb2a5c"
+            "utf8_bytes": 640,
+            "sha256": "d01a091059f66c7ba68ce067ca89028bb64674ce4ff0ced1b4f53015c1f98396"
           },
           "core_functions": [
             "copy",
@@ -4157,16 +4157,16 @@
           ]
         },
         "functional": {
-          "code": "Squares:\n    int: limit 0\n    Next:\n        return: int\n        next:\n            throws: Stop\n            @: owner parent(node)\n            int: i 0\n            while: i < owner\\limit\n                yield: i * i\n                i += 1\n            throw: Stop()\n\nExample:\n    int: limit\n    return: @\n    run:\n        throws: copy(FxStdCollect\\collect\\throws)\n        @: source (merge(Squares; (int: limit limit)))\n        return: collect(source\\Next\\next)\n",
+          "code": "Squares:\n    int: limit 0\n    Next:\n        return: int\n        next:\n            throws: Stop\n            @: owner parent(node)\n            int: i 0\n            while: i < owner\\limit\n                yield: i * i\n                i += 1\n            throw: Stop()\n\nExample:\n    int: limit\n    return: @\n    run:\n        throws: copy(collect\\throws)\n        @: source (merge(Squares; (int: limit limit)))\n        return: collect(source\\Next\\next)\n",
           "source_file": "source/lmx/P23.lm3",
           "contract_id": "P23",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 260,
-            "characters_with_whitespace": 458,
+            "characters": 247,
+            "characters_with_whitespace": 445,
             "nonblank_lines": 19,
-            "utf8_bytes": 458,
-            "sha256": "c6cbfe017e86041e1815a8d8049645fb8a0a24889fd9230628772e40704b3ed0"
+            "utf8_bytes": 445,
+            "sha256": "e932e1569c6f8be907690eac43e77393ad573ba0ee8fa556fc44bb730ff72e52"
           },
           "core_functions": [
             "collect"
@@ -4224,7 +4224,7 @@
           ]
         }
       ],
-      "lmx": "Resource:\n    int: value 42\n    int: width 8\n\nTrace:\n    int: mode 0\n    int: events 0\n    eval:\n        Trace\\events := events * 10 + x\n    code:\n        throws: ResourceFailure\n        eval()\n        if: Trace\\mode = mode\n            throw: ResourceFailure()\n    end: code\n    Acquire:\n        return: @\n        open:\n            throws: copy(Trace\\code\\throws)\n            int: x 1\n            code(2)\n        return: Resource\n    Action:\n        @: resource\n        return: int\n        use:\n            throws: copy(Trace\\code\\throws)\n            int: x 2\n            code(1)\n        return: resource\\value + resource\\width\n    Release:\n        @: resource\n        close:\n            int: x 3\n            eval()\n        end: close\n\nExample:\n    int: mode\n    return: @\n    run:\n        throws: copy(FxAround\\around\\throws)\n        Trace\\mode := mode\n        Trace\\events := 0\n        int: value \\bracket(Trace\\Acquire\\open; Trace\\Release\\close; Trace\\Action\\use)\n        return: (value; Trace\\events)\n        catch: FxCallFailure (@: failure)\n            return: (0; Trace\\events)\n",
+      "lmx": "Resource:\n    int: value 42\n    int: width 8\n\nTrace:\n    int: mode 0\n    int: events 0\n    eval:\n        Trace\\events := events * 10 + x\n    code:\n        throws: ResourceFailure\n        eval()\n        if: Trace\\mode = mode\n            throw: ResourceFailure()\n    end: code\n    Acquire:\n        return: @\n        open:\n            throws: copy(Trace\\code\\throws)\n            int: x 1\n            code(2)\n        return: Resource\n    Action:\n        @: resource\n        return: int\n        use:\n            throws: copy(Trace\\code\\throws)\n            int: x 2\n            code(1)\n        return: resource\\value + resource\\width\n    Release:\n        @: resource\n        close:\n            int: x 3\n            eval()\n        end: close\n\nExample:\n    int: mode\n    return: @\n    run:\n        throws: copy(bracket\\throws)\n        Trace\\mode := mode\n        Trace\\events := 0\n        int: value \\bracket(Trace\\Acquire\\open; Trace\\Release\\close; Trace\\Action\\use)\n        return: (value; Trace\\events)\n        catch: FxCallFailure (@: failure)\n            return: (0; Trace\\events)\n",
       "foreign": "use strict;\nuse warnings;\nuse feature 'defer';\nno warnings 'experimental::defer';\nsub example {\n    my ($mode) = @_;\n    my ($events, $value) = (0, 0);\n    eval {\n        $events = $events * 10 + 1;\n        die \"ResourceFailure\\n\" if $mode == 2;\n        my $resource = {value => 42, width => 8};\n        defer { $events = $events * 10 + 3 }\n        $events = $events * 10 + 2;\n        die \"ResourceFailure\\n\" if $mode == 1;\n        $value = $resource->{value} + $resource->{width};\n    };\n    return [$value, $events];\n}\n",
       "core_functions": [
         "bracket"
@@ -4251,8 +4251,8 @@
       },
       "counts": {
         "lmx": {
-          "characters": 1085,
-          "nonwhitespace": 650,
+          "characters": 1077,
+          "nonwhitespace": 642,
           "nonblank_lines": 46
         },
         "foreign": {
@@ -4313,16 +4313,16 @@
           "low_level_operations": []
         },
         "functional": {
-          "code": "Resource:\n    int: value 42\n    int: width 8\n\nTrace:\n    int: mode 0\n    int: events 0\n    eval:\n        Trace\\events := events * 10 + x\n    code:\n        throws: ResourceFailure\n        eval()\n        if: Trace\\mode = mode\n            throw: ResourceFailure()\n    end: code\n    Acquire:\n        return: @\n        open:\n            throws: copy(Trace\\code\\throws)\n            int: x 1\n            code(2)\n        return: Resource\n    Action:\n        @: resource\n        return: int\n        use:\n            throws: copy(Trace\\code\\throws)\n            int: x 2\n            code(1)\n        return: resource\\value + resource\\width\n    Release:\n        @: resource\n        close:\n            int: x 3\n            eval()\n        end: close\n\nExample:\n    int: mode\n    return: @\n    run:\n        throws: copy(FxAround\\around\\throws)\n        Trace\\mode := mode\n        Trace\\events := 0\n        int: value \\bracket(Trace\\Acquire\\open; Trace\\Release\\close; Trace\\Action\\use)\n        return: (value; Trace\\events)\n        catch: FxCallFailure (@: failure)\n            return: (0; Trace\\events)\n",
+          "code": "Resource:\n    int: value 42\n    int: width 8\n\nTrace:\n    int: mode 0\n    int: events 0\n    eval:\n        Trace\\events := events * 10 + x\n    code:\n        throws: ResourceFailure\n        eval()\n        if: Trace\\mode = mode\n            throw: ResourceFailure()\n    end: code\n    Acquire:\n        return: @\n        open:\n            throws: copy(Trace\\code\\throws)\n            int: x 1\n            code(2)\n        return: Resource\n    Action:\n        @: resource\n        return: int\n        use:\n            throws: copy(Trace\\code\\throws)\n            int: x 2\n            code(1)\n        return: resource\\value + resource\\width\n    Release:\n        @: resource\n        close:\n            int: x 3\n            eval()\n        end: close\n\nExample:\n    int: mode\n    return: @\n    run:\n        throws: copy(bracket\\throws)\n        Trace\\mode := mode\n        Trace\\events := 0\n        int: value \\bracket(Trace\\Acquire\\open; Trace\\Release\\close; Trace\\Action\\use)\n        return: (value; Trace\\events)\n        catch: FxCallFailure (@: failure)\n            return: (0; Trace\\events)\n",
           "source_file": "source/lmx/P24.lm3",
           "contract_id": "P24",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 650,
-            "characters_with_whitespace": 1085,
+            "characters": 642,
+            "characters_with_whitespace": 1077,
             "nonblank_lines": 46,
-            "utf8_bytes": 1085,
-            "sha256": "cbf0056c19f627c11dcc5d7cb82350b82009e20a71c432568589ee1d3cbdca99"
+            "utf8_bytes": 1077,
+            "sha256": "b89d6f3736b0a1cc3d278f24ed645f4114fa4fa3ee675688f5af0b85494d6742"
           },
           "core_functions": [
             "bracket"
@@ -4869,7 +4869,7 @@
             "RxThenOperand",
             "RxRepeatOperands"
           ],
-          "file_sha256": "67741793eb7e3a9f8ece6415063d1dcd5ea04ea34b20f4339f13ec5002fedcf8",
+          "file_sha256": "ea77addd55cae48af6539944ef958e42a4b857e9345ae2bf5ffbe6be309db10a",
           "extract_sha256": "81ee120e6a72a455ed967df76d1a091f09e199339a04a71f008de3dfbfb3709c"
         },
         {

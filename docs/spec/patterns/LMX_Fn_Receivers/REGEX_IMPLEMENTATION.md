@@ -149,11 +149,22 @@ Before search, the public role selects `RxReplacementLiteral\accept` or `RxRepla
 
 The established five short Pattern words use `PASS_ARGS_AS_IS = 0`, private `left/right`, an optional left and required right. The runtime supplies an explicitly empty right vector for a postfix form. `then` has the ready priority obtained from `sys\priority("+")`; the four repetition words use `sys\priority("*")`. Their order is left-to-right. The existing priority, binding, modifiers and defaults of `|` remain unchanged.
 
-`RxLogicalArguments` appends the **whole** supplied left reference, if present, followed by the already prepared right elements. It does not reopen a group, unwrap an Array, fold a right tail automatically, re-evaluate any occurrence or inspect written arity to consume neighboring expressions.
+An operand method explicitly calls `RxLogicalArguments` inside its body when its own algorithm needs a logical argument sequence. The helper appends the **whole** supplied left reference, if present, followed by the already prepared right elements. It does not reopen a group, unwrap an Array, fold a right tail automatically, re-evaluate any occurrence or inspect written arity to consume neighboring expressions. The parser and transport preserve an absent left and never move the first right argument into it; this method-owned collection is not a universal pre-call binder.
 
 The absence check `left != nil` uses the current [ordinary absence-state comparison](../../LMX_semantics.en.md#colon-declares); it does **not** dereference `left` or read nonexistent payload bytes. In prepared operand ABI, a written nil/uninitialized value has a present reference to its typed record; an omitted left leaves the receiving reference cell uninitialized. Those must remain different. [The explicit-nil fixture](tests/regex/case_nil_left.lmx) checks that nil data is rejected as Pattern/text, rather than silently omitted.
 
-The sole conditional right opening is still performed once by common operand preparation: a written anonymous left, exactly one right argument, and that right argument a written anonymous Structure. Only one right level opens; the left stays whole. P0 never removes the container. This package performs **zero additional openings**.
+The [Expression grouper](../../LMX_semantics.en.md#expression-structural-grouping)
+handles priorities, groups and field streams from the supplied graph. In
+CODE/Expression an ordinary named Structure with the current lexical parent
+follows the ordinary call path; a named Structure with another parent and every
+anonymous Structure are grouped with the actual parent retained. Whole Pattern
+values remain under their receiving value contract. The separate
+application adapter packages the left side as one actual and the current right
+stream as an Array of references. The established argument vectors follow from
+that plan and ABI, not a conditional opening pass after grouping. Three right
+Structures remain three elements at that level. P0 retains the graph; Pattern
+values accepted under a whole-value contract are not automatically consumed as
+CODE. This package performs **zero additional openings**.
 
 All Pattern receivers also have the general operand representation under the [common form contract](../../OPERATION_FORMS.md); the five short words below retain their established arity/priority policies. Both `then` forms delegate to `RxSequence\then`: an ordinary zero-part call returns `emptyPattern`, a single part is returned, and the established operand form requires at least two logical arguments.
 

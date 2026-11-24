@@ -27,8 +27,8 @@ Perl собирает список встроенным /g. LMX материал
 
 | Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
 | --- | ---: | ---: | ---: |
-| LMX процедурный | 506 | 887 | 28 |
-| LMX функциональный | 317 | 364 | 6 |
+| LMX процедурный | 489 | 870 | 28 |
+| LMX функциональный | 243 | 290 | 6 |
 | Perl | 75 | 99 | 6 |
 
 Обе LMX-формы опубликованы и считаются независимо. Все определения, обработчики и ссылки на throws входят в полный размер. Выбор единственного LMX-варианта по длине не выполняется.
@@ -47,7 +47,7 @@ Example:
     char[]: text
     return: @
     run:
-        throws: copy(sys\resize\throws) copy(FxSeqPush\append\throws) copy(FxRecordOperands\record\throws)
+        throws: copy(sys\resize\throws) copy(FxSeqPush\append\throws) copy(record\throws)
         @[]: out []
         int: i 0
         while: i < length(text)
@@ -68,7 +68,7 @@ Example:
         return: out
 ```
 
-[Полный исходник](source/lmx/procedural/P17.lm3). 506 непробельных символов; 28 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/procedural/P17.lm3). 489 непробельных символов; 28 непустых строк. Все объявления и Throws включены.
 
 ## LMX — функциональный
 
@@ -77,11 +77,11 @@ Example:
     char[]: text
     return: @
     run:
-        throws: copy(RxByteText\byteText\throws) copy(RxRepeatOperands\atLeast\throws) copy(RxEachMatch\eachMatch\throws) copy(FxStdCollect\collect\throws) copy(FxMap\map\throws) copy(RxMatchedValue\matchedValue\throws)
+        throws: copy(byteText\throws) copy(atLeast\throws) copy(eachMatch\throws) copy(collect\throws) copy(map\throws) copy(matchedValue\throws)
         return: map(collect(eachMatch(byteText(text); (asciiLetter atLeast 1))); matchedValue)
 ```
 
-[Полный исходник](source/lmx/P17.lm3). 317 непробельных символов; 6 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/P17.lm3). 243 непробельных символов; 6 непустых строк. Все объявления и Throws включены.
 
 ## Perl
 

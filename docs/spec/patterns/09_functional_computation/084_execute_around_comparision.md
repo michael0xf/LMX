@@ -210,7 +210,7 @@ object ExecuteAroundExample {
 | Haskell | 642 | 21 |
 | Scala | **521** | 27 |
 
-Обе LMX-записи сравниваются самостоятельно. Полный текст включает все объявления, локальные helpers и Throws; заголовки и списки ошибок не вычитаются. Общие тела ядра учитываются один раз в отдельных сравнениях. Минимум сопоставимой строки выделяется в PDF и XLSX зелёным.
+Обе LMX-записи сравниваются самостоятельно. Полный текст включает все объявления, локальные helpers и Throws; заголовки и списки ошибок не вычитаются. Общие тела ядра учитываются один раз в отдельных сравнениях. Минимум сопоставимой строки подчёркивается в PDF и XLSX зелёным; при равенстве отмечаются все победители.
 
 Явные Throws и copy списка вызываемого метода сохраняют точный видимый договор отказов. У процедурной записи нет скрытых обходов через map/filter/fold/unique/pipe/bind или поэлементную Array-арифметику.
 
@@ -232,7 +232,7 @@ The complete local Around and functional bracket preserve one resource lifecycle
 
 **Limits.** The shared observations exercise acquisition and action failure. The full comparison in 098 also specifies release failure and interruption. Haskell masks asynchronous exceptions during setup/cleanup; Scala combines dual failures by severity; LMX uses ordinary finally and Message ownership. These distinct error policies are disclosed, not silently treated as equivalent.
 
-Both complete LMX client styles are counted in full. Existing foreign controls are unchanged. Implementation comparisons retain one canonical body. Revised LMX source has not been executed.
+Both complete LMX client styles are counted in full. Foreign controls retain the same scenario; 085 removes unused and single-use locals consistently across languages. Implementation comparisons retain one canonical body. Revised LMX source has not been executed.
 
 ## Источники
 

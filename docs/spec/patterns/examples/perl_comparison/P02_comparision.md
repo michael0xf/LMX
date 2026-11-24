@@ -35,8 +35,8 @@
 
 | Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
 | --- | ---: | ---: | ---: |
-| LMX процедурный | 208 | 333 | 12 |
-| LMX функциональный | 105 | 148 | 6 |
+| LMX процедурный | 191 | 316 | 12 |
+| LMX функциональный | 91 | 134 | 6 |
 | Perl | 77 | 107 | 6 |
 
 Обе LMX-формы опубликованы и считаются независимо. Все определения, обработчики и ссылки на throws входят в полный размер. Выбор единственного LMX-варианта по длине не выполняется.
@@ -48,7 +48,7 @@ Example:
     int[]: items
     return: @
     run:
-        throws: copy(FxSeqPush\append\throws) copy(FxRecordOperands\record\throws)
+        throws: copy(FxSeqPush\append\throws) copy(record\throws)
         int[]: out []
         int: i 0
         while: i < length(items)
@@ -58,7 +58,7 @@ Example:
         return: out
 ```
 
-[Полный исходник](source/lmx/procedural/P02.lm3). 208 непробельных символов; 12 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/procedural/P02.lm3). 191 непробельных символов; 12 непустых строк. Все объявления и Throws включены.
 
 ## LMX — функциональный
 
@@ -67,11 +67,11 @@ Example:
     int[]: items
     return: @
     run:
-        throws: copy(FxSeqCompress\compress\throws)
+        throws: copy(compress\throws)
         return: compress(items; items % 2 = 0)
 ```
 
-[Полный исходник](source/lmx/P02.lm3). 105 непробельных символов; 6 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/P02.lm3). 91 непробельных символов; 6 непустых строк. Все объявления и Throws включены.
 
 ## Perl
 

@@ -1,13 +1,97 @@
 {
-  "revision": "2026-11-22",
+  "revision": "2026-11-24",
   "change": "Name :: Signature is the only named declaration form; previous declaration and public constructor names removed without aliases",
-  "type_constructor": "to: T0 to T1 ... R; to(inputs := inputTypes; result := resultType)",
+  "type_constructor": "->: T0 -> T1 ... R; `->`(T0; T1; ...; R); FxToTypes\\`->`(inputs := inputTypes; result := resultType)",
   "reflection": "signature(operation := F)",
   "named_declaration_call_relation": "preserved",
   "old_named_declaration_spelling_occurrences": 0,
   "runtime_executed": false,
   "exports": "internal fun\\const owning-field source set, integrated by core namespace preparation",
   "availability": "single current core; direct names, no client import or version choice",
-  "named_expression": "ordinary :: operand; source-form mode 1, raw left declaration identifier, one right DATA template",
-  "operand_shapes": "signature_operand_shapes.json"
+  "named_expression": "ordinary :: expression operation with its invariant signature-declaration contract; ALL arguments are DATA, including NAME. One whole right Structure is one external actual. The common namespace/field-consumption mechanism reads its immediate declaration fields, or those of its referenced DATA target, when the receiver contract requires a list.",
+  "operand_shapes": "signature_operand_shapes.json",
+  "type_constructor_priorities": {
+    "->": "sys\\priority(\"+\")",
+    "::": "sys\\priority(\":=\")"
+  },
+  "composed_expression": {
+    "source": "f :: int -> int int",
+    "grouping": "f :: (int -> int int)",
+    "signature": "two int inputs, int result; no body or automatic currying",
+    "consumption": "The tree grouper resolves priorities, groups and explicit streams; the distinct application adapter maps its current-level results to the receiving ABI. :: consumes its prepared positional profile exclusively as DATA, without local RHS evaluation or service-field reflection. Common namespace reading supplies immediate declaration fields when that DATA contract requires a list; it is not a second operand-opening pass.",
+    "status": "NORMATIVE_TARGET",
+    "runtime_status": "NOT_RUN"
+  },
+  "description_consumption_contract": "../../../LMX_semantics.en.md#signature-description-consumption",
+  "description_consumption_acceptance": "../../../validation/signature_expression_cases_20261124.json",
+  "explicit_value_path": {
+    "source": [
+      "@: description (int -> int int)",
+      "f :: description"
+    ],
+    "contract": "existing ordinary value declaration followed by the ready-reference named declaration",
+    "runtime_status": "NOT_RUN"
+  },
+  "receiver_context_invariance": "../../../LMX_semantics.en.md#receiver-context-invariance",
+  "receiver_meaning_checks": [
+    {
+      "form": "::",
+      "expected": "Declares a named signature in CODE or DATA context and consumes ALL arguments exclusively as DATA, including NAME. For a declaration-list contract, common namespace consumption reads the immediate fields of the supplied Structure or referenced DATA. The external actual vector, nested models and return descriptions remain intact; no Structure call, formal-initializer execution or recursive flattening follows."
+    },
+    {
+      "form": "const: int: limit 3",
+      "expected": "const keeps its modifier contract and always consumes DATA arguments"
+    },
+    {
+      "form": "private: @: left",
+      "expected": "private keeps its binding modifier contract and always consumes DATA arguments"
+    }
+  ],
+  "builtin_mode_metadata": "Implementation and mode metadata are not supplied; no PASS_ARGS_AS_IS value is inferred for builtin ::",
+  "anonymous_structure_contract": "An anonymous Structure is not called as a callable or new activation; it may execute in place in CODE/Expression under the ordinary rules. Inspecting signature DATA does not execute that Structure.",
+  "description_opening": "The common namespace/field-sequence mechanism reads ordered immediate fields of a supplied Structure or referenced DATA when the receiving contract requires a declaration or field list. :: uses this mechanism under its DATA-only signature contract. DATA or CODE determines element consumption; the receiving contract chooses a list or a whole value. Whole TYPE/model/value contracts preserve their object. A ready positional profile remains a profile; its service fields are not declarations. This changes neither external actuals nor operand preparation and does not extend CODE W/E to DATA.",
+  "receiver_structure_sequences": "../../../LMX_semantics.en.md#receiver-structure-sequences",
+  "expression_architecture": {
+    "grouper": "Resolve priorities, groups and explicit field streams in the supplied pure graph, including references consumed as CODE/Expression. Notation, source origin and parenthesis history are not semantic flags. Produce a structured current-level operation/stream plan without rewriting or reparsing text.",
+    "application_adapter": "Package the left side as one actual and the current-level right stream as an Array of references under the receiving ABI. This packaging belongs to the application adapter, not the grouper.",
+    "collector": "RxLogicalArguments and library asOperand forward the projected actual vector; no element traversal, reverse packing or additional opening pass.",
+    "roles": "VALUE/TYPE/DATA and whole-value contracts do not become CODE automatically. In CODE/Expression, an ordinary named Structure with the current lexical parent follows the ordinary call path; a named Structure with a different parent and every anonymous Structure are handled as graph groups, retaining their real parent. Name/actual-parent relative to traversal owner determines the branch, not reference provenance. Planning does not run DATA or force RAW.",
+    "reference": "../../../LMX_semantics.en.md#expression-structural-grouping",
+    "abi_corollary_reference": "../../../LMX_semantics.en.md#operand-right-only-opening",
+    "runtime_status": "NOT_RUN",
+    "raw_occurrence": "Retain each complete nested Expression as one original RAW occurrence with its live context; do not pass its physical tokens as several actuals or evaluate it during planning.",
+    "graph_references": "Consume the supplied pure graph under its receiving role. In CODE/Expression: named + current lexical parent means ordinary call; named + other parent means group; anonymous means group. Preserve actual parent and binding context; do not use source-origin or parenthesis flags."
+  },
+  "group_copy_equivalence": {
+    "short": "(a b c) := copy(d)",
+    "equivalent_for_group_assignment": "(a b c) := (copy(d))",
+    "reason": "copy is an explicit field stream; the current-level group assignment consumes that stream without an otherwise unnecessary outer RHS group. Values are ready before any destination write.",
+    "whole_value_control": "scalar := (copy(d)) retains its Structure when scalar receives one whole value",
+    "runtime_status": "NOT_RUN"
+  },
+  "code_graph_reference_control": {
+    "definition": "S: a b c d",
+    "code_expression": "1 + S + 2",
+    "parent_cases": [
+      {
+        "graph_name": "S",
+        "actual_parent": "different from current lexical parent",
+        "expected": "Treat S as the same group shape as direct (a b c d), preserving its actual parent and context; this branch creates no call activation."
+      },
+      {
+        "graph_name": "S",
+        "actual_parent": "current lexical parent",
+        "expected": "Use the ordinary named-Structure call path and its admission; do not silently inline it as a foreign-parent group."
+      },
+      {
+        "graph_name": null,
+        "actual_parent": "current lexical parent or another parent",
+        "expected": "An anonymous Structure remains a group; execution, when required by CODE/Expression, is in place rather than a named call."
+      }
+    ],
+    "numeric_result": "Not asserted: four neighboring atoms do not automatically form a numeric expression; + admission and any ordinary call result are checked separately.",
+    "value_boundary": "A Structure admitted in a VALUE/TYPE/DATA position remains under that contract, regardless of its name or parent; the CODE classification is not applied automatically there.",
+    "provenance": "Source spelling/origin and P0 diagnostic provenance do not decide the branch.",
+    "runtime_status": "NOT_RUN"
+  }
 }

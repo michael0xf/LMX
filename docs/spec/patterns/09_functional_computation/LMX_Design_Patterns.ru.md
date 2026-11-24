@@ -2,7 +2,7 @@
 
 Haskell даёт естественный контроль для Maybe/Monad и каррирования. Scala сочетает функциональные приёмы с JVM, явным батутом и обычным управлением ресурсами. Эти языки выбраны за подходящие механизмы, а не для универсального рейтинга краткости.
 
-Четыре задачи имеют две полные LMX-записи: процедурную и функциональную. Haskell и Scala сохраняют исходные контрольные программы. Четыре реализации ядра сравниваются отдельно и имеют по одному общему LMX-телу.
+Четыре задачи имеют две полные LMX-записи: процедурную и функциональную. Haskell и Scala сохраняют контрольные договоры; в 085 также убраны неиспользуемая переменная и одноразовое промежуточное имя. Четыре реализации ядра сравниваются отдельно и имеют по одному общему LMX-телу.
 
 ## Каталог / Catalog
 
@@ -58,7 +58,7 @@ run(0) → 42123: результат 42, журнал 123. run(1) → −123: о
 
 Независимые сохранённые префиксы: прямое окружение и общий curry.
 
-Объявить сложение и создать независимые add5/add100 через поэтапный curry либо partial. Контрольные клиенты используют применение Haskell и Function2.curried Scala. Сохранены saved=1000 и повторный add5(1); результат 6101006.
+Объявить сложение и создать независимые префиксы 5 и 100 через поэтапный curry либо partial. add5 используется дважды, однократная ветвь 100 вызывается сразу. Контрольные клиенты используют применение Haskell и Function2.curried Scala; результат 6101006.
 
 6, 101, 6; demo возвращает 6101006. Возвращённая функция имеет ровно один явный int-вход. Библиотечный LMX-прототип не меняется; две созданные функции независимы.
 
@@ -72,7 +72,7 @@ run(0) → 42123: результат 42, журнал 123. run(1) → −123: о
 
 ## Методика / Method
 
-Two complete LMX style clients are compared for082–085; neither is removed by a shortest-source selection. All declarations and Throws count in full. Shared implementation records091/092/098/099 retain one canonical LMX body; foreign sources are unchanged.
+Two complete LMX style clients are compared for082–085; neither is removed by a shortest-source selection. All declarations and Throws count in full. Shared implementation records091/092/098/099 retain one canonical LMX body; foreign clients retain their observable contract; 085 removes the same unused and single-use locals in Haskell and Scala.
 
 [Comparison](LMX_Comparison_09_functional_computation.md) · [Excel](LMX_Comparison_09_functional_computation.xlsx) · [PDF](LMX_Comparison_09_functional_computation.pdf) · [CSV](LMX_Comparison_09_functional_computation.csv)
 

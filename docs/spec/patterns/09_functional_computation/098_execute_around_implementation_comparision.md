@@ -110,7 +110,7 @@ object Around {
 | Haskell | 390 | 11 |
 | Scala | 836 | 36 |
 
-Обе LMX-записи сравниваются самостоятельно. Полный текст включает все объявления, локальные helpers и Throws; заголовки и списки ошибок не вычитаются. Общие тела ядра учитываются один раз в отдельных сравнениях. Минимум сопоставимой строки выделяется в PDF и XLSX зелёным.
+Обе LMX-записи сравниваются самостоятельно. Полный текст включает все объявления, локальные helpers и Throws; заголовки и списки ошибок не вычитаются. Общие тела ядра учитываются один раз в отдельных сравнениях. Минимум сопоставимой строки подчёркивается в PDF и XLSX зелёным; при равенстве отмечаются все победители.
 
 Явные Throws и copy списка вызываемого метода сохраняют точный видимый договор отказов. У процедурной записи нет скрытых обходов через map/filter/fold/unique/pipe/bind или поэлементную Array-арифметику.
 
@@ -130,7 +130,7 @@ Generic acquire/action/release: the resource, payload result and extra arguments
 
 **Limits.** Scoped API: one resource, three callbacks, arbitrary result. This is not a reimplementation of all Using.Manager or every resource combinator. Haskell masked cleanup can still be interrupted at interruptible operations, as in standard bracket. Scala interruption follows JVM exceptions, not Haskell masking. LMX post sends the whole owner operation; returning from an action after merely posting work ends the local bracket lifetime. No language handler can guarantee cleanup after abrupt process termination. Runtime call/allocator failure during cleanup remains a kernel failure, not confirmed external release.
 
-Both complete LMX client styles are counted in full. Existing foreign controls are unchanged. Implementation comparisons retain one canonical body. Revised LMX source has not been executed.
+Both complete LMX client styles are counted in full. Foreign controls retain the same scenario; 085 removes unused and single-use locals consistently across languages. Implementation comparisons retain one canonical body. Revised LMX source has not been executed.
 
 ## Источники
 

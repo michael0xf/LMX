@@ -66,6 +66,7 @@ of a generated user callable must be private or required.
 | Prepared representation | Explicit priority |
 | --- | --- |
 | `FxRecordOperands`, `FxSignatureOperand`, `FxToOperand`, `FxTypeOperand` | `sys\priority("+")` |
+| Built-in named signature operand `::` | `sys\priority(":=")`; weaker than `->` |
 | Finite comparison profiles `PipeLibrary`, `FindLibrary`, `SpecificationLibrary\Operators`, `MoneyLibrary\Equality`, `RetryLibrary` | `sys\priority("+")` |
 | `FxBetween` | `sys\priority("<=")` |
 | `bind` and Pattern `then` | `sys\priority("+")` |
@@ -75,8 +76,42 @@ of a generated user callable must be private or required.
 These are ordinary ready properties on the existing expression scale, obtained
 before grouping without running the operand body. They do not assign numeric
 priority constants, change built-in symbolic priorities, or introduce a new
-registry. `::` and the original non-Pattern branches of `|` keep their existing
-contracts. The copied fields contain no matching, collection or adapter
+registry. `::` retains its NAME/description declaration contract; its weaker
+grouping gives `f :: int -> int int` one whole RHS occurrence, just as in
+`f :: (int -> int int)`.
+The [description-consumption contract](../../LMX_semantics.en.md#signature-description-consumption)
+consumes every argument exclusively as DATA, including the declaration NAME.
+One Structure supplied as the description remains one external operand actual.
+When a contract requires a declaration or field list, the
+[common namespace mechanism](../../LMX_semantics.en.md#receiver-structure-sequences)
+reads the ordered immediate fields of a Structure or its referenced DATA target.
+`::` uses that mechanism for signature declarations; modifiers use the same
+machinery under their DATA contracts. DATA or CODE governs element consumption;
+the receiver contract decides between a list and a whole value. Whole TYPE,
+model and value contracts retain the object. This introduces no special `::`
+opening, outer actual expansion, CODE W/E in DATA, Structure call or recursive
+flattening of nested models and `return` descriptions. A ready positional profile
+is also DATA and is consumed as a profile, not reflected into service-field declarations.
+If the common Expression mechanism prepares a constructor result, `::` consumes
+that ready result. Under
+[receiver-context invariance](../../LMX_semantics.en.md#receiver-context-invariance),
+the resolved operation retains its own contract: `::` is a signature declaration
+even in CODE, and modifiers such as `const`/`private` always consume DATA.
+Expression is CODE, so an ordinary explicit callable form inside it remains a
+call. RAW controls timing without changing that meaning. Grouping, priorities
+and any preparation of the constructor result belong to the common Expression
+mechanism. `::` has no CODE-argument branch, local DATA/value selector or RHS
+evaluation step. The direct arrow spellings are normative equivalents under
+that common mechanism. An anonymous Structure is not called; execution in
+place in CODE/Expression follows the ordinary rules.
+Formal initializers in an explicit DATA template remain unexecuted. An ordinary
+value declaration followed by `f :: description` is another explicit path.
+The builtin `::` implementation and mode metadata are absent from this package;
+no `PASS_ARGS_AS_IS` value is assigned to it. Runtime verification remains
+**NOT_RUN**. It does not acquire assignment
+semantics from that priority.
+The original non-Pattern
+branches of `|` keep their existing contracts. The copied fields contain no matching, collection or adapter
 algorithm. The same bodies are used by both applicable forms.
 
 ## Whole values and constructor adapters
@@ -96,8 +131,9 @@ The actor context has explicit input routes for:
 `T` is the actual complete requirement, including Array shape, qualification and
 reference depth. The input expression is evaluated once. The selected value
 is retained as one record and passed by the named internal `p0` mapping.
-Neither W/E nor operand RHS-opening is repeated. Some(null), Some(0), an empty
-Array and absence remain distinct.
+The capture receives the already projected actual record. It does not regroup
+the source, reopen that value or reapply ordinary callable W/E. Some(null),
+Some(0), an empty Array and absence remain distinct.
 
 `FxRecordAdapter` is implemented in
 [generic_functions.lmx](src/generic_functions.lmx). `FxCaptureOne` delegates to
@@ -143,10 +179,50 @@ retry remains `retryPost`.
 
 ## TYPE and prepared argument routes
 
-`to(A0; A1; R)` collects complete TYPE tokens with the result last.
-`A0 to A1 R` uses `FxToOperand` and the same `FxToTokens` / `FxToTypes` builder.
-`to(R)` constructs a nullary signature; an empty call fails with `FxArity`.
+The common Expression grouper resolves priorities, groups and explicit field
+streams from the supplied pure graph, regardless of notation or origin. Its output is a
+structured operation/stream plan. A separate application adapter packages the
+left side as one actual and the current-level right stream as an Array of
+references; the grouper itself does not package `left`. The library collector
+and `asOperand` wrapper forward that prepared vector. Their logical argument
+collection is an explicit step inside the operand method body, not a universal
+pre-call binder. An absent left stays absent at method entry; the first right
+item is not shifted into it. Thus `(:= a 1)` and `(a := 1)` reach the method
+with different vectors, and their equivalence belongs to that method, not an
+assignment-specific parser rule. There is no subsequent conditional opening
+pass, textual rewrite or reparsing.
+
+For `(a b c) := (a c b)`, the adapter supplies one whole left argument and the
+right stream `a, c, b`. For `(a b c) := (f g h) (f g h) (f g h)`, it supplies
+three whole right Structures, not nine fields. Direct `(a b c) := copy(d)` uses
+the explicit field stream and needs no enclosing RHS group. Its group-assignment
+effect equals the wrapped spelling; a scalar whole-value `(copy(d))` is retained.
+These outcomes follow from [the common grouper and application adapter](../../LMX_semantics.en.md#expression-structural-grouping).
+Nested scalar Expressions such as `1 + ((2))` are handled recursively from the
+graph. When consumed as CODE/Expression, an ordinary named Structure with the
+current lexical parent follows the ordinary call path. A named Structure with
+another parent, and every anonymous Structure, is handled as a group with its
+actual parent retained. The distinction uses graph name/parent and traversal
+owner, not how a reference was obtained.
+VALUE/TYPE/DATA positions preserve their receiving contracts and do not become
+CODE automatically. A graph's source origin and parenthesis history are not
+semantic flags. DATA is not evaluated and RAW is not forced by group planning;
+a complete inner Expression remains one
+original RAW occurrence with its context, not several physical-token actuals.
+
+`` `->`(A0; A1; R) `` collects complete TYPE tokens with the result last.
+`A0 -> A1 R` uses `FxToOperand` and the same `FxToTokens` / `FxToTypes` builder.
+`` `->`(R) `` constructs a nullary signature; an empty call fails with `FxArity`.
 `Name :: DATA` retains its named-signature meaning.
+`f :: int -> int int` groups as `f :: (int -> int int)`. Obtaining the constructor's
+two-input/one-result description belongs to the common Expression mechanism;
+`::` receives that ready profile as DATA and does not evaluate its arguments.
+The constructor neither creates an executable body nor
+implicitly turns the flat signature into a chain of unary callables.
+`int -> (int int)` has one right Structure, not two right TYPE tokens;
+`int -> ()` has one right empty Structure. Their admission follows the ordinary
+TYPE contract. `FxToOperand`, `FxToTokens` and `RxLogicalArguments` use the
+projected arguments without signature-specific opening or a second adaptation.
 
 `type(x)` reads the actual physical type code, not an arbitrary semantic model.
 `types(source)` still returns the sequence of field type codes. These operations
@@ -200,7 +276,7 @@ checks must cover:
 - all input roles, full result/void and field-stream/control behavior;
 - whole scalars, arrays, Structures, reference values and dynamic binding;
 - ambiguous Maybe/Result/Array and literal/callable intersections;
-- wrong arity, omitted arguments, named actual order and one RHS-opening;
+- wrong arity, omitted arguments, named actual order and current-level stream projection without a second opening;
 - exact pipeline/retry results across interpreter/native transitions;
 - generic Pattern inputs, literal failure phase, zero-length success and
   monotonic cursor completion;

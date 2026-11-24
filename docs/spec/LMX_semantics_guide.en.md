@@ -156,7 +156,7 @@ load these fields directly. `sys\native(S)` returns the native descriptor of var
 or 0; `sys\capacity(S)` returns reserved capacity from the arena table. All five no-argument forms
 select the data of the current call; code requires an explicit argument. Reading neither compiles nor invokes native.
 
-These receivers execute only in code; same-headed data forms remain ordinary data.
+These resolved receivers retain their contracts in DATA and CODE; merely storing or inspecting a source form does not execute it ([context invariance](LMX_semantics.en.md#receiver-context-invariance)).
 For example, the path `D\length` (`D` is the data Structure) selects a user field while `length()` reads the length
 of the call's data. The parameters of `call` are named `args` and `code`; node keeps its existing meaning.
 
@@ -287,9 +287,9 @@ See [names and paths](LMX_semantics.en.md#fields).
 <a id="fn-signature"></a>
 ### Named fn signatures and ordinary templates
 
-`Name :: DATA` is an ordinary expression-operand application. Its left occurrence is the declaration identifier, consumed without reading an existing value; its defined single-template form has one complete right DATA Structure. The declaration inspects that template's fields to describe the signature, without unwrapping the operand argument vector or executing nested forms.
+`Name :: DATA` is an ordinary expression-operand application. Its left occurrence is the declaration identifier, consumed without reading an existing value; its DATA-template form has one complete right DATA Structure. The declaration inspects that template's fields to describe the signature, without unwrapping the operand argument vector or executing nested forms. A ready signature is consumed through its established profile, and a producer follows ordinary CODE Expression semantics under the [receiver contract](LMX_semantics.en.md#signature-description-consumption); obtaining a descriptor does not execute a template's initializers.
 
-`Name :: A B` has two right arguments; `Name :: (A B)` has one whole right Structure. The declaration identifier on the left is not an unnamed Structure, so the [conditional RIGHT-only opening](LMX_semantics.en.md#operand-right-only-opening) does not apply. `::` opens no extra Frame and creates no automatic `end: Name` target. It introduces a constant signature name and creates no executable body or native entry. `return` describes the result and is not an input; omitting it describes a procedure. The term fn-match below retains its positional compatibility meaning, not a public receiver named `fn`.
+`Name :: A B` has two right arguments; `Name :: (A B)` has one whole right Structure. The signature contract consumes one DATA description through the common immediate-field reader; [structural grouping](LMX_semantics.en.md#expression-structural-grouping) does not recursively flatten it. `::` opens no extra Frame and creates no automatic `end: Name` target. It introduces a constant signature name and creates no executable body or native entry. `return` describes the result and is not an input; omitting it describes a procedure. The term fn-match below retains its positional compatibility meaning, not a public receiver named `fn`.
 
 ~~~lmx
 SumSignature :: (int: a; int: b; return: int)
@@ -368,7 +368,7 @@ PairData:
 PairSignature :: PairData
 ~~~
 
-In `PairSignature :: PairData`, the left occurrence is the declaration identifier and the single right occurrence is the whole DATA template. Reading its input/result fields is not argument unwrapping. Ordinary-call CODE W/E does not expand that template or execute its nested forms.
+In `PairSignature :: PairData`, the left occurrence is the declaration identifier and the single right occurrence is the whole DATA template. Its own DATA opening reads the input/result declaration list without changing outer arguments. Ordinary-call CODE W/E does not expand that template or execute its nested forms.
 [Full contract](LMX_semantics.en.md#fn-signature).
 
 <a id="return-in-data"></a>
@@ -422,7 +422,7 @@ The contract notation in the table is analytic: it is not a new grammar for decl
 | `S` is explicitly assigned to a formal | `f(a := S)` | W only, no E |
 | whole `C` fits `call(code)`, the fields of `C` fit `call(args code)` | `call(C)` | an ambiguity error |
 | the same `C` is explicitly supplied as `code` | `call(code := C)` | no expansion; hidden `args` creates no second form |
-| A named signature uses a nested data template | `SignatureName :: DataTemplate` | Left declaration identifier and one whole right DATA template; field inspection is not operand unwrapping, and CODE W/E does not apply |
+| A named signature uses a nested data template | `SignatureName :: DataTemplate` | Left declaration identifier and one whole right DATA template; the receiver opens DATA into a declaration list without changing outer actuals; CODE W/E does not apply |
 
 [The table in the semantics](LMX_semantics.en.md#selection-examples).
 
@@ -877,16 +877,11 @@ sources. If W and E both fit, the result is the usual ambiguity error; import ha
 The ordinary named-signature expression `Name :: DATA` separately reads its one right template in the DATA role. This declaration contract does not turn the source arguments of import, copy or merge into DATA arguments merely because their output is accepted in a DATA context.
 
 ~~~lmx
-(a b) := (copy(Pair))
+(a b) := copy(Pair)
 (c b d a) := (a b c d)
 ~~~
 
-Group assignment is positional. Its right side is one unnamed Structure in parentheses, the form `() := ()`:
-several values without the group are an error. A field stream is written inside the group; the bare stream
-`(a b) := copy(Pair)` is an error, and a Structure returned from a function is not opened (author's decision,
-2026-11-21). All RHS values are obtained before the first write, and a count mismatch is
-reported before any LHS write. With initial a=1, b=2, c=3, d=4, the second line gives c=1, b=2, d=3, a=4.
-This read-before-write rule does not promise rollback of already performed RHS effects.
+For [group positional assignment](LMX_semantics.en.md#group-assign), `(a b) := copy(Pair)` and `(a b) := (copy(Pair))` consume the same two emitted fields when the source and targets satisfy the contract. The collector is optional for this sequence consumer. The grouper preserves current-level items; application adaptation packages the left PLACE sequence as one actual. Three sibling RHS groups remain three Structure values, not a recursively flattened stream. Obtain and retain all RHS values and check their count before the first target write; RHS names do not reorder targets and previous RHS effects are not rolled back. A function-returned Structure remains one value. Scalar `ptr := (copy(Pair))` still receives one collected Structure.
 
 <a id="import-selection"></a>
 ### Import keeps original identities and parents
@@ -1042,6 +1037,14 @@ implementation key `plus[decimal][int] → decimal_int_add`. It does not
 declare types, create a runtime namespace, or search providers automatically.
 Source precedence, conflict resolution, and a missing-cell marker belong to
 the profile selected by the Table's consumer, not a universal hidden registry.
+
+### Groups are structural, application packaging is separate
+
+The grouper consumes a clean graph, without parentheses or provenance flags. In CODE/Expression an anonymous Structure is a group; a named Structure is a group only when its actual parent differs from the current lexical owner. A named same-parent Structure instead follows ordinary receiver/call handling. References preserve the target's parent and context. Thus `1 + S + 2` and `1 + (a b c d) + 2` have the same grouping rule for an available `S: a b c d` with that **different-parent** condition; operator admission is separate. Whole VALUE/TYPE/DATA positions retain their own contracts. [Parent guard](LMX_semantics.en.md#expression-structure-parent-guard).
+
+`1 + ((2))` is 3 and `(1) + (2 * 3)` is 7: an Expression group contains one complete expression. Material `(1 2 3 4)` and nested `((1 2))` do not become implicit arithmetic. The same rule works on the tree of any source form, not only parentheses. A Structure received as a whole value stays one value; a graph received as CODE/Expression follows the name/actual-parent guard, including ordinary receiver/call handling for a named same-parent node; `(copy(Model))` collects a field stream even when it emits zero or one field.
+
+The grouper builds priority dependencies and current-level sequences. A separate Expression application adapter packages left as one actual and right as an Array of references. Thus `(a b c) := (a c b)` supplies one left PLACE bundle and three right values; `(a b c) := (f g h) (f g h) (f g h)` supplies three right Structure values. The general form `arg0 operand arg1 arg2 arg3` includes ordinary binary expressions, without automatic folding or shifting a missing left argument. Receiving contracts preserve DATA, NAME, TYPE, PLACE and RAW. [Full rule](LMX_semantics.en.md#expression-structural-grouping).
 
 <a id="expression-priority"></a>
 ## Priorities, value dependencies, and assignment effects
@@ -1219,7 +1222,7 @@ cache is introduced.
 <a id="operand-references"></a>
 ### References, storage, and explicit addresses
 
-A bare method name is a reference; `add()` is an explicit call; `a add b` is operator use after normal resolution.
+A method name supplied as a value denotes a reference; `add()` is an explicit call and `a add b` is operator use. A named Structure reached by CODE/Expression traversal follows the [actual-parent guard](LMX_semantics.en.md#expression-structure-parent-guard).
 Taking `@add` produces a numeric address. Prefix `\` follows a reference and never means `sys\eval`.
 
 ~~~lmx
@@ -1260,7 +1263,36 @@ One operation has receiver and operand spellings under its canonical name.
 For example `unique(xs)` / `xs unique` use optional shared default equality,
 `some(x) bind half bind half` hides typed-record packing in the adaptive
 constructor, and `type(x)` / `x type` query the same actual physical type.
-`to(A; B)` / `A to B` describe an A-to-B signature; result is always last.
+`` `->`(A; B) `` / `A -> B` describe an A-to-B signature; result is always last.
+
+Group the complete signature expression when that makes the declaration clearer:
+
+```lmx
+f :: (int -> int int)
+```
+
+The direct spellings produce the same description. Expression is CODE,
+and `::` remains a signature-declaration receiver with its own NAME and
+description contracts. Its priority `sys\priority(":=")`, below
+`sys\priority("+")` of `->`, groups the whole constructor. This is not field expansion inside a group.
+The [context rule](LMX_semantics.en.md#receiver-context-invariance) also preserves
+the contracts of `const`, `private`, `return` and system queries. Explicit DATA
+formal declarations keep their unexecuted initializers. Ready signatures keep
+their positional profile, not a new interpretation of service fields.
+
+The following independent examples are normative targets; runtime is **NOT_RUN**.
+
+| Form | Target description or retained argument shape |
+| --- | --- |
+| `fFlat :: int -> int int` | Two int inputs, int result |
+| `f3 :: (int -> int int int)` | Three int inputs, int result |
+| `fNested :: int -> (int -> int)` | One int input, one callable result |
+| `` f0 :: `->`(int) `` | No inputs, int result |
+| `fModel :: int -> Model` | One int input, the whole valid named Model as result |
+| `int -> (int int)` | One right group; its TYPE admission is separate, and it is not the flat two-occurrence right side |
+| `int -> ()` | One present empty right Structure; it is not the nullary form |
+
+Full TYPE models and computed signature descriptors remain whole under their contract. A left group alone proves no TYPE-list opening; `(int int) -> ((char char))` is not a basis for erasing an inner model. DATA template initializers remain unexecuted. See [signature grouping](LMX_semantics.en.md#signature-grouping) and the [common structural grouper](LMX_semantics.en.md#expression-structural-grouping). No constructor-specific grouping profile or automatic currying is introduced; parser, translator and runtime execution are **NOT_RUN**.
 
 The source-form role chooses a declared representation of one family, after
 which ordinary overload selection applies. Maybe, Result and Array do not become
@@ -1274,7 +1306,8 @@ The [receiver chapter](LMX_semantics.en.md#functional-receivers) and
 The [common inventory](CORE_FUNCTIONS.md) lists every direct public function.
 The kernel exposes these names through its ordinary constant namespace;
 application code needs no `import: fun`. The method still receives its actual
-parent's DATA, and its name follows lowerCamelCase.
+parent's DATA. Word names follow lowerCamelCase; symbolic names such as `->`
+use their exact identifiers in receiver calls.
 
 For an ordinary Structure S, `length(S)` and `S[i]` already provide the
 reference-sequence interface. A captured argument prefix and a List can be S
@@ -1313,7 +1346,7 @@ a different approach. Minor spelling changes are notes. Shared implementation
 dependencies are reported separately and are not assigned zero cost.
 
 The new name `satisfies` retains admission's previous direction and phases.
-`Name :: DATA` and `to` construct signature descriptions with the same positional compatibility rule: input
+`Name :: DATA` and `->` construct signature descriptions with the same positional compatibility rule: input
 labels may differ, but count, order, complete requirements and the result must
 fit. The existing named-signature relationship with `call` is deliberately unchanged;
 all other uses accept either signature description. See [the equivalence rule](LMX_semantics.en.md#fn-forms-equivalent).

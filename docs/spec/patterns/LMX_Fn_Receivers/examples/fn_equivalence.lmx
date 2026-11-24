@@ -16,7 +16,7 @@ FxFnEquivalenceExamples:
         throws: copy(FxThrows\capture)
         private: @: empty (copy(()))
         private: @: originalInfo FxKernel\signature(subject := FxMixedTarget\evaluate)
-        private: @: tokenContract FxToTypes\to(inputs := originalInfo\inputTypes; result := originalInfo\resultType)
+        private: @: tokenContract FxToTypes\`->`(inputs := originalInfo\inputTypes; result := originalInfo\resultType)
         # Новое fn-требование принимает callable с прежним именованным DATA.
         private: tokenContract@: acceptsNamed FxMixedTarget\evaluate
         sys\assert(acceptsNamed(p0 := 2; p1 := 1.5; p2 := "abc") = 6.0)
@@ -33,7 +33,7 @@ FxFnEquivalenceExamples:
         sys\assert(generatedForToken(p0 := 1; p1 := 2.0; p2 := "x") = 3.0)
         # void остаётся отсутствием return, не @0, int0 или пустой Structure.
         private: @: procedureInfo FxKernel\signature(subject := FxProcedureTarget\run)
-        private: @: procedureType FxToTypes\to(inputs := procedureInfo\inputTypes; result := procedureInfo\resultType)
+        private: @: procedureType FxToTypes\`->`(inputs := procedureInfo\inputTypes; result := procedureInfo\resultType)
         private: procedureType@: newAcceptsOldProcedure FxProcedureTarget\run
         private: @: generatedProcedure FxPartial\partial(FxProcedureTarget\run; prefix := empty)
         private: FxLegacyProcedureContract@: oldAcceptsNewProcedure generatedProcedure
@@ -43,7 +43,7 @@ FxFnEquivalenceExamples:
         sys\assert(FxGenericCounter\calls = before + 8)
         # Нулевая арность не подменяется одним фиктивным void-параметром.
         private: @: nullaryInfo FxKernel\signature(subject := FxNullaryTarget\value)
-        private: @: nullaryType FxToTypes\to(inputs := empty; result := nullaryInfo\resultType)
+        private: @: nullaryType FxToTypes\`->`(inputs := empty; result := nullaryInfo\resultType)
         private: nullaryType@: typedNullary FxNullaryTarget\value
         private: @: generatedNullary FxPartial\partial(FxNullaryTarget\value; prefix := empty)
         private: FxLegacyNullaryContract@: legacyNullary generatedNullary

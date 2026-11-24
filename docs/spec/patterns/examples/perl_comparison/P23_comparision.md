@@ -28,8 +28,8 @@ merge задаёт limit в модельном слоте отдельного �
 
 | Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
 | --- | ---: | ---: | ---: |
-| LMX процедурный | 390 | 657 | 24 |
-| LMX функциональный | 260 | 458 | 19 |
+| LMX процедурный | 373 | 640 | 24 |
+| LMX функциональный | 247 | 445 | 19 |
 | Perl | 242 | 346 | 16 |
 
 Обе LMX-формы опубликованы и считаются независимо. Все определения, обработчики и ссылки на throws входят в полный размер. Выбор единственного LMX-варианта по длине не выполняется.
@@ -56,7 +56,7 @@ Example:
     int: limit
     return: @
     run:
-        throws: copy(Squares\Next\next\throws) copy(FxSeqPush\append\throws) copy(FxRecordOperands\record\throws)
+        throws: copy(Squares\Next\next\throws) copy(FxSeqPush\append\throws) copy(record\throws)
         @: source (merge(Squares; (int: limit limit)))
         @[]: out []
         while: 1
@@ -66,7 +66,7 @@ Example:
             return: out
 ```
 
-[Полный исходник](source/lmx/procedural/P23.lm3). 390 непробельных символов; 24 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/procedural/P23.lm3). 373 непробельных символов; 24 непустых строк. Все объявления и Throws включены.
 
 ## LMX — функциональный
 
@@ -88,12 +88,12 @@ Example:
     int: limit
     return: @
     run:
-        throws: copy(FxStdCollect\collect\throws)
+        throws: copy(collect\throws)
         @: source (merge(Squares; (int: limit limit)))
         return: collect(source\Next\next)
 ```
 
-[Полный исходник](source/lmx/P23.lm3). 260 непробельных символов; 19 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/P23.lm3). 247 непробельных символов; 19 непустых строк. Все объявления и Throws включены.
 
 ## Perl
 

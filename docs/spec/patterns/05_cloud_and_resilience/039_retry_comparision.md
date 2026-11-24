@@ -25,6 +25,7 @@ RetryMessage:
         int: attempt
         pause:
             delay(1 << (attempt - 1))
+    ---
     run:
         throws: copy(FxThrows\call) FxArity FxPredicate FxRecordArity ReceiverIndex
         return: retry(request; Http503\retryOn; 3; delay := Wait\pause)

@@ -136,7 +136,7 @@ parent(S), length(S), sys\storage(S) directly read parent, length, storage.
 sys\native(S) returns the ordinary native descriptor from call tables, including signature variants,
 or 0 when absent. sys\capacity(S) reads capacity in elements from the arena table.
 These queries construct no auxiliary descriptor. Every zero-argument form selects current data;
-code requires an explicit argument. R0 has no artificial DATA for these queries. A same-headed data form remains an ordinary Structure, like the path `D\for` to a field of the data `D`.
+code requires an explicit argument. R0 has no artificial DATA for these queries. Resolved system queries retain their contracts in DATA as well. A path such as `D\for` selects an actually stored field; path lookup does not execute its source or reclassify a receiver application as a declaration.
 Ordinary paths S\parent, S\length, S\storage, and S\native select written fields without pseudo-fields.
 
 The selected Structure performs CODE and its actual parent performs DATA ([§11](#call-receivers));
@@ -389,14 +389,28 @@ unconditional ban “a launch of a Structure has no result” is removed togethe
 <a id="fn-signature"></a>
 ### The named signature
 
-`name :: data` supplies a declaration identifier on the left and an ordinary
-DATA Structure on the right. The identifier is declared, not read from an
+A receiving declaration-list contract uses the [common immediate-field mechanism](LMX_semantics.en.md#receiver-structure-sequences); this internal DATA opening does not change outer actuals or ordinary CODE W/E.
+
+In its DATA-template form, `name :: data` supplies a declaration identifier
+on the left and an ordinary DATA Structure on the right. The identifier is declared, not read from an
 existing variable. The Structure describes the explicit input places
 in declaration order and the optional result field `return`. The declared name is constant and can
 be imported under the ordinary root-constant rule. The declaration creates a signature description, neither an
 executable body nor a native entry. Without `return` the signature is procedural. A structural
 result is a nested description inside `return`; `return` is not an input position. The common
-parser is used; the right side remains a DATA description without CODE W/E. The former named-declaration receiver is removed, while the named signature/call relationship is unchanged.
+parser is used; this template remains a DATA description without CODE W/E. The former named-declaration receiver is removed, while the named signature/call relationship is unchanged.
+
+All `::` arguments, including its declaration identifier, are DATA.
+A ready signature is an ordinary Structure consumed by its existing positional
+profile, not by reinterpreting service fields. Common Expression preparation
+and priorities account for `f :: (int -> int int)` and `f :: int -> int int`
+yielding the same description: `::` at `sys\priority(":=")` binds more weakly
+than `->` at `sys\priority("+")`. The receiver itself has no DATA/value selector
+or RHS evaluator. Modifiers always consume DATA, while each receiver retains
+its own semantics ([context rule](LMX_semantics.en.md#receiver-context-invariance)).
+Anonymous Structures execute in place in CODE/Expression and are never called
+as callables. Source inspection does not eagerly execute initializers or bodies.
+These are normative targets; parser/translator/runtime execution is **NOT_RUN**.
 
 ```lmx
 SumSignature :: (int: a; int: b; return: int)
@@ -846,11 +860,7 @@ namespace receiving a stream; copied and imported methods retain their correct l
 DATA/parent relationships. Serialization preserves the written receiver, not an implicit
 expanded replacement. [Composition contract](LMX_semantics.en.md#composition).
 
-Field streams also use ordinary group assignment through an explicit group:
-`(a b) := (copy(Pair))` assigns two resulting fields positionally; the bare stream
-`(a b) := copy(Pair)` is an error (author's decision, 2026-11-21). All RHS values are obtained before the first write, and a count mismatch is
-reported before that write. RHS field names do not reorder targets; already completed RHS effects
-are not rolled back.
+For [group positional assignment](LMX_semantics.en.md#group-assign), `(a b) := copy(Pair)` and `(a b) := (copy(Pair))` consume the same two emitted fields when the source and targets satisfy the contract. The collector is optional for this sequence consumer. The grouper preserves current-level items; application adaptation packages the left PLACE sequence as one actual. Three sibling RHS groups remain three Structure values, not a recursively flattened stream. Obtain and retain all RHS values and check their count before the first target write; RHS names do not reorder targets and previous RHS effects are not rolled back. A function-returned Structure remains one value. Scalar `ptr := (copy(Pair))` still receives one collected Structure.
 
 <a id="satisfies"></a>
 ## 14. satisfies
@@ -1043,10 +1053,9 @@ With mode 0, `left` receives a reference to the prepared left value and `right` 
 references to prepared right values in source order. `(1 foo 2 3 4)` supplies one left value and
 three right values. In prefix `(foo 1 2 3 4)` no left actual is written; all four are on the right,
 and ordinary defaults/requiredness determine whether omission is admissible. No `has_left` marker
-or implicit shift of the first right value is added. An Array or Structure remains one operand
-container except for the conditional operand rule below; dense numeric Array storage is not reinterpreted as `Array<@>`.
+or implicit shift of the first right value is added. An Array or Structure in a whole-value position remains one item under the receiving contract; dense numeric Array storage is not reinterpreted as `Array<@>`.
 
-An operand opens a group only when all three conditions hold: `left` is a written unnamed Structure, `length(right) = 1`, and `right[0]` is a written unnamed Structure. Only the one outer group on the RIGHT is removed, once for this operand application; its immediate fields become `right`. LEFT remains the same whole Structure and merely supplies the condition. Nested groups are not opened again, and a Structure returned by a function is not automatically opened. P0 never performs this transformation. Ordinary callable W/E selection is a separate rule, not an additional operand-opening pass. A named declaration such as `Name :: (A B)` has a name on the left, so its single right-hand Structure remains whole; `Name :: A B` instead has two right arguments.
+Expression is the ordinary Structure graph interpreted with a [structural grouper](LMX_semantics.en.md#expression-structural-grouping): it determines priorities, complete expression units and streams at the current tree level, independently of source spelling. A separate Expression application adapter packages left as one actual/reference bundle and right as an Array of references. `arg0 operand arg1 arg2 arg3` is the general form; a binary contract uses one right item, with no automatic fold or movement of the first right item into an absent left. The receiving contract selects whole-value or current-level sequence consumption. `(a b c) := (a c b)` therefore has one left bundle and three right values; three sibling RHS groups remain three Structure items. There is no extra conditional unwrapping pass after grouping. The grouper reads the clean graph. In CODE/Expression, anonymous Structures and named Structures whose actual parent differs from the current lexical owner are groups; named same-parent Structures use ordinary receiver/call handling. Reference resolution preserves the actual parent. Whole VALUE/TYPE/DATA material is not automatically reclassified as CODE. `1 + ((2))` is 3; field collectors such as `(copy(Model))` remain containers for zero, one or many fields. `::` and modifiers keep DATA consumption and the common immediate-field reader; they gain no RHS evaluator. P0, ordinary callable W/E and the existing lifetime/effect rules remain intact. See [architecture and acceptance](EXPRESSION_GROUPING.md); execution is **NOT_RUN**.
 
 These references address values in genuine typed records: value at p, four-byte code at p − 4.
 A container reference addresses its typed descriptor. An untagged C temporary is not such a
@@ -1072,8 +1081,7 @@ a requirement for an addressed int does not mean “unevaluated code that may re
 
 `sys\eval(fragment)` explicitly invokes the same expression evaluator on one occurrence and
 returns its ordinary value. Each invocation is a fresh evaluation; omission causes no effects,
-and two invocations repeat the effects. Dereferencing the fragment is not evaluation. A bare
-callable reference remains a reference unless the source form calls it.
+and two invocations repeat the effects. Dereferencing the fragment is not evaluation. A callable received as a whole value remains a reference. A Structure reached in CODE/Expression follows the [name/parent guard](LMX_semantics.en.md#expression-structure-parent-guard), including ordinary receiver/call handling for a named same-parent node.
 
 Transport retains the occurrence's original active context through existing frames and hidden
 parameters, including when a helper receives it. Names in the operand implementation cannot

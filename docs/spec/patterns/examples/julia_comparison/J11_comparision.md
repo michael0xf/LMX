@@ -31,7 +31,7 @@ Julia требует 1.9 или новее для Iterators.flatmap. LMX воз�
 
 | Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
 | --- | ---: | ---: | ---: |
-| LMX процедурный | 225 | 345 | 12 |
+| LMX процедурный | 208 | 328 | 12 |
 | LMX функциональный | 133 | 204 | 11 |
 | Julia | 53 | 62 | 1 |
 
@@ -44,7 +44,7 @@ Example:
     int[]: xs
     return: @
     run:
-        throws: copy(FxSeqPush\append\throws) copy(FxRecordOperands\record\throws)
+        throws: copy(FxSeqPush\append\throws) copy(record\throws)
         @[]: out []
         int: i 0
         while: i < length(xs)
@@ -54,7 +54,7 @@ Example:
         return: out
 ```
 
-[Полный исходник](source/lmx/procedural/J11.lm3). 225 непробельных символов; 12 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/procedural/J11.lm3). 208 непробельных символов; 12 непустых строк. Все объявления и Throws включены.
 
 ## LMX — функциональный
 

@@ -30,7 +30,7 @@
 | Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
 | --- | ---: | ---: | ---: |
 | LMX процедурный | 194 | 425 | 19 |
-| LMX функциональный | 239 | 345 | 14 |
+| LMX функциональный | 221 | 327 | 14 |
 | Perl | 123 | 166 | 7 |
 
 Обе LMX-формы опубликованы и считаются независимо. Все определения, обработчики и ссылки на throws входят в полный размер. Выбор единственного LMX-варианта по длине не выполняется.
@@ -74,14 +74,14 @@ Example:
     int[]: items
     return: @
     run:
-        throws: copy(FxSeqAny\any\throws) copy(FxSeqAll\all\throws)
+        throws: copy(any\throws) copy(all\throws)
         int: threshold 0
         int: negative any(items; Below\test)
         threshold := 10
         return: (negative; all(items; Below\test))
 ```
 
-[Полный исходник](source/lmx/P05.lm3). 239 непробельных символов; 14 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/P05.lm3). 221 непробельных символов; 14 непустых строк. Все объявления и Throws включены.
 
 ## Perl
 

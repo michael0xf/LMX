@@ -16,7 +16,7 @@ Ports must state inputs, outputs and effects. A compareAndSet port is one atomic
 
 ## LMX model
 
-The current uploaded specifications govern. An executable method is an ordinary Structure whose DATA is its actual parent. `Name :: DATA` declares a named signature; `to` constructs its type-token counterpart. Locals do not publish back into the source graph. Explicit paths select graph cells, and blank lines close syntax blocks to the current document root. A declaration actual is an ordinary DATA Structure and is not executed or mapped by its internal name during transfer.
+The current uploaded specifications govern. An executable method is an ordinary Structure whose DATA is its actual parent. `Name :: DATA` declares a named signature; `->` constructs its type-token counterpart. Locals do not publish back into the source graph. Explicit paths select graph cells, and blank lines close syntax blocks to the current document root. A declaration actual is an ordinary DATA Structure and is not executed or mapped by its internal name during transfer.
 
 copy/merge emit fields. A group collects a distinct container and does not become the copied method’s lexical owner. Persistent method state uses the actual owner. Ordinary single-Structure W/E selection applies; explicit named supply passes a whole value where required.
 

@@ -24,7 +24,7 @@ P0 уже принимает все ресиверы в Expression. Поддер
 | `types` | `types(source)` | default: [RxTypes\types](LMX_Fn_Receivers/src/reflection.lmx) |
 | `names` | `names(source)` | default: [RxNames\names](LMX_Fn_Receivers/src/reflection_bridges.lmx) |
 | `signature` | `signature(operation)` | default: [RxSignature\signature](LMX_Fn_Receivers/src/reflection_bridges.lmx) |
-| `to` | `to(inputTypes...; resultType)` | default: [FxToTokens\to](LMX_Fn_Receivers/src/fn_operand.lmx) |
+| `->` | `` `->`(inputTypes...; resultType) `` | default: [FxToTokens\`->`](LMX_Fn_Receivers/src/fn_operand.lmx) |
 | `curry` | `curry(operation)` | default: [FxLambda\lambda](LMX_Fn_Receivers/src/generic_functions.lmx) |
 | `apply` | `apply(operation; args)` | default: [FxApply\apply](LMX_Fn_Receivers/src/generic_runtime.lmx) |
 | `partial` | `partial(operation; prefix)` | default: [FxPartial\partial](LMX_Fn_Receivers/src/generic_functions.lmx) |
@@ -40,7 +40,7 @@ P0 уже принимает все ресиверы в Expression. Поддер
 | `scanl` | `scanl(items; seed; step)` | default: [FxScan\scan](LMX_Fn_Receivers/src/collections.lmx) |
 | `bind` | `bind(input; next)` | Maybe: [FxBind\bind](LMX_Fn_Receivers/src/containers.lmx); Result: [FxBindResult\bind](LMX_Fn_Receivers/src/containers.lmx); Array: [FxListBind\bind](LMX_Fn_Receivers/src/containers.lmx) |
 | `traverse` | `traverse(items; next)` | default: [FxTraverse\traverse](LMX_Fn_Receivers/src/collections.lmx) |
-| `memoize` | `memoize(operation; sameKey)` | default: [FxMemo\memo](LMX_Fn_Receivers/src/generic_combinators.lmx) |
+| `memoize` | `memoize(operation; sameKey=0)` | default: [FxMemo\memo](LMX_Fn_Receivers/src/generic_combinators.lmx) |
 | `fix` | `fix(operation)` | default: [FxFix\fix](LMX_Fn_Receivers/src/generic_combinators.lmx) |
 | `select` | `select(source; indices)` | default: [RxSelect\select](LMX_Fn_Receivers/src/structures.lmx) |
 | `omit` | `omit(source; indices)` | default: [RxOmit\omit](LMX_Fn_Receivers/src/structures.lmx) |
@@ -166,13 +166,13 @@ P0 уже принимает все ресиверы в Expression. Поддер
 | `starmap` | `starmap(rows; operation)` | default: [FxStdStarMap\starmap](LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
 | `zipLongest` | `zipLongest(first; second; fillRecord)` | default: [FxStdZipLongest\zipLongest](LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
 | `collect` | `collect(next; limit=-1)` | default: [FxStdCollect\collect](LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
-| `includes` | `includes(items; valueRecord; same)` | default: [FxStdMembership\includes](LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
-| `adjoin` | `adjoin(items; valueRecord; same)` | default: [FxStdAdjoin\adjoin](LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
-| `union` | `union(first; second; same)` | default: [FxStdSets\union](LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
-| `intersection` | `intersection(first; second; same)` | default: [FxStdSets\intersection](LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
-| `difference` | `difference(first; second; same)` | default: [FxStdSets\difference](LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
-| `symmetricDifference` | `symmetricDifference(first; second; same)` | default: [FxStdSets\symmetricDifference](LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
-| `isSubset` | `isSubset(first; second; same)` | default: [FxStdSubset\isSubset](LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
+| `includes` | `includes(items; valueRecord; same=0)` | default: [FxStdMembership\includes](LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
+| `adjoin` | `adjoin(items; valueRecord; same=0)` | default: [FxStdAdjoin\adjoin](LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
+| `union` | `union(first; second; same=0)` | default: [FxStdSets\union](LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
+| `intersection` | `intersection(first; second; same=0)` | default: [FxStdSets\intersection](LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
+| `difference` | `difference(first; second; same=0)` | default: [FxStdSets\difference](LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
+| `symmetricDifference` | `symmetricDifference(first; second; same=0)` | default: [FxStdSets\symmetricDifference](LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
+| `isSubset` | `isSubset(first; second; same=0)` | default: [FxStdSubset\isSubset](LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
 | `mapOption` | `mapOption(input; transform)` | default: [FxMapOption\mapOption](LMX_Fn_Receivers/src/coreStandardObjects.lmx) |
 | `filterOption` | `filterOption(input; accepts)` | default: [FxFilterOption\filterOption](LMX_Fn_Receivers/src/coreStandardObjects.lmx) |
 | `orElse` | `orElse(input; fallback)` | default: [FxOrElse\orElse](LMX_Fn_Receivers/src/coreStandardObjects.lmx) |
@@ -189,16 +189,16 @@ P0 уже принимает все ресиверы в Expression. Поддер
 | `findField` | `findField(source; label; occurrence)` | default: [FxFindField\findField](LMX_Fn_Receivers/src/coreStandardObjects.lmx) |
 | `hasField` | `hasField(source; label; occurrence)` | default: [FxHasField\hasField](LMX_Fn_Receivers/src/coreStandardObjects.lmx) |
 | `getField` | `getField(source; label; occurrence)` | default: [FxGetField\getField](LMX_Fn_Receivers/src/coreStandardObjects.lmx) |
-| `assoc` | `assoc(rows; key; same; keyIndex=0)` | default: [FxAssoc\assoc](LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
+| `assoc` | `assoc(rows; key; same=0; keyIndex=0)` | default: [FxAssoc\assoc](LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
 | `pairlis` | `pairlis(keys; values; tail=())` | default: [FxPairlis\pairlis](LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
-| `getProperty` | `getProperty(properties; key; same)` | default: [FxGetProperty\getProperty](LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
-| `setProperty` | `setProperty(properties; key; value; same)` | default: [FxSetProperty\setProperty](LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
-| `removeProperty` | `removeProperty(properties; key; same)` | default: [FxRemoveProperty\removeProperty](LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
-| `getProperties` | `getProperties(properties; indicators; same)` | default: [FxGetProperties\getProperties](LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
+| `getProperty` | `getProperty(properties; key; same=0)` | default: [FxGetProperty\getProperty](LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
+| `setProperty` | `setProperty(properties; key; value; same=0)` | default: [FxSetProperty\setProperty](LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
+| `removeProperty` | `removeProperty(properties; key; same=0)` | default: [FxRemoveProperty\removeProperty](LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
+| `getProperties` | `getProperties(properties; indicators; same=0)` | default: [FxGetProperties\getProperties](LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
 | `asOperand` | `asOperand(operation; priority)` | default: [FxAsOperand\asOperand](LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
-| `mismatch` | `mismatch(first; second; same)` | default: [FxMismatch\mismatch](LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
-| `searchSequence` | `searchSequence(items; pattern; same; start=0)` | default: [FxSearchSequence\searchSequence](LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
-| `substitute` | `substitute(items; oldValue; newValue; same)` | default: [FxSubstitute\substitute](LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
+| `mismatch` | `mismatch(first; second; same=0)` | default: [FxMismatch\mismatch](LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
+| `searchSequence` | `searchSequence(items; pattern; same=0; start=0)` | default: [FxSearchSequence\searchSequence](LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
+| `substitute` | `substitute(items; oldValue; newValue; same=0)` | default: [FxSubstitute\substitute](LMX_Fn_Receivers/src/coreStandardLisp.lmx) |
 | `indexOf` | `indexOf(text; part; start=0; same=0)` | default: [FxIndexOf\indexOf](LMX_Fn_Receivers/src/coreStandardText.lmx) |
 | `lastIndexOf` | `lastIndexOf(text; part; start=length(text); same=0)` | default: [FxLastIndexOf\lastIndexOf](LMX_Fn_Receivers/src/coreStandardText.lmx) |
 | `compare` | `compare(first; second; order=0)` | default: [FxCompare\compare](LMX_Fn_Receivers/src/coreStandardText.lmx) |
@@ -244,7 +244,7 @@ P0 уже принимает все ресиверы в Expression. Поддер
 
 `compose(outer; inner)` строит callable и не исполняет стадии при построении. `pipe(value; stages)` применяет стадии к принятому значению по порядку; его фактический тип может меняться. `equals` принимает явную проекцию, `findFirst` — предикат, `allOf` — совместимые предикаты произвольной сигнатуры, `retry` — operation/retryOn/limit/delay. Прикладные профили Money и Http503 задают данные и политики, общий алгоритм остаётся в ядре. [Примеры и зависимости](UNIFIED_OPERATIONS.md).
 
-`type` выражает требование типа без конфликта с объявлением `int: x`. `to` получает входные TYPE и последний TYPE результата: `A0 to A1 R`. Обозначения TYPE/RAW/PLACE/LAZY_NODE сохраняют роль и не вычисляются как обычное значение только из-за выбора формы вызова.
+`type` выражает требование типа без конфликта с объявлением `int: x`. `->` получает входные TYPE и последний TYPE результата: `A0 -> A1 R`. Обозначения TYPE/RAW/PLACE/LAZY_NODE сохраняют роль и не вычисляются как обычное значение только из-за выбора формы вызова.
 
 `retryPost` использует настоящие Message/post, сохраняет конечный результат и учитывает поздние ответы. Таймаут или отмена дальнейших повторов не означают принудительного завершения удалённого вызова. `iterateUntilStop` использует принятую декларацию и живые места принимающего исполнения; нижний мост attemptAccepted явно описан как граница интеграции.
 
@@ -260,7 +260,7 @@ Maybe имеет present и ссылку value; Result — ok и ссылку va
 
 Имена согласованы с [канонической миграцией](LMX_Fn_Receivers/CANONICAL_MIGRATION.json). Прежние callable aliases не сохраняются. Исторические карты переименований описывают происхождение, а действующий [catalog.json](LMX_Fn_Receivers/catalog.json) задаёт публичные имена, типовые варианты и маршруты обеих форм. Имена контрольных языков в их исходниках остаются родными.
 
-Каррирование называется `curry`, левая свёртка — `foldl`, её префиксы с seed — `scanl`, мемоизация — `memoize`, acquire/release/action — `bracket`. Именованные сигнатуры записываются `Name :: DATA`; построение из TYPE доступно как `to` с типом результата последним. `index` возвращает Maybe индекса, `deleteAt` удаляет полуоткрытый диапазон. Смена формы вызова не меняет ни один из этих договоров.
+Каррирование называется `curry`, левая свёртка — `foldl`, её префиксы с seed — `scanl`, мемоизация — `memoize`, acquire/release/action — `bracket`. Именованные сигнатуры записываются `Name :: DATA`; построение из TYPE доступно как `->` с типом результата последним. `index` возвращает Maybe индекса, `deleteAt` удаляет полуоткрытый диапазон. Смена формы вызова не меняет ни один из этих договоров.
 
 ## Примеры и метрика
 

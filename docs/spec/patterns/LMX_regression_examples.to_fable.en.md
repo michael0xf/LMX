@@ -901,7 +901,7 @@ not propose a global registry or new generic syntax.
 <a id="operands"></a>
 ## OP. Operands, expression evaluation, and argument boundaries
 
-These cases follow the current operand contract, including conditional RIGHT-only opening. In their source citations, P23 means the Interpreter section of source P3. Mandatory header fields are checked in the actual DATA; no registration receiver is used.
+These cases follow the current operand contract: the Expression grouper produces a structured operation/stream plan, and a separate application adapter supplies the left actual and right-reference Array. In their source citations, P23 means the Interpreter section of source P3. Mandatory header fields are checked in the actual DATA; no registration receiver is used.
 
 ### OP01 — An ordinary method acquires operand use from its actual DATA
 
@@ -975,23 +975,38 @@ cases, provide genuine Array/Structure fixtures through the harness rather than
 changing `Array<T>` into `Array<@>` by reinterpreting its backing.
 
 
-Also inspect the conditional opening with an unconstrained operand probe. `a`, `b`, `c`, and `d` stand for inert values in these shape checks; an application entry need not invoke the probe body to verify the supplied references.
+Also inspect the current-level plan and the separate application-adapter snapshot with an unconstrained operand probe. `a`, `b`, `c`, and `d` stand for inert values in these shape checks. The probe must admit the shown value shapes; this table does not assert admission to a particular typed operation. Select the stated sequence or whole-value consumption explicitly in the harness; the generic operand does not acquire a contract from its name or a vanished singleton wrapper. Checking the supplied references does not require invoking the probe body.
 
-| Written application | RIGHT after operand admission | LEFT after operand admission |
+| Written application | RIGHT supplied by the application adapter | LEFT supplied by the application adapter |
 | --- | --- | --- |
 | `(a b) probe (c d)` | Two immediate right values, c and d | The original whole `(a b)` Structure |
-| `(a b) probe ((c d))` | One unnamed inner Structure `(c d)`; do not open it again | The original whole `(a b)` Structure |
-| `(a b) probe ()` | Zero right values after opening that one empty group | The original whole `(a b)` Structure |
-| `1 probe (c d)` | One whole Structure; scalar LEFT does not satisfy the condition | The scalar 1 |
-| `probe (c d)` with omitted LEFT | One whole Structure; omission does not satisfy the condition | Still omitted; no first-right shift |
+| `(a b) probe (((c d)))`, sequence consumption | Two right values c and d after normalization of the sole group | One bundle referring to a and b |
+| `(a b) probe (((c d))) 7`, sequence consumption | Two right items: normalized subgroup `(c d)` and 7 | One bundle referring to a and b |
+| `1 probe 2 (((3))) (4) ((5))` | Four right units: 2, 3, 4, 5 | Scalar 1 |
+| `1 probe 2 (((5 6))) (4) 5` | Four right units: 2, subgroup `(5 6)`, 4, 5 | Scalar 1 |
+| `1 probe 2 (+ 5 6) 4 5` | Four right units, the second being one complete prefix application of + | Scalar 1 |
+| `(a b) probe ()` | Zero current-level right items | The original whole `(a b)` Structure |
+| `1 probe (c d)` | One whole Structure in the plan for scalar LEFT | The scalar 1 |
+| `probe (c d)` with omitted LEFT | One whole Structure in the plan with omitted LEFT | Still omitted; no first-right shift |
 | `(a b) probe (c d) 7` | Two right occurrences: the whole group and 7 | The original whole `(a b)` Structure |
-| `(a b) probe producer()` returning a Structure | One returned Structure; no automatic opening | The original whole `(a b)` Structure |
+| `(a b) probe producer()` returning a ready Structure in a VALUE position | One whole result under the VALUE contract; no implicit CODE interpretation | The original whole `(a b)` Structure |
 | `Name :: (A B)` | One whole right-hand Structure | Declaration identifier Name |
 | `Name :: A B` | Two right arguments, A and B | Declaration identifier Name |
 
-An operand opens a group only when all three conditions hold: `left` is a written unnamed Structure, `length(right) = 1`, and `right[0]` is a written unnamed Structure. Only the one outer group on the RIGHT is removed, once for this operand application; its immediate fields become `right`. LEFT remains the same whole Structure and merely supplies the condition. Nested groups are not opened again, and a Structure returned by a function is not automatically opened. P0 never performs this transformation. Ordinary callable W/E selection is a separate rule, not an additional operand-opening pass. A named declaration such as `Name :: (A B)` has a name on the left, so its single right-hand Structure remains whole; `Name :: A B` instead has two right arguments.
+The grouper receives the pure graph and represents the left segment and the right current-level stream separately. Parentheses in the displayed cases describe that graph, not delimiter flags available to this phase. The Expression application adapter then packages the full left segment as one actual and the right items as an Array of references. The old anonymous-LEFT/sole-anonymous-RIGHT formulation is a corollary of these plan and ABI results, not an independent opening pass. The grouper recursively normalizes every admitted Expression group before supply. One resulting unit is transparent; zero or several units remain one subgroup. Normalized neighboring subgroups are not spliced, and complete inner applications retain their atomic boundaries. The adapter and operand body do not repeat grouping or invent an operation between material atoms. The operand method alone checks admission of the supplied values. A ready value consumed as VALUE/TYPE/DATA does not automatically become CODE. In a CODE/Expression graph an anonymous Structure is always a group. A named Structure is a group when its parent differs from the current lexical parent; when those parents coincide, ordinary call processing applies. This decision uses the node name and parent, not whether the node was written inline or reached through a reference. The group case preserves the original parent and introduces no call. The grouper receives the graph without parentheses. The named `::` rows retain the shown right-argument counts, and all their arguments are DATA.
 
-Verify the retained source graph separately: P0 keeps every original group in all rows. Opening is a single operand-admission action on RIGHT, not a loop that retests the newly obtained arguments. `::` does not acquire an extra Frame or an automatic `end: Name` terminator from this rule. These checks do not change ordinary callable W/E candidate selection.
+Verify the retained source graph separately: P0 keeps every original group in all rows. Grouping produces a structured plan, not replacement source text, and the application adapter packages that plan without a second opening pass. `::` does not acquire an extra Frame or an automatic `end: Name` terminator. Ordinary callable W/E candidate selection is unchanged. Anonymous CODE Structures execute in place; this does not introduce a call or a new activation.
+
+The following group-assignment snapshots distinguish the stream plan from the operand ABI. Values in the three-group row are schematic; the destination places must admit those whole Structure values before assignment.
+
+| Written assignment | Grouper left segment | Grouper right stream | Application-adapter snapshot |
+| --- | --- | --- | --- |
+| `(a b c) := (a c b)` | Places a, b, c | Values a, c, b at the selected level | One whole left place bundle; three right references |
+| `(a b c) := (f g h) (f g h) (f g h)` | Places a, b, c | Three whole group items | One whole left place bundle; three right references, never nine |
+| `(a b) := copy(Pair)`, with Pair fields 2 and 7 | Places a, b | The two fields emitted by copy | One whole left place bundle; references to 2 and 7 |
+| `(a b) := (copy(Pair))`, with the same Pair | Places a, b | The same two copied fields | The same two-value assignment as the preceding row |
+
+The last two rows are valid equivalent group-assignment cases. The current [R02 source](examples/lmx/R02.lm3) uses the shorter direct stream; its expected `StreamProbe\run()` result remains **27**. All right values are read before the first target write. These are normative expected snapshots, not a parser or runtime execution receipt. Removing parentheses from a scalar container assignment such as `ptr := (copy(Model))` is outside this equivalence.
 
 Source: [operand header](../LMX_semantics.en.md#operand-receiver); [prepared values](../LMX_semantics.en.md#prepared-operands); [references and storage](../LMX_semantics.en.md#operand-storage).
 

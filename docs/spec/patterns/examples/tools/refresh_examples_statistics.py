@@ -13,7 +13,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 PATTERNS = ROOT.parent
-EDITION = '2026-11-23'
+EDITION = '2026-11-24'
 sys.path.insert(0, str(PATTERNS/'tools'))
 from canonical_operations import definitions as canonical_definitions
 from lmx_style_variants import normalize, measure as metric, validate_variants

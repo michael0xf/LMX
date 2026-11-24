@@ -57,7 +57,7 @@ def main():
                             if cell.find('s:v',NS) is None:entry['missing_cached_results'].append({'sheet':name,'cell':cell.attrib.get('r')})
         if entry['formula_errors'] or entry['missing_cached_results']:errors.append({'file':entry['file'],'issue':'XLSX error or missing formula cache'})
         books.append(entry)
-    report={'edition':'2026-11-23','scope':'final PDF page bounds and rendering; XLSX archive/XML/cached-formula checks, not native Excel or LMX execution',
+    report={'edition':'2026-11-24','scope':'final PDF page bounds and rendering; XLSX archive/XML/cached-formula checks, not native Excel or LMX execution',
         'pdf_files':pdfs,'xlsx_files':books,'pdf_pages':len(pages),'errors':errors,
         'pdf_contact_sheets':contacts(pages,out,'pdf_contact'),'visual_signoff':'pending human/model inspection of rendered files'}
     args.report.parent.mkdir(parents=True,exist_ok=True);args.report.write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')

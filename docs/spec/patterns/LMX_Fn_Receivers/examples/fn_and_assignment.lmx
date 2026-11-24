@@ -1,7 +1,7 @@
 # Подготовленные проверки приёмки, а не отчёт о выполненном прогоне ядра.
 # Нужны generic_functions.lmx, fn_operand.lmx и поставщик FxKernel из KERNEL_REQUIREMENTS.md.
-# Реальный метод операнда — FxToOperand\to. Каноническое написание
-# T0 to T1 R — обычное ядерное имя в стандартном namespace ядра.
+# Реальный метод операнда — FxToOperand\`->`. Каноническое написание
+# T0 -> T1 R — обычное ядерное имя в стандартном namespace ядра.
 # Именованное объявление полностью перенесено в Name :: Signature.
 # Пустые строки разделяют только корневые формы.
 # Каждый run возвращает 1 при выполнении всех проверок.
@@ -48,7 +48,7 @@ FxFnReadyCodesExample:
     return: int
     run:
         throws: copy(FxThrows\fixture)
-        @: made (sys\typeof(FxFnReadySamples[0]) FxToOperand\to sys\typeof(FxFnReadySamples[1]) sys\typeof(FxFnReadySamples[2]) sys\typeof(FxFnReadySamples[0]))
+        @: made (sys\typeof(FxFnReadySamples[0]) FxToOperand\`->` sys\typeof(FxFnReadySamples[1]) sys\typeof(FxFnReadySamples[2]) sys\typeof(FxFnReadySamples[0]))
         @: info FxKernel\signature(subject := made)
         sys\assert(length(info\inputTypes) = 3)
         sys\assert(info\hasResult = 1)
@@ -74,7 +74,7 @@ FxFnUninitExample:
         tokens[0] := FxFnUninitSamples\integral[0]
         tokens[1] := FxFnUninitSamples\real[0]
         tokens[2] := FxFnUninitSamples\reference[0]
-        @: made FxToTypes\to(inputs := tokens; result := FxFnUninitSamples\integral[0])
+        @: made FxToTypes\`->`(inputs := tokens; result := FxFnUninitSamples\integral[0])
         @: info FxKernel\signature(subject := made)
         sys\assert(length(info\inputTypes) = 3)
         sys\assert(info\hasResult = 1)
@@ -106,7 +106,7 @@ FxFnProcedureExample:
         @: original FxKernel\signature(subject := FxFnProcedureTarget\run)
         sys\assert(original\hasResult = 0)
         @[]: tokens []
-        @: made FxToTypes\to(inputs := tokens; result := original\resultType)
+        @: made FxToTypes\`->`(inputs := tokens; result := original\resultType)
         @: info FxKernel\signature(subject := made)
         sys\assert(length(info\inputTypes) = 0)
         sys\assert(info\hasResult = 0)
@@ -138,9 +138,9 @@ FxAssignmentSource:
     int: second 5
     int: third 6
 
-# 5. Сохранённая P0 группа содержит copy(s), а общий механизм потребления
-# получает его поля для позиционной записи. Не требуется снимать группу
-# при разборе и не разрешается рекурсивно раскрывать произвольные контейнеры.
+# 5. copy(s) даёт явный поток полей для позиционной записи; внешняя группа
+# справа не нужна. Группировщик сохраняет дерево и текущий уровень потока,
+# а адаптер применения собирает левую группу в один аргумент.
 FxGroupCopyExample:
     return: int
     run:
@@ -149,7 +149,7 @@ FxGroupCopyExample:
         int: b 0
         int: c 0
         @: s FxAssignmentSource
-        (a b c) := (copy(s))
+        (a b c) := copy(s)
         sys\assert(a = 4)
         sys\assert(b = 5)
         sys\assert(c = 6)
@@ -173,7 +173,7 @@ FxFnAndAssignmentExamples:
 # - инструментировать чтение uninit: ни make, ни normalizeType не читают payload;
 # - проверить qualified operand в interpreter/native и всех переходах между ними;
 # - обеспечить lifetime материализованных ready int-токенов;
-# - повторить операндный пример с прямым ядерным именем to и проверить
+# - повторить операндный пример с прямым ядерным именем -> и проверить
 #   совместимость с FxFnExpectedMixed :: (...);
 # - неизвестный код типа отказывает с FxTypeToken, не создавая успешный descriptor;
 # - mismatch длины в групповом присваивании обнаруживается до первой записи;

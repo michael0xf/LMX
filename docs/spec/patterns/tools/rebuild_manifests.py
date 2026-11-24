@@ -43,7 +43,7 @@ def main():
     assert not static['errors'], 'Fix source checks before publishing manifests'
     package_files = files(PACKAGE, {'MANIFEST.json'})
     write(PACKAGE / 'MANIFEST.json', {
-        'revision': 'integrated-spec-two-lmx-styles-fable-clarifications-2026-11-23',
+        'revision': 'pure-graph-expression-grouping-arrow-shortened-examples-2026-11-24',
         'base_archive': base['name'], 'base_archive_sha256': base['sha256'],
         'historical_provenance': historical,
         'public_receivers': len(catalog),
@@ -57,7 +57,7 @@ def main():
         'source_parts': static['source_parts'], 'source_lines': static['source_lines'],
         'prepared_assertions': static['prepared_assertions'],
         'named_signature_form': 'Name :: Signature through the ordinary Expression operand protocol; no separate Frame',
-        'type_constructor': 'to: ordered TYPE inputs followed by the result TYPE',
+        'type_constructor': '->: ordered TYPE inputs followed by the result TYPE',
         'postfix_type_forms': ['Struct@: ptr', 'type[]: array'],
         'runtime_executed': False, 'manifest_self_excluded': True,
         'files': package_files,
@@ -69,9 +69,11 @@ def main():
     (PATTERNS / 'MANIFEST.sha256').write_text(''.join(f"{row['sha256']}  {row['path']}\n" for row in pattern_files))
     spec_files = files(SPEC, {'ARCHIVE_MANIFEST.json'})
     write(SPEC / 'ARCHIVE_MANIFEST.json', {
-        'edition': '2026-11-23', 'base_archive': base['name'], 'base_archive_sha256': base['sha256'],
+        'edition': '2026-11-24', 'base_archive': base['name'], 'base_archive_sha256': base['sha256'],
         'historical_provenance': historical,
-        'scope': 'Complete current spec directory, including integrated contracts, sources, comparisons and answers to Fable.',
+        'scope': 'Complete post-merge spec directory, including integrated contracts, sources, comparisons and answers to Fable; not the member list of the changes-only archive.',
+        'delivery_mode': 'changes_only',
+        'delta_manifest': 'CHANGES_2026-11-24.json at archive root',
         'fable_answers': 'FABLE_CLARIFICATIONS.md',
         'self_excluded': True, 'excluded_metadata': ['.DS_Store', '__pycache__', '*.pyc', '.git'],
         'file_count_without_manifest': len(spec_files), 'files': spec_files,

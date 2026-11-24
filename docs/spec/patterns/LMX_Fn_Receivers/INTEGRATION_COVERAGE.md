@@ -14,7 +14,7 @@ callable composition is `compose`.
 | Membership, association, properties, mismatch, search and memo keys | Shared `FxKeyIndex`, `FxSequenceSearch` and equality; key projection is optional and evaluated once per selected value |
 | Adaptive constructors | `FxRecordAdapter` captures one admitted whole value and invokes the single constructor positionally; `some`, `ok`, `err`, `done` retain exact container results |
 | Canonical `bind` | Maybe and Result use typed short-circuit wrappers over `FxBindChain`; Array delegates to `FxSeqBind`; no legacy callable aliases |
-| `type` and `to` | `FxValueType` observes the record type; `FxToTypes`/`FxToTokens` place the result TYPE last and use one signature-construction body |
+| `type` and `->` | `FxValueType` observes the record type; `FxToTypes`/`FxToTokens` place the result TYPE last and use one signature-construction body |
 | Receiver and operand forms | Every catalog variant records both targets, roles, source declarations, required fields, exact result and declared finite throws |
 | Prepared operand DATA | One ordinary `FxPreparedOperands` fragment; each consumer supplies its explicit ready priority, requiredness and result |
 | Value pipelines, projection equality and result retry | `coreGenericOperations.lmx`; `FxPipeBuild` and `FxRetryBuild` publish exact R through the existing `FxWrap` engine protocol |

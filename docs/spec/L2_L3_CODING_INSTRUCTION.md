@@ -404,14 +404,7 @@ Its DATA is checked against the structural operand header. Mandatory fields are
 `left`, `right`, `PASS_ARGS_AS_IS`, and `PRIORITY`. Missing properties are not
 filled by merely checking the template.
 
-`left` is one reference input. `right` is an Array of references in source
-occurrence order. A container remains one operand; no general Array spreading
-is introduced. An operand has one opening of its own: when its `left` is an
-unnamed Structure and its single `right` argument is an unnamed Structure too,
-the parentheses on the right are opened and `right` receives all their content;
-a Structure returned from a function is not opened (author's decisions,
-2026-11-21 and 2026-11-22). Prefix forms can omit the written left actual under normal
-method admission.
+The [Expression grouper](LMX_semantics.en.md#expression-structural-grouping) derives priority dependencies and current-level structural sequences from the clean graph. CODE/Expression traversal treats anonymous or named different-parent Structures as groups, and named same-parent Structures as ordinary receiver/call applications, relative to the current lexical owner. Reference resolution never reparents the target. A separate application adapter supplies one left reference/bundle and an Array of right references. The receiving contract selects whole-value or sequence consumption: group assignment accepts bare `copy` or its collector and snapshots RHS values before writes; three sibling RHS groups remain three Structure values. Complete scalar expression groups such as `((2))` yield one value, while TYPE/models, field collectors and returned/reference values keep their actual contracts. There is no extra conditional opening pass, new persistent flag or public two-Array operand ABI. Prefix absence remains absence; there is no automatic fold or right-to-left shift.
 
 `PASS_ARGS_AS_IS 0` supplies prepared values. `PASS_ARGS_AS_IS 1` supplies
 original occurrences without their effects. The priority is an independent

@@ -39,8 +39,8 @@
 
 | Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
 | --- | ---: | ---: | ---: |
-| LMX процедурный | 365 | 633 | 20 |
-| LMX функциональный | 141 | 214 | 11 |
+| LMX процедурный | 348 | 616 | 20 |
+| LMX функциональный | 131 | 204 | 11 |
 | Julia | 55 | 62 | 2 |
 
 Обе LMX-формы опубликованы и считаются независимо. Все определения, обработчики и ссылки на throws входят в полный размер. Выбор единственного LMX-варианта по длине не выполняется.
@@ -52,7 +52,7 @@ Example:
     int[]: xs
     return: @
     run:
-        throws: copy(FxSeqPush\append\throws) copy(FxRecordOperands\record\throws)
+        throws: copy(FxSeqPush\append\throws) copy(record\throws)
         @[]: out []
         int: i 0
         while: i < length(xs)
@@ -70,7 +70,7 @@ Example:
         return: out
 ```
 
-[Полный исходник](source/lmx/procedural/J12.lm3). 365 непробельных символов; 20 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/procedural/J12.lm3). 348 непробельных символов; 20 непустых строк. Все объявления и Throws включены.
 
 ## LMX — функциональный
 
@@ -86,11 +86,11 @@ Example:
     int[]: xs
     return: @
     run:
-        throws: copy(FxGroupBy\groupBy\throws)
+        throws: copy(groupBy\throws)
         return: groupBy(xs; Parity\key)
 ```
 
-[Полный исходник](source/lmx/J12.lm3). 141 непробельных символов; 11 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/J12.lm3). 131 непробельных символов; 11 непустых строк. Все объявления и Throws включены.
 
 ## Julia
 

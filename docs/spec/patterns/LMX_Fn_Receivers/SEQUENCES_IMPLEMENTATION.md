@@ -26,7 +26,7 @@ foldl/scanl/zipWith. Their own additional defaults, uninitialized inputs,
 required/private policies, full requirements, results, and declared exits
 remain those of the selected callable.
 
-Every collection operation has its ordinary receiver and common operand form under one canonical name. `map`, `slice` and `replaceRange` reuse the original body and full contract; the existing Expression mechanism and actor publication route the prepared roles. Existing numeric Expression operands retain their arithmetic/scalar-expansion semantics. Both forms keep the single conditional opening of the written anonymous RIGHT container and never recursively flatten returned arrays. See [operation forms](../../OPERATION_FORMS.md) and [publication](PUBLICATION_CONTRACT.md).
+Every collection operation has its ordinary receiver and common operand form under one canonical name. `map`, `slice` and `replaceRange` reuse the original body and full contract; the existing Expression mechanism and actor publication route the prepared roles. Existing numeric Expression operands retain their arithmetic/scalar-expansion semantics. The tree grouper handles priorities, groups and field streams; the separate application adapter packages left as one actual and the current right stream as references. Collection adapters use that prepared vector without an extra opening pass and never recursively flatten returned arrays passed as values. See [structural grouping](../../LMX_semantics.en.md#expression-structural-grouping), [operation forms](../../OPERATION_FORMS.md) and [publication](PUBLICATION_CONTRACT.md).
 
 `index` is the sequence search receiver. It returns the existing Maybe.
 It is distinct from Regex `find(source; pattern)`, whose result is a Match;

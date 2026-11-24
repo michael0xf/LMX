@@ -2,6 +2,16 @@
 
 **Current core:** [types, universal sequences, generic patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
 
+**Current revision: 2026-11-24.** The [revision report](REVISION_2026-11-24.md)
+records the `->` signature name, shortened examples, refreshed comparisons and
+the author's final Expression grouping rules. See the [clean-graph grouping
+chapter](EXPRESSION_GROUPING.md) and [detailed algorithm with reference code](EXPRESSION_ALGORITHM.md).
+There are exactly two operand forms: no left atom, or one left atom; both have
+a right tail. Anonymous Structures are groups. A named Structure is a group
+only when its actual parent differs from the lexical parent of the expression;
+a named same-parent Structure follows ordinary receiver/call processing.
+The separate application adapter preserves one left actual and a right Array.
+
 This is the documentation layout of the current uploaded archive. Historical notes
 inside individual files can refer to the author's wider repository; those paths do
 not change the layout or the source of this edition. The current work is summarized
@@ -15,7 +25,7 @@ restoration records remain provenance; they do not replace the current source.
 
 **Answers to Fable are included in this archive:**
 [FABLE_CLARIFICATIONS.md](FABLE_CLARIFICATIONS.md) answers every item in the supplied findings,
-states the concrete corrections and identifies the remaining narrow R0 design question.
+states the concrete corrections and includes the author's resolution of the R0 question.
 The rules are also corrected in their permanent chapters. See the
 [integration and verification report](INTEGRATION_REPORT.md) for the completed scope and execution limits.
 
@@ -66,7 +76,7 @@ wherever their receiver records occur. An anonymous Structure is not itself a
 call, but its contents can contain calls and initializers with their ordinary
 contracts.
 
-An operand opens a group only when all three conditions hold: `left` is a written unnamed Structure, `length(right) = 1`, and `right[0]` is a written unnamed Structure. Only the one outer group on the RIGHT is removed, once for this operand application; its immediate fields become `right`. LEFT remains the same whole Structure and merely supplies the condition. Nested groups are not opened again, and a Structure returned by a function is not automatically opened. P0 never performs this transformation. Ordinary callable W/E selection is a separate rule, not an additional operand-opening pass. A named declaration such as `Name :: (A B)` has a name on the left, so its single right-hand Structure remains whole; `Name :: A B` instead has two right arguments.
+Expression is the ordinary Structure graph interpreted with a [structural grouper](LMX_semantics.en.md#expression-structural-grouping): it determines priorities, complete expression units and streams at the current tree level, independently of source spelling. A separate Expression application adapter packages left as one actual/reference bundle and right as an Array of references. `arg0 operand arg1 arg2 arg3` is the general form; a binary contract uses one right item, with no automatic fold or movement of the first right item into an absent left. The receiving contract selects whole-value or current-level sequence consumption. `(a b c) := (a c b)` therefore has one left bundle and three right values; three sibling RHS groups remain three Structure items. There is no extra conditional unwrapping pass after grouping. The grouper reads the clean graph. In CODE/Expression, anonymous Structures and named Structures whose actual parent differs from the current lexical owner are groups; named same-parent Structures use ordinary receiver/call handling. Reference resolution preserves the actual parent. Whole VALUE/TYPE/DATA material is not automatically reclassified as CODE. `1 + ((2))` is 3; field collectors such as `(copy(Model))` remain containers for zero, one or many fields. `::` and modifiers keep DATA consumption and the common immediate-field reader; they gain no RHS evaluator. P0, ordinary callable W/E and the existing lifetime/effect rules remain intact. See [architecture and acceptance](EXPRESSION_GROUPING.md); execution is **NOT_RUN**.
 
 The clean graph is the complete literal source representation, including terminal
 primitive leaves as `{type value}` at addresses referenced by Structure cells.

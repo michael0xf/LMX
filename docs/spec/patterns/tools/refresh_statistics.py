@@ -18,7 +18,7 @@ import sys
 from lmx_style_variants import LEGACY_ROLE, STYLES, measure, normalize, validate_variants
 
 ROOT = Path(__file__).resolve().parents[1]
-DATE = '2026-11-23'
+DATE = '2026-11-24'
 MARKER = '# BEGIN PROCEDURAL LMX (excluded from character counts)'
 ALTERNATIVE_MARKER = '# BEGIN ALTERNATIVE LMX (excluded from character counts)'
 LAYERS = ('scenario', 'usage', 'shared_implementation_client', 'implementation')

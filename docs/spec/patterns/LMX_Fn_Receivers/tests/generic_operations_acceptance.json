@@ -663,7 +663,7 @@
     },
     {
       "id": "GEN001",
-      "scenario": "to inputs then final result token",
+      "scenario": "-> inputs then final result token",
       "expected": "Both forms construct identical full input/result requirements; void and nullary contracts preserved",
       "modes": {
         "interpreter_interpreter": "NOT_RUN",
@@ -930,17 +930,17 @@
     },
     {
       "id": "FORM004",
-      "scenario": "to / default ordinary versus operand",
+      "scenario": "-> / default ordinary versus operand",
       "expected": {
         "call": {
-          "target": "FxToTokens\\to",
+          "target": "FxToTokens\\`->`",
           "route": "existing-receiver",
           "argument_roles": [
             "TYPE..."
           ]
         },
         "operand": {
-          "target": "FxToOperand\\to",
+          "target": "FxToOperand\\`->`",
           "route": "existing-operand",
           "argument_roles": [
             "TYPE..."
@@ -4630,7 +4630,7 @@
           "result_declaration": "@",
           "declared_throws": [],
           "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
-          "source_declaration": "RxMembers:\n    private: @: values\n    required: values\n    return: @\n    oneOf:\n        return: RxClassMake\\make(values; 0)"
+          "source_declaration": "RxMembers:\n    private: @: values\n    required: values\n    return: @"
         },
         "observation": "Same existing body/owner and actual result, evaluation order, accepted argument mapping, finite effects and short-circuit behavior"
       },
@@ -6506,12 +6506,7 @@
           "source": "src/regex/operands.lmx",
           "declared_inputs": [
             "@: left",
-            "@[]: right",
-            "throws: copy(FxThrows\\pattern)",
-            "private: @: args RxLogicalArguments\\collect(left := left; right := right)",
-            "if: length(args) != 2",
-            "throw: PatternArgument()",
-            "private: int: count \\args[1]"
+            "@[]: right"
           ],
           "declaration_copies": [],
           "required": [
@@ -6535,7 +6530,7 @@
             "SequenceSize"
           ],
           "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
-          "source_declaration": "RxRepeatOperands:\n    private:\n        @: left\n        @[]: right\n    required: right\n    const: int: PASS_ARGS_AS_IS 0\n    const: int: PRIORITY sys\\priority(\"*\")\n    return: @\n    times:\n        throws: copy(FxThrows\\pattern)\n        private: @: args RxLogicalArguments\\collect(left := left; right := right)\n        if: length(args) != 2\n            throw: PatternArgument()\n        private: int: count \\args[1]\n        return: RxRepeated\\repeated(pattern := args[0]; minimum := count; maximum := args[1])"
+          "source_declaration": "RxRepeatOperands:\n    private:\n        @: left\n        @[]: right\n    required: right\n    const: int: PASS_ARGS_AS_IS 0\n    const: int: PRIORITY sys\\priority(\"*\")\n    return: @"
         },
         "observation": "Same existing body/owner and actual result, evaluation order, accepted argument mapping, finite effects and short-circuit behavior"
       },
@@ -6571,17 +6566,7 @@
           "source": "src/regex/operands.lmx",
           "declared_inputs": [
             "@: left",
-            "@[]: right",
-            "throws: copy(FxThrows\\pattern)",
-            "private: @: args RxLogicalArguments\\collect(left := left; right := right)",
-            "if: length(args) != 2",
-            "throw: PatternArgument()",
-            "private: int: count \\args[1]",
-            "throws: copy(FxThrows\\pattern)",
-            "private: @: args RxLogicalArguments\\collect(left := left; right := right)",
-            "if: length(args) != 2",
-            "throw: PatternArgument()",
-            "private: int: count \\args[1]"
+            "@[]: right"
           ],
           "declaration_copies": [],
           "required": [
@@ -6605,7 +6590,7 @@
             "SequenceSize"
           ],
           "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
-          "source_declaration": "RxRepeatOperands:\n    private:\n        @: left\n        @[]: right\n    required: right\n    const: int: PASS_ARGS_AS_IS 0\n    const: int: PRIORITY sys\\priority(\"*\")\n    return: @\n    times:\n        throws: copy(FxThrows\\pattern)\n        private: @: args RxLogicalArguments\\collect(left := left; right := right)\n        if: length(args) != 2\n            throw: PatternArgument()\n        private: int: count \\args[1]\n        return: RxRepeated\\repeated(pattern := args[0]; minimum := count; maximum := args[1])\n    atLeast:\n        throws: copy(FxThrows\\pattern)\n        private: @: args RxLogicalArguments\\collect(left := left; right := right)\n        if: length(args) != 2\n            throw: PatternArgument()\n        private: int: count \\args[1]\n        return: RxRepeated\\repeated(pattern := args[0]; minimum := count)"
+          "source_declaration": "RxRepeatOperands:\n    private:\n        @: left\n        @[]: right\n    required: right\n    const: int: PASS_ARGS_AS_IS 0\n    const: int: PRIORITY sys\\priority(\"*\")\n    return: @"
         },
         "observation": "Same existing body/owner and actual result, evaluation order, accepted argument mapping, finite effects and short-circuit behavior"
       },
@@ -6641,24 +6626,7 @@
           "source": "src/regex/operands.lmx",
           "declared_inputs": [
             "@: left",
-            "@[]: right",
-            "throws: copy(FxThrows\\pattern)",
-            "private: @: args RxLogicalArguments\\collect(left := left; right := right)",
-            "if: length(args) != 2",
-            "throw: PatternArgument()",
-            "private: int: count \\args[1]",
-            "throws: copy(FxThrows\\pattern)",
-            "private: @: args RxLogicalArguments\\collect(left := left; right := right)",
-            "if: length(args) != 2",
-            "throw: PatternArgument()",
-            "private: int: count \\args[1]",
-            "throws: copy(FxThrows\\pattern)",
-            "private: @: args RxLogicalArguments\\collect(left := left; right := right)",
-            "if: length(args) != 2",
-            "throw: PatternArgument()",
-            "private: int: count \\args[1]",
-            "if: count < 0",
-            "throw: PatternArgument()"
+            "@[]: right"
           ],
           "declaration_copies": [],
           "required": [
@@ -6682,7 +6650,7 @@
             "SequenceSize"
           ],
           "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
-          "source_declaration": "RxRepeatOperands:\n    private:\n        @: left\n        @[]: right\n    required: right\n    const: int: PASS_ARGS_AS_IS 0\n    const: int: PRIORITY sys\\priority(\"*\")\n    return: @\n    times:\n        throws: copy(FxThrows\\pattern)\n        private: @: args RxLogicalArguments\\collect(left := left; right := right)\n        if: length(args) != 2\n            throw: PatternArgument()\n        private: int: count \\args[1]\n        return: RxRepeated\\repeated(pattern := args[0]; minimum := count; maximum := args[1])\n    atLeast:\n        throws: copy(FxThrows\\pattern)\n        private: @: args RxLogicalArguments\\collect(left := left; right := right)\n        if: length(args) != 2\n            throw: PatternArgument()\n        private: int: count \\args[1]\n        return: RxRepeated\\repeated(pattern := args[0]; minimum := count)\n    atMost:\n        throws: copy(FxThrows\\pattern)\n        private: @: args RxLogicalArguments\\collect(left := left; right := right)\n        if: length(args) != 2\n            throw: PatternArgument()\n        private: int: count \\args[1]\n        if: count < 0\n            throw: PatternArgument()\n        return: RxRepeated\\repeated(pattern := args[0]; maximum := args[1])"
+          "source_declaration": "RxRepeatOperands:\n    private:\n        @: left\n        @[]: right\n    required: right\n    const: int: PASS_ARGS_AS_IS 0\n    const: int: PRIORITY sys\\priority(\"*\")\n    return: @"
         },
         "observation": "Same existing body/owner and actual result, evaluation order, accepted argument mapping, finite effects and short-circuit behavior"
       },
@@ -7175,8 +7143,7 @@
           "source": "src/coreStandardFunctional.lmx",
           "declared_inputs": [
             "@: items",
-            "int: count",
-            "throws: copy(FxThrows\\sequence)"
+            "int: count"
           ],
           "declaration_copies": [],
           "required": [
@@ -7190,7 +7157,7 @@
             "SequenceSize"
           ],
           "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
-          "source_declaration": "FxStdCut:\n    private:\n        @: items\n        int: count\n    required: items count\n    return: @\n    take:\n        throws: copy(FxThrows\\sequence)\n        return: FxSeqSlice\\slice(items; 0; FxStdCutIndex\\get(items; count))"
+          "source_declaration": "FxStdCut:\n    private:\n        @: items\n        int: count\n    required: items count\n    return: @"
         },
         "observation": "Same existing body/owner and actual result, evaluation order, accepted argument mapping, finite effects and short-circuit behavior"
       },
@@ -7226,9 +7193,7 @@
           "source": "src/coreStandardFunctional.lmx",
           "declared_inputs": [
             "@: items",
-            "int: count",
-            "throws: copy(FxThrows\\sequence)",
-            "throws: copy(FxThrows\\sequence)"
+            "int: count"
           ],
           "declaration_copies": [],
           "required": [
@@ -7242,7 +7207,7 @@
             "SequenceSize"
           ],
           "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
-          "source_declaration": "FxStdCut:\n    private:\n        @: items\n        int: count\n    required: items count\n    return: @\n    take:\n        throws: copy(FxThrows\\sequence)\n        return: FxSeqSlice\\slice(items; 0; FxStdCutIndex\\get(items; count))\n    drop:\n        throws: copy(FxThrows\\sequence)\n        return: FxSeqSlice\\slice(items; FxStdCutIndex\\get(items; count); length(items))"
+          "source_declaration": "FxStdCut:\n    private:\n        @: items\n        int: count\n    required: items count\n    return: @"
         },
         "observation": "Same existing body/owner and actual result, evaluation order, accepted argument mapping, finite effects and short-circuit behavior"
       },
@@ -7330,8 +7295,7 @@
           "source": "src/coreStandardFunctional.lmx",
           "declared_inputs": [
             "@: items",
-            "@: accepts",
-            "throws: copy(FxThrows\\predicate) SequenceSize"
+            "@: accepts"
           ],
           "declaration_copies": [],
           "required": [
@@ -7347,7 +7311,7 @@
             "SequenceSize"
           ],
           "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
-          "source_declaration": "FxStdPrefix:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: @\n    takeWhile:\n        throws: copy(FxThrows\\predicate) SequenceSize\n        return: FxStdCut\\take(items; FxStdPrefixIndex\\get(items; accepts))"
+          "source_declaration": "FxStdPrefix:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: @"
         },
         "observation": "Same existing body/owner and actual result, evaluation order, accepted argument mapping, finite effects and short-circuit behavior"
       },
@@ -7383,9 +7347,7 @@
           "source": "src/coreStandardFunctional.lmx",
           "declared_inputs": [
             "@: items",
-            "@: accepts",
-            "throws: copy(FxThrows\\predicate) SequenceSize",
-            "throws: copy(FxThrows\\predicate) SequenceSize"
+            "@: accepts"
           ],
           "declaration_copies": [],
           "required": [
@@ -7401,7 +7363,7 @@
             "SequenceSize"
           ],
           "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
-          "source_declaration": "FxStdPrefix:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: @\n    takeWhile:\n        throws: copy(FxThrows\\predicate) SequenceSize\n        return: FxStdCut\\take(items; FxStdPrefixIndex\\get(items; accepts))\n    dropWhile:\n        throws: copy(FxThrows\\predicate) SequenceSize\n        return: FxStdCut\\drop(items; FxStdPrefixIndex\\get(items; accepts))"
+          "source_declaration": "FxStdPrefix:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: @"
         },
         "observation": "Same existing body/owner and actual result, evaluation order, accepted argument mapping, finite effects and short-circuit behavior"
       },
@@ -7926,8 +7888,7 @@
           "declared_inputs": [
             "@: items",
             "@: seed",
-            "@: step",
-            "throws: copy(FxThrows\\sequencefixture)"
+            "@: step"
           ],
           "declaration_copies": [],
           "required": [
@@ -7950,7 +7911,7 @@
             "SequenceStep"
           ],
           "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
-          "source_declaration": "FxStdRightFold:\n    private:\n        @: items\n        @: seed\n        @: step\n    required: items seed step\n    return: @\n    foldr:\n        throws: copy(FxThrows\\sequencefixture)\n        return: FxFold\\fold(FxSeqReverse\\reverse(items); seed; FxFlip\\flip(step))"
+          "source_declaration": "FxStdRightFold:\n    private:\n        @: items\n        @: seed\n        @: step\n    required: items seed step\n    return: @"
         },
         "observation": "Same existing body/owner and actual result, evaluation order, accepted argument mapping, finite effects and short-circuit behavior"
       },
@@ -8038,8 +7999,7 @@
           "source": "src/coreStandardFunctional.lmx",
           "declared_inputs": [
             "@: items",
-            "@: transform",
-            "throws: copy(FxThrows\\traversal) SequenceElement"
+            "@: transform"
           ],
           "declaration_copies": [],
           "required": [
@@ -8055,7 +8015,7 @@
             "SequenceSize"
           ],
           "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
-          "source_declaration": "FxStdMaybeMap:\n    private:\n        @: items\n        @: transform\n    required: items transform\n    return: @\n    filterMap:\n        throws: copy(FxThrows\\traversal) SequenceElement\n        return: FxStdMaybeMapEngine\\run(items; transform; 0; 0)"
+          "source_declaration": "FxStdMaybeMap:\n    private:\n        @: items\n        @: transform\n    required: items transform\n    return: @"
         },
         "observation": "Same existing body/owner and actual result, evaluation order, accepted argument mapping, finite effects and short-circuit behavior"
       },
@@ -8091,9 +8051,7 @@
           "source": "src/coreStandardFunctional.lmx",
           "declared_inputs": [
             "@: items",
-            "@: transform",
-            "throws: copy(FxThrows\\traversal) SequenceElement",
-            "throws: copy(FxThrows\\traversal) SequenceElement"
+            "@: transform"
           ],
           "declaration_copies": [],
           "required": [
@@ -8109,7 +8067,7 @@
             "SequenceSize"
           ],
           "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
-          "source_declaration": "FxStdMaybeMap:\n    private:\n        @: items\n        @: transform\n    required: items transform\n    return: @\n    filterMap:\n        throws: copy(FxThrows\\traversal) SequenceElement\n        return: FxStdMaybeMapEngine\\run(items; transform; 0; 0)\n    mapWhile:\n        throws: copy(FxThrows\\traversal) SequenceElement\n        return: FxStdMaybeMapEngine\\run(items; transform; 1; 0)"
+          "source_declaration": "FxStdMaybeMap:\n    private:\n        @: items\n        @: transform\n    required: items transform\n    return: @"
         },
         "observation": "Same existing body/owner and actual result, evaluation order, accepted argument mapping, finite effects and short-circuit behavior"
       },
@@ -8198,8 +8156,7 @@
           "declared_inputs": [
             "@: items",
             "@: seed",
-            "@: step",
-            "throws: copy(FxThrows\\traversal)"
+            "@: step"
           ],
           "declaration_copies": [],
           "required": [
@@ -8214,7 +8171,7 @@
             "SequenceSize"
           ],
           "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
-          "source_declaration": "FxStdMapAccum:\n    private:\n        @: items\n        @: seed\n        @: step\n    required: items seed step\n    return: @\n    mapAccumL:\n        throws: copy(FxThrows\\traversal)\n        return: FxStdMapAccumEngine\\run(items; seed; step; 0)"
+          "source_declaration": "FxStdMapAccum:\n    private:\n        @: items\n        @: seed\n        @: step\n    required: items seed step\n    return: @"
         },
         "observation": "Same existing body/owner and actual result, evaluation order, accepted argument mapping, finite effects and short-circuit behavior"
       },
@@ -8789,8 +8746,7 @@
           "declared_inputs": [
             "@: first",
             "@: second",
-            "@: same 0",
-            "throws: copy(FxThrows\\sequencefixture)"
+            "@: same 0"
           ],
           "declaration_copies": [],
           "required": [
@@ -8813,7 +8769,7 @@
             "SequenceStep"
           ],
           "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
-          "source_declaration": "FxStdSets:\n    private:\n        @: first\n        @: second\n        @: same 0\n    required: first second \n    return: @\n    union:\n        throws: copy(FxThrows\\sequencefixture)\n        return: FxUnique\\unique(FxSeqConcat\\concat((first; second)); same)"
+          "source_declaration": "FxStdSets:\n    private:\n        @: first\n        @: second\n        @: same 0\n    required: first second \n    return: @"
         },
         "observation": "Same existing body/owner and actual result, evaluation order, accepted argument mapping, finite effects and short-circuit behavior"
       },
@@ -8850,9 +8806,7 @@
           "declared_inputs": [
             "@: first",
             "@: second",
-            "@: same 0",
-            "throws: copy(FxThrows\\sequencefixture)",
-            "throws: copy(FxThrows\\sequencefixture)"
+            "@: same 0"
           ],
           "declaration_copies": [],
           "required": [
@@ -8875,7 +8829,7 @@
             "SequenceStep"
           ],
           "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
-          "source_declaration": "FxStdSets:\n    private:\n        @: first\n        @: second\n        @: same 0\n    required: first second \n    return: @\n    union:\n        throws: copy(FxThrows\\sequencefixture)\n        return: FxUnique\\unique(FxSeqConcat\\concat((first; second)); same)\n    intersection:\n        throws: copy(FxThrows\\sequencefixture)\n        return: FxStdSetSelect\\select(first; second; same; 1)"
+          "source_declaration": "FxStdSets:\n    private:\n        @: first\n        @: second\n        @: same 0\n    required: first second \n    return: @"
         },
         "observation": "Same existing body/owner and actual result, evaluation order, accepted argument mapping, finite effects and short-circuit behavior"
       },
@@ -8912,10 +8866,7 @@
           "declared_inputs": [
             "@: first",
             "@: second",
-            "@: same 0",
-            "throws: copy(FxThrows\\sequencefixture)",
-            "throws: copy(FxThrows\\sequencefixture)",
-            "throws: copy(FxThrows\\sequencefixture)"
+            "@: same 0"
           ],
           "declaration_copies": [],
           "required": [
@@ -8938,7 +8889,7 @@
             "SequenceStep"
           ],
           "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
-          "source_declaration": "FxStdSets:\n    private:\n        @: first\n        @: second\n        @: same 0\n    required: first second \n    return: @\n    union:\n        throws: copy(FxThrows\\sequencefixture)\n        return: FxUnique\\unique(FxSeqConcat\\concat((first; second)); same)\n    intersection:\n        throws: copy(FxThrows\\sequencefixture)\n        return: FxStdSetSelect\\select(first; second; same; 1)\n    difference:\n        throws: copy(FxThrows\\sequencefixture)\n        return: FxStdSetSelect\\select(first; second; same; 0)"
+          "source_declaration": "FxStdSets:\n    private:\n        @: first\n        @: second\n        @: same 0\n    required: first second \n    return: @"
         },
         "observation": "Same existing body/owner and actual result, evaluation order, accepted argument mapping, finite effects and short-circuit behavior"
       },
@@ -9665,7 +9616,9 @@
         "contract": {
           "source": "src/coreStandardObjects.lmx",
           "declared_inputs": [],
-          "declaration_copies": [],
+          "declaration_copies": [
+            "copy(FxFieldArguments)"
+          ],
           "required": [],
           "result_declaration": "@",
           "declared_throws": [
@@ -9711,7 +9664,9 @@
         "contract": {
           "source": "src/coreStandardObjects.lmx",
           "declared_inputs": [],
-          "declaration_copies": [],
+          "declaration_copies": [
+            "copy(FxFieldArguments)"
+          ],
           "required": [],
           "result_declaration": "int",
           "declared_throws": [
@@ -9757,7 +9712,9 @@
         "contract": {
           "source": "src/coreStandardObjects.lmx",
           "declared_inputs": [],
-          "declaration_copies": [],
+          "declaration_copies": [
+            "copy(FxFieldArguments)"
+          ],
           "required": [],
           "result_declaration": "@",
           "declared_throws": [
@@ -10501,7 +10458,7 @@
             "copy: FxTrimInputs"
           ],
           "required": [],
-          "result_declaration": "void",
+          "result_declaration": "inherited via declaration_copies",
           "declared_throws": [
             "FxCallFailure",
             "FxKernelFailure",
@@ -10606,7 +10563,7 @@
             "copy: FxTrimInputs"
           ],
           "required": [],
-          "result_declaration": "void",
+          "result_declaration": "inherited via declaration_copies",
           "declared_throws": [
             "FxCallFailure",
             "FxKernelFailure",
@@ -10655,8 +10612,7 @@
             "char[]: text",
             "char[]: chars \" \\t\\r\\n\\v\\f\"",
             "@: predicate 0",
-            "@: same 0",
-            "throws: copy(FxThrows\\predicate) FxShape SequenceSize"
+            "@: same 0"
           ],
           "declaration_copies": [],
           "required": [
@@ -10673,7 +10629,7 @@
             "SequenceSize"
           ],
           "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
-          "source_declaration": "FxTextTrim:\n    private:\n        char[]: text\n        char[]: chars \" \\t\\r\\n\\v\\f\"\n        @: predicate 0\n        @: same 0\n    required: text\n    return: char[]\n    trim:\n        throws: copy(FxThrows\\predicate) FxShape SequenceSize\n        return: \\FxSequenceTrim\\trim(text; chars; 0; predicate; same)"
+          "source_declaration": "FxTextTrim:\n    private:\n        char[]: text\n        char[]: chars \" \\t\\r\\n\\v\\f\"\n        @: predicate 0\n        @: same 0\n    required: text\n    return: char[]"
         },
         "observation": "Same existing body/owner and actual result, evaluation order, accepted argument mapping, finite effects and short-circuit behavior"
       },
@@ -10712,7 +10668,7 @@
             "copy: FxTrimInputs"
           ],
           "required": [],
-          "result_declaration": "void",
+          "result_declaration": "inherited via declaration_copies",
           "declared_throws": [
             "FxCallFailure",
             "FxKernelFailure",
@@ -10761,9 +10717,7 @@
             "char[]: text",
             "char[]: chars \" \\t\\r\\n\\v\\f\"",
             "@: predicate 0",
-            "@: same 0",
-            "throws: copy(FxThrows\\predicate) FxShape SequenceSize",
-            "throws: copy(FxThrows\\predicate) FxShape SequenceSize"
+            "@: same 0"
           ],
           "declaration_copies": [],
           "required": [
@@ -10780,7 +10734,7 @@
             "SequenceSize"
           ],
           "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
-          "source_declaration": "FxTextTrim:\n    private:\n        char[]: text\n        char[]: chars \" \\t\\r\\n\\v\\f\"\n        @: predicate 0\n        @: same 0\n    required: text\n    return: char[]\n    trim:\n        throws: copy(FxThrows\\predicate) FxShape SequenceSize\n        return: \\FxSequenceTrim\\trim(text; chars; 0; predicate; same)\n    trimStart:\n        throws: copy(FxThrows\\predicate) FxShape SequenceSize\n        return: \\FxSequenceTrim\\trim(text; chars; 1; predicate; same)"
+          "source_declaration": "FxTextTrim:\n    private:\n        char[]: text\n        char[]: chars \" \\t\\r\\n\\v\\f\"\n        @: predicate 0\n        @: same 0\n    required: text\n    return: char[]"
         },
         "observation": "Same existing body/owner and actual result, evaluation order, accepted argument mapping, finite effects and short-circuit behavior"
       },
@@ -10819,7 +10773,7 @@
             "copy: FxPadInputs"
           ],
           "required": [],
-          "result_declaration": "void",
+          "result_declaration": "inherited via declaration_copies",
           "declared_throws": [
             "FxKernelFailure",
             "FxTypeToken",
@@ -10917,7 +10871,7 @@
             "copy: FxPadInputs"
           ],
           "required": [],
-          "result_declaration": "void",
+          "result_declaration": "inherited via declaration_copies",
           "declared_throws": [
             "FxKernelFailure",
             "FxTypeToken",
@@ -10962,8 +10916,7 @@
           "declared_inputs": [
             "char[]: text",
             "int: width",
-            "char[]: fill \" \"",
-            "throws: copy(FxThrows\\sequence)"
+            "char[]: fill \" \""
           ],
           "declaration_copies": [],
           "required": [
@@ -10977,7 +10930,7 @@
             "SequenceSize"
           ],
           "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
-          "source_declaration": "FxTextPad:\n    private:\n        char[]: text\n        int: width\n        char[]: fill \" \"\n    required: text width\n    return: char[]\n    padLeft:\n        throws: copy(FxThrows\\sequence)\n        return: \\FxSequencePad\\pad(text; width; fill; 0)"
+          "source_declaration": "FxTextPad:\n    private:\n        char[]: text\n        int: width\n        char[]: fill \" \"\n    required: text width\n    return: char[]"
         },
         "observation": "Same existing body/owner and actual result, evaluation order, accepted argument mapping, finite effects and short-circuit behavior"
       },
@@ -11277,7 +11230,7 @@
             "copy: FxAffixInputs"
           ],
           "required": [],
-          "result_declaration": "void",
+          "result_declaration": "inherited via declaration_copies",
           "declared_throws": [
             "FxCallFailure",
             "FxKernelFailure",
@@ -11326,7 +11279,7 @@
             "copy: FxAffixInputs"
           ],
           "required": [],
-          "result_declaration": "void",
+          "result_declaration": "inherited via declaration_copies",
           "declared_throws": [
             "FxCallFailure",
             "FxKernelFailure",

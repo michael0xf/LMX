@@ -3,6 +3,8 @@ from pathlib import Path
 import json
 import re
 from sync_effects import Source
+from identifier_spelling import markdown_code, spell
+from catalog_data import owner_data
 
 R = Path(__file__).resolve().parents[1]
 texts = {p.relative_to(R): p.read_text() for p in sorted((R/'src').rglob('*.lmx'))}
@@ -22,22 +24,12 @@ def contract(api):
     start = re.search(r'(?m)^    '+re.escape(method)+r':', text)
     if start is None:
         raise ValueError('missing contract method '+api)
-    declaration = text[:start.start()]
-    inputs = []
-    copies = []
-    for line in declaration.splitlines()[1:]:
-        stripped = line.strip()
-        if re.match(r'(?:private:\s*)?copy:', stripped):
-            copies.append(stripped)
-        elif re.match(r'(?:private:\s*)?[^:#]+:\s*\w', stripped) and not stripped.startswith(('return:', 'required:', 'const:')):
-            inputs.append(stripped)
-    result = re.findall(r'(?m)^    return:\s*(.+)$', declaration)
-    required = re.findall(r'(?m)^    required:\s*(.+)$', declaration)
-    return {'source': path, 'declared_inputs': inputs, 'declaration_copies': copies,
-            'required': required, 'result_declaration': result[-1] if result else 'void',
+    declaration = owner_data(text)
+    source_declaration = declaration.pop('source_declaration')
+    return {'source': path, **declaration,
             'declared_throws': effects.get(api, []),
             'throws_scope': 'explicit source declaration only; publication adds reached adapter/target failures',
-            'source_declaration': declaration.rstrip()}
+            'source_declaration': source_declaration}
 
 definitions = json.loads((R/'operation_definitions.json').read_text())['operations']
 migration = json.loads((R/'CANONICAL_MIGRATION.json').read_text())
@@ -56,10 +48,10 @@ for index, d in enumerate(definitions, 1):
     row = {'id':index, 'name':name, 'public_name':name, 'api':first['api'], 'source':first['source'], 'signature':d['signature'], 'scope':d['scope'], 'status':'BODY_WITH_BRIDGE', 'implementation_layer':'core', 'availability':'source_and_publication_contract', 'namespace_root':'fun\\const', 'lmx_executed':False, 'forms':d['forms'], 'variants':d['variants']}
     row['former_name'] = next((e['old'] for e in migration['entries'] if e['new']==name), None)
     rows.append(row)
-    public.append('        @: '+name+' '+first['api'])
+    public.append('        @: '+spell(name)+' '+first['api'])
     if index > 1:
         families.append('    ---')
-    families.append('    '+name+':')
+    families.append('    '+spell(name)+':')
     for variant in d['variants']:
         assert (R/variant['source']).is_file(), variant
         if variant['operand']['route']=='asOperand':
@@ -75,8 +67,8 @@ lines = ['# Canonical library operations and their two forms', '',
     'Both forms use the same algorithms and real owner DATA. Complete family/role binding, adaptive capture and exact result projection are defined in [PUBLICATION_CONTRACT.md](PUBLICATION_CONTRACT.md). Runtime execution is **NOT_RUN**.', '',
     '| Name | Ordinary form | Implementations and operand form |', '| --- | --- | --- |']
 for row in rows:
-    variants = '; '.join(f"**{v['family']}** [{v['api']}]({v['source']}) → `{v['operand']['target']}` ({v['operand']['route']})" for v in row['variants'])
-    lines.append(f"| `{row['name']}` | `{row['signature']}` | {variants} |")
+    variants = '; '.join(f"**{v['family']}** [{markdown_code(v['api'])}]({v['source']}) → {markdown_code(v['operand']['target'])} ({v['operand']['route']})" for v in row['variants'])
+    lines.append(f"| {markdown_code(row['name'])} | {markdown_code(row['signature'])} | {variants} |")
 lines += ['', '## Roles, results and failures', '']
 for row in rows:
     lines.append(f"- **{row['name']}** — {row['scope']}. Roles: "+', '.join(row['variants'][0]['roles'])+'.')

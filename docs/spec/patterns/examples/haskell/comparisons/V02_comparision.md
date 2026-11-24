@@ -25,6 +25,7 @@ TicketCode:
                     last := 'Z'
                 if: candidate[i] < first || candidate[i] > last
                     return: 0
+                ---
             i += 1
         return: candidate[2] = '-'
 ```
@@ -38,7 +39,7 @@ TicketCode:
     char[]: candidate
     return: int
     accepts:
-        throws: copy(RxMatches\matches\throws)
+        throws: copy(matches\throws)
         return: matches(byteText(candidate); (within("A"; "Z") times 2) then "-" then (asciiDigit times 2))
 ```
 
@@ -61,7 +62,7 @@ accepts _ = False
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
 | LMX — процедурный | 223 | 18 |
-| LMX — функциональный | 170 | 6 |
+| LMX — функциональный | 160 | 6 |
 | Haskell | **132** | 6 |
 
 Обе LMX-записи учитываются целиком, включая объявления, общие локальные helpers и Throws. Ошибки не исключаются из подсчёта. Общая реализация ядра не размножается ради стилей. Существующий статус иностранной пары/аналогии сохранён.

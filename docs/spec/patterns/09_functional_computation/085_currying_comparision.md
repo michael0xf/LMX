@@ -4,7 +4,7 @@
 
 ## Общий сценарий
 
-Объявить сложение и создать независимые add5/add100 через поэтапный curry либо partial. Контрольные клиенты используют применение Haskell и Function2.curried Scala. Сохранены saved=1000 и повторный add5(1); результат 6101006.
+Объявить сложение и создать независимые префиксы 5 и 100 через поэтапный curry либо partial. add5 используется дважды, однократная ветвь 100 вызывается сразу. Контрольные клиенты используют применение Haskell и Function2.curried Scala; результат 6101006.
 
 **Ожидается:** 6, 101, 6; demo возвращает 6101006. Возвращённая функция имеет ровно один явный int-вход. Библиотечный LMX-прототип не меняется; две созданные функции независимы.
 
@@ -68,15 +68,13 @@ Addition:
 Demo:
     return: int
     run:
-        throws: copy(FxPartial\partial\throws) FxCallFailure
+        throws: copy(curry\throws) FxRecordArity
         @: add curry(Addition\apply)
         @: add5 add(5)
-        @: add100 add(100)
-        int: saved 1000
-        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)
+        return: add5(1) * 1000000 + add(100)(1) * 1000 + add5(1)
 ```
 
-[Полный исходник](examples/lmx/085_currying.lm3). 244 непробельных символов; 15 непустых строк. Все объявления и Throws включены.
+[Полный исходник](examples/lmx/085_currying.lm3). 205 непробельных символов; 13 непустых строк. Все объявления и Throws включены.
 
 
 ## Haskell
@@ -89,9 +87,7 @@ add first second = first + second
 
 demo :: Int
 demo = let add5 = add 5
-           add100 = add 100
-           saved = 1000
-       in add5 1 * 1000000 + add100 1 * 1000 + add5 1
+       in add5 1 * 1000000 + add 100 1 * 1000 + add5 1
 ```
 
 Клиент использует существующее средство языка/библиотеки. Соседняя самостоятельная реализация служит отдельным сравнением и не подключается.
@@ -106,9 +102,7 @@ object CurryingExample {
   def demo: Int = {
     val curried = (add _).curried
     val add5 = curried(5)
-    val add100 = curried(100)
-    val saved = 1000
-    add5(1) * 1000000 + add100(1) * 1000 + add5(1)
+    add5(1) * 1000000 + curried(100)(1) * 1000 + add5(1)
   }
 }
 ```
@@ -122,11 +116,11 @@ object CurryingExample {
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
 | LMX — процедурный | 493 | 31 |
-| LMX — функциональный | 244 | 15 |
-| Haskell | **154** | 8 |
-| Scala | 198 | 10 |
+| LMX — функциональный | 205 | 13 |
+| Haskell | **131** | 6 |
+| Scala | 169 | 8 |
 
-Обе LMX-записи сравниваются самостоятельно. Полный текст включает все объявления, локальные helpers и Throws; заголовки и списки ошибок не вычитаются. Общие тела ядра учитываются один раз в отдельных сравнениях. Минимум сопоставимой строки выделяется в PDF и XLSX зелёным.
+Обе LMX-записи сравниваются самостоятельно. Полный текст включает все объявления, локальные helpers и Throws; заголовки и списки ошибок не вычитаются. Общие тела ядра учитываются один раз в отдельных сравнениях. Минимум сопоставимой строки подчёркивается в PDF и XLSX зелёным; при равенстве отмечаются все победители.
 
 Явные Throws и copy списка вызываемого метода сохраняют точный видимый договор отказов. У процедурной записи нет скрытых обходов через map/filter/fold/unique/pipe/bind или поэлементную Array-арифметику.
 
@@ -140,13 +134,13 @@ int относится только к прикладному сложению �
 
 Independent captured prefixes: direct environments and the common curry operation.
 
-**Scenario.** Declare addition and create two independent bindings add5/add100 through staged curry or partial. Native Haskell application and Scala Function2.curried provide the control clients. Keep saved=1000 and the repeated add5(1); the result is 6101006.
+**Scenario.** Declare addition and create independent prefixes 5 and 100 through staged curry or partial. Reuse add5 twice and immediately call the one-use 100 branch. Native Haskell application and Scala Function2.curried provide the control clients; the result is 6101006.
 
 **Expected.** 6, 101, 6; demo returns 6101006. The returned function has exactly one explicit int input. The LMX library prototype is unchanged and the two created functions are independent.
 
 **Limits.** int belongs only to application addition and the numeric observation 6101006. Generic partial is not limited to int×int→int. At k=N it returns a delayed nullary callable without calling the target during construction.
 
-Both complete LMX client styles are counted in full. Existing foreign controls are unchanged. Implementation comparisons retain one canonical body. Revised LMX source has not been executed.
+Both complete LMX client styles are counted in full. Foreign controls retain the same scenario; 085 removes unused and single-use locals consistently across languages. Implementation comparisons retain one canonical body. Revised LMX source has not been executed.
 
 ## Источники
 

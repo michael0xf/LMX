@@ -141,7 +141,11 @@ def main():
         issue("shared_equality_walk", "patterns/LMX_Fn_Receivers/src", "equalFields must delegate to the one range-comparison walk")
 
     foreign_checked = 0
+    foreign_reviewed = 0
     baseline = None
+    revision_path = root / 'patterns/validation/source_revision_20261124.json'
+    revision = json.loads(revision_path.read_text()) if revision_path.is_file() else {}
+    reviewed_foreign = {'patterns/'+row['path']:row for row in revision.get('foreign_changes',[])}
     if args.baseline_archive:
         baseline = {"file": args.baseline_archive.name, "sha256": hashlib.sha256(args.baseline_archive.read_bytes()).hexdigest()}
         with tarfile.open(args.baseline_archive) as archive:
@@ -155,11 +159,20 @@ def main():
                 current = root / relative
                 before = archive.extractfile(member).read()
                 if not current.is_file() or current.read_bytes() != before:
-                    issue("foreign_source_changed", relative, "Inspect the comparison-contract change explicitly")
+                    review = reviewed_foreign.get(relative.as_posix(), {})
+                    if (current.is_file() and relative.as_posix() in {
+                        'patterns/09_functional_computation/examples/haskell/085_currying.hs',
+                        'patterns/09_functional_computation/examples/scala/085_currying.scala'}
+                        and hashlib.sha256(before).hexdigest() == review.get('before_sha256')
+                        and hashlib.sha256(current.read_bytes()).hexdigest() == review.get('after_sha256')):
+                        foreign_reviewed += 1
+                    else:
+                        issue("foreign_source_changed", relative, "Change is not covered by the exact reviewed source hashes")
 
     counts["foreign_sources_compared"] = foreign_checked
+    counts["foreign_sources_reviewed_shortening"] = foreign_reviewed
     report = {
-        "scope": "documentation, source names, shared definitions and unchanged comparison-language sources",
+        "scope": "documentation, source names, shared definitions and preserved or explicitly reviewed comparison-language sources",
         "baseline": baseline,
         "checks": dict(counts),
         "errors": errors,

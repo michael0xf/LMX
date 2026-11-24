@@ -54,7 +54,7 @@ The colon separates a head from its argument Structure. It does not by itself me
 
 Positional fields retain their order. A nested Frame stays an ordinary Frame and does not by itself name a formal; a named argument of a callable is written with the operator `:=` ([§21](#operators)), whose meaning the semantics defines after P0. Parameter names, table meaning, column count, named-argument validation, and execution are not inferred by P0 from visual alignment. There is no separate anonymous-function or label grammar; `outerLoop:` with a body is an ordinary Frame.
 
-The left side of `:=` may be an unnamed Structure of places: `(a b c) := (c, a, b)` and `(a b) := (copy(Pair))`. A nonempty bounded Structure followed by `:=` is the left side of the write; the right side is parsed by the common expression rules. That assignment case is separate from a group in a Frame head: the common head grammar admits a written bounded group, including a nonempty one, before `:` with zero or more postfixes. Thus `(Model): p` is retained as a Frame with the complete grouped head; the head consumer decides whether that description is admissible. `(): value` retains its ordinary empty-head form ([§14](#bounded)). Group positional assignment, including `(a b) := (copy(Pair))`, follows [semantics](LMX_semantics.en.md#group-assign): values are obtained before the first write, and the receiver's field-stream contract does not change P0.
+The left side of `:=` may be an unnamed Structure of places: `(a b c) := (c, a, b)` and `(a b) := (copy(Pair))`. A nonempty bounded Structure followed by `:=` is the left side of the write; the right side is parsed by the common expression rules. That assignment case is separate from a group in a Frame head: the common head grammar admits a written bounded group, including a nonempty one, before `:` with zero or more postfixes. Thus `(Model): p` is retained as a Frame with the complete grouped head; the head consumer decides whether that description is admissible. `(): value` retains its ordinary empty-head form ([§14](#bounded)). Group positional assignment, including both `(a b) := copy(Pair)` and `(a b) := (copy(Pair))`, follows [semantics](LMX_semantics.en.md#group-assign): values are obtained before the first write, and the receiver's field-stream contract does not change P0.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 2148–2148.
 
@@ -684,7 +684,7 @@ Source: §§4.0.1, 4.1 and 15 of the previous specification; the author's direct
 
 A Frame's argument list is itself a Structure. P0 retains every anonymous group, even a sole or empty one: `s(a b)` has two fields; `s((a b))` has one Structure field. `f()`, bare `f:`, and `f:` with an explicitly empty vertical body have the same empty Frame-body; a blank physical line after `f:` completes that empty body without creating a return or anonymous field. `f: ()` is instead `f(())`, one field containing an empty Structure. In DATA, `A: (int: x 1)` retains its anonymous inner Structure, whereas `A(int: x 1)` and `A: int: x 1` directly describe the field `x`. A receiver whose contract takes DATA arguments accepts them as written. A receiver whose arguments are CODE may consider the equal readings W (whole) and E (one-level expansion of one Structure not assigned to a named formal). Exactly one accepted declaration/reading/map is used, with no second expansion; zero candidates fail and multiple candidates are ambiguous. For `import`, `copy`, and `merge`, the source argument role is always CODE; placement inside DATA does not suppress W/E. This is semantic admission, never a P0 unwrapping pass. See [whole arguments](LMX_semantics.en.md#whole-arguments) and [selection](LMX_semantics.en.md#declaration-selection).
 
-Parentheses are not a call marker. P0 gives `f()` and an empty `f:` the same Frame without checking whether `f` exists. A resolved ordinary head declares a Structure in DATA and calls it in CODE. The callable `C` itself executes over its actual `parent(C)`; the path used to obtain it does not substitute another parent. A head with its own receiver contract follows that contract. These forms perform no assignment merely because a colon is present. See [construction](LMX_semantics.en.md#construction) and [structural calls](LMX_semantics.en.md#call-receivers).
+Parentheses are not a call marker. P0 gives `f()` and an empty `f:` the same Frame without checking whether `f` exists. Only an ordinary user structural form outside Expression takes the DATA declaration role. Expression is CODE; resolved system or special receivers retain their own contracts, including declaration actions ([context invariance](LMX_semantics.en.md#receiver-context-invariance)). The callable `C` itself executes over its actual `parent(C)`; the path used to obtain it does not substitute another parent. A head with its own receiver contract follows that contract. These forms perform no assignment merely because a colon is present. See [construction](LMX_semantics.en.md#construction) and [structural calls](LMX_semantics.en.md#call-receivers).
 
 Written grouping is also significant for field streams:
 
@@ -696,7 +696,7 @@ f(arg0 := (copy(A)))
 
 The first supplies result fields; the second forms one Structure before `f` applies ordinary W/E; the third supplies that whole Structure explicitly to real formal `arg0`, suppressing E. `copy(Empty)` emits zero fields, while `(copy(Empty))` is one empty structural result. P0 preserves the grouping in every case, including `struct := (merge(A B))` and `return: (copy(A))`; the namespace performs the computation. The same distinction applies to nested `import`: its surrounding consumer receives the stream, with no duplicate hidden import into the caller. See [field streams](LMX_semantics_guide.en.md#field-streams).
 
-Bare `f:` without arguments and without a vertical body is the short form without arguments: a Frame with an empty body, like `f()`. Bare `f` is an ordinary admitted atomic expression; P0 retains it as an atom and does not create a call Frame. Under [semantics](LMX_semantics.en.md#resolved-head-consumption), a bare name reads the resolved value or reference without executing the Structure; its launch is written `call: f` or, in code, `f()`. The translator does not distinguish Frame forms by COLON/COMPACT or source spelling. An empty inline tail followed by a nonempty vertical body is valid. Bare `end` remains forbidden.
+Bare `f:` without arguments and without a vertical body is the short form without arguments: a Frame with an empty body, like `f()`. Bare `f` is an ordinary admitted atomic expression; P0 retains it as an atom and does not create a call Frame. A whole-value consumer reads a reference under its own contract. In CODE/Expression, the [name/actual-parent guard](LMX_semantics.en.md#expression-structure-parent-guard) distinguishes a group from ordinary receiver/call handling; P0 itself makes neither decision. Explicit `call: f` and `f()` remain ordinary launch forms. The translator does not distinguish Frame forms by COLON/COMPACT or source spelling. An empty inline tail followed by a nonempty vertical body is valid. Bare `end` remains forbidden.
 
 **Valid: the same empty P0 Frame; parentheses do not select a call** — author, 2026-09-23.
 
@@ -772,6 +772,10 @@ P0 does not reduce active entries to one flat table of winning values. A rendere
 
 ## 21. Operator tokens and expression boundaries
 
+Expression uses the ordinary source graph plus a semantic grouper for both priorities and structural groups. The rule depends on the tree, not a particular delimiter spelling: `1 + ((2))` is 3, while a material group `(1 2 3 4)` is not an implicit arithmetic expression. P0 preserves both groups. The later Expression application adapter separately packages one left actual and the current-level right stream; it does not insert that package into the source graph. See [structural grouping](LMX_semantics.en.md#expression-structural-grouping).
+
+The existing attached-unary class has a side, left or right, and exactly one atom. It applies generally, rather than being hardcoded to `++` and `--`. Ordinary infix/prefix operands, including `:=`, receive no parser exception by name or PLACE/NAME role. The common analysis retains each left occurrence and its value context; role consumption belongs to the resolved method. `(:= a 1)` is delivered as absent left with right [a,1], while `(a := 1)` is delivered as left a with right [1]. Only the assignment method makes their effects equivalent; the parser and binder never transpose these actuals. [Method consumption](LMX_semantics.en.md#operand-left-view).
+
 Receiver spelling can use the same canonical symbolic name in backticks,
 for example `` `+`(a; b) ``. Colon is the existing structural delimiter and
 is not appended to an operator name. One-argument attached applications select
@@ -788,9 +792,26 @@ Operator symbols are not bare identifiers. P0 splits compact unquoted spellings 
 keeps the written left identifier and complete right-hand signature description
 in the common graph. P0 does not turn it into nested colon Frames, look up the
 left name, open the description as actual call arguments, or execute its fields.
-The signature consumer applies its declaration contract through the common operand mechanism after parsing, including the ordinary raw-occurrence mode and a ready priority. The
+The signature consumer applies its declaration contract through the common operand mechanism after parsing, with its DATA-only argument contract and a ready priority; no unverified built-in raw-mode flag is assigned. The
 single-colon Frame grammar and ordinary expression/group boundaries remain in
 force; `::` is not an assignment with a different spelling.
+
+`->` is one ordinary symbolic operand token, not the consecutive operations `-`
+and `>`. The existing operator-token path handles both `A->B` and `A -> B`.
+Its ready priority is `sys\priority("+")`; `::` has `sys\priority(":=")` and
+therefore binds less tightly. In `f :: int -> int int`, common Expression
+grouping forms the complete constructor on the right. Expression is CODE,
+while `::` retains its DATA-only declaration contract. The receiver form is
+`` `->`(int; int; int) ``. Inputs remain first and result last, without automatic
+currying ([receiver context](LMX_semantics.en.md#receiver-context-invariance)).
+
+`f :: (int -> int int)` and `f :: int -> int int` have the same signature
+result. The lower priority makes outer parentheses optional; P0 keeps them
+when written. `int -> (int int)` has one right argument, while `int -> int int`
+has two. `int -> (int -> int)` contains one inner Expression producing one
+signature descriptor. `int -> ()` has one present empty group.
+The [grouping contract](LMX_semantics.en.md#signature-grouping) separates these
+shapes from TYPE admission and uses the common structural grouper plus receiving contracts. No operator-specific parser or additional flattening is introduced.
 
 The previous minimal L2 profile lists grouping `(expr)`; prefixes `@`, `\`, `++`, `--`, `+`, `-`, `!`, `~`; postfixes `++`, `--`; infixes `+`, `-`, `*`, `/`, `%`, `=`, `!=`, `<`, `<=`, `>`, `>=`, `&&`, `||`, `&`, `|`, `^`; and the index suffix. Writing a prefix adjacent to its operand is style, not a mandatory P0 boundary.
 
@@ -1238,15 +1259,9 @@ consumed through the standard `OPERANDS_TEMPLATE`; the named declaration
 with `call`. All other uses accept both descriptions interchangeably. Parameter
 labels do not alter positional type compatibility. Dispatch on the resolved
 receiver's contract follows structural parsing and does not change written
-boundaries. The named declaration uses the ordinary expression operand `::`; it does not add a special signature delimiter or argument parser. The old named receiver is removed. The core type-token constructor `to` is another entry to the same signature kind.
+boundaries. The named declaration uses the ordinary expression operand `::`; it does not add a special signature delimiter or argument parser. The old named receiver is removed. The core type-token constructor `->` is another entry to the same signature kind.
 
-The sole operand-opening rule has three simultaneous conditions: `left` is
-an unnamed Structure, `right` has exactly one argument, and that argument is
-an unnamed Structure. Only that RIGHT container loses one outer level when
-preparing the operand arguments. `left` remains whole, the rule is not repeated,
-and P0 never performs this operation. With `Name :: (...)`, the identifier on
-the left does not satisfy the condition, so the right Structure remains one
-argument. Ordinary callable W/E selection has a separate defined scope.
+Expression is the ordinary Structure graph interpreted with a [structural grouper](LMX_semantics.en.md#expression-structural-grouping): it determines priorities, complete expression units and streams at the current tree level, independently of source spelling. A separate Expression application adapter packages left as one actual/reference bundle and right as an Array of references. `arg0 operand arg1 arg2 arg3` is the general form; a binary contract uses one right item, with no automatic fold or movement of the first right item into an absent left. The receiving contract selects whole-value or current-level sequence consumption. `(a b c) := (a c b)` therefore has one left bundle and three right values; three sibling RHS groups remain three Structure items. There is no extra conditional unwrapping pass after grouping. The grouper reads the clean graph. In CODE/Expression, anonymous Structures and named Structures whose actual parent differs from the current lexical owner are groups; named same-parent Structures use ordinary receiver/call handling. Reference resolution preserves the actual parent. Whole VALUE/TYPE/DATA material is not automatically reclassified as CODE. `1 + ((2))` is 3; field collectors such as `(copy(Model))` remain containers for zero, one or many fields. `::` and modifiers keep DATA consumption and the common immediate-field reader; they gain no RHS evaluator. P0, ordinary callable W/E and the existing lifetime/effect rules remain intact. See [architecture and acceptance](EXPRESSION_GROUPING.md); execution is **NOT_RUN**.
 
 Generated LMX must preserve written anonymous groups, the current operand rule,
 blank-line root termination and explicit tail cutters. A reference sequence is
@@ -1260,4 +1275,4 @@ and the [signature interchangeability rule](LMX_semantics.en.md#fn-forms-equival
 
 The [unified contract](CORE_SEQUENCES_REGEX.en.md#types) supplies NAME/TYPE/VALUE roles after the common structural parse. Empty written [] and nonempty indexing remain distinguishable in the graph, including spans and roundtrip. Prefix @ addresses a value; postfix @ constructs a type from a full requirement. The symbolic TYPE atom @ in @[] is accepted by the common normalizer. Type interning, array creation, and initializer execution do not occur in P0.
 
-`then`, `times`, `atLeast`, `atMost`, and `optional` are ordinary discovered Expression operands. Repetition has multiplication priority; then has addition priority; the existing | retains its priority and gains a Pattern branch. Arity is checked after grouping. Neither these words nor ordinary sequence receiver names create a new grammar or change the conditional opening of only the right container. All exact contracts and examples are in [the Expression and Pattern sections](CORE_SEQUENCES_REGEX.en.md#patterns).
+`then`, `times`, `atLeast`, `atMost`, and `optional` are ordinary discovered Expression operands. Repetition has multiplication priority; then has addition priority; the existing | retains its priority and gains a Pattern branch. Arity is checked after grouping. Neither these words nor ordinary sequence receiver names create a new grammar or change the common structural grouping or the application adapter. All exact contracts and examples are in [the Expression and Pattern sections](CORE_SEQUENCES_REGEX.en.md#patterns).

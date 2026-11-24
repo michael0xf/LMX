@@ -244,13 +244,13 @@
         {
           "id": "functional",
           "label_ru": "Функциональный LMX",
-          "code": "Addition:\n    int: first\n    int: second\n    return: int\n    add:\n        return: first + second\n\nClosureProbe:\n    return: int\n    run:\n        throws: copy(FxPartial\\partial\\throws)\n        @: add5 partial(Addition\\add; (5))\n        @: add100 partial(Addition\\add; (100))\n        int: saved 1000\n        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n",
+          "code": "Addition:\n    int: first\n    int: second\n    return: int\n    add:\n        return: first + second\n\nClosureProbe:\n    return: int\n    run:\n        throws: copy(partial\\throws)\n        @: add5 partial(Addition\\add; (5))\n        @: add100 partial(Addition\\add; (100))\n        int: saved 1000\n        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n",
           "metrics": {
-            "characters": 249,
-            "characters_with_whitespace": 361,
+            "characters": 239,
+            "characters_with_whitespace": 351,
             "nonblank_lines": 14,
-            "utf8_bytes": 361,
-            "sha256": "e6253ad579939af61b209ab34b8299ce50f48db7a2f15ea48f5fb8571ddb12e5"
+            "utf8_bytes": 351,
+            "sha256": "29df456d160dbebb7f55cdc14c13dac04a0ff1918f2d84d9370fb7efb4afba33"
           },
           "correct_for_scenario": true,
           "cases": [
@@ -294,16 +294,16 @@
           }
         },
         "functional": {
-          "code": "Addition:\n    int: first\n    int: second\n    return: int\n    add:\n        return: first + second\n\nClosureProbe:\n    return: int\n    run:\n        throws: copy(FxPartial\\partial\\throws)\n        @: add5 partial(Addition\\add; (5))\n        @: add100 partial(Addition\\add; (100))\n        int: saved 1000\n        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n",
+          "code": "Addition:\n    int: first\n    int: second\n    return: int\n    add:\n        return: first + second\n\nClosureProbe:\n    return: int\n    run:\n        throws: copy(partial\\throws)\n        @: add5 partial(Addition\\add; (5))\n        @: add100 partial(Addition\\add; (100))\n        int: saved 1000\n        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n",
           "source_file": "lmx/H03.lm3",
           "contract_id": "root/H03",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 249,
-            "characters_with_whitespace": 361,
+            "characters": 239,
+            "characters_with_whitespace": 351,
             "nonblank_lines": 14,
-            "utf8_bytes": 361,
-            "sha256": "e6253ad579939af61b209ab34b8299ce50f48db7a2f15ea48f5fb8571ddb12e5"
+            "utf8_bytes": 351,
+            "sha256": "29df456d160dbebb7f55cdc14c13dac04a0ff1918f2d84d9370fb7efb4afba33"
           }
         }
       },
@@ -1070,13 +1070,13 @@
         {
           "id": "procedural",
           "label_ru": "Процедурный LMX",
-          "code": "Pair:\n    int: first 2\n    int: second 7\n\nStreamProbe:\n    return: int\n    run:\n        int: a 0\n        int: b 0\n        (a b) := (copy(Pair))\n        return: a * 10 + b\n",
+          "code": "Pair:\n    int: first 2\n    int: second 7\n\nStreamProbe:\n    return: int\n    run:\n        int: a 0\n        int: b 0\n        (a b) := copy(Pair)\n        return: a * 10 + b\n",
           "metrics": {
-            "characters": 95,
-            "characters_with_whitespace": 171,
+            "characters": 93,
+            "characters_with_whitespace": 169,
             "nonblank_lines": 10,
-            "utf8_bytes": 171,
-            "sha256": "97d21444a79536a19e1ae234369972455e842bed31c0401ef9c066b6a9203b36"
+            "utf8_bytes": 169,
+            "sha256": "e2fc29d306076753d8fd7d9f777ddb59356ca0ea7ef640ab4007220e07ac0089"
           },
           "correct_for_scenario": true,
           "cases": [
@@ -1090,18 +1090,18 @@
             }
           ],
           "load_before": [],
-          "notes_ru": "Групповое присваивание принимает настоящий скопированный поток полей. Заменять его отдельными чтениями нельзя: это убрало бы сам предмет проверки. Минимальная форма общая."
+          "notes_ru": "Групповое присваивание принимает поток полей `copy(Pair)` напрямую; внешняя группа вокруг `copy` для этого списка мест не нужна. В обоих стилях сохранены позиционные записи a=2 и b=7, чтение всех правых значений до первой записи и результат 27. Минимальная форма общая."
         },
         {
           "id": "functional",
           "label_ru": "Функциональный LMX",
-          "code": "Pair:\n    int: first 2\n    int: second 7\n\nStreamProbe:\n    return: int\n    run:\n        int: a 0\n        int: b 0\n        (a b) := (copy(Pair))\n        return: a * 10 + b\n",
+          "code": "Pair:\n    int: first 2\n    int: second 7\n\nStreamProbe:\n    return: int\n    run:\n        int: a 0\n        int: b 0\n        (a b) := copy(Pair)\n        return: a * 10 + b\n",
           "metrics": {
-            "characters": 95,
-            "characters_with_whitespace": 171,
+            "characters": 93,
+            "characters_with_whitespace": 169,
             "nonblank_lines": 10,
-            "utf8_bytes": 171,
-            "sha256": "97d21444a79536a19e1ae234369972455e842bed31c0401ef9c066b6a9203b36"
+            "utf8_bytes": 169,
+            "sha256": "e2fc29d306076753d8fd7d9f777ddb59356ca0ea7ef640ab4007220e07ac0089"
           },
           "correct_for_scenario": true,
           "cases": [
@@ -1115,34 +1115,34 @@
             }
           ],
           "load_before": [],
-          "notes_ru": "Групповое присваивание принимает настоящий скопированный поток полей. Заменять его отдельными чтениями нельзя: это убрало бы сам предмет проверки. Минимальная форма общая."
+          "notes_ru": "Групповое присваивание принимает поток полей `copy(Pair)` напрямую; внешняя группа вокруг `copy` для этого списка мест не нужна. В обоих стилях сохранены позиционные записи a=2 и b=7, чтение всех правых значений до первой записи и результат 27. Минимальная форма общая."
         }
       ],
       "lmx_variants": {
         "procedural": {
-          "code": "Pair:\n    int: first 2\n    int: second 7\n\nStreamProbe:\n    return: int\n    run:\n        int: a 0\n        int: b 0\n        (a b) := (copy(Pair))\n        return: a * 10 + b\n",
+          "code": "Pair:\n    int: first 2\n    int: second 7\n\nStreamProbe:\n    return: int\n    run:\n        int: a 0\n        int: b 0\n        (a b) := copy(Pair)\n        return: a * 10 + b\n",
           "source_file": "lmx/R02.lm3",
           "contract_id": "root/R02",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 95,
-            "characters_with_whitespace": 171,
+            "characters": 93,
+            "characters_with_whitespace": 169,
             "nonblank_lines": 10,
-            "utf8_bytes": 171,
-            "sha256": "97d21444a79536a19e1ae234369972455e842bed31c0401ef9c066b6a9203b36"
+            "utf8_bytes": 169,
+            "sha256": "e2fc29d306076753d8fd7d9f777ddb59356ca0ea7ef640ab4007220e07ac0089"
           }
         },
         "functional": {
-          "code": "Pair:\n    int: first 2\n    int: second 7\n\nStreamProbe:\n    return: int\n    run:\n        int: a 0\n        int: b 0\n        (a b) := (copy(Pair))\n        return: a * 10 + b\n",
+          "code": "Pair:\n    int: first 2\n    int: second 7\n\nStreamProbe:\n    return: int\n    run:\n        int: a 0\n        int: b 0\n        (a b) := copy(Pair)\n        return: a * 10 + b\n",
           "source_file": "lmx/R02.lm3",
           "contract_id": "root/R02",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 95,
-            "characters_with_whitespace": 171,
+            "characters": 93,
+            "characters_with_whitespace": 169,
             "nonblank_lines": 10,
-            "utf8_bytes": 171,
-            "sha256": "97d21444a79536a19e1ae234369972455e842bed31c0401ef9c066b6a9203b36"
+            "utf8_bytes": 169,
+            "sha256": "e2fc29d306076753d8fd7d9f777ddb59356ca0ea7ef640ab4007220e07ac0089"
           }
         }
       },
@@ -1152,7 +1152,7 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "same_minimal_form",
-      "style_note": "Групповое присваивание принимает настоящий скопированный поток полей. Заменять его отдельными чтениями нельзя: это убрало бы сам предмет проверки. Минимальная форма общая.",
+      "style_note": "Групповое присваивание принимает поток полей `copy(Pair)` напрямую; внешняя группа вокруг `copy` для этого списка мест не нужна. В обоих стилях сохранены позиционные записи a=2 и b=7, чтение всех правых значений до первой записи и результат 27. Минимальная форма общая.",
       "lmx_operation_phase": "after_root_startup"
     },
     {
@@ -1884,7 +1884,7 @@
         {
           "id": "procedural",
           "label_ru": "Процедурный LMX",
-          "code": "TicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        if: length(candidate) != 5\n            return: 0\n        int: i 0\n        while: i < 5\n            if: i != 2\n                char: first '0'\n                char: last '9'\n                if: i < 2\n                    first := 'A'\n                    last := 'Z'\n                if: candidate[i] < first || candidate[i] > last\n                    return: 0\n            i += 1\n        return: candidate[2] = '-'\n",
+          "code": "TicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        if: length(candidate) != 5\n            return: 0\n        int: i 0\n        while: i < 5\n            if: i != 2\n                char: first '0'\n                char: last '9'\n                if: i < 2\n                    first := 'A'\n                    last := 'Z'\n                if: candidate[i] < first || candidate[i] > last\n                    return: 0\n                ---\n            i += 1\n        return: candidate[2] = '-'\n",
           "metrics": {
             "characters": 223,
             "characters_with_whitespace": 483,
@@ -1954,13 +1954,13 @@
         {
           "id": "functional",
           "label_ru": "Функциональный LMX",
-          "code": "TicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        throws: copy(RxMatches\\matches\\throws)\n        return: matches(byteText(candidate); (within(\"A\"; \"Z\") times 2) then \"-\" then (asciiDigit times 2))\n",
+          "code": "TicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        throws: copy(matches\\throws)\n        return: matches(byteText(candidate); (within(\"A\"; \"Z\") times 2) then \"-\" then (asciiDigit times 2))\n",
           "metrics": {
-            "characters": 170,
-            "characters_with_whitespace": 218,
+            "characters": 160,
+            "characters_with_whitespace": 208,
             "nonblank_lines": 6,
-            "utf8_bytes": 218,
-            "sha256": "cd512991bddc020c07a9bce1fa0654428e37ec0f692d473be2852701691cf18e"
+            "utf8_bytes": 208,
+            "sha256": "0246eb09dd1852f7d77164d3d49cff396293a02bc1be68aad53edff72921f414"
           },
           "correct_for_scenario": true,
           "cases": [
@@ -2024,7 +2024,7 @@
       ],
       "lmx_variants": {
         "procedural": {
-          "code": "TicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        if: length(candidate) != 5\n            return: 0\n        int: i 0\n        while: i < 5\n            if: i != 2\n                char: first '0'\n                char: last '9'\n                if: i < 2\n                    first := 'A'\n                    last := 'Z'\n                if: candidate[i] < first || candidate[i] > last\n                    return: 0\n            i += 1\n        return: candidate[2] = '-'\n",
+          "code": "TicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        if: length(candidate) != 5\n            return: 0\n        int: i 0\n        while: i < 5\n            if: i != 2\n                char: first '0'\n                char: last '9'\n                if: i < 2\n                    first := 'A'\n                    last := 'Z'\n                if: candidate[i] < first || candidate[i] > last\n                    return: 0\n                ---\n            i += 1\n        return: candidate[2] = '-'\n",
           "source_file": "lmx/procedural/V02.lm3",
           "contract_id": "root/V02",
           "runtime_execution": "NOT_RUN",
@@ -2037,16 +2037,16 @@
           }
         },
         "functional": {
-          "code": "TicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        throws: copy(RxMatches\\matches\\throws)\n        return: matches(byteText(candidate); (within(\"A\"; \"Z\") times 2) then \"-\" then (asciiDigit times 2))\n",
+          "code": "TicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        throws: copy(matches\\throws)\n        return: matches(byteText(candidate); (within(\"A\"; \"Z\") times 2) then \"-\" then (asciiDigit times 2))\n",
           "source_file": "lmx/V02.lm3",
           "contract_id": "root/V02",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 170,
-            "characters_with_whitespace": 218,
+            "characters": 160,
+            "characters_with_whitespace": 208,
             "nonblank_lines": 6,
-            "utf8_bytes": 218,
-            "sha256": "cd512991bddc020c07a9bce1fa0654428e37ec0f692d473be2852701691cf18e"
+            "utf8_bytes": 208,
+            "sha256": "0246eb09dd1852f7d77164d3d49cff396293a02bc1be68aad53edff72921f414"
           }
         }
       },

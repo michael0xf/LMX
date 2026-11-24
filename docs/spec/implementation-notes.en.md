@@ -42,7 +42,7 @@ called a namespace image, descriptor cache, or execution metadata.
 |---|---|---|
 | Graph and namespace | All written receivers stay in the source graph; computations/transforms happen in namespace; only terminal primitives use direct `{type value}` representation | Replacing receiver records with computed fields, saved resolution graphs, persistent expression results |
 | Structural call | Execute selected C; DATA is its actual parent; call takes code or args/code; R0 has neither DATA nor user actuals | Separate data parameter, data=code launch convention, fncall, special data name |
-| Named signature | Ordinary expression `name :: data`, with a left declaration identifier and one complete right DATA template; creates a constant positional signature description without operand unwrapping | Omitting the left declaration identifier, executable fn/sub, a signature that silently becomes an implementation |
+| Named signature | Ordinary `name :: data` consumes a declaration identifier and one admitted DATA template or ready signature; creates a constant positional description without operand unwrapping. All arguments remain DATA; common Expression preparation supplies nested-operation results, without a receiver evaluator or selector ([contract](LMX_semantics.en.md#signature-description-consumption)) | Omitting the declaration identifier, executable fn/sub, speculative role selection, executing formal initializers, reading descriptor service fields as formals, or silently creating an implementation |
 | Requirement matching | Full explicitly described tree for an ordinary model; ordered input count/types plus result for fn inside common satisfies | Matching fn by input names/body, treating ordinary templates as reduced call signatures |
 | Explicit actuals | Equal W/E candidates, retained actual map, no implicit-source selection, source-order effects | Whole/expanded preference, hidden rescue of required inputs, repeated expansion/execution |
 | Binding | Own actual/autofill value; transparent caller place; retained fallback own value/description | One mode used for every external name, alias-to-copy or copy-to-alias substitutions |
@@ -53,6 +53,8 @@ called a namespace image, descriptor cache, or execution metadata.
 | Parser closure | Blank physical line invokes common complete close at local document root; protected content/pairs/Mix retain their rules | Ignoring a physical blank inside an intended continuing block or inventing a separate grammar subsystem |
 | Storage/native | Typed records, common variable-sized Arrays, ordinary machine locals, direct native calls where known, existing bridge/arena/GC | Typing by address ranges, hidden native compilation, local publication/flush, universal wrapper/registry additions |
 | Complete program | One complete graph plus compiled methods; R0 is a C method with a local graph pointer even for interpreter execution | Static DATA replicas, persistent working/expanded/callable graphs, global hidden program instances |
+
+A receiving declaration-list contract uses the [common immediate-field mechanism](LMX_semantics.en.md#receiver-structure-sequences); this internal DATA opening does not change outer actuals or ordinary CODE W/E.
 
 Fn matching and call selection are different operations. A method with types `[int, Array<char>]`
 and different formal names can satisfy that fn requirement; one with reverse types cannot,
@@ -210,11 +212,7 @@ before an applicable E reading.
 A stream's destination is not an implicit source or model. Matching fields overlay only inside
 one merge; independent streams use ordinary DATA repeated occurrences.
 
-For one copied value use `(copy(A))`, for one merged value `(merge(A B))`; for fields use the
-ungrouped receiver. An explicit named formal suppresses E for that whole structural actual.
-`(a b) := (copy(Pair))` uses ordinary positional group assignment: all RHS values and the count
-check precede the first write, without rolling back prior RHS effects; the bare stream
-`(a b) := copy(Pair)` is an error (author's decision, 2026-11-21).
+For one copied value use `(copy(A))`, for one merged value `(merge(A B))`; for fields use the ungrouped receiver. An explicit named formal suppresses E for that whole structural actual. For [group positional assignment](LMX_semantics.en.md#group-assign), `(a b) := copy(Pair)` and `(a b) := (copy(Pair))` consume the same two emitted fields when the source and targets satisfy the contract. The collector is optional for this sequence consumer. The grouper preserves current-level items; application adaptation packages the left PLACE sequence as one actual. Three sibling RHS groups remain three Structure values, not a recursively flattened stream. Obtain and retain all RHS values and check their count before the first target write; RHS names do not reorder targets and previous RHS effects are not rolled back. A function-returned Structure remains one value. Scalar `ptr := (copy(Pair))` still receives one collected Structure.
 
 <a id="compound-assign-notes"></a>
 ### 4.3. Expressions and operands
@@ -234,7 +232,7 @@ type. Discovery, expression use, and sys\priority share its description, with no
 registration. sys\name consumes an identifier spelling and returns a normal char Array without
 resolving or executing the named entity. Prefix dereference remains dereference, not eval.
 
-An operand opens a group only when all three conditions hold: `left` is a written unnamed Structure, `length(right) = 1`, and `right[0]` is a written unnamed Structure. Only the one outer group on the RIGHT is removed, once for this operand application; its immediate fields become `right`. LEFT remains the same whole Structure and merely supplies the condition. Nested groups are not opened again, and a Structure returned by a function is not automatically opened. P0 never performs this transformation. Ordinary callable W/E selection is a separate rule, not an additional operand-opening pass. A named declaration such as `Name :: (A B)` has a name on the left, so its single right-hand Structure remains whole; `Name :: A B` instead has two right arguments.
+Expression is the ordinary Structure graph interpreted with a [structural grouper](LMX_semantics.en.md#expression-structural-grouping): it determines priorities, complete expression units and streams at the current tree level, independently of source spelling. A separate Expression application adapter packages left as one actual/reference bundle and right as an Array of references. `arg0 operand arg1 arg2 arg3` is the general form; a binary contract uses one right item, with no automatic fold or movement of the first right item into an absent left. The receiving contract selects whole-value or current-level sequence consumption. `(a b c) := (a c b)` therefore has one left bundle and three right values; three sibling RHS groups remain three Structure items. There is no extra conditional unwrapping pass after grouping. The grouper reads the clean graph. In CODE/Expression, anonymous Structures and named Structures whose actual parent differs from the current lexical owner are groups; named same-parent Structures use ordinary receiver/call handling. Reference resolution preserves the actual parent. Whole VALUE/TYPE/DATA material is not automatically reclassified as CODE. `1 + ((2))` is 3; field collectors such as `(copy(Model))` remain containers for zero, one or many fields. `::` and modifiers keep DATA consumption and the common immediate-field reader; they gain no RHS evaluator. P0, ordinary callable W/E and the existing lifetime/effect rules remain intact. See [architecture and acceptance](EXPRESSION_GROUPING.md); execution is **NOT_RUN**.
 
 <a id="open-design"></a>
 ## 5. Derived review cases and the resolved physical-layout decision

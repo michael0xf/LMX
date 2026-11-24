@@ -96,7 +96,7 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "RetryMessage:\n    @: request\n    @: delay\n    return: int\n    Wait:\n        int: attempt\n        pause:\n            delay(1 << (attempt - 1))\n    run:\n        throws: copy(FxThrows\\call) FxArity FxPredicate FxRecordArity ReceiverIndex\n        return: retry(request; Http503\\retryOn; 3; delay := Wait\\pause)\n",
+          "code": "RetryMessage:\n    @: request\n    @: delay\n    return: int\n    Wait:\n        int: attempt\n        pause:\n            delay(1 << (attempt - 1))\n    ---\n    run:\n        throws: copy(FxThrows\\call) FxArity FxPredicate FxRecordArity ReceiverIndex\n        return: retry(request; Http503\\retryOn; 3; delay := Wait\\pause)\n",
           "notes_ru": "Общий retry принимает callback, предикат повторения, предел и необязательную задержку. Http503 задаёт только доменное условие status = 503; Wait переводит номер завершённой попытки в прежние интервалы 1, 2. Проход, сохранение фактического результата и остановка находятся в ядре. request/read/delay не выполняются при передаче ссылок. Синхронный provider вызывается в отдельном Message и не ждёт собственного mailbox. Это тот же профиль идемпотентного HTTP-чтения, не новая гарантия таймера или scheduler.",
           "notes_en": "Generic retry takes an operation, a retry predicate, a limit and an optional delay. Http503 supplies only status = 503; Wait maps the completed attempt number to the original delays 1 and 2. Traversal, exact result handling and termination belong to the core. Passing callbacks does not execute them. The synchronous provider operates in a separate Message without waiting on its own mailbox; the HTTP idempotent-read boundary is unchanged.",
           "metrics": {

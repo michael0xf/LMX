@@ -13,6 +13,7 @@ SPEC = ROOT.parents[2]
 LIB = SPEC / 'patterns/LMX_Fn_Receivers'
 sys.path.insert(0, str(SPEC / 'patterns/tools'))
 from canonical_operations import definitions
+from lmx_execution_contract import ensure_startup_note
 CLHS = 'https://www.lispworks.com/documentation/HyperSpec/Body/'
 COMPONENTS = [
     dict(id='SI01', title='Обходы, фильтрация и свёртка',
@@ -236,7 +237,8 @@ python3 tools/rebuild_implementations.py
 
 [Runtime support CL](../source/implementations/common-lisp/runtime.lisp) загружается перед SI01–SI06. Тесты: [test_implementations.lisp](../tools/test_implementations.lisp). [LMX зависимости](../source/implementations/lmx/shared_dependencies.lmx) являются частью сравнительного пакета, но не заменяют штатную установку ядра и его provider. Новых публичных операций эти шесть пар не требуют.
 '''
-    (ROOT/'library_comparisons/README.md').write_text(readme)
+    (ROOT/'library_comparisons/README.md').write_text(ensure_startup_note(
+        readme,'../../../../LMX_semantics.en.md#source-entry-profiles'))
     mirror_checks=[]
     for item in items:
         markdown=(ROOT/'library_comparisons'/f'{item["id"]}_comparision.md').read_text()

@@ -108,12 +108,6 @@ FxOne:
         out[0] := value
         return: out
 
-FxPreparedOperands:
-    private:
-        @: left
-        @[]: right
-    const: int: PASS_ARGS_AS_IS 0
-
 FxProjectValue:
     private:
         @: value
@@ -125,17 +119,6 @@ FxProjectValue:
         if: projection = 0
             return: value
         return: FxApply\apply(projection; FxOne\make(value))
-
-FxRecordOperands:
-    copy: FxPreparedOperands
-    const: int: PRIORITY sys\priority("+")
-    required: left right
-    return: @
-    record:
-        throws: FxRecordArity
-        if: length(right) != 0
-            throw: FxRecordArity()
-        return: left
 
 FxSeqAdmit:
     private:

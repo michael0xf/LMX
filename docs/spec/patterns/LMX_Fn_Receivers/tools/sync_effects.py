@@ -22,6 +22,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+from identifier_spelling import IDENT, QUALIFIED, canonical_path, decode, path_parts, spell
 
 ROOT = Path(__file__).resolve().parents[1]
 BANK = Path('src/failures.lmx')
@@ -29,8 +30,6 @@ BANK_ROOT = 'FxThrows'
 REPORT = ROOT / 'tests/effect_contracts.json'
 AUDIT = ROOT / 'tests/effect_formatting_review.json'
 REGEN = ROOT / 'tests/effect_regeneration_review.json'
-IDENT = r'[A-Za-z_]\w*'
-QUALIFIED = rf'{IDENT}(?:\\{IDENT})*'
 HEADER = re.compile(rf'^( *)(?:independent:\s*)?({IDENT}):\s*$')
 DECL = re.compile(r'^( *)throws:\s*(.*?)\s*$')
 COPY = re.compile(rf'copy\(\s*({QUALIFIED})\s*\)|copy:\s*({QUALIFIED})')
@@ -72,8 +71,8 @@ def digest(value):
     return hashlib.sha256(text.encode()).hexdigest()
 
 
-def mask(text):
-    """Keep line positions while hiding comments and source literals."""
+def mask(text, keep_identifiers=False, reject_literals=False):
+    """Keep positions; quoted identifiers may remain visible to inventories."""
     out = list(text)
     quote = None
     comment = False
@@ -86,7 +85,7 @@ def mask(text):
             else:
                 out[i] = ' '
         elif quote:
-            if ch != '\n':
+            if ch != '\n' and not (quote == '`' and keep_identifiers):
                 out[i] = ' '
             if ch == '\\' and quote != '`' and i + 1 < len(text):
                 i += 1
@@ -95,14 +94,18 @@ def mask(text):
             elif ch == quote:
                 if quote == '`' and i + 1 < len(text) and text[i + 1] == '`':
                     i += 1
-                    out[i] = ' '
+                    if not keep_identifiers:
+                        out[i] = ' '
                 else:
                     quote = None
         elif ch == '#':
             out[i] = ' '
             comment = True
         elif ch in ('"', "'", '`'):
-            out[i] = ' '
+            if reject_literals and ch != '`':
+                raise ValueError('literal in finite failure list is unsupported')
+            if ch != '`' or not keep_identifiers:
+                out[i] = ' '
             quote = ch
         i += 1
     if quote:
@@ -124,7 +127,7 @@ class Source:
     def __init__(self, texts):
         self.texts = texts
         self.lines = {p: s.splitlines(keepends=True) for p, s in texts.items()}
-        self.clean = {p: mask(s).splitlines() for p, s in texts.items()}
+        self.clean = {p: mask(s, keep_identifiers=True).splitlines() for p, s in texts.items()}
         self.headers = defaultdict(list)
         self.declarations = []
         for path, lines in self.clean.items():
@@ -143,14 +146,21 @@ class Source:
                 if decl:
                     if not stack:
                         raise ValueError(f'{path}:{i + 1}: throws without a containing structure')
-                    self.declarations.append(Span(path, i, self.end(path, i, indent), indent,
-                                                  stack[-1].key, decl.group(2)))
+                    span = Span(path, i, self.end(path, i, indent), indent,
+                                stack[-1].key, decl.group(2))
+                    self.declarations.append(span)
+                    # The declaration is also addressable as operation\throws;
+                    # quoting the method name must not hide that source list.
+                    target = span.key + '\\throws'
+                    self.headers[target].append(Span(path, i, span.end, indent,
+                                                     target, decl.group(2)))
                     continue
                 if re.search(r'\bthrows\s*:', line):
                     raise ValueError(f'{path}:{i + 1}: unsupported inline throws form')
                 header = HEADER.fullmatch(line)
                 if header:
-                    key = '\\'.join([stack[-1].key, header.group(2)] if stack else [header.group(2)])
+                    name = spell(decode(header.group(2)))
+                    key = '\\'.join([stack[-1].key, name] if stack else [name])
                     span = Span(path, i, self.end(path, i, indent), indent, key)
                     self.headers[key].append(span)
                     stack.append(span)
@@ -176,8 +186,7 @@ class Source:
 
     def entries(self, span):
         for raw in self.lines[span.file][span.start:span.end]:
-            if any(mark in raw.split('#', 1)[0] for mark in ('"', "'", '`')):
-                raise ValueError(f'{span.file}:{span.start + 1}: literal in finite failure list is unsupported')
+            mask(raw, keep_identifiers=True, reject_literals=True)
         values = [span.tail] if span.tail else []
         for i in range(span.start + 1, span.end):
             line = self.clean[span.file][i]
@@ -204,9 +213,9 @@ class Source:
         for entry in entries:
             match = COPY.fullmatch(entry)
             if match:
-                target = match.group(1) or match.group(2)
+                target = canonical_path(match.group(1) or match.group(2))
                 if target not in self.headers:
-                    parts = span.key.split('\\')
+                    parts = path_parts(span.key)
                     for size in range(len(parts), 0, -1):
                         candidate = '\\'.join(parts[:size] + [target])
                         if candidate in self.headers:
@@ -221,7 +230,7 @@ class Source:
                     self.cache[target] = self.resolve(choices[0], visiting + (target,))
                 names.update(self.cache[target])
             elif re.fullmatch(rf'{IDENT}(?:\s+{IDENT})*', entry):
-                names.update(entry.split())
+                names.update(decode(m.group()) for m in re.finditer(IDENT, entry))
             else:
                 raise ValueError(f'{span.file}:{span.start + 1}: unsupported failure-list entry {entry!r}')
         return tuple(sorted(names))
@@ -243,10 +252,10 @@ class Source:
 
 
 def inline(names, indent=0):
-    line = ' ' * indent + 'throws:' + (' ' + ' '.join(names) if names else '')
+    line = ' ' * indent + 'throws:' + (' ' + ' '.join(spell(n) for n in names) if names else '')
     if len(line) <= 110 or len(names) <= 1:
         return line + '\n'
-    return ' ' * indent + 'throws:\n' + ''.join(' ' * (indent + 4) + name + '\n' for name in names)
+    return ' ' * indent + 'throws:\n' + ''.join(' ' * (indent + 4) + spell(name) + '\n' for name in names)
 
 
 def reference(name, indent=0):
@@ -254,7 +263,7 @@ def reference(name, indent=0):
 
 
 def field(name, names):
-    return '    ' + name + ':\n' + ''.join('        ' + x + '\n' for x in names)
+    return '    ' + spell(name) + ':\n' + ''.join('        ' + spell(x) + '\n' for x in names)
 
 
 def normalize(texts):

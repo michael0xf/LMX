@@ -86,7 +86,7 @@ def build_table(tab,sty,document_name,sheet_name):
 def footer(canvas,doc):
     canvas.setStrokeColor(colors.HexColor('#CFD8E0'));canvas.line(36,39,PAGE[0]-36,39)
     canvas.setFillColor(colors.HexColor('#526575'));canvas.setFont('LMX',7)
-    canvas.drawString(36,29,'LMX · полные листинги · 23 ноября 2026')
+    canvas.drawString(36,29,'LMX · полные листинги · 24 ноября 2026')
     canvas.drawRightString(PAGE[0]-36,29,str(doc.page))
     canvas.setFont('LMX',6.5)
     canvas.drawString(36,18,'Весь непробельный Unicode-текст; Throws/copy включены. Зелёное подчёркивание — минимум, включая все равенства.')
@@ -107,7 +107,7 @@ def main():
         story=[]
         for index,view in enumerate(source['sheets']):
             if index:story.append(PageBreak())
-            story.extend([para(view['title'],sty['title']),para('Полные размеры исходников · 23 ноября 2026',sty['note'])])
+            story.extend([para(view['title'],sty['title']),para('Полные размеры исходников · 24 ноября 2026',sty['note'])])
             for tab in view['tables']:
                 story.append(CondPageBreak(65))
                 story.append(para(tab['title'],sty['heading']))

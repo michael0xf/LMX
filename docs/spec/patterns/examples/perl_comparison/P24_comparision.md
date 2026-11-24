@@ -27,7 +27,7 @@
 | Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
 | --- | ---: | ---: | ---: |
 | LMX процедурный | 764 | 1264 | 54 |
-| LMX функциональный | 650 | 1085 | 46 |
+| LMX функциональный | 642 | 1077 | 46 |
 | Perl | 365 | 521 | 18 |
 
 Обе LMX-формы опубликованы и считаются независимо. Все определения, обработчики и ссылки на throws входят в полный размер. Выбор единственного LMX-варианта по длине не выполняется.
@@ -142,7 +142,7 @@ Example:
     int: mode
     return: @
     run:
-        throws: copy(FxAround\around\throws)
+        throws: copy(bracket\throws)
         Trace\mode := mode
         Trace\events := 0
         int: value \bracket(Trace\Acquire\open; Trace\Release\close; Trace\Action\use)
@@ -151,7 +151,7 @@ Example:
             return: (0; Trace\events)
 ```
 
-[Полный исходник](source/lmx/P24.lm3). 650 непробельных символов; 46 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/P24.lm3). 642 непробельных символов; 46 непустых строк. Все объявления и Throws включены.
 
 ## Perl
 

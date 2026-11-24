@@ -26,8 +26,8 @@ def main():
                 listing['code']=normalize(row['variants'][language][variant])
                 listing['primary_variant']=variant
                 decisions.append({'id':row['id'],'language':language,'variant':variant,'metrics':measure(listing['code']),
-                                  'selection':'one unchanged canonical implementation' if row.get('kind')=='implementation' else 'unchanged foreign control'})
+                                  'selection':'one canonical implementation' if row.get('kind')=='implementation' else 'published foreign control under the same scenario contract'})
     path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
     (ROOT/'variant_selection.json').write_text(json.dumps({'policy':data['selection_policy'],'decisions':decisions},ensure_ascii=False,indent=2)+'\n')
-    print(json.dumps({'client_pairs':4,'common_implementations':4,'foreign_sources_changed':False}))
+    print(json.dumps({'client_pairs':4,'common_implementations':4,'selection':'both full LMX styles and the current foreign controls'}))
 if __name__=='__main__':main()

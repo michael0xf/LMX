@@ -422,9 +422,9 @@ name-sensitive operand header.
 Mode 0 prepares the needed values once: left is a reference to the left value, right is an Array
 of references to right values in source order. `(1 foo 2 3 4)` has one left and three right values;
 `(foo 1 2 3 4)` omits left and has four right values. The ordinary call contract decides whether
-that omission is allowed. A container is one operand except for the conditional rule below; a dense numeric Array is never cast to Array<@>. Prefix application does not shift the first right value into left or add a has-left flag.
+that omission is allowed. A whole-value container stays one item under its receiving contract; a dense numeric Array is never cast to Array<@>. Prefix application does not shift the first right value into left or add a has-left flag.
 
-An operand opens a group only when all three conditions hold: `left` is a written unnamed Structure, `length(right) = 1`, and `right[0]` is a written unnamed Structure. Only the one outer group on the RIGHT is removed, once for this operand application; its immediate fields become `right`. LEFT remains the same whole Structure and merely supplies the condition. Nested groups are not opened again, and a Structure returned by a function is not automatically opened. P0 never performs this transformation. Ordinary callable W/E selection is a separate rule, not an additional operand-opening pass. A named declaration such as `Name :: (A B)` has a name on the left, so its single right-hand Structure remains whole; `Name :: A B` instead has two right arguments.
+Expression is the ordinary Structure graph interpreted with a [structural grouper](LMX_semantics.en.md#expression-structural-grouping): it determines priorities, complete expression units and streams at the current tree level, independently of source spelling. A separate Expression application adapter packages left as one actual/reference bundle and right as an Array of references. `arg0 operand arg1 arg2 arg3` is the general form; a binary contract uses one right item, with no automatic fold or movement of the first right item into an absent left. The receiving contract selects whole-value or current-level sequence consumption. `(a b c) := (a c b)` therefore has one left bundle and three right values; three sibling RHS groups remain three Structure items. There is no extra conditional unwrapping pass after grouping. The grouper reads the clean graph. In CODE/Expression, anonymous Structures and named Structures whose actual parent differs from the current lexical owner are groups; named same-parent Structures use ordinary receiver/call handling. Reference resolution preserves the actual parent. Whole VALUE/TYPE/DATA material is not automatically reclassified as CODE. `1 + ((2))` is 3; field collectors such as `(copy(Model))` remain containers for zero, one or many fields. `::` and modifiers keep DATA consumption and the common immediate-field reader; they gain no RHS evaluator. P0, ordinary callable W/E and the existing lifetime/effect rules remain intact. See [architecture and acceptance](EXPRESSION_GROUPING.md); execution is **NOT_RUN**.
 
 Operand references point to genuine typed values/descriptors, with the tag immediately before
 the value. Untagged native temporaries use the ordinary result/storage bridge when a typed record
@@ -437,8 +437,7 @@ Mode 1 passes the source argument occurrences without execution. A raw handler u
 reference requirements; “reference to int” does not mean “arbitrary unevaluated code returning
 int”. `sys\eval(fragment)` invokes the one evaluator in that occurrence's original active
 context and returns its ordinary value. Calling eval twice repeats effects, while not calling it
-causes no argument effects. `\fragment` only dereferences. A bare callable remains a reference
-unless the source form calls it. Forwarding a fragment to a helper retains the original context,
+causes no argument effects. `\fragment` only dereferences. A callable received as a whole value remains a reference; CODE/Expression graph traversal uses the [name/parent guard](LMX_semantics.en.md#expression-structure-parent-guard), including named same-parent receiver/call handling. Forwarding a fragment to a helper retains the original context,
 including receiving-DATA assignment rules and private visibility. A graph address alone does not
 identify an activation; use the existing frame/hidden-argument transport. This retains neither an
 ended frame nor a permanent result cache and creates no new lifetime extension.
@@ -483,10 +482,25 @@ values; there is no fncall or separate result channel in the call surface.
 <a id="fn-signature"></a>
 ### Named positional signatures
 
-`name :: data` is an ordinary expression-operand application with a left declaration identifier and one complete right DATA template. The name becomes a constant signature name;
+In its DATA-template form, `name :: data` is an ordinary expression-operand application with a left declaration identifier and one complete right DATA template. The name becomes a constant signature name;
 the data template supplies the ordered explicit input types and optional result description.
 Return is not an input, an Array is one input, and a nested user Structure is not automatically a
-formal. The declaration produces no body or native implementation and does not use ordinary-call CODE W/E expansion. Inspecting the fields of its one right template is not operand unwrapping; its left identifier does not satisfy the unnamed-Structure condition.
+formal. The declaration produces no body or native implementation and does not use ordinary-call CODE W/E expansion to open its DATA template. Its own DATA opening reads the declaration list without changing external operand arguments; its left declaration NAME and one right DATA description retain their external boundaries.
+
+The declaration receiver `::` consumes every argument as DATA, including
+the identifier to declare. One description Structure remains one actual;
+the receiver opens its DATA, directly or through a reference, into the immediate
+declaration list. This does not invoke it, execute formal initializers, change
+the external argument count or recursively flatten nested models/results. Ready signatures retain their positional profile.
+Common Expression priorities and preparation handle nested operations before
+their prepared description is consumed; `::` adds no DATA/value selector,
+`sys\eval` stage or assumed `PASS_ARGS_AS_IS` value. The executable built-in
+implementation and verified operand metadata are not supplied.
+[Receiver context invariance](LMX_semantics.en.md#receiver-context-invariance)
+preserves modifier DATA contracts and the specific semantics of `return`.
+Anonymous CODE/Expression Structures execute in place, never as callable
+invocations with a fresh activation. Reading the graph is not eager execution.
+Runtime acceptance is **NOT_RUN**; no new parser, flag or group expansion is added.
 
 ```lmx
 SumSignature :: (int: a; int: b; return: int)
@@ -931,13 +945,7 @@ original declaration/owner identity; copy and merge deeply copy the used graph a
 corresponding copied owners through their operation map. Every source import/copy/merge receiver remains
 in place; direct source-path reads and serialization expose that written record, not its result.
 
-For group assignment, `(a b) := (copy(Pair))` consumes result fields positionally: the right side is one
-unnamed Structure in parentheses, the form `() := ()`. Only that outer RHS group is opened once; the LHS group stays whole and its fields are read as targets by assignment itself. Nested RHS groups remain nested. Several values without the group are an error, the stream is
-written inside the group, the bare stream `(a b) := copy(Pair)` is an error, and a Structure
-returned from a function is not opened (author's decision, 2026-11-21). Obtain all RHS
-values before the first target write; detect count mismatch before that write. RHS names do not
-reorder targets, and completed RHS effects are not transactionally rolled back. For initial
-`a=1, b=2, c=3, d=4`, `(c b d a) := (a b c d)` gives `c=1, b=2, d=3, a=4`.
+For [group positional assignment](LMX_semantics.en.md#group-assign), `(a b) := copy(Pair)` and `(a b) := (copy(Pair))` consume the same two emitted fields when the source and targets satisfy the contract. The collector is optional for this sequence consumer. The grouper preserves current-level items; application adaptation packages the left PLACE sequence as one actual. Three sibling RHS groups remain three Structure values, not a recursively flattened stream. Obtain and retain all RHS values and check their count before the first target write; RHS names do not reorder targets and previous RHS effects are not rolled back. A function-returned Structure remains one value. Scalar `ptr := (copy(Pair))` still receives one collected Structure.
 
 ### 6.5. Explicit compilation and turn boundaries
 
@@ -1192,10 +1200,19 @@ entry to the same receiver and afterwards the absence of old calls is verified;
 this is not a reason to keep two semantics.
 
 Use the common signature extractor and descriptor builder for both `Name :: DATA`
-and the type-token constructor `to`. Skip formal variable labels for compatibility; retain full
+and the type-token constructor `->`. Skip formal variable labels for compatibility; retain full
 nested type requirements, semantic order and exact result/void. Preserve the
 current named-signature/call relationship. All other operations must accept either
 description, including storage, argument transport, admission and adapters.
+
+Publish the constructor only as the symbolic name `->`, with quoted receiver
+and path spellings such as `` `->`(A; B) `` and `` FxToTokens\`->` ``. Retain
+its existing ready `sys\priority("+")`; the named declaration `::` has ready
+`sys\priority(":=")`. Common expression grouping therefore supplies one
+constructor result in `f :: int -> int int`. Obtaining that descriptor does not
+execute the described inputs or body. Do not keep the former constructor name
+`to` as an export or forwarding method, or turn this flat TYPE sequence into an
+implicitly curried signature.
 
 The source provider contracts cover signature extraction, type normalization,
 DATA construction, ordinary callable construction, call outcome capture,

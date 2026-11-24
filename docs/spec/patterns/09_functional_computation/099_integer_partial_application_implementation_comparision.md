@@ -92,7 +92,7 @@ object Partial {
 | Haskell | 699 | 17 |
 | Scala | **263** | 7 |
 
-Обе LMX-записи сравниваются самостоятельно. Полный текст включает все объявления, локальные helpers и Throws; заголовки и списки ошибок не вычитаются. Общие тела ядра учитываются один раз в отдельных сравнениях. Минимум сопоставимой строки выделяется в PDF и XLSX зелёным.
+Обе LMX-записи сравниваются самостоятельно. Полный текст включает все объявления, локальные helpers и Throws; заголовки и списки ошибок не вычитаются. Общие тела ядра учитываются один раз в отдельных сравнениях. Минимум сопоставимой строки подчёркивается в PDF и XLSX зелёным; при равенстве отмечаются все победители.
 
 Явные Throws и copy списка вызываемого метода сохраняют точный видимый договор отказов. У процедурной записи нет скрытых обходов через map/filter/fold/unique/pipe/bind или поэлементную Array-арифметику.
 
@@ -112,7 +112,7 @@ General partial(F;prefix): an arbitrary heterogeneous signature, 0≤k≤N, exac
 
 **Limits.** All three implementations cover empty/full prefixes, heterogeneous records, independent captures, reference identity and void/Unit results. Haskell and Scala reject incompatible prefix shapes statically and use Nil/EmptyTuple for nullary calls. LMX checks at runtime and also preserves declaration-specific defaults/private/dynamic binding through its adapters. The typed foreign Callable is a comparison implementation, never an imported usage dependency.
 
-Both complete LMX client styles are counted in full. Existing foreign controls are unchanged. Implementation comparisons retain one canonical body. Revised LMX source has not been executed.
+Both complete LMX client styles are counted in full. Foreign controls retain the same scenario; 085 removes unused and single-use locals consistently across languages. Implementation comparisons retain one canonical body. Revised LMX source has not been executed.
 
 ## Источники
 

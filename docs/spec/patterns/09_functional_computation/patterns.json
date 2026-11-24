@@ -7,7 +7,7 @@
   ],
   "rationale_ru": "Haskell даёт естественный контроль для Maybe/Monad и каррирования. Scala сочетает функциональные приёмы с JVM, явным батутом и обычным управлением ресурсами. Эти языки выбраны за подходящие механизмы, а не для универсального рейтинга краткости.",
   "rationale_en": "Haskell is a natural control for Maybe/Monad and currying. Scala combines functional constructs with JVM execution, explicit trampolines and ordinary resource handling. The selection follows mechanisms rather than a universal brevity ranking.",
-  "overview_ru": "Четыре задачи имеют две полные LMX-записи: процедурную и функциональную. Haskell и Scala сохраняют исходные контрольные программы. Четыре реализации ядра сравниваются отдельно и имеют по одному общему LMX-телу.",
+  "overview_ru": "Четыре задачи имеют две полные LMX-записи: процедурную и функциональную. Haskell и Scala сохраняют контрольные договоры; в 085 также убраны неиспользуемая переменная и одноразовое промежуточное имя. Четыре реализации ядра сравниваются отдельно и имеют по одному общему LMX-телу.",
   "overview_en": "Four tasks have complete procedural and functional LMX variants. Existing Haskell and Scala controls are unchanged. Four implementation comparisons each retain one common canonical LMX body.",
   "patterns": [
     {
@@ -371,7 +371,7 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "Steps:\n    int: n\n    return: @\n    Throws: copy(FxPartial\\partial\\throws) FxCallFailure\n    code:\n        throws: copy(Throws)\n        if: n = 0\n            return: done(x)\n        return: more(thunk := partial(next; (n - 1)))\n    even_step:\n        throws: copy(Throws)\n        int: x 1\n        @: next odd_step\n        return: code()\n    odd_step:\n        throws: copy(Throws)\n        int: x 0\n        @: next even_step\n        return: code()\n    Example:\n        int: n\n        return: int\n        run:\n            throws: copy(Throws)\n            return: \\trampoline(even_step(n))\n",
+          "code": "Steps:\n    int: n\n    return: @\n    Throws: copy(partial\\throws) FxCallFailure\n    code:\n        throws: copy(Throws)\n        if: n = 0\n            return: done(x)\n        return: more(thunk := partial(next; (n - 1)))\n    even_step:\n        throws: copy(Throws)\n        int: x 1\n        @: next odd_step\n        return: code()\n    odd_step:\n        throws: copy(Throws)\n        int: x 0\n        @: next even_step\n        return: code()\n    Example:\n        int: n\n        return: int\n        run:\n            throws: copy(Throws)\n            return: \\trampoline(even_step(n))\n",
           "notes_ru": "Общий алгоритм шага находится в Steps\\code; even_step и odd_step задают локальные x и next, доступные по динамическому связыванию. Throws содержит список выходов один раз, четыре copy(Throws) входят в подсчёт. Входы: Steps\\Example\\run(0), Steps\\Example\\run(1), Steps\\Example\\run(100001). Выходы передаются вызывающему; это не корневой обработчик Message. [Разыменование и catch](FAILURE_BOUNDARIES.md#trampoline).",
           "notes_en": "Steps\\code owns the shared step algorithm. even_step and odd_step supply local x and next through dynamic binding. Throws declares the exits once; all four copy(Throws) uses are counted. After root startup, ordinary case calls are Steps\\Example\\run(0), Steps\\Example\\run(1), and Steps\\Example\\run(100001). Exits propagate to the caller; this is not a root Message handler. [Dereference and catch](FAILURE_BOUNDARIES.md#trampoline).",
           "depends_on": [
@@ -380,10 +380,10 @@
           ],
           "primary_variant": "functional",
           "metrics": {
-            "characters": 354,
+            "characters": 344,
             "nonblank_lines": 25,
-            "utf8_bytes": 586,
-            "sha256": "883797ce9f7b227b73f488083e1349c681b3d3343dc148f65f68ac2674d28a01"
+            "utf8_bytes": 576,
+            "sha256": "fc4f47092924cb0e399d27544fc0ce132936207b4d89b51d2b04bbf033a630de"
           },
           "publication_role": "compatibility_mirror_not_separate_comparison"
         },
@@ -433,7 +433,7 @@
       "variants": {
         "LMX": {
           "procedural": "Steps:\n    Example:\n        int: n\n        return: int\n        run:\n            int: value 1\n            while: n > 0\n                value := 1 - value\n                n -= 1\n            return: value\n",
-          "functional": "Steps:\n    int: n\n    return: @\n    Throws: copy(FxPartial\\partial\\throws) FxCallFailure\n    code:\n        throws: copy(Throws)\n        if: n = 0\n            return: done(x)\n        return: more(thunk := partial(next; (n - 1)))\n    even_step:\n        throws: copy(Throws)\n        int: x 1\n        @: next odd_step\n        return: code()\n    odd_step:\n        throws: copy(Throws)\n        int: x 0\n        @: next even_step\n        return: code()\n    Example:\n        int: n\n        return: int\n        run:\n            throws: copy(Throws)\n            return: \\trampoline(even_step(n))\n"
+          "functional": "Steps:\n    int: n\n    return: @\n    Throws: copy(partial\\throws) FxCallFailure\n    code:\n        throws: copy(Throws)\n        if: n = 0\n            return: done(x)\n        return: more(thunk := partial(next; (n - 1)))\n    even_step:\n        throws: copy(Throws)\n        int: x 1\n        @: next odd_step\n        return: code()\n    odd_step:\n        throws: copy(Throws)\n        int: x 0\n        @: next even_step\n        return: code()\n    Example:\n        int: n\n        return: int\n        run:\n            throws: copy(Throws)\n            return: \\trampoline(even_step(n))\n"
         },
         "Haskell": {
           "standard": "module TrampolineExample where\nimport Control.Monad.Free (Free(..), iter)\nimport Data.Functor.Identity (Identity(..))\n\nevenStep, oddStep :: Int -> Free Identity Bool\nevenStep 0 = Pure True\nevenStep n = Free (Identity (oddStep (n - 1)))\noddStep 0 = Pure False\noddStep n = Free (Identity (evenStep (n - 1)))\n\nparity :: Int -> Bool\nparity = iter runIdentity . evenStep\n"
@@ -517,16 +517,16 @@
           }
         },
         "functional": {
-          "code": "Steps:\n    int: n\n    return: @\n    Throws: copy(FxPartial\\partial\\throws) FxCallFailure\n    code:\n        throws: copy(Throws)\n        if: n = 0\n            return: done(x)\n        return: more(thunk := partial(next; (n - 1)))\n    even_step:\n        throws: copy(Throws)\n        int: x 1\n        @: next odd_step\n        return: code()\n    odd_step:\n        throws: copy(Throws)\n        int: x 0\n        @: next even_step\n        return: code()\n    Example:\n        int: n\n        return: int\n        run:\n            throws: copy(Throws)\n            return: \\trampoline(even_step(n))\n",
+          "code": "Steps:\n    int: n\n    return: @\n    Throws: copy(partial\\throws) FxCallFailure\n    code:\n        throws: copy(Throws)\n        if: n = 0\n            return: done(x)\n        return: more(thunk := partial(next; (n - 1)))\n    even_step:\n        throws: copy(Throws)\n        int: x 1\n        @: next odd_step\n        return: code()\n    odd_step:\n        throws: copy(Throws)\n        int: x 0\n        @: next even_step\n        return: code()\n    Example:\n        int: n\n        return: int\n        run:\n            throws: copy(Throws)\n            return: \\trampoline(even_step(n))\n",
           "source_file": "examples/lmx/083_trampoline.lm3",
           "contract_id": "functional/083",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 354,
-            "characters_with_whitespace": 586,
+            "characters": 344,
+            "characters_with_whitespace": 576,
             "nonblank_lines": 25,
-            "utf8_bytes": 586,
-            "sha256": "883797ce9f7b227b73f488083e1349c681b3d3343dc148f65f68ac2674d28a01"
+            "utf8_bytes": 576,
+            "sha256": "fc4f47092924cb0e399d27544fc0ce132936207b4d89b51d2b04bbf033a630de"
           }
         }
       },
@@ -1048,12 +1048,12 @@
       "scope": "core",
       "summary_ru": "Независимые сохранённые префиксы: прямое окружение и общий curry.",
       "summary_en": "Independent captured prefixes: direct environments and the common curry operation.",
-      "scenario_ru": "Объявить сложение и создать независимые add5/add100 через поэтапный curry либо partial. Контрольные клиенты используют применение Haskell и Function2.curried Scala. Сохранены saved=1000 и повторный add5(1); результат 6101006.",
-      "scenario_en": "Declare addition and create two independent bindings add5/add100 through staged curry or partial. Native Haskell application and Scala Function2.curried provide the control clients. Keep saved=1000 and the repeated add5(1); the result is 6101006.",
+      "scenario_ru": "Объявить сложение и создать независимые префиксы 5 и 100 через поэтапный curry либо partial. add5 используется дважды, однократная ветвь 100 вызывается сразу. Контрольные клиенты используют применение Haskell и Function2.curried Scala; результат 6101006.",
+      "scenario_en": "Declare addition and create independent prefixes 5 and 100 through staged curry or partial. Reuse add5 twice and immediately call the one-use 100 branch. Native Haskell application and Scala Function2.curried provide the control clients; the result is 6101006.",
       "expected_ru": "6, 101, 6; demo возвращает 6101006. Возвращённая функция имеет ровно один явный int-вход. Библиотечный LMX-прототип не меняется; две созданные функции независимы.",
       "expected_en": "6, 101, 6; demo returns 6101006. The returned function has exactly one explicit int input. The LMX library prototype is unchanged and the two created functions are independent.",
-      "lmx_notes_ru": "Процедурный вариант целиком показывает собственные окружения и прямой вызов. Функциональный использует общий curry. Независимость сохранённых5/100 и остаточная сигнатура одинаковы; общие тела ядра в099 не размножаются.",
-      "lmx_notes_en": "Both complete styles are compared, with their entire declarations and Throws.",
+      "lmx_notes_ru": "Процедурный вариант целиком показывает собственные окружения и прямой вызов; его локальный saved=1000 оставлен как отдельная проверка затенения сохранённого поля. Функциональный использует общий curry, сохраняет повторно используемый add5 и сразу вызывает ветвь add(100)(1). Независимость префиксов 5/100 и остаточная сигнатура сохраняются; общие тела ядра в099 не размножаются.",
+      "lmx_notes_en": "The procedural client explicitly retains saved=1000 as a shadowing regression for the captured field. The functional client retains reused add5 and calls its one-use 100 branch directly. Both complete styles are counted with all declarations and Throws.",
       "comparison_ru": "Готовый API используется только на уровне клиента; реализация соответствующего компонента сравнивается отдельной строкой. Небольшие изменения записи объясняются без повторного полного листинга.",
       "comparison_en": "Ready APIs are used by clients; component implementations are compared separately. Minor spelling differences are described without duplicate full listings.",
       "limits_ru": "int относится только к прикладному сложению и числовой кодировке 6101006. Общее partial не ограничено int×int→int. Для k=N оно возвращает отложенный nullary callable и не вызывает исходную функцию при создании.",
@@ -1061,45 +1061,45 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "Addition:\n    int: first\n    int: second\n    return: int\n    apply:\n        return: first + second\n\nDemo:\n    return: int\n    run:\n        throws: copy(FxPartial\\partial\\throws) FxCallFailure\n        @: add curry(Addition\\apply)\n        @: add5 add(5)\n        @: add100 add(100)\n        int: saved 1000\n        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n",
-          "notes_ru": "Один общий curry создаёт две независимые ветви add5/add100. Сохранены saved=1000, повторный add5(1) и полный результат 6101006. Действующий вариант с двумя partial остаётся рядом. Полные тела и дополнительная стоимость curry раскрыты в [приложении](CURRY_ADAPTER_VARIANT.md), а не объявлены бесплатной заменой 099.",
-          "notes_en": "One general curry creates independent add5/add100 branches. saved=1000, the repeated add5(1), and the complete result 6101006 remain. The valid two-partial alternative is retained. Complete curry bodies and their additional dependency cost are disclosed in CURRY_ADAPTER_VARIANT.md, not treated as a free replacement for component 099.",
+          "code": "Addition:\n    int: first\n    int: second\n    return: int\n    apply:\n        return: first + second\n\nDemo:\n    return: int\n    run:\n        throws: copy(curry\\throws) FxRecordArity\n        @: add curry(Addition\\apply)\n        @: add5 add(5)\n        return: add5(1) * 1000000 + add(100)(1) * 1000 + add5(1)\n",
+          "notes_ru": "Один общий curry создаёт независимые префиксы 5/100. Повторный add5(1) и полный результат 6101006 сохранены; ветвь 100 вызывается сразу, неиспользуемого saved нет. Действующий вариант с partial остаётся рядом. Полные тела и дополнительная стоимость curry раскрыты в [приложении](CURRY_ADAPTER_VARIANT.md).",
+          "notes_en": "One general curry creates independent prefixes 5/100. The repeated add5(1) and result 6101006 remain; the one-use 100 branch is called directly and the unused saved local is removed. The partial alternative remains; complete curry bodies and dependency cost are disclosed in CURRY_ADAPTER_VARIANT.md.",
           "depends_on": [
             99
           ],
           "primary_variant": "functional",
           "metrics": {
-            "characters": 244,
-            "nonblank_lines": 15,
-            "utf8_bytes": 366,
-            "sha256": "aae58a4a61e01f861df4f106d8627b73768965a8a2cb88c369342a84b8bd73e9"
+            "characters": 205,
+            "nonblank_lines": 13,
+            "utf8_bytes": 305,
+            "sha256": "2ef8a81b5f357f9cdf6d268997f9d60021b45892aede22ce9753aac768e59675"
           },
           "publication_role": "compatibility_mirror_not_separate_comparison"
         },
         {
           "language": "Haskell",
-          "code": "module CurryingExample where\n\nadd :: Int -> Int -> Int\nadd first second = first + second\n\ndemo :: Int\ndemo = let add5 = add 5\n           add100 = add 100\n           saved = 1000\n       in add5 1 * 1000000 + add100 1 * 1000 + add5 1\n",
+          "code": "module CurryingExample where\n\nadd :: Int -> Int -> Int\nadd first second = first + second\n\ndemo :: Int\ndemo = let add5 = add 5\n       in add5 1 * 1000000 + add 100 1 * 1000 + add5 1\n",
           "notes_ru": "Клиент использует существующее средство языка/библиотеки. Соседняя самостоятельная реализация служит отдельным сравнением и не подключается.",
           "notes_en": "The client uses an existing language/library facility. The adjacent independent implementation is a separate comparison and is not imported.",
           "primary_variant": "standard",
           "metrics": {
-            "characters": 154,
-            "nonblank_lines": 8,
-            "utf8_bytes": 232,
-            "sha256": "540dd6edd7eddfc230ad2361a3c7561f732b8df72151b2530278d39444e4b1b1"
+            "characters": 131,
+            "nonblank_lines": 6,
+            "utf8_bytes": 181,
+            "sha256": "92018a06d7cfb21e4e9b3dd744f3ecf5c43385fbff089d94b34b313fd1ad3ac8"
           }
         },
         {
           "language": "Scala",
-          "code": "object CurryingExample {\n  def add(first: Int, second: Int): Int = first + second\n  def demo: Int = {\n    val curried = (add _).curried\n    val add5 = curried(5)\n    val add100 = curried(100)\n    val saved = 1000\n    add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n  }\n}\n",
+          "code": "object CurryingExample {\n  def add(first: Int, second: Int): Int = first + second\n  def demo: Int = {\n    val curried = (add _).curried\n    val add5 = curried(5)\n    add5(1) * 1000000 + curried(100)(1) * 1000 + add5(1)\n  }\n}\n",
           "notes_ru": "Клиент использует существующее средство языка/библиотеки. Соседняя самостоятельная реализация служит отдельным сравнением и не подключается.",
           "notes_en": "The client uses an existing language/library facility. The adjacent independent implementation is a separate comparison and is not imported.",
           "primary_variant": "standard",
           "metrics": {
-            "characters": 198,
-            "nonblank_lines": 10,
-            "utf8_bytes": 270,
-            "sha256": "6ed014512b5d5a1498d4e6cd8cb20dd07137edd2b8d338e2f4229e5a840e9343"
+            "characters": 169,
+            "nonblank_lines": 8,
+            "utf8_bytes": 225,
+            "sha256": "d5532b6b87678f621efcdea86600bb2c80204c081ecf3abd6cdd91d54d5345a3"
           }
         }
       ],
@@ -1121,23 +1121,23 @@
       "variants": {
         "LMX": {
           "procedural": "CapturePrototype:\n    int: saved 0\n    @: binary 0\n    inputs:\n        int: second\n        return: int\n        apply:\n            return: node\\binary(node\\saved; second)\n\nCurry:\n    @: binary\n    int: first\n    return: @\n    capture:\n        @: instance (copy(CapturePrototype))\n        @: owner parent(instance\\inputs)\n        owner\\saved := first\n        owner\\binary := binary\n        return: instance\\inputs\\apply\n\nAddition:\n    int: first\n    int: second\n    return: int\n    apply:\n        return: first + second\n\nDemo:\n    return: int\n    run:\n        @: add5 Curry\\capture(Addition\\apply; 5)\n        @: add100 Curry\\capture(Addition\\apply; 100)\n        int: saved 1000\n        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n",
-          "functional": "Addition:\n    int: first\n    int: second\n    return: int\n    apply:\n        return: first + second\n\nDemo:\n    return: int\n    run:\n        throws: copy(FxPartial\\partial\\throws) FxCallFailure\n        @: add curry(Addition\\apply)\n        @: add5 add(5)\n        @: add100 add(100)\n        int: saved 1000\n        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n"
+          "functional": "Addition:\n    int: first\n    int: second\n    return: int\n    apply:\n        return: first + second\n\nDemo:\n    return: int\n    run:\n        throws: copy(curry\\throws) FxRecordArity\n        @: add curry(Addition\\apply)\n        @: add5 add(5)\n        return: add5(1) * 1000000 + add(100)(1) * 1000 + add5(1)\n"
         },
         "Haskell": {
-          "standard": "module CurryingExample where\n\nadd :: Int -> Int -> Int\nadd first second = first + second\n\ndemo :: Int\ndemo = let add5 = add 5\n           add100 = add 100\n           saved = 1000\n       in add5 1 * 1000000 + add100 1 * 1000 + add5 1\n"
+          "standard": "module CurryingExample where\n\nadd :: Int -> Int -> Int\nadd first second = first + second\n\ndemo :: Int\ndemo = let add5 = add 5\n       in add5 1 * 1000000 + add 100 1 * 1000 + add5 1\n"
         },
         "Scala": {
-          "standard": "object CurryingExample {\n  def add(first: Int, second: Int): Int = first + second\n  def demo: Int = {\n    val curried = (add _).curried\n    val add5 = curried(5)\n    val add100 = curried(100)\n    val saved = 1000\n    add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n  }\n}\n"
+          "standard": "object CurryingExample {\n  def add(first: Int, second: Int): Int = first + second\n  def demo: Int = {\n    val curried = (add _).curried\n    val add5 = curried(5)\n    add5(1) * 1000000 + curried(100)(1) * 1000 + add5(1)\n  }\n}\n"
         }
       },
       "variant_notes": {
         "LMX": {
           "procedural": {
-            "notes_ru": "Процедурный вариант целиком показывает собственные окружения и прямой вызов. Функциональный использует общий curry. Независимость сохранённых5/100 и остаточная сигнатура одинаковы; общие тела ядра в099 не размножаются.",
+            "notes_ru": "Процедурный вариант целиком показывает собственные окружения и прямой вызов; его локальный saved=1000 оставлен как отдельная проверка затенения сохранённого поля. Функциональный использует общий curry, сохраняет повторно используемый add5 и сразу вызывает ветвь add(100)(1). Независимость префиксов 5/100 и остаточная сигнатура сохраняются; общие тела ядра в099 не размножаются.",
             "notes_en": "Two complete style variants preserve the stated observable contract. All declarations and Throws count; revised LMX is NOT_RUN."
           },
           "functional": {
-            "notes_ru": "Процедурный вариант целиком показывает собственные окружения и прямой вызов. Функциональный использует общий curry. Независимость сохранённых5/100 и остаточная сигнатура одинаковы; общие тела ядра в099 не размножаются.",
+            "notes_ru": "Процедурный вариант целиком показывает собственные окружения и прямой вызов; его локальный saved=1000 оставлен как отдельная проверка затенения сохранённого поля. Функциональный использует общий curry, сохраняет повторно используемый add5 и сразу вызывает ветвь add(100)(1). Независимость префиксов 5/100 и остаточная сигнатура сохраняются; общие тела ядра в099 не размножаются.",
             "notes_en": "Two complete style variants preserve the stated observable contract. All declarations and Throws count; revised LMX is NOT_RUN."
           }
         },
@@ -1225,16 +1225,16 @@
           }
         },
         "functional": {
-          "code": "Addition:\n    int: first\n    int: second\n    return: int\n    apply:\n        return: first + second\n\nDemo:\n    return: int\n    run:\n        throws: copy(FxPartial\\partial\\throws) FxCallFailure\n        @: add curry(Addition\\apply)\n        @: add5 add(5)\n        @: add100 add(100)\n        int: saved 1000\n        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n",
+          "code": "Addition:\n    int: first\n    int: second\n    return: int\n    apply:\n        return: first + second\n\nDemo:\n    return: int\n    run:\n        throws: copy(curry\\throws) FxRecordArity\n        @: add curry(Addition\\apply)\n        @: add5 add(5)\n        return: add5(1) * 1000000 + add(100)(1) * 1000 + add5(1)\n",
           "source_file": "examples/lmx/085_currying.lm3",
           "contract_id": "functional/085",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 244,
-            "characters_with_whitespace": 366,
-            "nonblank_lines": 15,
-            "utf8_bytes": 366,
-            "sha256": "aae58a4a61e01f861df4f106d8627b73768965a8a2cb88c369342a84b8bd73e9"
+            "characters": 205,
+            "characters_with_whitespace": 305,
+            "nonblank_lines": 13,
+            "utf8_bytes": 305,
+            "sha256": "2ef8a81b5f357f9cdf6d268997f9d60021b45892aede22ce9753aac768e59675"
           }
         }
       },
@@ -1245,7 +1245,15 @@
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
       "style_note": "Процедурный вариант целиком показывает собственные окружения и прямой вызов. Функциональный использует общий curry. Независимость сохранённых5/100 и остаточная сигнатура одинаковы; общие тела ядра в099 не размножаются.",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "companion_sources": [
+        {
+          "file": "examples/lmx/variants/085_currying_core.lm3",
+          "counts_as_primary": false,
+          "sha256": "25b840d977daa0e2626eb388b84fced8ba55ab3d5a030d40e4346e4ce906df2a",
+          "role": "Alternative using partial; distinct from the two compared styles, retained as an additional source."
+        }
+      ]
     },
     {
       "id": 99,
@@ -1405,7 +1413,7 @@
     "excluded": "Other approach-level variants are separate, uncounted alternatives. One-line and type-only historical duplicates were removed.",
     "implementation_boundary": "Full scoped API with common LMX dependencies reported separately; clients import real standard/existing facilities."
   },
-  "selection_policy": "Two complete LMX style clients are compared for082–085; neither is removed by a shortest-source selection. All declarations and Throws count in full. Shared implementation records091/092/098/099 retain one canonical LMX body; foreign sources are unchanged.",
+  "selection_policy": "Two complete LMX style clients are compared for082–085; neither is removed by a shortest-source selection. All declarations and Throws count in full. Shared implementation records091/092/098/099 retain one canonical LMX body; foreign clients retain their observable contract; 085 removes the same unused and single-use locals in Haskell and Scala.",
   "lmx_execution_contract": {
     "startup_target": "root",
     "startup_level": "L3 Thread",

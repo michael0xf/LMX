@@ -6,225 +6,225 @@ Both forms use the same algorithms and real owner DATA. Complete family/role bin
 
 | Name | Ordinary form | Implementations and operand form |
 | --- | --- | --- |
-| `types` | `types(source)` | **default** [RxTypes\types](src/reflection.lmx) → `StandardOperands\types` (asOperand) |
-| `names` | `names(source)` | **default** [RxNames\names](src/reflection_bridges.lmx) → `StandardOperands\names` (asOperand) |
-| `signature` | `signature(operation)` | **default** [RxSignature\signature](src/reflection_bridges.lmx) → `StandardOperands\signature` (asOperand) |
-| `to` | `to(inputTypes...; resultType)` | **default** [FxToTokens\to](src/fn_operand.lmx) → `FxToOperand\to` (existing-operand) |
-| `curry` | `curry(operation)` | **default** [FxLambda\lambda](src/generic_functions.lmx) → `StandardOperands\curry` (asOperand) |
-| `apply` | `apply(operation; args)` | **default** [FxApply\apply](src/generic_runtime.lmx) → `StandardOperands\apply` (asOperand) |
-| `partial` | `partial(operation; prefix)` | **default** [FxPartial\partial](src/generic_functions.lmx) → `StandardOperands\partial` (asOperand) |
-| `uncurry` | `uncurry(operation; contract; failures)` | **default** [FxUncurry\uncurry](src/generic_functions.lmx) → `FxUncurry\uncurry` (role-aware-translator) |
-| `flip` | `flip(operation)` | **default** [FxFlip\flip](src/generic_functions.lmx) → `StandardOperands\flip` (asOperand) |
-| `compose` | `compose(outer; inner)` | **default** [FxCompose\compose](src/generic_combinators.lmx) → `StandardOperands\compose` (asOperand) |
-| `identity` | `identity(typeToken)` | **default** [FxIdentity\identity](src/generic_combinators.lmx) → `FxIdentity\identity` (role-aware-translator) |
-| `map` | `map(items; transform)` | **default** [FxMap\map](src/collections.lmx) → `StandardOperands\map` (asOperand) |
-| `filter` | `filter(items; accepts)` | **default** [FxFilter\filter](src/collections.lmx) → `StandardOperands\filter` (asOperand) |
-| `foldl` | `foldl(items; seed; step)` | **default** [FxFold\fold](src/collections.lmx) → `StandardOperands\foldl` (asOperand) |
-| `zip` | `zip(first; second)` | **default** [FxZip\zip](src/collections.lmx) → `StandardOperands\zip` (asOperand) |
-| `zipWith` | `zipWith(first; second; combine)` | **default** [FxZipWith\zipWith](src/collections.lmx) → `StandardOperands\zipWith` (asOperand) |
-| `scanl` | `scanl(items; seed; step)` | **default** [FxScan\scan](src/collections.lmx) → `StandardOperands\scanl` (asOperand) |
-| `bind` | `bind(input; next)` | **Maybe** [FxBind\bind](src/containers.lmx) → `FxMaybeBindOperand\bind` (existing-operand); **Result** [FxBindResult\bind](src/containers.lmx) → `FxResultBindOperand\bind` (existing-operand); **Array** [FxListBind\bind](src/containers.lmx) → `ArrayBinding\bind` (existing-operand) |
-| `traverse` | `traverse(items; next)` | **default** [FxTraverse\traverse](src/collections.lmx) → `StandardOperands\traverse` (asOperand) |
-| `memoize` | `memoize(operation; sameKey=0)` | **default** [FxMemo\memo](src/generic_combinators.lmx) → `StandardOperands\memoize` (asOperand) |
-| `fix` | `fix(operation)` | **default** [FxFix\fix](src/generic_combinators.lmx) → `StandardOperands\fix` (asOperand) |
-| `select` | `select(source; indices)` | **default** [RxSelect\select](src/structures.lmx) → `StandardOperands\select` (asOperand) |
-| `omit` | `omit(source; indices)` | **default** [RxOmit\omit](src/structures.lmx) → `StandardOperands\omit` (asOperand) |
-| `rename` | `rename(source; indices; labels)` | **default** [RxRename\rename](src/reflection_bridges.lmx) → `StandardOperands\rename` (asOperand) |
-| `reorder` | `reorder(source; permutation)` | **default** [RxReorder\reorder](src/structures.lmx) → `StandardOperands\reorder` (asOperand) |
-| `project` | `project(source; indices)` | **default** [RxProject\project](src/structures.lmx) → `StandardOperands\project` (asOperand) |
-| `defaults` | `defaults(source; fallback)` | **default** [RxDefaults\defaults](src/structures.lmx) → `StandardOperands\defaults` (asOperand) |
-| `diff` | `diff(before; after)` | **default** [RxDiff\diff](src/structures.lmx) → `StandardOperands\diff` (asOperand) |
-| `patch` | `patch(source; change)` | **default** [RxPatch\patch](src/structures.lmx) → `StandardOperands\patch` (asOperand) |
-| `bindFields` | `bindFields(operation; bindings)` | **default** [RxBindFields\bindFields](src/structures.lmx) → `StandardOperands\bindFields` (asOperand) |
-| `derive` | `derive(base; extension)` | **default** [RxDerive\derive](src/structures.lmx) → `StandardOperands\derive` (asOperand) |
-| `transpose` | `transpose(rows)` | **default** [FxTranspose\transpose](src/collections.lmx) → `StandardOperands\transpose` (asOperand) |
-| `groupBy` | `groupBy(items; keyOf=0; sameKey=0)` | **default** [FxGroupBy\groupBy](src/collections.lmx) → `StandardOperands\groupBy` (asOperand) |
-| `lazy` | `lazy(operation)` | **default** [FxLazy\lazy](src/generic_wrappers.lmx) → `StandardOperands\lazy` (asOperand) |
-| `force` | `force(thunk)` | **default** [FxForce\force](src/generic_wrappers.lmx) → `StandardOperands\force` (asOperand) |
-| `once` | `once(operation)` | **default** [FxOnce\once](src/generic_wrappers.lmx) → `StandardOperands\once` (asOperand) |
-| `repeat` | `repeat(operation; count; args=())` | **default** [FxRepeat\repeat](src/generic_wrappers.lmx) → `StandardOperands\repeat` (asOperand) |
-| `runUntil` | `runUntil(step; finished; initial)` | **default** [FxUntil\runUntil](src/generic_wrappers.lmx) → `StandardOperands\runUntil` (asOperand) |
-| `retryCall` | `retryCall(operation; attempts; args=())` | **default** [FxRetry\retryCall](src/generic_wrappers.lmx) → `StandardOperands\retryCall` (asOperand) |
-| `bracket` | `bracket(acquire; release; action; arguments=())` | **default** [FxAround\around](src/generic_wrappers.lmx) → `StandardOperands\bracket` (asOperand) |
-| `recover` | `recover(operation; handler)` | **default** [FxRecover\recover](src/generic_wrappers.lmx) → `StandardOperands\recover` (asOperand) |
-| `adapter` | `adapter(operation; before; after; contract)` | **default** [FxAdapter\adapter](src/generic_combinators.lmx) → `StandardOperands\adapter` (asOperand) |
-| `permute` | `permute(operation; permutation)` | **default** [FxPermute\permute](src/generic_combinators.lmx) → `StandardOperands\permute` (asOperand) |
-| `overload` | `overload(candidates; accepts; contract)` | **default** [FxOverload\overload](src/generic_combinators.lmx) → `StandardOperands\overload` (asOperand) |
-| `predicate` | `predicate(operation)` | **default** [FxPredicate\predicate](src/generic_combinators.lmx) → `StandardOperands\predicate` (asOperand) |
-| `guard` | `guard(operation; accepts)` | **default** [FxGuard\guard](src/generic_combinators.lmx) → `StandardOperands\guard` (asOperand) |
-| `trace` | `trace(operation; sink)` | **default** [FxTrace\trace](src/generic_wrappers.lmx) → `StandardOperands\trace` (asOperand) |
-| `contract` | `contract(operation; pre; post)` | **default** [FxContract\contract](src/generic_combinators.lmx) → `StandardOperands\contract` (asOperand) |
-| `composeData` | `composeData(code; overlay)` | **default** [RxComposeData\composeData](src/structures.lmx) → `StandardOperands\composeData` (asOperand) |
-| `record` | `record(left; right=())` | **default** [FxRecordOperands\record](src/generic_functions.lmx) → `FxRecordOperands\record` (role-aware-translator) |
-| `some` | `some(value)` | **default** [FxSome\some](src/containers.lmx) → `StandardOperands\some` (asOperand) |
-| `none` | `none()` | **default** [FxNone\none](src/containers.lmx) → `StandardOperands\none` (asOperand) |
-| `ok` | `ok(value)` | **default** [FxOk\ok](src/containers.lmx) → `StandardOperands\ok` (asOperand) |
-| `err` | `err(reason)` | **default** [FxErr\err](src/containers.lmx) → `StandardOperands\err` (asOperand) |
-| `list` | `list(values)` | **default** [FxList\list](src/containers.lmx) → `StandardOperands\list` (asOperand) |
-| `done` | `done(value)` | **default** [FxDone\done](src/containers.lmx) → `StandardOperands\done` (asOperand) |
-| `more` | `more(thunk)` | **default** [FxMore\more](src/containers.lmx) → `StandardOperands\more` (asOperand) |
-| `trampoline` | `trampoline(current)` | **default** [FxTrampoline\trampoline](src/containers.lmx) → `StandardOperands\trampoline` (asOperand) |
-| `range` | `range(start; stop; step=1) / range(start; stop; step; profile)` | **default** [FxSeqRange\range](src/sequences.lmx) → `StandardOperands\range_default` (asOperand); **profile** [FxProfileRange\range](src/sequence_profiles.lmx) → `StandardOperands\range_profile` (asOperand) |
-| `slice` | `slice(source; begin; end)` | **default** [FxSeqSlice\slice](src/sequences.lmx) → `StandardOperands\slice` (asOperand) |
-| `reverse` | `reverse(source)` | **default** [FxSeqReverse\reverse](src/sequences.lmx) → `StandardOperands\reverse` (asOperand) |
-| `concat` | `concat(parts)` | **default** [FxSeqConcat\concat](src/sequences.lmx) → `StandardOperands\concat` (asOperand) |
-| `compress` | `compress(source; mask)` | **default** [FxSeqCompress\compress](src/sequences.lmx) → `StandardOperands\compress` (asOperand) |
-| `any` | `any(items; accepts)` | **default** [FxSeqAny\any](src/sequences.lmx) → `StandardOperands\any` (asOperand) |
-| `all` | `all(items; accepts)` | **default** [FxSeqAll\all](src/sequences.lmx) → `StandardOperands\all` (asOperand) |
-| `index` | `index(items; accepts)` | **default** [FxSeqIndex\index](src/sequences.lmx) → `StandardOperands\index` (asOperand) |
-| `count` | `count(items; accepts)` | **default** [FxSeqCount\count](src/sequences.lmx) → `StandardOperands\count` (asOperand) |
-| `replaceRange` | `replaceRange(target; begin; end; values)` | **default** [FxSeqReplaceRange\replaceRange](src/sequences_mutation.lmx) → `StandardOperands\replaceRange` (asOperand) |
-| `splice` | `splice(target; begin; end; values)` | **default** [FxSeqSplice\splice](src/sequences_mutation.lmx) → `StandardOperands\splice` (asOperand) |
-| `append` | `append(target; values)` | **default** [FxSeqAppend\append](src/sequences_mutation.lmx) → `StandardOperands\append` (asOperand) |
-| `insert` | `insert(target; position; values)` | **default** [FxSeqInsert\insert](src/sequences_mutation.lmx) → `StandardOperands\insert` (asOperand) |
-| `deleteAt` | `deleteAt(target; begin; end)` | **default** [FxSeqDeleteAt\deleteAt](src/sequences_mutation.lmx) → `StandardOperands\deleteAt` (asOperand) |
-| `literal` | `literal(value)` | **default** [RxLiteral\literal](src/regex/primitives.lmx) → `StandardOperands\literal` (asOperand) |
-| `oneOf` | `oneOf(values)` | **default** [RxMembers\oneOf](src/regex/primitives.lmx) → `StandardOperands\oneOf` (asOperand) |
-| `noneOf` | `noneOf(values)` | **default** [RxMembers\noneOf](src/regex/primitives.lmx) → `StandardOperands\noneOf` (asOperand) |
-| `within` | `within(first; last; order=0)` | **default** [RxWithin\within](src/regex/primitives.lmx) → `StandardOperands\within` (asOperand) |
-| `satisfy` | `satisfy(predicate)` | **default** [RxSatisfy\satisfy](src/regex/primitives.lmx) → `StandardOperands\satisfy` (asOperand) |
-| `boundaryOf` | `boundaryOf(predicate)` | **default** [RxBoundaryOf\boundaryOf](src/regex/primitives.lmx) → `StandardOperands\boundaryOf` (asOperand) |
-| `sameAs` | `sameAs(name)` | **default** [RxSameAs\sameAs](src/regex/primitives.lmx) → `StandardOperands\sameAs` (asOperand) |
-| `then` | `then(patterns...)` | **Pattern** [RxSequence\then](src/regex/combinators.lmx) → `RxThenOperand\then` (existing-operand) |
-| `choice` | `choice(patterns)` | **default** [RxChoice\choice](src/regex/combinators.lmx) → `StandardOperands\choice` (asOperand) |
-| `repeated` | `repeated(pattern; minimum=0; maximum=unbounded; order=extendFirst)` | **default** [RxRepeated\repeated](src/regex/combinators.lmx) → `StandardOperands\repeated` (asOperand) |
-| `atomic` | `atomic(pattern)` | **default** [RxAtomic\atomic](src/regex/combinators.lmx) → `StandardOperands\atomic` (asOperand) |
-| `capture` | `capture(name; pattern)` | **default** [RxCapture\capture](src/regex/combinators.lmx) → `StandardOperands\capture` (asOperand) |
-| `ahead` | `ahead(pattern)` | **default** [RxAhead\ahead](src/regex/combinators.lmx) → `StandardOperands\ahead` (asOperand) |
-| `notAhead` | `notAhead(pattern)` | **default** [RxNotAhead\notAhead](src/regex/combinators.lmx) → `StandardOperands\notAhead` (asOperand) |
-| `behind` | `behind(pattern)` | **default** [RxBehind\behind](src/regex/combinators.lmx) → `StandardOperands\behind` (asOperand) |
-| `notBehind` | `notBehind(pattern)` | **default** [RxNotBehind\notBehind](src/regex/combinators.lmx) → `StandardOperands\notBehind` (asOperand) |
-| `utf8Text` | `utf8Text(source)` | **default** [RxUtf8Text\utf8Text](src/regex/text.lmx) → `StandardOperands\utf8Text` (asOperand) |
-| `byteText` | `byteText(source)` | **default** [RxByteText\byteText](src/regex/text.lmx) → `StandardOperands\byteText` (asOperand) |
-| `matchAt` | `matchAt(source; pattern; position)` | **default** [RxMatchAt\matchAt](src/regex/operations.lmx) → `StandardOperands\matchAt` (asOperand) |
-| `wholeMatch` | `wholeMatch(source; pattern)` | **default** [RxWholeMatch\wholeMatch](src/regex/operations.lmx) → `StandardOperands\wholeMatch` (asOperand) |
-| `find` | `find(source; pattern)` | **default** [RxFind\find](src/regex/operations.lmx) → `StandardOperands\find` (asOperand) |
-| `eachMatch` | `eachMatch(source; pattern)` | **default** [RxEachMatch\eachMatch](src/regex/operations.lmx) → `StandardOperands\eachMatch` (asOperand) |
-| `contains` | `contains(source; pattern)` | **default** [RxContains\contains](src/regex/operations.lmx) → `StandardOperands\contains` (asOperand) |
-| `hasPrefix` | `hasPrefix(source; pattern)` | **default** [RxHasPrefix\hasPrefix](src/regex/operations.lmx) → `StandardOperands\hasPrefix` (asOperand) |
-| `hasSuffix` | `hasSuffix(source; pattern)` | **default** [RxHasSuffix\hasSuffix](src/regex/operations.lmx) → `StandardOperands\hasSuffix` (asOperand) |
-| `matches` | `matches(source; pattern)` | **default** [RxMatches\matches](src/regex/operations.lmx) → `StandardOperands\matches` (asOperand) |
-| `matchedSpan` | `matchedSpan(result)` | **default** [RxMatchedSpan\matchedSpan](src/regex/operations.lmx) → `StandardOperands\matchedSpan` (asOperand) |
-| `matchedValue` | `matchedValue(result)` | **default** [RxMatchedValue\matchedValue](src/regex/operations.lmx) → `StandardOperands\matchedValue` (asOperand) |
-| `captureSpans` | `captureSpans(result; name)` | **default** [RxCaptureSpans\captureSpans](src/regex/operations.lmx) → `StandardOperands\captureSpans` (asOperand) |
-| `lastCapture` | `lastCapture(result; name)` | **default** [RxLastCapture\lastCapture](src/regex/operations.lmx) → `StandardOperands\lastCapture` (asOperand) |
-| `captureValue` | `captureValue(result; name)` | **default** [RxCaptureValue\captureValue](src/regex/operations.lmx) → `StandardOperands\captureValue` (asOperand) |
-| `captureValues` | `captureValues(result; name)` | **default** [RxCaptureValues\captureValues](src/regex/operations.lmx) → `StandardOperands\captureValues` (asOperand) |
-| `replaceFirst` | `replaceFirst(source; pattern; replacement)` | **default** [RxReplaceFirst\replaceFirst](src/regex/operations.lmx) → `RxReplaceFirst\replaceFirst` (role-aware-translator) |
-| `replace` | `replace(source; pattern; replacement)` | **default** [RxReplace\replace](src/regex/operations.lmx) → `RxReplace\replace` (role-aware-translator) |
-| `split` | `split(source; pattern)` | **default** [RxSplit\split](src/regex/operations.lmx) → `StandardOperands\split` (asOperand) |
-| `times` | `times(left; right)` | **default** [RxRepeatOperands\times](src/regex/operands.lmx) → `RxRepeatOperands\times` (role-aware-translator) |
-| `atLeast` | `atLeast(left; right)` | **default** [RxRepeatOperands\atLeast](src/regex/operands.lmx) → `RxRepeatOperands\atLeast` (role-aware-translator) |
-| `atMost` | `atMost(left; right)` | **default** [RxRepeatOperands\atMost](src/regex/operands.lmx) → `RxRepeatOperands\atMost` (role-aware-translator) |
-| `optional` | `optional(left; right)` | **default** [RxRepeatOperands\optional](src/regex/operands.lmx) → `RxRepeatOperands\optional` (role-aware-translator) |
-| `findFirst` | `findFirst(items; accepts)` | **default** [FxFindFirst\findFirst](src/coreComparisonGroups.lmx) → `StandardOperands\findFirst` (asOperand) |
-| `allOf` | `allOf(predicates; contract=0)` | **default** [FxAllOf\allOf](src/coreComparisonGroups.lmx) → `StandardOperands\allOf` (asOperand) |
-| `equalFields` | `equalFields(first; second; same=0)` | **default** [FxEqualFields\equalFields](src/coreComparisonGroups.lmx) → `StandardOperands\equalFields` (asOperand) |
-| `retryPost` | `retryPost(request; retryOn; attempts; delay; firstDelay; maxDelay; timeoutMs; complete)` | **default** [FxRetryPost\retryPost](src/coreComparisonGroups.lmx) → `StandardOperands\retryPost` (asOperand) |
-| `between` | `between(left; right)` | **default** [FxBetween\between](src/coreComparisonExamples.lmx) → `FxBetween\between` (role-aware-translator) |
-| `iterateUntilStop` | `iterateUntilStop(iteration; body)` | **default** [FxIterateUntilStop\iterateUntilStop](src/coreComparisonExamples.lmx) → `FxIterateUntilStop\iterateUntilStop` (role-aware-translator) |
-| `sort` | `sort(items; compare)` | **default** [FxSort\sort](src/corePerlExamples.lmx) → `StandardOperands\sort` (asOperand) |
-| `unique` | `unique(items; same=0)` | **default** [FxUnique\unique](src/corePerlExamples.lmx) → `StandardOperands\unique` (asOperand) |
-| `take` | `take(items; count)` | **default** [FxStdCut\take](src/coreStandardFunctional.lmx) → `StandardOperands\take` (asOperand) |
-| `drop` | `drop(items; count)` | **default** [FxStdCut\drop](src/coreStandardFunctional.lmx) → `StandardOperands\drop` (asOperand) |
-| `splitAt` | `splitAt(items; count)` | **default** [FxStdCut\splitAt](src/coreStandardFunctional.lmx) → `StandardOperands\splitAt` (asOperand) |
-| `takeWhile` | `takeWhile(items; accepts)` | **default** [FxStdPrefix\takeWhile](src/coreStandardFunctional.lmx) → `StandardOperands\takeWhile` (asOperand) |
-| `dropWhile` | `dropWhile(items; accepts)` | **default** [FxStdPrefix\dropWhile](src/coreStandardFunctional.lmx) → `StandardOperands\dropWhile` (asOperand) |
-| `span` | `span(items; accepts)` | **default** [FxStdPrefix\span](src/coreStandardFunctional.lmx) → `StandardOperands\span` (asOperand) |
-| `partition` | `partition(items; accepts)` | **default** [FxStdPartition\partition](src/coreStandardFunctional.lmx) → `StandardOperands\partition` (asOperand) |
-| `enumerate` | `enumerate(items; start=0)` | **default** [FxStdEnumerate\enumerate](src/coreStandardFunctional.lmx) → `StandardOperands\enumerate` (asOperand) |
-| `windows` | `windows(items; width=2; step=1; partial=0)` | **default** [FxStdWindows\windows](src/coreStandardFunctional.lmx) → `StandardOperands\windows` (asOperand) |
-| `chunks` | `chunks(items; size; strict=0)` | **default** [FxStdChunks\chunks](src/coreStandardFunctional.lmx) → `StandardOperands\chunks` (asOperand) |
-| `intersperse` | `intersperse(items; separatorRecord)` | **default** [FxStdIntersperse\intersperse](src/coreStandardFunctional.lmx) → `StandardOperands\intersperse` (asOperand) |
-| `join` | `join(parts; separator)` | **Array** [FxStdJoin\join](src/coreStandardFunctional.lmx) → `StandardOperands\join_Array` (asOperand); **text** [FxTextJoin\join](src/sequence_profiles.lmx) → `StandardOperands\join_text` (asOperand) |
-| `unzip` | `unzip(pairs)` | **default** [FxStdUnzip\unzip](src/coreStandardFunctional.lmx) → `StandardOperands\unzip` (asOperand) |
-| `foldr` | `foldr(items; seedRecord; step)` | **default** [FxStdRightFold\foldr](src/coreStandardFunctional.lmx) → `StandardOperands\foldr` (asOperand) |
-| `scanr` | `scanr(items; seedRecord; step)` | **default** [FxStdRightFold\scanr](src/coreStandardFunctional.lmx) → `StandardOperands\scanr` (asOperand) |
-| `filterMap` | `filterMap(items; transform)` | **default** [FxStdMaybeMap\filterMap](src/coreStandardFunctional.lmx) → `StandardOperands\filterMap` (asOperand) |
-| `mapWhile` | `mapWhile(items; transform)` | **default** [FxStdMaybeMap\mapWhile](src/coreStandardFunctional.lmx) → `StandardOperands\mapWhile` (asOperand) |
-| `findMap` | `findMap(items; transform)` | **default** [FxStdMaybeMap\findMap](src/coreStandardFunctional.lmx) → `StandardOperands\findMap` (asOperand) |
-| `mapAccumL` | `mapAccumL(items; seedRecord; step)` | **default** [FxStdMapAccum\mapAccumL](src/coreStandardFunctional.lmx) → `StandardOperands\mapAccumL` (asOperand) |
-| `mapAccumR` | `mapAccumR(items; seedRecord; step)` | **default** [FxStdMapAccum\mapAccumR](src/coreStandardFunctional.lmx) → `StandardOperands\mapAccumR` (asOperand) |
-| `groupAdjacent` | `groupAdjacent(items; keyOf=0; sameKey=0)` | **default** [FxStdGroupAdjacent\groupAdjacent](src/coreStandardFunctional.lmx) → `StandardOperands\groupAdjacent` (asOperand) |
-| `replicate` | `replicate(valueRecord; count)` | **default** [FxStdReplicate\replicate](src/coreStandardFunctional.lmx) → `StandardOperands\replicate` (asOperand) |
-| `cycle` | `cycle(items; count; rejectNegative=0)` | **default** [FxStdCycle\cycle](src/coreStandardFunctional.lmx) → `StandardOperands\cycle_default` (asOperand); **text** [FxTextCycle\cycle](src/sequence_profiles.lmx) → `StandardOperands\cycle_text` (asOperand) |
-| `starmap` | `starmap(rows; operation)` | **default** [FxStdStarMap\starmap](src/coreStandardFunctional.lmx) → `StandardOperands\starmap` (asOperand) |
-| `zipLongest` | `zipLongest(first; second; fillRecord)` | **default** [FxStdZipLongest\zipLongest](src/coreStandardFunctional.lmx) → `StandardOperands\zipLongest` (asOperand) |
-| `collect` | `collect(next; limit=-1)` | **default** [FxStdCollect\collect](src/coreStandardFunctional.lmx) → `StandardOperands\collect` (asOperand) |
-| `includes` | `includes(items; valueRecord; same=0)` | **default** [FxStdMembership\includes](src/coreStandardFunctional.lmx) → `StandardOperands\includes` (asOperand) |
-| `adjoin` | `adjoin(items; valueRecord; same=0)` | **default** [FxStdAdjoin\adjoin](src/coreStandardFunctional.lmx) → `StandardOperands\adjoin` (asOperand) |
-| `union` | `union(first; second; same=0)` | **default** [FxStdSets\union](src/coreStandardFunctional.lmx) → `StandardOperands\union` (asOperand) |
-| `intersection` | `intersection(first; second; same=0)` | **default** [FxStdSets\intersection](src/coreStandardFunctional.lmx) → `StandardOperands\intersection` (asOperand) |
-| `difference` | `difference(first; second; same=0)` | **default** [FxStdSets\difference](src/coreStandardFunctional.lmx) → `StandardOperands\difference` (asOperand) |
-| `symmetricDifference` | `symmetricDifference(first; second; same=0)` | **default** [FxStdSets\symmetricDifference](src/coreStandardFunctional.lmx) → `StandardOperands\symmetricDifference` (asOperand) |
-| `isSubset` | `isSubset(first; second; same=0)` | **default** [FxStdSubset\isSubset](src/coreStandardFunctional.lmx) → `StandardOperands\isSubset` (asOperand) |
-| `mapOption` | `mapOption(input; transform)` | **default** [FxMapOption\mapOption](src/coreStandardObjects.lmx) → `StandardOperands\mapOption` (asOperand) |
-| `filterOption` | `filterOption(input; accepts)` | **default** [FxFilterOption\filterOption](src/coreStandardObjects.lmx) → `StandardOperands\filterOption` (asOperand) |
-| `orElse` | `orElse(input; fallback)` | **default** [FxOrElse\orElse](src/coreStandardObjects.lmx) → `StandardOperands\orElse` (asOperand) |
-| `orElseGet` | `orElseGet(input; fallback)` | **default** [FxOrElseGet\orElseGet](src/coreStandardObjects.lmx) → `StandardOperands\orElseGet` (asOperand) |
-| `orElseOption` | `orElseOption(input; fallback)` | **default** [FxOrElseOption\orElseOption](src/coreStandardObjects.lmx) → `StandardOperands\orElseOption` (asOperand) |
-| `foldOption` | `foldOption(input; whenEmpty; whenPresent)` | **default** [FxFoldOption\foldOption](src/coreStandardObjects.lmx) → `StandardOperands\foldOption` (asOperand) |
-| `flattenOption` | `flattenOption(input)` | **default** [FxFlattenOption\flattenOption](src/coreStandardObjects.lmx) → `StandardOperands\flattenOption` (asOperand) |
-| `mapResult` | `mapResult(input; transform)` | **default** [FxMapResult\mapResult](src/coreStandardObjects.lmx) → `StandardOperands\mapResult` (asOperand) |
-| `mapErr` | `mapErr(input; transform)` | **default** [FxMapErr\mapErr](src/coreStandardObjects.lmx) → `StandardOperands\mapErr` (asOperand) |
-| `orElseResult` | `orElseResult(input; fallback)` | **default** [FxOrElseResult\orElseResult](src/coreStandardObjects.lmx) → `StandardOperands\orElseResult` (asOperand) |
-| `foldResult` | `foldResult(input; onError; onSuccess)` | **default** [FxFoldResult\foldResult](src/coreStandardObjects.lmx) → `StandardOperands\foldResult` (asOperand) |
-| `attempt` | `attempt(operation; args=())` | **default** [FxAttemptResult\attempt](src/coreStandardObjects.lmx) → `StandardOperands\attempt` (asOperand) |
-| `tap` | `tap(value; action)` | **default** [FxTap\tap](src/coreStandardObjects.lmx) → `StandardOperands\tap` (asOperand) |
-| `findField` | `findField(source; label; occurrence)` | **default** [FxFindField\findField](src/coreStandardObjects.lmx) → `StandardOperands\findField` (asOperand) |
-| `hasField` | `hasField(source; label; occurrence)` | **default** [FxHasField\hasField](src/coreStandardObjects.lmx) → `StandardOperands\hasField` (asOperand) |
-| `getField` | `getField(source; label; occurrence)` | **default** [FxGetField\getField](src/coreStandardObjects.lmx) → `StandardOperands\getField` (asOperand) |
-| `assoc` | `assoc(rows; key; same=0; keyIndex=0)` | **default** [FxAssoc\assoc](src/coreStandardLisp.lmx) → `StandardOperands\assoc` (asOperand) |
-| `pairlis` | `pairlis(keys; values; tail=())` | **default** [FxPairlis\pairlis](src/coreStandardLisp.lmx) → `StandardOperands\pairlis` (asOperand) |
-| `getProperty` | `getProperty(properties; key; same=0)` | **default** [FxGetProperty\getProperty](src/coreStandardLisp.lmx) → `StandardOperands\getProperty` (asOperand) |
-| `setProperty` | `setProperty(properties; key; value; same=0)` | **default** [FxSetProperty\setProperty](src/coreStandardLisp.lmx) → `StandardOperands\setProperty` (asOperand) |
-| `removeProperty` | `removeProperty(properties; key; same=0)` | **default** [FxRemoveProperty\removeProperty](src/coreStandardLisp.lmx) → `StandardOperands\removeProperty` (asOperand) |
-| `getProperties` | `getProperties(properties; indicators; same=0)` | **default** [FxGetProperties\getProperties](src/coreStandardLisp.lmx) → `StandardOperands\getProperties` (asOperand) |
-| `asOperand` | `asOperand(operation; priority)` | **default** [FxAsOperand\asOperand](src/coreStandardLisp.lmx) → `StandardOperands\asOperand` (asOperand) |
-| `mismatch` | `mismatch(first; second; same=0)` | **default** [FxMismatch\mismatch](src/coreStandardLisp.lmx) → `StandardOperands\mismatch` (asOperand) |
-| `searchSequence` | `searchSequence(items; pattern; same=0; start=0)` | **default** [FxSearchSequence\searchSequence](src/coreStandardLisp.lmx) → `StandardOperands\searchSequence` (asOperand) |
-| `substitute` | `substitute(items; oldValue; newValue; same=0)` | **default** [FxSubstitute\substitute](src/coreStandardLisp.lmx) → `StandardOperands\substitute` (asOperand) |
-| `indexOf` | `indexOf(text; part; start=0; same=0)` | **default** [FxIndexOf\indexOf](src/coreStandardText.lmx) → `StandardOperands\indexOf` (asOperand) |
-| `lastIndexOf` | `lastIndexOf(text; part; start=length(text); same=0)` | **default** [FxLastIndexOf\lastIndexOf](src/coreStandardText.lmx) → `StandardOperands\lastIndexOf` (asOperand) |
-| `compare` | `compare(first; second; order=0)` | **default** [FxCompare\compare](src/coreStandardText.lmx) → `StandardOperands\compare` (asOperand) |
-| `trim` | `trim(text; chars; predicate=0; same=0) / text profile supplies whitespace` | **default** [FxTrim\trim](src/coreStandardText.lmx) → `StandardOperands\trim_default` (asOperand); **text** [FxTextTrim\trim](src/sequence_profiles.lmx) → `StandardOperands\trim_text` (asOperand) |
-| `trimStart` | `trimStart(text; chars; predicate=0; same=0) / text profile supplies whitespace` | **default** [FxTrimStart\trim](src/coreStandardText.lmx) → `StandardOperands\trimStart_default` (asOperand); **text** [FxTextTrim\trimStart](src/sequence_profiles.lmx) → `StandardOperands\trimStart_text` (asOperand) |
-| `trimEnd` | `trimEnd(text; chars; predicate=0; same=0) / text profile supplies whitespace` | **default** [FxTrimEnd\trim](src/coreStandardText.lmx) → `StandardOperands\trimEnd_default` (asOperand); **text** [FxTextTrim\trimEnd](src/sequence_profiles.lmx) → `StandardOperands\trimEnd_text` (asOperand) |
-| `padLeft` | `padLeft(text; width; fill) / text profile supplies space` | **default** [FxPadLeft\pad](src/coreStandardText.lmx) → `StandardOperands\padLeft_default` (asOperand); **text** [FxTextPad\padLeft](src/sequence_profiles.lmx) → `StandardOperands\padLeft_text` (asOperand) |
-| `padRight` | `padRight(text; width; fill) / text profile supplies space` | **default** [FxPadRight\pad](src/coreStandardText.lmx) → `StandardOperands\padRight_default` (asOperand); **text** [FxTextPad\padRight](src/sequence_profiles.lmx) → `StandardOperands\padRight_text` (asOperand) |
-| `translate` | `translate(text; from; to; same=0)` | **default** [FxTranslate\translate](src/coreStandardText.lmx) → `StandardOperands\translate` (asOperand) |
-| `format` | `format(value; base=10) / format(value; profile; arguments=())` | **default** [FxFormat\format](src/coreStandardText.lmx) → `StandardOperands\format_default` (asOperand); **profile** [FxProfileFormat\format](src/sequence_profiles.lmx) → `StandardOperands\format_profile` (asOperand) |
-| `parse` | `parse(text; base=10) / parse(source; profile; arguments=())` | **default** [FxParse\parse](src/coreStandardText.lmx) → `StandardOperands\parse_default` (asOperand); **profile** [FxProfileParse\parse](src/sequence_profiles.lmx) → `StandardOperands\parse_profile` (asOperand) |
-| `removePrefix` | `removePrefix(text; affix; same=0)` | **default** [FxRemovePrefix\remove](src/coreStandardText.lmx) → `StandardOperands\removePrefix` (asOperand) |
-| `removeSuffix` | `removeSuffix(text; affix; same=0)` | **default** [FxRemoveSuffix\remove](src/coreStandardText.lmx) → `StandardOperands\removeSuffix` (asOperand) |
-| `sum` | `sum(items; initial=(0 record))` | **default** [FxSum\sum](src/coreStandardNumeric.lmx) → `StandardOperands\sum` (asOperand) |
-| `product` | `product(items; initial=(1 record))` | **default** [FxProduct\product](src/coreStandardNumeric.lmx) → `StandardOperands\product` (asOperand) |
-| `minimum` | `minimum(items)` | **default** [FxMinimum\minimum](src/coreStandardNumeric.lmx) → `StandardOperands\minimum` (asOperand) |
-| `maximum` | `maximum(items)` | **default** [FxMaximum\maximum](src/coreStandardNumeric.lmx) → `StandardOperands\maximum` (asOperand) |
-| `argMin` | `argMin(items)` | **default** [FxArgMin\argMin](src/coreStandardNumeric.lmx) → `StandardOperands\argMin` (asOperand) |
-| `argMax` | `argMax(items)` | **default** [FxArgMax\argMax](src/coreStandardNumeric.lmx) → `StandardOperands\argMax` (asOperand) |
-| `extrema` | `extrema(items)` | **default** [FxExtrema\extrema](src/coreStandardNumeric.lmx) → `StandardOperands\extrema` (asOperand) |
-| `min` | `min(first; second)` | **default** [FxMin\min](src/coreStandardNumeric.lmx) → `StandardOperands\min` (asOperand) |
-| `max` | `max(first; second)` | **default** [FxMax\max](src/coreStandardNumeric.lmx) → `StandardOperands\max` (asOperand) |
-| `minMax` | `minMax(first; second)` | **default** [FxMinMax\minMax](src/coreStandardNumeric.lmx) → `StandardOperands\minMax` (asOperand) |
-| `clamp` | `clamp(value; lower; upper)` | **default** [FxClamp\clamp](src/coreStandardNumeric.lmx) → `StandardOperands\clamp` (asOperand) |
-| `sign` | `sign(value)` | **default** [FxSign\sign](src/coreStandardNumeric.lmx) → `StandardOperands\sign` (asOperand) |
-| `gcd` | `gcd(first; second)` | **default** [FxGcd\gcd](src/coreStandardNumeric.lmx) → `StandardOperands\gcd` (asOperand) |
-| `lcm` | `lcm(first; second)` | **default** [FxLcm\lcm](src/coreStandardNumeric.lmx) → `StandardOperands\lcm` (asOperand) |
-| `divMod` | `divMod(dividend; divisor)` | **default** [FxDivMod\divMod](src/coreStandardNumeric.lmx) → `StandardOperands\divMod` (asOperand) |
-| `type` | `type(value)` | **default** [FxValueType\type](src/operation_forms.lmx) → `FxTypeOperand\type` (existing-operand) |
-| `arrayView` | `arrayView(items)` | **default** [RxArrayView\arrayView](src/regex/source.lmx) → `StandardOperands\arrayView` (asOperand) |
-| `element` | `element(value)` | **default** [RxElement\element](src/regex/primitives.lmx) → `StandardOperands\element` (asOperand) |
-| `equals` | `equals(first; second; projection=0; same=0)` | **default** [FxEquals\equals](src/coreGenericOperations.lmx) → `StandardOperands\equals` (asOperand) |
-| `pipe` | `pipe(value; stages)` | **default** [FxPipe\pipe](src/coreGenericOperations.lmx) → `FxPipeBuild\make` (adaptive-exact-operand) |
-| `retry` | `retry(operation; retryOn; limit; delay=0; arguments=())` | **default** [FxRetryValue\retry](src/coreGenericOperations.lmx) → `FxRetryBuild\make` (adaptive-exact-operand) |
+| `types` | `types(source)` | **default** [`RxTypes\types`](src/reflection.lmx) → `StandardOperands\types` (asOperand) |
+| `names` | `names(source)` | **default** [`RxNames\names`](src/reflection_bridges.lmx) → `StandardOperands\names` (asOperand) |
+| `signature` | `signature(operation)` | **default** [`RxSignature\signature`](src/reflection_bridges.lmx) → `StandardOperands\signature` (asOperand) |
+| `->` | `` `->`(inputTypes...; resultType) `` | **default** [`` FxToTokens\`->` ``](src/fn_operand.lmx) → `` FxToOperand\`->` `` (existing-operand) |
+| `curry` | `curry(operation)` | **default** [`FxLambda\lambda`](src/generic_functions.lmx) → `StandardOperands\curry` (asOperand) |
+| `apply` | `apply(operation; args)` | **default** [`FxApply\apply`](src/generic_runtime.lmx) → `StandardOperands\apply` (asOperand) |
+| `partial` | `partial(operation; prefix)` | **default** [`FxPartial\partial`](src/generic_functions.lmx) → `StandardOperands\partial` (asOperand) |
+| `uncurry` | `uncurry(operation; contract; failures)` | **default** [`FxUncurry\uncurry`](src/generic_functions.lmx) → `FxUncurry\uncurry` (role-aware-translator) |
+| `flip` | `flip(operation)` | **default** [`FxFlip\flip`](src/generic_functions.lmx) → `StandardOperands\flip` (asOperand) |
+| `compose` | `compose(outer; inner)` | **default** [`FxCompose\compose`](src/generic_combinators.lmx) → `StandardOperands\compose` (asOperand) |
+| `identity` | `identity(typeToken)` | **default** [`FxIdentity\identity`](src/generic_combinators.lmx) → `FxIdentity\identity` (role-aware-translator) |
+| `map` | `map(items; transform)` | **default** [`FxMap\map`](src/collections.lmx) → `StandardOperands\map` (asOperand) |
+| `filter` | `filter(items; accepts)` | **default** [`FxFilter\filter`](src/collections.lmx) → `StandardOperands\filter` (asOperand) |
+| `foldl` | `foldl(items; seed; step)` | **default** [`FxFold\fold`](src/collections.lmx) → `StandardOperands\foldl` (asOperand) |
+| `zip` | `zip(first; second)` | **default** [`FxZip\zip`](src/collections.lmx) → `StandardOperands\zip` (asOperand) |
+| `zipWith` | `zipWith(first; second; combine)` | **default** [`FxZipWith\zipWith`](src/collections.lmx) → `StandardOperands\zipWith` (asOperand) |
+| `scanl` | `scanl(items; seed; step)` | **default** [`FxScan\scan`](src/collections.lmx) → `StandardOperands\scanl` (asOperand) |
+| `bind` | `bind(input; next)` | **Maybe** [`FxBind\bind`](src/containers.lmx) → `FxMaybeBindOperand\bind` (existing-operand); **Result** [`FxBindResult\bind`](src/containers.lmx) → `FxResultBindOperand\bind` (existing-operand); **Array** [`FxListBind\bind`](src/containers.lmx) → `ArrayBinding\bind` (existing-operand) |
+| `traverse` | `traverse(items; next)` | **default** [`FxTraverse\traverse`](src/collections.lmx) → `StandardOperands\traverse` (asOperand) |
+| `memoize` | `memoize(operation; sameKey=0)` | **default** [`FxMemo\memo`](src/generic_combinators.lmx) → `StandardOperands\memoize` (asOperand) |
+| `fix` | `fix(operation)` | **default** [`FxFix\fix`](src/generic_combinators.lmx) → `StandardOperands\fix` (asOperand) |
+| `select` | `select(source; indices)` | **default** [`RxSelect\select`](src/structures.lmx) → `StandardOperands\select` (asOperand) |
+| `omit` | `omit(source; indices)` | **default** [`RxOmit\omit`](src/structures.lmx) → `StandardOperands\omit` (asOperand) |
+| `rename` | `rename(source; indices; labels)` | **default** [`RxRename\rename`](src/reflection_bridges.lmx) → `StandardOperands\rename` (asOperand) |
+| `reorder` | `reorder(source; permutation)` | **default** [`RxReorder\reorder`](src/structures.lmx) → `StandardOperands\reorder` (asOperand) |
+| `project` | `project(source; indices)` | **default** [`RxProject\project`](src/structures.lmx) → `StandardOperands\project` (asOperand) |
+| `defaults` | `defaults(source; fallback)` | **default** [`RxDefaults\defaults`](src/structures.lmx) → `StandardOperands\defaults` (asOperand) |
+| `diff` | `diff(before; after)` | **default** [`RxDiff\diff`](src/structures.lmx) → `StandardOperands\diff` (asOperand) |
+| `patch` | `patch(source; change)` | **default** [`RxPatch\patch`](src/structures.lmx) → `StandardOperands\patch` (asOperand) |
+| `bindFields` | `bindFields(operation; bindings)` | **default** [`RxBindFields\bindFields`](src/structures.lmx) → `StandardOperands\bindFields` (asOperand) |
+| `derive` | `derive(base; extension)` | **default** [`RxDerive\derive`](src/structures.lmx) → `StandardOperands\derive` (asOperand) |
+| `transpose` | `transpose(rows)` | **default** [`FxTranspose\transpose`](src/collections.lmx) → `StandardOperands\transpose` (asOperand) |
+| `groupBy` | `groupBy(items; keyOf=0; sameKey=0)` | **default** [`FxGroupBy\groupBy`](src/collections.lmx) → `StandardOperands\groupBy` (asOperand) |
+| `lazy` | `lazy(operation)` | **default** [`FxLazy\lazy`](src/generic_wrappers.lmx) → `StandardOperands\lazy` (asOperand) |
+| `force` | `force(thunk)` | **default** [`FxForce\force`](src/generic_wrappers.lmx) → `StandardOperands\force` (asOperand) |
+| `once` | `once(operation)` | **default** [`FxOnce\once`](src/generic_wrappers.lmx) → `StandardOperands\once` (asOperand) |
+| `repeat` | `repeat(operation; count; args=())` | **default** [`FxRepeat\repeat`](src/generic_wrappers.lmx) → `StandardOperands\repeat` (asOperand) |
+| `runUntil` | `runUntil(step; finished; initial)` | **default** [`FxUntil\runUntil`](src/generic_wrappers.lmx) → `StandardOperands\runUntil` (asOperand) |
+| `retryCall` | `retryCall(operation; attempts; args=())` | **default** [`FxRetry\retryCall`](src/generic_wrappers.lmx) → `StandardOperands\retryCall` (asOperand) |
+| `bracket` | `bracket(acquire; release; action; arguments=())` | **default** [`FxAround\around`](src/generic_wrappers.lmx) → `StandardOperands\bracket` (asOperand) |
+| `recover` | `recover(operation; handler)` | **default** [`FxRecover\recover`](src/generic_wrappers.lmx) → `StandardOperands\recover` (asOperand) |
+| `adapter` | `adapter(operation; before; after; contract)` | **default** [`FxAdapter\adapter`](src/generic_combinators.lmx) → `StandardOperands\adapter` (asOperand) |
+| `permute` | `permute(operation; permutation)` | **default** [`FxPermute\permute`](src/generic_combinators.lmx) → `StandardOperands\permute` (asOperand) |
+| `overload` | `overload(candidates; accepts; contract)` | **default** [`FxOverload\overload`](src/generic_combinators.lmx) → `StandardOperands\overload` (asOperand) |
+| `predicate` | `predicate(operation)` | **default** [`FxPredicate\predicate`](src/generic_combinators.lmx) → `StandardOperands\predicate` (asOperand) |
+| `guard` | `guard(operation; accepts)` | **default** [`FxGuard\guard`](src/generic_combinators.lmx) → `StandardOperands\guard` (asOperand) |
+| `trace` | `trace(operation; sink)` | **default** [`FxTrace\trace`](src/generic_wrappers.lmx) → `StandardOperands\trace` (asOperand) |
+| `contract` | `contract(operation; pre; post)` | **default** [`FxContract\contract`](src/generic_combinators.lmx) → `StandardOperands\contract` (asOperand) |
+| `composeData` | `composeData(code; overlay)` | **default** [`RxComposeData\composeData`](src/structures.lmx) → `StandardOperands\composeData` (asOperand) |
+| `record` | `record(left; right=())` | **default** [`FxRecordOperands\record`](src/generic_functions.lmx) → `FxRecordOperands\record` (role-aware-translator) |
+| `some` | `some(value)` | **default** [`FxSome\some`](src/containers.lmx) → `StandardOperands\some` (asOperand) |
+| `none` | `none()` | **default** [`FxNone\none`](src/containers.lmx) → `StandardOperands\none` (asOperand) |
+| `ok` | `ok(value)` | **default** [`FxOk\ok`](src/containers.lmx) → `StandardOperands\ok` (asOperand) |
+| `err` | `err(reason)` | **default** [`FxErr\err`](src/containers.lmx) → `StandardOperands\err` (asOperand) |
+| `list` | `list(values)` | **default** [`FxList\list`](src/containers.lmx) → `StandardOperands\list` (asOperand) |
+| `done` | `done(value)` | **default** [`FxDone\done`](src/containers.lmx) → `StandardOperands\done` (asOperand) |
+| `more` | `more(thunk)` | **default** [`FxMore\more`](src/containers.lmx) → `StandardOperands\more` (asOperand) |
+| `trampoline` | `trampoline(current)` | **default** [`FxTrampoline\trampoline`](src/containers.lmx) → `StandardOperands\trampoline` (asOperand) |
+| `range` | `range(start; stop; step=1) / range(start; stop; step; profile)` | **default** [`FxSeqRange\range`](src/sequences.lmx) → `StandardOperands\range_default` (asOperand); **profile** [`FxProfileRange\range`](src/sequence_profiles.lmx) → `StandardOperands\range_profile` (asOperand) |
+| `slice` | `slice(source; begin; end)` | **default** [`FxSeqSlice\slice`](src/sequences.lmx) → `StandardOperands\slice` (asOperand) |
+| `reverse` | `reverse(source)` | **default** [`FxSeqReverse\reverse`](src/sequences.lmx) → `StandardOperands\reverse` (asOperand) |
+| `concat` | `concat(parts)` | **default** [`FxSeqConcat\concat`](src/sequences.lmx) → `StandardOperands\concat` (asOperand) |
+| `compress` | `compress(source; mask)` | **default** [`FxSeqCompress\compress`](src/sequences.lmx) → `StandardOperands\compress` (asOperand) |
+| `any` | `any(items; accepts)` | **default** [`FxSeqAny\any`](src/sequences.lmx) → `StandardOperands\any` (asOperand) |
+| `all` | `all(items; accepts)` | **default** [`FxSeqAll\all`](src/sequences.lmx) → `StandardOperands\all` (asOperand) |
+| `index` | `index(items; accepts)` | **default** [`FxSeqIndex\index`](src/sequences.lmx) → `StandardOperands\index` (asOperand) |
+| `count` | `count(items; accepts)` | **default** [`FxSeqCount\count`](src/sequences.lmx) → `StandardOperands\count` (asOperand) |
+| `replaceRange` | `replaceRange(target; begin; end; values)` | **default** [`FxSeqReplaceRange\replaceRange`](src/sequences_mutation.lmx) → `StandardOperands\replaceRange` (asOperand) |
+| `splice` | `splice(target; begin; end; values)` | **default** [`FxSeqSplice\splice`](src/sequences_mutation.lmx) → `StandardOperands\splice` (asOperand) |
+| `append` | `append(target; values)` | **default** [`FxSeqAppend\append`](src/sequences_mutation.lmx) → `StandardOperands\append` (asOperand) |
+| `insert` | `insert(target; position; values)` | **default** [`FxSeqInsert\insert`](src/sequences_mutation.lmx) → `StandardOperands\insert` (asOperand) |
+| `deleteAt` | `deleteAt(target; begin; end)` | **default** [`FxSeqDeleteAt\deleteAt`](src/sequences_mutation.lmx) → `StandardOperands\deleteAt` (asOperand) |
+| `literal` | `literal(value)` | **default** [`RxLiteral\literal`](src/regex/primitives.lmx) → `StandardOperands\literal` (asOperand) |
+| `oneOf` | `oneOf(values)` | **default** [`RxMembers\oneOf`](src/regex/primitives.lmx) → `StandardOperands\oneOf` (asOperand) |
+| `noneOf` | `noneOf(values)` | **default** [`RxMembers\noneOf`](src/regex/primitives.lmx) → `StandardOperands\noneOf` (asOperand) |
+| `within` | `within(first; last; order=0)` | **default** [`RxWithin\within`](src/regex/primitives.lmx) → `StandardOperands\within` (asOperand) |
+| `satisfy` | `satisfy(predicate)` | **default** [`RxSatisfy\satisfy`](src/regex/primitives.lmx) → `StandardOperands\satisfy` (asOperand) |
+| `boundaryOf` | `boundaryOf(predicate)` | **default** [`RxBoundaryOf\boundaryOf`](src/regex/primitives.lmx) → `StandardOperands\boundaryOf` (asOperand) |
+| `sameAs` | `sameAs(name)` | **default** [`RxSameAs\sameAs`](src/regex/primitives.lmx) → `StandardOperands\sameAs` (asOperand) |
+| `then` | `then(patterns...)` | **Pattern** [`RxSequence\then`](src/regex/combinators.lmx) → `RxThenOperand\then` (existing-operand) |
+| `choice` | `choice(patterns)` | **default** [`RxChoice\choice`](src/regex/combinators.lmx) → `StandardOperands\choice` (asOperand) |
+| `repeated` | `repeated(pattern; minimum=0; maximum=unbounded; order=extendFirst)` | **default** [`RxRepeated\repeated`](src/regex/combinators.lmx) → `StandardOperands\repeated` (asOperand) |
+| `atomic` | `atomic(pattern)` | **default** [`RxAtomic\atomic`](src/regex/combinators.lmx) → `StandardOperands\atomic` (asOperand) |
+| `capture` | `capture(name; pattern)` | **default** [`RxCapture\capture`](src/regex/combinators.lmx) → `StandardOperands\capture` (asOperand) |
+| `ahead` | `ahead(pattern)` | **default** [`RxAhead\ahead`](src/regex/combinators.lmx) → `StandardOperands\ahead` (asOperand) |
+| `notAhead` | `notAhead(pattern)` | **default** [`RxNotAhead\notAhead`](src/regex/combinators.lmx) → `StandardOperands\notAhead` (asOperand) |
+| `behind` | `behind(pattern)` | **default** [`RxBehind\behind`](src/regex/combinators.lmx) → `StandardOperands\behind` (asOperand) |
+| `notBehind` | `notBehind(pattern)` | **default** [`RxNotBehind\notBehind`](src/regex/combinators.lmx) → `StandardOperands\notBehind` (asOperand) |
+| `utf8Text` | `utf8Text(source)` | **default** [`RxUtf8Text\utf8Text`](src/regex/text.lmx) → `StandardOperands\utf8Text` (asOperand) |
+| `byteText` | `byteText(source)` | **default** [`RxByteText\byteText`](src/regex/text.lmx) → `StandardOperands\byteText` (asOperand) |
+| `matchAt` | `matchAt(source; pattern; position)` | **default** [`RxMatchAt\matchAt`](src/regex/operations.lmx) → `StandardOperands\matchAt` (asOperand) |
+| `wholeMatch` | `wholeMatch(source; pattern)` | **default** [`RxWholeMatch\wholeMatch`](src/regex/operations.lmx) → `StandardOperands\wholeMatch` (asOperand) |
+| `find` | `find(source; pattern)` | **default** [`RxFind\find`](src/regex/operations.lmx) → `StandardOperands\find` (asOperand) |
+| `eachMatch` | `eachMatch(source; pattern)` | **default** [`RxEachMatch\eachMatch`](src/regex/operations.lmx) → `StandardOperands\eachMatch` (asOperand) |
+| `contains` | `contains(source; pattern)` | **default** [`RxContains\contains`](src/regex/operations.lmx) → `StandardOperands\contains` (asOperand) |
+| `hasPrefix` | `hasPrefix(source; pattern)` | **default** [`RxHasPrefix\hasPrefix`](src/regex/operations.lmx) → `StandardOperands\hasPrefix` (asOperand) |
+| `hasSuffix` | `hasSuffix(source; pattern)` | **default** [`RxHasSuffix\hasSuffix`](src/regex/operations.lmx) → `StandardOperands\hasSuffix` (asOperand) |
+| `matches` | `matches(source; pattern)` | **default** [`RxMatches\matches`](src/regex/operations.lmx) → `StandardOperands\matches` (asOperand) |
+| `matchedSpan` | `matchedSpan(result)` | **default** [`RxMatchedSpan\matchedSpan`](src/regex/operations.lmx) → `StandardOperands\matchedSpan` (asOperand) |
+| `matchedValue` | `matchedValue(result)` | **default** [`RxMatchedValue\matchedValue`](src/regex/operations.lmx) → `StandardOperands\matchedValue` (asOperand) |
+| `captureSpans` | `captureSpans(result; name)` | **default** [`RxCaptureSpans\captureSpans`](src/regex/operations.lmx) → `StandardOperands\captureSpans` (asOperand) |
+| `lastCapture` | `lastCapture(result; name)` | **default** [`RxLastCapture\lastCapture`](src/regex/operations.lmx) → `StandardOperands\lastCapture` (asOperand) |
+| `captureValue` | `captureValue(result; name)` | **default** [`RxCaptureValue\captureValue`](src/regex/operations.lmx) → `StandardOperands\captureValue` (asOperand) |
+| `captureValues` | `captureValues(result; name)` | **default** [`RxCaptureValues\captureValues`](src/regex/operations.lmx) → `StandardOperands\captureValues` (asOperand) |
+| `replaceFirst` | `replaceFirst(source; pattern; replacement)` | **default** [`RxReplaceFirst\replaceFirst`](src/regex/operations.lmx) → `RxReplaceFirst\replaceFirst` (role-aware-translator) |
+| `replace` | `replace(source; pattern; replacement)` | **default** [`RxReplace\replace`](src/regex/operations.lmx) → `RxReplace\replace` (role-aware-translator) |
+| `split` | `split(source; pattern)` | **default** [`RxSplit\split`](src/regex/operations.lmx) → `StandardOperands\split` (asOperand) |
+| `times` | `times(left; right)` | **default** [`RxRepeatOperands\times`](src/regex/operands.lmx) → `RxRepeatOperands\times` (role-aware-translator) |
+| `atLeast` | `atLeast(left; right)` | **default** [`RxRepeatOperands\atLeast`](src/regex/operands.lmx) → `RxRepeatOperands\atLeast` (role-aware-translator) |
+| `atMost` | `atMost(left; right)` | **default** [`RxRepeatOperands\atMost`](src/regex/operands.lmx) → `RxRepeatOperands\atMost` (role-aware-translator) |
+| `optional` | `optional(left; right)` | **default** [`RxRepeatOperands\optional`](src/regex/operands.lmx) → `RxRepeatOperands\optional` (role-aware-translator) |
+| `findFirst` | `findFirst(items; accepts)` | **default** [`FxFindFirst\findFirst`](src/coreComparisonGroups.lmx) → `StandardOperands\findFirst` (asOperand) |
+| `allOf` | `allOf(predicates; contract=0)` | **default** [`FxAllOf\allOf`](src/coreComparisonGroups.lmx) → `StandardOperands\allOf` (asOperand) |
+| `equalFields` | `equalFields(first; second; same=0)` | **default** [`FxEqualFields\equalFields`](src/coreComparisonGroups.lmx) → `StandardOperands\equalFields` (asOperand) |
+| `retryPost` | `retryPost(request; retryOn; attempts; delay; firstDelay; maxDelay; timeoutMs; complete)` | **default** [`FxRetryPost\retryPost`](src/coreComparisonGroups.lmx) → `StandardOperands\retryPost` (asOperand) |
+| `between` | `between(left; right)` | **default** [`FxBetween\between`](src/coreComparisonExamples.lmx) → `FxBetween\between` (role-aware-translator) |
+| `iterateUntilStop` | `iterateUntilStop(iteration; body)` | **default** [`FxIterateUntilStop\iterateUntilStop`](src/coreComparisonExamples.lmx) → `FxIterateUntilStop\iterateUntilStop` (role-aware-translator) |
+| `sort` | `sort(items; compare)` | **default** [`FxSort\sort`](src/corePerlExamples.lmx) → `StandardOperands\sort` (asOperand) |
+| `unique` | `unique(items; same=0)` | **default** [`FxUnique\unique`](src/corePerlExamples.lmx) → `StandardOperands\unique` (asOperand) |
+| `take` | `take(items; count)` | **default** [`FxStdCut\take`](src/coreStandardFunctional.lmx) → `StandardOperands\take` (asOperand) |
+| `drop` | `drop(items; count)` | **default** [`FxStdCut\drop`](src/coreStandardFunctional.lmx) → `StandardOperands\drop` (asOperand) |
+| `splitAt` | `splitAt(items; count)` | **default** [`FxStdCut\splitAt`](src/coreStandardFunctional.lmx) → `StandardOperands\splitAt` (asOperand) |
+| `takeWhile` | `takeWhile(items; accepts)` | **default** [`FxStdPrefix\takeWhile`](src/coreStandardFunctional.lmx) → `StandardOperands\takeWhile` (asOperand) |
+| `dropWhile` | `dropWhile(items; accepts)` | **default** [`FxStdPrefix\dropWhile`](src/coreStandardFunctional.lmx) → `StandardOperands\dropWhile` (asOperand) |
+| `span` | `span(items; accepts)` | **default** [`FxStdPrefix\span`](src/coreStandardFunctional.lmx) → `StandardOperands\span` (asOperand) |
+| `partition` | `partition(items; accepts)` | **default** [`FxStdPartition\partition`](src/coreStandardFunctional.lmx) → `StandardOperands\partition` (asOperand) |
+| `enumerate` | `enumerate(items; start=0)` | **default** [`FxStdEnumerate\enumerate`](src/coreStandardFunctional.lmx) → `StandardOperands\enumerate` (asOperand) |
+| `windows` | `windows(items; width=2; step=1; partial=0)` | **default** [`FxStdWindows\windows`](src/coreStandardFunctional.lmx) → `StandardOperands\windows` (asOperand) |
+| `chunks` | `chunks(items; size; strict=0)` | **default** [`FxStdChunks\chunks`](src/coreStandardFunctional.lmx) → `StandardOperands\chunks` (asOperand) |
+| `intersperse` | `intersperse(items; separatorRecord)` | **default** [`FxStdIntersperse\intersperse`](src/coreStandardFunctional.lmx) → `StandardOperands\intersperse` (asOperand) |
+| `join` | `join(parts; separator)` | **Array** [`FxStdJoin\join`](src/coreStandardFunctional.lmx) → `StandardOperands\join_Array` (asOperand); **text** [`FxTextJoin\join`](src/sequence_profiles.lmx) → `StandardOperands\join_text` (asOperand) |
+| `unzip` | `unzip(pairs)` | **default** [`FxStdUnzip\unzip`](src/coreStandardFunctional.lmx) → `StandardOperands\unzip` (asOperand) |
+| `foldr` | `foldr(items; seedRecord; step)` | **default** [`FxStdRightFold\foldr`](src/coreStandardFunctional.lmx) → `StandardOperands\foldr` (asOperand) |
+| `scanr` | `scanr(items; seedRecord; step)` | **default** [`FxStdRightFold\scanr`](src/coreStandardFunctional.lmx) → `StandardOperands\scanr` (asOperand) |
+| `filterMap` | `filterMap(items; transform)` | **default** [`FxStdMaybeMap\filterMap`](src/coreStandardFunctional.lmx) → `StandardOperands\filterMap` (asOperand) |
+| `mapWhile` | `mapWhile(items; transform)` | **default** [`FxStdMaybeMap\mapWhile`](src/coreStandardFunctional.lmx) → `StandardOperands\mapWhile` (asOperand) |
+| `findMap` | `findMap(items; transform)` | **default** [`FxStdMaybeMap\findMap`](src/coreStandardFunctional.lmx) → `StandardOperands\findMap` (asOperand) |
+| `mapAccumL` | `mapAccumL(items; seedRecord; step)` | **default** [`FxStdMapAccum\mapAccumL`](src/coreStandardFunctional.lmx) → `StandardOperands\mapAccumL` (asOperand) |
+| `mapAccumR` | `mapAccumR(items; seedRecord; step)` | **default** [`FxStdMapAccum\mapAccumR`](src/coreStandardFunctional.lmx) → `StandardOperands\mapAccumR` (asOperand) |
+| `groupAdjacent` | `groupAdjacent(items; keyOf=0; sameKey=0)` | **default** [`FxStdGroupAdjacent\groupAdjacent`](src/coreStandardFunctional.lmx) → `StandardOperands\groupAdjacent` (asOperand) |
+| `replicate` | `replicate(valueRecord; count)` | **default** [`FxStdReplicate\replicate`](src/coreStandardFunctional.lmx) → `StandardOperands\replicate` (asOperand) |
+| `cycle` | `cycle(items; count; rejectNegative=0)` | **default** [`FxStdCycle\cycle`](src/coreStandardFunctional.lmx) → `StandardOperands\cycle_default` (asOperand); **text** [`FxTextCycle\cycle`](src/sequence_profiles.lmx) → `StandardOperands\cycle_text` (asOperand) |
+| `starmap` | `starmap(rows; operation)` | **default** [`FxStdStarMap\starmap`](src/coreStandardFunctional.lmx) → `StandardOperands\starmap` (asOperand) |
+| `zipLongest` | `zipLongest(first; second; fillRecord)` | **default** [`FxStdZipLongest\zipLongest`](src/coreStandardFunctional.lmx) → `StandardOperands\zipLongest` (asOperand) |
+| `collect` | `collect(next; limit=-1)` | **default** [`FxStdCollect\collect`](src/coreStandardFunctional.lmx) → `StandardOperands\collect` (asOperand) |
+| `includes` | `includes(items; valueRecord; same=0)` | **default** [`FxStdMembership\includes`](src/coreStandardFunctional.lmx) → `StandardOperands\includes` (asOperand) |
+| `adjoin` | `adjoin(items; valueRecord; same=0)` | **default** [`FxStdAdjoin\adjoin`](src/coreStandardFunctional.lmx) → `StandardOperands\adjoin` (asOperand) |
+| `union` | `union(first; second; same=0)` | **default** [`FxStdSets\union`](src/coreStandardFunctional.lmx) → `StandardOperands\union` (asOperand) |
+| `intersection` | `intersection(first; second; same=0)` | **default** [`FxStdSets\intersection`](src/coreStandardFunctional.lmx) → `StandardOperands\intersection` (asOperand) |
+| `difference` | `difference(first; second; same=0)` | **default** [`FxStdSets\difference`](src/coreStandardFunctional.lmx) → `StandardOperands\difference` (asOperand) |
+| `symmetricDifference` | `symmetricDifference(first; second; same=0)` | **default** [`FxStdSets\symmetricDifference`](src/coreStandardFunctional.lmx) → `StandardOperands\symmetricDifference` (asOperand) |
+| `isSubset` | `isSubset(first; second; same=0)` | **default** [`FxStdSubset\isSubset`](src/coreStandardFunctional.lmx) → `StandardOperands\isSubset` (asOperand) |
+| `mapOption` | `mapOption(input; transform)` | **default** [`FxMapOption\mapOption`](src/coreStandardObjects.lmx) → `StandardOperands\mapOption` (asOperand) |
+| `filterOption` | `filterOption(input; accepts)` | **default** [`FxFilterOption\filterOption`](src/coreStandardObjects.lmx) → `StandardOperands\filterOption` (asOperand) |
+| `orElse` | `orElse(input; fallback)` | **default** [`FxOrElse\orElse`](src/coreStandardObjects.lmx) → `StandardOperands\orElse` (asOperand) |
+| `orElseGet` | `orElseGet(input; fallback)` | **default** [`FxOrElseGet\orElseGet`](src/coreStandardObjects.lmx) → `StandardOperands\orElseGet` (asOperand) |
+| `orElseOption` | `orElseOption(input; fallback)` | **default** [`FxOrElseOption\orElseOption`](src/coreStandardObjects.lmx) → `StandardOperands\orElseOption` (asOperand) |
+| `foldOption` | `foldOption(input; whenEmpty; whenPresent)` | **default** [`FxFoldOption\foldOption`](src/coreStandardObjects.lmx) → `StandardOperands\foldOption` (asOperand) |
+| `flattenOption` | `flattenOption(input)` | **default** [`FxFlattenOption\flattenOption`](src/coreStandardObjects.lmx) → `StandardOperands\flattenOption` (asOperand) |
+| `mapResult` | `mapResult(input; transform)` | **default** [`FxMapResult\mapResult`](src/coreStandardObjects.lmx) → `StandardOperands\mapResult` (asOperand) |
+| `mapErr` | `mapErr(input; transform)` | **default** [`FxMapErr\mapErr`](src/coreStandardObjects.lmx) → `StandardOperands\mapErr` (asOperand) |
+| `orElseResult` | `orElseResult(input; fallback)` | **default** [`FxOrElseResult\orElseResult`](src/coreStandardObjects.lmx) → `StandardOperands\orElseResult` (asOperand) |
+| `foldResult` | `foldResult(input; onError; onSuccess)` | **default** [`FxFoldResult\foldResult`](src/coreStandardObjects.lmx) → `StandardOperands\foldResult` (asOperand) |
+| `attempt` | `attempt(operation; args=())` | **default** [`FxAttemptResult\attempt`](src/coreStandardObjects.lmx) → `StandardOperands\attempt` (asOperand) |
+| `tap` | `tap(value; action)` | **default** [`FxTap\tap`](src/coreStandardObjects.lmx) → `StandardOperands\tap` (asOperand) |
+| `findField` | `findField(source; label; occurrence)` | **default** [`FxFindField\findField`](src/coreStandardObjects.lmx) → `StandardOperands\findField` (asOperand) |
+| `hasField` | `hasField(source; label; occurrence)` | **default** [`FxHasField\hasField`](src/coreStandardObjects.lmx) → `StandardOperands\hasField` (asOperand) |
+| `getField` | `getField(source; label; occurrence)` | **default** [`FxGetField\getField`](src/coreStandardObjects.lmx) → `StandardOperands\getField` (asOperand) |
+| `assoc` | `assoc(rows; key; same=0; keyIndex=0)` | **default** [`FxAssoc\assoc`](src/coreStandardLisp.lmx) → `StandardOperands\assoc` (asOperand) |
+| `pairlis` | `pairlis(keys; values; tail=())` | **default** [`FxPairlis\pairlis`](src/coreStandardLisp.lmx) → `StandardOperands\pairlis` (asOperand) |
+| `getProperty` | `getProperty(properties; key; same=0)` | **default** [`FxGetProperty\getProperty`](src/coreStandardLisp.lmx) → `StandardOperands\getProperty` (asOperand) |
+| `setProperty` | `setProperty(properties; key; value; same=0)` | **default** [`FxSetProperty\setProperty`](src/coreStandardLisp.lmx) → `StandardOperands\setProperty` (asOperand) |
+| `removeProperty` | `removeProperty(properties; key; same=0)` | **default** [`FxRemoveProperty\removeProperty`](src/coreStandardLisp.lmx) → `StandardOperands\removeProperty` (asOperand) |
+| `getProperties` | `getProperties(properties; indicators; same=0)` | **default** [`FxGetProperties\getProperties`](src/coreStandardLisp.lmx) → `StandardOperands\getProperties` (asOperand) |
+| `asOperand` | `asOperand(operation; priority)` | **default** [`FxAsOperand\asOperand`](src/coreStandardLisp.lmx) → `StandardOperands\asOperand` (asOperand) |
+| `mismatch` | `mismatch(first; second; same=0)` | **default** [`FxMismatch\mismatch`](src/coreStandardLisp.lmx) → `StandardOperands\mismatch` (asOperand) |
+| `searchSequence` | `searchSequence(items; pattern; same=0; start=0)` | **default** [`FxSearchSequence\searchSequence`](src/coreStandardLisp.lmx) → `StandardOperands\searchSequence` (asOperand) |
+| `substitute` | `substitute(items; oldValue; newValue; same=0)` | **default** [`FxSubstitute\substitute`](src/coreStandardLisp.lmx) → `StandardOperands\substitute` (asOperand) |
+| `indexOf` | `indexOf(text; part; start=0; same=0)` | **default** [`FxIndexOf\indexOf`](src/coreStandardText.lmx) → `StandardOperands\indexOf` (asOperand) |
+| `lastIndexOf` | `lastIndexOf(text; part; start=length(text); same=0)` | **default** [`FxLastIndexOf\lastIndexOf`](src/coreStandardText.lmx) → `StandardOperands\lastIndexOf` (asOperand) |
+| `compare` | `compare(first; second; order=0)` | **default** [`FxCompare\compare`](src/coreStandardText.lmx) → `StandardOperands\compare` (asOperand) |
+| `trim` | `trim(text; chars; predicate=0; same=0) / text profile supplies whitespace` | **default** [`FxTrim\trim`](src/coreStandardText.lmx) → `StandardOperands\trim_default` (asOperand); **text** [`FxTextTrim\trim`](src/sequence_profiles.lmx) → `StandardOperands\trim_text` (asOperand) |
+| `trimStart` | `trimStart(text; chars; predicate=0; same=0) / text profile supplies whitespace` | **default** [`FxTrimStart\trim`](src/coreStandardText.lmx) → `StandardOperands\trimStart_default` (asOperand); **text** [`FxTextTrim\trimStart`](src/sequence_profiles.lmx) → `StandardOperands\trimStart_text` (asOperand) |
+| `trimEnd` | `trimEnd(text; chars; predicate=0; same=0) / text profile supplies whitespace` | **default** [`FxTrimEnd\trim`](src/coreStandardText.lmx) → `StandardOperands\trimEnd_default` (asOperand); **text** [`FxTextTrim\trimEnd`](src/sequence_profiles.lmx) → `StandardOperands\trimEnd_text` (asOperand) |
+| `padLeft` | `padLeft(text; width; fill) / text profile supplies space` | **default** [`FxPadLeft\pad`](src/coreStandardText.lmx) → `StandardOperands\padLeft_default` (asOperand); **text** [`FxTextPad\padLeft`](src/sequence_profiles.lmx) → `StandardOperands\padLeft_text` (asOperand) |
+| `padRight` | `padRight(text; width; fill) / text profile supplies space` | **default** [`FxPadRight\pad`](src/coreStandardText.lmx) → `StandardOperands\padRight_default` (asOperand); **text** [`FxTextPad\padRight`](src/sequence_profiles.lmx) → `StandardOperands\padRight_text` (asOperand) |
+| `translate` | `translate(text; from; to; same=0)` | **default** [`FxTranslate\translate`](src/coreStandardText.lmx) → `StandardOperands\translate` (asOperand) |
+| `format` | `format(value; base=10) / format(value; profile; arguments=())` | **default** [`FxFormat\format`](src/coreStandardText.lmx) → `StandardOperands\format_default` (asOperand); **profile** [`FxProfileFormat\format`](src/sequence_profiles.lmx) → `StandardOperands\format_profile` (asOperand) |
+| `parse` | `parse(text; base=10) / parse(source; profile; arguments=())` | **default** [`FxParse\parse`](src/coreStandardText.lmx) → `StandardOperands\parse_default` (asOperand); **profile** [`FxProfileParse\parse`](src/sequence_profiles.lmx) → `StandardOperands\parse_profile` (asOperand) |
+| `removePrefix` | `removePrefix(text; affix; same=0)` | **default** [`FxRemovePrefix\remove`](src/coreStandardText.lmx) → `StandardOperands\removePrefix` (asOperand) |
+| `removeSuffix` | `removeSuffix(text; affix; same=0)` | **default** [`FxRemoveSuffix\remove`](src/coreStandardText.lmx) → `StandardOperands\removeSuffix` (asOperand) |
+| `sum` | `sum(items; initial=(0 record))` | **default** [`FxSum\sum`](src/coreStandardNumeric.lmx) → `StandardOperands\sum` (asOperand) |
+| `product` | `product(items; initial=(1 record))` | **default** [`FxProduct\product`](src/coreStandardNumeric.lmx) → `StandardOperands\product` (asOperand) |
+| `minimum` | `minimum(items)` | **default** [`FxMinimum\minimum`](src/coreStandardNumeric.lmx) → `StandardOperands\minimum` (asOperand) |
+| `maximum` | `maximum(items)` | **default** [`FxMaximum\maximum`](src/coreStandardNumeric.lmx) → `StandardOperands\maximum` (asOperand) |
+| `argMin` | `argMin(items)` | **default** [`FxArgMin\argMin`](src/coreStandardNumeric.lmx) → `StandardOperands\argMin` (asOperand) |
+| `argMax` | `argMax(items)` | **default** [`FxArgMax\argMax`](src/coreStandardNumeric.lmx) → `StandardOperands\argMax` (asOperand) |
+| `extrema` | `extrema(items)` | **default** [`FxExtrema\extrema`](src/coreStandardNumeric.lmx) → `StandardOperands\extrema` (asOperand) |
+| `min` | `min(first; second)` | **default** [`FxMin\min`](src/coreStandardNumeric.lmx) → `StandardOperands\min` (asOperand) |
+| `max` | `max(first; second)` | **default** [`FxMax\max`](src/coreStandardNumeric.lmx) → `StandardOperands\max` (asOperand) |
+| `minMax` | `minMax(first; second)` | **default** [`FxMinMax\minMax`](src/coreStandardNumeric.lmx) → `StandardOperands\minMax` (asOperand) |
+| `clamp` | `clamp(value; lower; upper)` | **default** [`FxClamp\clamp`](src/coreStandardNumeric.lmx) → `StandardOperands\clamp` (asOperand) |
+| `sign` | `sign(value)` | **default** [`FxSign\sign`](src/coreStandardNumeric.lmx) → `StandardOperands\sign` (asOperand) |
+| `gcd` | `gcd(first; second)` | **default** [`FxGcd\gcd`](src/coreStandardNumeric.lmx) → `StandardOperands\gcd` (asOperand) |
+| `lcm` | `lcm(first; second)` | **default** [`FxLcm\lcm`](src/coreStandardNumeric.lmx) → `StandardOperands\lcm` (asOperand) |
+| `divMod` | `divMod(dividend; divisor)` | **default** [`FxDivMod\divMod`](src/coreStandardNumeric.lmx) → `StandardOperands\divMod` (asOperand) |
+| `type` | `type(value)` | **default** [`FxValueType\type`](src/operation_forms.lmx) → `FxTypeOperand\type` (existing-operand) |
+| `arrayView` | `arrayView(items)` | **default** [`RxArrayView\arrayView`](src/regex/source.lmx) → `StandardOperands\arrayView` (asOperand) |
+| `element` | `element(value)` | **default** [`RxElement\element`](src/regex/primitives.lmx) → `StandardOperands\element` (asOperand) |
+| `equals` | `equals(first; second; projection=0; same=0)` | **default** [`FxEquals\equals`](src/coreGenericOperations.lmx) → `StandardOperands\equals` (asOperand) |
+| `pipe` | `pipe(value; stages)` | **default** [`FxPipe\pipe`](src/coreGenericOperations.lmx) → `FxPipeBuild\make` (adaptive-exact-operand) |
+| `retry` | `retry(operation; retryOn; limit; delay=0; arguments=())` | **default** [`FxRetryValue\retry`](src/coreGenericOperations.lmx) → `FxRetryBuild\make` (adaptive-exact-operand) |
 
 ## Roles, results and failures
 
 - **types** — physical field type codes; int[] by language contract. Roles: DECLARED_INPUT_ROLES.
 - **names** — physical canonical names; anonymous entries retain typed absence. Roles: DECLARED_INPUT_ROLES.
 - **signature** — ordinary positional signature description. Roles: DECLARED_INPUT_ROLES.
-- **to** — ordered TYPE tokens, result last; no-input to(resultType). Roles: TYPE....
+- **->** — ordered TYPE tokens, result last; one result TYPE constructs a nullary signature. Roles: TYPE....
 - **curry** — arbitrary finite arity, exact stage input type and terminal result. Roles: CALLABLE.
 - **apply** — arbitrary actual record vector; result record including explicit void. Roles: DECLARED_INPUT_ROLES.
 - **partial** — prefix 0..N; exact residual signature, complete prefix yields thunk. Roles: CALLABLE, ACTUAL_RECORDS.

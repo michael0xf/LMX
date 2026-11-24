@@ -121,6 +121,7 @@ def write_overview(directory,data,foreign,implementation_note=""):
            "Редактируются examples.json и единые исходники ядра; tools/rebuild.py воспроизводит исходники, Markdown и метрики. "
            "Проверка suite выполняется tools/check.py для Julia и tools/validate.py для Perl. "
            "PDF/XLSX формирует общая сборка архива.\n")
+    intro+='\nСчитается полный текст каждой формы: все определения, вспомогательные методы, комментарии внутри листинга, обработчики, имена ошибок и полные ссылки `throws: copy(target\\throws)`. Списки берутся из фактически выбранных методов или явно заданного конечного объединения договоров. Статистического удаления аргументов Throws нет. В PDF/XLSX зелёным шрифтом и подчёркиванием числа выделяются **все** равные минимумы полного счёта сопоставимой строки; неполные аналогии победителя не получают.\n'
     (directory/"README.md").write_text(ensure_startup_note(intro,"../../../LMX_semantics.en.md#source-entry-profiles"))
     (directory/f"LMX_Comparison_{foreign}.md").write_text(f"# Сводное сравнение LMX / {foreign}\n\n"+table+
         "\nВсе числа считают полные исходники. Оба LMX-варианта остаются отдельными колонками. "

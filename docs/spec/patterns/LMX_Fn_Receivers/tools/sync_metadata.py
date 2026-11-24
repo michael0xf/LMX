@@ -3,6 +3,9 @@
 
 No LMX evaluation, alias creation or semantic inference is performed. Catalog
 variants select the actual implementation; source hashes describe these files.
+Existing authored scope/arguments are preserved exactly. Missing descriptions
+use the selected variant, with an explicit contract reference when a family
+has no own prose; another family's default prose is not a substitute.
 """
 from pathlib import Path
 import hashlib
@@ -16,6 +19,47 @@ def digest(text):
 
 def count(text):
     return sum(not c.isspace() for c in text)
+
+def select_variant(entry, row, old):
+    variants = row['variants']
+    variant = next((v for v in variants if v['api'] == entry.get('api')), None)
+    if variant is None and entry.get('api') == 'FxJoin\\join':
+        variant = next(v for v in variants if v['family'] == 'text')
+    if variant is None and old == 'repeatText':
+        variant = next(v for v in variants if v['family'] == 'text')
+    if variant is None and 'family' in entry:
+        variant = next((v for v in variants if v['family'] == entry['family']), None)
+        if variant is None:
+            raise ValueError('unknown authored family for ' + row['name'])
+    if variant is None:
+        if len(variants) != 1:
+            raise ValueError('choose API or family before synchronizing ' + row['name'])
+        variant = variants[0]
+    return variant
+
+
+def fill_missing_descriptions(entry, row, variant, old):
+    """Initialize absent fields only; retain all existing author text verbatim."""
+    own = variant
+    fallback = row if len(row['variants']) == 1 else {}
+    reference = (variant['family'] + ' family; see ' + variant['api'] +
+                 ' and implementation_contract')
+    if 'arguments' not in entry:
+        if 'arguments' in own:
+            arguments = own['arguments']
+        else:
+            signature = own.get('signature', fallback.get('signature'))
+            arguments = (signature.split('(', 1)[1].rsplit(')', 1)[0]
+                         if signature and '(' in signature else signature)
+            if arguments is None:
+                arguments = reference
+        entry['arguments'] = ('items; count; rejectNegative=1'
+                              if old == 'repeatText' else arguments)
+    if 'scope' not in entry:
+        entry['scope'] = own.get('scope', fallback.get('scope', reference))
+        if old == 'repeatText':
+            entry['scope'] += '; the former rejecting count profile passes rejectNegative=1 explicitly'
+
 
 def main():
     catalog = json.loads((ROOT/'catalog.json').read_text())
@@ -53,21 +97,10 @@ def main():
             if old == 'pipe' and entry.get('api', '').startswith('FxPipe\\'):
                 name = 'pipe'
             row = names[name]
-            variants = row['variants']
-            variant = next((v for v in variants if v['api']==entry.get('api')), None)
-            if variant is None and entry.get('api')=='FxJoin\\join':
-                variant = next(v for v in variants if v['family']=='text')
-            if variant is None and old=='repeatText':
-                variant = next(v for v in variants if v['family']=='text')
-            if variant is None:
-                variant = variants[0]
+            variant = select_variant(entry, row, old)
             entry['name'] = name
             source_fields(entry, variant)
-            entry['arguments'] = row['signature'].split('(',1)[1].rsplit(')',1)[0] if '(' in row['signature'] else row['signature']
-            entry['scope'] = row['scope']
-            if old=='repeatText':
-                entry['arguments'] = 'items; count; rejectNegative=1'
-                entry['scope'] += '; the former rejecting count profile passes rejectNegative=1 explicitly'
+            fill_missing_descriptions(entry, row, variant, old)
             entry['runtime_status'] = 'NOT_RUN'
         for entry in data.get('support_definitions', []):
             source, text = roots[entry['definition']]

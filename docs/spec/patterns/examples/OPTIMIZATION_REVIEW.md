@@ -6,7 +6,7 @@
 | --- | ---: | ---: | ---: | --- | --- |
 | [H01](haskell/comparisons/H01_comparision.md) | 191 | 191 | 303 | complete_pair | same_minimal_form |
 | [H02](haskell/comparisons/H02_comparision.md) | 245 | 215 | — | lmx_only | distinct |
-| [H03](haskell/comparisons/H03_comparision.md) | 495 | 249 | 143 | complete_pair | distinct |
+| [H03](haskell/comparisons/H03_comparision.md) | 495 | 239 | 143 | complete_pair | distinct |
 | [H04](haskell/comparisons/H04_comparision.md) | 265 | 205 | 128 | complete_pair | distinct |
 | [H05](haskell/comparisons/H05_comparision.md) | 218 | 206 | — | related_analogy | distinct |
 | [H06](haskell/comparisons/H06_comparision.md) | 223 | 167 | 89 | complete_pair | distinct |
@@ -22,7 +22,7 @@
 | [R07](haskell/comparisons/R07_comparision.md) | 159 | 159 | — | related_analogy | same_minimal_form |
 | [R09](haskell/comparisons/R09_comparision.md) | 189 | 189 | — | lmx_only | same_minimal_form |
 | [A01](haskell/comparisons/A01_comparision.md) | 126 | 126 | — | lmx_only | same_minimal_form |
-| [V02](haskell/comparisons/V02_comparision.md) | 223 | 170 | 132 | complete_pair | distinct |
+| [V02](haskell/comparisons/V02_comparision.md) | 223 | 160 | 132 | complete_pair | distinct |
 | [V03](haskell/comparisons/V03_comparision.md) | 308 | 298 | — | related_analogy | distinct |
 | [V04](haskell/comparisons/V04_comparision.md) | 160 | 160 | — | lmx_only | same_minimal_form |
 | [V05](haskell/comparisons/V05_comparision.md) | 547 | 547 | — | lmx_only | same_minimal_form |

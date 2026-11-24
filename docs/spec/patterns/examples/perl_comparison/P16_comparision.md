@@ -28,7 +28,7 @@
 | Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
 | --- | ---: | ---: | ---: |
 | LMX процедурный | 549 | 944 | 33 |
-| LMX функциональный | 508 | 626 | 11 |
+| LMX функциональный | 442 | 560 | 11 |
 | Perl | 144 | 180 | 7 |
 
 Обе LMX-формы опубликованы и считаются независимо. Все определения, обработчики и ссылки на throws входят в полный размер. Выбор единственного LMX-варианта по длине не выполняется.
@@ -82,7 +82,7 @@ Example:
     char[]: text
     return: @
     run:
-        throws: copy(RxByteText\byteText\throws) copy(RxRepeatOperands\atLeast\throws) copy(RxCapture\capture\throws) copy(RxThenOperand\then\throws) copy(RxWholeMatch\wholeMatch\throws) copy(RxCaptureValue\captureValue\throws)
+        throws: copy(byteText\throws) copy(atLeast\throws) copy(capture\throws) copy(RxThenOperand\then\throws) copy(wholeMatch\throws) copy(captureValue\throws)
         @: parsed wholeMatch(byteText(text); (then capture("key"; (asciiLetter atLeast 1)) "=" capture("value"; (asciiDigit atLeast 1))))
         if: parsed\present = 0
             return: (0; ""; "")
@@ -91,7 +91,7 @@ Example:
         return: (1; \key\value; \value\value)
 ```
 
-[Полный исходник](source/lmx/P16.lm3). 508 непробельных символов; 11 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/P16.lm3). 442 непробельных символов; 11 непустых строк. Все объявления и Throws включены.
 
 ## Perl
 

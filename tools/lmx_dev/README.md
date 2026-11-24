@@ -59,9 +59,9 @@ SDK-launcher'ов — адресные `LMX_DEV_MCP_CONFIG`/`LMX_DEV_INSTRUCTION
 | MCP | CLI после `python tools/lmx_dev/entry.py` | Что выполняется |
 | --- | --- | --- |
 | `get_spec_rule(topic, max_chars=2600, include_history=false)` | `spec "R0"` | Дословный раздел текущих Markdown |
-| `check_file(file, phase="syntax")` | `check file.lm2 --phase syntax` | Graph `p0`, только синтаксический разбор |
+| `check_file(file, phase="syntax", closure="")` | `check file.lm2 --phase syntax [--closure NAME]` | Graph `p0`, только синтаксический разбор |
 | `check_file(file, phase="static")` | `check file.lm2 --phase static` | Пока `unavailable`: отдельного нормативного CLI нет |
-| `check_file(file, phase="translate")` | `check file.lm2 --phase translate` | Принятый FE, перевод L2 в L1, включая его CHECK |
+| `check_file(file, phase="translate", closure="")` | `check file.lm2 --phase translate [--closure NAME]` | Принятый FE, перевод L2 в L1, включая его CHECK |
 | `bootstrap(profile="smoke")` | `bootstrap smoke` | Компонентный suite10, исполняет программы |
 | `bootstrap(profile="selfHost")` | `bootstrap selfHost` | Явная полная G1/G2, full-suite и штатные сравнения |
 | `service_status()` | `status` | Покрытие команд, окно и блокировка |
@@ -107,6 +107,79 @@ Memory watchdog дополнительно требует 900 MiB свободн
 проверкой файла, 3500 MiB перед сборочным профилем и прекращает дерево при
 остатке менее 600 MiB; это не замена mutex.
 
+## Зарегистрированные связки producers
+
+Плоская конфигурация остаётся принятым комплектом и связкой по умолчанию с именем
+`accepted`; прежняя конфигурация версии 1 работает без изменений. Необязательный
+ключ `closures` регистрирует другие комплекты по имени, например кандидата среза:
+
+```json
+"closures": {
+  "return-at-graph05": {
+    "role": "candidate",
+    "description": "RT04 runtime, Graph05 graph tool, FEH04 frontend",
+    "acceptedRevision": "0c79ce0e…",
+    "variables": {"graph": "C:/…/codex-k3-return-at-graph05/graph_trans-prod.exe",
+                  "fe": "C:/…/codex-k3-return-at-feh04/l2trans.exe"},
+    "stage": "C:/…/service-candidate-return-at",
+    "stageManifest": "C:/…/service-candidate-return-at/stage.sha256",
+    "pinsManifest": "C:/…/service-candidate-return-at/artifacts.sha256",
+    "pins": {"C:/…/stage.sha256": "0d5df282…", "C:/…/artifacts.sha256": "06fc63e6…"}
+  }
+}
+```
+
+- Связка **явно** задаёт `stage`, `graph` и `fe`; у принятого комплекта ничего не наследует.
+- Шаблоны `check:syntax`/`check:translate`, адаптер `p0-v1`, lock, permit и каталоги
+  запусков общие: в шаблон подставляются проверенные `{graph}`, `{fe}` и `{stage}`
+  выбранной связки. Собственных argv у связки нет.
+- `pins` — путь → SHA-256; `pinsManifest` добавляет строки sha256sum (абсолютные
+  пути или относительно самого файла). Один файл с разными хешами — отказ.
+- `stageManifest` — sha256sum **всего** `stage/src` (пути относительно `stage`):
+  стадия — это точное множество файлов, а не путь. Оба манифеста сами закреплены
+  в `pins`.
+- `bootstrap:smoke` и `bootstrap:selfHost` выполняются только на `accepted`;
+  `check:static` остаётся `unavailable`.
+
+Permit открывает ведущий. С `--closure` он допускает **ровно** перечисленные имена;
+принятый комплект допускается только если назван явно:
+
+```powershell
+# только кандидат: проверка без closure (accepted) в этом окне закрыта
+build2/lmx_dev/venv/Scripts/python.exe tools/lmx_dev/entry.py permit --seconds 300 --reason "…" --closure return-at-graph05
+# приняты оба, каждый назван явно
+build2/lmx_dev/venv/Scripts/python.exe tools/lmx_dev/entry.py permit --seconds 300 --reason "…" --closure accepted --closure return-at-graph05
+```
+
+Такой permit содержит `scopedConfigHash`, `closures` и `effectiveHashes` и **не
+содержит** `configHash`: процесс со старым runner (до связок) не находит в нём
+привязки и держит окно закрытым. Permit без `--closure` имеет прежний вид и
+допускает только `accepted`; новый runner читает его тоже только для `accepted`.
+Любая правка `config.json`, как и прежде, делает имеющийся permit недействительным.
+
+Отказы — все до запуска процесса: неизвестное имя; имя не допущено permit; другая
+эффективная конфигурация связки; закрытый или чужой permit. Затем под общим lock
+повторно проверяются permit, pins, `graph`/`fe` и точное множество `stage/src`
+(добавленный, пропавший или изменённый файл, строка манифеста вне `stage/src`,
+ссылка или junction в дереве — отказ). Команда фазы обязана начинаться с
+объявленного producer (`argv[0]`). `pinsManifest` читается до lock; под lock
+сверяются pin, текущий файл и хеш прочитанных байтов.
+
+Чеки: `closure` в результате, в `receipt.json` и в ответе MCP/CLI — `name`, `role`
+(`accepted`/`candidate`), `selection`, `effectiveHash`, `acceptedRevision`,
+`pinsVerified`, `producers` (путь и SHA-256 `graph` и `fe`), `stage` (`manifest`,
+`manifestSha256`, число файлов). Снимок входов содержит pins и файлы манифеста
+стадии. `status`/`service_status` перечисляет связки с ролью и тем, допускает ли их
+текущий permit (`admitted` говорит об имени и содержимом; само окно —
+`compilerWindow`).
+
+Границы. Читаемое producer вне стадии (системные заголовки, внешние include) не
+отслеживается. Собственные операции, smoke и сборочные producers для кандидата не
+регистрируются. Реальный standalone static отсутствует; когда он появится, его
+подключают новым ключом `check:*` в общей конфигурации со своим адаптером, а не argv
+в связке. Уже запущенные старые MCP-процессы работают с `accepted` на прежнем
+permit; ради границы permit их перезапускать не нужно.
+
 ## Правила и границы индекса
 
 `catalogue.json` содержит только пути, идентификаторы, роли и поисковые синонимы,
@@ -136,8 +209,8 @@ PDF, XLS, статистика, task-пакеты и архивы не чита�
 producer pins через снимок входов, параметры окружения и его общий hash (остальные
 значения окружения, включая секреты, не выводятся). Изменение наблюдаемых входов
 даёт `stale=true`, `result=indeterminate` даже после exit 0. Кэша компиляции нет.
-Наблюдаются явный файл, `watch` roots и `pins`; внешние include вне этой области
-нужно добавить в `watch`. Без этого сервис не удостоверяет их неизменность.
+Наблюдаются явный файл, `watch` roots и `pins` (для выбранной связки — ещё файлы её
+манифеста стадии); внешние include вне этой области нужно добавить в `watch`. Без этого сервис не удостоверяет их неизменность.
 
 Различаются `completed/passed`, `completed/rejected`, `unavailable/notRun`,
 `timeout`, `cancelled`, `resourceLimit`, `crash`, `protocolError`. Последние пять
@@ -163,13 +236,19 @@ tokens и единицы координат не додумываются. По�
 ## Проверка самого сервиса
 
 ```powershell
-build2/lmx_dev/venv/Scripts/python.exe -m unittest tools.lmx_dev.tests.test_services -v
+build2/lmx_dev/venv/Scripts/python.exe -m unittest tools.lmx_dev.tests.test_services tools.lmx_dev.tests.test_closures -v
 ```
 
 Тесты не запускают LMX: используют управляемый Python subprocess для timeout,
 отмены, потомков, блокировок, отказов, отсутствующих артефактов и изменения входов.
 Отдельно проходит настоящий MCP stdio handshake/list-tools/call-tool и проверка
-характерных запросов по текущей спецификации. Hosted P0 закреплён реальным логом
+характерных запросов по текущей спецификации. `test_closures` на тех же fixture-процессах
+проверяет: прежнюю конфигурацию и выбор по умолчанию без изменений; явного кандидата с
+чеком; отказы до процесса (неизвестное имя, permit только для `accepted`, изменённый и
+неприкреплённый producer, изменённая/добавленная/удалённая стадия, подменённый манифест,
+двойной хеш, манифест вне `src`, ссылка в дереве, закрытое окно); команду не с
+объявленного producer; невход в занятый lock вторым процессом; scoped permit, который
+не принимает прежний gate. Hosted P0 закреплён реальным логом
 отказа и отрицательными контрпримерами без запуска LMX.
 
 **Реальные пробы 2026-11-24, выполнены ведущим в единственном конвейере:**

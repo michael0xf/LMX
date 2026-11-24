@@ -21,9 +21,9 @@ def create_server(index: SpecIndex, runner: Runner) -> FastMCP:
         """
         return index.search(topic, max_chars, include_history)
 
-    async def run(operation: str, file: str | None = None) -> dict:
+    async def run(operation: str, file: str | None = None, closure: str = "") -> dict:
         stop = Event()
-        task = asyncio.create_task(asyncio.to_thread(runner.run, operation, file, stop))
+        task = asyncio.create_task(asyncio.to_thread(runner.run, operation, file, stop, closure))
         try:
             return public_result(await asyncio.shield(task))
         except asyncio.CancelledError:
@@ -33,12 +33,16 @@ def create_server(index: SpecIndex, runner: Runner) -> FastMCP:
             raise
 
     @mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False})
-    async def check_file(file: str, phase: Literal["syntax", "static", "translate"] = "syntax") -> dict:
+    async def check_file(file: str, phase: Literal["syntax", "static", "translate"] = "syntax",
+                         closure: str = "") -> dict:
         """Check one project file without running its body/tests. Needs an open compiler window.
 
         Static is unavailable until a real static CLI exists. Logs/receipts go to a fresh run directory.
+        `closure` selects a registered producer closure for syntax/translate by NAME only (never a path or a
+        command); empty is the accepted bundle. An unknown, unadmitted or changed closure is refused before any
+        process starts. This tool never opens the window.
         """
-        return await run("check:" + phase, file)
+        return await run("check:" + phase, file, closure)
 
     @mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": True, "openWorldHint": False})
     async def bootstrap(profile: Literal["smoke", "selfHost"] = "smoke") -> dict:

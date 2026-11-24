@@ -12,6 +12,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from threading import Event
 
+from .closures import (Refused, admit, listing, require, select, stage_inventory, validate, verify_pins,
+                       verify_producer)
 from .diagnostics import collect, is_hosted_p0_rejection
 from .process import available_memory_mb, execute
 
@@ -59,7 +61,7 @@ def public_result(result: dict) -> dict:
     """Keep commands/snapshots in the receipt, rather than every model response."""
     keys = ("operation", "execution", "result", "achievedPhase", "stale", "message",
             "runId", "exitCode", "logicalExitCode", "durationSeconds", "log", "receipt", "diagnostics",
-            "diagnosticCount", "unparsedDiagnosticLines", "diagnosticsOmitted")
+            "diagnosticCount", "unparsedDiagnosticLines", "diagnosticsOmitted", "closure")
     answer = {key: result[key] for key in keys if key in result}
     if result.get("artifacts"):
         answer["artifactFiles"] = list(result["artifacts"])
@@ -97,17 +99,30 @@ class Runner:
         data = json.loads(raw)
         if data.get("version") != 1:
             raise ValueError("Unsupported configuration version")
+        validate(data)
         data["_loadedHash"] = hashlib.sha256(raw).hexdigest()
         return data
 
-    def gate(self, config: dict) -> None:
+    def permit(self, config: dict) -> dict:
         path = Path(config["permit"])
         if not path.exists():
             raise Unavailable("Compiler window is closed. The lead must grant a permit from CLI after freeing the pipeline.")
-        permit = json.loads(path.read_text(encoding="utf-8"))
-        if (permit.get("configHash") != config["_loadedHash"] or sha(self.config) != config["_loadedHash"]
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    def gate(self, config: dict, effective: dict | None = None) -> None:
+        """The window is open for this configuration; with a selected closure, its name and content are admitted."""
+        permit = self.permit(config)
+        # A scoped permit (it names closures) binds the configuration under its own key: a runner older than
+        # closures reads no configHash in it and keeps the window closed.
+        bound = permit.get("scopedConfigHash" if permit.get("closures") else "configHash")
+        if (bound != config["_loadedHash"] or sha(self.config) != config["_loadedHash"]
                 or permit.get("expires", 0) <= time.time()):
             raise Unavailable("Compiler permit expired or belongs to a different producer configuration.")
+        if effective is not None:
+            try:
+                admit(permit, effective)
+            except Refused as error:
+                raise Unavailable(str(error)) from None
 
     def status(self) -> dict:
         try:
@@ -120,15 +135,21 @@ class Runner:
             config = self.load()
         except (OSError, ValueError, Unavailable):
             config = {}
+        try:
+            permit = self.permit(config) if config else None
+        except (OSError, ValueError, KeyError, Unavailable):
+            permit = None
         lock = config.get("lock")
         return {"compilerWindow": "permitted" if ready else "closed", "reason": reason,
                 "pipelineBusy": bool(lock and Path(lock).exists()), "config": str(self.config),
                 "operations": {name: {"description": op.get("description"),
                                       "configured": not bool(op.get("unavailable")),
                                       "reason": op.get("unavailable")}
-                               for name, op in config.get("operations", {}).items()}}
+                               for name, op in config.get("operations", {}).items()},
+                # admitted: the permit names the closure and its registered content; the window is compilerWindow.
+                "closures": listing(config, permit)}
 
-    def run(self, operation: str, file: str | None = None, cancel: Event | None = None) -> dict:
+    def run(self, operation: str, file: str | None = None, cancel: Event | None = None, closure: str = "") -> dict:
         cancel = cancel or Event()
         result = {"operation": operation, "execution": "unavailable", "result": "notRun",
                   "achievedPhase": None, "stale": None}
@@ -145,31 +166,49 @@ class Runner:
                     raise ValueError("file must be an existing file inside the project")
                 if source.suffix.lower() not in op.get("suffixes", [".lm2", ".lm3"]):
                     raise ValueError("This accepted producer does not support that file extension")
-            self.gate(config)
+            # Which bundle answers: a registered name, or the accepted default. Both are refused before anything starts.
+            try:
+                effective = select(config, closure)
+                require(operation, effective)
+            except Refused as error:
+                raise Unavailable(str(error)) from None
+            result["closure"] = {"name": effective["closureName"], "role": effective["closureRole"],
+                                 "selection": "explicit" if closure else "default",
+                                 "effectiveHash": effective["effectiveHash"],
+                                 "acceptedRevision": effective.get("acceptedRevision")}
+            self.gate(config, effective)
             with machine_lock(Path(config["lock"]), [Path(p) for p in config.get("busy_markers", [])]):
-                self.gate(config)
+                self.gate(config, effective)
                 available = available_memory_mb()
                 if available is not None and available < op.get("memory_start_mb", config.get("memory_start_mb", 0)):
                     raise Unavailable(f"Insufficient available RAM/commit: {available} MiB")
-                for path, expected in config.get("pins", {}).items():
-                    if not Path(path).is_file() or sha(Path(path)) != expected:
-                        raise Unavailable(f"Accepted producer/dependency changed: {path}")
+                # The integrity of the selected bundle is proved here, under the shared lock, before any process.
+                try:
+                    pins = verify_pins(effective)
+                    result["closure"]["pinsVerified"] = len(pins)
+                    # The producers of a registered closure are pinned files of their registered hash.
+                    result["closure"]["producers"] = verify_producer(effective, operation)
+                    inventory, stage_files = stage_inventory(effective)
+                except Refused as error:
+                    result["closure"]["stage"] = error.inventory
+                    raise Unavailable(str(error)) from None
+                result["closure"]["stage"] = inventory
                 run_dir = Path(config["runs"]) / (time.strftime("%Y%m%d-%H%M%S-") + uuid.uuid4().hex[:12])
                 run_dir.mkdir(parents=True)
                 result.update(runId=run_dir.name, runDirectory=str(run_dir), receipt=str(run_dir / "receipt.json"))
                 paths = [self.config, *[Path(p) for p in config.get("watch", [])],
-                         *[Path(p) for p in config.get("pins", {})]]
+                         *[Path(p) for p in effective.get("pins", {})], *stage_files]
                 if source:
                     paths.append(source)
                 before = snapshot(paths)
                 write_json(run_dir / "inputs-before.json", before)
-                variables = dict(config.get("variables", {}), repo=str(self.root), run=str(run_dir),
-                                 source=str(source or ""), stage=str(config.get("stage", "")))
+                variables = dict(effective.get("variables", {}), repo=str(self.root), run=str(run_dir),
+                                 source=str(source or ""), stage=str(effective.get("stage", "")))
                 if op.get("copy_stage"):
                     stage = run_dir / "stage"
-                    shutil.copytree(config["stage"], stage)
+                    shutil.copytree(effective["stage"], stage)
                     variables["stage"] = str(stage)
-                    for src, relative in config.get("stage_files", {}).items():
+                    for src, relative in effective.get("stage_files", {}).items():
                         destination = (stage / relative).resolve()
                         if not destination.is_relative_to(stage.resolve()):
                             raise ValueError("stage_files destination escapes fresh stage")
@@ -179,6 +218,11 @@ class Runner:
                 argv = [fmt(arg) for arg in op["argv"]]
                 if not Path(argv[0]).is_absolute() or Path(argv[0]).suffix.lower() in (".bat", ".cmd"):
                     raise ValueError("Executable must be an absolute executable path, not a shell script")
+                try:
+                    # The command of the phase runs the declared producer: in the accepted template its argv[0].
+                    verify_producer(effective, operation, argv)
+                except Refused as error:
+                    raise Unavailable(str(error)) from None
                 cwd = Path(fmt(op["cwd"]))
                 env = os.environ.copy()
                 for key, value in config.get("environment", {}).items():
@@ -189,12 +233,14 @@ class Runner:
                 result.update(argv=argv, cwd=str(cwd), description=op.get("description"),
                               log=str(run_dir / "output.log"), exitCode=None,
                               inputSnapshot=str(run_dir / "inputs-before.json"),
-                              inputCoverage="Explicit file, configured watch roots and pinned producers. External includes outside this closure are not tracked.",
+                              inputCoverage=("Explicit file, configured watch roots, pinned producers and the files of the stage manifest. Reads outside the stage are not tracked."
+                                             if stage_files else
+                                             "Explicit file, configured watch roots and pinned producers. External includes outside this closure are not tracked."),
                               environment=config.get("environment", {}),
                               environmentHash=hashlib.sha256(json.dumps(sorted(env.items())).encode()).hexdigest())
                 started = time.monotonic()
                 write_json(run_dir / "receipt.json", dict(result, execution="running", result="indeterminate"))
-                self.gate(config)
+                self.gate(config, effective)
                 state, code = execute(argv, cwd, env, run_dir / "output.log", op.get("timeout", 60),
                                       cancel, config.get("memory_floor_mb", 0))
                 result.update(execution=state, exitCode=code, result="indeterminate",

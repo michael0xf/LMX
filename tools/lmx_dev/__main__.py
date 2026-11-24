@@ -4,8 +4,36 @@ import sys
 import time
 from pathlib import Path
 
+from .closures import DEFAULT_CLOSURE, select
 from .runner import Runner, public_result, sha, write_json
 from .spec import SpecIndex
+
+
+def grant(runner: Runner, seconds: int, reason: str, closures: list[str]) -> dict:
+    """Lead only, CLI only: the window is never opened by MCP.
+
+    The permit names the closures it admits and, for each registered one, the hash of its effective configuration.
+    With names it admits exactly those (the accepted bundle only when it is named: ``--closure accepted``).
+    Without names it admits the accepted bundle only and keeps the former shape.
+    """
+    data = runner.load()
+    if Path(data["lock"]).exists() or any(Path(p).exists() for p in data.get("busy_markers", [])):
+        raise ValueError("The shared pipeline is busy")
+    admitted, hashes = [], {}
+    for name in dict.fromkeys(closures):
+        effective = select(data, name)
+        admitted.append(name)
+        if name != DEFAULT_CLOSURE:
+            hashes[name] = effective["effectiveHash"]
+    # A scoped permit carries no configHash: a runner older than closures then reads no binding at all and keeps
+    # the window closed, instead of running the accepted producer under a permit granted for a candidate.
+    permit = {"expires": time.time() + seconds, "reason": reason}
+    if closures:
+        permit.update(scopedConfigHash=sha(runner.config), closures=admitted, effectiveHashes=hashes)
+    else:
+        permit["configHash"] = sha(runner.config)
+    write_json(Path(data["permit"]), permit)
+    return permit
 
 
 def main() -> int:
@@ -23,11 +51,16 @@ def main() -> int:
     check = sub.add_parser("check")
     check.add_argument("file")
     check.add_argument("--phase", choices=["syntax", "static", "translate"], default="syntax")
+    check.add_argument("--closure", default="",
+                       help="Registered producer closure for syntax/translate (name only); default: the accepted bundle")
     bootstrap = sub.add_parser("bootstrap")
     bootstrap.add_argument("profile", choices=["smoke", "selfHost"], default="smoke", nargs="?")
     permit = sub.add_parser("permit", help="Lead only: admit compiler jobs after releasing the shared pipeline")
     permit.add_argument("--seconds", required=True, type=int)
     permit.add_argument("--reason", required=True)
+    permit.add_argument("--closure", action="append", default=[],
+                        help="Admit exactly the closures named here (repeatable; the accepted bundle is `accepted`); "
+                             "without the flag the permit admits the accepted bundle only")
     sub.add_parser("close-window")
     args = parser.parse_args()
     root = args.root.resolve()
@@ -51,16 +84,13 @@ def main() -> int:
         elif args.command == "permit":
             if not 1 <= args.seconds <= 86400 or not args.reason.strip():
                 raise ValueError("Permit requires a reason and 1..86400 seconds")
-            data = runner.load()
-            if Path(data["lock"]).exists() or any(Path(p).exists() for p in data.get("busy_markers", [])):
-                raise ValueError("The shared pipeline is busy")
-            result = {"expires": time.time() + args.seconds, "configHash": sha(config), "reason": args.reason}
-            write_json(Path(data["permit"]), result)
+            result = grant(runner, args.seconds, args.reason, args.closure)
         elif args.command == "close-window":
             Path(runner.load()["permit"]).unlink(missing_ok=True)
             result = {"compilerWindow": "closed", "note": "Running jobs keep their lock until completion/cancellation."}
         else:
-            result = runner.run("check:" + args.phase, args.file) if args.command == "check" else runner.run("bootstrap:" + args.profile)
+            result = (runner.run("check:" + args.phase, args.file, closure=args.closure) if args.command == "check"
+                      else runner.run("bootstrap:" + args.profile))
             result = public_result(result)
     except Exception as error:
         if args.command == "serve":

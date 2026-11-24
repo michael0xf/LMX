@@ -198,6 +198,7 @@ end: lmx_walk_numeric_type
 fn: lmx_walk_load_numeric (c.LmxArena@: arena; @: cell; size_t@: out) int
     int: base_type 0
     int: ty 0
+    ulong: whole (cast: (ulong) 0U)
     if: out = 0
         return: c.LMX_WALK_INVALID
     ty := lmx_walk_numeric_type(arena, cell)
@@ -220,7 +221,10 @@ fn: lmx_walk_load_numeric (c.LmxArena@: arena; @: cell; size_t@: out) int
         \out := (cast: (size_t) c.lmx_unsigned_value_known(cell))
         return: c.LMX_WALK_OK
     if: base_type = c.LMX_TYPE_ULONG
-        \out := (cast: (size_t) c.lmx_ulong_value_known(cell))
+        whole := c.lmx_ulong_value_known(cell)
+        if: whole > c.SIZE_MAX
+            return: c.LMX_WALK_INVALID
+        \out := (cast: (size_t) whole)
         return: c.LMX_WALK_OK
     return: c.LMX_WALK_INVALID
 end: lmx_walk_load_numeric
@@ -732,8 +736,9 @@ fn: lmx_call_result_value (c.LmxArena@: arena; c.Lmx@: code; c.LmxWalkValue@: va
             if: saved\kind = c.LMX_WALK_VALUE_FOREIGN
                 status := lmx_call_scalar_result(arena, code, @ saved, dest, @ delivered)
             else:
-                if: lmx_walk_value_number(@ saved, @ number, @ ty) != c.LMX_WALK_OK
+                if: lmx_walk_value_numeric(@ saved) != c.LMX_WALK_OK
                     return: c.LMX_CALL_NOT_CALLABLE
+                ty := saved\type
                 if: dest != 0
                     pool := c.lmx_range_cell_pool(arena, dest)
                     if: pool != 0
@@ -755,8 +760,9 @@ fn: lmx_call_result_value (c.LmxArena@: arena; c.Lmx@: code; c.LmxWalkValue@: va
                         width := lmx_walk_type_size(ty)
                         if: width = 0U || c.lmx_range_entry_at(arena, dest) != 0 || c.lmx_range_write_overlaps_profile(arena, dest, width, 0, 0, 0U) != 0
                             return: c.LMX_CALL_NOT_CALLABLE
-                        if: lmx_walk_store_numeric_raw(dest, ty, number) != c.LMX_WALK_OK
+                        if: lmx_walk_value_storage(@ saved) = 0
                             return: c.LMX_CALL_NOT_CALLABLE
+                        c.memcpy(dest, lmx_walk_value_storage(@ saved), width)
                         ---
                     ---
                     delivered := dest
@@ -772,24 +778,37 @@ fn: lmx_call_result_value (c.LmxArena@: arena; c.Lmx@: code; c.LmxWalkValue@: va
     return: 0
 end: lmx_call_result_value
 
-# Slice 255 (design 4.5 B2a): a contextual literal -- a number with no type of its own (LMX_TYPE_NONE; the magnitude in
-# `wide`, the U spelling in `natural`). It takes the type of the operand or place it meets; alone it is int (U: unsigned).
-fn: lmx_walk_value_lit (c.LmxWalkValue@: out; size_t: magnitude; int: usuf) int
+# A literal has no receiving type yet. Keep its magnitude in the wider existing unsigned payload, its spelling
+# in natural, and its sign in number. The high half of a positive magnitude is never a sign bit.
+fn: lmx_walk_value_lit (c.LmxWalkValue@: out; ullong: magnitude; int: usuf; int: negative) int
     if: out = 0
         return: c.LMX_WALK_INVALID
+    if: c.ULONG_MAX > c.SIZE_MAX
+        if: magnitude > (cast: (ullong) c.ULONG_MAX)
+            return: c.LMX_WALK_UNSUPPORTED
+        ---
+    else:
+        if: magnitude > (cast: (ullong) c.SIZE_MAX)
+            return: c.LMX_WALK_UNSUPPORTED
+    ---
     lmx_walk_value_clear(out)
     out\present := 1
     out\kind := c.LMX_WALK_VALUE_NUMBER
     out\type := c.LMX_TYPE_NONE
-    out\wide := magnitude
+    if: c.ULONG_MAX > c.SIZE_MAX
+        out\longnum := (cast: (ulong) magnitude)
+    else:
+        out\wide := (cast: (size_t) magnitude)
+    ---
     out\natural := (cast: (unsigned) usuf)
+    out\number := (cast: (int) (negative != 0 && magnitude != (cast: (ullong) 0)))
     return: c.LMX_WALK_OK
 end: lmx_walk_value_lit
 
 fn: lmx_walk_value_num (c.LmxWalkValue@: out; int: ty; size_t: number) int
     # A number with no type is a contextual literal (slice 255).
     if: c.lmx_type_base(ty) = c.LMX_TYPE_NONE
-        return: lmx_walk_value_lit(out, number, 0)
+        return: lmx_walk_value_lit(out, (cast: (ullong) number), 0, 0)
     lmx_walk_value_clear(out)
     out\present := 1
     out\kind := c.LMX_WALK_VALUE_NUMBER
@@ -797,15 +816,100 @@ fn: lmx_walk_value_num (c.LmxWalkValue@: out; int: ty; size_t: number) int
     return: lmx_walk_store_numeric_raw(lmx_walk_value_storage(out), ty, number)
 end: lmx_walk_value_num
 
+# Validate the numeric representation without converting its payload to a machine word.
+fn: lmx_walk_value_numeric (c.LmxWalkValue@: value) int
+    int: ty 0
+    if: value = 0 || value\present = 0 || value\kind != c.LMX_WALK_VALUE_NUMBER
+        return: c.LMX_WALK_INVALID
+    ty := c.lmx_type_base(value\type)
+    if: ty = c.LMX_TYPE_NONE || ty = c.LMX_TYPE_INT || ty = c.LMX_TYPE_SIZE_T || ty = c.LMX_TYPE_UNSIGNED || ty = c.LMX_TYPE_ULONG || ty = c.LMX_TYPE_CHAR || ty = c.LMX_TYPE_UNSIGNED_CHAR
+        return: c.LMX_WALK_OK
+    return: c.LMX_WALK_INVALID
+end: lmx_walk_value_numeric
+
+# A condition tests the original typed value. A wide ULONG must not first become a size_t zero.
+fn: lmx_walk_value_truth (c.LmxWalkValue@: value; int@: out) int
+    int: ty 0
+    if: out = 0 || lmx_walk_value_numeric(value) != c.LMX_WALK_OK
+        return: c.LMX_WALK_INVALID
+    ty := c.lmx_type_base(value\type)
+    if: ty = c.LMX_TYPE_NONE
+        if: c.ULONG_MAX > c.SIZE_MAX
+            out[0] := (cast: (int) (value\longnum != 0U))
+        else:
+            out[0] := (cast: (int) (value\wide != 0U))
+        ---
+        return: c.LMX_WALK_OK
+    if: ty = c.LMX_TYPE_INT
+        out[0] := (cast: (int) (value\number != 0))
+    if: ty = c.LMX_TYPE_SIZE_T
+        out[0] := (cast: (int) (value\wide != 0U))
+    if: ty = c.LMX_TYPE_UNSIGNED
+        out[0] := (cast: (int) (value\natural != 0U))
+    if: ty = c.LMX_TYPE_ULONG
+        out[0] := (cast: (int) (value\longnum != 0U))
+    if: ty = c.LMX_TYPE_CHAR
+        out[0] := (cast: (int) (c.lmx_char_value_known((cast: (@) (@ value\byte))) != 0))
+    if: ty = c.LMX_TYPE_UNSIGNED_CHAR
+        out[0] := (cast: (int) (c.lmx_uchar_value_known((cast: (@) (@ value\byte))) != 0U))
+    return: c.LMX_WALK_OK
+end: lmx_walk_value_truth
+
+# A bounded numeric consumer can inspect sign and magnitude before choosing its own word or offset type.
+# This projection is not the transport used by stores, calls, materialization, or numeric operators.
+fn: lmx_walk_value_magnitude (c.LmxWalkValue@: value; ullong@: magnitude; int@: negative) int
+    int: ty 0
+    int: small 0
+    unsigned: residue 0U
+    if: magnitude = 0 || negative = 0 || lmx_walk_value_numeric(value) != c.LMX_WALK_OK
+        return: c.LMX_WALK_INVALID
+    ty := c.lmx_type_base(value\type)
+    negative[0] := 0
+    if: ty = c.LMX_TYPE_NONE
+        negative[0] := value\number
+        if: c.ULONG_MAX > c.SIZE_MAX
+            magnitude[0] := (cast: (ullong) value\longnum)
+        else:
+            magnitude[0] := (cast: (ullong) value\wide)
+        ---
+        return: c.LMX_WALK_OK
+    if: ty = c.LMX_TYPE_INT || ty = c.LMX_TYPE_CHAR
+        small := value\number
+        if: ty = c.LMX_TYPE_CHAR
+            small := c.lmx_char_value_known((cast: (@) (@ value\byte)))
+        residue := (cast: (unsigned) small)
+        if: small < 0
+            negative[0] := 1
+            residue := 0U - residue
+        ---
+        magnitude[0] := (cast: (ullong) residue)
+        return: c.LMX_WALK_OK
+    if: ty = c.LMX_TYPE_UNSIGNED_CHAR
+        magnitude[0] := (cast: (ullong) c.lmx_uchar_value_known((cast: (@) (@ value\byte))))
+    if: ty = c.LMX_TYPE_UNSIGNED
+        magnitude[0] := (cast: (ullong) value\natural)
+    if: ty = c.LMX_TYPE_ULONG
+        magnitude[0] := (cast: (ullong) value\longnum)
+    if: ty = c.LMX_TYPE_SIZE_T
+        magnitude[0] := (cast: (ullong) value\wide)
+    return: c.LMX_WALK_OK
+end: lmx_walk_value_magnitude
+
 fn: lmx_walk_value_number (c.LmxWalkValue@: value; size_t@: number; int@: ty) int
     int: base_type 0
+    ullong: magnitude (cast: (ullong) 0)
+    int: negative 0
     if: value = 0 || value\present = 0 || value\kind != c.LMX_WALK_VALUE_NUMBER
         return: c.LMX_WALK_INVALID
     \ty := value\type
     base_type := c.lmx_type_base(value\type)
-    # A contextual literal (LMX_TYPE_NONE, slice 255): its magnitude.
+    # Only actual word consumers use this projection. Do not narrow an unsigned value silently.
     if: base_type = c.LMX_TYPE_NONE
-        \number := value\wide
+        if: lmx_walk_value_magnitude(value, @ magnitude, @ negative) != c.LMX_WALK_OK || magnitude > (cast: (ullong) c.SIZE_MAX)
+            return: c.LMX_WALK_INVALID
+        \number := (cast: (size_t) magnitude)
+        if: negative != 0
+            \number := 0U - \number
         return: c.LMX_WALK_OK
     if: base_type = c.LMX_TYPE_INT
         \number := (cast: (size_t) value\number)
@@ -817,6 +921,8 @@ fn: lmx_walk_value_number (c.LmxWalkValue@: value; size_t@: number; int@: ty) in
                 \number := (cast: (size_t) value\natural)
             else:
                 if: base_type = c.LMX_TYPE_ULONG
+                    if: value\longnum > c.SIZE_MAX
+                        return: c.LMX_WALK_INVALID
                     \number := (cast: (size_t) value\longnum)
                 else:
                     if: base_type = c.LMX_TYPE_CHAR
@@ -851,7 +957,13 @@ end: lmx_walk_value_promoted
 
 # A contextual literal takes the type `ty` (LMX_TYPE_NONE: its own default); any other number is copied as it is.
 fn: lmx_walk_value_adopt (c.LmxWalkValue@: value; int: ty; c.LmxWalkValue@: out) int
-    size_t: magnitude 0U
+    ullong: magnitude (cast: (ullong) 0)
+    int: negative 0
+    int: small 0
+    unsigned: natural 0U
+    ulong: whole 0U
+    size_t: wide 0U
+    char: byte 0
     if: value = 0 || out = 0 || value\present = 0 || value\kind != c.LMX_WALK_VALUE_NUMBER
         return: c.LMX_WALK_INVALID
     if: c.lmx_type_base(value\type) != c.LMX_TYPE_NONE
@@ -863,62 +975,86 @@ fn: lmx_walk_value_adopt (c.LmxWalkValue@: value; int: ty; c.LmxWalkValue@: out)
         if: value\natural != 0U
             ty := c.LMX_TYPE_UNSIGNED
     ---
-    magnitude := value\wide
-    return: lmx_walk_value_num(out, ty, magnitude)
+    if: lmx_walk_value_lit_fits(value, ty) = 0
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+    if: lmx_walk_value_magnitude(value, @ magnitude, @ negative) != c.LMX_WALK_OK
+        return: c.LMX_WALK_INVALID
+    # Construct the chosen type from its own C object. Negative INT_MIN is never negated as a signed int.
+    if: c.lmx_type_base(ty) = c.LMX_TYPE_INT
+        small := (cast: (int) magnitude)
+        if: negative != 0
+            small := 0 - (cast: (int) (magnitude - (cast: (ullong) 1))) - 1
+        return: lmx_walk_value_load(0, (cast: (@) (@ small)), ty, out)
+    if: c.lmx_type_base(ty) = c.LMX_TYPE_CHAR
+        small := (cast: (int) magnitude)
+        if: negative != 0
+            small := 0 - small
+        byte := (cast: (char) small)
+        return: lmx_walk_value_load(0, (cast: (@) (@ byte)), ty, out)
+    if: c.lmx_type_base(ty) = c.LMX_TYPE_UNSIGNED_CHAR
+        c.lmx_uchar_store_known((cast: (@) (@ byte)), (cast: (unsigned) magnitude))
+        return: lmx_walk_value_load(0, (cast: (@) (@ byte)), ty, out)
+    if: c.lmx_type_base(ty) = c.LMX_TYPE_UNSIGNED
+        natural := (cast: (unsigned) magnitude)
+        return: lmx_walk_value_load(0, (cast: (@) (@ natural)), ty, out)
+    if: c.lmx_type_base(ty) = c.LMX_TYPE_ULONG
+        whole := (cast: (ulong) magnitude)
+        return: lmx_walk_value_load(0, (cast: (@) (@ whole)), ty, out)
+    if: c.lmx_type_base(ty) = c.LMX_TYPE_SIZE_T
+        wide := (cast: (size_t) magnitude)
+        return: lmx_walk_value_load(0, (cast: (@) (@ wide)), ty, out)
+    return: c.LMX_WALK_INVALID
 end: lmx_walk_value_adopt
 
 # A present number becomes a contextual literal of its magnitude (the walker's LIT operand beside a non-literal operand).
 sub: lmx_walk_value_contextual (c.LmxWalkValue@: value)
-    size_t: number 0U
+    ullong: magnitude (cast: (ullong) 0)
     int: ty 0
     int: usuf 0
+    int: negative 0
     if: value = 0 || value\present = 0 || value\kind != c.LMX_WALK_VALUE_NUMBER
         return
-    if: lmx_walk_value_number(value, @ number, @ ty) != c.LMX_WALK_OK
+    ty := c.lmx_type_base(value\type)
+    if: ty = c.LMX_TYPE_NONE
         return
-    ty := c.lmx_type_base(ty)
+    if: lmx_walk_value_magnitude(value, @ magnitude, @ negative) != c.LMX_WALK_OK
+        return
     if: ty = c.LMX_TYPE_UNSIGNED || ty = c.LMX_TYPE_SIZE_T || ty = c.LMX_TYPE_ULONG
         usuf := 1
-    lmx_walk_value_lit(value, number, usuf)
+    lmx_walk_value_lit(value, magnitude, usuf, negative)
     return
 end: lmx_walk_value_contextual
 
-# Slice 297 (CALLABLE-PLACE-NAMED-RECEPTION; the book provenance :198, :773; Codex 294 review): whether the value of a
-# contextual literal is one of the numeric type `ty` -- its magnitude, or for a negated literal of no U spelling (the two's
-# complement lmx_walk_value_unary leaves, a magnitude above SIZE_MAX / 2) the negative of its complement; a literal spelled
-# U is unsigned, its value its magnitude.  A type whose largest value is SIZE_MAX takes every magnitude.  1: it is; 0: it
-# is not, the place's reception is the implicit `convert`, never a silent reinterpretation; a type that is no number
-# answers 1 (its own reception decides).
+# Whether the explicit sign and complete magnitude belong to the receiving numeric type.
+# A nonnumeric type decides admission through its own ordinary receiver.
 fn: lmx_walk_value_lit_fits (c.LmxWalkValue@: value; int: ty) int
-    size_t: magnitude 0U
-    size_t: above 0U
-    size_t: below 0U
+    ullong: magnitude (cast: (ullong) 0)
+    ullong: above (cast: (ullong) 0)
+    ullong: below (cast: (ullong) 0)
+    int: negative 0
     int: base_type 0
-    if: value = 0
+    if: lmx_walk_value_magnitude(value, @ magnitude, @ negative) != c.LMX_WALK_OK
         return: 0
     base_type := c.lmx_type_base(ty)
-    magnitude := value\wide
     if: base_type = c.LMX_TYPE_SIZE_T
-        return: 1
+        above := (cast: (ullong) c.SIZE_MAX)
     if: base_type = c.LMX_TYPE_INT
-        above := (cast: (size_t) c.INT_MAX)
-        below := (cast: (size_t) c.INT_MAX) + 1U
+        above := (cast: (ullong) c.INT_MAX)
+        below := (cast: (ullong) c.INT_MAX) + (cast: (ullong) 1)
     if: base_type = c.LMX_TYPE_CHAR
-        above := (cast: (size_t) c.CHAR_MAX)
-        below := (cast: (size_t) (0 - c.CHAR_MIN))
+        above := (cast: (ullong) c.CHAR_MAX)
+        below := (cast: (ullong) (0 - c.CHAR_MIN))
     if: base_type = c.LMX_TYPE_UNSIGNED
-        above := (cast: (size_t) c.UINT_MAX)
+        above := (cast: (ullong) c.UINT_MAX)
     if: base_type = c.LMX_TYPE_ULONG
-        above := (cast: (size_t) c.ULONG_MAX)
+        above := (cast: (ullong) c.ULONG_MAX)
     if: base_type = c.LMX_TYPE_UNSIGNED_CHAR
-        above := (cast: (size_t) c.UCHAR_MAX)
-    if: above = 0U
+        above := (cast: (ullong) c.UCHAR_MAX)
+    if: above = (cast: (ullong) 0)
         return: 1
-    if: above = c.SIZE_MAX
-        return: 1
-    if: value\natural != 0U || magnitude <= c.SIZE_MAX / 2U
+    if: negative = 0
         return: (cast: (int) (magnitude <= above))
-    return: (cast: (int) ((0U - magnitude) <= below))
+    return: (cast: (int) (magnitude <= below))
 end: lmx_walk_value_lit_fits
 
 # Slice 255 (design 4.5 B2a): the reception of a complete value by a place of type `ty` -- the one runtime admission of a
@@ -936,8 +1072,6 @@ fn: lmx_walk_value_receive (c.LmxWalkValue@: value; int: ty; c.LmxWalkValue@: ou
         return: lmx_walk_value_receive_scalar(value, ty, (cast: (const: c.LmxScalarABI@) value\scalar_abi), out)
     # Slice 297 (CALLABLE-PLACE-NAMED-RECEPTION; Codex 294 review): a contextual literal outside the place's type -- 300 at a
     # char formal of the callable a call selected -- is the implicit `convert` before anything receives it.
-    if: value\kind = c.LMX_WALK_VALUE_NUMBER && c.lmx_type_base(value\type) = c.LMX_TYPE_NONE && lmx_walk_value_lit_fits(value, ty) = 0
-        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
     if: value\kind = c.LMX_WALK_VALUE_NUMBER
         status := lmx_walk_value_adopt(value, ty, taken_p)
         if: status != c.LMX_WALK_OK
@@ -988,54 +1122,98 @@ fn: lmx_walk_value_null_literal (c.LmxWalkValue@: value) int
         return: 0
     if: c.lmx_type_base(value\type) != c.LMX_TYPE_NONE
         return: 0
+    if: c.ULONG_MAX > c.SIZE_MAX
+        return: (cast: (int) (value\longnum = 0U))
     return: (cast: (int) (value\wide = 0U))
 end: lmx_walk_value_null_literal
 
 fn: lmx_walk_value_unary (int: op; c.LmxWalkValue@: value; c.LmxWalkValue@: out) int
-    size_t: number 0U
-    unsigned: narrow 0U
+    c.LmxWalkValue: adopted
+    c.LmxWalkValue@: current value
+    ullong: magnitude (cast: (ullong) 0)
+    int: negative 0
     int: ty 0
-    if: op != c.LMX_WALK_OP_NEG && op != c.LMX_WALK_OP_POS && op != c.LMX_WALK_OP_BNOT
+    int: small 0
+    unsigned: natural 0U
+    ulong: whole 0U
+    size_t: wide 0U
+    int: status 0
+    int: contextual 0
+    if: out = 0 || (op != c.LMX_WALK_OP_NEG && op != c.LMX_WALK_OP_POS && op != c.LMX_WALK_OP_BNOT)
         return: c.LMX_WALK_INVALID
-    # Slice 260 (P1-NUMERIC-KIND): a present reference or foreign value under a sign is the type mismatch -- the implicit `convert`.
     if: value != 0 && value\present != 0 && (value\kind = c.LMX_WALK_VALUE_REFERENCE || value\kind = c.LMX_WALK_VALUE_FOREIGN)
         return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
-    if: lmx_walk_value_number(value, @ number, @ ty) != c.LMX_WALK_OK
+    if: lmx_walk_value_numeric(value) != c.LMX_WALK_OK
         return: c.LMX_WALK_INVALID
-    ty := c.lmx_type_base(ty)
-    if: ty = c.LMX_TYPE_CHAR
+    ty := c.lmx_type_base(value\type)
+    if: ty = c.LMX_TYPE_NONE
+        if: lmx_walk_value_magnitude(value, @ magnitude, @ negative) != c.LMX_WALK_OK
+            return: c.LMX_WALK_INVALID
+        # A source sign preserves the literal before reception, including the spelling of INT_MIN.
+        if: value\natural = 0U && (op = c.LMX_WALK_OP_NEG || op = c.LMX_WALK_OP_POS)
+            if: op = c.LMX_WALK_OP_NEG
+                negative := (cast: (int) (negative = 0))
+            return: lmx_walk_value_lit(out, magnitude, 0, negative)
+        # Select the literal's existing operation type before complement/unsigned negation.
+        # U up to UINT_MAX has unsigned width: ~0U must not become ULONG_MAX on a wider target.
         ty := c.LMX_TYPE_INT
-        if: c.CHAR_MAX > c.INT_MAX
+        if: value\natural != 0U
             ty := c.LMX_TYPE_UNSIGNED
+            if: magnitude > (cast: (ullong) c.UINT_MAX)
+                ty := c.LMX_TYPE_SIZE_T
+                if: c.ULONG_MAX > c.SIZE_MAX
+                    ty := c.LMX_TYPE_ULONG
+            ---
+        ---
+        status := lmx_walk_value_adopt(value, ty, @ adopted)
+        if: status != c.LMX_WALK_OK
+            return: status
+        current := @ adopted
+        contextual := 1
     ---
-    if: ty = c.LMX_TYPE_UNSIGNED_CHAR
-        ty := c.LMX_TYPE_INT
-        if: c.UCHAR_MAX > c.INT_MAX
-            ty := c.LMX_TYPE_UNSIGNED
-    ---
-    # Slice 297 (CALLABLE-PLACE-NAMED-RECEPTION): a contextual literal spelled U is an unsigned of its C99 type (6.4.4.1:
-    # unsigned int when it holds the magnitude, else the 64-bit one): its sign and complement are that type's, and the result
-    # keeps the U spelling.  The size_t complement without the spelling made `~0U` the value -1 -- no unsigned
-    # (lmx_walk_value_lit_fits); a literal of no U spelling stays the int it is (`~0` is -1).
-    if: ty = c.LMX_TYPE_NONE && value\natural != 0U && number <= (cast: (size_t) c.UINT_MAX)
-        narrow := (cast: (unsigned) number)
+    ty := lmx_walk_value_promoted(ty)
+    if: ty = c.LMX_TYPE_INT
+        small := current\number
+        if: c.lmx_type_base(current\type) = c.LMX_TYPE_CHAR
+            small := c.lmx_char_value_known((cast: (@) (@ current\byte)))
+        if: c.lmx_type_base(current\type) = c.LMX_TYPE_UNSIGNED_CHAR
+            small := (cast: (int) c.lmx_uchar_value_known((cast: (@) (@ current\byte))))
         if: op = c.LMX_WALK_OP_NEG
-            narrow := 0U - narrow
+            if: small = c.INT_MIN
+                return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+            small := 0 - small
+        ---
         if: op = c.LMX_WALK_OP_BNOT
-            narrow := c.UINT_MAX - narrow
-        return: lmx_walk_value_lit(out, (cast: (size_t) narrow), 1)
-    if: ty = c.LMX_TYPE_NONE && value\natural != 0U
+            small := ~ small
+        status := lmx_walk_value_load(0, (cast: (@) (@ small)), ty, out)
+    if: ty = c.LMX_TYPE_UNSIGNED
+        natural := current\natural
+        if: c.lmx_type_base(current\type) = c.LMX_TYPE_UNSIGNED_CHAR
+            natural := c.lmx_uchar_value_known((cast: (@) (@ current\byte)))
+        if: c.lmx_type_base(current\type) = c.LMX_TYPE_CHAR
+            natural := (cast: (unsigned) c.lmx_char_value_known((cast: (@) (@ current\byte))))
         if: op = c.LMX_WALK_OP_NEG
-            number := 0U - number
+            natural := 0U - natural
         if: op = c.LMX_WALK_OP_BNOT
-            number := 0U - number - 1U
-        return: lmx_walk_value_lit(out, number, 1)
-    if: op = c.LMX_WALK_OP_NEG
-        number := 0U - number
-    if: op = c.LMX_WALK_OP_BNOT
-        # Unsigned word complement; the numeric store keeps the promoted width.
-        number := 0U - number - 1U
-    return: lmx_walk_value_num(out, ty, number)
+            natural := c.UINT_MAX - natural
+        status := lmx_walk_value_load(0, (cast: (@) (@ natural)), ty, out)
+    if: ty = c.LMX_TYPE_ULONG
+        whole := current\longnum
+        if: op = c.LMX_WALK_OP_NEG
+            whole := (cast: (ulong) 0U) - whole
+        if: op = c.LMX_WALK_OP_BNOT
+            whole := c.ULONG_MAX - whole
+        status := lmx_walk_value_load(0, (cast: (@) (@ whole)), ty, out)
+    if: ty = c.LMX_TYPE_SIZE_T
+        wide := current\wide
+        if: op = c.LMX_WALK_OP_NEG
+            wide := 0U - wide
+        if: op = c.LMX_WALK_OP_BNOT
+            wide := c.SIZE_MAX - wide
+        status := lmx_walk_value_load(0, (cast: (@) (@ wide)), ty, out)
+    if: status = c.LMX_WALK_OK && contextual != 0
+        lmx_walk_value_contextual(out)
+    return: status
 end: lmx_walk_value_unary
 
 # A reference payload is loaded once using its proved pointer-cell accessors;
@@ -1043,6 +1221,8 @@ end: lmx_walk_value_unary
 # (lmx_value_loaded_context).
 fn: lmx_walk_value_load (c.LmxArena@: arena; @: storage; int: ty; c.LmxWalkValue@: out) int
     int: base_type 0
+    @: payload void 0
+    size_t: bytes 0U
     c.LmxPool@: pool 0
     c.LmxWalkValue: current
     c.LmxWalkValue@: current_value @ current
@@ -1069,30 +1249,42 @@ fn: lmx_walk_value_load (c.LmxArena@: arena; @: storage; int: ty; c.LmxWalkValue
             return: c.LMX_WALK_INVALID
         raw := read(storage)
         return: lmx_walk_value_ref_context(out, ty, raw, c.lmx_value_loaded_context(c.lmx_pointer_cell_context(arena, storage), raw))
-    lmx_walk_value_clear(current_value)
-    current_value\present := 1
-    current_value\kind := c.LMX_WALK_VALUE_NUMBER
-    current_value\type := ty
+    # Read before clearing out: storage may be one of out's own numeric members.
+    # Keep just the actual typed payload, rather than clearing and copying an entire temporary Value.
     if: base_type = c.LMX_TYPE_INT
         current_value\number := (cast: (int) c.lmx_int_value_known(storage))
+        payload := (cast: (@) (@ current_value\number))
+        bytes := c.sizeof(c.int)
     else:
         if: base_type = c.LMX_TYPE_SIZE_T
             current_value\wide := (cast: (size_t) c.lmx_size_value_known(storage))
+            payload := (cast: (@) (@ current_value\wide))
+            bytes := c.sizeof(c.size_t)
         else:
             if: base_type = c.LMX_TYPE_UNSIGNED
                 current_value\natural := (cast: (unsigned) c.lmx_unsigned_value_known(storage))
+                payload := (cast: (@) (@ current_value\natural))
+                bytes := c.sizeof(c.unsigned)
             else:
                 if: base_type = c.LMX_TYPE_ULONG
                     current_value\longnum := (cast: (ulong) c.lmx_ulong_value_known(storage))
+                    payload := (cast: (@) (@ current_value\longnum))
+                    bytes := c.sizeof(current_value\longnum)
                 else:
                     if: base_type != c.LMX_TYPE_CHAR && base_type != c.LMX_TYPE_UNSIGNED_CHAR
                         return: c.LMX_WALK_INVALID
                     c.memcpy((cast: (@) (@ current_value\byte)), storage, c.sizeof(c.char))
+                    payload := (cast: (@) (@ current_value\byte))
+                    bytes := c.sizeof(c.char)
                 ---
             ---
         ---
     ---
-    c.memcpy((cast: (@) out), (cast: (@) current_value), c.sizeof(c.LmxWalkValue))
+    lmx_walk_value_clear(out)
+    out\present := 1
+    out\kind := c.LMX_WALK_VALUE_NUMBER
+    out\type := ty
+    c.memcpy(lmx_walk_value_storage(out), payload, bytes)
     return: c.LMX_WALK_OK
 end: lmx_walk_value_load
 
@@ -1196,7 +1388,8 @@ end: lmx_walk_value_slot
 fn: lmx_walk_value_materialize (c.LmxArena@: arena; c.LmxWalkValue@: value; @@: outcell) int
     c.LmxWalkValue: saved
     @: cell void 0
-    size_t: number 0U
+    @: storage void 0
+    size_t: bytes 0U
     int: ty c.LMX_TYPE_NONE
     int: status
     if: outcell = 0
@@ -1217,16 +1410,23 @@ fn: lmx_walk_value_materialize (c.LmxArena@: arena; c.LmxWalkValue@: value; @@: 
             outcell[0] := saved\ref
         return: status
     if: saved\kind = c.LMX_WALK_VALUE_NUMBER
-        status := lmx_walk_value_number(@ saved, @ number, @ ty)
-        if: status != c.LMX_WALK_OK
-            return: status
+        ty := saved\type
+        if: c.lmx_type_base(ty) = c.LMX_TYPE_NONE
+            status := lmx_walk_value_adopt(@ saved, c.LMX_TYPE_NONE, @ saved)
+            if: status != c.LMX_WALK_OK
+                return: status
+        ---
+        # Persist the actual typed payload. Passing ULONG through a size_t word would narrow it on some targets.
+        # Contextual literals have no physical storage until their receiver supplies a type.
+        ty := saved\type
+        storage := lmx_walk_value_storage(@ saved)
+        bytes := lmx_walk_type_size(ty)
+        if: storage = 0 || bytes = 0U
+            return: c.LMX_WALK_UNSUPPORTED
         cell := c.lmx_scalar_new_physical_profiled(arena, ty, 0)
         if: cell = 0
             return: c.LMX_WALK_NOMEM
-        status := lmx_walk_store_numeric_raw(cell, ty, number)
-        if: status != c.LMX_WALK_OK
-            return: status
-        ---
+        c.memcpy(cell, storage, bytes)
     else:
         if: saved\kind = c.LMX_WALK_VALUE_REFERENCE
             ty := (cast: (int) saved\type)
@@ -1394,18 +1594,18 @@ return: c.LMX_WALK_OK
 # Slice 259 (design 4.5 B2b-2b): the bit width of a numeric type's machine representation (C99: the bits of its largest
 # value, counted) -- the range of a shift count is [0, width of the left operand's promoted type).
 fn: lmx_type_width (int: ty) int
-    size_t: all 0U
+    ullong: all (cast: (ullong) 0)
     int: width 0
     ty := c.lmx_type_base(ty)
     if: ty = c.LMX_TYPE_INT || ty = c.LMX_TYPE_UNSIGNED
-        all := (cast: (size_t) c.UINT_MAX)
+        all := (cast: (ullong) c.UINT_MAX)
     if: ty = c.LMX_TYPE_SIZE_T
-        all := c.SIZE_MAX
+        all := (cast: (ullong) c.SIZE_MAX)
     if: ty = c.LMX_TYPE_ULONG
-        all := (cast: (size_t) c.ULONG_MAX)
+        all := (cast: (ullong) c.ULONG_MAX)
     if: ty = c.LMX_TYPE_CHAR || ty = c.LMX_TYPE_UNSIGNED_CHAR
-        all := (cast: (size_t) c.UCHAR_MAX)
-    while: all != 0U
+        all := (cast: (ullong) c.UCHAR_MAX)
+    while: all != (cast: (ullong) 0)
         all := all >> 1
         width := width + 1
     ---
@@ -1494,60 +1694,58 @@ fn: lmx_walk_native_int_bin_apply (int: op; int: left; int: right; int@: result)
 end: lmx_walk_native_int_bin_apply
 
 # Slice 255 (design 4.5 B2a): the one binary operation of both executors over two complete values -- ADD, SUB, MUL, DIV, MOD,
-# LT, EQ.  Presence; EQ of two references; the numeric projections; the C99 integer promotions; a contextual literal takes
+# LT, EQ. Presence; EQ of two references; the actual typed operands; C99 integer promotions; a contextual literal takes
 # the other operand's promoted type (two literals: int, or unsigned when one is U-spelled); an int operation runs through
 # lmx_walk_native_int_bin_apply (its overflow and zero divisor are THROWN + LMX_WALK_NAME_INTERPRETER: the walker raises its
 # interpreter fault from them, native code its implicit throw); the other types compute in their own width as before.  Two
 # numbers of different types are the language's implicit `convert` throw (the frontend refuses the static case as "mixed
 # numeric types (a conversion)"), not INVALID; malformed operands stay INVALID.
 fn: lmx_walk_value_bin (int: op; c.LmxWalkValue@: value; c.LmxWalkValue@: other; c.LmxWalkValue@: out) int
-    size_t: ua 0U
-    size_t: ub 0U
-    size_t: wv 0U
+    c.LmxWalkValue: left
+    c.LmxWalkValue: right
+    c.LmxWalkValue@: lhs value
+    c.LmxWalkValue@: rhs other
     int: a 0
     int: b 0
     int: status 0
-    int: native_num_result 0
+    int: result 0
+    int: ia 0
+    int: ib 0
+    int: shifting 0
+    ullong: count (cast: (ullong) 0)
+    int: count_negative 0
     if: op != c.LMX_WALK_OP_ADD && op != c.LMX_WALK_OP_SUB && op != c.LMX_WALK_OP_MUL && op != c.LMX_WALK_OP_DIV && op != c.LMX_WALK_OP_MOD && op != c.LMX_WALK_OP_LT && op != c.LMX_WALK_OP_EQ && op != c.LMX_WALK_OP_BAND && op != c.LMX_WALK_OP_BOR && op != c.LMX_WALK_OP_BXOR && op != c.LMX_WALK_OP_SHL && op != c.LMX_WALK_OP_SHR
         return: c.LMX_WALK_INVALID
     if: value = 0 || other = 0 || out = 0 || value\present = 0 || other\present = 0
         return: c.LMX_WALK_INVALID
     if: op = c.LMX_WALK_OP_EQ && (value\kind = c.LMX_WALK_VALUE_REFERENCE || other\kind = c.LMX_WALK_VALUE_REFERENCE)
         if: value\kind = c.LMX_WALK_VALUE_REFERENCE && other\kind = c.LMX_WALK_VALUE_REFERENCE
-            return: lmx_walk_value_num(out, c.LMX_TYPE_INT, (cast: (size_t) (value\ref = other\ref)))
-        # Slice 260 (P1-NUMERIC-KIND, Codex 2026-11-02): one reference beside a number.  A contextual literal 0 (the NONE-typed
-        # literal a statically typed program writes as `p = 0`, lmx_walk_value_contextual) is the null test of the reference,
-        # as the typed program's null literal is a typed null reference; any other number beside a reference is the language's
-        # type mismatch in the operation -- the implicit `convert` (the book :777), not a malformed operand.
+            result := (cast: (int) (value\ref = other\ref))
+            return: lmx_walk_value_load(0, (cast: (@) (@ result)), c.LMX_TYPE_INT, out)
         if: value\kind = c.LMX_WALK_VALUE_REFERENCE && lmx_walk_value_null_literal(other) != 0
-            return: lmx_walk_value_num(out, c.LMX_TYPE_INT, (cast: (size_t) (value\ref = 0)))
+            result := (cast: (int) (value\ref = 0))
+            return: lmx_walk_value_load(0, (cast: (@) (@ result)), c.LMX_TYPE_INT, out)
         if: other\kind = c.LMX_WALK_VALUE_REFERENCE && lmx_walk_value_null_literal(value) != 0
-            return: lmx_walk_value_num(out, c.LMX_TYPE_INT, (cast: (size_t) (other\ref = 0)))
+            result := (cast: (int) (other\ref = 0))
+            return: lmx_walk_value_load(0, (cast: (@) (@ result)), c.LMX_TYPE_INT, out)
         return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
     ---
-    # Slice 260 (P1-NUMERIC-KIND): a PRESENT operand of another kind where a number is asked -- a reference or a foreign value in
-    # the arithmetic, the order comparison, the bitwise and shift operators -- is the implicit `convert` before the operation,
-    # the runtime twin of the typed program's refusals («a reference where a number is asked», «arithmetic on a reference», «a
-    # reference compared by order»); an unresolved or malformed operand stays the mechanical INVALID.
     if: value\kind = c.LMX_WALK_VALUE_REFERENCE || value\kind = c.LMX_WALK_VALUE_FOREIGN || other\kind = c.LMX_WALK_VALUE_REFERENCE || other\kind = c.LMX_WALK_VALUE_FOREIGN
         return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
-    if: lmx_walk_value_number(value, @ ua, @ a) != c.LMX_WALK_OK || lmx_walk_value_number(other, @ ub, @ b) != c.LMX_WALK_OK
+    if: lmx_walk_value_numeric(value) != c.LMX_WALK_OK || lmx_walk_value_numeric(other) != c.LMX_WALK_OK
         return: c.LMX_WALK_INVALID
-    # C99 integer promotions concern representation, not storage family.
-    # Operand cells retain their full physical IDs; this is a new result.
-    a := lmx_walk_value_promoted(a)
-    b := lmx_walk_value_promoted(b)
-    # Slice 259 (design 4.5 B2b-2b): a shift's operands are promoted apart (C99 6.5.7): the result has the left's promoted
-    # type, the count keeps its own; a contextual left literal is an int, or an unsigned by its suffix.  A count outside
-    # [0, width of the left's type) is the machine contract's undefined shift: the implicit `interpreter` throw before the
-    # operation in both executors (the ledger BITWISE-OPERATORS-NOT-CLASSIFIED); a negative count is outside as a size_t.
-    if: op = c.LMX_WALK_OP_SHL || op = c.LMX_WALK_OP_SHR
+    a := lmx_walk_value_promoted(value\type)
+    b := lmx_walk_value_promoted(other\type)
+    shifting := (cast: (int) (op = c.LMX_WALK_OP_SHL || op = c.LMX_WALK_OP_SHR))
+    if: shifting != 0
         if: a = c.LMX_TYPE_NONE
             a := c.LMX_TYPE_INT
             if: value\natural != 0U
                 a := c.LMX_TYPE_UNSIGNED
         ---
-        if: ub >= (cast: (size_t) lmx_type_width(a))
+        if: lmx_walk_value_magnitude(other, @ count, @ count_negative) != c.LMX_WALK_OK
+            return: c.LMX_WALK_INVALID
+        if: count_negative != 0 || count >= (cast: (ullong) lmx_type_width(a))
             return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
         b := a
     ---
@@ -1563,43 +1761,167 @@ fn: lmx_walk_value_bin (int: op; c.LmxWalkValue@: value; c.LmxWalkValue@: other;
         b := a
     if: a != b
         return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
-    if: a = c.LMX_TYPE_INT
-        status := lmx_walk_native_int_bin_apply(op, (cast: (int) ua), (cast: (int) ub), @ native_num_result)
+    # Ready typed operands remain in their existing storage. Only a contextual literal needs adoption.
+    if: c.lmx_type_base(value\type) = c.LMX_TYPE_NONE
+        status := lmx_walk_value_adopt(value, a, @ left)
         if: status != c.LMX_WALK_OK
             return: status
-        return: lmx_walk_value_num(out, c.LMX_TYPE_INT, (cast: (size_t) native_num_result))
+        lhs := @ left
     ---
-    if: op = c.LMX_WALK_OP_LT
-        return: lmx_walk_value_num(out, c.LMX_TYPE_INT, (cast: (size_t) (ua < ub)))
-    if: op = c.LMX_WALK_OP_EQ
-        return: lmx_walk_value_num(out, c.LMX_TYPE_INT, (cast: (size_t) (ua = ub)))
-    if: op = c.LMX_WALK_OP_ADD
-        wv := ua + ub
-    if: op = c.LMX_WALK_OP_SUB
-        wv := ua - ub
-    if: op = c.LMX_WALK_OP_MUL
-        wv := ua * ub
-    if: op = c.LMX_WALK_OP_BAND
-        wv := ua & ub
-    if: op = c.LMX_WALK_OP_BOR
-        wv := ua | ub
-    if: op = c.LMX_WALK_OP_BXOR
-        wv := ua ^ ub
-    if: op = c.LMX_WALK_OP_SHL
-        wv := ua << ub
-    if: op = c.LMX_WALK_OP_SHR
-        wv := ua >> ub
-    # -170 c1 / D-58: a zero divisor in a complete operation raises the implicit interpreter throw.
-    if: op = c.LMX_WALK_OP_DIV || op = c.LMX_WALK_OP_MOD
-        if: ub = 0U
-            return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
-        if: op = c.LMX_WALK_OP_DIV
-            wv := ua / ub
-        else:
-            wv := ua % ub
+    if: shifting = 0 && c.lmx_type_base(other\type) = c.LMX_TYPE_NONE
+        status := lmx_walk_value_adopt(other, b, @ right)
+        if: status != c.LMX_WALK_OK
+            return: status
+        rhs := @ right
+    ---
+    if: a = c.LMX_TYPE_INT
+        ia := lhs\number
+        if: c.lmx_type_base(lhs\type) = c.LMX_TYPE_CHAR
+            ia := c.lmx_char_value_known((cast: (@) (@ lhs\byte)))
+        if: c.lmx_type_base(lhs\type) = c.LMX_TYPE_UNSIGNED_CHAR
+            ia := (cast: (int) c.lmx_uchar_value_known((cast: (@) (@ lhs\byte))))
+        ib := (cast: (int) count)
+        if: shifting = 0
+            ib := rhs\number
+            if: c.lmx_type_base(rhs\type) = c.LMX_TYPE_CHAR
+                ib := c.lmx_char_value_known((cast: (@) (@ rhs\byte)))
+            if: c.lmx_type_base(rhs\type) = c.LMX_TYPE_UNSIGNED_CHAR
+                ib := (cast: (int) c.lmx_uchar_value_known((cast: (@) (@ rhs\byte))))
         ---
+        status := lmx_walk_native_int_bin_apply(op, ia, ib, @ result)
+        if: status != c.LMX_WALK_OK
+            return: status
+        return: lmx_walk_value_load(0, (cast: (@) (@ result)), c.LMX_TYPE_INT, out)
     ---
-    return: lmx_walk_value_num(out, a, wv)
+    if: a = c.LMX_TYPE_UNSIGNED
+        unsigned: ua lhs\natural
+        unsigned: ub (cast: (unsigned) count)
+        unsigned: uresult (cast: (unsigned) 0)
+        if: shifting = 0
+            ub := rhs\natural
+        ---
+        if: c.lmx_type_base(lhs\type) = c.LMX_TYPE_CHAR
+            ua := (cast: (unsigned) c.lmx_char_value_known((cast: (@) (@ lhs\byte))))
+        if: c.lmx_type_base(lhs\type) = c.LMX_TYPE_UNSIGNED_CHAR
+            ua := c.lmx_uchar_value_known((cast: (@) (@ lhs\byte)))
+        if: shifting = 0 && c.lmx_type_base(rhs\type) = c.LMX_TYPE_CHAR
+            ub := (cast: (unsigned) c.lmx_char_value_known((cast: (@) (@ rhs\byte))))
+        if: shifting = 0 && c.lmx_type_base(rhs\type) = c.LMX_TYPE_UNSIGNED_CHAR
+            ub := c.lmx_uchar_value_known((cast: (@) (@ rhs\byte)))
+        if: op = c.LMX_WALK_OP_LT
+            result := (cast: (int) (ua < ub))
+            return: lmx_walk_value_load(0, (cast: (@) (@ result)), c.LMX_TYPE_INT, out)
+        if: op = c.LMX_WALK_OP_EQ
+            result := (cast: (int) (ua = ub))
+            return: lmx_walk_value_load(0, (cast: (@) (@ result)), c.LMX_TYPE_INT, out)
+        if: op = c.LMX_WALK_OP_ADD
+            uresult := ua + ub
+        if: op = c.LMX_WALK_OP_SUB
+            uresult := ua - ub
+        if: op = c.LMX_WALK_OP_MUL
+            uresult := ua * ub
+        if: op = c.LMX_WALK_OP_BAND
+            uresult := ua & ub
+        if: op = c.LMX_WALK_OP_BOR
+            uresult := ua | ub
+        if: op = c.LMX_WALK_OP_BXOR
+            uresult := ua ^ ub
+        if: op = c.LMX_WALK_OP_SHL
+            uresult := ua << ub
+        if: op = c.LMX_WALK_OP_SHR
+            uresult := ua >> ub
+        if: op = c.LMX_WALK_OP_DIV || op = c.LMX_WALK_OP_MOD
+            if: ub = (cast: (unsigned) 0)
+                return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+            if: op = c.LMX_WALK_OP_DIV
+                uresult := ua / ub
+            else:
+                uresult := ua % ub
+            ---
+        ---
+        return: lmx_walk_value_load(0, (cast: (@) (@ uresult)), c.LMX_TYPE_UNSIGNED, out)
+    ---
+    if: a = c.LMX_TYPE_ULONG
+        ulong: la lhs\longnum
+        ulong: lb (cast: (ulong) count)
+        ulong: lresult (cast: (ulong) 0)
+        if: shifting = 0
+            lb := rhs\longnum
+        ---
+        if: op = c.LMX_WALK_OP_LT
+            result := (cast: (int) (la < lb))
+            return: lmx_walk_value_load(0, (cast: (@) (@ result)), c.LMX_TYPE_INT, out)
+        if: op = c.LMX_WALK_OP_EQ
+            result := (cast: (int) (la = lb))
+            return: lmx_walk_value_load(0, (cast: (@) (@ result)), c.LMX_TYPE_INT, out)
+        if: op = c.LMX_WALK_OP_ADD
+            lresult := la + lb
+        if: op = c.LMX_WALK_OP_SUB
+            lresult := la - lb
+        if: op = c.LMX_WALK_OP_MUL
+            lresult := la * lb
+        if: op = c.LMX_WALK_OP_BAND
+            lresult := la & lb
+        if: op = c.LMX_WALK_OP_BOR
+            lresult := la | lb
+        if: op = c.LMX_WALK_OP_BXOR
+            lresult := la ^ lb
+        if: op = c.LMX_WALK_OP_SHL
+            lresult := la << lb
+        if: op = c.LMX_WALK_OP_SHR
+            lresult := la >> lb
+        if: op = c.LMX_WALK_OP_DIV || op = c.LMX_WALK_OP_MOD
+            if: lb = (cast: (ulong) 0)
+                return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+            if: op = c.LMX_WALK_OP_DIV
+                lresult := la / lb
+            else:
+                lresult := la % lb
+            ---
+        ---
+        return: lmx_walk_value_load(0, (cast: (@) (@ lresult)), c.LMX_TYPE_ULONG, out)
+    ---
+    if: a = c.LMX_TYPE_SIZE_T
+        size_t: wa lhs\wide
+        size_t: wb (cast: (size_t) count)
+        size_t: wresult (cast: (size_t) 0)
+        if: shifting = 0
+            wb := rhs\wide
+        ---
+        if: op = c.LMX_WALK_OP_LT
+            result := (cast: (int) (wa < wb))
+            return: lmx_walk_value_load(0, (cast: (@) (@ result)), c.LMX_TYPE_INT, out)
+        if: op = c.LMX_WALK_OP_EQ
+            result := (cast: (int) (wa = wb))
+            return: lmx_walk_value_load(0, (cast: (@) (@ result)), c.LMX_TYPE_INT, out)
+        if: op = c.LMX_WALK_OP_ADD
+            wresult := wa + wb
+        if: op = c.LMX_WALK_OP_SUB
+            wresult := wa - wb
+        if: op = c.LMX_WALK_OP_MUL
+            wresult := wa * wb
+        if: op = c.LMX_WALK_OP_BAND
+            wresult := wa & wb
+        if: op = c.LMX_WALK_OP_BOR
+            wresult := wa | wb
+        if: op = c.LMX_WALK_OP_BXOR
+            wresult := wa ^ wb
+        if: op = c.LMX_WALK_OP_SHL
+            wresult := wa << wb
+        if: op = c.LMX_WALK_OP_SHR
+            wresult := wa >> wb
+        if: op = c.LMX_WALK_OP_DIV || op = c.LMX_WALK_OP_MOD
+            if: wb = (cast: (size_t) 0)
+                return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+            if: op = c.LMX_WALK_OP_DIV
+                wresult := wa / wb
+            else:
+                wresult := wa % wb
+            ---
+        ---
+        return: lmx_walk_value_load(0, (cast: (@) (@ wresult)), c.LMX_TYPE_SIZE_T, out)
+    ---
+    return: c.LMX_WALK_INVALID
 end: lmx_walk_value_bin
 
 fn: lmx_walk_witness_type (c.LmxArena@: arena; @: witness) int
@@ -2743,8 +3065,8 @@ end: lmx_walk_value_prepare_scalar_store
 fn: lmx_walk_value_store_with_writer (c.LmxArena@: arena; c.LmxWalkPlace@: place; c.LmxWalkValue@: value; c.LmxPointerCellWrite: write) int
     c.LmxWalkValue: received
     c.LmxWalkValue@: received_p @ received
-    size_t: number 0U
-    int: ty 0
+    @: storage void 0
+    size_t: bytes 0U
     int: status 0
     c.LmxPool@: scalar_pool 0
     c.LmxWalkValue@: scalar_context 0
@@ -2790,13 +3112,18 @@ fn: lmx_walk_value_store_with_writer (c.LmxArena@: arena; c.LmxWalkPlace@: place
     status := lmx_walk_value_receive(value, place\type, received_p)
     if: status != c.LMX_WALK_OK
         return: status
-    if: lmx_walk_value_number(received_p, @ number, @ ty) != c.LMX_WALK_OK || ty != place\type
+    if: received_p\type != place\type
         return: c.LMX_WALK_INVALID
-    status := lmx_walk_store_numeric_raw((cast: (@) place\address), ty, number)
-    if: status = c.LMX_WALK_OK && place\context != 0
+    storage := lmx_walk_value_storage(received_p)
+    bytes := lmx_walk_type_size(place\type)
+    if: storage = 0 || bytes = 0U
+        return: c.LMX_WALK_INVALID
+    # Admission has selected this exact type. Store its bytes without a narrower intermediate integer.
+    c.memcpy(place\address, storage, bytes)
+    if: place\context != 0
         c.lmx_value_context_copy(place\context, 0)
     ---
-    return: status
+    return: c.LMX_WALK_OK
 end: lmx_walk_value_store_with_writer
 
 # The slot declares a model: a Structure field, or a reference field with a declared Structure (lmx_source_place_model_set).
@@ -6056,14 +6383,12 @@ fn: lmx_walk_throw (c.LmxWalkFrame@: f; c.Lmx@: code; c.LmxWalkValue@: out) int
                 return: c.LMX_WALK_INVALID
             if: item\kind = c.LMX_WALK_VALUE_NUMBER
                 ty := item\type
-                if: lmx_walk_value_number(values + i, @ number, @ ty) != c.LMX_WALK_OK
+                if: lmx_walk_value_storage(item) = 0 || lmx_walk_type_size(ty) = 0U
                     return: c.LMX_WALK_INVALID
                 cell := c.lmx_scalar_new_physical_profiled((cast: (c.LmxArena@) f\arena), ty, 0)
                 if: cell = 0
                     return: c.LMX_WALK_NOMEM
-                if: lmx_walk_store_numeric_raw(cell, ty, number) != c.LMX_WALK_OK
-                    return: c.LMX_WALK_INVALID
-                ---
+                c.memcpy(cell, lmx_walk_value_storage(item), lmx_walk_type_size(ty))
             else:
                 if: item\kind != c.LMX_WALK_VALUE_REFERENCE || (item\ref != 0 && lmx_walk_kind(f, (cast: (@) item\ref)) != c.LMX_KIND_STRUCT)
                     return: c.LMX_WALK_INVALID
@@ -6237,19 +6562,21 @@ end: lmx_walk_body_in
 fn: lmx_walk_cell_copy (c.LmxArena@: arena; @: cell) @
     @: fresh void 0
     int: ty
-    size_t: number 0U
+    size_t: bytes 0U
     if: arena = 0 || cell = 0
         return: cell
     ty := lmx_walk_numeric_type(arena, cell)
     if: ty = c.LMX_TYPE_NONE
         return: cell
-    if: lmx_walk_load_numeric(arena, cell, @ number) != c.LMX_WALK_OK
+    bytes := lmx_walk_type_size(ty)
+    if: bytes = 0U
         return: 0
     # An explicit storage copy preserves full physical identity. Its first
     # fill is not an ordinary mutation of the source or of live graph storage.
     fresh := c.lmx_scalar_new_physical_profiled(arena, ty, 0)
-    if: fresh = 0 || lmx_walk_store_numeric_raw(fresh, ty, number) != c.LMX_WALK_OK
+    if: fresh = 0
         return: 0
+    c.memcpy(fresh, cell, bytes)
     return: fresh
 end: lmx_walk_cell_copy
 
@@ -8603,16 +8930,25 @@ fn: lmx_walk_eval_result_in (c.LmxWalkFrame@: f; @: operand; c.LmxWalkValue@: ou
         root := c.lmx_graph_value_in((cast: (c.LmxArena@) f\arena), code, 1U)
         if: root = 0
             return: c.LMX_WALK_INVALID
-        # A three-part LIT retains a contextual magnitude and U spelling.
+        # Four parts retain the full typed magnitude, U spelling, and explicit source sign.
         # A two-part LIT still produces its declared typed value unchanged.
-        if: code_fields\size = 3U
+        if: code_fields\size = 4U
             leaf := c.lmx_graph_value_in((cast: (c.LmxArena@) f\arena), code, 2U)
-            if: leaf = 0 || c.lmx_type_base(c.lmx_domain_type((cast: (c.LmxArena@) f\arena), root)) != c.LMX_TYPE_SIZE_T || c.lmx_type_base(c.lmx_domain_type((cast: (c.LmxArena@) f\arena), leaf)) != c.LMX_TYPE_SIZE_T
+            @: sign_cell void c.lmx_graph_value_in((cast: (c.LmxArena@) f\arena), code, 3U)
+            int: magnitude_type c.lmx_type_base(c.lmx_domain_type((cast: (c.LmxArena@) f\arena), root))
+            ullong: literal_magnitude (cast: (ullong) 0)
+            int: literal_negative 0
+            if: leaf = 0 || sign_cell = 0 || (magnitude_type != c.LMX_TYPE_SIZE_T && magnitude_type != c.LMX_TYPE_ULONG) || c.lmx_type_base(c.lmx_domain_type((cast: (c.LmxArena@) f\arena), leaf)) != c.LMX_TYPE_SIZE_T || c.lmx_type_base(c.lmx_domain_type((cast: (c.LmxArena@) f\arena), sign_cell)) != c.LMX_TYPE_SIZE_T
                 return: c.LMX_WALK_INVALID
             size_t: suffix c.lmx_size_value_known(leaf)
-            if: suffix > 1U
+            size_t: source_negative c.lmx_size_value_known(sign_cell)
+            if: suffix > 1U || source_negative > 1U
                 return: c.LMX_WALK_INVALID
-            return: lmx_walk_value_lit(out, c.lmx_size_value_known(root), (cast: (int) suffix))
+            if: lmx_walk_value_cell((cast: (c.LmxArena@) f\arena), root, @ value) != c.LMX_WALK_OK || lmx_walk_value_magnitude(@ value, @ literal_magnitude, @ literal_negative) != c.LMX_WALK_OK
+                return: c.LMX_WALK_INVALID
+            return: lmx_walk_value_lit(out, literal_magnitude, (cast: (int) suffix), (cast: (int) source_negative))
+        if: code_fields\size != 2U
+            return: c.LMX_WALK_INVALID
         return: lmx_walk_value_cell((cast: (c.LmxArena@) f\arena), root, out)
     c.lmx_execution_roots_push((cast: (c.LmxArena@) f\arena), @ value_roots, (cast: (@) (@ value)), 1U, 0, 0U, 0, 0)
     c.lmx_execution_roots_push((cast: (c.LmxArena@) f\arena), @ other_roots, (cast: (@) (@ other)), 1U, 0, 0U, 0, 0)
@@ -8951,16 +9287,16 @@ fn: lmx_walk_eval_result_in (c.LmxWalkFrame@: f; @: operand; c.LmxWalkValue@: ou
         status := lmx_walk_eval(f, c.lmx_graph_value_in((cast: (c.LmxArena@) f\arena), code, 1U), @ value)
         if: status != c.LMX_WALK_OK
             return: status
-        if: lmx_walk_value_number(@ value, @ ua, @ a) != c.LMX_WALK_OK
+        if: lmx_walk_value_truth(@ value, @ a) != c.LMX_WALK_OK
             return: c.LMX_WALK_INVALID
-        if: (op = c.LMX_WALK_OP_AND && ua = 0U) || (op = c.LMX_WALK_OP_OR && ua != 0U)
+        if: (op = c.LMX_WALK_OP_AND && a = 0) || (op = c.LMX_WALK_OP_OR && a != 0)
             return: lmx_walk_value_num(out, c.LMX_TYPE_INT, (cast: (size_t) (op = c.LMX_WALK_OP_OR)))
         status := lmx_walk_eval(f, c.lmx_graph_value_in((cast: (c.LmxArena@) f\arena), code, 2U), @ other)
         if: status != c.LMX_WALK_OK
             return: status
-        if: lmx_walk_value_number(@ other, @ ub, @ b) != c.LMX_WALK_OK
+        if: lmx_walk_value_truth(@ other, @ b) != c.LMX_WALK_OK
             return: c.LMX_WALK_INVALID
-        return: lmx_walk_value_num(out, c.LMX_TYPE_INT, (cast: (size_t) (ub != 0U)))
+        return: lmx_walk_value_load(0, (cast: (@) (@ b)), c.LMX_TYPE_INT, out)
     # Slice 261 (design 4.5 B2b-2d, P1-PTR-COVERAGE): [receive, value, witness, depth, leaf] -- a runtime-typed value at a
     # pointer place whose shape the translator knows: the one receive by the actual pointees (lmx_walk_value_receive_pointer),
     # the same call the native code makes at that place; the received value takes the witness's type.  An absent value
@@ -9016,9 +9352,9 @@ fn: lmx_walk_eval_result_in (c.LmxWalkFrame@: f; @: operand; c.LmxWalkValue@: ou
         status := lmx_walk_eval(f, c.lmx_graph_value_in((cast: (c.LmxArena@) f\arena), code, 1U), @ value)
         if: status != c.LMX_WALK_OK
             return: status
-        if: lmx_walk_value_number(@ value, @ wv, @ a) != c.LMX_WALK_OK
+        if: lmx_walk_value_truth(@ value, @ a) != c.LMX_WALK_OK
             return: c.LMX_WALK_INVALID
-        if: wv != 0U
+        if: a != 0
             return: lmx_walk_body(f, c.lmx_graph_ref_struct_in((cast: (c.LmxArena@) f\arena), code, 2U), 0U)
         if: code_fields\size > 3U
             return: lmx_walk_body(f, c.lmx_graph_ref_struct_in((cast: (c.LmxArena@) f\arena), c.lmx_graph_ref_struct_in((cast: (c.LmxArena@) f\arena), code, 3U), 1U), 0U)
@@ -9050,8 +9386,8 @@ fn: lmx_walk_eval_result_in (c.LmxWalkFrame@: f; @: operand; c.LmxWalkValue@: ou
             if: op != c.LMX_WALK_OP_UNTIL
                 status := lmx_walk_eval(f, c.lmx_graph_value_in((cast: (c.LmxArena@) f\arena), code, 1U), @ value)
                 if: status = c.LMX_WALK_OK
-                    status := lmx_walk_value_number(@ value, @ wv, @ a)
-                if: status != c.LMX_WALK_OK || wv = 0U
+                    status := lmx_walk_value_truth(@ value, @ a)
+                if: status != c.LMX_WALK_OK || a = 0
                     going := 0
                 ---
             ---
@@ -9080,8 +9416,8 @@ fn: lmx_walk_eval_result_in (c.LmxWalkFrame@: f; @: operand; c.LmxWalkValue@: ou
             if: going != 0 && op = c.LMX_WALK_OP_UNTIL
                 status := lmx_walk_eval(f, c.lmx_graph_value_in((cast: (c.LmxArena@) f\arena), code, 1U), @ value)
                 if: status = c.LMX_WALK_OK
-                    status := lmx_walk_value_number(@ value, @ wv, @ a)
-                if: status != c.LMX_WALK_OK || wv != 0U
+                    status := lmx_walk_value_truth(@ value, @ a)
+                if: status != c.LMX_WALK_OK || a != 0
                     going := 0
                 ---
             ---
@@ -10378,12 +10714,9 @@ fn: lmx_callable_args_value (c.LmxArena@: arena; c.Lmx@: code; c.Lmx@@: out) int
             status := lmx_walk_value_receive(@ current, numeric, @ current)
             if: status != c.LMX_WALK_OK
                 return: status
-            status := lmx_walk_value_number(@ current, @ number, @ ty)
-            if: status != c.LMX_WALK_OK
-                return: status
-            status := lmx_walk_store_numeric_raw(cell, numeric, number)
-            if: status != c.LMX_WALK_OK
-                return: status
+            if: lmx_walk_value_storage(@ current) = 0 || lmx_walk_type_size(numeric) = 0U
+                return: c.LMX_WALK_INVALID
+            c.memcpy(cell, lmx_walk_value_storage(@ current), lmx_walk_type_size(numeric))
             if: c.lmx_graph_ref_store_in(arena, built, j, cell) != 0
                 return: c.LMX_WALK_NOMEM
         ---

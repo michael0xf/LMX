@@ -1,0 +1,27 @@
+# A ready ULONG survives Array storage and readback, and its RHS runs once.
+# This ordinary program tests checked transport in native and walked execution.
+# The separate machine-local Array pin remains OPEN at the existing collector limit.
+
+fn: cn_array_rhs (@: seen int) ulong
+    seen[0U] := seen[0U] + 1
+    ulong: result 0U
+    return: ~ result
+end: cn_array_rhs
+
+fn: cn_array_store () int
+    []: ulong items 2
+    []: int seen 1
+    seen[0U] := 0
+    size_t: at 1U
+    items[at] := cn_array_rhs(@ seen[0U])
+    if: seen[0U] != 1
+        return: 11
+    ulong: expected 0U
+    expected := ~ expected
+    if: items[at] != expected
+        return: 12
+    return: 7
+end: cn_array_store
+
+send: exit(exit_code: cn_array_store(); stdout: ""; stderr: "")
+return

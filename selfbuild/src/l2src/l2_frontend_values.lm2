@@ -415,6 +415,17 @@ fn: lm_compiler_emit_scalar_aliases (c.FILE@: out) int
     int: row -1
     int: old -1
     int: started 0
+    int@: alloc_err_cell (cast: (int@) (@ c.l2_alloc_err))
+    c.LmP0Text: wide_storage
+    c.LmP0Text@: wide @ wide_storage
+    # The widest unsigned scalar, which the generated numeric views name for the magnitude of a contextual
+    # literal, is a foreign scalar of this unit like any other: it is interned here, before the aliases are
+    # written, so that its alias is among them. A profile without that row (or no primitive table) interns
+    # nothing, and then no generated text names it.
+    wide\data := "ullong"
+    wide\length := 6U
+    if: lm_compiler_foreign_byvalue(wide) < 0 && alloc_err_cell[0] != 0
+        return: 1
     while: i < count[0]
         row := -1
         if: raw_c[0][i] = 0

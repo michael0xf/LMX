@@ -1,0 +1,90 @@
+# The same ready values survive conditions, arithmetic, materialization and an ordinary typed store.
+# The literal tests distinguish positive SIZE_MAX from -1 before any receiving type is selected.
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_walk.h.lm1"
+predef: "l2src/lmx_walk_values.h.lm1"
+predef: "l2src/lmx_value_owned.h.lm1"
+include: "<limits.h>" "<stdint.h>" "<string.h>"
+
+fn: cn_values () int
+    c.LmxArena: owned
+    c.LmxArena@: arena @ owned
+    c.LmxWalkValue: value
+    c.LmxWalkValue@: value_ptr @ value
+    c.LmxWalkValue: zero
+    c.LmxWalkValue: result
+    c.LmxWalkValue: negative
+    c.LmxWalkPlace: place
+    @: cell void 0
+    ulong: source c.ULONG_MAX / (cast: (ulong) 2U) + (cast: (ulong) 1U)
+    ulong: empty (cast: (ulong) 0U)
+    ulong: target (cast: (ulong) 0U)
+    int: truth 0
+    int: sign 0
+    int: minimum c.INT_MIN
+    char: byte (cast: (char) 255U)
+    int: signed_byte 0
+    ullong: expected_byte (cast: (ullong) 0)
+    ullong: magnitude (cast: (ullong) 0)
+    c.memset((cast: (@) arena), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(arena) != 0
+        return: 11
+    # This branch is the old ULONG64/SIZE_T32 failure: the value is nonzero with a zero low word.
+    if: c.ULONG_MAX > c.SIZE_MAX
+        source := (cast: (ulong) c.SIZE_MAX) + (cast: (ulong) 1U)
+    if: c.lmx_walk_value_load(0, (cast: (@) (@ source)), c.LMX_TYPE_ULONG, @ value) != c.LMX_WALK_OK || c.lmx_walk_value_load(0, (cast: (@) (@ empty)), c.LMX_TYPE_ULONG, @ zero) != c.LMX_WALK_OK
+        return: 12
+    if: c.lmx_walk_value_load(0, (cast: (@) (@ value_ptr\longnum)), c.LMX_TYPE_ULONG, value_ptr) != c.LMX_WALK_OK || value_ptr\longnum != source
+        return: 31
+    if: c.lmx_walk_value_truth(@ value, @ truth) != c.LMX_WALK_OK || truth != 1
+        return: 13
+    if: c.lmx_walk_value_bin(c.LMX_WALK_OP_EQ, @ value, @ zero, @ result) != c.LMX_WALK_OK || result\number != 0
+        return: 14
+    if: c.lmx_walk_value_bin(c.LMX_WALK_OP_SUB, @ value, @ zero, @ result) != c.LMX_WALK_OK || result\longnum != source
+        return: 15
+    if: c.lmx_walk_value_unary(c.LMX_WALK_OP_BNOT, @ value, @ result) != c.LMX_WALK_OK || result\longnum != c.ULONG_MAX - source
+        return: 16
+    if: c.lmx_walk_value_unary(c.LMX_WALK_OP_NEG, @ value, @ result) != c.LMX_WALK_OK || result\longnum != (cast: (ulong) 0U) - source
+        return: 17
+    c.memset((cast: (@) (@ place)), 0, c.sizeof(c.LmxWalkPlace))
+    place\address := (cast: (@) (@ target))
+    place\type := c.LMX_TYPE_ULONG
+    if: c.lmx_walk_value_store(arena, @ place, @ value) != c.LMX_WALK_OK || target != source
+        return: 18
+    if: c.lmx_walk_value_materialize(arena, @ value, @ cell) != c.LMX_WALK_OK || c.lmx_ulong_value_known(cell) != source
+        return: 19
+    cell := c.lmx_walk_cell_copy(arena, cell)
+    if: cell = 0 || c.lmx_ulong_value_known(cell) != source
+        return: 30
+    # materialize must save its source before clearing an aliased output pointer.
+    if: c.lmx_walk_value_materialize(arena, @ value, (cast: (@@: void) (@ value_ptr\ref))) != c.LMX_WALK_OK || c.lmx_ulong_value_known(value_ptr\ref) != source
+        return: 20
+    if: c.lmx_walk_value_lit(@ value, (cast: (ullong) c.SIZE_MAX), 0, 0) != c.LMX_WALK_OK || c.lmx_walk_value_lit(@ negative, (cast: (ullong) 1), 0, 1) != c.LMX_WALK_OK
+        return: 21
+    if: c.lmx_walk_value_magnitude(@ value, @ magnitude, @ sign) != c.LMX_WALK_OK || magnitude != (cast: (ullong) c.SIZE_MAX) || sign != 0
+        return: 22
+    if: c.lmx_walk_value_truth(@ value, @ truth) != c.LMX_WALK_OK || truth != 1
+        return: 23
+    if: c.lmx_walk_value_receive(@ value, c.LMX_TYPE_SIZE_T, @ result) != c.LMX_WALK_OK || result\wide != c.SIZE_MAX
+        return: 24
+    if: c.lmx_walk_value_receive(@ negative, c.LMX_TYPE_SIZE_T, @ result) != c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+        return: 25
+    if: c.lmx_walk_value_load(0, (cast: (@) (@ minimum)), c.LMX_TYPE_INT, @ value) != c.LMX_WALK_OK || c.lmx_walk_value_magnitude(@ value, @ magnitude, @ sign) != c.LMX_WALK_OK || sign != 1 || magnitude != (cast: (ullong) c.INT_MAX) + (cast: (ullong) 1)
+        return: 26
+    if: c.lmx_walk_value_lit(@ value, magnitude, 0, 1) != c.LMX_WALK_OK || c.lmx_walk_value_receive(@ value, c.LMX_TYPE_INT, @ result) != c.LMX_WALK_OK || result\number != c.INT_MIN
+        return: 27
+    if: c.lmx_walk_value_lit(@ value, (cast: (ullong) 0), 1, 0) != c.LMX_WALK_OK || c.lmx_walk_value_unary(c.LMX_WALK_OP_BNOT, @ value, @ result) != c.LMX_WALK_OK
+        return: 28
+    if: c.lmx_walk_value_magnitude(@ result, @ magnitude, @ sign) != c.LMX_WALK_OK || sign != 0 || magnitude != (cast: (ullong) c.UINT_MAX)
+        return: 29
+    signed_byte := c.lmx_char_value_known((cast: (@) (@ byte)))
+    expected_byte := (cast: (ullong) signed_byte)
+    if: signed_byte < 0
+        expected_byte := (cast: (ullong) (0 - signed_byte))
+    if: c.lmx_walk_value_load(0, (cast: (@) (@ byte)), c.LMX_TYPE_CHAR, @ value) != c.LMX_WALK_OK || c.lmx_walk_value_magnitude(@ value, @ magnitude, @ sign) != c.LMX_WALK_OK || sign != (cast: (int) (signed_byte < 0)) || magnitude != expected_byte
+        return: 32
+    if: c.lmx_walk_value_load(0, (cast: (@) (@ byte)), c.LMX_TYPE_UNSIGNED_CHAR, @ value) != c.LMX_WALK_OK || c.lmx_walk_value_magnitude(@ value, @ magnitude, @ sign) != c.LMX_WALK_OK || sign != 0 || magnitude != (cast: (ullong) 255U)
+        return: 33
+    c.lmx_arena_release(arena)
+    return: 7
+end: cn_values

@@ -215,33 +215,33 @@ fn: lm_compiler_num (const: (c.LmP0Text@: text)) int
     return: (cast: (int) (1))
 end: lm_compiler_num
 
-fn: lm_compiler_num_value_span (const: (c.LmP0Text@: text); size_t: start; size_t: stop; size_t@: out) int
+fn: lm_compiler_num_value_span (const: (c.LmP0Text@: text); size_t: start; size_t: stop; ullong@: out) int
     size_t: i start
-    size_t: acc 0U
-    size_t: digit 0U
-    size_t: base 10U
+    ullong: acc (cast: (ullong) 0)
+    int: digit 0
+    int: base 10
     if: text = 0 || text\data = 0 || out = 0 || start >= stop || stop > text\length
         return: (cast: (int) (0))
     if: stop - start > 1U && text\data[start] = 48
-        base := 8U
+        base := 8
         if: text\data[start + 1U] = 120 || text\data[start + 1U] = 88
-            base := 16U
+            base := 16
             i := start + 2U
             if: i >= stop
                 return: (cast: (int) (0))
         ---
     ---
     while: i < stop
-        digit := (cast: (size_t) -1)
+        digit := -1
         if: text\data[i] >= 48 && text\data[i] <= 57
-            digit := (cast: (size_t) (text\data[i] - 48))
+            digit := text\data[i] - 48
         if: text\data[i] >= 65 && text\data[i] <= 70
-            digit := (cast: (size_t) (text\data[i] - 65 + 10))
+            digit := text\data[i] - 65 + 10
         if: text\data[i] >= 97 && text\data[i] <= 102
-            digit := (cast: (size_t) (text\data[i] - 97 + 10))
-        if: digit >= base || acc > (((cast: (size_t) -1) - digit) / base)
+            digit := text\data[i] - 97 + 10
+        if: digit < 0 || digit >= base || acc > ((cast: (ullong) c.ULLONG_MAX) - (cast: (ullong) digit)) / (cast: (ullong) base)
             return: (cast: (int) (0))
-        acc := acc * base + digit
+        acc := acc * (cast: (ullong) base) + (cast: (ullong) digit)
         i := i + 1U
     ---
     \out := acc
@@ -250,12 +250,17 @@ end: lm_compiler_num_value_span
 
 fn: lm_compiler_num_value (const: (c.LmP0Text@: text); size_t@: out) int
     size_t: stop
+    ullong: wide (cast: (ullong) 0)
     if: lm_compiler_num(text) = 0 || out = 0
         return: (cast: (int) (0))
     stop := text\length
     if: text\data[stop - 1U] = 85 || text\data[stop - 1U] = 117
         stop := stop - 1U
-    return: (cast: (int) (lm_compiler_num_value_span(text, 0U, stop, out)))
+    # The bounded WORD reader (a count, a width, a retained word): the literal is read whole and refused above size_t.
+    if: lm_compiler_num_value_span(text, 0U, stop, @ wide) = 0 || wide > (cast: (ullong) (cast: (size_t) -1))
+        return: (cast: (int) (0))
+    \out := (cast: (size_t) wide)
+    return: (cast: (int) (1))
 end: lm_compiler_num_value
 
 fn: lm_compiler_octal_digits (const: (c.LmP0Text@: text)) int
@@ -381,6 +386,17 @@ fn: lm_compiler_u32_fits (const: (c.LmP0Text@: text)) int
     return: (cast: (int) ((cast: (int) (value <= (cast: (size_t) (cast: (unsigned) -1))))))
 end: lm_compiler_u32_fits
 
+# A ulong literal fits when its full magnitude, read by the wide parser, is at most ULONG_MAX: no word and no unsigned
+# bound.
+fn: lm_compiler_ulong_fits (const: (c.LmP0Text@: text)) int
+    int: neg 0
+    int: usuf 0
+    ullong: wide (cast: (ullong) 0)
+    if: lm_compiler_rw_num_lit(text, @ neg, @ wide, @ usuf) = 0 || neg != 0
+        return: (cast: (int) (0))
+    return: (cast: (int) ((cast: (int) (wide <= (cast: (ullong) c.ULONG_MAX)))))
+end: lm_compiler_ulong_fits
+
 fn: lm_compiler_char_digit_fits (const: (c.LmP0Text@: text)) int
     size_t: bits 0U
     int: value
@@ -407,7 +423,7 @@ fn: lm_compiler_literal_fits_kind (const: (c.LmP0Text@: text); int: kind) int
     if: kind = 3
         return: (cast: (int) (lm_compiler_u32_fits(text)))
     if: kind = 4
-        return: (cast: (int) (lm_compiler_u32_fits(text)))
+        return: (cast: (int) (lm_compiler_ulong_fits(text)))
     return: (cast: (int) (1))
 end: lm_compiler_literal_fits_kind
 
@@ -1452,11 +1468,11 @@ end: lm_compiler_reference_atom
 fn: lm_compiler_reference_null_literal (c.LmP0Field@: first; int: n) int
     int: neg 0
     int: uns 0
-    size_t: mag 1U
+    ullong: mag (cast: (ullong) 1)
     lm_compiler_reference_fields(@ first, @ n)
     if: n != 1 || first = 0 || first\value = 0 || first\value\kind != c.LM_P0_NODE_ATOM || first\value\as = 0 || first\value\as\atom = 0
         return: (cast: (int) (0))
-    if: lm_compiler_rw_num_lit((cast: (const: c.LmP0Text@) first\value\as\atom), @ neg, @ mag, @ uns) != 0 && mag = 0U
+    if: lm_compiler_rw_num_lit((cast: (const: c.LmP0Text@) first\value\as\atom), @ neg, @ mag, @ uns) != 0 && mag = (cast: (ullong) 0)
         return: (cast: (int) (1))
     return: (cast: (int) (0))
 end: lm_compiler_reference_null_literal
@@ -2073,7 +2089,7 @@ end: lm_compiler_host_is_body
 fn: lm_compiler_value_null_literal (c.L2ValueSpan@: value) int
     int: negative
     int: unsigned_literal
-    size_t: magnitude
+    ullong: magnitude (cast: (ullong) 0)
     if: value = 0 || value\grammar = 0 || value\node = 0 || value\count < 1
         return: (cast: (int) (0))
     if: value\values != 0 && value\value_n = 1 && (value\grammar = 3 || value\node\kind = c.LM_P0_NODE_STRUCTURE)
@@ -2084,7 +2100,7 @@ fn: lm_compiler_value_null_literal (c.L2ValueSpan@: value) int
     ---
     if: value\count != 1 || value\node\kind != c.LM_P0_NODE_ATOM || value\node\as = 0
         return: (cast: (int) (0))
-    return: (cast: (int) ((cast: (int) (lm_compiler_rw_num_lit((cast: (const: c.LmP0Text@) value\node\as\atom), @ negative, @ magnitude, @ unsigned_literal) != 0 && magnitude = 0U))))
+    return: (cast: (int) ((cast: (int) (lm_compiler_rw_num_lit((cast: (const: c.LmP0Text@) value\node\as\atom), @ negative, @ magnitude, @ unsigned_literal) != 0 && magnitude = (cast: (ullong) 0)))))
 end: lm_compiler_value_null_literal
 
 fn: lm_compiler_atoms_len (c.LmP0Field@: f; int: cnt) size_t
@@ -2770,12 +2786,12 @@ fn: lm_compiler_rw_numeric_declaration (const: (c.L2Declaration@: declaration)) 
     return: (cast: (int) (0))
 end: lm_compiler_rw_numeric_declaration
 
-fn: lm_compiler_rw_num_lit (const: (c.LmP0Text@: t); int@: neg; size_t@: mag; int@: usuf) int
+fn: lm_compiler_rw_num_lit (const: (c.LmP0Text@: t); int@: neg; ullong@: mag; int@: usuf) int
     size_t: i 0U
     size_t: stop
-    size_t: v 0U
+    ullong: v (cast: (ullong) 0)
     \neg := 0
-    \mag := 0U
+    \mag := (cast: (ullong) 0)
     \usuf := 0
     if: t = 0 || t\data = 0 || t\length = 0U
         return: (cast: (int) (0))

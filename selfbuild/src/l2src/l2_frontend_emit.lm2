@@ -7583,81 +7583,79 @@ fn: lm_compiler_rw_carry_work (int: into; int: oi; int@: out) int
 end: lm_compiler_rw_carry_work
 
 # Original: l2src/l2trans.lm1:24327
-fn: lm_compiler_rw_tlit (const: (c.LmP0Node@: source_node); int: parent; int: ty; int: neg; size_t: mag; int: usuf; int@: out) int
+fn: lm_compiler_rw_tlit (const: (c.LmP0Node@: source_node); int: parent; int: ty; int: neg; ullong: mag; int: usuf; int@: out) int
     int@: rw_emit_cell (cast: (int@) (@ c.l2_rw_emit))
     c.FILE@@: out_cell (cast: (c.FILE@@) (@ c.l2_out))
     int: v 0
     int: status
-    # A runtime receiving contract cannot choose a primitive storage type.
-    # Retain magnitude and U spelling in the ordinary LIT carrier; native
-    # and walker both produce lmx_walk_value_lit from these same parts.
+    # A runtime receiving contract retains the source sign beside the full magnitude.
     if: c.lm_compiler_ft_is_free(ty) != 0
-        if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_LIT", 3, out) != 0
+        if: c.ULONG_MAX > c.SIZE_MAX
+            if: mag > (cast: (ullong) c.ULONG_MAX)
+                return: c.lm_compiler_rw_refuse(source_node, "a literal out of its type's range")
+            ---
+        else:
+            if: mag > (cast: (ullong) c.SIZE_MAX)
+                return: c.lm_compiler_rw_refuse(source_node, "a literal out of its type's range")
+            ---
+        ---
+        if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_LIT", 4, out) != 0
             return: 1
         if: rw_emit_cell[0] = 0
             return: 0
-        # Slice 297: a negated literal is negated in its C99 type, as the kernel's negation is (lmx_walk_value_unary): one of
-        # no U spelling is an int, its magnitude the size_t two's complement -- `0U - n` wrapped in unsigned int and read as a
-        # positive magnitude (lmx_walk_value_lit_fits); one spelled U keeps its unsigned type's wrap.
-        if: neg != 0 && usuf = 0
-            if: c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, (cast: (size_t) 0U) - %zuU) != c.LMX_WALK_OK\n            return: 1\n", \out, mag) < 0
+        if: c.ULONG_MAX > c.SIZE_MAX
+            if: c.fprintf(out_cell[0], "        if: lmx_walk_store_ulong(l2_program_arena, l2_rw%d, 1U, (cast: (ulong) %lluU)) != c.LMX_WALK_OK\n            return: 1\n", \out, mag) < 0
                 return: 1
             ---
-        if: neg != 0 && usuf != 0
-            if: c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, 0U - %zuU) != c.LMX_WALK_OK\n            return: 1\n", \out, mag) < 0
-                return: 1
-            ---
-        if: neg = 0
-            if: c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", \out, mag) < 0
+        else:
+            if: c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, (cast: (size_t) %lluU)) != c.LMX_WALK_OK\n            return: 1\n", \out, mag) < 0
                 return: 1
             ---
         ---
-        if: c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, usuf) < 0
+        if: c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 3U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, usuf, \out, neg) < 0
             return: 1
         return: 0
-    # A source null literal in pointer context is a typed reference before EQ;
-    # a numeric value that happens to be zero is never reclassified at runtime.
+    # A source null literal in pointer context is a typed reference before EQ.
     if: c.lm_compiler_oc_is_ref(ty) != 0
-        if: mag != 0U
-            return: (cast: (int) (c.lm_compiler_rw_refuse(source_node, "a reference compared with a number other than 0")))
-        return: (cast: (int) (lm_compiler_rw_reference_value(0, 0, ty, parent, out)))
+        if: mag != (cast: (ullong) 0)
+            return: c.lm_compiler_rw_refuse(source_node, "a reference compared with a number other than 0")
+        return: lm_compiler_rw_reference_value(0, 0, ty, parent, out)
     ---
     if: usuf != 0 && (ty = 0 || ty = 1)
-        return: (cast: (int) (c.lm_compiler_rw_refuse(source_node, "a U literal in a signed type")))
+        return: c.lm_compiler_rw_refuse(source_node, "a U literal in a signed type")
     if: neg != 0 && (ty = 2 || ty = 3 || ty = 36)
-        return: (cast: (int) (c.lm_compiler_rw_refuse(source_node, "a literal out of its type's range")))
+        return: c.lm_compiler_rw_refuse(source_node, "a literal out of its type's range")
     if: ty = 0
-        if: (neg = 0 && mag > 2147483647U) || (neg != 0 && mag > 2147483648U)
-            return: (cast: (int) (c.lm_compiler_rw_refuse(source_node, "a literal out of its type's range")))
-        if: neg != 0 && mag > 0U
-            v := 0 - (cast: (int) (mag - 1U)) - 1
+        if: (neg = 0 && mag > (cast: (ullong) c.INT_MAX)) || (neg != 0 && mag > (cast: (ullong) c.INT_MAX) + (cast: (ullong) 1))
+            return: c.lm_compiler_rw_refuse(source_node, "a literal out of its type's range")
+        if: neg != 0 && mag > (cast: (ullong) 0)
+            v := 0 - (cast: (int) (mag - (cast: (ullong) 1))) - 1
         else:
             v := (cast: (int) mag)
         ---
         status := c.lm_compiler_rw_lit(parent, v, out)
-        return: (cast: (int) (c.lm_compiler_expr_leaf_note(source_node, 0, status, out)))
+        return: c.lm_compiler_expr_leaf_note(source_node, 0, status, out)
     if: ty = 1
-        if: (neg = 0 && mag > (cast: (size_t) c.CHAR_MAX)) || (neg != 0 && mag > (cast: (size_t) (0 - c.CHAR_MIN)))
-            return: (cast: (int) (c.lm_compiler_rw_refuse(source_node, "a literal out of its type's range")))
+        if: (neg = 0 && mag > (cast: (ullong) c.CHAR_MAX)) || (neg != 0 && mag > (cast: (ullong) (0 - c.CHAR_MIN)))
+            return: c.lm_compiler_rw_refuse(source_node, "a literal out of its type's range")
         v := (cast: (int) mag)
         if: neg != 0
             v := 0 - v
-        ---
         status := c.lm_compiler_rw_clit(parent, v & 255, out)
-        return: (cast: (int) (c.lm_compiler_expr_leaf_note(source_node, 1, status, out)))
-    if: (ty = 3 || ty = 36) && mag > 4294967295U
-        return: (cast: (int) (c.lm_compiler_rw_refuse(source_node, "a literal out of its type's range")))
+        return: c.lm_compiler_expr_leaf_note(source_node, 1, status, out)
+    if: (ty = 2 && mag > (cast: (ullong) c.SIZE_MAX)) || (ty = 3 && mag > (cast: (ullong) c.UINT_MAX)) || (ty = 36 && mag > (cast: (ullong) c.ULONG_MAX))
+        return: c.lm_compiler_rw_refuse(source_node, "a literal out of its type's range")
     if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_LIT", 2, out) != 0
-        return: (cast: (int) (1))
+        return: 1
     if: rw_emit_cell[0] = 0
-        return: (cast: (int) (c.lm_compiler_expr_leaf_note(source_node, ty, 0, out)))
-    if: ty = 2 && c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", \out, mag) < 0
-        return: (cast: (int) (1))
-    if: ty = 3 && c.fprintf(out_cell[0], "        if: lmx_walk_store_unsigned(l2_program_arena, l2_rw%d, 1U, %uU) != c.LMX_WALK_OK\n            return: 1\n", \out, (cast: (unsigned) mag)) < 0
-        return: (cast: (int) (1))
-    if: ty = 36 && c.fprintf(out_cell[0], "        if: lmx_walk_store_ulong(l2_program_arena, l2_rw%d, 1U, %uU) != c.LMX_WALK_OK\n            return: 1\n", \out, (cast: (unsigned) mag)) < 0
-        return: (cast: (int) (1))
-    return: (cast: (int) (c.lm_compiler_expr_leaf_note(source_node, ty, 0, out)))
+        return: c.lm_compiler_expr_leaf_note(source_node, ty, 0, out)
+    if: ty = 2 && c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, (cast: (size_t) %lluU)) != c.LMX_WALK_OK\n            return: 1\n", \out, mag) < 0
+        return: 1
+    if: ty = 3 && c.fprintf(out_cell[0], "        if: lmx_walk_store_unsigned(l2_program_arena, l2_rw%d, 1U, (cast: (unsigned) %lluU)) != c.LMX_WALK_OK\n            return: 1\n", \out, mag) < 0
+        return: 1
+    if: ty = 36 && c.fprintf(out_cell[0], "        if: lmx_walk_store_ulong(l2_program_arena, l2_rw%d, 1U, (cast: (ulong) %lluU)) != c.LMX_WALK_OK\n            return: 1\n", \out, mag) < 0
+        return: 1
+    return: c.lm_compiler_expr_leaf_note(source_node, ty, 0, out)
 end: lm_compiler_rw_tlit
 
 # Original: l2src/l2trans.lm1:24568
@@ -10813,7 +10811,7 @@ fn: lm_compiler_rw_operand (const: (c.LmP0Node@: source_node); int: ty; int: par
     int: formal 0 - 1
     int: pmi 0 - 1
     int: neg 0
-    size_t: mag 0U
+    ullong: mag (cast: (ullong) 0)
     int: usuf 0
     c.LmP0Text@: t
     c.L2FrontendScratchChar8: ib_own_storage
@@ -11275,7 +11273,7 @@ fn: lm_compiler_rw_dyn_side_ty (c.L2ValueSpan@: tok; int: lo; int: hi) int
     c.L2ValueSpan@: leaf tok + lo
     int: neg 0
     int: usuf 0
-    size_t: mag 0U
+    ullong: mag (cast: (ullong) 0)
     if: lo = hi && leaf\count = 1 && leaf\node != 0 && leaf\node\kind = c.LM_P0_NODE_ATOM && leaf\node\as != 0
         if: c.lm_compiler_rw_num_lit((cast: (const: c.LmP0Text@) (leaf\node\as\atom)), @ neg, @ mag, @ usuf) != 0 && usuf != 0
             return: c.lm_compiler_free_own()
@@ -12159,7 +12157,7 @@ fn: lm_compiler_rw_machine_value (c.L2ValueSpan@: value; int: parent; int@: out)
     int: ch
     int: type
     int: kind
-    size_t: magnitude
+    ullong: magnitude
     if: value\count = 1 && port_local_node != 0 && port_local_node\kind = c.LM_P0_NODE_ATOM && port_local_node\as != 0
         text := port_local_node\as\atom
         if: c.lm_compiler_c_stmt_door(text) != 0 || c.lm_compiler_quoted(text) != 0 || c.lm_compiler_rw_num_lit(text, @ neg, @ magnitude, @ uns) != 0 || c.lm_compiler_rw_char_lit(text, @ ch) != 0
@@ -16706,7 +16704,7 @@ fn: lm_compiler_mrs_build (int: res; const: (c.LmP0Node@: stmt); const: (c.LmP0N
     int: callee -1
     int: j 0
     int: dkind 0
-    size_t: dbits 0U
+    ullong: dbits (cast: (ullong) 0)
     int: fslot -2
     int: filled 0
     int: fq 0
@@ -19091,7 +19089,7 @@ fn: lm_compiler_rw_formal_default (int: entry; int: mi; int: j; int: ty) int
     c.L2FrontendScratchChar48: lit_storage
     char@: lit (cast: (char@) lit_storage\buffer)
     const: (char@: store 0)
-    size_t: bits 0U
+    ullong: bits (cast: (ullong) 0)
     int: kind 0
     kind := (cast: (int) (c.lm_compiler_formal_default_kind(mi, j, @ bits)))
     if: kind < 0
@@ -19108,7 +19106,7 @@ fn: lm_compiler_rw_formal_default (int: entry; int: mi; int: j; int: ty) int
     ---
     if: ty = 2
         store := "lmx_size_store_known"
-        c.sprintf(lit, "%zuU", bits)
+        c.sprintf(lit, "%zuU", (cast: (size_t) bits))
     ---
     if: ty = 3
         store := "lmx_unsigned_store_known"
@@ -19116,7 +19114,7 @@ fn: lm_compiler_rw_formal_default (int: entry; int: mi; int: j; int: ty) int
     ---
     if: ty = 36
         store := "lmx_ulong_store_known"
-        c.sprintf(lit, "%zuU", bits)
+        c.sprintf(lit, "(cast: (ulong) %lluU)", bits)
     ---
     if: store = 0
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], c.lm_compiler_formal_decl_at(mi, j), "internal: a built formal default has no primitive cell type")))
@@ -19191,7 +19189,7 @@ fn: lm_compiler_rw_named_literal (c.L2ApplicationActual@: actual; int: parent; i
     int: neg 0
     int: usuf 0
     int: ch 0
-    size_t: mag 0U
+    ullong: mag (cast: (ullong) 0)
     if: actual = 0
         return: (cast: (int) (1))
     value := @ actual\value

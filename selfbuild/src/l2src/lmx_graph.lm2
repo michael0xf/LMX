@@ -3638,18 +3638,16 @@ fn: lmx_expr_tree (c.LmxGraph@: g; c.Lmx@: chain; size_t@@: out) int
 # The int a value stands for: a number of type int (or a contextual literal, which takes the type of the operation). 0 and the int in out; 4 for any other value -- the answer the interpreter
 # gives to an operand that is no int today.
 fn: lmx_expr_int_of (c.LmxWalkValue@: value; int@: out) int
-    size_t: number 0U
-    int: ty 0
-    if: c.lmx_walk_value_number(value, @ number, @ ty) != c.LMX_WALK_OK
+    if: value = 0 || out = 0 || value\present = 0 || value\kind != c.LMX_WALK_VALUE_NUMBER
         return: 4
-    if: c.lmx_type_base(ty) != c.LMX_TYPE_INT
+    if: c.lmx_type_base(value\type) != c.LMX_TYPE_INT
         return: 4
-    out[0] := (cast: (int) number)
+    out[0] := value\number
     return: 0
 
 # The value of type int with the number number: the typed value of the common analysis (a number with its type; no cell of the arena).
 fn: lmx_expr_make_int (int: number; c.LmxWalkValue@: out) int
-    if: c.lmx_walk_value_num(out, c.LMX_TYPE_INT, (cast: (size_t) number)) != c.LMX_WALK_OK
+    if: c.lmx_walk_value_load(0, (cast: (@) (@ number)), c.LMX_TYPE_INT, out) != c.LMX_WALK_OK
         return: 4
     return: 0
 

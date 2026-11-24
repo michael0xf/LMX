@@ -2918,6 +2918,12 @@ fn: lmx_walk_place_write (c.LmxArena@: arena; c.LmxWalkPlace@: place; c.LmxWalkV
         ---
         if: context != stored
             c.lmx_value_context_copy(context, @ saved)
+        # This exact member is the declared local reference place, including before its first value.
+        # Its receiving type belongs to the owner and is not replaced by the giving reference's type.
+        if: context != 0 && place\address = (cast: (@) (@ context\ref))
+            context\present := 1
+            context\kind := c.LMX_WALK_VALUE_REFERENCE
+            context\ref := raw
         return: c.LMX_WALK_OK
     bytes := lmx_walk_type_size(ty)
     if: bytes = 0U
@@ -3059,8 +3065,14 @@ fn: lmx_walk_value_pointee (c.LmxArena@: arena; c.LmxWalkValue@: holder; int: ki
     # the activation, `@x` its local address) -- as its referent; the record's actual type is the pointee's (a number's, or a
     # pointer cell's: the next level of a known pointer).
     owner := holder\referent
-    if: holder\ref != 0 && owner != 0 && (owner\kind = c.LMX_WALK_VALUE_NUMBER || owner\kind = c.LMX_WALK_VALUE_REFERENCE) && lmx_walk_value_storage(owner) = holder\ref
-        ty := owner\type
+    if: holder\ref != 0 && owner != 0
+        # The reference member has declared physical storage even while the local has no value.
+        if: owner\kind = c.LMX_WALK_VALUE_REFERENCE && (cast: (@) (@ owner\ref)) = holder\ref
+            ty := owner\type
+        else:
+            if: owner\kind = c.LMX_WALK_VALUE_NUMBER && lmx_walk_value_storage(owner) = holder\ref
+                ty := owner\type
+    ---
     # The actual pointee cell first (P1-PTR-COVERAGE): a cell of the arena's pools tells its own kind and exact type -- a
     # Structure, an Array, a number, a pointer cell (the next level of a known pointer); the pointer-code table only for
     # storage outside the pools (a free input's own record, machine storage).

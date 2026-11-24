@@ -4070,6 +4070,14 @@ fn: lm_compiler_emit_work_decl (int: k) int
     # CODE variables acquire a value only at their reached declaration.
     # Preparing the C locals neither loads a computed source nor evaluates it.
     if: c.lm_compiler_own_code_local(cur_mi_cell[0], k) != 0 && c.lm_compiler_own_is_array(own_ty_cell[0][k]) = 0
+        # This depth-one Graph reference has one payload object, WV.ref, for reads, writes and @.
+        # _from and _bound remain origin/binding coordinates; they hold no local payload.
+        if: c.lm_compiler_own_is_graph(own_ty_cell[0][k]) != 0 && c.lm_compiler_source_definition_ns(k) < 0
+            if: c.lm_compiler_emit_input_value_type(c.lm_compiler_value_ft_of_own(own_ty_cell[0][k]), 0, physical_type) != 0
+                return: 1
+            if: c.fprintf(out_cell[0], "    LmxWalkValue: %s\n    lmx_walk_value_clear(@ %s)\n    %s.kind: c.LMX_WALK_VALUE_REFERENCE\n    %s.type: %s\n", cwv_name\data, cwv_name\data, cwv_name\data, cwv_name\data, physical_type) < 0 || c.lm_compiler_emit_roots_values(cur_mi_cell[0], "    ", "l2_call_arena", (cast: (const: char@) cwv_name\data), -1, 1, 0, 0) != 0
+                return: 1
+            return: 0
         if: cty != 0
             if: c.fprintf(out_cell[0], "    %s: %s 0\n", cty, cq_name\data) < 0
                 return: 1

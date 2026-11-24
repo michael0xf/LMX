@@ -508,7 +508,7 @@ fn: lmx_value_cell_fill (c.LmxArena@: arena; @: cell; c.LmxWalkValue@: owner; @:
     # An activation-owned reference lives in the Value's actual void* member.
     # This exact owner/address identity supplies its physical ABI; an arbitrary
     # out-of-pool address still needs its own declared callback.
-    if: owner != 0 && owner\present != 0 && owner\kind = c.LMX_WALK_VALUE_REFERENCE && cell = (cast: (@) (@ owner\ref))
+    if: owner != 0 && owner\kind = c.LMX_WALK_VALUE_REFERENCE && cell = (cast: (@) (@ owner\ref))
         local_reference := 1
     if: write = 0 && local_reference = 0
         return: 1
@@ -526,6 +526,10 @@ fn: lmx_value_cell_fill (c.LmxArena@: arena; @: cell; c.LmxWalkValue@: owner; @:
         ---
         if: owner != stored
             lmx_value_context_copy(owner, @ saved)
+        if: local_reference != 0
+            owner\present := 1
+            owner\kind := c.LMX_WALK_VALUE_REFERENCE
+            owner\ref := raw
         ---
     ---
     return: status

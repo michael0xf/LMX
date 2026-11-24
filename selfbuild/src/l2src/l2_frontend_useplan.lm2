@@ -1349,9 +1349,7 @@ fn: lm_compiler_model_inst_full (int: mi; int: ni; const: (char@: ind); c.L2Tx@:
         if: c.lm_compiler_own_cached(work_mi_cell[0], oi) != 0
             if: full_value != 0
                 return: (cast: (int) c.lm_compiler_own_load_context_full(oi, work_mi_cell[0], ind, dest, context, full_value))
-            if: c.lm_compiler_tx_set(dest, "(cast: (@: Lmx) ") != 0
-                return: (cast: (int) (1))
-            return: (cast: (int) (lm_compiler_tx_own_cname(dest, "l2_q", oi, ")")))
+            return: lm_compiler_model_own_value(oi, dest)
         ---
         status := lm_compiler_emit_graph_field_value(oi, ind, dest)
     else:
@@ -1381,9 +1379,7 @@ fn: lm_compiler_model_inst_full (int: mi; int: ni; const: (char@: ind); c.L2Tx@:
                     if: mi = work_mi_cell[0] && c.lm_compiler_own_cached(mi, oi) != 0
                         if: full_value != 0
                             return: (cast: (int) c.lm_compiler_own_load_context_full(oi, work_mi_cell[0], ind, dest, context, full_value))
-                        if: c.lm_compiler_tx_set(dest, "(cast: (@: Lmx) ") != 0
-                            return: 1
-                        return: lm_compiler_tx_own_cname(dest, "l2_q", oi, ")")
+                        return: lm_compiler_model_own_value(oi, dest)
                     ---
                     status := lm_compiler_emit_graph_field_value(oi, ind, dest)
                 ---
@@ -4924,3 +4920,13 @@ fn: lm_compiler_merge_args_callee (c.LmP0Field@: first; int: span; int: mi) int
         c.lm_compiler_path_release(@ resolved)
     return: (cast: (int) (callee))
 end: lm_compiler_merge_args_callee
+
+# A model instance reads the same selected own payload as ordinary expressions.
+fn: lm_compiler_model_own_value (int: own; c.L2Tx@: dest) int
+    c.L2FrontendScratchChar1024: value_storage
+    c.L2Tx: value_tx
+    c.L2Tx@: value c.lm_compiler_tx_local(@ value_tx, (cast: (char@) value_storage\buffer), 1024U)
+    if: c.lm_compiler_own_load(own, value) != 0
+        return: 1
+    return: c.lm_compiler_tx_join(dest, "(cast: (@: Lmx) ", (cast: (const: char@) value\data), ")", 0, 0)
+end: lm_compiler_model_own_value

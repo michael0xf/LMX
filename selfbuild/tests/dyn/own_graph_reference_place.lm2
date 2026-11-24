@@ -1,0 +1,51 @@
+# Bare read/write, @ and a free lookup share one activation-local Graph reference.
+# The pointer is used only while its owning call is live. Source objects keep their fields.
+Point:
+    int: y 0
+First:
+    int: y 2
+Second:
+    int: y 9
+Third:
+    int: y 13
+fn: free_read () int
+    @: seen Point chosen
+    return: seen\y
+fn: alias_read () int
+    @: seen Point, \alias
+    return: seen\y
+fn: giving (int@: count; Point: value) Point
+    \count := \count + 1
+    return: value
+fn: run (Point: input) int
+    @: chosen Point input
+    @@: alias Point 0
+    alias := @ chosen
+    \alias := Second
+    if: chosen\y != 9 || free_read() != 9 || alias_read() != 9
+        return: 81
+    int: calls 0
+    chosen := giving(@ calls; Third)
+    if: calls != 1 || chosen\y != 13 || free_read() != 13 || alias_read() != 13
+        return: 82
+    chosen := chosen
+    if: chosen\y != 13 || free_read() != 13 || alias_read() != 13
+        return: 83
+    if: First\y != 2 || Second\y != 9 || Third\y != 13
+        return: 84
+    return: 7
+fn: uninitialized () int
+    @: chosen Point
+    @@: alias Point 0
+    alias := @ chosen
+    \alias := Second
+    if: chosen\y != 9 || free_read() != 9 || alias_read() != 9
+        return: 85
+    return: 7
+fn: all () int
+    int: result run(First)
+    if: result != 7
+        return: result
+    return: uninitialized()
+send: exit(exit_code: all(); stdout: ""; stderr: "")
+return

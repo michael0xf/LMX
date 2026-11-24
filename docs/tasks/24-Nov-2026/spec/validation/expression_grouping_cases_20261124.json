@@ -1,0 +1,575 @@
+{
+  "revision": "2026-11-24",
+  "status": "NORMATIVE_CASES_NOT_RUN",
+  "scope": "General structural Expression grouping and separate application adaptation; no production parser/compiler implementation supplied",
+  "rules": [
+    "../LMX_semantics.en.md#expression-structural-grouping",
+    "../LMX_semantics.ru.md#expression-structural-grouping",
+    "../LMX_semantics.en.md#operand-right-only-opening",
+    "../LMX_semantics.en.md#group-assign",
+    "../LMX_semantics.en.md#receiver-structure-sequences",
+    "../EXPRESSION_GROUPING.md",
+    "../LMX_semantics.en.md#expression-structure-parent-guard",
+    "../LMX_semantics.ru.md#expression-structure-parent-guard",
+    "../LMX_semantics.en.md#operand-left-view",
+    "../LMX_semantics.ru.md#operand-left-view",
+    "../LMX_semantics.en.md#operand-prefix-method-policy",
+    "../LMX_semantics.ru.md#operand-prefix-method-policy"
+  ],
+  "public_operand_header_unchanged": {
+    "left": "@",
+    "right": "@[]",
+    "properties": [
+      "PASS_ARGS_AS_IS",
+      "PRIORITY"
+    ]
+  },
+  "phase_contract": [
+    "P0 preserves the source Structure graph.",
+    "The effect-free grouper derives structural operation/dependency units and streams at the current level under receiving contracts.",
+    "No source-only, written-group, parenthesis or returned-object flag selects graph grouping.",
+    "Expression application adaptation packages one left actual/reference bundle and right Array of references; wrapping left is not the grouping pass.",
+    "Ordinary demand, input roles, mode, admission and result handling apply; no separate conditional opening pass follows.",
+    "The clean-graph CODE/Expression walker handles anonymous Structures as groups; named Structures are groups only when actual parent differs from the current lexical owner, otherwise ordinary receiver/call handling applies. Whole VALUE/TYPE/DATA gates remain.",
+    "Built-in :: remains DATA-only; its PASS_ARGS_AS_IS metadata is unspecified because implementation is absent.",
+    "Every present left has the same internal LeftView: focus occurrence, complete value plan and pending context. No parser branch selects :=, PLACE or NAME.",
+    "The resolved operand method uses ordinary namespace consumption: whole VALUE plan versus selected PLACE/NAME focus; unconsumed context resumes with the declared result.",
+    "Argument delivery never moves prefix right[0] into absent left. Equivalent prefix/one-left assignment effects are implemented inside the assignment method only.",
+    "Attached unary operations retain their general left/right side class with exactly one atom, not a fixed ++/-- exception list."
+  ],
+  "compatibility": [
+    "The previous bare group-copy prohibition and single-written-RHS-group requirement are superseded by the author clarification.",
+    "The former conditional RHS wording is explained by current-level sequence contracts plus single-left application packaging, not a universal TYPE-model opening condition.",
+    "RAW complete expressions retain their whole original occurrence; legacy physical-token argument-count assumptions are not preserved.",
+    "A public two-Array operand ABI and arbitrary free operand placement are not introduced.",
+    "Named reference grouping requires an actual parent different from the current lexical owner. The earlier unqualified no-call/reference-group statement is corrected; anonymous Structures remain groups regardless of parent."
+  ],
+  "cases": [
+    {
+      "id": "E01",
+      "language": "LMX",
+      "code": "1 + ((2))",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected": "3",
+      "expected_value": 3,
+      "contract": "ordinary scalar int addition"
+    },
+    {
+      "id": "E02",
+      "language": "LMX",
+      "code": "2 + (1 * 2 - 3 / 4)",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected": "The inner expression is grouped by the existing numeric priorities and contributes one result to +; division follows the selected LMX numeric profile.",
+      "inner_occurrence_count": 1,
+      "no_numeric_profile_change": true
+    },
+    {
+      "id": "E03",
+      "language": "LMX",
+      "code": "2 + (47)",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected": "49",
+      "expected_value": 49,
+      "contract": "ordinary scalar int addition"
+    },
+    {
+      "id": "E04",
+      "language": "LMX",
+      "code": "(1) + (2 * 3)",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected": "7; complete source expressions are not split into physical raw tokens.",
+      "expected_value": 7,
+      "expected_right_items": 1
+    },
+    {
+      "id": "E05",
+      "language": "LMX",
+      "code": "2 + (1 2 3 4)",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected": "The right material group is one whole item. There is no implicit fold and no four-argument expansion merely from +; admission/result follow the actual numeric or sequence receiver contract.",
+      "expected_right_items": 1,
+      "automatic_fold": false
+    },
+    {
+      "id": "E06",
+      "language": "LMX",
+      "code": "((1 2))",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected": "Preserve the nested material levels. One child that is itself material is not automatically a complete scalar expression.",
+      "automatic_role_change": false
+    },
+    {
+      "id": "E07",
+      "language": "LMX",
+      "code": "((Model))",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected": "Under the explicitly selected whole VALUE contract, obtain the same Model reference as one value. This contract, not reference provenance, prevents automatic CODE interpretation.",
+      "preconditions": [
+        "Model is an available ordinary whole value",
+        "The receiving position explicitly consumes one whole VALUE, not CODE/Expression"
+      ],
+      "same_referred_identity": true
+    },
+    {
+      "id": "E08",
+      "language": "LMX",
+      "code": "((makeModel()))",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected": "Call makeModel once when demanded and receive its result under the selected whole VALUE contract. A later CODE/Expression consumer uses the name/actual-parent guard to choose group versus ordinary receiver/call handling; returning the object does not itself invoke it.",
+      "preconditions": [
+        "makeModel is an available callable returning a Structure",
+        "The result is currently consumed as one whole VALUE"
+      ],
+      "producer_calls": 1,
+      "automatic_role_change": false
+    },
+    {
+      "id": "E09",
+      "language": "LMX",
+      "code": "int -> (int -> int)",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected": "One input TYPE int and one inner callable result TYPE; never open physical fields of the produced descriptor."
+    },
+    {
+      "id": "E10",
+      "language": "LMX",
+      "code": "int -> (int int)",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected": "One whole RHS TYPE candidate, not two separate TYPE tokens. Ordinary normalizeType admission is not asserted for this material group.",
+      "expected_right_items": 1,
+      "automatic_tuple_interpretation": false
+    },
+    {
+      "id": "E11",
+      "language": "LMX",
+      "code": "target := ((next()))",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected": "Resolve the actual PLACE target, evaluate next once and assign its one retained whole value. Assignment does not implicitly reinterpret that value as CODE.",
+      "preconditions": [
+        "target is an assignable place admitting the result",
+        "next is an available ordinary callable"
+      ],
+      "producer_calls": 1,
+      "automatic_role_change": false
+    },
+    {
+      "id": "E12",
+      "language": "LMX",
+      "code": "S :: (int: x next(); return: int)",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected": ":: consumes DATA. The template is read through the common immediate declaration-field reader; next is not executed as a formal initializer during signature description.",
+      "initializer_calls": 0,
+      "consumer_rhs_eval": false
+    },
+    {
+      "id": "E13",
+      "language": "LMX",
+      "code": "f :: (int -> int int)\nfFlat :: int -> int int",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected": "Both independent declarations describe int,int -> int through common Expression grouping. :: remains DATA-only and has no evaluator.",
+      "consumer_rhs_eval": false,
+      "source_graphs_identical": false
+    },
+    {
+      "id": "E14",
+      "language": "LMX",
+      "code": "(1) rawOp (next() + 2)",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected": "The RAW receiver retains one whole original RHS expression occurrence and source context; planning runs no next call. Explicit sys\\eval uses ordinary grouping.",
+      "preconditions": [
+        "rawOp is an available user operand with ready PASS_ARGS_AS_IS=1 and a compatible contract"
+      ],
+      "calls_during_preparation": 0,
+      "expected_right_items": 1,
+      "raw_original_occurrence_preserved": true,
+      "compatibility": "Legacy handlers that expected physical tokens next,+,2 as separate actuals must use the whole prepared expression occurrence."
+    },
+    {
+      "id": "E15",
+      "language": "LMX",
+      "code": "(copy(Model))",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected": "Collect the declared field stream into a Structure for zero, one or many fields. Do not reclassify after observing output count.",
+      "preconditions": [
+        "Model is an admitted copy source"
+      ],
+      "output_field_counts": [
+        0,
+        1,
+        3
+      ],
+      "one_container_per_evaluation": true,
+      "second_copy": false
+    },
+    {
+      "id": "E16",
+      "language": "LMX",
+      "code": "ptr := (copy(()))",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected": "Assign one present empty Structure to ptr, not an omitted actual or a zero-item stream.",
+      "preconditions": [
+        "ptr is an available reference place admitting an empty Structure"
+      ],
+      "expected_right_items": 1,
+      "empty_structure_present": true
+    },
+    {
+      "id": "E17",
+      "language": "LMX",
+      "code": "(a b c) := (a c b)",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected": "The grouper exposes three left PLACE units and three current-level RHS value units. The application adapter packages one left actual; RHS snapshots precede writes.",
+      "initial_values": {
+        "a": 1,
+        "b": 2,
+        "c": 3
+      },
+      "final_values": {
+        "a": 1,
+        "b": 3,
+        "c": 2
+      },
+      "expected_left_actuals": 1,
+      "expected_right_items": 3,
+      "snapshot_before_first_write": true
+    },
+    {
+      "id": "E18",
+      "language": "LMX",
+      "code": "(a b c) := (f g h) (f g h) (f g h)",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected": "Three sibling right groups are three Structure values. Their immediate children are not flattened into nine arguments.",
+      "preconditions": [
+        "a,b,c are assignable reference places admitting the Structures",
+        "f,g,h are available ordinary values in these material groups"
+      ],
+      "expected_left_actuals": 1,
+      "expected_right_items": 3,
+      "recursive_flattening": false
+    },
+    {
+      "id": "E19",
+      "language": "LMX",
+      "code": "(target) := ((x y))",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected": "One inner Structure (x y) is the single current-level RHS item for the one PLACE target.",
+      "preconditions": [
+        "target is an available assignable reference place admitting the Structure",
+        "x,y are available ordinary values"
+      ],
+      "expected_left_actuals": 1,
+      "expected_right_items": 1,
+      "recursive_flattening": false
+    },
+    {
+      "id": "E20",
+      "language": "LMX",
+      "code": "(a b) := copy(Pair)",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected": "The bare copy field stream is accepted directly by the group-assignment sequence contract; values and count are settled before writing.",
+      "preconditions": [
+        "Pair supplies exactly two admitted fields",
+        "a,b are available assignable places"
+      ],
+      "expected_right_items": 2,
+      "snapshot_before_first_write": true,
+      "equivalent_value_assignment_to": "E21"
+    },
+    {
+      "id": "E21",
+      "language": "LMX",
+      "code": "(a b) := (copy(Pair))",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected": "The explicit collector supplies the same current-level assignment values as E20; it remains in the source graph and performs no second independent copy.",
+      "preconditions": [
+        "Same admitted fields and targets as E20 in an independent execution"
+      ],
+      "expected_right_items": 2,
+      "snapshot_before_first_write": true,
+      "collector_required": false
+    },
+    {
+      "id": "E22",
+      "language": "LMX",
+      "code": "ptr := (copy(Pair))",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected": "Scalar whole-value assignment receives one collected Structure. The group-assignment sequence contract is not imposed on this place.",
+      "preconditions": [
+        "ptr is an available reference place admitting the result"
+      ],
+      "expected_right_items": 1
+    },
+    {
+      "id": "E23",
+      "language": "LMX",
+      "code": "(op 1 2 3)",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected": "There is no written left actual; right has three items. Defaults and requiredness follow the actual operation contract.",
+      "preconditions": [
+        "op is an available operand whose contract admits this prefix shape"
+      ],
+      "left_actual_present": false,
+      "expected_right_items": 3,
+      "no_right_to_left_shift": true
+    },
+    {
+      "id": "E24",
+      "language": "LMX",
+      "code": "arg0 op arg1 arg2 arg3",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected": "The established variadic form supplies one left actual and three right items. Binary use is the subset whose selected contract requires one right item; no automatic fold.",
+      "expected_left_actuals": 1,
+      "expected_right_items": 3,
+      "automatic_fold": false,
+      "public_header": "left @; right @[]; unchanged"
+    },
+    {
+      "id": "E25",
+      "language": "LMX",
+      "code": "(a b) := copy(Three)",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected": "A three-field stream cannot satisfy two targets; refuse before the first assignment. Effects already produced while obtaining RHS are not rolled back.",
+      "preconditions": [
+        "Three supplies exactly three fields",
+        "a,b are available assignable places"
+      ],
+      "writes_before_count_refusal": 0,
+      "rollback_promised": false
+    },
+    {
+      "id": "E26",
+      "language": "LMX",
+      "code": "0 && ((tick()))",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected": "The skipped expression contributes no tick effects; structural planning is not execution.",
+      "preconditions": [
+        "tick is an available callable and ordinary logical short-circuit applies"
+      ],
+      "producer_calls": 0
+    },
+    {
+      "id": "E27",
+      "language": "LMX",
+      "code": "S :: (int: a; int: b; return: int)",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected": "DATA immediate-field reading uses the common namespace sequence mechanism. It is neither CODE W/E nor recursive runtime-Structure flattening.",
+      "consumer_rhs_eval": false,
+      "initializer_calls": 0
+    },
+    {
+      "id": "E28",
+      "language": "LMX graph",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "source_forms": "Any admitted inline, vertical, named-reference or graph-created representation with the same relevant clean graph and resolved receiving context.",
+      "expected": "The grouper uses the same graph, name, actual-parent relation and receiving context to derive the same plan. Anonymous nodes are groups; named different-parent nodes are groups; named same-parent nodes follow ordinary receiver/call handling. Provenance and delimiter spelling do not choose the branch."
+    },
+    {
+      "id": "E29",
+      "language": "LMX",
+      "code": "print: 1 + S + 2",
+      "alternative_code": "print: 1 + (a b c d) + 2",
+      "preconditions": [
+        "S is an available named Structure containing a,b,c,d",
+        "S.actual_parent differs from the current lexical owner of the CODE/Expression traversal",
+        "Each graph keeps its actual parent and lexical/evaluation context"
+      ],
+      "expected": "Under the different-parent condition, the reference S is the next group just like the inline material group. No lexical S declaration, reparenting, copy or call to S is synthesized for this group branch. Operator admission and the value of + on this material remain separate.",
+      "implicit_calls_to_S": 0,
+      "source_provenance_used_for_grouping": false,
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "declaration_context": "S: a b c d",
+      "actual_parent_preserved": true,
+      "lexical_context_preserved": true,
+      "graph_copy": false,
+      "parent_relation": "different",
+      "named_structure": true
+    },
+    {
+      "id": "E30",
+      "language": "LMX",
+      "code": "sys\\eval(G)",
+      "preconditions": [
+        "G is an available reference to the clean graph of the complete int Expression 1 + 2 under its valid evaluation context",
+        "G is anonymous, or its named Structure target has actual parent different from the current lexical owner of this explicit Expression traversal"
+      ],
+      "expected": "The explicit Expression consumer traverses the referenced graph through the group branch and returns 3. Reference spelling does not change this branch; the name/actual-parent conditions do.",
+      "expected_value": 3,
+      "implicit_calls_to_G": 0,
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "E31",
+      "language": "LMX graph",
+      "code": "S",
+      "preconditions": [
+        "The node is reached in CODE/Expression",
+        "S is named and S.actual_parent equals the current lexical owner of this traversal",
+        "S is an available ordinary callable with admissible actuals"
+      ],
+      "expected": "Select ordinary call handling for S with normal actual admission, effects, result and activation rules; do not traverse it as a noncalling group merely because it came through a reference. Planning itself does not execute its body.",
+      "named_structure": true,
+      "parent_relation": "same",
+      "handling": "ordinary_call",
+      "calls_during_planning": 0,
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "E32",
+      "language": "LMX graph",
+      "code": "(1 + 2)",
+      "preconditions": [
+        "The anonymous Structure is reached in CODE/Expression",
+        "Its actual parent equals the current lexical owner"
+      ],
+      "expected": "The anonymous node remains a group despite the same parent; evaluate in place to 3 when demanded, with no anonymous call activation.",
+      "named_structure": false,
+      "parent_relation": "same",
+      "handling": "group",
+      "expected_value": 3,
+      "anonymous_call_activations": 0,
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "E33",
+      "language": "LMX",
+      "code": "10 * 2 + 3",
+      "expected": "The + method consumes the complete left VALUE plan 10*2 and adds 3; no assignment-specific grouping rule.",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "expected_value": 23,
+      "parser_role_branch": false
+    },
+    {
+      "id": "E34",
+      "language": "LMX",
+      "code": "1 + v := 2 + 3",
+      "expected": "The assignment method consumes the selected PLACE v; its result 5 resumes the pending 1+ context.",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "preconditions": [
+        "v is an available assignable int place"
+      ],
+      "expected_value": 6,
+      "final_values": {
+        "v": 5
+      },
+      "parser_role_branch": false
+    },
+    {
+      "id": "E35",
+      "language": "LMX",
+      "code": "10 * v := 2 + 3",
+      "expected": "The same general LeftView/namespace consumption resumes the pending 10* context.",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "preconditions": [
+        "v is an available assignable int place"
+      ],
+      "expected_value": 50,
+      "final_values": {
+        "v": 5
+      },
+      "parser_role_branch": false
+    },
+    {
+      "id": "E36",
+      "language": "LMX",
+      "code": "v := v + 1",
+      "expected": "The right v is a separate occurrence and reads the old value. Names alone do not create dependencies.",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "initial_values": {
+        "v": 4
+      },
+      "final_values": {
+        "v": 5
+      },
+      "parser_role_branch": false
+    },
+    {
+      "id": "E37",
+      "language": "LMX",
+      "code": "(:= a 1)",
+      "expected": "Delivered left is ABSENT and right remains [a,1]. Inside the assignment operand method, its own prefix contract consumes a as the destination and 1 as the value; it assigns the same value as (a := 1).",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "alternative_code": "(a := 1)",
+      "preconditions": [
+        "a is an available assignable int place",
+        "The assignment operand method supports its documented prefix form"
+      ],
+      "delivered_prefix": {
+        "left": "ABSENT",
+        "right": [
+          "a",
+          "1"
+        ]
+      },
+      "delivered_one_left": {
+        "left": "a",
+        "right": [
+          "1"
+        ]
+      },
+      "final_values": {
+        "a": 1
+      },
+      "equivalence_stage": "inside_assignment_operand_method",
+      "binder_transposition": false
+    },
+    {
+      "id": "E38",
+      "language": "LMX graph",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN",
+      "case_family": "General attached-unary class, both sides",
+      "preconditions": [
+        "An available attached operation is represented by the existing left/right-side class",
+        "The operation has exactly one admitted atom and its own receiving/result contract"
+      ],
+      "expected": "The common class consumes exactly one atom on its declared side. It is not identified by a fixed ++/-- spelling list and does not enable a special :=/PLACE/NAME parser branch.",
+      "sides": [
+        "left",
+        "right"
+      ],
+      "atom_count": 1,
+      "spelling_dispatch": false,
+      "public_operand_header_changed": false
+    }
+  ],
+  "lmx_parser_execution": "NOT_RUN",
+  "translator_execution": "NOT_RUN",
+  "lmx_runtime_execution": "NOT_RUN"
+}

@@ -1,0 +1,20 @@
+Squares:
+    int: limit 0
+    Next:
+        return: int
+        next:
+            throws: Stop
+            @: owner parent(node)
+            int: i 0
+            while: i < owner\limit
+                yield: i * i
+                i += 1
+            throw: Stop()
+
+Example:
+    int: limit
+    return: @
+    run:
+        throws: copy(collect\throws)
+        @: source (merge(Squares; (int: limit limit)))
+        return: collect(source\Next\next)

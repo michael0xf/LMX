@@ -1,0 +1,414 @@
+{
+  "revision": "2026-11-24",
+  "correction": "Preserve whole TYPE material; general structural Expression grouping and separate left/right application adaptation, no TYPE-tail flattening",
+  "scope": "Normative signature, receiver-contract and structural grouping observations; execution NOT_RUN",
+  "status": "NORMATIVE_CASES_NOT_RUN",
+  "rules": [
+    "../LMX_semantics.en.md#signature-grouping",
+    "../LMX_semantics.ru.md#signature-grouping",
+    "../LMX_semantics.en.md#fn-signature",
+    "../LMX_semantics.en.md#operand-right-only-opening",
+    "../GENERIC_OPERATIONS.md#signature-argument-boundaries",
+    "../LMX_semantics.en.md#signature-description-consumption",
+    "../LMX_semantics.ru.md#signature-description-consumption",
+    "../LMX_semantics.en.md#receiver-context-invariance",
+    "../LMX_semantics.ru.md#receiver-context-invariance",
+    "../LMX_semantics.en.md#receiver-structure-sequences",
+    "../LMX_semantics.en.md#expression-structural-grouping",
+    "../EXPRESSION_GROUPING.md",
+    "expression_grouping_cases_20261124.json"
+  ],
+  "priorities": {
+    "::": "sys\\priority(\":=\")",
+    "->": "sys\\priority(\"+\")"
+  },
+  "invariants": [
+    "P0 preserves written groups; int -> (int int) has one right argument and is not int -> int int.",
+    "In CODE/Expression, anonymous Structures and named different-parent Structures are groups; named Structures with the current lexical owner as parent use ordinary receiver/call handling. VALUE/TYPE/DATA gates remain, and reference resolution preserves actual parent.",
+    "Every :: argument is consumed as DATA, including the declaration identifier. Modifiers always consume their arguments as DATA.",
+    "Receivers retain their own resolved contracts in DATA and CODE; Expression is CODE, not implicit user Structure declaration.",
+    "Common Expression priorities prepare nested operations; :: has no DATA/value selector and does not call sys\\eval on its received RHS.",
+    "When a receiving contract requires a declaration/field sequence, the common namespace mechanism reads immediate Structure fields or the target DATA fields of a reference. :: uses that mechanism.",
+    "Common Expression grouping produces current-level operation/sequence plans; a separate adapter packages one left actual and the right Array. No conditional opening pass follows grouping.",
+    "Receiving contracts select whole values/models or current-level sequences. Internal DATA field consumption does not recursively flatten models or change external arity.",
+    "Anonymous Structures are never invoked as callables; in CODE or Expression they execute in place without a new call activation.",
+    "Formal initializers, retained source, path inspection and signature inspection do not execute eagerly. Existing timing and generic RAW rules are unchanged.",
+    "The built-in :: implementation and operand metadata are absent; no PASS_ARGS_AS_IS value is assigned by assumption.",
+    "Ready signatures keep their positional-description profile and labels; physical service fields are not reinterpreted as formals.",
+    "Only the quoted -> receiver with one complete result TYPE is the documented nullary form; int -> () retains one empty right Structure.",
+    "All execution statuses remain NOT_RUN; no runtime, parser or compiler success is claimed."
+  ],
+  "source_trace": {
+    "collector": "../patterns/LMX_Fn_Receivers/src/regex/operands.lmx: RxLogicalArguments.collect preserves prepared occurrences",
+    "constructor": "../patterns/LMX_Fn_Receivers/src/fn_operand.lmx: FxToTokens selects final TYPE as result",
+    "new_grouping_profile_required": false,
+    "builtin_named_declaration_source_present": false,
+    "compiler_source_present": false,
+    "ready_description_builder": "../patterns/LMX_Fn_Receivers/src/generic_functions.lmx: FxSignatures.make builds data, declares Built :: data and returns Built",
+    "named_declaration_consumption": "DATA-only; common Structure-to-sequence consumption of the signature declaration list",
+    "builtin_pass_args_as_is": "NOT_SPECIFIED_NO_IMPLEMENTATION_EVIDENCE",
+    "common_expression_grouper": "Normative structural plan handles groups and priorities; actual compiler implementation is not supplied and execution is NOT_RUN"
+  },
+  "positive_cases": [
+    {
+      "id": "G01",
+      "language": "LMX",
+      "code": "f :: (int -> int int)",
+      "independent_source_fragment": true,
+      "execution": "NOT_RUN",
+      "purpose": "One complete constructor Expression supplies one descriptor; the written group remains in P0",
+      "description_consumption": "All :: arguments are DATA; common Expression preparation supplies nested-operation results. The receiver reads the description and has no separate evaluator or DATA/value selector.",
+      "status": "NORMATIVE_TARGET",
+      "expected_signature": {
+        "inputs": [
+          "int",
+          "int"
+        ],
+        "result": "int"
+      }
+    },
+    {
+      "id": "G02",
+      "language": "LMX",
+      "code": "fFlat :: int -> int int",
+      "independent_source_fragment": true,
+      "execution": "NOT_RUN",
+      "equivalent_signature_to": "G01",
+      "purpose": "Lower :: priority groups the whole constructor before declaration consumption",
+      "description_consumption": "All :: arguments are DATA; common Expression preparation supplies nested-operation results. The receiver reads the description and has no separate evaluator or DATA/value selector.",
+      "status": "NORMATIVE_TARGET",
+      "expected_signature": {
+        "inputs": [
+          "int",
+          "int"
+        ],
+        "result": "int"
+      }
+    },
+    {
+      "id": "G03",
+      "language": "LMX",
+      "code": "f3 :: (int -> int int int)",
+      "independent_source_fragment": true,
+      "execution": "NOT_RUN",
+      "purpose": "Ordinary variable-length right sequence; result last",
+      "description_consumption": "All :: arguments are DATA; common Expression preparation supplies nested-operation results. The receiver reads the description and has no separate evaluator or DATA/value selector.",
+      "status": "NORMATIVE_TARGET",
+      "expected_signature": {
+        "inputs": [
+          "int",
+          "int",
+          "int"
+        ],
+        "result": "int"
+      }
+    },
+    {
+      "id": "G04",
+      "language": "LMX",
+      "code": "fNested :: int -> (int -> int)",
+      "independent_source_fragment": true,
+      "execution": "NOT_RUN",
+      "purpose": "One whole inner Expression produces one TYPE; do not expand its returned descriptor",
+      "description_consumption": "All :: arguments are DATA; common Expression preparation supplies nested-operation results. The receiver reads the description and has no separate evaluator or DATA/value selector.",
+      "status": "NORMATIVE_TARGET",
+      "expected_signature": {
+        "inputs": [
+          "int"
+        ],
+        "result": {
+          "kind": "callable_signature",
+          "inputs": [
+            "int"
+          ],
+          "result": "int"
+        }
+      }
+    },
+    {
+      "id": "G05",
+      "language": "LMX",
+      "code": "f0 :: `->`(int)",
+      "independent_source_fragment": true,
+      "execution": "NOT_RUN",
+      "purpose": "Nullary signature through the ordinary receiver with one complete TYPE",
+      "description_consumption": "All :: arguments are DATA; common Expression preparation supplies nested-operation results. The receiver reads the description and has no separate evaluator or DATA/value selector.",
+      "status": "NORMATIVE_TARGET",
+      "expected_signature": {
+        "inputs": [],
+        "result": "int"
+      }
+    },
+    {
+      "id": "G06",
+      "language": "LMX",
+      "code": "fModel :: int -> Model",
+      "independent_source_fragment": true,
+      "execution": "NOT_RUN",
+      "preconditions": [
+        "Model is an available valid full structural requirement"
+      ],
+      "purpose": "Preserve the complete named model; never enumerate its fields as TYPE tokens",
+      "description_consumption": "All :: arguments are DATA; common Expression preparation supplies nested-operation results. The receiver reads the description and has no separate evaluator or DATA/value selector.",
+      "status": "NORMATIVE_TARGET",
+      "expected_signature": {
+        "inputs": [
+          "int"
+        ],
+        "result": {
+          "kind": "whole_model",
+          "source": "Model"
+        }
+      }
+    },
+    {
+      "id": "G07",
+      "language": "LMX",
+      "code": "S :: (int: a; int: b; return: int)\nF :: S",
+      "independent_source_fragment": true,
+      "expected_signature": {
+        "inputs": [
+          "int",
+          "int"
+        ],
+        "result": "int",
+        "public_labels": [
+          "a",
+          "b"
+        ]
+      },
+      "description_consumption": "All :: arguments are DATA; common Expression preparation supplies nested-operation results. The receiver reads the description and has no separate evaluator or DATA/value selector.",
+      "body_created": false,
+      "execution": "NOT_RUN",
+      "status": "NORMATIVE_TARGET"
+    },
+    {
+      "id": "G08",
+      "language": "LMX",
+      "code": "fFromCallable :: signature(Existing\\run)",
+      "independent_source_fragment": true,
+      "preconditions": [
+        "Existing\\run is an available ordinary callable with exactly two int inputs and an int result",
+        "signature resolves to the documented ordinary signature-inspection receiver"
+      ],
+      "description_consumption": "All :: arguments are DATA; common Expression preparation supplies nested-operation results. The receiver reads the description and has no separate evaluator or DATA/value selector.",
+      "execution": "NOT_RUN",
+      "status": "NORMATIVE_TARGET",
+      "expected_signature": {
+        "inputs": [
+          "int",
+          "int"
+        ],
+        "result": "int"
+      },
+      "expression_producer_evaluations": 1,
+      "candidate_body_executions": 0
+    }
+  ],
+  "shape_guards": [
+    {
+      "id": "B01",
+      "language": "LMX",
+      "code": "int -> (int int)",
+      "expected_shape": {
+        "left_occurrences": 1,
+        "right_occurrences": 1,
+        "right_sources": [
+          "(int int)"
+        ],
+        "receiving_contract": "whole TYPE occurrence",
+        "recursive_flattening": false
+      },
+      "not_equivalent_to": "int -> int int",
+      "TYPE_admission": "Not asserted; normalizeType must admit the whole right group before a signature result exists",
+      "automatic_tuple_interpretation": false,
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "B02",
+      "language": "LMX",
+      "code": "int -> ()",
+      "expected_shape": {
+        "left_occurrences": 1,
+        "right_occurrences": 1,
+        "right_sources": [
+          "()"
+        ],
+        "right_contains_present_empty_structure": true,
+        "receiving_contract": "whole TYPE occurrence",
+        "recursive_flattening": false
+      },
+      "not_equivalent_to": "`->`(int)",
+      "TYPE_admission": "Not asserted; an empty Structure is not absence or a zero-length right vector",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "B03",
+      "language": "LMX",
+      "code": "int -> ((int int))",
+      "expected_shape": {
+        "left_occurrences": 1,
+        "right_occurrences": 1,
+        "right_sources": [
+          "((int int))"
+        ],
+        "receiving_contract": "whole TYPE occurrence",
+        "recursive_flattening": false
+      },
+      "TYPE_admission": "Not asserted; the entire outer group remains the token",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "B04",
+      "language": "LMX",
+      "code": "(target) := ((x y))",
+      "preconditions": [
+        "target is an available assignable reference place admitting the whole Structure (x y)",
+        "x and y are available ordinary values; the RHS is material, not an operator expression"
+      ],
+      "expected_shape": {
+        "left_actuals": 1,
+        "left_places": [
+          "target"
+        ],
+        "right_occurrences": 1,
+        "right_sources": [
+          "(x y)"
+        ],
+        "recursive_flattening": false,
+        "separate_opening_pass": false
+      },
+      "expected": "Current-level sequence consumption supplies one inner Structure for one target; application adaptation packages the left PLACE sequence as one actual.",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "B05",
+      "language": "LMX",
+      "code": "int -> (int int) int",
+      "expected_shape": {
+        "left_occurrences": 1,
+        "right_occurrences": 2,
+        "right_sources": [
+          "(int int)",
+          "int"
+        ],
+        "receiving_contract": "whole TYPE occurrence",
+        "recursive_flattening": false
+      },
+      "TYPE_admission": "Not asserted for the group; it remains one occurrence among the ordinary right arguments",
+      "execution": "NOT_RUN"
+    }
+  ],
+  "negative_cases": [
+    {
+      "id": "N01",
+      "language": "LMX",
+      "code": "bad :: int int int",
+      "expected_stage": "named_signature_admission",
+      "expected": "Refuse the bare three-occurrence RHS as the one required signature description; no new TYPE-vector declaration syntax",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "N02",
+      "language": "LMX",
+      "code": "`->`()",
+      "expected_stage": "signature_constructor",
+      "expected_failure_name": "FxArity",
+      "expected": "No complete TYPE tokens at all",
+      "execution": "NOT_RUN"
+    }
+  ],
+  "lmx_parser_execution": "NOT_RUN",
+  "translator_execution": "NOT_RUN",
+  "lmx_runtime_execution": "NOT_RUN",
+  "consumer_guards": [
+    {
+      "id": "C01",
+      "language": "LMX",
+      "code": "S :: (int: x touch(); return: int)",
+      "preconditions": [
+        "touch is an available effectful default expression in this admitted DATA template"
+      ],
+      "source_role": "DATA template",
+      "expected": "The DATA-only signature contract reads the formal declarations through the common immediate-field mechanism; it does not execute touch or a body.",
+      "initializer_executions": 0,
+      "execution": "NOT_RUN",
+      "status": "NORMATIVE_TARGET"
+    },
+    {
+      "id": "C02",
+      "language": "LMX",
+      "code": "S :: candidate",
+      "preconditions": [
+        "candidate is an available stored callable reference"
+      ],
+      "source_role": "Atomic reference",
+      "expected": "Read the reference without invoking it; admission follows the existing description contract, and callable status alone does not prove it is a signature",
+      "candidate_executions": 0,
+      "execution": "NOT_RUN",
+      "status": "NORMATIVE_TARGET"
+    },
+    {
+      "id": "C03",
+      "language": "LMX",
+      "code": "S :: (A B) (C D)",
+      "expected_right_occurrences": 2,
+      "expected": "The single-description form does not combine two separately supplied groups or execute them to reduce the count",
+      "execution": "NOT_RUN",
+      "status": "NORMATIVE_TARGET"
+    },
+    {
+      "id": "C04",
+      "language": "LMX",
+      "code": "S :: int -> int int",
+      "preconditions": [
+        "Ordinary name resolution selects a different receiver named -> with a compatible ready operand header",
+        "Its one result is not an admissible signature description"
+      ],
+      "expected": "Ordinary resolution selects the actual receiver; its prepared result must be admitted as a DATA signature description. No built-in forcing by spelling, no consumer evaluator or DATA fallback.",
+      "execution": "NOT_RUN",
+      "status": "NORMATIVE_TARGET"
+    },
+    {
+      "id": "C05",
+      "language": "LMX",
+      "code": "S :: (makeSignature())",
+      "preconditions": [
+        "makeSignature is an illustrative available callable that can return a signature description"
+      ],
+      "status": "NORMATIVE_TARGET",
+      "expected": "makeSignature() within Expression follows CODE semantics and common priority preparation. :: consumes the resulting DATA description; it does not reinterpret the producer call as an empty user Structure declaration or evaluate the RHS inside itself.",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "C06",
+      "language": "LMX",
+      "code": "@: description (int -> int int)\nf :: description",
+      "independent_source_fragment": true,
+      "expected": "An ordinary value declaration prepares the description; :: then consumes the ready DATA description through the common declaration-list mechanism without invoking or re-evaluating it.",
+      "producer_evaluations": 1,
+      "execution": "NOT_RUN",
+      "status": "NORMATIVE_TARGET"
+    },
+    {
+      "id": "C07",
+      "language": "LMX",
+      "code": "S :: (int: a; int: b; return: int)",
+      "expected": "The one outer DATA argument is read as an immediate declaration list through the common Structure-to-sequence mechanism. Nested models and return descriptions are not recursively flattened; outer arity is unchanged.",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN"
+    },
+    {
+      "id": "C08",
+      "language": "LMX",
+      "code": "(tick())",
+      "preconditions": [
+        "tick is an available ordinary callable; the group is reached in CODE or Expression"
+      ],
+      "expected": "Execute the anonymous group in place. Its explicit tick call remains a call, but the group itself is not invoked and creates no new call activation.",
+      "status": "NORMATIVE_TARGET",
+      "execution": "NOT_RUN"
+    }
+  ],
+  "project_review": "../SIGNATURE_EXPRESSION_REVIEW.md"
+}

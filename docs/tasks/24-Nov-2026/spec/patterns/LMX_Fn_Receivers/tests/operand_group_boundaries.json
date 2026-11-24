@@ -1,0 +1,166 @@
+{
+  "scope": "Normative acceptance targets for the common tree grouper and distinct Expression application adapter; not runtime-executed by publication checks",
+  "runtime_executed": false,
+  "architecture": {
+    "grouper": "Resolve priorities, groups and explicit field streams in the supplied pure graph, including references consumed as CODE/Expression. Notation, source origin and parenthesis history are not semantic flags. Produce a structured current-level operation/stream plan without rewriting or reparsing text.",
+    "application_adapter": "Package the left side as one actual and the current-level right stream as an Array of references under the receiving ABI. This packaging belongs to the application adapter, not the grouper.",
+    "collector": "RxLogicalArguments and library asOperand forward the projected actual vector; no element traversal, reverse packing or additional opening pass.",
+    "roles": "VALUE/TYPE/DATA and whole-value contracts do not become CODE automatically. In CODE/Expression, an ordinary named Structure with the current lexical parent follows the ordinary call path; a named Structure with a different parent and every anonymous Structure are handled as graph groups, retaining their real parent. Name/actual-parent relative to traversal owner determines the branch, not reference provenance. Planning does not run DATA or force RAW.",
+    "reference": "../../../LMX_semantics.en.md#expression-structural-grouping",
+    "abi_corollary_reference": "../../../LMX_semantics.en.md#operand-right-only-opening",
+    "runtime_status": "NOT_RUN",
+    "graph_references": "Consume the supplied pure graph under its receiving role. In CODE/Expression: named + current lexical parent means ordinary call; named + other parent means group; anonymous means group. Preserve actual parent and binding context; do not use source-origin or parenthesis flags."
+  },
+  "p0": "Preserve graph identities, structural levels and diagnostic provenance; no parenthesis/source-origin flag participates in semantics and no replacement graph or textual reparse is produced",
+  "former_rule_status": "Accepted argument-vector observations are corollaries of grouping plus application ABI; there is no independent conditional-opening pass",
+  "callable_we": "Its established ordinary call-selection contract is unchanged",
+  "cases": [
+    {
+      "source": "(a b) op (c d)",
+      "written_right_occurrences": 1,
+      "prepared_right_length": 2,
+      "right_elements": [
+        "c",
+        "d"
+      ],
+      "left_actual": "(a b)"
+    },
+    {
+      "source": "a op (c d)",
+      "written_right_occurrences": 1,
+      "prepared_right_length": 1,
+      "right_elements": [
+        "(c d)"
+      ],
+      "left_actual": "a"
+    },
+    {
+      "source": "(a b) op (c d) e",
+      "written_right_occurrences": 2,
+      "prepared_right_length": 2,
+      "right_elements": [
+        "(c d)",
+        "e"
+      ],
+      "left_actual": "(a b)"
+    },
+    {
+      "source": "(a) op ((b c))",
+      "written_right_occurrences": 1,
+      "prepared_right_length": 1,
+      "right_elements": [
+        "(b c)"
+      ],
+      "left_actual": "(a)"
+    },
+    {
+      "source": "(a b) op factory()",
+      "written_right_occurrences": 1,
+      "prepared_right_length": 1,
+      "right_elements": [
+        "factory() result as one value in prepared mode; original call in raw mode"
+      ],
+      "left_actual": "(a b)",
+      "receiving_contract": "This control receives the call result as one whole VALUE; explicit RAW retains the complete call graph. It does not forbid consuming a graph through a separately selected CODE/Expression contract."
+    },
+    {
+      "source": "(a b) op S",
+      "written_right_occurrences": 1,
+      "prepared_right_length": 1,
+      "right_elements": [
+        "S as one whole Structure under the selected value/type/data contract"
+      ],
+      "left_actual": "(a b)",
+      "receiving_contract": "This control explicitly admits S as one whole VALUE/TYPE/DATA actual. It is not a blanket rule excluding referenced graphs from CODE/Expression grouping."
+    },
+    {
+      "source": "() op ()",
+      "written_right_occurrences": 1,
+      "prepared_right_length": 0,
+      "right_elements": [],
+      "left_actual": "()"
+    },
+    {
+      "source": "(a b c) := (a c b)",
+      "grouper_plan": "left stream a,b,c; assignment operation; right current-level stream a,c,b",
+      "left_actual": "one packaged Structure (a b c)",
+      "prepared_right_length": 3,
+      "right_elements": [
+        "a",
+        "c",
+        "b"
+      ]
+    },
+    {
+      "source": "(a b c) := (f g h) (f g h) (f g h)",
+      "grouper_plan": "left stream a,b,c; assignment operation; three right Structure values at the current level",
+      "left_actual": "one packaged Structure (a b c)",
+      "prepared_right_length": 3,
+      "right_elements": [
+        "whole Structure (f g h)",
+        "whole Structure (f g h)",
+        "whole Structure (f g h)"
+      ],
+      "forbidden_right_length": 9
+    },
+    {
+      "source": "(a b c) := copy(d)",
+      "equivalent_source": "(a b c) := (copy(d))",
+      "fixture": "d has three immediate ready fields with values 4,5,6",
+      "grouper_plan": "explicit copy field stream, with no required enclosing RHS group",
+      "left_actual": "one packaged Structure (a b c)",
+      "prepared_right_length": 3,
+      "right_elements": [
+        4,
+        5,
+        6
+      ],
+      "writes": "obtain the complete ordinary assignment snapshot before any destination write",
+      "whole_value_control": "scalar := (copy(d)) remains one whole Structure under the scalar contract"
+    }
+  ],
+  "nested_scalar_grouping_targets": [
+    {
+      "source": "1 + ((2))",
+      "expected": 3
+    },
+    {
+      "source": "((2)) + 1",
+      "expected": 3
+    }
+  ],
+  "required_controls": [
+    "Project only the selected current-level stream; do not descend into every Structure value",
+    "Application adaptation packages left as one actual; the grouper itself does not perform left packaging",
+    "RxLogicalArguments and asOperand consume the prepared vector without opening its elements",
+    "No eager evaluation of DATA or RAW to discover groups",
+    "Consume the supplied pure graph under its receiving role. In CODE/Expression: named + current lexical parent means ordinary call; named + other parent means group; anonymous means group. Preserve actual parent and binding context; do not use source-origin or parenthesis flags.",
+    "Explicit field streams and receiver-specific list contracts remain distinct from automatic value spreading"
+  ],
+  "code_graph_reference_control": {
+    "definition": "S: a b c d",
+    "code_expression": "1 + S + 2",
+    "parent_cases": [
+      {
+        "graph_name": "S",
+        "actual_parent": "different from current lexical parent",
+        "expected": "Treat S as the same group shape as direct (a b c d), preserving its actual parent and context; this branch creates no call activation."
+      },
+      {
+        "graph_name": "S",
+        "actual_parent": "current lexical parent",
+        "expected": "Use the ordinary named-Structure call path and its admission; do not silently inline it as a foreign-parent group."
+      },
+      {
+        "graph_name": null,
+        "actual_parent": "current lexical parent or another parent",
+        "expected": "An anonymous Structure remains a group; execution, when required by CODE/Expression, is in place rather than a named call."
+      }
+    ],
+    "numeric_result": "Not asserted: four neighboring atoms do not automatically form a numeric expression; + admission and any ordinary call result are checked separately.",
+    "value_boundary": "A Structure admitted in a VALUE/TYPE/DATA position remains under that contract, regardless of its name or parent; the CODE classification is not applied automatically there.",
+    "provenance": "Source spelling/origin and P0 diagnostic provenance do not decide the branch.",
+    "runtime_status": "NOT_RUN"
+  },
+  "displayed_source_scope": "Source spellings and written_right_occurrences describe fixtures for readers and diagnostics only. Actual grouping follows the passed graph and receiving contract, not how that graph was written or obtained."
+}

@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "group": "network_extra",
+  "group_target": "LMX::network_extra",
+  "components": [
+    {
+      "id": "network_extra:cares",
+      "paths": [
+        "vendor/cares"
+      ],
+      "version": "1.34.9",
+      "commit": null,
+      "license": "MIT",
+      "urls": [
+        "https://c-ares.org/",
+        "https://c-ares.org/download/c-ares-1.34.9.tar.gz"
+      ],
+      "licenses_notices": [
+        "vendor/cares/LICENSE.md"
+      ],
+      "source_archives": [
+        {
+          "url": "https://c-ares.org/download/c-ares-1.34.9.tar.gz",
+          "sha256": "9364b70a12eb59a06830fb488d9357f90100dff0d98b23ea3593a183d43e6f2f",
+          "retained_in_patch": false
+        }
+      ],
+      "public_headers": [
+        "vendor/cares/include/ares.h",
+        "vendor/cares/include/ares_dns.h",
+        "vendor/cares/include/ares_dns_record.h",
+        "vendor/cares/include/ares_nameser.h",
+        "vendor/cares/include/ares_version.h"
+      ],
+      "cmake_targets": [
+        "LMX::cares"
+      ],
+      "proposed_package": [
+        "net",
+        "dns"
+      ],
+      "build_group": "extensions/network_extra",
+      "profile": "Static C99; no configure-time downloads; local-network functionality does not require a global Internet connection",
+      "notes": [
+        "Asynchronous DNS with application-controlled channels and callbacks; no lookup is sent by the offline smoke test. Library init/cleanup is process-scoped and must be coordinated separately from actor-owned channels. Upstream C++ GTest tests retained as source; selected self-contained C99 smoke test executed."
+      ]
+    },
+    {
+      "id": "network_extra:libevent",
+      "paths": [
+        "vendor/libevent"
+      ],
+      "version": "2.1.13-stable",
+      "commit": null,
+      "license": "BSD-3-Clause and retained per-file ISC/BSD notices",
+      "urls": [
+        "https://libevent.org/",
+        "https://github.com/libevent/libevent/releases/download/release-2.1.13-stable/libevent-2.1.13-stable.tar.gz"
+      ],
+      "licenses_notices": [
+        "vendor/libevent/LICENSE"
+      ],
+      "source_archives": [
+        {
+          "url": "https://github.com/libevent/libevent/releases/download/release-2.1.13-stable/libevent-2.1.13-stable.tar.gz",
+          "sha256": "f7e9383b8c0baa81b687e5b5eecc01beefaf1b19b64151d95ed61647fe7a315c",
+          "retained_in_patch": false
+        }
+      ],
+      "public_headers": [
+        "vendor/libevent/include/event2/*.h",
+        "vendor/libevent/include/event.h",
+        "vendor/libevent/include/evhttp.h",
+        "vendor/libevent/include/evdns.h",
+        "vendor/libevent/include/evrpc.h",
+        "vendor/libevent/include/evutil.h"
+      ],
+      "cmake_targets": [
+        "LMX::event"
+      ],
+      "proposed_package": [
+        "net",
+        "event"
+      ],
+      "build_group": "extensions/network_extra",
+      "profile": "Static C99; no configure-time downloads; local-network functionality does not require a global Internet connection",
+      "notes": [
+        "Core, extra and optional pthreads static targets; OpenSSL adapter is outside the selected profile.",
+        "C99 build view replaces one fallthrough attribute statement and two redundant enum forward declarations; vendor files remain unchanged.",
+        "An event base and retained callback contexts belong to their actor/service; foreign callbacks must post messages rather than access its arena."
+      ],
+      "unbuilt_public_headers": [
+        "vendor/libevent/include/event2/bufferevent_ssl.h"
+      ],
+      "canonical_header_map": {
+        "vendor/libevent/include/evhttp.h": "evhttp.h",
+        "vendor/libevent/include/evutil.h": "evutil.h",
+        "vendor/libevent/include/event.h": "event.h",
+        "vendor/libevent/include/evdns.h": "evdns.h",
+        "vendor/libevent/include/evrpc.h": "evrpc.h",
+        "vendor/libevent/include/event2/event_struct.h": "event2/event_struct.h",
+        "vendor/libevent/include/event2/rpc_struct.h": "event2/rpc_struct.h",
+        "vendor/libevent/include/event2/bufferevent.h": "event2/bufferevent.h",
+        "vendor/libevent/include/event2/dns.h": "event2/dns.h",
+        "vendor/libevent/include/event2/visibility.h": "event2/visibility.h",
+        "vendor/libevent/include/event2/http.h": "event2/http.h",
+        "vendor/libevent/include/event2/rpc_compat.h": "event2/rpc_compat.h",
+        "vendor/libevent/include/event2/tag_compat.h": "event2/tag_compat.h",
+        "vendor/libevent/include/event2/dns_struct.h": "event2/dns_struct.h",
+        "vendor/libevent/include/event2/bufferevent_ssl.h": "event2/bufferevent_ssl.h",
+        "vendor/libevent/include/event2/buffer_compat.h": "event2/buffer_compat.h",
+        "vendor/libevent/include/event2/event.h": "event2/event.h",
+        "vendor/libevent/include/event2/thread.h": "event2/thread.h",
+        "vendor/libevent/include/event2/http_compat.h": "event2/http_compat.h",
+        "vendor/libevent/include/event2/tag.h": "event2/tag.h",
+        "vendor/libevent/include/event2/listener.h": "event2/listener.h",
+        "vendor/libevent/include/event2/rpc.h": "event2/rpc.h",
+        "vendor/libevent/include/event2/util.h": "event2/util.h",
+        "vendor/libevent/include/event2/http_struct.h": "event2/http_struct.h",
+        "vendor/libevent/include/event2/dns_compat.h": "event2/dns_compat.h",
+        "vendor/libevent/include/event2/keyvalq_struct.h": "event2/keyvalq_struct.h",
+        "vendor/libevent/include/event2/buffer.h": "event2/buffer.h",
+        "vendor/libevent/include/event2/event_compat.h": "event2/event_compat.h",
+        "vendor/libevent/include/event2/bufferevent_compat.h": "event2/bufferevent_compat.h",
+        "vendor/libevent/include/event2/bufferevent_struct.h": "event2/bufferevent_struct.h"
+      }
+    },
+    {
+      "id": "network_extra:mdns",
+      "paths": [
+        "vendor/mdns"
+      ],
+      "version": "snapshot a569c4759bd4",
+      "commit": "a569c4759bd47e0f2a7bfc4d4c19620445782806",
+      "license": "Unlicense",
+      "urls": [
+        "https://github.com/mjansson/mdns",
+        "https://codeload.github.com/mjansson/mdns/tar.gz/a569c4759bd47e0f2a7bfc4d4c19620445782806"
+      ],
+      "licenses_notices": [
+        "vendor/mdns/LICENSE"
+      ],
+      "source_archives": [
+        {
+          "url": "https://codeload.github.com/mjansson/mdns/tar.gz/a569c4759bd47e0f2a7bfc4d4c19620445782806",
+          "sha256": "8a82a92bb025f3abcfb18e666c388aabc4730da3ba116b412d5c0ead466d33be",
+          "retained_in_patch": false
+        }
+      ],
+      "public_headers": [
+        "vendor/mdns/mdns.h"
+      ],
+      "cmake_targets": [
+        "LMX::mdns"
+      ],
+      "proposed_package": [
+        "net",
+        "discovery"
+      ],
+      "build_group": "extensions/network_extra",
+      "profile": "Static C99; no configure-time downloads; local-network functionality does not require a global Internet connection",
+      "notes": [
+        "Header-only static-inline C99 API; no independent archive. The complete upstream example is compiled as a representative size probe, not executed.",
+        "Multicast service discovery uses the local network; remote resources and global DNS availability are not assumed."
+      ]
+    }
+  ]
+}

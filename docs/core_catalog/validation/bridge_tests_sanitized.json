@@ -1,0 +1,206 @@
+{
+  "scope": "explicit C99 frames, lifetime/type/range checks, real pinned zlib checksums",
+  "not_tested": [
+    "LMX arena lowering",
+    "LMX/L3 compiler",
+    "other generated shims",
+    "other platforms",
+    "LeakSanitizer (explicitly disabled by ASAN_OPTIONS)"
+  ],
+  "sanitize": true,
+  "inputs": [
+    {
+      "path": "bridge/test_bridge.c",
+      "sha256": "c74ab1dcf0cee329cd7615d78b95695e7a65a06a76e5c7b98e8eeff06e1b5c67"
+    },
+    {
+      "path": "bridge/lmx_catalog_bridge.c",
+      "sha256": "50c0d9cae50c36ecd05a6a6bf9f2ecd34d98a0405b492ba3900eea69300f97d2"
+    },
+    {
+      "path": "bridge/lmx_catalog_bridge.h",
+      "sha256": "5a7a6ab4ed486256c180a5f9e5bd2feb7276de0d14db3ffd38193d2cdf9a4cd7"
+    },
+    {
+      "path": "vendor/zlib/adler32.c",
+      "sha256": "9cd1443a24ff2a3053961695bd432035c58347386a420d3388232376ebabe211"
+    },
+    {
+      "path": "vendor/zlib/crc32.c",
+      "sha256": "dd941a0a499a27517e3be0624c2e0dc683f0591bf29dd1ed54e65443cb19beb6"
+    },
+    {
+      "path": "vendor/zlib/zlib.h",
+      "sha256": "2c404dcaa08709c2a129aea18f3dad4fb5acc5cb52ef12b6223bf8e78c195801"
+    },
+    {
+      "path": "vendor/zlib/zconf.h",
+      "sha256": "1e91041e94e3f13a12b770be849c4c674e37caddf94e37acddf853bb54a09adf"
+    },
+    {
+      "path": "vendor/zlib/crc32.h",
+      "sha256": "9a2223575183ac2ee8a247f20bf3ac066e8bd0140369556bdbdffc777435749e"
+    },
+    {
+      "path": "vendor/zlib/zutil.h",
+      "sha256": "a12243cc6d338ffad0c8e3500fbc05bc7fdcdc25a469393b1c2f7e5df307fff3"
+    }
+  ],
+  "commands": [
+    {
+      "argv": [
+        "cc",
+        "--version"
+      ],
+      "returncode": 0,
+      "stdout": "cc (Debian 14.2.0-19) 14.2.0\nCopyright (C) 2024 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cc",
+        "-std=c99",
+        "-O1",
+        "-g",
+        "-Wall",
+        "-Wextra",
+        "-fsanitize=address,undefined",
+        "-fno-omit-frame-pointer",
+        "-Werror",
+        "-pedantic",
+        "-I",
+        "${PROJECT}/docs/core_catalog/bridge",
+        "-I",
+        "${COLLECTION}/vendor/zlib",
+        "-c",
+        "${PROJECT}/docs/core_catalog/bridge/test_bridge.c",
+        "-o",
+        "${BUILD}/0.o"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cc",
+        "-std=c99",
+        "-O1",
+        "-g",
+        "-Wall",
+        "-Wextra",
+        "-fsanitize=address,undefined",
+        "-fno-omit-frame-pointer",
+        "-Werror",
+        "-pedantic",
+        "-I",
+        "${PROJECT}/docs/core_catalog/bridge",
+        "-I",
+        "${COLLECTION}/vendor/zlib",
+        "-c",
+        "${PROJECT}/docs/core_catalog/bridge/lmx_catalog_bridge.c",
+        "-o",
+        "${BUILD}/1.o"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cc",
+        "-std=c99",
+        "-O1",
+        "-g",
+        "-Wall",
+        "-Wextra",
+        "-fsanitize=address,undefined",
+        "-fno-omit-frame-pointer",
+        "-I",
+        "${PROJECT}/docs/core_catalog/bridge",
+        "-I",
+        "${COLLECTION}/vendor/zlib",
+        "-c",
+        "${COLLECTION}/vendor/zlib/adler32.c",
+        "-o",
+        "${BUILD}/2.o"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cc",
+        "-std=c99",
+        "-O1",
+        "-g",
+        "-Wall",
+        "-Wextra",
+        "-fsanitize=address,undefined",
+        "-fno-omit-frame-pointer",
+        "-I",
+        "${PROJECT}/docs/core_catalog/bridge",
+        "-I",
+        "${COLLECTION}/vendor/zlib",
+        "-c",
+        "${COLLECTION}/vendor/zlib/crc32.c",
+        "-o",
+        "${BUILD}/3.o"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cc",
+        "-std=c99",
+        "-O1",
+        "-g",
+        "-Wall",
+        "-Wextra",
+        "-fsanitize=address,undefined",
+        "-fno-omit-frame-pointer",
+        "${BUILD}/0.o",
+        "${BUILD}/1.o",
+        "${BUILD}/2.o",
+        "${BUILD}/3.o",
+        "-o",
+        "${BUILD}/test_bridge"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "${BUILD}/test_bridge"
+      ],
+      "returncode": 0,
+      "stdout": "{\"checks\":101,\"failures\":0,\"char_bits\":8,\"int_bits\":32,\"long_bits\":64,\"size_bits\":64,\"zlib\":\"1.4\"}\n",
+      "stderr": ""
+    }
+  ],
+  "pass": true,
+  "sanitizer_environment": {
+    "ASAN_OPTIONS": "detect_leaks=0"
+  },
+  "compiler": "cc (Debian 14.2.0-19) 14.2.0",
+  "result": {
+    "checks": 101,
+    "failures": 0,
+    "char_bits": 8,
+    "int_bits": 32,
+    "long_bits": 64,
+    "size_bits": 64,
+    "zlib": "1.4"
+  },
+  "normalized_paths": {
+    "applied": true,
+    "${PROJECT}": "project root containing docs/core_catalog/bridge",
+    "${COLLECTION}": "collection directory passed through --source",
+    "${BUILD}": "temporary directory or directory passed through --build-dir",
+    "scope": "Report paths only; actual compiler options and execution results are preserved."
+  }
+}

@@ -26,7 +26,10 @@ add_library(LMX::zip ALIAS lmx_arc_kuba_zip)
 # and places its private xxHash implementation in the ZSTD_ namespace.
 lmx_archive_library(zstd "${CMAKE_CURRENT_LIST_DIR}/generated/zstd.c")
 target_include_directories(lmx_arc_zstd PUBLIC "${_arc_vendor}/zstd/lib")
-target_compile_definitions(lmx_arc_zstd PRIVATE _POSIX_C_SOURCE=200809L)
+target_compile_definitions(lmx_arc_zstd PRIVATE _POSIX_C_SOURCE=200809L
+    divsufsort=lmx_zstd_divsufsort divbwt=lmx_zstd_divbwt)
+# Zstd's private libdivsufsort-lite has different function signatures from
+# the standalone library. Keep both real implementations in separate namespaces.
 target_link_libraries(lmx_arc_zstd PUBLIC Threads::Threads)
 
 set(_lzma_sources Bcj2.c Bra.c Bra86.c BraIA64.c CpuArch.c Delta.c

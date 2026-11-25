@@ -1,0 +1,503 @@
+{
+  "scope": "three default generated gates plus reviewed enabled on-demand zlib compress2 gate",
+  "not_tested": [
+    "other enabled C APIs",
+    "LMX arena lowering",
+    "L3 execution",
+    "other platforms"
+  ],
+  "pass": true,
+  "commands": [
+    {
+      "argv": [
+        "cc",
+        "--version"
+      ],
+      "returncode": 0,
+      "stdout": "cc (Debian 14.2.0-19) 14.2.0\nCopyright (C) 2024 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "${PROJECT}/docs/core_catalog/tools/build_c_catalog.py",
+        "--catalog-root",
+        "${CATALOG}",
+        "--emit-shim",
+        "compress2",
+        "--component",
+        "base:zlib",
+        "--shim-output",
+        "${BUILD}/generated_compress2.c"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cc",
+        "-std=c99",
+        "-O1",
+        "-g",
+        "-Wall",
+        "-Wextra",
+        "-pedantic",
+        "-Werror",
+        "-I",
+        "${PROJECT}/docs/core_catalog/bridge",
+        "${BUILD}/default_gates.c",
+        "${CATALOG}/c_shims/base_zlib_compress2.c",
+        "${CATALOG}/c_shims/acoustic_jansson_json_loadb.c",
+        "${CATALOG}/c_shims/acoustic_liquid_dsp_agc_crcf_create.c",
+        "${PROJECT}/docs/core_catalog/bridge/lmx_catalog_bridge.c",
+        "-o",
+        "${BUILD}/default_gates"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "${BUILD}/default_gates"
+      ],
+      "returncode": 0,
+      "stdout": "{\"gates\":3,\"failures\":0,\"native_libraries_linked\":0}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "nm",
+        "-u",
+        "${BUILD}/default_gates"
+      ],
+      "returncode": 0,
+      "stdout": "                 w _ITM_deregisterTMCloneTable\n                 w _ITM_registerTMCloneTable\n                 w __cxa_finalize@GLIBC_2.2.5\n                 w __gmon_start__\n                 U __libc_start_main@GLIBC_2.34\n                 U memchr@GLIBC_2.2.5\n                 U printf@GLIBC_2.2.5\n                 U strcmp@GLIBC_2.2.5\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cc",
+        "-std=c99",
+        "-O1",
+        "-g",
+        "-Wall",
+        "-Wextra",
+        "-pedantic",
+        "-Werror",
+        "-DLMXC99_COMPRESS2_EXAMPLE_TEST",
+        "-I",
+        "${PROJECT}/docs/core_catalog/bridge",
+        "-I",
+        "${BUILD}",
+        "-I",
+        "${COLLECTION}/vendor/zlib",
+        "-c",
+        "${PROJECT}/docs/core_catalog/bridge/lmx_catalog_bridge.c",
+        "-o",
+        "${BUILD}/enabled_0.o"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cc",
+        "-std=c99",
+        "-O1",
+        "-g",
+        "-Wall",
+        "-Wextra",
+        "-pedantic",
+        "-Werror",
+        "-DLMXC99_COMPRESS2_EXAMPLE_TEST",
+        "-I",
+        "${PROJECT}/docs/core_catalog/bridge",
+        "-I",
+        "${BUILD}",
+        "-I",
+        "${COLLECTION}/vendor/zlib",
+        "-c",
+        "${PROJECT}/docs/core_catalog/bridge/compress2_example.c",
+        "-o",
+        "${BUILD}/enabled_1.o"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cc",
+        "-std=c99",
+        "-O1",
+        "-g",
+        "-Wall",
+        "-Wextra",
+        "-DLMXC99_COMPRESS2_EXAMPLE_TEST",
+        "-I",
+        "${PROJECT}/docs/core_catalog/bridge",
+        "-I",
+        "${BUILD}",
+        "-I",
+        "${COLLECTION}/vendor/zlib",
+        "-c",
+        "${COLLECTION}/vendor/zlib/adler32.c",
+        "-o",
+        "${BUILD}/enabled_2.o"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cc",
+        "-std=c99",
+        "-O1",
+        "-g",
+        "-Wall",
+        "-Wextra",
+        "-DLMXC99_COMPRESS2_EXAMPLE_TEST",
+        "-I",
+        "${PROJECT}/docs/core_catalog/bridge",
+        "-I",
+        "${BUILD}",
+        "-I",
+        "${COLLECTION}/vendor/zlib",
+        "-c",
+        "${COLLECTION}/vendor/zlib/crc32.c",
+        "-o",
+        "${BUILD}/enabled_3.o"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cc",
+        "-std=c99",
+        "-O1",
+        "-g",
+        "-Wall",
+        "-Wextra",
+        "-DLMXC99_COMPRESS2_EXAMPLE_TEST",
+        "-I",
+        "${PROJECT}/docs/core_catalog/bridge",
+        "-I",
+        "${BUILD}",
+        "-I",
+        "${COLLECTION}/vendor/zlib",
+        "-c",
+        "${COLLECTION}/vendor/zlib/deflate.c",
+        "-o",
+        "${BUILD}/enabled_4.o"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cc",
+        "-std=c99",
+        "-O1",
+        "-g",
+        "-Wall",
+        "-Wextra",
+        "-DLMXC99_COMPRESS2_EXAMPLE_TEST",
+        "-I",
+        "${PROJECT}/docs/core_catalog/bridge",
+        "-I",
+        "${BUILD}",
+        "-I",
+        "${COLLECTION}/vendor/zlib",
+        "-c",
+        "${COLLECTION}/vendor/zlib/trees.c",
+        "-o",
+        "${BUILD}/enabled_5.o"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cc",
+        "-std=c99",
+        "-O1",
+        "-g",
+        "-Wall",
+        "-Wextra",
+        "-DLMXC99_COMPRESS2_EXAMPLE_TEST",
+        "-I",
+        "${PROJECT}/docs/core_catalog/bridge",
+        "-I",
+        "${BUILD}",
+        "-I",
+        "${COLLECTION}/vendor/zlib",
+        "-c",
+        "${COLLECTION}/vendor/zlib/zutil.c",
+        "-o",
+        "${BUILD}/enabled_6.o"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cc",
+        "-std=c99",
+        "-O1",
+        "-g",
+        "-Wall",
+        "-Wextra",
+        "-DLMXC99_COMPRESS2_EXAMPLE_TEST",
+        "-I",
+        "${PROJECT}/docs/core_catalog/bridge",
+        "-I",
+        "${BUILD}",
+        "-I",
+        "${COLLECTION}/vendor/zlib",
+        "-c",
+        "${COLLECTION}/vendor/zlib/compress.c",
+        "-o",
+        "${BUILD}/enabled_7.o"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cc",
+        "-std=c99",
+        "-O1",
+        "-g",
+        "-Wall",
+        "-Wextra",
+        "-DLMXC99_COMPRESS2_EXAMPLE_TEST",
+        "-I",
+        "${PROJECT}/docs/core_catalog/bridge",
+        "-I",
+        "${BUILD}",
+        "-I",
+        "${COLLECTION}/vendor/zlib",
+        "-c",
+        "${COLLECTION}/vendor/zlib/inflate.c",
+        "-o",
+        "${BUILD}/enabled_8.o"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cc",
+        "-std=c99",
+        "-O1",
+        "-g",
+        "-Wall",
+        "-Wextra",
+        "-DLMXC99_COMPRESS2_EXAMPLE_TEST",
+        "-I",
+        "${PROJECT}/docs/core_catalog/bridge",
+        "-I",
+        "${BUILD}",
+        "-I",
+        "${COLLECTION}/vendor/zlib",
+        "-c",
+        "${COLLECTION}/vendor/zlib/inffast.c",
+        "-o",
+        "${BUILD}/enabled_9.o"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cc",
+        "-std=c99",
+        "-O1",
+        "-g",
+        "-Wall",
+        "-Wextra",
+        "-DLMXC99_COMPRESS2_EXAMPLE_TEST",
+        "-I",
+        "${PROJECT}/docs/core_catalog/bridge",
+        "-I",
+        "${BUILD}",
+        "-I",
+        "${COLLECTION}/vendor/zlib",
+        "-c",
+        "${COLLECTION}/vendor/zlib/inftrees.c",
+        "-o",
+        "${BUILD}/enabled_10.o"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cc",
+        "-std=c99",
+        "-O1",
+        "-g",
+        "-Wall",
+        "-Wextra",
+        "-DLMXC99_COMPRESS2_EXAMPLE_TEST",
+        "-I",
+        "${PROJECT}/docs/core_catalog/bridge",
+        "-I",
+        "${BUILD}",
+        "-I",
+        "${COLLECTION}/vendor/zlib",
+        "-c",
+        "${COLLECTION}/vendor/zlib/uncompr.c",
+        "-o",
+        "${BUILD}/enabled_11.o"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cc",
+        "-std=c99",
+        "-O1",
+        "-g",
+        "-Wall",
+        "-Wextra",
+        "${BUILD}/enabled_0.o",
+        "${BUILD}/enabled_1.o",
+        "${BUILD}/enabled_2.o",
+        "${BUILD}/enabled_3.o",
+        "${BUILD}/enabled_4.o",
+        "${BUILD}/enabled_5.o",
+        "${BUILD}/enabled_6.o",
+        "${BUILD}/enabled_7.o",
+        "${BUILD}/enabled_8.o",
+        "${BUILD}/enabled_9.o",
+        "${BUILD}/enabled_10.o",
+        "${BUILD}/enabled_11.o",
+        "-o",
+        "${BUILD}/enabled_compress2"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "${BUILD}/enabled_compress2"
+      ],
+      "returncode": 0,
+      "stdout": "{\"assertions\":67,\"failures\":0,\"native_compress2_calls\":3,\"zlib\":\"1.4\"}\n",
+      "stderr": ""
+    }
+  ],
+  "inputs": [
+    {
+      "path": "${CATALOG}/c_shims/base_zlib_compress2.c",
+      "sha256": "718e8123a422e8c1528a39be79f6d0a94a1262b0ff1460be8e7218376e7278c3"
+    },
+    {
+      "path": "${CATALOG}/c_shims/acoustic_jansson_json_loadb.c",
+      "sha256": "2231aed83689d9de31653b0981e523b40c4a5dadd0cdedcc00da60a35f0be4bf"
+    },
+    {
+      "path": "${CATALOG}/c_shims/acoustic_liquid_dsp_agc_crcf_create.c",
+      "sha256": "d39756ff0ab7fd9b158e6afc216abe53ab4986c871cdb1b8e505950967b8d0e5"
+    },
+    {
+      "path": "${PROJECT}/docs/core_catalog/bridge/lmx_catalog_bridge.c",
+      "sha256": "50c0d9cae50c36ecd05a6a6bf9f2ecd34d98a0405b492ba3900eea69300f97d2"
+    },
+    {
+      "path": "${PROJECT}/docs/core_catalog/bridge/compress2_example.c",
+      "sha256": "8800cc8ecbd2c9fe46bc9bd239813ca54f58d367d0baadd13f95109181f4b5c2"
+    },
+    {
+      "path": "${COLLECTION}/vendor/zlib/adler32.c",
+      "sha256": "9cd1443a24ff2a3053961695bd432035c58347386a420d3388232376ebabe211"
+    },
+    {
+      "path": "${COLLECTION}/vendor/zlib/crc32.c",
+      "sha256": "dd941a0a499a27517e3be0624c2e0dc683f0591bf29dd1ed54e65443cb19beb6"
+    },
+    {
+      "path": "${COLLECTION}/vendor/zlib/deflate.c",
+      "sha256": "f1d7780041bb7821cd6ddb3b95ae033b5e3b83cdb67c708973245932e42a316d"
+    },
+    {
+      "path": "${COLLECTION}/vendor/zlib/trees.c",
+      "sha256": "8807b9f4075fd7f0322361359bfd5001e2c3430a7f17aede8ae26c642892d5f8"
+    },
+    {
+      "path": "${COLLECTION}/vendor/zlib/zutil.c",
+      "sha256": "c195fe0ff472545b231542ab6a633a97117710cea64f98c5d468775ed89eff55"
+    },
+    {
+      "path": "${COLLECTION}/vendor/zlib/compress.c",
+      "sha256": "5366b48da2beadd0bde7f476ed3b0adcf31a3b7f8ad6b616b32d5212cdca0980"
+    },
+    {
+      "path": "${COLLECTION}/vendor/zlib/inflate.c",
+      "sha256": "c91ab7595ba8ef11030af76a614fc3138d0ec4cf995f171a9f435e19b1e6d7bc"
+    },
+    {
+      "path": "${COLLECTION}/vendor/zlib/inffast.c",
+      "sha256": "f96787a11bb7131ffd2221fb40db27f6a5a1dfb12f59c0bc388807010749c34a"
+    },
+    {
+      "path": "${COLLECTION}/vendor/zlib/inftrees.c",
+      "sha256": "7ab9c04acc2e9888c8c1fddefc730a850f69a3d80a7a702433a35383e36efa9c"
+    },
+    {
+      "path": "${COLLECTION}/vendor/zlib/uncompr.c",
+      "sha256": "169973717526c615531592fb8b6f896eb60df731c2132bb8615f504479a35538"
+    },
+    {
+      "path": "${PROJECT}/docs/core_catalog/bridge/lmx_catalog_bridge.h",
+      "sha256": "5a7a6ab4ed486256c180a5f9e5bd2feb7276de0d14db3ffd38193d2cdf9a4cd7"
+    },
+    {
+      "path": "${BUILD}/generated_compress2.c",
+      "sha256": "718e8123a422e8c1528a39be79f6d0a94a1262b0ff1460be8e7218376e7278c3"
+    },
+    {
+      "path": "${COLLECTION}/vendor/zlib/zlib.h",
+      "sha256": "2c404dcaa08709c2a129aea18f3dad4fb5acc5cb52ef12b6223bf8e78c195801"
+    }
+  ],
+  "sanitized": false,
+  "compiler": "cc (Debian 14.2.0-19) 14.2.0",
+  "on_demand_matches_shipped_sample": true,
+  "default_gates": {
+    "gates": 3,
+    "failures": 0,
+    "native_libraries_linked": 0
+  },
+  "native_symbols_in_default_executable": [],
+  "enabled_compress2": {
+    "assertions": 67,
+    "failures": 0,
+    "native_compress2_calls": 3,
+    "zlib": "1.4"
+  },
+  "normalized_paths": {
+    "applied": true,
+    "${PROJECT}": "project containing this runner",
+    "${CATALOG}": "--catalog-root",
+    "${COLLECTION}": "--source",
+    "${BUILD}": "test build directory"
+  }
+}

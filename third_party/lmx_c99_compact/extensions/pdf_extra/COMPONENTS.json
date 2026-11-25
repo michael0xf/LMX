@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "scope": "One PDF reader/writer library with its embedded TTF helper; existing zlib reused. No renderer or standalone interpreter.",
+  "components": [
+    {
+      "id": "pdf_extra:pdfio",
+      "paths": [
+        "vendor/pdfio"
+      ],
+      "version": "1.6.6",
+      "commit": "fb05e16bb2ae8cf1b1101669b236401dcb36c906",
+      "upstream_commit_date": "2026-10-28T18:53:54Z",
+      "license": "Apache-2.0 with optional exceptions; embedded MD5 Zlib-style and SHA-256 BSD-3-Clause notices; CC0-1.0 ICC data",
+      "urls": [
+        "https://www.msweet.org/pdfio/",
+        "https://github.com/michaelrsweet/pdfio/releases/tag/v1.6.6",
+        "https://github.com/michaelrsweet/pdfio/tree/fb05e16bb2ae8cf1b1101669b236401dcb36c906",
+        "https://codeload.github.com/michaelrsweet/pdfio/tar.gz/fb05e16bb2ae8cf1b1101669b236401dcb36c906"
+      ],
+      "licenses_notices": [
+        "vendor/pdfio/LICENSE",
+        "vendor/pdfio/NOTICE",
+        "vendor/pdfio/pdfio-md5.c",
+        "vendor/pdfio/pdfio-sha256.c",
+        "vendor/pdfio/pdfio-aes.c",
+        "vendor/pdfio/testfiles/CGATS001Compat-v2-micro.txt",
+        "vendor/pdfio/ttf.c",
+        "vendor/pdfio/ttf.h",
+        "vendor/pdfio/examples/mmd.c",
+        "vendor/pdfio/examples/mmd.h"
+      ],
+      "source_archives": [
+        {
+          "url": "https://codeload.github.com/michaelrsweet/pdfio/tar.gz/fb05e16bb2ae8cf1b1101669b236401dcb36c906",
+          "sha256": "2c51109baea5f116006be1a796dad3f15e241ee17e6650ec7c23d5596a795e99",
+          "download_bytes": 6822519,
+          "retained_in_delivery": false
+        }
+      ],
+      "public_headers": [
+        "vendor/pdfio/pdfio.h",
+        "vendor/pdfio/pdfio-content.h",
+        "vendor/pdfio/ttf.h"
+      ],
+      "cmake_targets": [
+        "LMX::pdfio"
+      ],
+      "build_group": "extensions/pdf_extra",
+      "purpose": "Read/write external PDF documents, objects, pages, streams, metadata; page copy; font/image embedding. No rendering.",
+      "selected_profile": "Hosted C99 static library, 17 production translation units including embedded TTF, zlib stream compression, built-in PNG path, no libpng or libjpeg dependency; POSIX APIs on Unix and retained Win32 branches.",
+      "dependencies": [
+        {
+          "target": "LMX::zlib",
+          "existing_vendor": "vendor/zlib",
+          "duplicate_source_copy": false
+        },
+        {
+          "system": "libm",
+          "platform": "Unix"
+        },
+        {
+          "system": "advapi32",
+          "platform": "Windows"
+        }
+      ],
+      "optional_not_linked": [
+        "libpng; HAVE_LIBPNG deliberately undefined",
+        "libjpeg; JPEG compressed data is embedded without a libjpeg dependency"
+      ],
+      "embedded_components": [
+        {
+          "name": "TTF helper",
+          "paths": [
+            "vendor/pdfio/ttf.c",
+            "vendor/pdfio/ttf.h"
+          ],
+          "license": "Apache-2.0",
+          "source_url": "https://github.com/michaelrsweet/ttf",
+          "version": "Exact source embedded in PDFio v1.6.6; no submodule fetch required"
+        },
+        {
+          "name": "MD5 implementation",
+          "path": "vendor/pdfio/pdfio-md5.c",
+          "license": "Zlib-style permissive notice, L. Peter Deutsch / Aladdin Enterprises"
+        },
+        {
+          "name": "SHA-256 implementation",
+          "path": "vendor/pdfio/pdfio-sha256.c",
+          "license": "BSD-3-Clause, IETF Trust"
+        },
+        {
+          "name": "CGATS ICC profile",
+          "path": "vendor/pdfio/pdfio-cgats001-compat.h",
+          "license": "CC0-1.0",
+          "notice": "vendor/pdfio/testfiles/CGATS001Compat-v2-micro.txt",
+          "source_url": "https://github.com/saucecontrol/Compact-ICC-Profiles"
+        }
+      ],
+      "excluded_copyleft_assets": [
+        "examples/code128.ttf (GPL-2.0 font) and its license; dependent optional code128 example excluded together. No production dependency on this font."
+      ],
+      "state_and_reentrancy": "Files/objects/streams use per-file mutable state and allocator/file buffers. Serialize all access to each file, including reads. localeconv accesses process locale; do not change locale concurrently. Cross-file concurrency was not tested, and code sharing is not a claim that C or libc state is immutable.",
+      "vendor_modifications": [],
+      "build_view_adjustments": [
+        {
+          "module": "extensions/pdf_extra/prepare_pdfio.cmake",
+          "upstream_source": "vendor/pdfio/pdfio-content.c",
+          "upstream_source_sha256": "5e413d622dd16117145c9e4d05cc9e0d5cdcb5cc8951b9a6a9c678df5df3b5f8",
+          "generated_source_sha256": "fd315217d5d548bf60493c20915a5074b47055f93304eafb30465fc897962d4b",
+          "change": "One explicit (const double (*)[3]) matrix cast at pdfioArrayCreateColorFromMatrix call inside pdfioArrayCreateColorFromPrimaries. Original vendor bytes unchanged.",
+          "reason": "ISO C before C23 does not allow the implicit multidimensional-array pointer qualification conversion; GCC -std=c99 -pedantic-errors rejects it."
+        }
+      ],
+      "validation": "VERIFICATION.json: original-tree and trimmed-tree strict C99 builds, identical .a, three explicitly scoped offline checks plus ASan/UBSan. Encrypted CreationDate has a separately retained KNOWN_FAIL reproducer; encrypted profile not fully verified.",
+      "known_limitations": [
+        "Encrypted CreationDate is read as 0 instead of the written timestamp; KNOWN_FAIL, no semantic fix applied.",
+        "AES-256 is an upstream TODO, not claimed.",
+        "Not a PDF renderer; not all filter/font/image/corpus combinations validated."
+      ],
+      "limitation_report": "extensions/pdf_extra/KNOWN_LIMITATIONS.md"
+    }
+  ]
+}

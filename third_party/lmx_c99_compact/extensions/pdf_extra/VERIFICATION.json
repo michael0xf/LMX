@@ -1,0 +1,102 @@
+{
+  "status": "PASS_WITH_KNOWN_FAIL",
+  "date": "2026-11-25",
+  "scope": "Ordinary PDF read/write profile passed. Limited encrypted pages/strings/streams checks passed; encrypted date correctness is KNOWN_FAIL and not claimed. No blanket encrypted-PDF success claim.",
+  "platform": "Linux x86_64",
+  "compiler": "cc (Debian 14.2.0-19) 14.2.0",
+  "configuration": "CMake MinSizeRel, -Os -DNDEBUG, C_STANDARD=99, C_EXTENSIONS=OFF, -pedantic-errors; explicit test checks unaffected by NDEBUG",
+  "fresh_build_after_pruning": true,
+  "all_pdfio_compile_commands_strict_c99": true,
+  "pdfio_production_translation_units": 17,
+  "compiled_translation_units_including_dependencies_and_tests": 34,
+  "configure_or_build_network_downloads": false,
+  "tests": [
+    {
+      "name": "pdf_extra.roundtrip",
+      "status": "PASS",
+      "exit_code": 0,
+      "scope": "Two PDF pages, exact title/author and UTC CreationDate=1700000000, MediaBox, decoded page text, 512-byte binary Flate stream and copy/reopen one page."
+    },
+    {
+      "name": "pdf_extra.invalid",
+      "status": "PASS",
+      "exit_code": 0,
+      "scope": "Non-PDF text and truncated catalog object rejected with error callbacks."
+    },
+    {
+      "name": "pdf_extra.encrypted",
+      "status": "PASS_LIMITED_SCOPE",
+      "exit_code": 0,
+      "scope": "AES-128 pages/title/author/binary Flate stream and page-copy roundtrip, wrong-password rejection. Encrypted CreationDate deliberately not included in this PASS claim; separate known failure below."
+    }
+  ],
+  "known_failures": [
+    {
+      "name": "pdf_extra.encrypted_date_known_failure",
+      "status": "KNOWN_FAIL",
+      "correctness_claim": "NOT_CLAIMED",
+      "source": "extensions/pdf_extra/tests/repro_encrypted_date.c",
+      "executable": "lmx_pdf_repro_encrypted_date",
+      "observed_exit_code": 1,
+      "observed_stderr": "KNOWN FAILURE: encrypted CreationDate got 0, expected 1700000000",
+      "expected": 1700000000,
+      "actual": 0,
+      "registered_by_default": false,
+      "opt_in_cmake_option": "LMX_PDFIO_RUN_KNOWN_FAILURE=ON",
+      "will_fail_property": false,
+      "semantic_vendor_fix_applied": false,
+      "report": "extensions/pdf_extra/KNOWN_LIMITATIONS.md"
+    }
+  ],
+  "selected_checks_summary": {
+    "default_cases": 3,
+    "default_successful_exit_codes": 3,
+    "known_failures_excluded_from_pass_count": 1
+  },
+  "sanitizers": {
+    "status": "PASS_SELECTED_CHECKS",
+    "checks": 3,
+    "flags": "-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer",
+    "ASAN_OPTIONS": "detect_leaks=0",
+    "UBSAN_OPTIONS": "halt_on_error=1",
+    "leak_check": "NOT_RUN: disabled because this execution environment prevents LeakSanitizer process inspection",
+    "limits": "Same three scoped usage checks; not a fuzzing or security audit."
+  },
+  "sizes": [
+    {
+      "target": "LMX::pdfio",
+      "archive": "liblmx_pdfio.a",
+      "archive_bytes": 275664,
+      "text_bytes": 105599,
+      "data_bytes": 15792,
+      "bss_bytes": 0,
+      "sha256": "90b74763a99223dd915eb658f87d235a41d891b86aa5143c39c480be988d4881"
+    }
+  ],
+  "size_definition": "Actual .a file bytes; GNU size section sums shown separately. Existing zlib dependency, system libraries, integration tests and peak runtime memory excluded.",
+  "existing_zlib_archive_bytes_in_standalone_measurement": 107574,
+  "per_library_limit_bytes": 1000000,
+  "all_selected_archives_below_limit": true,
+  "source_integrity": {
+    "all_retained_vendor_files_match_pinned_upstream": true,
+    "original_and_retained_profile_archives_byte_identical": true,
+    "original_and_retained_archive_sha256": "90b74763a99223dd915eb658f87d235a41d891b86aa5143c39c480be988d4881",
+    "original_tree_profile_note": "The same hash-guarded one-cast C99 build view is used in both builds. Raw unadapted source was rejected by strict C99 for that qualification conversion."
+  },
+  "not_run": [
+    "Full upstream testpdfio/testttf corpus (binary test data/fonts intentionally omitted)",
+    "Windows/macOS/other Unix builds",
+    "Hardware/resource-limit performance or peak memory guarantees",
+    "Exhaustive external PDF/filter/font/image interoperability",
+    "Rendering (not a PDFio feature)",
+    "Fuzzing/security/cryptographic audit",
+    "Multithreaded access tests",
+    "LeakSanitizer"
+  ],
+  "commands_from_collection_root": [
+    "cmake -S extensions/pdf_extra -B build/pdf-extra -G Ninja -DCMAKE_BUILD_TYPE=MinSizeRel -DLMX_PDF_EXTRA_BUILD_TESTS=ON",
+    "cmake --build build/pdf-extra",
+    "ctest --test-dir build/pdf-extra --output-on-failure",
+    "build/pdf-extra/lmx_pdf_repro_encrypted_date build/pdf-extra/date-repro.pdf # currently exits 1: KNOWN_FAIL"
+  ]
+}

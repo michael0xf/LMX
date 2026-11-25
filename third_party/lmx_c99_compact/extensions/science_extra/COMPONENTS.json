@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "components": [
+    {
+      "id": "science_extra:liblsoda",
+      "paths": [
+        "vendor/liblsoda"
+      ],
+      "version": "master snapshot retrieved 2026-11-25",
+      "license": "MIT",
+      "urls": [
+        "https://github.com/sdwfrost/liblsoda",
+        "https://codeload.github.com/sdwfrost/liblsoda/tar.gz/refs/heads/master"
+      ],
+      "licenses_notices": [
+        "vendor/liblsoda/LICENSE"
+      ],
+      "source_archives": [
+        {
+          "url": "https://codeload.github.com/sdwfrost/liblsoda/tar.gz/refs/heads/master",
+          "sha256": "b94e3b584b5a7357fc4cb395f198e7136135915c46ec35e7359ca54144a392b5",
+          "download_bytes": 113235,
+          "retained_in_delivery": false
+        }
+      ],
+      "public_headers": [
+        "vendor/liblsoda/src/lsoda.h"
+      ],
+      "cmake_targets": [
+        "LMX::lsoda"
+      ],
+      "build_group": "extensions/science_extra",
+      "purpose": "Adaptive ODE integration with automatic stiff/nonstiff method switching",
+      "selected_profile": "double, dense finite-difference Jacobian; C99 diagnostic adapter",
+      "state_and_reentrancy": "Solver state is in caller contexts; read-only coefficient table is shared. Tested interleaved independent solves, not concurrent threads. Dense Jacobian memory grows quadratically in equation count; caller must budget dimension and lifetime.",
+      "vendor_modifications": [],
+      "build_view_adjustments": [
+        "C99 variadic macros replace GNU comma-swallow syntax; diagnostics keep message but omit source location prefix",
+        "Internal printf allocator reserves the NUL byte, checks negative formatting length and allocation failure"
+      ]
+    },
+    {
+      "id": "science_extra:erfa",
+      "paths": [
+        "vendor/erfa"
+      ],
+      "version": "2.0.1",
+      "license": "BSD-3-Clause (ERFA/SOFA-derived notice retained)",
+      "urls": [
+        "https://github.com/liberfa/erfa",
+        "https://codeload.github.com/liberfa/erfa/tar.gz/refs/tags/v2.0.1"
+      ],
+      "licenses_notices": [
+        "vendor/erfa/LICENSE"
+      ],
+      "source_archives": [
+        {
+          "url": "https://codeload.github.com/liberfa/erfa/tar.gz/refs/tags/v2.0.1",
+          "sha256": "d5469fbd0b212b3c7270c1da15c9bd82f37da9218fc89627f98283d27b416cbf",
+          "download_bytes": 345097,
+          "retained_in_delivery": false
+        }
+      ],
+      "public_headers": [
+        "vendor/erfa/src/erfa.h",
+        "vendor/erfa/src/erfam.h",
+        "vendor/erfa/src/erfaextra.h"
+      ],
+      "cmake_targets": [
+        "LMX::erfa"
+      ],
+      "build_group": "extensions/science_extra",
+      "purpose": "Astronomical coordinate systems, calendars/time scales, Earth orientation, star and planetary calculations",
+      "selected_profile": "Full ERFA 2.0.1 C library, SOFA heritage 20231011",
+      "state_and_reentrancy": "Most routines use caller data; mutable global leap-second-table override APIs must be serialized. No ephemeris/Earth-orientation data feed is bundled.",
+      "vendor_modifications": [],
+      "build_view_adjustments": []
+    }
+  ]
+}

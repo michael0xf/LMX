@@ -2,10 +2,13 @@
 
 [Русский](README_RU.md) · Edition of **25 November 2026**
 
-This README is intended for the root of `lmx_c99_compact`, next to [CMakeLists.txt](CMakeLists.txt). The collection contains **112 accepted component entries**, with every library group enabled by default. It provides sources, CMake targets, adapters, examples, and tests for use with LMX or another application. The LMX compiler, its FFI, and its graphical Manager are not included.
+This README is intended for the root of `lmx_c99_compact`, next to [CMakeLists.txt](CMakeLists.txt). The collection contains the component entries listed in **SOURCES.json**, with every library group enabled by default. It provides sources, CMake targets, adapters, examples, and tests for use with LMX or another application. The LMX compiler, its FFI, and its graphical Manager are not included.
 
 ## Start here
 
+- [Complete C99 capability catalog](../../docs/c99_archive/CATALOG.ru.md) — component role, version, license and source.
+- [External format capabilities](../../docs/c99_archive/FORMAT_GUIDE.ru.md) — readers, writers and selected profile limits.
+- [Current verification](../../docs/c99_archive/VERIFICATION.json) and [sizes](../../docs/c99_archive/SIZES.json).
 - [SOURCES.json](SOURCES.json) — the complete component list, pinned versions/commits, source URLs, and license paths.
 - [Examples and run commands](examples/README_RU.md) — 26 complete demonstration programs; guide in Russian.
 - [Upstream example index](examples/UPSTREAM_INDEX_RU.md) and [detailed provenance index](examples/UPSTREAM_SOURCES.json).
@@ -62,6 +65,18 @@ Sources were selected file by file from the full collection, then checked throug
 | Quantized inference | NNoM scalar core, q7/q15 | `LMX::mlp_nnom`, `LMX::nnom`; [rules](extensions/nnom/CMakeLists.txt) |
 
 Component entries, CMake targets, and static archives are different counting units. Shared dependencies, including zlib, cglm, and KissFFT, are not added as independent copies of the same implementation. The exact contents are pinned in [SOURCES.json](SOURCES.json).
+
+### Additional capability groups
+
+The numeric, text/hash and networking additions are retained. New groups
+provide media/filesystem formats and CBOR (`storage_extra`), sensing/control
+and device protocols (`control_extra`), TIFF/XLS/MAT, Data Matrix, regex and
+optimization (`knowledge_extra`), ODE and astronomical calculations
+(`science_extra`), and PDF object/page/stream I/O (`pdf_extra`).
+
+Every accepted group participates in `LMX::all`. Use
+`-DLMX_ARCHIVE_VERIFY=ON` for the current examples and CTest suite.
+Exact profiles and metadata are local to the extension directories.
 
 ## 2. Build requirements
 
@@ -199,24 +214,17 @@ libcorrect's convolutional API uses bit lengths, while RS uses byte lengths; an 
 
 ## 6. Examples, references, and validation scope
 
-The `examples/` directory contains **268 files totaling 1 429 932 bytes**, covering programs, short references, tests, provenance indexes, and CMake files. The addition had a 30 MB limit; its size was not increased artificially.
+The original 26 usage demonstrations, upstream examples and 51 API scenarios
+are retained. New groups add focused tests and a combined corrupted-file
+recovery example. Counts, C99 flags, actual platform and limitations are in
+the [current report](../../docs/c99_archive/VERIFICATION.json).
 
-- **26 collection programs:** rebuilt in strict C99 and run on Linux. All 26 were also compiled and linked for Windows.
-- **182 upstream files for 62 components:** 140 programs, 4 fragments, 21 short references, 2 SQL setup files, and 15 support files. They were reviewed, but not every program was compiled or run. Additional requirements are recorded in the [index](examples/UPSTREAM_INDEX_RU.md); these examples are not part of the automatic build of the 26 programs. Examples defining their own `*_IMPLEMENTATION` must not also link a second implementation of the same library.
-- **46 check programs / 51 CTest scenarios on Linux:** all passed. For Windows, 44 programs were built and 49 scenarios registered; two UNIX checks are not included there. The Windows scenarios were not run.
-
-### Completed validation of the compact distribution
-
-| Platform | Validated |
-|---|---|
-| Linux x86-64, GCC 14.2.0 | 1 512 strict C99 commands, including 4 validation translation units; 122 static archives; combined forced linking and execution; 26 demonstrations and 51 scenarios |
-| Windows x64, MinGW-w64 GCC 14.2.0 | 1 503 strict C99 commands in the main validation; 119 static archives; combined linking; additionally, 26 examples and 44 test programs. The PE files were not run |
-| Android arm64-v8a, API 26, NDK 30.0.16248370 | Graphics only, GLES3: 28 C99 commands; 12 graphics archives linked together with zlib into an AArch64 ELF. No execution on a device |
-| macOS | Platform inputs retained; no native build or execution performed |
-
-Linux configuration and building were performed with network connections prohibited. The sets of strong definitions in all validated production static archives matched those of the full collection on Linux and Windows. This checks preservation of the contents; it is not proof that every API is correct on every OS and CPU. A complete Android build of all libraries is not claimed.
-
-The released compact archive contains **4563 files**, with a total logical size of **93 186 264 bytes (88.87 MiB)**. The `.tar.gz` archive is **18 832 800 bytes (17.96 MiB)**. These measurements describe the released archive before this pair of README files is added. Compiled validation executables are not included in the archive.
+The new native verification is Linux x86_64. Historical Windows/Android
+results from the supplied baseline are not attributed to the new additions.
+Retained platform sources support future builds; they are not a claim of a
+completed hardware/OS matrix. [Size records](../../docs/c99_archive/SIZES.json)
+distinguish source payloads, archives and binaries; they are not a measured
+final LMX runtime. Our build products are excluded from the source archive.
 
 ## 7. Licenses and further integration
 

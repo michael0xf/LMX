@@ -1,0 +1,147 @@
+{
+  "status": "PASS",
+  "date_utc": "2026-11-25",
+  "scope": "Seven selected C99 profiles, six integration checks; native storage/format libraries, no LMX runtime changes.",
+  "platform": "Linux x86_64",
+  "compiler": "cc (Debian 14.2.0-19) 14.2.0",
+  "configuration": "CMake MinSizeRel; -std=c99; C_EXTENSIONS=OFF; -Os; -pedantic-errors; NDEBUG",
+  "actual_compile_command_count": 39,
+  "all_actual_compile_commands_strict_c99": true,
+  "stages": [
+    {
+      "name": "original_download_tree",
+      "configure": "PASS",
+      "build": "PASS",
+      "tests": "6/6 PASS",
+      "notes": "FatFs official patches and Unicode replacement applied; selected profiles/adapters identical to retained build."
+    },
+    {
+      "name": "retained_tree_after_pruning",
+      "configure": "PASS",
+      "build": "PASS",
+      "tests": "6/6 PASS",
+      "notes": "No source references to original download trees; network unused at configure/build/test."
+    }
+  ],
+  "tests": [
+    {
+      "name": "storage_littlefs",
+      "result": "PASS",
+      "coverage": "RAM NOR: format, mkdir, write/sync, rename, remount/read, truncate, remove"
+    },
+    {
+      "name": "storage_fatfs",
+      "result": "PASS",
+      "coverage": "FAT and exFAT; UTF-8 Cyrillic and accented LFN, Unicode case matching, write/sync/remount/read/unlink; FAT32 separately NOT_RUN"
+    },
+    {
+      "name": "storage_spiffs",
+      "result": "PASS",
+      "coverage": "RAM NOR: format, write, rename, remount/read, check, remove"
+    },
+    {
+      "name": "storage_heatshrink",
+      "result": "PASS",
+      "coverage": "4096-byte mixed binary payload; small streaming chunks, finish/drain, byte-exact roundtrip"
+    },
+    {
+      "name": "storage_cbor_interop",
+      "result": "PASS",
+      "coverage": "Both directions QCBOR/TinyCBOR; signed integer, UTF-8, double, bool, bytes; truncated-input rejection; known software-binary16 vector"
+    },
+    {
+      "name": "storage_flashdb",
+      "result": "PASS",
+      "coverage": "80 blob replacements with GC; KV and time-series reopen/read; direct typed and generic pointer-to-callback object locking APIs"
+    }
+  ],
+  "sizes": [
+    {
+      "component": "storage_extra:littlefs",
+      "archive": "liblmx_storage_littlefs.a",
+      "archive_bytes": 38970,
+      "text_bytes": 27863,
+      "data_bytes": 0,
+      "bss_bytes": 0,
+      "sha256": "18b4f5be89cfb04bd9dadc0e4b06b18429330646374f345257074f8c71d99c90",
+      "original_input_build_same_sha256": true
+    },
+    {
+      "component": "storage_extra:fatfs",
+      "archive": "liblmx_storage_fatfs.a",
+      "archive_bytes": 39330,
+      "text_bytes": 28189,
+      "data_bytes": 0,
+      "bss_bytes": 16,
+      "sha256": "cf1ae6ff17fdbd7755131855dd90e3e7f6b817f1bdf48cbbd16daf348d1d2d98",
+      "original_input_build_same_sha256": true
+    },
+    {
+      "component": "storage_extra:spiffs",
+      "archive": "liblmx_storage_spiffs.a",
+      "archive_bytes": 58016,
+      "text_bytes": 35456,
+      "data_bytes": 0,
+      "bss_bytes": 0,
+      "sha256": "4c76c7355abe9a15e700c209b67de4d983458ffc71664744dec843f420d35f81",
+      "original_input_build_same_sha256": true
+    },
+    {
+      "component": "storage_extra:heatshrink",
+      "archive": "liblmx_storage_heatshrink.a",
+      "archive_bytes": 8244,
+      "text_bytes": 3204,
+      "data_bytes": 0,
+      "bss_bytes": 0,
+      "sha256": "218a8323e790b6218d2d559385c351d43312be7f44ba236c2f65c0d8e291bb2d",
+      "original_input_build_same_sha256": true
+    },
+    {
+      "component": "storage_extra:qcbor",
+      "archive": "liblmx_storage_qcbor.a",
+      "archive_bytes": 63324,
+      "text_bytes": 27561,
+      "data_bytes": 0,
+      "bss_bytes": 20,
+      "sha256": "e2c56b09af56676ef41679e80b1a2ab72eeb418c1ca925147c18c161fca6c92d",
+      "original_input_build_same_sha256": true
+    },
+    {
+      "component": "storage_extra:tinycbor",
+      "archive": "liblmx_storage_tinycbor.a",
+      "archive_bytes": 42786,
+      "text_bytes": 14790,
+      "data_bytes": 0,
+      "bss_bytes": 0,
+      "sha256": "77e738a01fcfdce09ea315992196bf4a7b1ff207cada77f9c3c7bca84ca6ade4",
+      "original_input_build_same_sha256": true
+    },
+    {
+      "component": "storage_extra:flashdb",
+      "archive": "liblmx_storage_flashdb.a",
+      "archive_bytes": 49600,
+      "text_bytes": 22481,
+      "data_bytes": 0,
+      "bss_bytes": 130,
+      "sha256": "8a1da1771ad0846bd3fc9e5fc8d71e14b481773775572c551452c1136a5c59f0",
+      "original_input_build_same_sha256": true
+    }
+  ],
+  "size_limit_bytes": 1000000,
+  "all_archives_below_limit": true,
+  "total_static_archive_bytes": 300270,
+  "total_text_bytes": 159544,
+  "all_original_and_retained_archives_identical": true,
+  "size_interpretation": "Actual .a file bytes are stricter than code-only sizes for this profile. BSS is static writable state; caller buffers, heap, stack, medium images and executable runtime are additional and not represented by archive size.",
+  "cross_platform_execution": {
+    "Windows": "NOT_RUN",
+    "macOS": "NOT_RUN",
+    "ARM/MCU": "NOT_RUN",
+    "other": "NOT_RUN"
+  },
+  "physical_flash_and_power_failure_testing": "NOT_RUN; RAM models and C FILE-backed sector persistence only.",
+  "full_upstream_suites": "NOT_RUN; their source code is retained, but the six self-contained integration checks are the executed tests.",
+  "license_review": "Original retained notices inspected; selected targets have permissive licenses. FatFs mentions GPL compatibility but is included under its own permissive license.",
+  "network_at_build": "none",
+  "lmx_wrappers_execution": "NOT_RUN; this group exposes native C targets for later LMX wrapping."
+}

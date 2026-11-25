@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(LMX_C99_Libraries VERSION 3.1.0 LANGUAGES C)
+project(LMX_C99_Libraries VERSION 3.3.0 LANGUAGES C)
 set(LMX_VENDOR_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor")
 
 # All dependency sources are retained in vendor/. No configure-time downloads.
@@ -11,6 +11,19 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
 option(LMX_STRICT_C99 "Reject non-C99 constructs with GCC/Clang diagnostics" ON)
+option(LMX_BUILD_CATALOG_CHECKS "Run the compact catalog's combined-link C99 checks" OFF)
+option(LMX_BUILD_ARCHIVE_EXAMPLES "Build practical collection and recovery examples" OFF)
+option(LMX_ARCHIVE_VERIFY "Build the retained offline usage and new-component checks" OFF)
+if(LMX_ARCHIVE_VERIFY)
+    set(LMX_BUILD_ARCHIVE_EXAMPLES ON)
+    set(LMX_BUILD_CATALOG_CHECKS ON)
+    set(LMX_STORAGE_BUILD_TESTS ON)
+    set(LMX_CONTROL_EXTRA_BUILD_TESTS ON)
+    set(LMX_KNOWLEDGE_EXTRA_BUILD_TESTS ON)
+    set(LMX_SCIENCE_EXTRA_BUILD_TESTS ON)
+    set(LMX_PDF_EXTRA_BUILD_TESTS ON)
+    enable_testing()
+endif()
 # Fixed default composition: all accepted components are included.
 # To remove a group for a private build, edit its assignment manually here.
 set(LMX_WITH_STB ON) # Build the selected C99 stb components
@@ -46,6 +59,14 @@ set(LMX_WITH_GENANN ON) # Compact feed-forward neural networks
 set(LMX_WITH_KANN ON) # CPU autodiff graphs, neural networks and data reader
 set(LMX_WITH_MICRO_MLP ON) # Tinn and the reviewed afan MLP
 set(LMX_WITH_NNOM ON) # Portable scalar quantized neural inference
+set(LMX_WITH_NUMERIC_EXTRA ON) # Compact numeric alternatives and arbitrary-precision real
+set(LMX_WITH_TEXT_HASH_EXTRA ON) # Compact text, geometry, terminal and hash alternatives
+set(LMX_WITH_NETWORK_EXTRA ON) # Local DNS, events and multicast discovery
+set(LMX_WITH_STORAGE_EXTRA ON) # Media filesystems, flash records, CBOR and compression
+set(LMX_WITH_CONTROL_EXTRA ON) # Sensors, control and local device protocols
+set(LMX_WITH_KNOWLEDGE_EXTRA ON) # External formats, patterns, optimization and Data Matrix
+set(LMX_WITH_SCIENCE_EXTRA ON) # Differential equations and astronomical routines
+set(LMX_WITH_PDF_EXTRA ON) # PDF objects, pages, streams and metadata read/write
 set(LMX_CURL_WITH_LIBSSH2 ON) # Enable curl SCP/SFTP using the bundled libssh2 when systems are enabled
 
 # This compact source distribution contains production build inputs. The
@@ -219,6 +240,39 @@ if(LMX_WITH_NNOM)
     target_link_libraries(lmx_c99_all INTERFACE LMX::mlp_nnom)
 endif()
 
+if(LMX_WITH_NUMERIC_EXTRA)
+    add_subdirectory(extensions/numeric_extra)
+    target_link_libraries(lmx_c99_all INTERFACE LMX::numeric_extra)
+endif()
+if(LMX_WITH_TEXT_HASH_EXTRA)
+    add_subdirectory(extensions/text_hash_extra)
+    target_link_libraries(lmx_c99_all INTERFACE LMX::text_hash_extra)
+endif()
+if(LMX_WITH_NETWORK_EXTRA)
+    add_subdirectory(extensions/network_extra)
+    target_link_libraries(lmx_c99_all INTERFACE LMX::network_extra)
+endif()
+if(LMX_WITH_STORAGE_EXTRA)
+    add_subdirectory(extensions/storage_extra)
+    target_link_libraries(lmx_c99_all INTERFACE LMX::storage_extra)
+endif()
+if(LMX_WITH_CONTROL_EXTRA)
+    add_subdirectory(extensions/control_extra)
+    target_link_libraries(lmx_c99_all INTERFACE LMX::control_extra)
+endif()
+if(LMX_WITH_KNOWLEDGE_EXTRA)
+    add_subdirectory(extensions/knowledge_extra)
+    target_link_libraries(lmx_c99_all INTERFACE LMX::knowledge_extra)
+endif()
+if(LMX_WITH_SCIENCE_EXTRA)
+    add_subdirectory(extensions/science_extra)
+    target_link_libraries(lmx_c99_all INTERFACE LMX::science_extra)
+endif()
+if(LMX_WITH_PDF_EXTRA)
+    add_subdirectory(extensions/pdf_extra)
+    target_link_libraries(lmx_c99_all INTERFACE LMX::pdf_extra)
+endif()
+
 # Preserve the requested mathematical aggregation target and header name.
 # This toolbox is not an API/ABI-compatible implementation of GNU GSL.
 if(LMX_WITH_SCIENTIFIC AND LMX_WITH_PRECISION)
@@ -273,4 +327,15 @@ if(BUILD_TESTING AND LMX_WITH_CURL_ZLIB AND LMX_WITH_SYSTEMS AND LMX_CURL_WITH_L
         set_tests_properties(expanded.sftp_local_verified_host PROPERTIES
             TIMEOUT 45 SKIP_RETURN_CODE 77)
     endif()
+endif()
+
+# These tests are retained in this patch and do not need the omitted historical
+# test fixtures. Enable explicitly without changing the fixed bundle profile.
+if(LMX_BUILD_CATALOG_CHECKS)
+    enable_testing()
+    add_subdirectory(extensions/catalog_checks)
+endif()
+if(LMX_BUILD_ARCHIVE_EXAMPLES)
+    enable_testing()
+    add_subdirectory(examples)
 endif()

@@ -1,0 +1,21 @@
+# Entry Main: a block of one place describes a Structure with one field, as two do (the book #structure-result: the
+# form of the record decides, a block of places). D describes `return:` with `int: first`; C returns node\Solo. The
+# caller receives Solo itself: the write through node\result changes D\Solo\first. Solo\first 11, observed 7.
+@: result 0
+int: observed 0
+D:
+    Solo:
+        int: first 7
+    end: Solo
+    return:
+        int: first
+    end: return
+    C:
+        return: node\Solo
+    end: C
+end: D
+---
+Main:
+    node\result := D\C()
+    node\observed := node\result\first
+    node\result\first := 11

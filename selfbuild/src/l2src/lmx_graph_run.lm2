@@ -1404,7 +1404,7 @@ fn: lmx_graph_input_field (c.LmxGraph@: g; c.Lmx@: data; size_t: index) int
 # entry; CODE declarations create their local rows when reached. No default
 # expression or initializer runs here, and no local is published to the graph.
 # data 0 is a launch without data, as R0 (the book #root-entry): no input rows; the namespace is the body's.
-fn: lmx_graph_work_open_parts (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: data; c.Lmx@: body; char@: result; c.LmxGraphFrame@: frame) int
+fn: lmx_graph_work_open_parts (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: data; c.Lmx@: body; char@: result; c.Lmx@: result_description; c.LmxGraphFrame@: frame) int
     c.LmxActivation@: active (cast: (c.LmxActivation@) g\arena\activation)
     size_t: i 0U
     size_t: marked 0U
@@ -1419,6 +1419,9 @@ fn: lmx_graph_work_open_parts (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: data; c.Lmx
     frame\body := body
     frame\lexical_scope := body
     frame\result := result
+    # The block a structural launch describes its Structure result with, selected before the frame was opened; the
+    # collection marks it with the frame (lmx_gc_graph_frames).
+    frame\result_description := result_description
     frame\capacity := c.lmx_graph_count(data) + 8U
     frame\rows := (cast: (c.LmxGraphWork@) c.calloc(frame\capacity, c.sizeof(c.LmxGraphWork)))
     if: frame\rows = 0
@@ -1460,8 +1463,8 @@ end: lmx_graph_work_open_parts
 # lmx_graph_work_open_parts.
 fn: lmx_graph_work_open_data (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: data; c.LmxGraphFrame@: frame) int
     if: c.lmx_graph_method(g, code) != 0
-        return: lmx_graph_work_open_parts(g, code, data, c.lmx_graph_method_code(g, code), c.lmx_graph_word_text(g, c.lmx_graph_method_return(g, code)), frame)
-return: lmx_graph_work_open_parts(g, code, data, code, 0, frame)
+        return: lmx_graph_work_open_parts(g, code, data, c.lmx_graph_method_code(g, code), c.lmx_graph_word_text(g, c.lmx_graph_method_return(g, code)), 0, frame)
+return: lmx_graph_work_open_parts(g, code, data, code, 0, lmx_graph_data_structure(g, data), frame)
 
 fn: lmx_graph_work_open (c.LmxGraph@: g; c.Lmx@: code; c.LmxGraphFrame@: frame) int
     return: lmx_graph_work_open_data(g, code, c.lmx_graph_method_data(g, code), frame)
@@ -4554,7 +4557,7 @@ end: lmx_graph_launch_structural
 # the edge to its operand empty. The record is known by its form alone: unnamed, two slots, the word @ in the first,
 # the second empty. A WORD spelled @ is the exact name of a place (written in backticks), not the contract: it is no
 # scalar of the profile and no reference. 0 when the data has no such record or its record is of another shape (a
-# block of fields: a Structure result with several fields, which this launch does not carry yet). Nothing is executed.
+# block of places is a Structure result: lmx_graph_data_structure). Nothing is executed.
 fn: lmx_graph_data_result (c.LmxGraph@: g; c.Lmx@: data) char@
     c.LmxGraphState@: state (cast: (c.LmxGraphState@) c.lmx_graph_state())
     c.Lmx@: described 0
@@ -4582,6 +4585,79 @@ fn: lmx_graph_data_result (c.LmxGraph@: g; c.Lmx@: data) char@
     return: c.lmx_graph_word_text(g, item)
 end: lmx_graph_data_result
 
+# The result the data of a structural launch describes as a Structure (the book #structure-result, #return-in-data;
+# step 21.7 K3): the block its `return` record holds when every field of the block declares a place -- `return:` with
+# `int: first`, `int: second` --, of one field or of several. Such a result is one Structure value: the one the body
+# returns, when its fields are the described ones. The block describes no cell of the data. 0 when the record is of
+# another shape. Nothing is executed.
+fn: lmx_graph_data_structure (c.LmxGraph@: g; c.Lmx@: data) c.Lmx@
+    c.LmxGraphState@: state (cast: (c.LmxGraphState@) c.lmx_graph_state())
+    c.Lmx@: described 0
+    size_t: i 0U
+    if: state = 0 || data = 0 || c.lmx_graph_kind(g, (cast: (@) data)) != 4
+        return: 0
+    described := (cast: (c.Lmx@) c.lmx_graph_part(g, (cast: (@) data), (cast: (char@) state\w_return)))
+    if: described = 0 || c.lmx_graph_kind(g, (cast: (@) described)) != 4 || c.lmx_graph_count(described) = 0U
+        return: 0
+    while: i < c.lmx_graph_count(described)
+        if: c.lmx_graph_declaration_place_name(g, c.lmx_graph_get_in(g, described, i)) = 0
+            return: 0
+        i := i + 1U
+    ---
+    return: described
+
+# Is the result of the live launch of code a Structure described by a block? Such a launch was opened with the block
+# in its frame (lmx_graph_work_open_parts); a scalar or a reference result is the word of `frame\result`, alone. 1 or 0.
+fn: lmx_graph_result_structure (c.LmxGraph@: g; c.Lmx@: code) int
+    c.LmxActivation@: active (cast: (c.LmxActivation@) g\arena\activation)
+    c.LmxGraphFrame@: frame 0
+    if: active = 0 || active\code != code || active\frame = 0
+        return: 0
+    frame := (cast: (c.LmxGraphFrame@) active\frame)
+    return: (cast: (int) (frame\result_description != 0))
+
+# The block the live launch of code carries its Structure result under: the one selected when the launch was prepared,
+# by its identity (a replacement of the data's `return` record during the call does not reach this call). 0 when the
+# launch is not live or describes no Structure.
+fn: lmx_graph_result_description (c.LmxGraph@: g; c.Lmx@: code) c.Lmx@
+    c.LmxActivation@: active (cast: (c.LmxActivation@) g\arena\activation)
+    c.LmxGraphFrame@: frame 0
+    if: lmx_graph_result_structure(g, code) = 0
+        return: 0
+    active := (cast: (c.LmxActivation@) g\arena\activation)
+    frame := (cast: (c.LmxGraphFrame@) active\frame)
+    return: (cast: (c.Lmx@) frame\result_description)
+
+# The result of a launch described by a block: the Structure the body returns, itself, when its fields are the
+# described ones (lmx_graph_source_interface: the existing field walk; only its YES is a result -- NO is a mismatch,
+# UNKNOWN proves nothing -- and no initializer runs). The transfer copies nothing: a returned reference keeps its
+# target (the book #structure-result). A number or another kind is the unsuitable type (4). The Value stays as it is.
+fn: lmx_graph_result_receive_structure (c.LmxGraph@: g; c.Lmx@: code; c.LmxWalkValue@: value) int
+    c.Lmx@: described 0
+    @: structure void 0
+    int: answer c.LMX_IMPLEMENTS_UNKNOWN
+    int: status 0
+    if: value = 0 || value\present = 0
+        return: 5
+    described := lmx_graph_result_description(g, code)
+    if: described = 0
+        return: 5
+    if: value\kind = c.LMX_WALK_VALUE_REFERENCE && c.lmx_graph_kind(g, (cast: (@) value\ref)) = 4
+        structure := value\ref
+    else:
+        if: c.lmx_walk_value_materialize(g\arena, value, @ structure) != c.LMX_WALK_OK
+            return: 4
+        ---
+    ---
+    if: c.lmx_graph_kind(g, structure) != 4
+        return: 4
+    status := lmx_graph_source_interface(g, (cast: (c.Lmx@) structure), described, @ answer)
+    if: status != c.LMX_WALK_OK
+        return: 4
+    if: answer != c.LMX_IMPLEMENTS_YES
+        return: 4
+    return: 0
+
 fn: lmx_graph_result_receive (c.LmxGraph@: g; c.Lmx@: code; c.LmxWalkValue@: value) int
     @: abi void 0
     @: source void 0
@@ -4592,6 +4668,10 @@ fn: lmx_graph_result_receive (c.LmxGraph@: g; c.Lmx@: code; c.LmxWalkValue@: val
         if: value = 0 || value\present = 0 || value\kind != c.LMX_WALK_VALUE_REFERENCE
             return: 4
         return: 0
+    ---
+    # A result described by a block is the Structure the body returns (the book #structure-result; step 21.7 K3).
+    if: lmx_graph_result_structure(g, code) != 0
+        return: lmx_graph_result_receive_structure(g, code, value)
     ---
     ty := lmx_graph_result_type(g, code, @ abi, @ source)
     return: lmx_graph_result_receive_as(g, ty, abi, value)
@@ -5147,7 +5227,7 @@ fn: lmx_graph_launch_result (c.LmxGraph@: g; c.Lmx@: code) int
     c.LmxGraphFrame@: frame 0
     if: active != 0 && active\code = code && active\frame != 0
         frame := (cast: (c.LmxGraphFrame@) active\frame)
-        return: (cast: (int) (frame\result != 0))
+        return: (cast: (int) (frame\result != 0 || frame\result_description != 0))
     return: c.lmx_graph_has_result(g, code)
 end: lmx_graph_launch_result
 
@@ -5182,7 +5262,7 @@ end: lmx_graph_method_run_value
 
 # Invoke with arguments that have already passed admission. Missing literal defaults are copied into this call's
 # private places. Native and interpretation share the ordinary activation ABI; the signature graph remains intact.
-fn: lmx_graph_invoke_data_value (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: data; c.Lmx@: body; char@: result; @@: actuals; c.LmxWalkValue@: supplied; size_t: count; size_t@: bindings; c.LmxWalkValue@: out) int
+fn: lmx_graph_invoke_data_value (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: data; c.Lmx@: body; char@: result; c.Lmx@: result_description; @@: actuals; c.LmxWalkValue@: supplied; size_t: count; size_t@: bindings; c.LmxWalkValue@: out) int
     c.LmxGraphState@: state (cast: (c.LmxGraphState@) c.lmx_graph_state())
     c.Lmx@: statement 0
     @@: refs void 0
@@ -5200,6 +5280,7 @@ fn: lmx_graph_invoke_data_value (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: data; c.L
     c.LmxExecutionRoots: actual_roots
     c.LmxExecutionRoots: data_roots
     c.LmxExecutionRoots: supplied_roots
+    c.LmxExecutionRoots: description_roots
     c.LmxExecutionRoots@: roots_mark 0
     @: destination void 0
     @: result_abi void 0
@@ -5216,6 +5297,9 @@ fn: lmx_graph_invoke_data_value (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: data; c.L
     c.lmx_walk_value_clear(@ destination_value)
     width := lmx_graph_formal_width(g, data)
     if: count > width
+        return: 5
+    # A result described by a block belongs to a structural launch alone, as the reference result does.
+    if: result_description != 0 && (body != code || data = code)
         return: 5
     if: result != 0
         # The reference result (`return: @`) belongs to a structural launch alone (lmx_graph_launch_structure_value): an
@@ -5243,6 +5327,10 @@ fn: lmx_graph_invoke_data_value (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: data; c.L
     roots_mark := c.lmx_execution_roots_mark(g\arena)
     c.lmx_execution_roots_push(g\arena, @ supplied_roots, (cast: (@) supplied), (cast: (size_t) (supplied != 0)) * count, actuals, (cast: (size_t) (actuals != 0)) * count, (cast: (@) body), 0)
     c.lmx_execution_roots_push(g\arena, @ data_roots, 0, 0U, 0, 0U, (cast: (@) data), 0)
+    # The selected block stays live from its selection until the frame holds it (lmx_gc_graph_frames marks the frame's).
+    if: result_description != 0
+        c.lmx_execution_roots_push(g\arena, @ description_roots, 0, 0U, 0, 0U, (cast: (@) result_description), 0)
+        ---
     c.lmx_execution_roots_push(g\arena, @ actual_roots, (cast: (@) values), width, refs, width, (cast: (@) code), 0)
     while: i < count && status = 0
         slot := i
@@ -5288,7 +5376,7 @@ fn: lmx_graph_invoke_data_value (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: data; c.L
         # matching selected body may use the method's installed entry.
         # The entry of a native body receives values, not the description of a place that is made on demand: a call with one
         # runs the same body by the interpreter.
-        if: c.lmx_native_entry(g\arena, code) != 0 && (c.lmx_graph_method(g, code) = 0 || body = c.lmx_graph_method_code(g, code)) && (result = 0 || c.lmx_graph_method(g, code) != 0)
+        if: c.lmx_native_entry(g\arena, code) != 0 && (c.lmx_graph_method(g, code) = 0 || body = c.lmx_graph_method_code(g, code)) && ((result = 0 && result_description = 0) || c.lmx_graph_method(g, code) != 0)
             if: result != 0
                 destination := c.lmx_walk_result_storage(g\arena, result_type, (cast: (const: c.LmxScalarABI@) result_abi), 0, result_source, @ destination_value)
                 if: destination = 0
@@ -5307,7 +5395,7 @@ fn: lmx_graph_invoke_data_value (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: data; c.L
         else:
             status := c.lmx_activation_push(g\arena, @ activation, 2, code, refs, (cast: (@) values), width, 0)
             if: status = 0
-                status := lmx_graph_work_open_parts(g, code, data, body, result, @ frame)
+                status := lmx_graph_work_open_parts(g, code, data, body, result, result_description, @ frame)
                 if: status = 0
                     status := lmx_graph_method_run_value(g, code, @ result_value)
                     status := lmx_graph_work_finish(g, @ frame, status)
@@ -5326,18 +5414,18 @@ fn: lmx_graph_invoke_data_value (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: data; c.L
 end: lmx_graph_invoke_data_value
 
 fn: lmx_graph_invoke_value (c.LmxGraph@: g; c.Lmx@: code; @@: actuals; size_t: count; c.LmxWalkValue@: out) int
-    return: lmx_graph_invoke_data_value(g, code, c.lmx_graph_method_data(g, code), c.lmx_graph_method_code(g, code), c.lmx_graph_word_text(g, c.lmx_graph_method_return(g, code)), actuals, 0, count, 0, out)
+    return: lmx_graph_invoke_data_value(g, code, c.lmx_graph_method_data(g, code), c.lmx_graph_method_code(g, code), c.lmx_graph_word_text(g, c.lmx_graph_method_return(g, code)), 0, actuals, 0, count, 0, out)
 end: lmx_graph_invoke_value
 
 fn: lmx_graph_invoke_bound_value (c.LmxGraph@: g; c.Lmx@: code; @@: actuals; size_t: count; size_t@: bindings; c.LmxWalkValue@: out) int
-    return: lmx_graph_invoke_data_value(g, code, c.lmx_graph_method_data(g, code), c.lmx_graph_method_code(g, code), c.lmx_graph_word_text(g, c.lmx_graph_method_return(g, code)), actuals, 0, count, bindings, out)
+    return: lmx_graph_invoke_data_value(g, code, c.lmx_graph_method_data(g, code), c.lmx_graph_method_code(g, code), c.lmx_graph_word_text(g, c.lmx_graph_method_return(g, code)), 0, actuals, 0, count, bindings, out)
 end: lmx_graph_invoke_bound_value
 
 # Complete already received actuals use the same binding and execution worker.
 fn: lmx_graph_invoke_values (c.LmxGraph@: g; c.Lmx@: code; c.LmxWalkValue@: actuals; size_t: count; size_t@: bindings; c.LmxWalkValue@: out) int
     if: count != 0U && actuals = 0
         return: 5
-    return: lmx_graph_invoke_data_value(g, code, c.lmx_graph_method_data(g, code), c.lmx_graph_method_code(g, code), c.lmx_graph_word_text(g, c.lmx_graph_method_return(g, code)), 0, actuals, count, bindings, out)
+    return: lmx_graph_invoke_data_value(g, code, c.lmx_graph_method_data(g, code), c.lmx_graph_method_code(g, code), c.lmx_graph_word_text(g, c.lmx_graph_method_return(g, code)), 0, 0, actuals, count, bindings, out)
 end: lmx_graph_invoke_values
 
 fn: lmx_graph_invoke (c.LmxGraph@: g; c.Lmx@: code; @@: actuals; size_t: count; int@: out) int
@@ -6742,7 +6830,8 @@ end: lmx_graph_call_data
 # The structural call of an ordinary Structure C (the book #structural-call, #return-in-data; step 21.7 K3): C is
 # executed as code over its data parent(C) (lmx_graph_callee_data) by the one launch -- frame, execution and result
 # (lmx_graph_invoke_data_value) --, and the result its data describes (lmx_graph_data_result) is carried in out: a
-# scalar of the profile as its typed value, `@` as a reference with the identity of what the body returned. want_result:
+# scalar of the profile as its typed value, `@` as a reference with the identity of what the body returned, a block of
+# places as the Structure the body returned, by its identity (lmx_graph_data_structure). want_result:
 # the value of the call is consumed (1) or discarded (0). A consumed value with no described result is refused before
 # any effect (5); a described result the body does not give -- a bare `return`, the end of the body -- is the same
 # answer after the launch. A code that is not an ordinary Structure over another data -- a callable of the FN pool, a
@@ -6753,6 +6842,7 @@ fn: lmx_graph_launch_structure_value (c.LmxGraph@: g; c.Lmx@: given_code; c.Lmx@
     c.Lmx@: code (cast: (c.Lmx@) c.lmx_graph_target(g, (cast: (@) given_code)))
     c.Lmx@: data 0
     @: description void 0
+    c.Lmx@: described 0
     char@: result 0
     int: status 0
     if: out = 0 || c.lmx_graph_kind(g, (cast: (@) code)) != 4
@@ -6771,9 +6861,14 @@ fn: lmx_graph_launch_structure_value (c.LmxGraph@: g; c.Lmx@: given_code; c.Lmx@
     if: result != 0 && result != state\w_at && c.lmx_graph_scalar_binding(result, @ description) = 0
         result := 0
     ---
-    if: want_result != 0 && result = 0
+    # A block of places describes a Structure result (the book #structure-result; step 21.7 K3): the block is selected
+    # here, as the launch is prepared, and the frame keeps it; the reception is lmx_graph_result_receive_structure.
+    if: result = 0
+        described := lmx_graph_data_structure(g, data)
+    ---
+    if: want_result != 0 && result = 0 && described = 0
         return: 5
-    status := lmx_graph_invoke_data_value(g, code, data, code, result, 0, 0, 0U, 0, out)
+    status := lmx_graph_invoke_data_value(g, code, data, code, result, described, 0, 0, 0U, 0, out)
     if: status != 0
         return: status
     if: want_result = 0
@@ -6848,7 +6943,7 @@ fn: lmx_graph_launch_value (c.LmxGraph@: g; c.Lmx@: given_args; c.Lmx@: given_da
         i := i + 1U
     ---
     if: status = 0
-        status := lmx_graph_invoke_data_value(g, code, data, code, result, 0, values, count, bindings, out)
+        status := lmx_graph_invoke_data_value(g, code, data, code, result, 0, 0, values, count, bindings, out)
     c.lmx_execution_roots_restore(g\arena, roots_mark)
     c.free((cast: (@) values))
     c.free((cast: (@) bindings))

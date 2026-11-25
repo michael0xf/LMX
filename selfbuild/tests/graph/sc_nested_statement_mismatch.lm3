@@ -1,0 +1,21 @@
+# Entry Main: the contract of a call is the one its data describes, consumed or not (the book #return-in-data,
+# #structure-result). D describes `int: first`, `int: second`; C writes node\seen and returns node\Other, which has
+# `first` and `third`. The statement call answers 4 and the effect stands: D\seen 1.
+D:
+    int: seen 0
+    Other:
+        int: first 1
+        int: third 3
+    end: Other
+    return:
+        int: first
+        int: second
+    end: return
+    C:
+        node\seen := 1
+        return: node\Other
+    end: C
+end: D
+---
+Main:
+    D\C()

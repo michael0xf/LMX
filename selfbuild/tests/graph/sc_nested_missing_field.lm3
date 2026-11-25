@@ -1,0 +1,26 @@
+# Entry Main: a returned Structure without a field the description names is not the described result (the book
+# #structure-result). D describes `int: first`, `int: second`; C writes node\seen and returns node\Other, which has
+# `first` and `third`. The call answers 4 and the effect stands: D\seen 1, result 0.
+@: result 0
+D:
+    int: seen 0
+    Box:
+        int: first 7
+        int: second 9
+    end: Box
+    Other:
+        int: first 1
+        int: third 3
+    end: Other
+    return:
+        int: first
+        int: second
+    end: return
+    C:
+        node\seen := 1
+        return: node\Other
+    end: C
+end: D
+---
+Main:
+    node\result := D\C()

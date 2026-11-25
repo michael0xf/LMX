@@ -1,0 +1,25 @@
+# Entry Main: a result described by a block of places is the Structure the body returns, itself (the book
+# #structure-result, #return-in-data; step 21.7 K3). D describes `return:` with `int: first` and `int: second`; C
+# returns node\Box, a Structure with those fields. The caller receives that Structure, its identity and not a copy:
+# the write through node\result changes D\Box\second. The root places are written and read by their explicit path (the
+# book #binding-places). D\Box\second 11, observed 7, result is Box.
+@: result 0
+int: observed 0
+D:
+    Box:
+        int: first 7
+        int: second 9
+    end: Box
+    return:
+        int: first
+        int: second
+    end: return
+    C:
+        return: node\Box
+    end: C
+end: D
+---
+Main:
+    node\result := D\C()
+    node\result\second := 11
+    node\observed := node\result\first

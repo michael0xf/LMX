@@ -1,0 +1,22 @@
+# Entry Main: a bare `return` leaves no result (the book #return-in-data, #structure-result). D describes a block
+# of two places; C writes node\seen and returns without a value. The call answers 5 where its value is consumed and
+# the effect stands: D\seen 1, result 0.
+@: result 0
+D:
+    int: seen 0
+    Box:
+        int: first 7
+        int: second 9
+    end: Box
+    return:
+        int: first
+        int: second
+    end: return
+    C:
+        node\seen := 1
+        return
+    end: C
+end: D
+---
+Main:
+    node\result := D\C()

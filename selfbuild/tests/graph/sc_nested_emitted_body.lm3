@@ -1,0 +1,25 @@
+# Entry Main: the call inside an emitted fn body (step 21.7 K4: a consumed structural call is read by the common
+# evaluator from the written application). Bridge receives D\Box itself and writes its second field; Main reads 7.
+# D\Box\second 11, result is Box, r 7.
+@: result 0
+int: r 0
+D:
+    Box:
+        int: first 7
+        int: second 9
+    end: Box
+    return:
+        int: first
+        int: second
+    end: return
+    C:
+        return: node\Box
+    end: C
+end: D
+fn: Bridge () int
+    node\result := D\C()
+    node\result\second := 11
+    return: 7
+---
+Main:
+    node\r := Bridge()

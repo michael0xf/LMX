@@ -1,0 +1,23 @@
+# Entry Main: `call` and an ordinary Structure call return by one contract (the book #return-in-data). D describes a
+# block of two places; `call(code := D\C)` answers D\Box itself. The write through node\result changes D\Box\second:
+# D\Box\second 11, observed 7, result is Box.
+@: result 0
+int: observed 0
+D:
+    Box:
+        int: first 7
+        int: second 9
+    end: Box
+    return:
+        int: first
+        int: second
+    end: return
+    C:
+        return: node\Box
+    end: C
+end: D
+---
+Main:
+    node\result := call(code := D\C)
+    node\result\second := 11
+    node\observed := node\result\first

@@ -1,0 +1,24 @@
+# Entry Main: the returned Structure carries a field the description does not name (the book #fn-satisfies: extra
+# candidate fields are allowed). D describes `int: first`, `int: second`; C returns node\Box, which also has `extra`.
+# The call answers Box itself; its third field is kept. Box 7, 9, 5 -> second 11, observed 5.
+@: result 0
+int: observed 0
+D:
+    Box:
+        int: first 7
+        int: second 9
+        int: extra 5
+    end: Box
+    return:
+        int: first
+        int: second
+    end: return
+    C:
+        return: node\Box
+    end: C
+end: D
+---
+Main:
+    node\result := D\C()
+    node\result\second := 11
+    node\observed := node\result\extra

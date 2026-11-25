@@ -473,6 +473,8 @@ fn: lmx_gc_graph_frames (c.LmxArena@: arena; c.LmxGraphFrame@: frame; unsigned: 
     while: frame != 0 && status = c.LMX_GC_OK
         status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) frame\code), gen, 0))
         status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) frame\data), gen, 0))
+        # The block a structural launch selected for its Structure result (the book #structure-result; step 21.7 K3).
+        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) frame\result_description), gen, 0))
         status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) frame\body), gen, 0))
         status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) frame\lexical_scope), gen, 0))
         rows := (cast: (c.LmxGraphWork@) frame\rows)

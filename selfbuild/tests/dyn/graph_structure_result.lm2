@@ -1,0 +1,279 @@
+# The block a structural launch describes its Structure result with is the one selected as the launch is prepared (the
+# book #structure-result, #return-in-data; step 21.7 K3). Three data Structures of the program get a block made at run
+# time as their `return` record. Inside the body the native Swap checks that the frame of the structural launch on the
+# chain keeps that block, replaces the `return` edge of the data by another block and sweeps the next generation: the
+# selected block, detached from its data, is still reached by the pass (the frame holds it). One: D1 describes x, y and
+# Swap puts x, y, z there: Box (x, y) is answered. Two: D2 describes x, y, z and Swap puts x, y: Box is refused (4).
+# Three: D3 describes x, y and Swap puts x: Other (x) is refused (4). Every block is made by its own build of a file
+# nobody roots, between fillers of dead blocks, so its chunk holds nothing else that lives; a block of the probe file
+# (never named by anything) leaves with its chunk at the second sweep. (The identity of the answered Structure is that
+# of the graph rows sc_nested_*.) gsr_check answers 7 when every check passes.
+predef: "l2src/l2_graph_build.lm1"
+predef: "l2src/lmx_graph.h.lm1"
+predef: "l2src/lmx_graph_run.h.lm1"
+predef: "l2src/lmx_walk_values.h.lm1"
+predef: "l2src/lmx_value_owned.h.lm1"
+predef: "l2src/lmx_gc.h.lm1"
+predef: "l2src/lmx_call.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# The child of lmx named name (the target of its edge); 0 when there is none.
+fn: gsr_named (@: g c.LmxGraph; @: lmx c.Lmx; @: name char) @: void
+    size_t: slot c.lmx_graph_named(g, lmx, c.lmx_graph_intern(name, c.strlen(name)))
+    if: slot >= c.lmx_graph_count(lmx)
+        return: 0
+    return: c.lmx_graph_target(g, c.lmx_graph_get_in(g, lmx, slot))
+
+# Build a file of count blocks of a shape (0: int: x, int: y; 1: with int: z; 2: int: x alone) into the graph and
+# answer its root; 0 when the file is not written or not built.
+fn: gsr_file (@: g c.LmxGraph; @: name char; int: shape; size_t: count) @: c.Lmx
+    @: root c.Lmx 0
+    @: file c.FILE 0
+    size_t: i 0U
+    file := c.fopen(name, "wb")
+    if: file = 0 || c.fputs("(\n", file) < 0
+        return: 0
+    while: i < count
+        if: shape = 0
+            if: c.fprintf(file, "    K%zu:\n        int: x\n        int: y\n    end: K%zu\n", i, i) < 0
+                return: 0
+            ---
+        else:
+            if: shape = 1
+                if: c.fprintf(file, "    K%zu:\n        int: x\n        int: y\n        int: z\n    end: K%zu\n", i, i) < 0
+                    return: 0
+                ---
+            else:
+                if: c.fprintf(file, "    K%zu:\n        int: x\n    end: K%zu\n", i, i) < 0
+                    return: 0
+                ---
+            ---
+        ---
+        i := i + 1U
+    ---
+    if: c.fputs(")\n", file) < 0 || c.fclose(file) != 0
+        return: 0
+    if: c.lm_graph_build_file(g, name, @ root) != 0 || root = 0
+        return: 0
+    return: root
+
+# Block index of the file of root (the content record's child).
+fn: gsr_block (@: g c.LmxGraph; @: root c.Lmx; size_t: index) @: void
+    if: root = 0 || c.lmx_graph_count((cast: (@: c.Lmx) c.lmx_graph_get_in(g, root, 0U))) <= index
+        return: 0
+    return: c.lmx_graph_get_in(g, (cast: (@: c.Lmx) c.lmx_graph_get_in(g, root, 0U)), index)
+
+# The chunk of a block of the arena.
+fn: gsr_chunk (@: arena c.LmxArena; @: cell void) @: c.LmxChunk
+    @: pool c.LmxPool 0
+    if: cell = 0
+        return: 0
+    pool := c.lmx_range_pool(arena, cell)
+    if: pool = 0
+        return: 0
+    return: c.lmx_pool_chunk_at(pool, cell)
+
+# Swap, the native body of the three callables. owner: the code of the structural launch, a reference to the
+# replacement, the data. 1, or 100 and the number of the failed check.
+fn: gsr_swap (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
+    @: g c.LmxGraph arena\graph_metadata
+    @: body c.Lmx 0
+    @: selected void 0
+    @: replacement void 0
+    @: data c.Lmx 0
+    @: record c.LmxActivation (cast: (@: c.LmxActivation) arena\activation)
+    @: frame c.LmxGraphFrame 0
+    @: pool c.LmxPool 0
+    @: chunk c.LmxChunk 0
+    c.LmxWalkValue: value
+    unsigned: generation 0U
+    size_t: slot 0U
+    if: g = 0 || owner = 0 || nargs != 0U || c.lmx_graph_kind(g, owner) != 4 || c.lmx_graph_count((cast: (@: c.Lmx) owner)) != 3U
+        return: 101
+    body := (cast: (@: c.Lmx) c.lmx_graph_get_in(g, (cast: (@: c.Lmx) owner), 0U))
+    replacement := c.lmx_graph_get_in(g, (cast: (@: c.Lmx) owner), 1U)
+    data := (cast: (@: c.Lmx) c.lmx_graph_get_in(g, (cast: (@: c.Lmx) owner), 2U))
+    # The block the data names now is the one the launch was prepared with.
+    slot := c.lmx_graph_named(g, data, c.lmx_graph_intern("return", 6U))
+    if: slot >= c.lmx_graph_count(data)
+        return: 109
+    selected := c.lmx_graph_target(g, c.lmx_graph_get_in(g, data, slot))
+    # 1. The frame of the structural launch on the chain keeps the selected block, by its identity.
+    while: record != 0 && (cast: (@: void) record\code) != (cast: (@: void) body)
+        record := (cast: (@: c.LmxActivation) record\parent)
+    ---
+    if: record = 0 || record\kind != 2 || record\frame = 0
+        return: 102
+    frame := (cast: (@: c.LmxGraphFrame) record\frame)
+    if: (cast: (@: void) frame\result_description) != selected
+        return: 103
+    # 2. The `return` edge of the data now leads to another block: the selected one is detached.
+    if: c.lmx_graph_put_in(g, data, slot, replacement) != 0
+        return: 104
+    # 3. The sweep of the next generation.
+    generation := c.lmx_arena_generation_next(arena)
+    if: c.lmx_gc_sweep(arena, generation) != c.LMX_GC_OK
+        return: 105
+    # 4. The selected block is whole after the sweep: the pass reached its chunk through the launch.
+    pool := c.lmx_range_pool(arena, selected)
+    if: pool = 0
+        return: 106
+    chunk := c.lmx_pool_chunk_at(pool, selected)
+    if: chunk = 0 || chunk\mark != generation
+        return: 107
+    if: c.lmx_walk_value_num(@ value, c.LMX_TYPE_INT, 1U) != c.LMX_WALK_OK
+        return: 108
+    return: c.lmx_call_result_value(arena, code, @ value, dest, out, result)
+
+# One case. A block of the shape selected_shape, built into the graph now, becomes the `return` record of the data
+# Structure data_name; a reference to a block of the shape replacement_shape goes to the callable swap_name (whose body
+# is the native Swap); the structural call of the code part of the data is launched as a statement (lmx_graph_call_data,
+# the receiver of the emitted entry). Dead fillers of `width` blocks stand before and after the selected block, so its
+# chunk holds no other block that lives. 0 when the call answers expect_status, else 200 and the number of the failed
+# check.
+fn: gsr_case (@: g c.LmxGraph; @: root c.Lmx; @: program c.Lmx; @: data_name char; @: swap_name char; int: selected_shape; int: replacement_shape; size_t: width; int: expect_status) int
+    @: data c.Lmx 0
+    @: code c.Lmx 0
+    @: swap c.Lmx 0
+    @: swap_data c.Lmx 0
+    @: selected void 0
+    @: replacement void 0
+    @: edge void 0
+    size_t: slot 0U
+    int: status 0
+    data := (cast: (@: c.Lmx) gsr_named(g, program, data_name))
+    code := (cast: (@: c.Lmx) gsr_named(g, data, "C"))
+    swap := (cast: (@: c.Lmx) c.lmx_graph_resolve(g, root, c.lmx_graph_intern(swap_name, c.strlen(swap_name))))
+    if: data = 0 || code = 0 || swap = 0 || code\parent != data
+        return: 201
+    if: gsr_file(g, "graph_structure_result_f.lm3", 0, width) = 0
+        return: 202
+    selected := gsr_block(g, gsr_file(g, "graph_structure_result_s.lm3", selected_shape, 1U), 0U)
+    if: gsr_file(g, "graph_structure_result_g.lm3", 0, width) = 0
+        return: 202
+    replacement := gsr_block(g, gsr_file(g, "graph_structure_result_x.lm3", replacement_shape, 1U), 0U)
+    if: selected = 0 || replacement = 0
+        return: 203
+    # The `return` record of the data is the selected block: a reference named as the field was.
+    slot := c.lmx_graph_named(g, data, c.lmx_graph_intern("return", 6U))
+    edge := c.lmx_graph_ref_lmx(g, (cast: (@: c.Lmx) selected))
+    if: slot >= c.lmx_graph_count(data) || edge = 0 || c.lmx_graph_name(g, edge, "return", 6U) != 0 || c.lmx_graph_put_in(g, data, slot, edge) != 0
+        return: 204
+    # The owner record of the native Swap: the code, a reference to the replacement, the data.
+    edge := c.lmx_graph_ref_lmx(g, (cast: (@: c.Lmx) replacement))
+    swap_data := c.lmx_graph_lmx(g, 0, 3U)
+    if: edge = 0 || c.lmx_graph_name(g, edge, "return", 6U) != 0 || swap_data = 0 || c.lmx_graph_name(g, swap_data, "data", 4U) != 0
+        return: 205
+    if: c.lmx_graph_put_in(g, swap_data, 0U, code) != 0 || c.lmx_graph_put_in(g, swap_data, 1U, edge) != 0 || c.lmx_graph_put_in(g, swap_data, 2U, data) != 0
+        return: 206
+    slot := c.lmx_graph_named(g, swap, c.lmx_graph_intern("data", 4U))
+    if: slot >= c.lmx_graph_count(swap) || c.lmx_graph_put_in(g, swap, slot, swap_data) != 0
+        return: 207
+    swap_data\parent := swap
+    status := c.lmx_graph_call_data(g, 0, code, 1)
+    if: status != expect_status
+        c.fprintf(c.stderr, "graph structure result %s: status %d, expected %d\n", data_name, status, expect_status)
+        return: 208
+    # The replacement stands in the data.
+    if: (cast: (@: void) gsr_named(g, data, "return")) != replacement
+        return: 209
+    return: 0
+
+fn: gsr_check () int
+    c.LmxArena: arena
+    @: g c.LmxGraph 0
+    @: root c.Lmx 0
+    @: program c.Lmx 0
+    @: probe c.Lmx 0
+    @: swap c.Lmx 0
+    @: control void 0
+    @: file c.FILE 0
+    c.LmxExecutionRoots: roots
+    @: before c.LmxExecutionRoots 0
+    size_t: width 0U
+    size_t: first 0U
+    size_t: i 0U
+    int: opened 0
+    int: status 0
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ arena) != 0
+        return: 80
+    g := c.lmx_graph_open(@ arena)
+    file := c.fopen("graph_structure_result_code.lm3", "wb")
+    if: g = 0 || file = 0
+        return: 81
+    if: c.fputs("(\n    D1:\n        Box:\n            int: x 7\n            int: y 9\n        end: Box\n        return:\n            int: x\n            int: y\n        end: return\n        C:\n            int: ignored Swap1()\n            return: node\\Box\n        end: C\n    end: D1\n    D2:\n        Box:\n            int: x 7\n            int: y 9\n        end: Box\n        return:\n            int: x\n            int: y\n            int: z\n        end: return\n        C:\n            int: ignored Swap2()\n            return: node\\Box\n        end: C\n    end: D2\n    D3:\n        Box:\n            int: x 7\n            int: y 9\n        end: Box\n        Other:\n            int: x 1\n        end: Other\n        return:\n            int: x\n            int: y\n        end: return\n        C:\n            int: ignored Swap3()\n            return: node\\Other\n        end: C\n    end: D3\n)\nfn: Swap1 () int\n    return: 1\nfn: Swap2 () int\n    return: 1\nfn: Swap3 () int\n    return: 1\n", file) < 0 || c.fclose(file) != 0
+        return: 82
+    status := c.lm_graph_build_file(g, "graph_structure_result_code.lm3", @ root)
+    c.remove("graph_structure_result_code.lm3")
+    if: status != 0 || root = 0
+        return: 83
+    if: c.lmx_graph_space_open(g, root, @ opened) != 0
+        return: 84
+    program := (cast: (@: c.Lmx) c.lmx_graph_get_in(g, root, 0U))
+    if: program = 0
+        return: 85
+    # A spacer file, then the probe file: 512 dead blocks of x, y each. The content record of the probe must not share
+    # a chunk with a block of the program (a chunk is kept by any cell of it that lives). The width of a chunk of the
+    # blocks is the distance between two changes of the chunk along the probe; the fillers take that width and 64
+    # blocks more.
+    if: gsr_file(g, "graph_structure_result_p.lm3", 0, 512U) = 0
+        return: 86
+    probe := gsr_file(g, "graph_structure_result_p.lm3", 0, 512U)
+    if: probe = 0
+        return: 86
+    control := gsr_block(g, probe, 256U)
+    first := 0U
+    i := 1U
+    while: i < 512U && width = 0U
+        if: gsr_chunk(@ arena, gsr_block(g, probe, i)) != gsr_chunk(@ arena, gsr_block(g, probe, i - 1U))
+            if: first = 0U
+                first := i
+            else:
+                width := i - first
+            ---
+        ---
+        i := i + 1U
+    ---
+    if: width = 0U || width > 448U
+        return: 87
+    width := width + 64U
+    # The three callables get the native Swap for body.
+    i := 0U
+    while: i < 3U
+        if: i = 0U
+            swap := (cast: (@: c.Lmx) c.lmx_graph_resolve(g, root, c.lmx_graph_intern("Swap1", 5U)))
+        else:
+            if: i = 1U
+                swap := (cast: (@: c.Lmx) c.lmx_graph_resolve(g, root, c.lmx_graph_intern("Swap2", 5U)))
+            else:
+                swap := (cast: (@: c.Lmx) c.lmx_graph_resolve(g, root, c.lmx_graph_intern("Swap3", 5U)))
+            ---
+        ---
+        if: swap = 0 || c.lmx_native_install(@ arena, swap, (cast: (c.LmxPrimitiveEntry) c.gsr_swap), 0, 0, 0, 0, 0) != 0
+            return: 88
+        i := i + 1U
+    ---
+    before := c.lmx_execution_roots_mark(@ arena)
+    # The program is a root; the built files are not.
+    c.lmx_execution_roots_push(@ arena, @ roots, 0, 0U, 0, 0U, (cast: (@: void) root), 0)
+    status := gsr_case(g, root, program, "D1", "Swap1", 0, 1, width, 0)
+    if: status = 0
+        status := gsr_case(g, root, program, "D2", "Swap2", 1, 0, width, 4)
+    if: status = 0
+        status := gsr_case(g, root, program, "D3", "Swap3", 0, 2, width, 4)
+    if: status != 0
+        return: status
+    # The block of the probe file that nothing named left with its chunk at a sweep.
+    if: c.lmx_range_pool(@ arena, control) != 0
+        c.fprintf(c.stderr, "graph structure result: the control block is still in the arena\n")
+        return: 96
+    if: arena\activation != 0
+        return: 99
+    c.lmx_execution_roots_restore(@ arena, before)
+    c.lmx_graph_space_close(g, opened)
+    c.lmx_graph_close(g)
+    c.lmx_arena_release(@ arena)
+    return: 7
+end: gsr_check

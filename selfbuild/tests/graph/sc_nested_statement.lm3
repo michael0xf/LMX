@@ -1,0 +1,22 @@
+# Entry Main: the call as a statement discards its result and completes as it did (the book #structural-call). D
+# describes a block of two places; C writes node\seen and returns node\Box. Nothing is stored in result: D\seen 1,
+# result 0, D\Box 7, 9.
+@: result 0
+D:
+    int: seen 0
+    Box:
+        int: first 7
+        int: second 9
+    end: Box
+    return:
+        int: first
+        int: second
+    end: return
+    C:
+        node\seen := 1
+        return: node\Box
+    end: C
+end: D
+---
+Main:
+    D\C()

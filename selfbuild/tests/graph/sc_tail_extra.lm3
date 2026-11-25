@@ -1,0 +1,27 @@
+# Entry Main: a tail with more items than the described fields is refused before any item is evaluated: 5. Two
+# fields are described, the tail has three; its first item is a call that writes E\seen. E\seen stays 0.
+@: result 0
+E:
+    int: seen 0
+    return: int
+    A:
+        node\seen := node\seen * 10 + 1
+        return: 1
+    end: A
+    B:
+        node\seen := node\seen * 10 + 2
+        return: 2
+    end: B
+end: E
+D:
+    return:
+        int: x
+        int: y
+    end: return
+    C:
+        return: E\A() 9 11
+    end: C
+end: D
+---
+Main:
+    node\result := D\C()

@@ -1,0 +1,24 @@
+result:
+    int: x 1
+    int: y 2
+end: result
+int: observed 12
+E:
+    int: seen 12
+    return: int
+    A:
+        :=: (node \ seen) (((node \ seen) * 10) + 1)
+        return: 1
+    end: A
+    B:
+        :=: (node \ seen) (((node \ seen) * 10) + 2)
+        return: 2
+    end: B
+end: E
+D:
+    return: (int x) (int y)
+    C:
+        return: E\A() E\B()
+    end: C
+end: D
+Main: (:= (node \ result) D\C()) (:= (node \ observed) ((((node \ result) \ x) * 10) + ((node \ result) \ y)))

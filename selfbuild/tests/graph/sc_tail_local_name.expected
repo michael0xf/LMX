@@ -1,0 +1,13 @@
+result:
+    int: x 6
+    int: y 7
+end: result
+int: observed 67
+D:
+    return: (int x) (int y)
+    C:
+        int: x 5
+        return: (x + 1) (x + 2)
+    end: C
+end: D
+Main: (:= (node \ result) D\C()) (:= (node \ observed) ((((node \ result) \ x) * 10) + ((node \ result) \ y)))

@@ -4677,11 +4677,17 @@ fn: lmx_graph_result_receive (c.LmxGraph@: g; c.Lmx@: code; c.LmxWalkValue@: val
     return: lmx_graph_result_receive_as(g, ty, abi, value)
 end: lmx_graph_result_receive
 
+# The value a return passes: one item, or the tail of several items that supplies the fields of a result a block
+# describes (lmx_graph_return_tail; step 21.7 K3, part 2).
 fn: lmx_graph_return_value (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: statement; c.LmxWalkValue@: out) int
     c.LmxWalkValue: value
+    size_t: n c.lmx_graph_count(statement)
     int: status 0
-    if: out = 0 || c.lmx_graph_count(statement) != 1U
+    if: out = 0 || n = 0U
         return: 5
+    if: n != 1U
+        return: lmx_graph_return_tail(g, code, statement, n, out)
+    ---
     status := lmx_graph_eval_record(g, code, c.lmx_graph_get_in(g, statement, 0U), @ value)
     if: status != 0
         return: status
@@ -4690,6 +4696,98 @@ fn: lmx_graph_return_value (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: statement; c.L
         c.memcpy((cast: (@) out), (cast: (const: @) (@ value)), c.sizeof(c.LmxWalkValue))
     return: status
 end: lmx_graph_return_value
+
+# The place of item index of a tail: a new place declared as the field index of the selected block is, with the
+# value of that item (the book #structure-result; step 21.7 K3, part 2). The Value is received as the field's own
+# declared scalar type, as a formal of data receives a supplied value (lmx_graph_admit_value), and its cell is made as
+# the cell of such a supplied formal (lmx_graph_work_snapshot_value): materialized from the Value, named at its cell
+# by the name of the field. The description block itself is no literal here (lmx_graph_merge_literal_open refuses a
+# name the scope already resolves, and lmx_graph_merge_literal_put would allocate an uninit int for a field written
+# without a value). 0; 4 for a value the place does not admit or without memory.
+fn: lmx_graph_tail_place (c.LmxGraph@: g; c.Lmx@: described; size_t: index; c.LmxWalkValue@: value; @@: place_out) int
+    @: field void 0
+    c.LmxPool@: pool 0
+    @: place void 0
+    char@: name 0
+    c.LmxWalkValue: storage
+    int: branch 0
+    int: status 0
+    place_out[0] := 0
+    if: value = 0 || value\present = 0
+        return: 5
+    field := c.lmx_graph_get_in(g, described, index)
+    name := c.lmx_graph_declaration_place_name(g, field)
+    if: name = 0
+        return: 5
+    # The declared scalar type of the field: 1 a scalar of the profile, 2 its own int place, 0 neither.
+    pool := lmx_graph_scalar_pool(g, field)
+    branch := lmx_graph_primitive_branch(g, field, pool)
+    if: branch = 1
+        status := lmx_graph_result_receive_as(g, c.LMX_TYPE_FOREIGN, (cast: (@) pool\scalar_abi), value)
+    else:
+        if: branch = 2
+            status := lmx_graph_result_receive_as(g, c.LMX_TYPE_INT, (cast: (@) value\scalar_abi), value)
+        ---
+    ---
+    if: status != 0
+        return: status
+    c.memcpy((cast: (@) (@ storage)), (cast: (const: @) value), c.sizeof(c.LmxWalkValue))
+    storage\type := c.lmx_type_base(value\type)
+    if: storage\kind = c.LMX_WALK_VALUE_REFERENCE && storage\type = c.LMX_TYPE_LMX
+        storage\type := c.LMX_TYPE_GRAPH_LMX_REF
+    ---
+    if: c.lmx_walk_value_materialize(g\arena, @ storage, @ place) != c.LMX_WALK_OK
+        return: 4
+    if: place = 0 || c.lmx_graph_name_address(g, place, name) != 0
+        return: 4
+    place_out[0] := place
+    return: 0
+
+# The tail of a return (the book #structure-result; step 21.7 K3, part 2): `return: 7 9` supplies the described
+# result fields in order. The branch belongs to a launch whose result a block describes (lmx_graph_result_description);
+# with no such block, or with a number of items other than the number of the block's fields, the answer is 5 before
+# any item is evaluated. Each item is evaluated once, left to right, in the scope of the code, and received into a
+# new place declared as its field is (lmx_graph_tail_place). The result is one new Structure with those places; its
+# reception is the common one (lmx_graph_result_receive). The two execution roots have two roles: the Structure
+# under construction holds the places made so far while a later item may still collect; the temporary Value holds
+# the evaluated operand from its evaluation to its move into the new place, a way through a scalar ABI. 0, or the
+# interpreter's answer.
+fn: lmx_graph_return_tail (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: statement; size_t: n; c.LmxWalkValue@: out) int
+    c.Lmx@: described 0
+    c.Lmx@: made 0
+    c.LmxExecutionRoots: tail_roots
+    c.LmxExecutionRoots@: roots_mark 0
+    c.LmxWalkValue: value
+    @: place void 0
+    size_t: i 0U
+    int: status 0
+    described := lmx_graph_result_description(g, code)
+    if: described = 0 || n != c.lmx_graph_count(described)
+        return: 5
+    made := c.lmx_graph_lmx(g, 0, n)
+    if: made = 0
+        return: 4
+    c.lmx_walk_value_clear(@ value)
+    roots_mark := c.lmx_execution_roots_mark(g\arena)
+    c.lmx_execution_roots_push(g\arena, @ tail_roots, (cast: (@) (@ value)), 1U, 0, 0U, (cast: (@) made), 0)
+    while: i < n && status = 0
+        c.lmx_walk_value_clear(@ value)
+        status := lmx_graph_eval_record(g, code, c.lmx_graph_get_in(g, statement, i), @ value)
+        if: status = 0
+            status := lmx_graph_tail_place(g, described, i, @ value, @ place)
+        ---
+        if: status = 0 && c.lmx_graph_put_in(g, made, i, place) != 0
+            status := 4
+        i := i + 1U
+    ---
+    c.lmx_execution_roots_restore(g\arena, roots_mark)
+    if: status != 0
+        return: status
+    c.lmx_walk_value_clear(out)
+    if: c.lmx_walk_value_cell(g\arena, made, out) != c.LMX_WALK_OK
+        return: 4
+    return: lmx_graph_result_receive(g, code, out)
+end: lmx_graph_return_tail
 
 fn: lmx_graph_block (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: body; size_t: from; size_t: to; int: mode; c.LmxWalkValue@: out; char@@: flow) int
     c.LmxActivation@: active (cast: (c.LmxActivation@) g\arena\activation)

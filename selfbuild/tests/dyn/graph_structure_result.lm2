@@ -4,7 +4,9 @@
 # chain keeps that block, replaces the `return` edge of the data by another block and sweeps the next generation: the
 # selected block, detached from its data, is still reached by the pass (the frame holds it). One: D1 describes x, y and
 # Swap puts x, y, z there: Box (x, y) is answered. Two: D2 describes x, y, z and Swap puts x, y: Box is refused (4).
-# Three: D3 describes x, y and Swap puts x: Other (x) is refused (4). Every block is made by its own build of a file
+# Three: D3 describes x, y and Swap puts x: Other (x) is refused (4). Four: the tail `return: 7 Swap4()` builds the
+# result under the selected block, and the second item runs the Swap: the first place and the Structure under
+# construction are held through its sweep. Every block is made by its own build of a file
 # nobody roots, between fillers of dead blocks, so its chunk holds nothing else that lives; a block of the probe file
 # (never named by anything) leaves with its chunk at the second sweep. (The identity of the answered Structure is that
 # of the graph rows sc_nested_*.) gsr_check answers 7 when every check passes.
@@ -74,7 +76,7 @@ fn: gsr_chunk (@: arena c.LmxArena; @: cell void) @: c.LmxChunk
         return: 0
     return: c.lmx_pool_chunk_at(pool, cell)
 
-# Swap, the native body of the three callables. owner: the code of the structural launch, a reference to the
+# Swap, the native body of the four callables. owner: the code of the structural launch, a reference to the
 # replacement, the data. 1, or 100 and the number of the failed check.
 fn: gsr_swap (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
     @: g c.LmxGraph arena\graph_metadata
@@ -203,7 +205,7 @@ fn: gsr_check () int
     file := c.fopen("graph_structure_result_code.lm3", "wb")
     if: g = 0 || file = 0
         return: 81
-    if: c.fputs("(\n    D1:\n        Box:\n            int: x 7\n            int: y 9\n        end: Box\n        return:\n            int: x\n            int: y\n        end: return\n        C:\n            int: ignored Swap1()\n            return: node\\Box\n        end: C\n    end: D1\n    D2:\n        Box:\n            int: x 7\n            int: y 9\n        end: Box\n        return:\n            int: x\n            int: y\n            int: z\n        end: return\n        C:\n            int: ignored Swap2()\n            return: node\\Box\n        end: C\n    end: D2\n    D3:\n        Box:\n            int: x 7\n            int: y 9\n        end: Box\n        Other:\n            int: x 1\n        end: Other\n        return:\n            int: x\n            int: y\n        end: return\n        C:\n            int: ignored Swap3()\n            return: node\\Other\n        end: C\n    end: D3\n)\nfn: Swap1 () int\n    return: 1\nfn: Swap2 () int\n    return: 1\nfn: Swap3 () int\n    return: 1\n", file) < 0 || c.fclose(file) != 0
+    if: c.fputs("(\n    D1:\n        Box:\n            int: x 7\n            int: y 9\n        end: Box\n        return:\n            int: x\n            int: y\n        end: return\n        C:\n            int: ignored Swap1()\n            return: node\\Box\n        end: C\n    end: D1\n    D2:\n        Box:\n            int: x 7\n            int: y 9\n        end: Box\n        return:\n            int: x\n            int: y\n            int: z\n        end: return\n        C:\n            int: ignored Swap2()\n            return: node\\Box\n        end: C\n    end: D2\n    D3:\n        Box:\n            int: x 7\n            int: y 9\n        end: Box\n        Other:\n            int: x 1\n        end: Other\n        return:\n            int: x\n            int: y\n        end: return\n        C:\n            int: ignored Swap3()\n            return: node\\Other\n        end: C\n    end: D3\n    D4:\n        return:\n            int: x\n            int: y\n        end: return\n        C:\n            return: 7 Swap4()\n        end: C\n    end: D4\n)\nfn: Swap1 () int\n    return: 1\nfn: Swap2 () int\n    return: 1\nfn: Swap3 () int\n    return: 1\nfn: Swap4 () int\n    return: 1\n", file) < 0 || c.fclose(file) != 0
         return: 82
     status := c.lm_graph_build_file(g, "graph_structure_result_code.lm3", @ root)
     c.remove("graph_structure_result_code.lm3")
@@ -239,16 +241,20 @@ fn: gsr_check () int
     if: width = 0U || width > 448U
         return: 87
     width := width + 64U
-    # The three callables get the native Swap for body.
+    # The four callables get the native Swap for body.
     i := 0U
-    while: i < 3U
+    while: i < 4U
         if: i = 0U
             swap := (cast: (@: c.Lmx) c.lmx_graph_resolve(g, root, c.lmx_graph_intern("Swap1", 5U)))
         else:
             if: i = 1U
                 swap := (cast: (@: c.Lmx) c.lmx_graph_resolve(g, root, c.lmx_graph_intern("Swap2", 5U)))
             else:
-                swap := (cast: (@: c.Lmx) c.lmx_graph_resolve(g, root, c.lmx_graph_intern("Swap3", 5U)))
+                if: i = 2U
+                    swap := (cast: (@: c.Lmx) c.lmx_graph_resolve(g, root, c.lmx_graph_intern("Swap3", 5U)))
+                else:
+                    swap := (cast: (@: c.Lmx) c.lmx_graph_resolve(g, root, c.lmx_graph_intern("Swap4", 5U)))
+                ---
             ---
         ---
         if: swap = 0 || c.lmx_native_install(@ arena, swap, (cast: (c.LmxPrimitiveEntry) c.gsr_swap), 0, 0, 0, 0, 0) != 0
@@ -263,6 +269,8 @@ fn: gsr_check () int
         status := gsr_case(g, root, program, "D2", "Swap2", 1, 0, width, 4)
     if: status = 0
         status := gsr_case(g, root, program, "D3", "Swap3", 0, 2, width, 4)
+    if: status = 0
+        status := gsr_case(g, root, program, "D4", "Swap4", 0, 1, width, 0)
     if: status != 0
         return: status
     # The block of the probe file that nothing named left with its chunk at a sweep.

@@ -1,0 +1,30 @@
+# Entry Main: the items of a tail are evaluated once each, left to right, in the scope of C (the book
+# #structure-result). `return: E\A() E\B()`: A writes 1 into the tens of E\seen, B writes 2 into its ones. The
+# result is x 1, y 2 and E\seen 12: had B run first, E\seen were 21. observed 12.
+@: result 0
+int: observed 0
+E:
+    int: seen 0
+    return: int
+    A:
+        node\seen := node\seen * 10 + 1
+        return: 1
+    end: A
+    B:
+        node\seen := node\seen * 10 + 2
+        return: 2
+    end: B
+end: E
+D:
+    return:
+        int: x
+        int: y
+    end: return
+    C:
+        return: E\A() E\B()
+    end: C
+end: D
+---
+Main:
+    node\result := D\C()
+    node\observed := node\result\x * 10 + node\result\y

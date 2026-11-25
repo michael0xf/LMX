@@ -1,0 +1,24 @@
+# Entry Main: under a scalar description a tail is no result either: `return: int` takes one value. The answer is
+# 5 as before any item is evaluated; E\seen stays 0.
+@: result 0
+E:
+    int: seen 0
+    return: int
+    A:
+        node\seen := node\seen * 10 + 1
+        return: 1
+    end: A
+    B:
+        node\seen := node\seen * 10 + 2
+        return: 2
+    end: B
+end: E
+D:
+    return: int
+    C:
+        return: E\A() 9
+    end: C
+end: D
+---
+Main:
+    node\result := D\C()

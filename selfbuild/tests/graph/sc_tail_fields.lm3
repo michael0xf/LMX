@@ -1,0 +1,18 @@
+# Entry Main: the tail of a return supplies the described result fields in order (the book #structure-result; step
+# 21.7 K3, part 2). D describes `return:` with `int: x`, `int: y`; C returns the tail `7 9`. The call answers one
+# new Structure: x 7, y 9. observed 79.
+@: result 0
+int: observed 0
+D:
+    return:
+        int: x
+        int: y
+    end: return
+    C:
+        return: 7 9
+    end: C
+end: D
+---
+Main:
+    node\result := D\C()
+    node\observed := node\result\x * 10 + node\result\y

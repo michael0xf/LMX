@@ -1,0 +1,31 @@
+# Entry Main: an item that the place of its field does not admit is the unsuitable type (4), as at any receiving
+# place: the first field is an int place and the first item is a Structure. The call answers 4; the second item is
+# not evaluated: E\seen stays 0.
+@: result 0
+E:
+    int: seen 0
+    return: int
+    A:
+        node\seen := node\seen * 10 + 1
+        return: 1
+    end: A
+    B:
+        node\seen := node\seen * 10 + 2
+        return: 2
+    end: B
+end: E
+D:
+    Box:
+        int: first 1
+    end: Box
+    return:
+        int: x
+        int: y
+    end: return
+    C:
+        return: node\Box E\B()
+    end: C
+end: D
+---
+Main:
+    node\result := D\C()

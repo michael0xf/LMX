@@ -1,0 +1,24 @@
+# Entry Main: the tail belongs to a launch whose result a block describes. D has no `return` part: the answer is 5
+# as before any item is evaluated, and the call that writes E\seen does not run.
+@: result 0
+E:
+    int: seen 0
+    return: int
+    A:
+        node\seen := node\seen * 10 + 1
+        return: 1
+    end: A
+    B:
+        node\seen := node\seen * 10 + 2
+        return: 2
+    end: B
+end: E
+D:
+    int: seen 0
+    C:
+        return: E\A() 9
+    end: C
+end: D
+---
+Main:
+    node\result := D\C()

@@ -1,0 +1,23 @@
+@: result 0
+E:
+    int: seen 0
+    return: int
+    A:
+        :=: (node \ seen) (((node \ seen) * 10) + 1)
+        return: 1
+    end: A
+    B:
+        :=: (node \ seen) (((node \ seen) * 10) + 2)
+        return: 2
+    end: B
+end: E
+D:
+    Box:
+        int: first 1
+    end: Box
+    return: (int x) (int y)
+    C:
+        return: (node \ Box) E\B()
+    end: C
+end: D
+Main: (:= (node \ result) D\C())

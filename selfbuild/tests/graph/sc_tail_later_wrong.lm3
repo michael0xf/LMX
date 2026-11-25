@@ -1,0 +1,28 @@
+# Entry Main: a refusal of a later item of a tail keeps the effects of the items evaluated before it (the book
+# #structure-result; step 21.7 K3, part 2). D describes `return:` with `int: x`, `int: y`; C returns the tail
+# `E\A() node\Box`. A writes E\seen and answers 1; the second item is a Structure where the field declares an int.
+# The call answers 4 and E\seen stays 1: the first item ran once, and the unsuitable value was not received.
+@: result 0
+E:
+    int: seen 0
+    return: int
+    A:
+        node\seen := node\seen + 1
+        return: 1
+    end: A
+end: E
+D:
+    Box:
+        int: v 1
+    end: Box
+    return:
+        int: x
+        int: y
+    end: return
+    C:
+        return: E\A() node\Box
+    end: C
+end: D
+---
+Main:
+    node\result := D\C()

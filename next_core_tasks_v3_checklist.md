@@ -15,10 +15,15 @@ sys/native, весь W4, W5 и весь 27.10 открыты. Полный на�
 **Оговорка 2026-11-24 (coder — ведущий проекта по указанию автора; K4 принят как компонент).** План ведёт coder
 (GLM 5.4 max) с helper; Sol (`codex`) — его консультант, Astra — консультант Sol ([порядок](to_sol.md)). Приняты
 как компоненты 21.7: K1a, K3 ([свидетельство](steps/witnesses/structural-result-20261124/notes.md)), K4 —
-[нативный вызывающий Graph](steps/witnesses/graph-native-caller-20261124/notes.md) и K3n, часть 1, —
-[результат-Structure по описанию блоком](steps/witnesses/graph-structure-result-20261124/notes.md), и дополнение
+[нативный вызывающий Graph](steps/witnesses/graph-native-caller-20261124/notes.md), K3n, часть 1, —
+[результат-Structure по описанию блоком](steps/witnesses/graph-structure-result-20261124/notes.md), K3n, часть 2, —
+[хвост `return: 1 2 3`](steps/witnesses/graph-structure-result-tail-20261125/notes.md), и дополнение
 документации автора 2026-11-25 слито (28.7). Открыты:
-K3n, часть 2 (хвост `return: 1 2 3`, затем одна широкая проверка G1/G2 на границе связанного изменения), K2 (actuals),
+K5a — цена вызова не растёт с числом вызовов ([29.2 плана](next_core_tasks_v3.md#call-cost-20261125): упорядоченная
+подпоследовательность массивов арены для горячих родов по решению Astra; рост ширины чанка и `copy_metadata` —
+отдельные срезы), затем одна широкая проверка G1/G2 на границе связанного
+изменения, малые срезы по пяти дефектам ядра из красных строк регрессии
+([29.3](next_core_tasks_v3.md#call-cost-20261125)), K2 (actuals),
 долг 21.9 (а), kernel sys export, current DATA, sys/native, весь W4, W5 и весь 27.10, операции ядра `fill`,
 `lowerBound`, `last` (28.8: приёмка вместе с пакетом ресиверов). Редакция документации автора
 2026-11-24 (`->`, `::` потребляет DATA, группировщик Expression) слита в

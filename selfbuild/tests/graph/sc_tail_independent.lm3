@@ -1,0 +1,20 @@
+# Entry Main: two calls answer two Structures: a write into the first does not reach the second, and neither
+# reaches the description. a\x 100, b 7, 9: observed 100079.
+@: a 0
+@: b 0
+int: observed 0
+D:
+    return:
+        int: x
+        int: y
+    end: return
+    C:
+        return: 7 9
+    end: C
+end: D
+---
+Main:
+    node\a := D\C()
+    node\b := D\C()
+    node\a\x := 100
+    node\observed := node\a\x * 1000 + node\b\x * 10 + node\b\y

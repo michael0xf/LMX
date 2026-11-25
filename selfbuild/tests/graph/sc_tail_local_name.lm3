@@ -1,0 +1,19 @@
+# Entry Main: a field of the result may be named as a local of C (step 21.7 K3, part 2). C declares `int: x 5`;
+# the description names a field x. The items are read in the scope of C: x 6, y 7; the local x stays 5. observed
+# 67.
+@: result 0
+int: observed 0
+D:
+    return:
+        int: x
+        int: y
+    end: return
+    C:
+        int: x 5
+        return: x + 1 x + 2
+    end: C
+end: D
+---
+Main:
+    node\result := D\C()
+    node\observed := node\result\x * 10 + node\result\y

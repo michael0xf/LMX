@@ -1,0 +1,25 @@
+# Entry Main: the answer of a later item of a tail is the answer of the call, after the earlier items ran (the book
+# #structure-result; step 21.7 K3, part 2). D describes `return:` with `int: x`, `int: y`; C returns the tail
+# `E\A() zz`, where zz names nothing. A writes E\seen; an unknown name answers 3 in an ordinary return as well. The
+# call answers 3 and E\seen stays 1.
+@: result 0
+E:
+    int: seen 0
+    return: int
+    A:
+        node\seen := node\seen + 1
+        return: 1
+    end: A
+end: E
+D:
+    return:
+        int: x
+        int: y
+    end: return
+    C:
+        return: E\A() zz
+    end: C
+end: D
+---
+Main:
+    node\result := D\C()

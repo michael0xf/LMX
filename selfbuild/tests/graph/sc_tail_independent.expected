@@ -1,0 +1,16 @@
+a:
+    int: x 100
+    int: y 9
+end: a
+b:
+    int: x 7
+    int: y 9
+end: b
+int: observed 100079
+D:
+    return: (int x) (int y)
+    C:
+        return: 7 9
+    end: C
+end: D
+Main: (:= (node \ a) D\C()) (:= (node \ b) D\C()) (:= ((node \ a) \ x) 100) (:= (node \ observed) (((((node \ a) \ x) * 1000) + (((node \ b) \ x) * 10)) + ((node \ b) \ y)))

@@ -1,0 +1,16 @@
+# The requirement written at the point of use (the book, assignment and declaration sites): a reached declaration of
+# an existing place keeps the type check before its right side is evaluated. C is an ordinary Structure nested in D
+# and is launched as D\C() over D. D declares the reference place @: x 0; the body first writes the observable marker
+# data\entered := 1, then `int: x tick()`. The written requirement int does not hold of the place, so the right side
+# is not reached: entered 1, tick 0, x keeps its value. The refusal is the one of a numeric declaration over a place
+# of another kind (4), as deferred_numeric_type_refused pins it for a supplied reference destination.
+int: ticks 0
+fn: tick () int
+    node\ticks := node\ticks + 1
+    return: 7
+@: D (
+    int: entered 0
+    @: x 0
+    C(data\entered := 1; int: x tick(); data\x := x)
+)
+D\C()

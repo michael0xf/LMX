@@ -1,0 +1,16 @@
+# The requirement written at the point of use (the book, assignment and declaration sites): a reached declaration of
+# an existing place keeps the type check, the evaluation of its right side and the assignment. C is an ordinary
+# Structure nested in D and is launched as D\C() over D. D declares int: x 0; the body first writes the observable
+# marker data\entered := 1, then `int: x tick()`, then carries the local's value into the data. The pair is
+# compatible: entered 1, tick 1, x 7. The marker and the last write are explicit paths: a bare-name assignment to an
+# input place of the called Structure writes the place of the activation, not the graph.
+int: ticks 0
+fn: tick () int
+    node\ticks := node\ticks + 1
+    return: 7
+@: D (
+    int: entered 0
+    int: x 0
+    C(data\entered := 1; int: x tick(); data\x := x)
+)
+D\C()

@@ -6991,9 +6991,10 @@ end: lmx_graph_launch_structure_value
 # description of the result (0 for a launch without one) and the code. A reference stands for its target. The formals
 # of the launch are the fields of the arguments, each with its value: an int place gives this launch an independent
 # cell, a reference place is passed as it is; a place without a value has no input and any other field is not a
-# formal of this subset (5). An ordinary Structure is its own code; a callable given as code runs its code part. With
-# no data an ordinary Structure runs over itself and a callable over its own data. A callable given without arguments
-# keeps its own contract and its own entry (lmx_graph_invoke_data). Data is not completed for the launch: it must have
+# formal of this subset (5). The Structure given as code is executed itself, with that code as its body: no part
+# inside it is selected for it (the author 2026-11-16, LMX_blog/2026-11-16.md, call(D s)) -- a body over other data is
+# given as s\code. With no data the code runs over itself. A callable given without arguments keeps its own contract
+# and its own entry (lmx_graph_invoke_data). Data is not completed for the launch: it must have
 # every place the code declares or uses (lmx_graph_work_require) -- only fn, sub and catch complete their data, when
 # the graph is built. The result of this subset is an int, so its description must be the word int
 # (lmx_graph_call_shape); a launch with a result must return one. 0 and the result in out, or the interpreter's answer.

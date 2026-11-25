@@ -105,7 +105,7 @@ fn: ce_names_preflight (char@: data; size_t: count) int
     return: 0
 end: ce_names_preflight
 
-# offsets: index[first,last], work[first,last], path[first,last], attr-exempt.
+# offsets: index[first,last], work[first,last], path[first,last], attr-exempt, eol=crlf, text=false.
 # The first TAB separates the head from the complete (possibly tab/LF) path.
 fn: ce_record (char@: data; size_t: first; size_t: last; size_t@: offsets) int
     size_t: tab first
@@ -119,6 +119,8 @@ fn: ce_record (char@: data; size_t: first; size_t: last; size_t@: offsets) int
     offsets[4U] := tab + 1U
     offsets[5U] := last
     offsets[6U] := 0U
+    offsets[7U] := 0U
+    offsets[8U] := 0U
     if: ce_readable_name(data + tab + 1U, last - tab - 1U) = 0
         return: 1
     while: pos < tab
@@ -135,6 +137,10 @@ fn: ce_record (char@: data; size_t: first; size_t: last; size_t@: offsets) int
         else:
             if: dt_find(data, word_after, pos, "-text", 5U) != (cast: (size_t) -1)
                 offsets[6U] := 1U
+            if: ce_word(data, pos, word_after, "eol=crlf") != 0
+                offsets[7U] := 1U
+            if: ce_word(data, pos, word_after, "text=false") != 0
+                offsets[8U] := 1U
             ---
         ---
         fields := fields + 1U
@@ -183,8 +189,14 @@ fn: ce_endings (char@: data; size_t: count; size_t@: tracked; size_t@: offsets) 
             else:
                 if: ce_word(data, offsets[0U], offsets[1U], "i/lf") = 0
                     failed := ce_diagnostic(data, offsets[0U], offsets[1U], path, "", @ bad)
+                # One CRLF working copy is by design: a file whose own attribute converts line ends at checkout
+                # (text eol=crlf) is i/lf here and w/crlf in the tree -- the five .cmd of the author's C99 bundle
+                # (Sol, 2026-11-25). The index is still required to be LF; ce_controls still reads the file.
                 if: failed = 0 && (ce_word(data, offsets[2U], offsets[3U], "w/crlf") != 0 || ce_word(data, offsets[2U], offsets[3U], "w/mixed") != 0)
-                    failed := ce_diagnostic(data, offsets[2U], offsets[3U], path, " (working copy is not LF)", @ bad)
+                    if: offsets[7U] = 0U || offsets[8U] != 0U || ce_word(data, offsets[2U], offsets[3U], "w/crlf") = 0
+                        failed := ce_diagnostic(data, offsets[2U], offsets[3U], path, " (working copy is not LF)", @ bad)
+                    ---
+                ---
                 if: failed = 0 && ce_word(data, offsets[2U], offsets[3U], "w/-text") != 0
                     failed := ce_diagnostic(data, offsets[2U], offsets[3U], path, " (git reads the working copy as binary)", @ bad)
                 ---
@@ -284,7 +296,7 @@ fn: docs_eol_check (char@: repo; char@: git; char@: private_out; size_t@: tracke
     out := txt_path(private_out, "docs-eol.stdout")
     err := txt_path(private_out, "docs-eol.stderr")
     args := c.calloc(7U, sizeof(char@))
-    offsets := c.calloc(7U, c.sizeof(c.size_t))
+    offsets := c.calloc(9U, c.sizeof(c.size_t))
     if: out != 0 && err != 0 && args != 0 && offsets != 0
         args[0U] := git
         args[1U] := "-C"

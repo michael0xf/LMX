@@ -100,7 +100,10 @@ def check_eol():
     Only the explicit -text attribute of .gitattributes exempts a path -- verbatim imports and the binaries named
     there by extension.  Git's own guess (i/-text) is not an exemption: a lone CR, a NUL or too many control bytes
     make git read a text file as binary, and steps/review-log.md passed both checks that way with one eaten `\r`
-    (REVIEW 0b60c45).  i/none -- no line break at all -- has no ending to check.'''
+    (REVIEW 0b60c45).  i/none -- no line break at all -- has no ending to check.  One CRLF working copy is by
+    design: a file whose own attribute converts line ends at checkout (text eol=crlf) is LF in the index and CRLF in
+    the working tree -- the five .cmd of the author's C99 bundle (Sol, 2026-11-25).  The index is still required to be
+    LF there, and check_ctrl still reads such a file.'''
     import subprocess
     out=subprocess.run(['git','-C',str(ROOT),'ls-files','--eol','-z'],capture_output=True,check=True).stdout
     NUL=bytes([0]);TAB=bytes([9]);bad=[];seen=0
@@ -109,12 +112,13 @@ def check_eol():
         seen+=1
         head,path=rec.split(TAB,1)
         fields=head.split()
-        index=fields[0].decode();attrs=b' '.join(fields[2:]).decode()
+        index=fields[0].decode();attrs=b' '.join(fields[2:]).decode();words=attrs.split()
         if '-text' in attrs or index=='i/none':continue
         if index=='i/-text':bad.append(index+' '+path.decode()+' (git reads it as binary: a lone CR, a NUL or control bytes? a real binary needs -text in .gitattributes)');continue
         if index!='i/lf':bad.append(index+' '+path.decode())
         work=fields[1].decode()
-        if work in ('w/crlf','w/mixed'):bad.append(work+' '+path.decode()+' (a tool or editor wrote CRLF into the working tree)')
+        by_attribute=index=='i/lf' and work=='w/crlf' and 'eol=crlf' in words and 'attr/text=false' not in words
+        if work in ('w/crlf','w/mixed') and not by_attribute:bad.append(work+' '+path.decode()+' (a tool or editor wrote CRLF into the working tree)')
         if work=='w/-text':bad.append(work+' '+path.decode()+' (git reads the working copy as binary: a lone CR, a NUL or control bytes?)')
     assert not bad,'CRLF or mixed line endings (LF everywhere; index and working tree): '+', '.join(bad[:12])+(' ... %d files'%len(bad) if len(bad)>12 else '')
     check_ctrl(out)

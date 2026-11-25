@@ -1,0 +1,145 @@
+# The ordered subsequence of the hot kinds in the list of the arena's arrays (K5a, 2026-11-25; the decision of Astra:
+# arena.arrays stays the owner of the arrays, and for the kinds PRIMITIVE and STRUCT an ordered subsequence of the list
+# is kept, which the lookups of a cell walk). The subsequence must equal the filtering of the list by the hot kind:
+# after joins of hot and other arrays in a mixed order; after an array leaves the list by hand
+# (lmx_arena_array_drop); after a revert takes back the blocks made after a mark; after an attach, whose prepend
+# reverses the order of the donor. The lookup answers the first array of the list that suits: with two arrays of one
+# key the newer one, sealed or not, and the older one once the newer left. Release empties the head. Answer 7; another
+# number names the check that failed.
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l2src/lmx_value_owned.h.lm1"
+include: "<stdlib.h>"
+
+# Is the subsequence of the hot kinds exactly the filtering of the list, in the order of the list? 1 or 0.
+fn: ahs_whole (@: arena c.LmxArena) int
+    @: full void 0
+    @: hot void 0
+    @: pool c.LmxPool 0
+    int: kind 0
+    full := (cast: (@) arena\arrays)
+    hot := (cast: (@) arena\hot_arrays)
+    while: full != 0
+        pool := (cast: (c.LmxPool@) full)
+        kind := pool\kind
+        if: kind = c.LMX_KIND_PRIMITIVE || kind = c.LMX_KIND_STRUCT
+            if: hot != full
+                return: 0
+            ---
+            pool := (cast: (c.LmxPool@) hot)
+            hot := (cast: (@) pool\hot_next)
+        ---
+        pool := (cast: (c.LmxPool@) full)
+        full := (cast: (@) pool\next)
+    ---
+    if: hot != 0
+        return: 0
+    return: 1
+end: ahs_whole
+
+fn: ahs_check () int
+    @: a c.LmxArena 0
+    @: b c.LmxArena 0
+    @: item c.Lmx 0
+    @: mark c.LmxArenaBlock 0
+    @: p_int c.LmxPool 0
+    @: p_size c.LmxPool 0
+    @: p_struct c.LmxPool 0
+    @: p_other c.LmxPool 0
+    @: s_other c.LmxPool 0
+    @: q c.LmxPool 0
+    @: head void 0
+    int: zero_int 0
+    size_t: zero_size 0U
+    a := (cast: (c.LmxArena@) c.calloc(1U, c.sizeof(c.LmxArena)))
+    b := (cast: (c.LmxArena@) c.calloc(1U, c.sizeof(c.LmxArena)))
+    if: a = 0 || b = 0
+        return: 100
+    if: c.lmx_arena_open(a) != 0 || c.lmx_arena_open(b) != 0
+        return: 101
+    # Joins of hot and other arrays in a mixed order: an int pool; a Structure and its array of slots; a size_t pool
+    # after an array of slots; two more Structures with their arrays.
+    if: c.lmx_arena_take(a, c.sizeof(c.int), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT) = 0
+        return: 110
+    p_int := c.lmx_arena_find(a, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT)
+    item := c.lmx_node_new_owned(a)
+    if: p_int = 0 || item = 0 || c.lmx_arena_refs_open_owned(a, item, 2U) != 0
+        return: 111
+    if: c.lmx_arena_take(a, c.sizeof(zero_size), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T) = 0
+        return: 112
+    p_size := c.lmx_arena_find(a, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T)
+    p_struct := c.lmx_arena_find(a, c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT)
+    item := c.lmx_node_new_owned(a)
+    if: p_size = 0 || p_struct = 0 || item = 0 || c.lmx_arena_refs_open_owned(a, item, 2U) != 0
+        return: 113
+    item := c.lmx_node_new_owned(a)
+    if: item = 0 || c.lmx_arena_refs_open_owned(a, item, 2U) != 0
+        return: 114
+    # The subsequence is the filtering of the list: the last array of slots heads the list and is not in the
+    # subsequence; the subsequence is the size_t pool, the Structure pool, the int pool, and nothing more.
+    head := (cast: (@) a\arrays)
+    if: ahs_whole(a) = 0 || head = 0
+        return: 120
+    if: a\hot_arrays != p_size || p_size\hot_next != p_struct || p_struct\hot_next != p_int || p_int\hot_next != 0
+        return: 121
+    # Two arrays of one key: the lookup answers the first of the list, the newer one, sealed as well; a sealed array
+    # hands out no cell. Once it left the list, the older one is answered.
+    q := c.lmx_pool_make_profiled(a, c.sizeof(c.int), c.sizeof(c.int), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT, 0)
+    if: q = 0 || c.lmx_arena_find(a, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT) != q
+        return: 130
+    if: c.lmx_pool_seal(q) != 0 || c.lmx_arena_find(a, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT) != q
+        return: 131
+    if: c.lmx_arena_take(a, c.sizeof(c.int), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT) != 0
+        return: 132
+    if: c.lmx_arena_array_drop(a, q) != 0
+        return: 133
+    if: c.lmx_arena_find(a, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT) != p_int || q\next != 0 || q\hot_next != 0
+        return: 134
+    if: ahs_whole(a) = 0 || (cast: (@) a\arrays) != head || a\hot_arrays != p_size
+        return: 135
+    # A revert takes back the blocks made after the mark, an array of slots and a hot pool among them: both lists lose
+    # them and keep their order.
+    mark := c.lmx_arena_mark(a)
+    item := c.lmx_node_new_owned(a)
+    if: item = 0 || c.lmx_arena_refs_open_owned(a, item, 2U) != 0
+        return: 140
+    q := c.lmx_pool_make_profiled(a, c.sizeof(c.int), c.sizeof(c.int), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT, 0)
+    if: q = 0 || c.lmx_arena_find(a, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT) != q
+        return: 141
+    if: c.lmx_arena_revert(a, mark) != 0
+        return: 142
+    if: c.lmx_arena_find(a, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT) != p_int
+        return: 143
+    if: ahs_whole(a) = 0 || (cast: (@) a\arrays) != head || a\hot_arrays != p_size
+        return: 144
+    # The donor: an int pool, a Structure and its array of slots.
+    if: c.lmx_arena_take(b, c.sizeof(c.int), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT) = 0
+        return: 150
+    p_other := c.lmx_arena_find(b, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT)
+    item := c.lmx_node_new_owned(b)
+    if: p_other = 0 || item = 0 || c.lmx_arena_refs_open_owned(b, item, 2U) != 0
+        return: 151
+    s_other := c.lmx_arena_find(b, c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT)
+    if: s_other = 0 || ahs_whole(b) = 0
+        return: 152
+    # The attach prepends the donor's arrays as it prepends its list: the donor's oldest first. Both lists follow.
+    if: c.lmx_arena_attach(a, b) != 0
+        return: 153
+    if: b\arrays != 0 || b\hot_arrays != 0 || a\arrays != p_other || a\hot_arrays != p_other
+        return: 154
+    if: p_other\next != s_other || p_other\hot_next != s_other || s_other\hot_next != p_size
+        return: 155
+    if: ahs_whole(a) = 0 || c.lmx_arena_find(a, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT) != p_other
+        return: 156
+    if: c.lmx_arena_find(a, c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT) != s_other
+        return: 157
+    # Release empties both heads.
+    if: c.lmx_arena_release(a) != 0 || c.lmx_arena_release(b) != 0
+        return: 160
+    if: a\arrays != 0 || a\hot_arrays != 0 || b\arrays != 0 || b\hot_arrays != 0
+        return: 161
+    c.free((cast: (@) a))
+    c.free((cast: (@) b))
+    return: 7
+end: ahs_check

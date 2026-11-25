@@ -97,7 +97,7 @@ end: lmx_arena_index_set_cap
 fn: lmx_arena_open (c.LmxArena@: arena) int
     if: arena = 0
         return: 1
-    if: arena\blocks != 0 || arena\arrays != 0 || lmx_arena_index_data(arena) != 0
+    if: arena\blocks != 0 || arena\arrays != 0 || arena\hot_arrays != 0 || lmx_arena_index_data(arena) != 0
         return: 1
     if: lmx_arena_index_len(arena) != 0U || lmx_arena_index_cap(arena) != 0U
         return: 1
@@ -151,11 +151,35 @@ fn: lmx_arena_find (c.LmxArena@: arena; int: kind; int: type) c.LmxPool@
     return: lmx_arena_find_profiled(arena, kind, type, 0)
 end: lmx_arena_find
 
+# The hot kinds of the arena's arrays (K5a, 2026-11-25): PRIMITIVE and STRUCT, the kinds every taking of a cell
+# looks for. Their arrays also form an ordered subsequence of the list of arrays (arena\hot_arrays, linked through
+# hot_next): a Structure made at run time brings an array of slots of its own into the list
+# (lmx_arena_refs_open_profiled), and a lookup that walks the whole list pays for every Structure made before it.
+# The subsequence equals the filtering of the list by the hot kind: an array joins it as it joins the list
+# (lmx_arena_array), leaves it as it leaves the list, before its storage goes (lmx_arena_array_drop: a sweep, a
+# revert, a release), it is emptied as the list is emptied (lmx_arena_release) and at an attach the donor's
+# subsequence is prepended as its list is (lmx_arena_attach). 1 for a hot kind, else 0.
+fn: lmx_arena_hot_kind (int: kind) int
+    if: kind = c.LMX_KIND_PRIMITIVE || kind = c.LMX_KIND_STRUCT
+        return: 1
+    return: 0
+end: lmx_arena_hot_kind
+
+# The list a lookup of arrays of a kind walks: the subsequence of the hot kinds, the whole list for every other kind.
+# The subsequence keeps the order of the list (the same joins, leaves and attaches make it), so the first array that
+# suits is the same. The fields a lookup compares (role, pointer_read, pointer_write, scalar_abi) are written after
+# the array joined the list, so they are read from the array at every lookup and kept nowhere else.
+fn: lmx_arena_kind_list (c.LmxArena@: arena; int: kind) c.LmxPool@
+    if: lmx_arena_hot_kind(kind) != 0
+        return: (cast: (LmxPool@) arena\hot_arrays)
+    return: (cast: (LmxPool@) arena\arrays)
+end: lmx_arena_kind_list
+
 fn: lmx_arena_find_profiled (c.LmxArena@: arena; int: kind; int: type; c.Lmx@: pool_profile) c.LmxPool@
     c.LmxPool@: pool 0
     if: arena = 0
         return: 0
-    pool := (cast: (LmxPool@) arena\arrays)
+    pool := (cast: (LmxPool@) lmx_arena_kind_list(arena, kind))
     while: pool != 0
         if: pool\scalar_abi != 0
             pool := pool\next
@@ -194,6 +218,12 @@ fn: lmx_arena_array (c.LmxArena@: arena; c.LmxPool@: array; c.LmxArenaBlock@: re
     ---
     array\next := arena\arrays
     arena\arrays := array
+    if: lmx_arena_hot_kind(array\kind) != 0
+        array\hot_next := arena\hot_arrays
+        arena\hot_arrays := array
+    else:
+        array\hot_next := 0
+    ---
     return: 0
 end: lmx_arena_array
 
@@ -211,6 +241,7 @@ fn: lmx_arena_array_drop (c.LmxArena@: arena; c.LmxPool@: array) int
         if: pool = array
             \slot := pool\next
             pool\next := 0
+            lmx_arena_hot_unlink(arena, array)
             return: 0
         ---
         slot := @ pool\next
@@ -218,6 +249,25 @@ fn: lmx_arena_array_drop (c.LmxArena@: arena; c.LmxPool@: array) int
     ---
     return: 1
 end: lmx_arena_array_drop
+
+# The array leaves the subsequence of the hot kinds too (K5a): it is in it exactly when it is in the list and its
+# kind is hot. The subsequence is short -- the arrays of slots are not in it -- so the walk is by pointer, and an
+# array of another kind ends it without a find.
+sub: lmx_arena_hot_unlink (c.LmxArena@: arena; c.LmxPool@: array)
+    c.LmxPool@@: slot 0
+    c.LmxPool@: pool 0
+    slot := @ arena\hot_arrays
+    pool := \slot
+    while: pool != 0
+        if: pool = array
+            \slot := pool\hot_next
+            pool\hot_next := 0
+            return
+        ---
+        slot := @ pool\hot_next
+        pool := \slot
+    ---
+end: lmx_arena_hot_unlink
 
 # One interval [base, base + bytes) of one array joins the arena's index.  This is the
 # insertion into the table -- the manager's act, and the only one.
@@ -287,6 +337,7 @@ fn: lmx_arena_drop (c.LmxArena@: arena; c.LmxArenaBlock@: block) int
             pool\tail := 0
             pool\chain_gen := pool\chain_gen + 1U
             pool\next := 0
+            pool\hot_next := 0
             pool\stride := 0U
             pool\chunk_capacity := 0U
             pool\kind := 0
@@ -440,7 +491,7 @@ fn: lmx_arena_take_struct_physical_role (c.LmxArena@: arena; int: physical_type;
         return: 0
     if: pool_profile != 0 && c.lmx_range_classify(arena, (cast: (@) pool_profile)) != c.LMX_KIND_STRUCT
         return: 0
-    pool := (cast: (LmxPool@) arena\arrays)
+    pool := (cast: (LmxPool@) lmx_arena_kind_list(arena, c.LMX_KIND_STRUCT))
     while: pool != 0
         if: pool\kind = c.LMX_KIND_STRUCT && pool\type = physical_type && pool\profile = pool_profile && pool\role = role && pool\stride = c.sizeof(c.Lmx)
             return: (cast: (Lmx@) c.lmx_pool_take_n(arena, pool, 1U))
@@ -499,7 +550,7 @@ fn: lmx_arena_pointer_cells_profiled (c.LmxArena@: arena; int: type; c.Lmx@: poo
     # access contracts) may use the same number in one arena after import.
     # Keep their cells in separate arrays; the address index identifies the
     # physical pool for every later read, copy, walk and collection.
-    pool := (cast: (LmxPool@) arena\arrays)
+    pool := (cast: (LmxPool@) lmx_arena_kind_list(arena, c.LMX_KIND_PRIMITIVE))
     while: pool != 0
         if: pool\kind = c.LMX_KIND_PRIMITIVE && pool\type = type && pool\profile = pool_profile && pool\stride = stride && pool\pointer_read = read && pool\pointer_write = write
             break
@@ -540,7 +591,7 @@ fn: lmx_arena_scalar_cells_profiled (c.LmxArena@: arena; int: type; c.Lmx@: pool
         return: (cast: (@) 0)
     if: pool_profile != 0 && c.lmx_range_classify(arena, (cast: (@) pool_profile)) != c.LMX_KIND_STRUCT
         return: (cast: (@) 0)
-    pool := (cast: (c.LmxPool@) arena\arrays)
+    pool := (cast: (c.LmxPool@) lmx_arena_kind_list(arena, c.LMX_KIND_PRIMITIVE))
     while: pool != 0
         if: pool\kind = c.LMX_KIND_PRIMITIVE && pool\type = type && pool\profile = pool_profile && pool\stride = abi\size && pool\scalar_abi = abi
             break
@@ -741,6 +792,14 @@ fn: lmx_arena_attach (c.LmxArena@: arena; c.LmxArena@: other) int
         pool := next
     ---
     other\arrays := 0
+    pool := (cast: (LmxPool@) other\hot_arrays)
+    while: pool != 0
+        next := (cast: (LmxPool@) pool\hot_next)
+        pool\hot_next := arena\hot_arrays
+        arena\hot_arrays := pool
+        pool := next
+    ---
+    other\hot_arrays := 0
     lmx_arena_index_set_len(other, 0U)
     if: lmx_arena_index_data(other) != 0
         c.free((cast: (@) lmx_arena_index_data(other)))
@@ -787,6 +846,7 @@ fn: lmx_arena_release (c.LmxArena@: arena) int
     c.lmx_native_table_dispose(@ arena\native_calls)
     status := c.lmx_arena_blocks_dispose_all(@ arena\blocks)
     arena\arrays := 0
+    arena\hot_arrays := 0
     if: lmx_arena_index_data(arena) != 0
         c.free((cast: (@) lmx_arena_index_data(arena)))
     ---

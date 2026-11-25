@@ -1,0 +1,1406 @@
+{
+  "schema_version": 1,
+  "scope": "Twenty additions only: numeric10 + text/hash/geometry/terminal7 + network3; existing112 are not recounted.",
+  "authoritative_package_plan": "docs/core_catalog/package_plan.lmx",
+  "measurement": {
+    "unit": "bytes",
+    "source_scope": "Uncompressed regular-file payload bytes in selected vendor trees, including retained notices/readme/tests where present; excludes shared extensions, generated build views, catalog documentation, downloaded archives and build products.",
+    "original_source_scope": "Full upstream unpacked snapshots before selection, as recorded in component source-selection reports.",
+    "retained_source_verification": "Recounted from current patch vendor trees and matched to component reports for all20.",
+    "binary_scope": "Sum of selected static .a files, including archive/symbol-table overhead; neither executable size nor resident memory nor final linked kernel size.",
+    "binary_platform": "Local Linux x86_64 C99 MinSizeRel profiles; exact profiles are in cited build reports. Other platforms NOT_RUN.",
+    "binary_exclusions": [
+      "Existing LibTomMath dependency is not counted again.",
+      "Legacy xxHash implementation is not counted again.",
+      "Monolithic libevent.a is not added on top of core/extra/pthreads.",
+      "mDNS has no archive: 35640-byte consumer executable is reported separately, not added to archive total.",
+      "Shared libraries/system runtime, tools and final application linkage are not part of archive totals."
+    ],
+    "test_scope": "Only selected reported C99 native checks passed. Upstream full suites, LMX wrapper execution and cross-platform execution are not claimed."
+  },
+  "totals": {
+    "components": 20,
+    "original_unpacked_bytes": 35132918,
+    "retained_source_bytes": 9411667,
+    "selected_archive_bytes": 2307702,
+    "archive_count": 22,
+    "header_only_components": 1,
+    "source_bytes_removed": 25721251,
+    "source_reduction_percent": 73.21,
+    "consumer_executable_bytes_excluded_from_archives": 35640,
+    "all_selected_component_archive_sums_below_1000000": true
+  },
+  "groups": [
+    {
+      "group": "numeric_extra",
+      "components": 10,
+      "original_unpacked_bytes": 12840167,
+      "retained_source_bytes": 2497743,
+      "selected_archive_bytes": 965686,
+      "archive_count": 10,
+      "header_only_components": 0
+    },
+    {
+      "group": "text_hash_extra",
+      "components": 7,
+      "original_unpacked_bytes": 12077881,
+      "retained_source_bytes": 1940100,
+      "selected_archive_bytes": 446986,
+      "archive_count": 8,
+      "header_only_components": 0
+    },
+    {
+      "group": "network_extra",
+      "components": 3,
+      "original_unpacked_bytes": 10214870,
+      "retained_source_bytes": 4973824,
+      "selected_archive_bytes": 895030,
+      "archive_count": 4,
+      "header_only_components": 1
+    }
+  ],
+  "retained_file_checks": {
+    "components_checked": 20,
+    "all_license_paths_present": true,
+    "all_selected_usage_test_example_sources_present": true,
+    "upstream_suite_completeness": "NOT_ASSERTED",
+    "upstream_full_suites": "NOT_RUN"
+  },
+  "components": [
+    {
+      "id": "numeric_extra:libbf",
+      "name": "LibBF",
+      "purpose_ru": "Произвольная двоичная точность и математические функции",
+      "lmx_package": "number\\real",
+      "package_plan": {
+        "path": "docs/core_catalog/package_plan.lmx",
+        "component_line": 568,
+        "status": "proposal_only"
+      },
+      "license": "MIT",
+      "version": "2025-06-03",
+      "cmake_targets": [
+        "LMX::libbf",
+        "LMX::real"
+      ],
+      "original_unpacked_bytes": 745314,
+      "retained_source_bytes": 272725,
+      "original_file_count": 25,
+      "retained_file_count": 7,
+      "native_artifacts": {
+        "kind": "static_archives",
+        "archives": [
+          {
+            "archive": "liblmx_libbf.a",
+            "archive_bytes": 90992,
+            "text_bytes": 57063,
+            "data_bytes": 0,
+            "bss_bytes": 0
+          }
+        ],
+        "archive_bytes": 90992
+      },
+      "test_status": {
+        "selected_c99_build": "PASS",
+        "selected_native_checks": "PASS",
+        "reported_cases": [
+          "numeric_extra.usage"
+        ],
+        "upstream_full_suite": "NOT_RUN",
+        "lmx_runtime": "NOT_RUN",
+        "other_platforms": "NOT_RUN"
+      },
+      "retained_file_check": {
+        "license_paths": [
+          "third_party/lmx_c99_compact/vendor/libbf/LICENSE"
+        ],
+        "all_license_paths_present": true,
+        "usage_test_example_sources": [
+          "third_party/lmx_c99_compact/extensions/numeric_extra/tests/numeric_extra_check.c"
+        ],
+        "all_usage_sources_present": true,
+        "upstream_test_example_source_count": 0,
+        "upstream_test_example_source_examples": [],
+        "upstream_suite_completeness": "NOT_ASSERTED"
+      },
+      "notes_ru": [
+        "Основной backend real; явный precision/context, C99 portable32 и namespaced auxiliary symbols.",
+        "Исправление отказа первоначального parser allocation создаётся в build view."
+      ],
+      "evidence": {
+        "component_metadata": "third_party/lmx_c99_compact/extensions/numeric_extra/COMPONENTS.json",
+        "source_selection": "third_party/lmx_c99_compact/extensions/numeric_extra/COMPACTNESS.json",
+        "native_build_report": "third_party/lmx_c99_compact/extensions/numeric_extra/VERIFICATION.json"
+      }
+    },
+    {
+      "id": "numeric_extra:softfloat",
+      "name": "SoftFloat",
+      "purpose_ru": "Программная IEEE арифметика 16/32/64/80/128 бит",
+      "lmx_package": "number\\float",
+      "package_plan": {
+        "path": "docs/core_catalog/package_plan.lmx",
+        "component_line": 573,
+        "status": "proposal_only"
+      },
+      "license": "BSD-3-Clause",
+      "version": "3e (2018-01-20)",
+      "cmake_targets": [
+        "LMX::softfloat"
+      ],
+      "original_unpacked_bytes": 1872955,
+      "retained_source_bytes": 1267905,
+      "original_file_count": 451,
+      "retained_file_count": 310,
+      "native_artifacts": {
+        "kind": "static_archives",
+        "archives": [
+          {
+            "archive": "liblmx_softfloat.a",
+            "archive_bytes": 484220,
+            "text_bytes": 66043,
+            "data_bytes": 2,
+            "bss_bytes": 34
+          }
+        ],
+        "archive_bytes": 484220
+      },
+      "test_status": {
+        "selected_c99_build": "PASS",
+        "selected_native_checks": "PASS",
+        "reported_cases": [
+          "numeric_extra.usage"
+        ],
+        "upstream_full_suite": "NOT_RUN",
+        "lmx_runtime": "NOT_RUN",
+        "other_platforms": "NOT_RUN"
+      },
+      "retained_file_check": {
+        "license_paths": [
+          "third_party/lmx_c99_compact/vendor/softfloat/COPYING.txt"
+        ],
+        "all_license_paths_present": true,
+        "usage_test_example_sources": [
+          "third_party/lmx_c99_compact/extensions/numeric_extra/tests/numeric_extra_check.c"
+        ],
+        "all_usage_sources_present": true,
+        "upstream_test_example_source_count": 0,
+        "upstream_test_example_source_examples": [],
+        "upstream_suite_completeness": "NOT_ASSERTED"
+      },
+      "notes_ru": [
+        "Fixed-format арифметика; mutable global rounding/status требуют owner-side сериализации в L3."
+      ],
+      "evidence": {
+        "component_metadata": "third_party/lmx_c99_compact/extensions/numeric_extra/COMPONENTS.json",
+        "source_selection": "third_party/lmx_c99_compact/extensions/numeric_extra/COMPACTNESS.json",
+        "native_build_report": "third_party/lmx_c99_compact/extensions/numeric_extra/VERIFICATION.json"
+      }
+    },
+    {
+      "id": "numeric_extra:libfixmath",
+      "name": "libfixmath",
+      "purpose_ru": "Fixed-point Q16.16 арифметика",
+      "lmx_package": "number\\fixed",
+      "package_plan": {
+        "path": "docs/core_catalog/package_plan.lmx",
+        "component_line": 578,
+        "status": "proposal_only"
+      },
+      "license": "MIT",
+      "version": "snapshot aa19cbf9142c",
+      "cmake_targets": [
+        "LMX::fixmath"
+      ],
+      "original_unpacked_bytes": 951539,
+      "retained_source_bytes": 58703,
+      "original_file_count": 63,
+      "retained_file_count": 16,
+      "native_artifacts": {
+        "kind": "static_archives",
+        "archives": [
+          {
+            "archive": "liblmx_fixmath.a",
+            "archive_bytes": 17928,
+            "text_bytes": 4759,
+            "data_bytes": 0,
+            "bss_bytes": 0
+          }
+        ],
+        "archive_bytes": 17928
+      },
+      "test_status": {
+        "selected_c99_build": "PASS",
+        "selected_native_checks": "PASS",
+        "reported_cases": [
+          "numeric_extra.usage"
+        ],
+        "upstream_full_suite": "NOT_RUN",
+        "lmx_runtime": "NOT_RUN",
+        "other_platforms": "NOT_RUN"
+      },
+      "retained_file_check": {
+        "license_paths": [
+          "third_party/lmx_c99_compact/vendor/libfixmath/LICENSE"
+        ],
+        "all_license_paths_present": true,
+        "usage_test_example_sources": [
+          "third_party/lmx_c99_compact/extensions/numeric_extra/tests/numeric_extra_check.c"
+        ],
+        "all_usage_sources_present": true,
+        "upstream_test_example_source_count": 0,
+        "upstream_test_example_source_examples": [],
+        "upstream_suite_completeness": "NOT_ASSERTED"
+      },
+      "notes_ru": [
+        "FIXMATH_NO_CACHE; overflow/rounding заданы выбранным профилем."
+      ],
+      "evidence": {
+        "component_metadata": "third_party/lmx_c99_compact/extensions/numeric_extra/COMPONENTS.json",
+        "source_selection": "third_party/lmx_c99_compact/extensions/numeric_extra/COMPACTNESS.json",
+        "native_build_report": "third_party/lmx_c99_compact/extensions/numeric_extra/VERIFICATION.json"
+      }
+    },
+    {
+      "id": "numeric_extra:libfixmatrix",
+      "name": "libfixmatrix",
+      "purpose_ru": "Fixed-point матрицы, векторы и кватернионы",
+      "lmx_package": "math\\linear",
+      "package_plan": {
+        "path": "docs/core_catalog/package_plan.lmx",
+        "component_line": 583,
+        "status": "proposal_only"
+      },
+      "license": "MIT",
+      "version": "snapshot a8d583e4fe1f",
+      "cmake_targets": [
+        "LMX::fixmatrix"
+      ],
+      "original_unpacked_bytes": 85283,
+      "retained_source_bytes": 41039,
+      "original_file_count": 20,
+      "retained_file_count": 14,
+      "native_artifacts": {
+        "kind": "static_archives",
+        "archives": [
+          {
+            "archive": "liblmx_fixmatrix.a",
+            "archive_bytes": 25144,
+            "text_bytes": 8768,
+            "data_bytes": 0,
+            "bss_bytes": 0
+          }
+        ],
+        "archive_bytes": 25144
+      },
+      "test_status": {
+        "selected_c99_build": "PASS",
+        "selected_native_checks": "PASS",
+        "reported_cases": [
+          "numeric_extra.usage"
+        ],
+        "upstream_full_suite": "NOT_RUN",
+        "lmx_runtime": "NOT_RUN",
+        "other_platforms": "NOT_RUN"
+      },
+      "retained_file_check": {
+        "license_paths": [
+          "third_party/lmx_c99_compact/vendor/libfixmatrix/LICENSE"
+        ],
+        "all_license_paths_present": true,
+        "usage_test_example_sources": [
+          "third_party/lmx_c99_compact/extensions/numeric_extra/tests/numeric_extra_check.c"
+        ],
+        "all_usage_sources_present": true,
+        "upstream_test_example_source_count": 0,
+        "upstream_test_example_source_examples": [],
+        "upstream_suite_completeness": "NOT_ASSERTED"
+      },
+      "notes_ru": [
+        "Использует libfixmath; предельные размеры native matrices заданы при компиляции."
+      ],
+      "evidence": {
+        "component_metadata": "third_party/lmx_c99_compact/extensions/numeric_extra/COMPONENTS.json",
+        "source_selection": "third_party/lmx_c99_compact/extensions/numeric_extra/COMPACTNESS.json",
+        "native_build_report": "third_party/lmx_c99_compact/extensions/numeric_extra/VERIFICATION.json"
+      }
+    },
+    {
+      "id": "numeric_extra:fp16",
+      "name": "FP16",
+      "purpose_ru": "Конверсия IEEE и ARM alternate half",
+      "lmx_package": "number\\float",
+      "package_plan": {
+        "path": "docs/core_catalog/package_plan.lmx",
+        "component_line": 588,
+        "status": "proposal_only"
+      },
+      "license": "MIT",
+      "version": "snapshot 782eea126dc5",
+      "cmake_targets": [
+        "LMX::fp16"
+      ],
+      "original_unpacked_bytes": 398275,
+      "retained_source_bytes": 30158,
+      "original_file_count": 31,
+      "retained_file_count": 6,
+      "native_artifacts": {
+        "kind": "static_archives",
+        "archives": [
+          {
+            "archive": "liblmx_fp16.a",
+            "archive_bytes": 2498,
+            "text_bytes": 476,
+            "data_bytes": 0,
+            "bss_bytes": 0
+          }
+        ],
+        "archive_bytes": 2498
+      },
+      "test_status": {
+        "selected_c99_build": "PASS",
+        "selected_native_checks": "PASS",
+        "reported_cases": [
+          "numeric_extra.usage"
+        ],
+        "upstream_full_suite": "NOT_RUN",
+        "lmx_runtime": "NOT_RUN",
+        "other_platforms": "NOT_RUN"
+      },
+      "retained_file_check": {
+        "license_paths": [
+          "third_party/lmx_c99_compact/vendor/fp16/LICENSE"
+        ],
+        "all_license_paths_present": true,
+        "usage_test_example_sources": [
+          "third_party/lmx_c99_compact/extensions/numeric_extra/tests/numeric_extra_check.c"
+        ],
+        "all_usage_sources_present": true,
+        "upstream_test_example_source_count": 0,
+        "upstream_test_example_source_examples": [],
+        "upstream_suite_completeness": "NOT_ASSERTED"
+      },
+      "notes_ru": [
+        "Четыре внешних C entrypoints дополняют upstream header-only API; native half extensions выключены."
+      ],
+      "evidence": {
+        "component_metadata": "third_party/lmx_c99_compact/extensions/numeric_extra/COMPONENTS.json",
+        "source_selection": "third_party/lmx_c99_compact/extensions/numeric_extra/COMPACTNESS.json",
+        "native_build_report": "third_party/lmx_c99_compact/extensions/numeric_extra/VERIFICATION.json"
+      }
+    },
+    {
+      "id": "numeric_extra:cminpack",
+      "name": "CMINPACK",
+      "purpose_ru": "Нелинейные уравнения и least squares",
+      "lmx_package": "math\\fit",
+      "package_plan": {
+        "path": "docs/core_catalog/package_plan.lmx",
+        "component_line": 593,
+        "status": "proposal_only"
+      },
+      "license": "MINPACK permissive (University of Chicago acknowledgment required)",
+      "version": "1.3.15 / 49a7ea4e6edf",
+      "cmake_targets": [
+        "LMX::cminpack"
+      ],
+      "original_unpacked_bytes": 2645003,
+      "retained_source_bytes": 238165,
+      "original_file_count": 415,
+      "retained_file_count": 30,
+      "native_artifacts": {
+        "kind": "static_archives",
+        "archives": [
+          {
+            "archive": "liblmx_cminpack.a",
+            "archive_bytes": 75222,
+            "text_bytes": 31068,
+            "data_bytes": 0,
+            "bss_bytes": 0
+          }
+        ],
+        "archive_bytes": 75222
+      },
+      "test_status": {
+        "selected_c99_build": "PASS",
+        "selected_native_checks": "PASS",
+        "reported_cases": [
+          "numeric_extra.usage"
+        ],
+        "upstream_full_suite": "NOT_RUN",
+        "lmx_runtime": "NOT_RUN",
+        "other_platforms": "NOT_RUN"
+      },
+      "retained_file_check": {
+        "license_paths": [
+          "third_party/lmx_c99_compact/vendor/cminpack/CopyrightMINPACK.txt"
+        ],
+        "all_license_paths_present": true,
+        "usage_test_example_sources": [
+          "third_party/lmx_c99_compact/extensions/numeric_extra/tests/numeric_extra_check.c"
+        ],
+        "all_usage_sources_present": true,
+        "upstream_test_example_source_count": 0,
+        "upstream_test_example_source_examples": [],
+        "upstream_suite_completeness": "NOT_ASSERTED"
+      },
+      "notes_ru": [
+        "Выбран C double API без Fortran/f2c/BLAS/LAPACK; лицензия содержит acknowledgment University of Chicago."
+      ],
+      "evidence": {
+        "component_metadata": "third_party/lmx_c99_compact/extensions/numeric_extra/COMPONENTS.json",
+        "source_selection": "third_party/lmx_c99_compact/extensions/numeric_extra/COMPACTNESS.json",
+        "native_build_report": "third_party/lmx_c99_compact/extensions/numeric_extra/VERIFICATION.json"
+      }
+    },
+    {
+      "id": "numeric_extra:imath",
+      "name": "IMath",
+      "purpose_ru": "Большие целые и точные рациональные числа",
+      "lmx_package": "number\\bigint",
+      "package_plan": {
+        "path": "docs/core_catalog/package_plan.lmx",
+        "component_line": 598,
+        "status": "proposal_only"
+      },
+      "license": "MIT",
+      "version": "snapshot b7271d046214",
+      "cmake_targets": [
+        "LMX::imath"
+      ],
+      "original_unpacked_bytes": 2271299,
+      "retained_source_bytes": 127451,
+      "original_file_count": 92,
+      "retained_file_count": 7,
+      "native_artifacts": {
+        "kind": "static_archives",
+        "archives": [
+          {
+            "archive": "liblmx_imath.a",
+            "archive_bytes": 52900,
+            "text_bytes": 26426,
+            "data_bytes": 72,
+            "bss_bytes": 0
+          }
+        ],
+        "archive_bytes": 52900
+      },
+      "test_status": {
+        "selected_c99_build": "PASS",
+        "selected_native_checks": "PASS",
+        "reported_cases": [
+          "numeric_extra.usage"
+        ],
+        "upstream_full_suite": "NOT_RUN",
+        "lmx_runtime": "NOT_RUN",
+        "other_platforms": "NOT_RUN"
+      },
+      "retained_file_check": {
+        "license_paths": [
+          "third_party/lmx_c99_compact/vendor/imath/LICENSE"
+        ],
+        "all_license_paths_present": true,
+        "usage_test_example_sources": [
+          "third_party/lmx_c99_compact/extensions/numeric_extra/tests/numeric_extra_check.c"
+        ],
+        "all_usage_sources_present": true,
+        "upstream_test_example_source_count": 0,
+        "upstream_test_example_source_examples": [],
+        "upstream_suite_completeness": "NOT_ASSERTED"
+      },
+      "notes_ru": [
+        "Native typedefs несовместимы с LibTomMath; используются отдельные translation units и value converters."
+      ],
+      "evidence": {
+        "component_metadata": "third_party/lmx_c99_compact/extensions/numeric_extra/COMPONENTS.json",
+        "source_selection": "third_party/lmx_c99_compact/extensions/numeric_extra/COMPACTNESS.json",
+        "native_build_report": "third_party/lmx_c99_compact/extensions/numeric_extra/VERIFICATION.json"
+      }
+    },
+    {
+      "id": "numeric_extra:pffft",
+      "name": "PFFFT",
+      "purpose_ru": "Float/double FFT и fast convolution",
+      "lmx_package": "math\\transform",
+      "package_plan": {
+        "path": "docs/core_catalog/package_plan.lmx",
+        "component_line": 603,
+        "status": "proposal_only"
+      },
+      "license": "BSD-like NCAR/UCAR (3 conditions)",
+      "version": "snapshot bffd965c3b07",
+      "cmake_targets": [
+        "LMX::pffft"
+      ],
+      "original_unpacked_bytes": 3040759,
+      "retained_source_bytes": 265510,
+      "original_file_count": 111,
+      "retained_file_count": 26,
+      "native_artifacts": {
+        "kind": "static_archives",
+        "archives": [
+          {
+            "archive": "liblmx_pffft.a",
+            "archive_bytes": 79692,
+            "text_bytes": 56463,
+            "data_bytes": 0,
+            "bss_bytes": 0
+          }
+        ],
+        "archive_bytes": 79692
+      },
+      "test_status": {
+        "selected_c99_build": "PASS",
+        "selected_native_checks": "PASS",
+        "reported_cases": [
+          "numeric_extra.alternatives"
+        ],
+        "upstream_full_suite": "NOT_RUN",
+        "lmx_runtime": "NOT_RUN",
+        "other_platforms": "NOT_RUN"
+      },
+      "retained_file_check": {
+        "license_paths": [
+          "third_party/lmx_c99_compact/vendor/pffft/LICENSE.txt"
+        ],
+        "all_license_paths_present": true,
+        "usage_test_example_sources": [
+          "third_party/lmx_c99_compact/extensions/numeric_extra/tests/numeric_alternatives_check.c"
+        ],
+        "all_usage_sources_present": true,
+        "upstream_test_example_source_count": 0,
+        "upstream_test_example_source_examples": [],
+        "upstream_suite_completeness": "NOT_ASSERTED"
+      },
+      "notes_ru": [
+        "Portable scalar profile; C APIs float/double/convolution, без C++ PFDSP или FFTW."
+      ],
+      "evidence": {
+        "component_metadata": "third_party/lmx_c99_compact/extensions/numeric_extra/COMPONENTS.json",
+        "source_selection": "third_party/lmx_c99_compact/extensions/numeric_extra/COMPACTNESS.json",
+        "native_build_report": "third_party/lmx_c99_compact/extensions/numeric_extra/VERIFICATION.json"
+      }
+    },
+    {
+      "id": "numeric_extra:pcg-c",
+      "name": "pcg-c",
+      "purpose_ru": "Псевдослучайные потоки и jump-ahead",
+      "lmx_package": "random",
+      "package_plan": {
+        "path": "docs/core_catalog/package_plan.lmx",
+        "component_line": 608,
+        "status": "proposal_only"
+      },
+      "license": "Apache-2.0 OR MIT",
+      "version": "snapshot 83252d9c23df",
+      "cmake_targets": [
+        "LMX::pcg"
+      ],
+      "original_unpacked_bytes": 565412,
+      "retained_source_bytes": 134437,
+      "original_file_count": 215,
+      "retained_file_count": 17,
+      "native_artifacts": {
+        "kind": "static_archives",
+        "archives": [
+          {
+            "archive": "liblmx_pcg.a",
+            "archive_bytes": 50806,
+            "text_bytes": 10786,
+            "data_bytes": 16,
+            "bss_bytes": 0
+          }
+        ],
+        "archive_bytes": 50806
+      },
+      "test_status": {
+        "selected_c99_build": "PASS",
+        "selected_native_checks": "PASS",
+        "reported_cases": [
+          "numeric_extra.alternatives"
+        ],
+        "upstream_full_suite": "NOT_RUN",
+        "lmx_runtime": "NOT_RUN",
+        "other_platforms": "NOT_RUN"
+      },
+      "retained_file_check": {
+        "license_paths": [
+          "third_party/lmx_c99_compact/vendor/pcg-c/LICENSE-MIT.txt",
+          "third_party/lmx_c99_compact/vendor/pcg-c/LICENSE-APACHE.txt"
+        ],
+        "all_license_paths_present": true,
+        "usage_test_example_sources": [
+          "third_party/lmx_c99_compact/extensions/numeric_extra/tests/numeric_alternatives_check.c"
+        ],
+        "all_usage_sources_present": true,
+        "upstream_test_example_source_count": 0,
+        "upstream_test_example_source_examples": [],
+        "upstream_suite_completeness": "NOT_ASSERTED"
+      },
+      "notes_ru": [
+        "8/16/32/64-bit state; compiler-extension 128-bit profile выключен; L3 использует explicit-state _r."
+      ],
+      "evidence": {
+        "component_metadata": "third_party/lmx_c99_compact/extensions/numeric_extra/COMPONENTS.json",
+        "source_selection": "third_party/lmx_c99_compact/extensions/numeric_extra/COMPACTNESS.json",
+        "native_build_report": "third_party/lmx_c99_compact/extensions/numeric_extra/VERIFICATION.json"
+      }
+    },
+    {
+      "id": "numeric_extra:libtomfloat",
+      "name": "LibTomFloat",
+      "purpose_ru": "Экспериментальная произвольная двоичная точность",
+      "lmx_package": "number\\real",
+      "package_plan": {
+        "path": "docs/core_catalog/package_plan.lmx",
+        "component_line": 613,
+        "status": "proposal_only"
+      },
+      "license": "Public Domain OR WTFPL-2.0 (upstream dual license)",
+      "version": "0.02 / e7812b59bbe1",
+      "cmake_targets": [
+        "LMX::tomfloat"
+      ],
+      "original_unpacked_bytes": 264328,
+      "retained_source_bytes": 61650,
+      "original_file_count": 64,
+      "retained_file_count": 57,
+      "native_artifacts": {
+        "kind": "static_archives",
+        "archives": [
+          {
+            "archive": "liblmx_tomfloat.a",
+            "archive_bytes": 86284,
+            "text_bytes": 10576,
+            "data_bytes": 0,
+            "bss_bytes": 0
+          }
+        ],
+        "archive_bytes": 86284
+      },
+      "test_status": {
+        "selected_c99_build": "PASS",
+        "selected_native_checks": "PASS",
+        "reported_cases": [
+          "numeric_extra.libtomfloat"
+        ],
+        "upstream_full_suite": "NOT_RUN",
+        "lmx_runtime": "NOT_RUN",
+        "other_platforms": "NOT_RUN"
+      },
+      "retained_file_check": {
+        "license_paths": [
+          "third_party/lmx_c99_compact/vendor/libtomfloat/LICENSE",
+          "third_party/lmx_c99_compact/vendor/libtomfloat/WARNING"
+        ],
+        "all_license_paths_present": true,
+        "usage_test_example_sources": [
+          "third_party/lmx_c99_compact/extensions/numeric_extra/tests/libtomfloat_check.c"
+        ],
+        "all_usage_sources_present": true,
+        "upstream_test_example_source_count": 0,
+        "upstream_test_example_source_examples": [],
+        "upstream_suite_completeness": "NOT_ASSERTED"
+      },
+      "notes_ru": [
+        "Существующая LibTomMath — отдельная зависимость; её архив не посчитан повторно.",
+        "Generated fixes sqrt(0) и signed-long constants; mpf_from_string/mpf_to_string declared_unimplemented; upstream WARNING сохранён."
+      ],
+      "evidence": {
+        "component_metadata": "third_party/lmx_c99_compact/extensions/numeric_extra/COMPONENTS.json",
+        "source_selection": "third_party/lmx_c99_compact/extensions/numeric_extra/COMPACTNESS.json",
+        "native_build_report": "third_party/lmx_c99_compact/extensions/numeric_extra/VERIFICATION.json"
+      }
+    },
+    {
+      "id": "text_hash_extra:libdivsufsort",
+      "name": "libdivsufsort",
+      "purpose_ru": "Суффиксные массивы и BWT",
+      "lmx_package": "text\\search",
+      "package_plan": {
+        "path": "docs/core_catalog/package_plan.lmx",
+        "component_line": 618,
+        "status": "proposal_only"
+      },
+      "license": "MIT",
+      "version": "2.0.2-1; pinned upstream commit",
+      "cmake_targets": [
+        "LMX::divsufsort",
+        "LMX::divsufsort64"
+      ],
+      "original_unpacked_bytes": 133689,
+      "retained_source_bytes": 83705,
+      "original_file_count": 29,
+      "retained_file_count": 10,
+      "native_artifacts": {
+        "kind": "static_archives",
+        "archives": [
+          {
+            "archive": "liblmx_divsufsort.a",
+            "archive_bytes": 27624,
+            "text_bytes": 19492,
+            "data_bytes": 0,
+            "bss_bytes": 0
+          },
+          {
+            "archive": "liblmx_divsufsort64.a",
+            "archive_bytes": 27724,
+            "text_bytes": 19556,
+            "data_bytes": 0,
+            "bss_bytes": 0
+          }
+        ],
+        "archive_bytes": 55348
+      },
+      "test_status": {
+        "selected_c99_build": "PASS",
+        "selected_native_checks": "PASS",
+        "reported_cases": [
+          "text_hash_extra.divsufsort"
+        ],
+        "upstream_full_suite": "NOT_RUN",
+        "lmx_runtime": "NOT_RUN",
+        "other_platforms": "NOT_RUN"
+      },
+      "retained_file_check": {
+        "license_paths": [
+          "third_party/lmx_c99_compact/vendor/libdivsufsort/LICENSE"
+        ],
+        "all_license_paths_present": true,
+        "usage_test_example_sources": [
+          "third_party/lmx_c99_compact/extensions/text_hash_extra/tests/divsufsort.c"
+        ],
+        "all_usage_sources_present": true,
+        "upstream_test_example_source_count": 0,
+        "upstream_test_example_source_examples": [],
+        "upstream_suite_completeness": "NOT_ASSERTED"
+      },
+      "notes_ru": [
+        "Посчитаны оба независимых 32/64-bit index archives; это две сборки одного компонента."
+      ],
+      "evidence": {
+        "component_metadata": "third_party/lmx_c99_compact/extensions/text_hash_extra/COMPONENTS.json",
+        "source_selection": "third_party/lmx_c99_compact/extensions/text_hash_extra/PROVENANCE.json",
+        "native_build_report": "docs/core_catalog/additions/non_numeric_build.json"
+      }
+    },
+    {
+      "id": "text_hash_extra:libtess2",
+      "name": "libtess2",
+      "purpose_ru": "Тесселяция многоугольников",
+      "lmx_package": "geo\\tessellation",
+      "package_plan": {
+        "path": "docs/core_catalog/package_plan.lmx",
+        "component_line": 623,
+        "status": "proposal_only"
+      },
+      "license": "SGI-B-2.0",
+      "version": "1.0.3; pinned upstream commit",
+      "cmake_targets": [
+        "LMX::tess2"
+      ],
+      "original_unpacked_bytes": 247809,
+      "retained_source_bytes": 189892,
+      "original_file_count": 30,
+      "retained_file_count": 18,
+      "native_artifacts": {
+        "kind": "static_archives",
+        "archives": [
+          {
+            "archive": "liblmx_tess2.a",
+            "archive_bytes": 47570,
+            "text_bytes": 23106,
+            "data_bytes": 56,
+            "bss_bytes": 0
+          }
+        ],
+        "archive_bytes": 47570
+      },
+      "test_status": {
+        "selected_c99_build": "PASS",
+        "selected_native_checks": "PASS",
+        "reported_cases": [
+          "text_hash_extra.tess2"
+        ],
+        "upstream_full_suite": "NOT_RUN",
+        "lmx_runtime": "NOT_RUN",
+        "other_platforms": "NOT_RUN"
+      },
+      "retained_file_check": {
+        "license_paths": [
+          "third_party/lmx_c99_compact/vendor/libtess2/LICENSE.txt"
+        ],
+        "all_license_paths_present": true,
+        "usage_test_example_sources": [
+          "third_party/lmx_c99_compact/extensions/text_hash_extra/tests/tess2.c"
+        ],
+        "all_usage_sources_present": true,
+        "upstream_test_example_source_count": 0,
+        "upstream_test_example_source_examples": [],
+        "upstream_suite_completeness": "NOT_ASSERTED"
+      },
+      "notes_ru": [],
+      "evidence": {
+        "component_metadata": "third_party/lmx_c99_compact/extensions/text_hash_extra/COMPONENTS.json",
+        "source_selection": "third_party/lmx_c99_compact/extensions/text_hash_extra/PROVENANCE.json",
+        "native_build_report": "docs/core_catalog/additions/non_numeric_build.json"
+      }
+    },
+    {
+      "id": "text_hash_extra:libccd",
+      "name": "libccd",
+      "purpose_ru": "Пересечения выпуклых тел",
+      "lmx_package": "geo\\collision",
+      "package_plan": {
+        "path": "docs/core_catalog/package_plan.lmx",
+        "component_line": 628,
+        "status": "proposal_only"
+      },
+      "license": "BSD-3-Clause",
+      "version": "2.0 in upstream CMake; pinned upstream commit",
+      "cmake_targets": [
+        "LMX::ccd"
+      ],
+      "original_unpacked_bytes": 337202,
+      "retained_source_bytes": 120640,
+      "original_file_count": 103,
+      "retained_file_count": 19,
+      "native_artifacts": {
+        "kind": "static_archives",
+        "archives": [
+          {
+            "archive": "liblmx_ccd.a",
+            "archive_bytes": 45120,
+            "text_bytes": 25231,
+            "data_bytes": 1056,
+            "bss_bytes": 24
+          }
+        ],
+        "archive_bytes": 45120
+      },
+      "test_status": {
+        "selected_c99_build": "PASS",
+        "selected_native_checks": "PASS",
+        "reported_cases": [
+          "text_hash_extra.ccd"
+        ],
+        "upstream_full_suite": "NOT_RUN",
+        "lmx_runtime": "NOT_RUN",
+        "other_platforms": "NOT_RUN"
+      },
+      "retained_file_check": {
+        "license_paths": [
+          "third_party/lmx_c99_compact/vendor/libccd/BSD-LICENSE"
+        ],
+        "all_license_paths_present": true,
+        "usage_test_example_sources": [
+          "third_party/lmx_c99_compact/extensions/text_hash_extra/tests/ccd.c"
+        ],
+        "all_usage_sources_present": true,
+        "upstream_test_example_source_count": 0,
+        "upstream_test_example_source_examples": [],
+        "upstream_suite_completeness": "NOT_ASSERTED"
+      },
+      "notes_ru": [
+        "CCD_DOUBLE; upstream LGPL CU harness не включён; выполнен собственный C smoke test."
+      ],
+      "evidence": {
+        "component_metadata": "third_party/lmx_c99_compact/extensions/text_hash_extra/COMPONENTS.json",
+        "source_selection": "third_party/lmx_c99_compact/extensions/text_hash_extra/PROVENANCE.json",
+        "native_build_report": "docs/core_catalog/additions/non_numeric_build.json"
+      }
+    },
+    {
+      "id": "text_hash_extra:inih",
+      "name": "inih",
+      "purpose_ru": "Разбор конфигурации INI",
+      "lmx_package": "document\\config",
+      "package_plan": {
+        "path": "docs/core_catalog/package_plan.lmx",
+        "component_line": 633,
+        "status": "proposal_only"
+      },
+      "license": "BSD-3-Clause",
+      "version": "63 in upstream Meson; pinned upstream commit",
+      "cmake_targets": [
+        "LMX::inih"
+      ],
+      "original_unpacked_bytes": 92732,
+      "retained_source_bytes": 28267,
+      "original_file_count": 63,
+      "retained_file_count": 4,
+      "native_artifacts": {
+        "kind": "static_archives",
+        "archives": [
+          {
+            "archive": "liblmx_inih.a",
+            "archive_bytes": 4452,
+            "text_bytes": 1582,
+            "data_bytes": 0,
+            "bss_bytes": 0
+          }
+        ],
+        "archive_bytes": 4452
+      },
+      "test_status": {
+        "selected_c99_build": "PASS",
+        "selected_native_checks": "PASS",
+        "reported_cases": [
+          "text_hash_extra.inih"
+        ],
+        "upstream_full_suite": "NOT_RUN",
+        "lmx_runtime": "NOT_RUN",
+        "other_platforms": "NOT_RUN"
+      },
+      "retained_file_check": {
+        "license_paths": [
+          "third_party/lmx_c99_compact/vendor/inih/LICENSE.txt"
+        ],
+        "all_license_paths_present": true,
+        "usage_test_example_sources": [
+          "third_party/lmx_c99_compact/extensions/text_hash_extra/tests/inih.c"
+        ],
+        "all_usage_sources_present": true,
+        "upstream_test_example_source_count": 0,
+        "upstream_test_example_source_examples": [],
+        "upstream_suite_completeness": "NOT_ASSERTED"
+      },
+      "notes_ru": [],
+      "evidence": {
+        "component_metadata": "third_party/lmx_c99_compact/extensions/text_hash_extra/COMPONENTS.json",
+        "source_selection": "third_party/lmx_c99_compact/extensions/text_hash_extra/PROVENANCE.json",
+        "native_build_report": "docs/core_catalog/additions/non_numeric_build.json"
+      }
+    },
+    {
+      "id": "text_hash_extra:isocline",
+      "name": "isocline",
+      "purpose_ru": "Редактор строки для терминала/REPL",
+      "lmx_package": "ui\\terminal",
+      "package_plan": {
+        "path": "docs/core_catalog/package_plan.lmx",
+        "component_line": 638,
+        "status": "proposal_only"
+      },
+      "license": "MIT AND LicenseRef-Markus-Kuhn-wcwidth-permissive",
+      "version": "1.1.0",
+      "cmake_targets": [
+        "LMX::isocline"
+      ],
+      "original_unpacked_bytes": 1228035,
+      "retained_source_bytes": 400853,
+      "original_file_count": 62,
+      "retained_file_count": 34,
+      "native_artifacts": {
+        "kind": "static_archives",
+        "archives": [
+          {
+            "archive": "liblmx_isocline.a",
+            "archive_bytes": 126218,
+            "text_bytes": 69335,
+            "data_bytes": 6808,
+            "bss_bytes": 484
+          }
+        ],
+        "archive_bytes": 126218
+      },
+      "test_status": {
+        "selected_c99_build": "PASS",
+        "selected_native_checks": "PASS",
+        "reported_cases": [
+          "text_hash_extra.isocline",
+          "text_hash_extra.isocline_pipe"
+        ],
+        "upstream_full_suite": "NOT_RUN",
+        "lmx_runtime": "NOT_RUN",
+        "other_platforms": "NOT_RUN"
+      },
+      "retained_file_check": {
+        "license_paths": [
+          "third_party/lmx_c99_compact/vendor/isocline/LICENSE",
+          "third_party/lmx_c99_compact/vendor/isocline/src/wcwidth.c"
+        ],
+        "all_license_paths_present": true,
+        "usage_test_example_sources": [
+          "third_party/lmx_c99_compact/extensions/text_hash_extra/tests/isocline.c",
+          "third_party/lmx_c99_compact/extensions/text_hash_extra/tests/isocline_pipe.cmake"
+        ],
+        "all_usage_sources_present": true,
+        "upstream_test_example_source_count": 0,
+        "upstream_test_example_source_examples": [],
+        "upstream_suite_completeness": "NOT_ASSERTED"
+      },
+      "notes_ru": [
+        "Process-global terminal state; interactive TTY editing NOT_RUN.",
+        "Встроенный wcwidth сохраняет отдельное permissive уведомление Markus Kuhn."
+      ],
+      "evidence": {
+        "component_metadata": "third_party/lmx_c99_compact/extensions/text_hash_extra/COMPONENTS.json",
+        "source_selection": "third_party/lmx_c99_compact/extensions/text_hash_extra/PROVENANCE.json",
+        "native_build_report": "docs/core_catalog/additions/non_numeric_build.json"
+      }
+    },
+    {
+      "id": "text_hash_extra:libunibreak",
+      "name": "libunibreak",
+      "purpose_ru": "Границы строк, слов и графем Unicode",
+      "lmx_package": "text\\unicode",
+      "package_plan": {
+        "path": "docs/core_catalog/package_plan.lmx",
+        "component_line": 643,
+        "status": "proposal_only"
+      },
+      "license": "Zlib AND Unicode-3.0",
+      "version": "8.0",
+      "cmake_targets": [
+        "LMX::unibreak"
+      ],
+      "original_unpacked_bytes": 4527072,
+      "retained_source_bytes": 815890,
+      "original_file_count": 67,
+      "retained_file_count": 30,
+      "native_artifacts": {
+        "kind": "static_archives",
+        "archives": [
+          {
+            "archive": "liblmx_unibreak.a",
+            "archive_bytes": 149060,
+            "text_bytes": 130431,
+            "data_bytes": 168,
+            "bss_bytes": 0
+          }
+        ],
+        "archive_bytes": 149060
+      },
+      "test_status": {
+        "selected_c99_build": "PASS",
+        "selected_native_checks": "PASS",
+        "reported_cases": [
+          "text_hash_extra.unibreak"
+        ],
+        "upstream_full_suite": "NOT_RUN",
+        "lmx_runtime": "NOT_RUN",
+        "other_platforms": "NOT_RUN"
+      },
+      "retained_file_check": {
+        "license_paths": [
+          "third_party/lmx_c99_compact/vendor/libunibreak/LICENCE",
+          "third_party/lmx_c99_compact/vendor/libunibreak/UNICODE_LICENSE.txt"
+        ],
+        "all_license_paths_present": true,
+        "usage_test_example_sources": [
+          "third_party/lmx_c99_compact/extensions/text_hash_extra/tests/unibreak.c"
+        ],
+        "all_usage_sources_present": true,
+        "upstream_test_example_source_count": 0,
+        "upstream_test_example_source_examples": [],
+        "upstream_suite_completeness": "NOT_ASSERTED"
+      },
+      "notes_ru": [
+        "Готовые Unicode tables сохранены локально; обновление/загрузка данных при сборке не требуется."
+      ],
+      "evidence": {
+        "component_metadata": "third_party/lmx_c99_compact/extensions/text_hash_extra/COMPONENTS.json",
+        "source_selection": "third_party/lmx_c99_compact/extensions/text_hash_extra/PROVENANCE.json",
+        "native_build_report": "docs/core_catalog/additions/non_numeric_build.json"
+      }
+    },
+    {
+      "id": "text_hash_extra:xxhash_modern",
+      "name": "xxHash 0.8.4",
+      "purpose_ru": "Быстрые некриптографические хеши",
+      "lmx_package": "hash",
+      "package_plan": {
+        "path": "docs/core_catalog/package_plan.lmx",
+        "component_line": 648,
+        "status": "proposal_only"
+      },
+      "license": "BSD-2-Clause",
+      "version": "0.8.4",
+      "cmake_targets": [
+        "LMX::xxhash_modern"
+      ],
+      "original_unpacked_bytes": 5511342,
+      "retained_source_bytes": 300853,
+      "original_file_count": 100,
+      "retained_file_count": 4,
+      "native_artifacts": {
+        "kind": "static_archives",
+        "archives": [
+          {
+            "archive": "liblmx_xxhash_modern.a",
+            "archive_bytes": 19218,
+            "text_bytes": 9287,
+            "data_bytes": 0,
+            "bss_bytes": 0
+          }
+        ],
+        "archive_bytes": 19218
+      },
+      "test_status": {
+        "selected_c99_build": "PASS",
+        "selected_native_checks": "PASS",
+        "reported_cases": [
+          "text_hash_extra.xxhash_modern",
+          "text_hash_extra.hash_alternatives"
+        ],
+        "upstream_full_suite": "NOT_RUN",
+        "lmx_runtime": "NOT_RUN",
+        "other_platforms": "NOT_RUN"
+      },
+      "retained_file_check": {
+        "license_paths": [
+          "third_party/lmx_c99_compact/vendor/xxhash/LICENSE"
+        ],
+        "all_license_paths_present": true,
+        "usage_test_example_sources": [
+          "third_party/lmx_c99_compact/extensions/text_hash_extra/tests/xxhash_modern.c",
+          "third_party/lmx_c99_compact/extensions/text_hash_extra/tests/hash_alternatives.c",
+          "third_party/lmx_c99_compact/extensions/text_hash_extra/tests/hash_legacy_view.c",
+          "third_party/lmx_c99_compact/extensions/text_hash_extra/tests/hash_modern_view.c"
+        ],
+        "all_usage_sources_present": true,
+        "upstream_test_example_source_count": 0,
+        "upstream_test_example_source_examples": [],
+        "upstream_suite_completeness": "NOT_ASSERTED"
+      },
+      "notes_ru": [
+        "Namespaced symbols; современный и legacy headers изолированы по C units.",
+        "GPL xxhsum и его tests не включены; старый backend не посчитан повторно."
+      ],
+      "evidence": {
+        "component_metadata": "third_party/lmx_c99_compact/extensions/text_hash_extra/COMPONENTS.json",
+        "source_selection": "third_party/lmx_c99_compact/extensions/text_hash_extra/PROVENANCE.json",
+        "native_build_report": "docs/core_catalog/additions/non_numeric_build.json"
+      }
+    },
+    {
+      "id": "network_extra:cares",
+      "name": "c-ares",
+      "purpose_ru": "Асинхронный DNS",
+      "lmx_package": "net\\dns",
+      "package_plan": {
+        "path": "docs/core_catalog/package_plan.lmx",
+        "component_line": 653,
+        "status": "proposal_only"
+      },
+      "license": "MIT",
+      "version": "1.34.9",
+      "cmake_targets": [
+        "LMX::cares"
+      ],
+      "original_unpacked_bytes": 5373957,
+      "retained_source_bytes": 2465461,
+      "original_file_count": 532,
+      "retained_file_count": 192,
+      "native_artifacts": {
+        "kind": "static_archives",
+        "archives": [
+          {
+            "archive": "cares/src/lib/libcares.a",
+            "archive_bytes": 466620,
+            "sha256": "0b0d325f9a5901276d7b891c27f0eac941f3cae319047038063c75774126f6e3"
+          }
+        ],
+        "archive_bytes": 466620
+      },
+      "test_status": {
+        "selected_c99_build": "PASS",
+        "selected_native_checks": "PASS",
+        "reported_cases": [
+          "DNS packet fields"
+        ],
+        "upstream_full_suite": "NOT_RUN",
+        "lmx_runtime": "NOT_RUN",
+        "other_platforms": "NOT_RUN"
+      },
+      "retained_file_check": {
+        "license_paths": [
+          "third_party/lmx_c99_compact/vendor/cares/LICENSE.md"
+        ],
+        "all_license_paths_present": true,
+        "usage_test_example_sources": [
+          "third_party/lmx_c99_compact/extensions/network_extra/tests/network_smoke.c"
+        ],
+        "all_usage_sources_present": true,
+        "upstream_test_example_source_count": 34,
+        "upstream_test_example_source_examples": [
+          "third_party/lmx_c99_compact/vendor/cares/test/ares-fuzz.c",
+          "third_party/lmx_c99_compact/vendor/cares/test/ares-test-ai.h",
+          "third_party/lmx_c99_compact/vendor/cares/test/ares-test-fuzz-name.c",
+          "third_party/lmx_c99_compact/vendor/cares/test/ares-test-fuzz.c",
+          "third_party/lmx_c99_compact/vendor/cares/test/ares-test-init.cc"
+        ],
+        "upstream_suite_completeness": "NOT_ASSERTED"
+      },
+      "notes_ru": [
+        "Smoke строит DNS packet без отправки запросов.",
+        "Сохранены upstream test sources, в том числе C++/GTest; их full suite NOT_RUN и не требуется выбранной C99 сборке."
+      ],
+      "evidence": {
+        "component_metadata": "third_party/lmx_c99_compact/extensions/network_extra/COMPONENTS.json",
+        "source_selection": "third_party/lmx_c99_compact/extensions/network_extra/COMPACTNESS.json",
+        "native_build_report": "docs/core_catalog/validation/network_build.json"
+      }
+    },
+    {
+      "id": "network_extra:libevent",
+      "name": "libevent",
+      "purpose_ru": "Цикл событий, buffers, HTTP/DNS/RPC",
+      "lmx_package": "net\\event",
+      "package_plan": {
+        "path": "docs/core_catalog/package_plan.lmx",
+        "component_line": 658,
+        "status": "proposal_only"
+      },
+      "license": "BSD-3-Clause and retained per-file ISC/BSD notices",
+      "version": "2.1.13-stable",
+      "cmake_targets": [
+        "LMX::event"
+      ],
+      "original_unpacked_bytes": 4720957,
+      "retained_source_bytes": 2398384,
+      "original_file_count": 221,
+      "retained_file_count": 160,
+      "native_artifacts": {
+        "kind": "static_archives",
+        "archives": [
+          {
+            "archive": "event/lib/libevent_core.a",
+            "archive_bytes": 260394,
+            "sha256": "e0469115f0ea1ff7ca1f3e4cdd0ed32cdc98f6f91df8f601bd2f10fe41ce62d8"
+          },
+          {
+            "archive": "event/lib/libevent_extra.a",
+            "archive_bytes": 163200,
+            "sha256": "c71d611da681b5416312f05021a554d843578322ddf001cd0457a01c83db6c17"
+          },
+          {
+            "archive": "event/lib/libevent_pthreads.a",
+            "archive_bytes": 4816,
+            "sha256": "d469e949c26ea8c1ba023837cc382c6f12a9699ab3c957fc57e339b9565b510d"
+          }
+        ],
+        "archive_bytes": 428410
+      },
+      "test_status": {
+        "selected_c99_build": "PASS",
+        "selected_native_checks": "PASS",
+        "reported_cases": [
+          "event timer",
+          "buffer roundtrip",
+          "HTTP URI"
+        ],
+        "upstream_full_suite": "NOT_RUN",
+        "lmx_runtime": "NOT_RUN",
+        "other_platforms": "NOT_RUN"
+      },
+      "retained_file_check": {
+        "license_paths": [
+          "third_party/lmx_c99_compact/vendor/libevent/LICENSE"
+        ],
+        "all_license_paths_present": true,
+        "usage_test_example_sources": [
+          "third_party/lmx_c99_compact/extensions/network_extra/tests/network_smoke.c"
+        ],
+        "all_usage_sources_present": true,
+        "upstream_test_example_source_count": 47,
+        "upstream_test_example_source_examples": [
+          "third_party/lmx_c99_compact/vendor/libevent/sample/dns-example.c",
+          "third_party/lmx_c99_compact/vendor/libevent/sample/event-read-fifo.c",
+          "third_party/lmx_c99_compact/vendor/libevent/sample/hello-world.c",
+          "third_party/lmx_c99_compact/vendor/libevent/sample/time-test.c",
+          "third_party/lmx_c99_compact/vendor/libevent/test/bench.c"
+        ],
+        "upstream_suite_completeness": "NOT_ASSERTED"
+      },
+      "notes_ru": [
+        "Посчитаны только core + extra + pthreads. Монолитный libevent.a не суммируется с ними повторно; OpenSSL profile не выбран.",
+        "Upstream tests и выбранные sample sources сохранены, full suite NOT_RUN."
+      ],
+      "evidence": {
+        "component_metadata": "third_party/lmx_c99_compact/extensions/network_extra/COMPONENTS.json",
+        "source_selection": "third_party/lmx_c99_compact/extensions/network_extra/COMPACTNESS.json",
+        "native_build_report": "docs/core_catalog/validation/network_build.json"
+      }
+    },
+    {
+      "id": "network_extra:mdns",
+      "name": "mDNS",
+      "purpose_ru": "Обнаружение служб в локальной сети",
+      "lmx_package": "net\\discovery",
+      "package_plan": {
+        "path": "docs/core_catalog/package_plan.lmx",
+        "component_line": 663,
+        "status": "proposal_only"
+      },
+      "license": "Unlicense",
+      "version": "snapshot a569c4759bd4",
+      "cmake_targets": [
+        "LMX::mdns"
+      ],
+      "original_unpacked_bytes": 119956,
+      "retained_source_bytes": 109979,
+      "original_file_count": 12,
+      "retained_file_count": 4,
+      "native_artifacts": {
+        "kind": "header_only",
+        "archives": [],
+        "archive_bytes": null,
+        "consumer_executable": {
+          "bytes": 35640,
+          "measurement": "complete upstream example executable; dynamically linked system C library",
+          "execution": "NOT_RUN",
+          "included_in_archive_sum": false,
+          "source": "third_party/lmx_c99_compact/vendor/mdns/mdns.c"
+        }
+      },
+      "test_status": {
+        "selected_c99_build": "PASS",
+        "selected_native_checks": "PASS",
+        "reported_cases": [
+          "mDNS name roundtrip"
+        ],
+        "upstream_full_suite": "NOT_RUN",
+        "lmx_runtime": "NOT_RUN",
+        "other_platforms": "NOT_RUN"
+      },
+      "retained_file_check": {
+        "license_paths": [
+          "third_party/lmx_c99_compact/vendor/mdns/LICENSE"
+        ],
+        "all_license_paths_present": true,
+        "usage_test_example_sources": [
+          "third_party/lmx_c99_compact/extensions/network_extra/tests/network_smoke.c",
+          "third_party/lmx_c99_compact/vendor/mdns/mdns.c"
+        ],
+        "all_usage_sources_present": true,
+        "upstream_test_example_source_count": 1,
+        "upstream_test_example_source_examples": [
+          "third_party/lmx_c99_compact/vendor/mdns/mdns.c"
+        ],
+        "upstream_suite_completeness": "NOT_ASSERTED"
+      },
+      "notes_ru": [
+        "Header-only: независимого .a нет. Полный upstream example compiled as size probe, execution NOT_RUN.",
+        "Краткий name roundtrip выполнен внутри offline network smoke; multicast packets не отправлялись."
+      ],
+      "evidence": {
+        "component_metadata": "third_party/lmx_c99_compact/extensions/network_extra/COMPONENTS.json",
+        "source_selection": "third_party/lmx_c99_compact/extensions/network_extra/COMPACTNESS.json",
+        "native_build_report": "docs/core_catalog/validation/network_build.json"
+      }
+    }
+  ],
+  "source_reports": [
+    "third_party/lmx_c99_compact/extensions/numeric_extra/COMPONENTS.json",
+    "third_party/lmx_c99_compact/extensions/text_hash_extra/COMPONENTS.json",
+    "third_party/lmx_c99_compact/extensions/network_extra/COMPONENTS.json",
+    "third_party/lmx_c99_compact/extensions/numeric_extra/COMPACTNESS.json",
+    "third_party/lmx_c99_compact/extensions/text_hash_extra/PROVENANCE.json",
+    "third_party/lmx_c99_compact/extensions/network_extra/COMPACTNESS.json",
+    "third_party/lmx_c99_compact/extensions/numeric_extra/VERIFICATION.json",
+    "docs/core_catalog/additions/non_numeric_build.json",
+    "docs/core_catalog/validation/network_build.json"
+  ]
+}

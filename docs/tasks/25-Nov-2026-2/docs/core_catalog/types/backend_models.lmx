@@ -1,0 +1,1192 @@
+# Все исходные 112 компонента и 20 дополнений получают общую модель данных.
+# Это план адаптации; он не утверждает, что каждый API уже прошёл L3 приёмку.
+# Наличие модели не заменяет точную сигнатуру, ownership и проверки конкретного API.
+BackendModels:
+    component_001:
+        char[]: component "base:curl"
+        char[]: profile "network"
+        char[]: models "Buffer Resource Callback Packet Error KeyValue"
+        char[]: converters "span cString resource callback numericNarrow"
+        char[]: policy "Native connection stays with one owner; explicit retained buffer/callback lifetime."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_002:
+        char[]: component "base:mbedtls"
+        char[]: profile "crypto"
+        char[]: models "Buffer Secret Resource Callback Time Error"
+        char[]: converters "span secret resource callback time"
+        char[]: policy "Select exact algorithm and key/nonce/tag lengths; no reinterpretation across providers."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_003:
+        char[]: component "base:zlib"
+        char[]: profile "archive"
+        char[]: models "Buffer Encoded Resource Callback Time KeyValue Error"
+        char[]: converters "span cString resource callback time networkAddress"
+        char[]: policy "Compressed bytes and decompressed storage remain distinct; matched release and expansion budget."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_004:
+        char[]: component "base:sqlite3"
+        char[]: profile "database"
+        char[]: models "DbValue DbRow DbRows Resource Buffer Time Error"
+        char[]: converters "database cString span resource time"
+        char[]: policy "Preserve null/absent/text/binary/decimal distinctions; cursor memory copied before next step."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_005:
+        char[]: component "base:stb"
+        char[]: profile "av"
+        char[]: models "Image Audio Encoded Buffer Resource Callback Time Error Tensor"
+        char[]: converters "imageBackend pcmToFloat floatToPcm tensorLayout span resource callback time tensorBackend"
+        char[]: policy "Encoded packets, decoded frames, timestamp timebase and decoder ownership are separate. stb is a collection: pixel/audio/font/packing/data APIs all remain in the API catalogue."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_006:
+        char[]: component "base:klib"
+        char[]: profile "containers"
+        char[]: models "Buffer Resource Callback Error"
+        char[]: converters "span callback resource"
+        char[]: policy "Adapt to existing LMX Arrays/Structures; no duplicate high-level container ontology."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_007:
+        char[]: component "base:stc"
+        char[]: profile "containers"
+        char[]: models "Buffer Resource Callback Error"
+        char[]: converters "span callback resource"
+        char[]: policy "Adapt to existing LMX Arrays/Structures; no duplicate high-level container ontology."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_008:
+        char[]: component "base:decnumber"
+        char[]: profile "decimal"
+        char[]: models "DecimalContext NumericStatus Buffer Error"
+        char[]: converters "decimalToDecNumber decimalFromDecNumber cString numericNarrow"
+        char[]: policy "One semantic decimal, MPDecimal primary; alternate decimal formats use explicit conversion."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_009:
+        char[]: component "base:libsodium"
+        char[]: profile "crypto"
+        char[]: models "Buffer Secret Resource Callback Time Error"
+        char[]: converters "span secret resource callback time"
+        char[]: policy "Select exact algorithm and key/nonce/tag lengths; no reinterpretation across providers."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_010:
+        char[]: component "base:sljit"
+        char[]: profile "native"
+        char[]: models "Resource Buffer Callback Error"
+        char[]: converters "resource span callback numericNarrow"
+        char[]: policy "Low-level allocator/JIT/thread ABI requires owner-side bridge; no raw C pointer exported in L3. Executable addresses and C calling conventions stay behind the specific trusted JIT service."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_011:
+        char[]: component "base:linmath"
+        char[]: profile "numeric"
+        char[]: models "Tensor Complex NumericStatus Callback Error"
+        char[]: converters "tensorLayout tensorBackend numericNarrow callback"
+        char[]: policy "Keep scalar profile and precision explicit; callback returns/error protocol exactly typed. Small float vectors/matrices are explicit views/conversions of Tensor."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_012:
+        char[]: component "base:kissfft"
+        char[]: profile "numeric"
+        char[]: models "Tensor Complex NumericStatus Callback Error"
+        char[]: converters "tensorLayout tensorBackend numericNarrow callback"
+        char[]: policy "Keep scalar profile and precision explicit; callback returns/error protocol exactly typed. Complex pair conversion preserves float/double build selection; no cast of arbitrary Complex Structure."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_013:
+        char[]: component "base:tinyspline"
+        char[]: profile "numeric"
+        char[]: models "Tensor Complex NumericStatus Callback Error"
+        char[]: converters "tensorLayout tensorBackend numericNarrow callback"
+        char[]: policy "Keep scalar profile and precision explicit; callback returns/error protocol exactly typed."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_014:
+        char[]: component "base:wavelib"
+        char[]: profile "numeric"
+        char[]: models "Tensor Complex NumericStatus Callback Error"
+        char[]: converters "tensorLayout tensorBackend numericNarrow callback"
+        char[]: policy "Keep scalar profile and precision explicit; callback returns/error protocol exactly typed."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_015:
+        char[]: component "base:cephes"
+        char[]: profile "numeric"
+        char[]: models "Tensor Complex NumericStatus Callback Error"
+        char[]: converters "tensorLayout tensorBackend numericNarrow callback"
+        char[]: policy "Keep scalar profile and precision explicit; callback returns/error protocol exactly typed."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_016:
+        char[]: component "base:cmpfit"
+        char[]: profile "numeric"
+        char[]: models "Tensor Complex NumericStatus Callback Error"
+        char[]: converters "tensorLayout tensorBackend numericNarrow callback"
+        char[]: policy "Keep scalar profile and precision explicit; callback returns/error protocol exactly typed."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_017:
+        char[]: component "base:xoshiro"
+        char[]: profile "rng"
+        char[]: models "RandomState Buffer Error"
+        char[]: converters "span numericNarrow"
+        char[]: policy "State is explicit; deterministic PRNG is not cryptographic entropy."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_018:
+        char[]: component "base:libtommath"
+        char[]: profile "bigint"
+        char[]: models "NumericStatus Buffer Error"
+        char[]: converters "integerText numericNarrow span"
+        char[]: policy "One semantic bigint, LibTomMath primary; never narrow through double."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_019:
+        char[]: component "base:mpdecimal"
+        char[]: profile "decimal"
+        char[]: models "DecimalContext NumericStatus Buffer Error"
+        char[]: converters "decimalToDecNumber decimalFromDecNumber cString numericNarrow"
+        char[]: policy "One semantic decimal, MPDecimal primary; alternate decimal formats use explicit conversion."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_020:
+        char[]: component "base:cquadpack"
+        char[]: profile "numeric"
+        char[]: models "Tensor Complex NumericStatus Callback Error"
+        char[]: converters "tensorLayout tensorBackend numericNarrow callback"
+        char[]: policy "Keep scalar profile and precision explicit; callback returns/error protocol exactly typed."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_021:
+        char[]: component "base:stroud_rule"
+        char[]: profile "numeric"
+        char[]: models "Tensor Complex NumericStatus Callback Error"
+        char[]: converters "tensorLayout tensorBackend numericNarrow callback"
+        char[]: policy "Keep scalar profile and precision explicit; callback returns/error protocol exactly typed."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_022:
+        char[]: component "base:sparse_grid_hw"
+        char[]: profile "numeric"
+        char[]: models "Tensor Complex NumericStatus Callback Error"
+        char[]: converters "tensorLayout tensorBackend numericNarrow callback"
+        char[]: policy "Keep scalar profile and precision explicit; callback returns/error protocol exactly typed."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_023:
+        char[]: component "base:sobol"
+        char[]: profile "numeric"
+        char[]: models "Tensor Complex NumericStatus Callback Error"
+        char[]: converters "tensorLayout tensorBackend numericNarrow callback"
+        char[]: policy "Keep scalar profile and precision explicit; callback returns/error protocol exactly typed."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_024:
+        char[]: component "systems:dyad"
+        char[]: profile "network"
+        char[]: models "Buffer Resource Callback Packet Error KeyValue"
+        char[]: converters "span cString resource callback numericNarrow"
+        char[]: policy "Native connection stays with one owner; explicit retained buffer/callback lifetime."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_025:
+        char[]: component "systems:enet"
+        char[]: profile "network"
+        char[]: models "Buffer Resource Callback Packet Error KeyValue"
+        char[]: converters "span cString resource callback numericNarrow"
+        char[]: policy "Native connection stays with one owner; explicit retained buffer/callback lifetime."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_026:
+        char[]: component "systems:libssh2"
+        char[]: profile "network"
+        char[]: models "Buffer Resource Callback Packet Error KeyValue"
+        char[]: converters "span cString resource callback numericNarrow"
+        char[]: policy "Native connection stays with one owner; explicit retained buffer/callback lifetime."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_027:
+        char[]: component "systems:monocypher"
+        char[]: profile "crypto"
+        char[]: models "Buffer Secret Resource Callback Time Error"
+        char[]: converters "span secret resource callback time"
+        char[]: policy "Select exact algorithm and key/nonce/tag lengths; no reinterpretation across providers."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_028:
+        char[]: component "systems:miniz"
+        char[]: profile "archive"
+        char[]: models "Buffer Encoded Resource Callback Time KeyValue Error"
+        char[]: converters "span cString resource callback time networkAddress"
+        char[]: policy "Compressed bytes and decompressed storage remain distinct; matched release and expansion budget."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_029:
+        char[]: component "systems:lz4"
+        char[]: profile "archive"
+        char[]: models "Buffer Encoded Resource Callback Time KeyValue Error"
+        char[]: converters "span cString resource callback time networkAddress"
+        char[]: policy "Compressed bytes and decompressed storage remain distinct; matched release and expansion budget."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_030:
+        char[]: component "systems:microtar"
+        char[]: profile "archive"
+        char[]: models "Buffer Encoded Resource Callback Time KeyValue Error"
+        char[]: converters "span cString resource callback time networkAddress"
+        char[]: policy "Compressed bytes and decompressed storage remain distinct; matched release and expansion budget."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_031:
+        char[]: component "systems:jsmn"
+        char[]: profile "parse"
+        char[]: models "ParseNode Buffer Resource Callback Error"
+        char[]: converters "textBackend cString span resource callback"
+        char[]: policy "External format only; source offsets/encoding/borrowed views and nesting budget explicit."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_032:
+        char[]: component "systems:cjson"
+        char[]: profile "parse"
+        char[]: models "ParseNode Buffer Resource Callback Error"
+        char[]: converters "textBackend cString span resource callback"
+        char[]: policy "External format only; source offsets/encoding/borrowed views and nesting budget explicit."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_033:
+        char[]: component "systems:tinydir"
+        char[]: profile "text"
+        char[]: models "Buffer Error"
+        char[]: converters "cString span textBackend"
+        char[]: policy "Text remains exact char[]; encoding and embedded NUL handling depend on the selected API."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_034:
+        char[]: component "systems:tinycthread"
+        char[]: profile "native"
+        char[]: models "Resource Buffer Callback Error"
+        char[]: converters "resource span callback numericNarrow"
+        char[]: policy "Low-level allocator/JIT/thread ABI requires owner-side bridge; no raw C pointer exported in L3."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_035:
+        char[]: component "systems:libvterm"
+        char[]: profile "gui"
+        char[]: models "Resource Tensor Image Buffer Callback KeyValue Error"
+        char[]: converters "resource callback tensorLayout imageBackend cString span"
+        char[]: policy "Widget/render state belongs to its owner; application supplies supported device/window context."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_036:
+        char[]: component "http_parser:llhttp"
+        char[]: profile "parse"
+        char[]: models "ParseNode Buffer Resource Callback Error"
+        char[]: converters "textBackend cString span resource callback"
+        char[]: policy "External format only; source offsets/encoding/borrowed views and nesting budget explicit."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_037:
+        char[]: component "graphics:sokol"
+        char[]: profile "gui"
+        char[]: models "Resource Tensor Image Buffer Callback KeyValue Error"
+        char[]: converters "resource callback tensorLayout imageBackend cString span"
+        char[]: policy "Widget/render state belongs to its owner; application supplies supported device/window context."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_038:
+        char[]: component "graphics:nuklear"
+        char[]: profile "gui"
+        char[]: models "Resource Tensor Image Buffer Callback KeyValue Error"
+        char[]: converters "resource callback tensorLayout imageBackend cString span"
+        char[]: policy "Widget/render state belongs to its owner; application supplies supported device/window context."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_039:
+        char[]: component "graphics:microui"
+        char[]: profile "gui"
+        char[]: models "Resource Tensor Image Buffer Callback KeyValue Error"
+        char[]: converters "resource callback tensorLayout imageBackend cString span"
+        char[]: policy "Widget/render state belongs to its owner; application supplies supported device/window context."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_040:
+        char[]: component "graphics:olive"
+        char[]: profile "image"
+        char[]: models "Image Encoded Buffer Resource Callback Error"
+        char[]: converters "imageBackend tensorLayout span resource callback"
+        char[]: policy "One canonical pixel model; convert channel/color/alpha/origin/stride, use matching decoder free."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_041:
+        char[]: component "graphics:qoi"
+        char[]: profile "image"
+        char[]: models "Image Encoded Buffer Resource Callback Error"
+        char[]: converters "imageBackend tensorLayout span resource callback"
+        char[]: policy "One canonical pixel model; convert channel/color/alpha/origin/stride, use matching decoder free."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_042:
+        char[]: component "graphics:lodepng"
+        char[]: profile "image"
+        char[]: models "Image Encoded Buffer Resource Callback Error"
+        char[]: converters "imageBackend tensorLayout span resource callback"
+        char[]: policy "One canonical pixel model; convert channel/color/alpha/origin/stride, use matching decoder free."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_043:
+        char[]: component "graphics:libspng"
+        char[]: profile "image"
+        char[]: models "Image Encoded Buffer Resource Callback Error"
+        char[]: converters "imageBackend tensorLayout span resource callback"
+        char[]: policy "One canonical pixel model; convert channel/color/alpha/origin/stride, use matching decoder free."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_044:
+        char[]: component "graphics:tpng"
+        char[]: profile "image"
+        char[]: models "Image Encoded Buffer Resource Callback Error"
+        char[]: converters "imageBackend tensorLayout span resource callback"
+        char[]: policy "One canonical pixel model; convert channel/color/alpha/origin/stride, use matching decoder free."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_045:
+        char[]: component "graphics:tjpgdec"
+        char[]: profile "image"
+        char[]: models "Image Encoded Buffer Resource Callback Error"
+        char[]: converters "imageBackend tensorLayout span resource callback"
+        char[]: policy "One canonical pixel model; convert channel/color/alpha/origin/stride, use matching decoder free."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_046:
+        char[]: component "graphics:nanojpeg"
+        char[]: profile "image"
+        char[]: models "Image Encoded Buffer Resource Callback Error"
+        char[]: converters "imageBackend tensorLayout span resource callback"
+        char[]: policy "One canonical pixel model; convert channel/color/alpha/origin/stride, use matching decoder free."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_047:
+        char[]: component "graphics:gifdec"
+        char[]: profile "image"
+        char[]: models "Image Encoded Buffer Resource Callback Error"
+        char[]: converters "imageBackend tensorLayout span resource callback"
+        char[]: policy "One canonical pixel model; convert channel/color/alpha/origin/stride, use matching decoder free."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_048:
+        char[]: component "graphics:msf_gif"
+        char[]: profile "image"
+        char[]: models "Image Encoded Buffer Resource Callback Error"
+        char[]: converters "imageBackend tensorLayout span resource callback"
+        char[]: policy "One canonical pixel model; convert channel/color/alpha/origin/stride, use matching decoder free."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_049:
+        char[]: component "media:miniaudio"
+        char[]: profile "audio"
+        char[]: models "Audio Encoded Buffer Resource Callback Time Error"
+        char[]: converters "pcmToFloat floatToPcm tensorLayout span resource callback time"
+        char[]: policy "Sample representation/rate/channel layout explicit; async device callback cannot access foreign arena."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_050:
+        char[]: component "media:dr_wav"
+        char[]: profile "audio"
+        char[]: models "Audio Encoded Buffer Resource Callback Time Error"
+        char[]: converters "pcmToFloat floatToPcm tensorLayout span resource callback time"
+        char[]: policy "Sample representation/rate/channel layout explicit; async device callback cannot access foreign arena."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_051:
+        char[]: component "media:dr_mp3"
+        char[]: profile "audio"
+        char[]: models "Audio Encoded Buffer Resource Callback Time Error"
+        char[]: converters "pcmToFloat floatToPcm tensorLayout span resource callback time"
+        char[]: policy "Sample representation/rate/channel layout explicit; async device callback cannot access foreign arena."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_052:
+        char[]: component "media:dr_flac"
+        char[]: profile "audio"
+        char[]: models "Audio Encoded Buffer Resource Callback Time Error"
+        char[]: converters "pcmToFloat floatToPcm tensorLayout span resource callback time"
+        char[]: policy "Sample representation/rate/channel layout explicit; async device callback cannot access foreign arena."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_053:
+        char[]: component "media:minimp3"
+        char[]: profile "audio"
+        char[]: models "Audio Encoded Buffer Resource Callback Time Error"
+        char[]: converters "pcmToFloat floatToPcm tensorLayout span resource callback time"
+        char[]: policy "Sample representation/rate/channel layout explicit; async device callback cannot access foreign arena."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_054:
+        char[]: component "media:TinySoundFont"
+        char[]: profile "audio"
+        char[]: models "Audio Encoded Buffer Resource Callback Time Error"
+        char[]: converters "pcmToFloat floatToPcm tensorLayout span resource callback time"
+        char[]: policy "Sample representation/rate/channel layout explicit; async device callback cannot access foreign arena."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_055:
+        char[]: component "media:pl_mpeg"
+        char[]: profile "av"
+        char[]: models "Image Audio Encoded Buffer Resource Callback Time Error"
+        char[]: converters "imageBackend pcmToFloat floatToPcm tensorLayout span resource callback time"
+        char[]: policy "Encoded packets, decoded frames, timestamp timebase and decoder ownership are separate."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_056:
+        char[]: component "media:jo_mpeg"
+        char[]: profile "av"
+        char[]: models "Image Audio Encoded Buffer Resource Callback Time Error"
+        char[]: converters "imageBackend pcmToFloat floatToPcm tensorLayout span resource callback time"
+        char[]: policy "Encoded packets, decoded frames, timestamp timebase and decoder ownership are separate."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_057:
+        char[]: component "media:jo_gif"
+        char[]: profile "image"
+        char[]: models "Image Encoded Buffer Resource Callback Error"
+        char[]: converters "imageBackend tensorLayout span resource callback"
+        char[]: policy "One canonical pixel model; convert channel/color/alpha/origin/stride, use matching decoder free."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_058:
+        char[]: component "media:jo_mp1"
+        char[]: profile "audio"
+        char[]: models "Audio Encoded Buffer Resource Callback Time Error"
+        char[]: converters "pcmToFloat floatToPcm tensorLayout span resource callback time"
+        char[]: policy "Sample representation/rate/channel layout explicit; async device callback cannot access foreign arena."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_059:
+        char[]: component "media:minih264"
+        char[]: profile "av"
+        char[]: models "Image Audio Encoded Buffer Resource Callback Time Error"
+        char[]: converters "imageBackend pcmToFloat floatToPcm tensorLayout span resource callback time"
+        char[]: policy "Encoded packets, decoded frames, timestamp timebase and decoder ownership are separate."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_060:
+        char[]: component "media:nestegg"
+        char[]: profile "av"
+        char[]: models "Image Audio Encoded Buffer Resource Callback Time Error"
+        char[]: converters "imageBackend pcmToFloat floatToPcm tensorLayout span resource callback time"
+        char[]: policy "Encoded packets, decoded frames, timestamp timebase and decoder ownership are separate."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_061:
+        char[]: component "media:h264bsd"
+        char[]: profile "av"
+        char[]: models "Image Audio Encoded Buffer Resource Callback Time Error"
+        char[]: converters "imageBackend pcmToFloat floatToPcm tensorLayout span resource callback time"
+        char[]: policy "Encoded packets, decoded frames, timestamp timebase and decoder ownership are separate."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_062:
+        char[]: component "media:libwebp"
+        char[]: profile "image"
+        char[]: models "Image Encoded Buffer Resource Callback Error"
+        char[]: converters "imageBackend tensorLayout span resource callback"
+        char[]: policy "One canonical pixel model; convert channel/color/alpha/origin/stride, use matching decoder free."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_063:
+        char[]: component "documents:pdfgen"
+        char[]: profile "gui"
+        char[]: models "Resource Tensor Image Buffer Callback KeyValue Error"
+        char[]: converters "resource callback tensorLayout imageBackend cString span"
+        char[]: policy "Widget/render state belongs to its owner; application supplies supported device/window context."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_064:
+        char[]: component "documents:md4c"
+        char[]: profile "parse"
+        char[]: models "ParseNode Buffer Resource Callback Error"
+        char[]: converters "textBackend cString span resource callback"
+        char[]: policy "External format only; source offsets/encoding/borrowed views and nesting budget explicit."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_065:
+        char[]: component "documents:gumbo"
+        char[]: profile "parse"
+        char[]: models "ParseNode Buffer Resource Callback Error"
+        char[]: converters "textBackend cString span resource callback"
+        char[]: policy "External format only; source offsets/encoding/borrowed views and nesting budget explicit."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_066:
+        char[]: component "documents:yxml"
+        char[]: profile "parse"
+        char[]: models "ParseNode Buffer Resource Callback Error"
+        char[]: converters "textBackend cString span resource callback"
+        char[]: policy "External format only; source offsets/encoding/borrowed views and nesting budget explicit."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_067:
+        char[]: component "documents:ezxml"
+        char[]: profile "parse"
+        char[]: models "ParseNode Buffer Resource Callback Error"
+        char[]: converters "textBackend cString span resource callback"
+        char[]: policy "External format only; source offsets/encoding/borrowed views and nesting budget explicit."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_068:
+        char[]: component "documents:tomlc99"
+        char[]: profile "parse"
+        char[]: models "ParseNode Buffer Resource Callback Error"
+        char[]: converters "textBackend cString span resource callback"
+        char[]: policy "External format only; source offsets/encoding/borrowed views and nesting budget explicit."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_069:
+        char[]: component "documents:libyaml"
+        char[]: profile "parse"
+        char[]: models "ParseNode Buffer Resource Callback Error"
+        char[]: converters "textBackend cString span resource callback"
+        char[]: policy "External format only; source offsets/encoding/borrowed views and nesting budget explicit."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_070:
+        char[]: component "documents:cgltf"
+        char[]: profile "parse"
+        char[]: models "ParseNode Buffer Resource Callback Error Tensor Image"
+        char[]: converters "textBackend cString span resource callback tensorBackend imageBackend"
+        char[]: policy "External format only; source offsets/encoding/borrowed views and nesting budget explicit. Mesh attributes use Tensor; parsed asset/resource lifetimes remain explicit."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_071:
+        char[]: component "documents:fast_obj"
+        char[]: profile "parse"
+        char[]: models "ParseNode Buffer Resource Callback Error Tensor"
+        char[]: converters "textBackend cString span resource callback tensorBackend"
+        char[]: policy "External format only; source offsets/encoding/borrowed views and nesting budget explicit. Vertex/index arrays use Tensor with typed indices and declared coordinate convention."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_072:
+        char[]: component "archives:kuba_zip"
+        char[]: profile "archive"
+        char[]: models "Buffer Encoded Resource Callback Time KeyValue Error"
+        char[]: converters "span cString resource callback time networkAddress"
+        char[]: policy "Compressed bytes and decompressed storage remain distinct; matched release and expansion budget."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_073:
+        char[]: component "archives:zstd"
+        char[]: profile "archive"
+        char[]: models "Buffer Encoded Resource Callback Time KeyValue Error"
+        char[]: converters "span cString resource callback time networkAddress"
+        char[]: policy "Compressed bytes and decompressed storage remain distinct; matched release and expansion budget."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_074:
+        char[]: component "archives:lzma_sdk"
+        char[]: profile "archive"
+        char[]: models "Buffer Encoded Resource Callback Time KeyValue Error"
+        char[]: converters "span cString resource callback time networkAddress"
+        char[]: policy "Compressed bytes and decompressed storage remain distinct; matched release and expansion budget."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_075:
+        char[]: component "archives:cmp"
+        char[]: profile "parse"
+        char[]: models "ParseNode Buffer Resource Callback Error"
+        char[]: converters "textBackend cString span resource callback"
+        char[]: policy "External format only; source offsets/encoding/borrowed views and nesting budget explicit."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_076:
+        char[]: component "archives:mpack"
+        char[]: profile "parse"
+        char[]: models "ParseNode Buffer Resource Callback Error"
+        char[]: converters "textBackend cString span resource callback"
+        char[]: policy "External format only; source offsets/encoding/borrowed views and nesting budget explicit."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_077:
+        char[]: component "archives:nanopb"
+        char[]: profile "parse"
+        char[]: models "ParseNode Buffer Resource Callback Error"
+        char[]: converters "textBackend cString span resource callback"
+        char[]: policy "External format only; source offsets/encoding/borrowed views and nesting budget explicit."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_078:
+        char[]: component "xlsxio:xlsxio"
+        char[]: profile "database"
+        char[]: models "DbValue DbRow DbRows Resource Buffer Time Error"
+        char[]: converters "database cString span resource time"
+        char[]: policy "Preserve null/absent/text/binary/decimal distinctions; cursor memory copied before next step."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_079:
+        char[]: component "xlsxio:expat"
+        char[]: profile "parse"
+        char[]: models "ParseNode Buffer Resource Callback Error"
+        char[]: converters "textBackend cString span resource callback"
+        char[]: policy "External format only; source offsets/encoding/borrowed views and nesting budget explicit."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_080:
+        char[]: component "xlsxio:minizip"
+        char[]: profile "archive"
+        char[]: models "Buffer Encoded Resource Callback Time KeyValue Error"
+        char[]: converters "span cString resource callback time networkAddress"
+        char[]: policy "Compressed bytes and decompressed storage remain distinct; matched release and expansion budget."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_081:
+        char[]: component "databases:hiredis"
+        char[]: profile "database"
+        char[]: models "DbValue DbRow DbRows Resource Buffer Time Error"
+        char[]: converters "database cString span resource time"
+        char[]: policy "Preserve null/absent/text/binary/decimal distinctions; cursor memory copied before next step."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_082:
+        char[]: component "databases:mongo_c_driver"
+        char[]: profile "database"
+        char[]: models "DbValue DbRow DbRows Resource Buffer Time Error"
+        char[]: converters "database cString span resource time"
+        char[]: policy "Preserve null/absent/text/binary/decimal distinctions; cursor memory copied before next step."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_083:
+        char[]: component "postgresql:postgresql-libpq"
+        char[]: profile "database"
+        char[]: models "DbValue DbRow DbRows Resource Buffer Time Error"
+        char[]: converters "database cString span resource time"
+        char[]: policy "Preserve null/absent/text/binary/decimal distinctions; cursor memory copied before next step."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_084:
+        char[]: component "sqlite_vec:sqlite_vec"
+        char[]: profile "database"
+        char[]: models "DbValue DbRow DbRows Resource Buffer Time Error"
+        char[]: converters "database cString span resource time"
+        char[]: policy "Preserve null/absent/text/binary/decimal distinctions; cursor memory copied before next step."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_085:
+        char[]: component "extras:tinyfiledialogs"
+        char[]: profile "gui"
+        char[]: models "Resource Tensor Image Buffer Callback KeyValue Error"
+        char[]: converters "resource callback tensorLayout imageBackend cString span"
+        char[]: policy "Widget/render state belongs to its owner; application supplies supported device/window context."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_086:
+        char[]: component "extras:whereami"
+        char[]: profile "text"
+        char[]: models "Buffer Error"
+        char[]: converters "cString span textBackend"
+        char[]: policy "Text remains exact char[]; encoding and embedded NUL handling depend on the selected API."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_087:
+        char[]: component "extras:cglm"
+        char[]: profile "numeric"
+        char[]: models "Tensor Complex NumericStatus Callback Error"
+        char[]: converters "tensorLayout tensorBackend numericNarrow callback"
+        char[]: policy "Keep scalar profile and precision explicit; callback returns/error protocol exactly typed. Keep call, inline and struct API forms separate in ABI metadata; semantic matrix model is shared."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_088:
+        char[]: component "extras:quirc"
+        char[]: profile "image"
+        char[]: models "Image Encoded Buffer Resource Callback Error"
+        char[]: converters "imageBackend tensorLayout span resource callback"
+        char[]: policy "One canonical pixel model; convert channel/color/alpha/origin/stride, use matching decoder free."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_089:
+        char[]: component "extras:qrcodegen"
+        char[]: profile "image"
+        char[]: models "Image Encoded Buffer Resource Callback Error"
+        char[]: converters "imageBackend tensorLayout span resource callback"
+        char[]: policy "One canonical pixel model; convert channel/color/alpha/origin/stride, use matching decoder free."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_090:
+        char[]: component "extras:tiny_regex_c"
+        char[]: profile "text"
+        char[]: models "Buffer Error"
+        char[]: converters "cString span textBackend"
+        char[]: policy "Text remains exact char[]; encoding and embedded NUL handling depend on the selected API."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_091:
+        char[]: component "geospatial:geodesic"
+        char[]: profile "geo"
+        char[]: models "GeoPoint Vector3 Tensor Resource Callback Error"
+        char[]: converters "coordinates tensorLayout span resource callback"
+        char[]: policy "Latitude/longitude order, radians/degrees and reference system must be explicit."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_092:
+        char[]: component "geospatial:h3"
+        char[]: profile "geo"
+        char[]: models "GeoPoint Vector3 Tensor Resource Callback Error"
+        char[]: converters "coordinates tensorLayout span resource callback"
+        char[]: policy "Latitude/longitude order, radians/degrees and reference system must be explicit."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_093:
+        char[]: component "geospatial:rtree"
+        char[]: profile "geo"
+        char[]: models "GeoPoint Vector3 Tensor Resource Callback Error"
+        char[]: converters "coordinates tensorLayout span resource callback"
+        char[]: policy "Latitude/longitude order, radians/degrees and reference system must be explicit."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_094:
+        char[]: component "geospatial:shapelib"
+        char[]: profile "geo"
+        char[]: models "GeoPoint Vector3 Tensor Resource Callback Error DbRow DbValue"
+        char[]: converters "coordinates tensorLayout span resource callback database"
+        char[]: policy "Latitude/longitude order, radians/degrees and reference system must be explicit. Shape geometry and DBF row values use separate canonical models."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_095:
+        char[]: component "geospatial:minmea"
+        char[]: profile "geo"
+        char[]: models "GeoPoint Vector3 Tensor Resource Callback Error Time CivilTime"
+        char[]: converters "coordinates tensorLayout span resource callback time"
+        char[]: policy "Latitude/longitude order, radians/degrees and reference system must be explicit. NMEA fixed-point fractions and invalid fixes convert explicitly; no silent 0-coordinate substitution."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_096:
+        char[]: component "core_helpers:ryu"
+        char[]: profile "text"
+        char[]: models "Buffer Error NumericStatus"
+        char[]: converters "cString span textBackend numericNarrow"
+        char[]: policy "Text remains exact char[]; encoding and embedded NUL handling depend on the selected API. Shortest-roundtrip formatting describes machine floats; it is not arbitrary decimal arithmetic."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_097:
+        char[]: component "core_helpers:tlsf"
+        char[]: profile "native"
+        char[]: models "Resource Buffer Callback Error"
+        char[]: converters "resource span callback numericNarrow"
+        char[]: policy "Low-level allocator/JIT/thread ABI requires owner-side bridge; no raw C pointer exported in L3."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_098:
+        char[]: component "genann:genann"
+        char[]: profile "tensor"
+        char[]: models "Tensor Resource Callback Quantization Error"
+        char[]: converters "tensorLayout tensorBackend numericNarrow resource callback"
+        char[]: policy "Map dtype/rank/layout/stride/retention; quantized types need explicit scale and rounding."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_099:
+        char[]: component "kann:kann"
+        char[]: profile "tensor"
+        char[]: models "Tensor Resource Callback Quantization Error"
+        char[]: converters "tensorLayout tensorBackend numericNarrow resource callback"
+        char[]: policy "Map dtype/rank/layout/stride/retention; quantized types need explicit scale and rounding."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_100:
+        char[]: component "acoustic:liquid_dsp"
+        char[]: profile "audio"
+        char[]: models "Audio Encoded Buffer Resource Callback Time Error"
+        char[]: converters "pcmToFloat floatToPcm tensorLayout span resource callback time"
+        char[]: policy "Sample representation/rate/channel layout explicit; async device callback cannot access foreign arena."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_101:
+        char[]: component "acoustic:quiet"
+        char[]: profile "audio"
+        char[]: models "Audio Encoded Buffer Resource Callback Time Error"
+        char[]: converters "pcmToFloat floatToPcm tensorLayout span resource callback time"
+        char[]: policy "Sample representation/rate/channel layout explicit; async device callback cannot access foreign arena."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_102:
+        char[]: component "acoustic:jansson"
+        char[]: profile "parse"
+        char[]: models "ParseNode Buffer Resource Callback Error"
+        char[]: converters "textBackend cString span resource callback"
+        char[]: policy "External format only; source offsets/encoding/borrowed views and nesting budget explicit."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_103:
+        char[]: component "orbits:sgp4"
+        char[]: profile "orbit"
+        char[]: models "OrbitState Vector3 Time CivilTime Tensor Error"
+        char[]: converters "coordinates time tensorLayout cString"
+        char[]: policy "Preserve epoch/time scale, TEME frame, km and km/s; no implicit Earth-fixed conversion."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_104:
+        char[]: component "tensors:utensil"
+        char[]: profile "tensor"
+        char[]: models "Tensor Resource Callback Quantization Error"
+        char[]: converters "tensorLayout tensorBackend numericNarrow resource callback"
+        char[]: policy "Map dtype/rank/layout/stride/retention; quantized types need explicit scale and rounding."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_105:
+        char[]: component "tensors:mint"
+        char[]: profile "tensor"
+        char[]: models "Tensor Resource Callback Quantization Error"
+        char[]: converters "tensorLayout tensorBackend numericNarrow resource callback"
+        char[]: policy "Map dtype/rank/layout/stride/retention; quantized types need explicit scale and rounding."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_106:
+        char[]: component "text_paths:cwalk"
+        char[]: profile "text"
+        char[]: models "Buffer Error"
+        char[]: converters "cString span textBackend"
+        char[]: policy "Text remains exact char[]; encoding and embedded NUL handling depend on the selected API."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_107:
+        char[]: component "text_paths:utf8"
+        char[]: profile "text"
+        char[]: models "Buffer Error"
+        char[]: converters "cString span textBackend"
+        char[]: policy "Text remains exact char[]; encoding and embedded NUL handling depend on the selected API."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_108:
+        char[]: component "micro_mlp:tinn"
+        char[]: profile "tensor"
+        char[]: models "Tensor Resource Callback Quantization Error"
+        char[]: converters "tensorLayout tensorBackend numericNarrow resource callback"
+        char[]: policy "Map dtype/rank/layout/stride/retention; quantized types need explicit scale and rounding."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_109:
+        char[]: component "micro_mlp:afan_neural_network"
+        char[]: profile "tensor"
+        char[]: models "Tensor Resource Callback Quantization Error"
+        char[]: converters "tensorLayout tensorBackend numericNarrow resource callback"
+        char[]: policy "Map dtype/rank/layout/stride/retention; quantized types need explicit scale and rounding."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_110:
+        char[]: component "nnom:nnom"
+        char[]: profile "tensor"
+        char[]: models "Tensor Resource Callback Quantization Error"
+        char[]: converters "tensorLayout tensorBackend numericNarrow resource callback"
+        char[]: policy "Map dtype/rank/layout/stride/retention; quantized types need explicit scale and rounding. q7/q15 and x4-packed weights require explicit packing; tensor shape alone is insufficient."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_111:
+        char[]: component "embeddings:static_embeddings"
+        char[]: profile "tensor"
+        char[]: models "Tensor Resource Callback Quantization Error"
+        char[]: converters "tensorLayout tensorBackend numericNarrow resource callback"
+        char[]: policy "Map dtype/rank/layout/stride/retention; quantized types need explicit scale and rounding."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_112:
+        char[]: component "channel_codes:libcorrect"
+        char[]: profile "audio"
+        char[]: models "Audio Encoded Buffer Resource Callback Time Error"
+        char[]: converters "pcmToFloat floatToPcm tensorLayout span resource callback time"
+        char[]: policy "Sample representation/rate/channel layout explicit; async device callback cannot access foreign arena. FEC operates on bytes/bits; Audio is only an upstream modem integration context, not input to every FEC function."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_113:
+        char[]: component "numeric_extra:libbf"
+        char[]: profile "arbitrary_real"
+        char[]: models "RealContext DecimalContext NumericStatus Resource Buffer"
+        char[]: converters "realText realToBinary64 alternateNumber resource"
+        char[]: policy "Canonical arbitrary binary real; owner context lifetime and budget explicit. bfdec_t remains alternate decimal representation; no double intermediary."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_114:
+        char[]: component "numeric_extra:softfloat"
+        char[]: profile "ieee_arithmetic"
+        char[]: models "ScalarCell Buffer Tensor RealContext NumericStatus"
+        char[]: converters "span tensorLayout numericNarrow fixedPoint"
+        char[]: policy "Fixed IEEE format words. Upstream global rounding/status must be serialized and restored by owner-side L3 adapter; no promise of arbitrary precision."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_115:
+        char[]: component "numeric_extra:libfixmath"
+        char[]: profile "fixed_point"
+        char[]: models "ScalarCell Tensor Quantization NumericStatus"
+        char[]: converters "fixedPoint numericNarrow tensorLayout"
+        char[]: policy "Q16.16 profile; explicit saturation, overflow sentinel and rounding; no separate library-named LMX scalar."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_116:
+        char[]: component "numeric_extra:libfixmatrix"
+        char[]: profile "fixed_matrix"
+        char[]: models "Tensor Complex Vector3 Quantization NumericStatus"
+        char[]: converters "fixedPoint tensorLayout tensorBackend"
+        char[]: policy "Shared Tensor with bounded native matrix dimensions; pack/unpack fixed point and inspect backend error flags."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_117:
+        char[]: component "numeric_extra:fp16"
+        char[]: profile "half_formats"
+        char[]: models "ScalarCell Buffer Tensor Quantization NumericStatus"
+        char[]: converters "fixedPoint numericNarrow span"
+        char[]: policy "IEEE half versus ARM alternate encoding explicit; format bits not mathematical integer values."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_118:
+        char[]: component "numeric_extra:cminpack"
+        char[]: profile "nonlinear_solver"
+        char[]: models "Tensor Callback ScalarCell Error"
+        char[]: converters "tensorLayout tensorBackend callback numericNarrow"
+        char[]: policy "Residual/Jacobian callbacks are synchronous exact C signatures; work-array dimensions and convergence/error status explicit."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_119:
+        char[]: component "numeric_extra:imath"
+        char[]: profile "exact_rational"
+        char[]: models "Rational NumericStatus Buffer"
+        char[]: converters "integerText alternateNumber"
+        char[]: policy "Independent bigint/rational backend; native IMath typedefs are incompatible with LibTomMath typedefs. Convert values in isolated translation units."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_120:
+        char[]: component "numeric_extra:pffft"
+        char[]: profile "fft"
+        char[]: models "Tensor ComplexBuffer Audio Resource Error"
+        char[]: converters "tensorLayout tensorBackend resource"
+        char[]: policy "Independent FFT backend with float/double; explicit transform length, complex layout, alignment and inverse normalization; setup lifetime owned."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_121:
+        char[]: component "numeric_extra:pcg-c"
+        char[]: profile "random"
+        char[]: models "RandomState ScalarCell Buffer"
+        char[]: converters "randomState numericNarrow span"
+        char[]: policy "Explicit-state seeded stream and jump-ahead; no hidden global RNG; 128-bit-state compiler extension disabled; bounded range must be positive."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_122:
+        char[]: component "numeric_extra:libtomfloat"
+        char[]: profile "experimental_real"
+        char[]: models "RealContext NumericStatus Resource Buffer"
+        char[]: converters "alternateNumber realText resource"
+        char[]: policy "Experimental independent arbitrary-real implementation. Missing mpf_from_string/to_string are declared but unimplemented; rounding/exponent capabilities do not equal LibBF context. Generated fixes cover sqrt0 and signed-long constants only."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_123:
+        char[]: component "text_hash_extra:libdivsufsort"
+        char[]: profile "suffix_index"
+        char[]: models "Buffer Tensor ScalarCell Error"
+        char[]: converters "span tensorLayout numericNarrow"
+        char[]: policy "Byte input and signed index arrays have checked lengths; 32/64-bit variants selected explicitly; no new string ontology."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_124:
+        char[]: component "text_hash_extra:libtess2"
+        char[]: profile "tessellation"
+        char[]: models "Tensor Vector3 Resource Callback Error"
+        char[]: converters "tensorLayout tensorBackend resource callback"
+        char[]: policy "Polygon contour coordinates and vertex/index output use shared Tensor; allocator, winding rule, dimensions and cleanup are explicit."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_125:
+        char[]: component "text_hash_extra:libccd"
+        char[]: profile "collision"
+        char[]: models "Tensor Vector3 Callback Resource Error"
+        char[]: converters "tensorLayout tensorBackend callback resource"
+        char[]: policy "Convex support callbacks and native vector structs use checked geometry mapping, not pointer casts between arbitrary arrays."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_126:
+        char[]: component "text_hash_extra:inih"
+        char[]: profile "configuration"
+        char[]: models "KeyValue ParseNode Buffer Callback Error"
+        char[]: converters "cString textBackend span callback"
+        char[]: policy "INI names/values mapped to text/KeyValue; transient parser views copied and line errors preserved."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_127:
+        char[]: component "text_hash_extra:isocline"
+        char[]: profile "interactive_text"
+        char[]: models "Buffer Resource Callback Error"
+        char[]: converters "cString span resource callback textBackend"
+        char[]: policy "Terminal and completion state owned; callbacks may retain data, user input is exact text, native allocation matched with release."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_128:
+        char[]: component "text_hash_extra:libunibreak"
+        char[]: profile "unicode_breaks"
+        char[]: models "Buffer Tensor ScalarCell Error"
+        char[]: converters "span textBackend numericNarrow"
+        char[]: policy "UTF-8/16/32 units distinguished; break-position Array counted in corresponding input units, never guessed byte offsets."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_129:
+        char[]: component "text_hash_extra:xxhash_modern"
+        char[]: profile "noncryptographic_hash"
+        char[]: models "Buffer Resource ScalarCell"
+        char[]: converters "span resource numericNarrow"
+        char[]: policy "Modern namespaced xxHash independent of legacy embedded implementation; stateful/one-shot paths share Buffer; digest width and canonical byte order explicit, not cryptographic Secret."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_130:
+        char[]: component "network_extra:cares"
+        char[]: profile "dns"
+        char[]: models "Buffer Packet NetworkAddress Resource Callback Time Duration Error"
+        char[]: converters "cString span resource callback time networkAddress numericNarrow"
+        char[]: policy "Asynchronous DNS request lifetime and cancellation owned; callbacks are delivered by the selected event loop; packet bytes and decoded names remain distinct."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_131:
+        char[]: component "network_extra:libevent"
+        char[]: profile "event_loop"
+        char[]: models "Resource Callback Buffer Packet NetworkAddress Time Duration Error"
+        char[]: converters "resource callback span time networkAddress numericNarrow"
+        char[]: policy "Event loop and event/bufferevent resources have one owner; callback thread and unregister/quiescence explicit; monotonic timeout separate from civil time."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_132:
+        char[]: component "network_extra:mdns"
+        char[]: profile "discovery"
+        char[]: models "Packet Buffer NetworkAddress Resource Callback Time Duration KeyValue Error"
+        char[]: converters "span cString resource callback time networkAddress"
+        char[]: policy "Multicast discovery parses bounded DNS packets and interface-specific addresses; borrowed packet slices copied before callback return; TTL and cache lifetime explicit."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#

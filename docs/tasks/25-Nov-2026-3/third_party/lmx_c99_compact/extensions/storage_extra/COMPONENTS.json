@@ -1,0 +1,346 @@
+{
+  "schema_version": 1,
+  "scope": "Seven C99 lower-layer storage, compression and external format components; source archive is offline and does not impose an application object model.",
+  "aggregate_target": "LMX::storage_extra",
+  "components": [
+    {
+      "id": "storage_extra:littlefs",
+      "paths": [
+        "vendor/littlefs"
+      ],
+      "version": "2.11 (LFS_VERSION 0x0002000b; disk 2.1)",
+      "commit": "6cb4e86540eca0d9ba62500a298385c9d863c8be",
+      "upstream_commit_date": "2026-03-24T22:26:24Z",
+      "license": "BSD-3-Clause",
+      "urls": [
+        "https://github.com/littlefs-project/littlefs",
+        "https://github.com/littlefs-project/littlefs/commit/6cb4e86540eca0d9ba62500a298385c9d863c8be",
+        "https://codeload.github.com/littlefs-project/littlefs/tar.gz/6cb4e86540eca0d9ba62500a298385c9d863c8be"
+      ],
+      "licenses_notices": [
+        "vendor/littlefs/LICENSE.md"
+      ],
+      "source_archive_sha256": "4803faf6db6c60093558a315a10c50926d2cfa5668a3f03fa2523fd09b10b747",
+      "download_bytes": 280264,
+      "public_headers": [
+        "vendor/littlefs/lfs.h",
+        "vendor/littlefs/lfs_util.h"
+      ],
+      "cmake_targets": [
+        "LMX::littlefs"
+      ],
+      "targets": [
+        "LMX::littlefs"
+      ],
+      "build_group": "extensions/storage_extra",
+      "purpose": "Block-device filesystem for NOR flash; hierarchical names, copy-on-write metadata and wear distribution.",
+      "selected_profile": "Standard C99 implementation, per-instance callbacks; debug/warning/error printing disabled.",
+      "state_and_reentrancy": "Mutating lfs_t/lfs_file_t instances and caller-owned block device; serialize access to each filesystem.",
+      "vendor_modifications": [],
+      "canonical_header_map": {
+        "vendor/littlefs/lfs.h": "lfs.h",
+        "vendor/littlefs/lfs_util.h": "lfs_util.h"
+      },
+      "validation": "VERIFICATION.json: strict C99 Linux x86_64; build from original inputs and clean retained source; other platforms and physical hardware NOT_RUN."
+    },
+    {
+      "id": "storage_extra:fatfs",
+      "paths": [
+        "vendor/fatfs"
+      ],
+      "version": "R0.16 + official patch 1 + patch 2 (2026-07-10) + official compact Unicode source",
+      "commit": null,
+      "upstream_commit_date": null,
+      "license": "LicenseRef-FatFs-ChaN",
+      "urls": [
+        "https://elm-chan.org/fsw/ff/",
+        "https://elm-chan.org/fsw/ff/arc/ff16.zip",
+        "https://elm-chan.org/fsw/ff/patches.html",
+        "https://elm-chan.org/fsw/ff/patch/ff16p1.diff",
+        "https://elm-chan.org/fsw/ff/patch/ff16p2.diff",
+        "https://elm-chan.org/fsw/ff/patch/ffunicode.zip"
+      ],
+      "licenses_notices": [
+        "vendor/fatfs/LICENSE.txt",
+        "vendor/fatfs/source/ff.c"
+      ],
+      "source_archive_sha256": "99f7dc1f7e095356e4a9e3dbe29959090d8b948afe2bbc5441e52fdf4b85449e",
+      "download_bytes": 2393600,
+      "public_headers": [
+        "vendor/fatfs/source/ff.h",
+        "vendor/fatfs/source/diskio.h"
+      ],
+      "cmake_targets": [
+        "LMX::fatfs"
+      ],
+      "targets": [
+        "LMX::fatfs"
+      ],
+      "build_group": "extensions/storage_extra",
+      "purpose": "Read/write/create FAT12/16/32 and exFAT media; UTF-8 long names and Unicode case matching.",
+      "selected_profile": "FF_USE_LFN=2; FF_LFN_UNICODE=2; FF_CODE_PAGE=437; FF_FS_EXFAT=1; FF_FS_NORTC=1; one volume; mkfs/find/fastseek/expand/chmod/label enabled.",
+      "state_and_reentrancy": "Global volume table and mutable FIL/FATFS state; driver callbacks and serialization belong to application. LFN working buffers use stack; fixed date without RTC.",
+      "vendor_modifications": [
+        "Official patches applied to ff.c, LF line endings normalized for exact patch application; patch files retained.",
+        "ffunicode.c replaced by official compact upstream Unicode table release; complete tables retained.",
+        "Selected ffconf.h materialized beside ff.h in build tree."
+      ],
+      "canonical_header_map": {
+        "vendor/fatfs/source/ff.h": "ff.h",
+        "vendor/fatfs/source/diskio.h": "diskio.h"
+      },
+      "validation": "VERIFICATION.json: strict C99 Linux x86_64; build from original inputs and clean retained source; other platforms and physical hardware NOT_RUN.",
+      "source_updates": {
+        "ff16p1.diff": {
+          "url": "https://elm-chan.org/fsw/ff/patch/ff16p1.diff",
+          "bytes": 2322,
+          "sha256": "7996ddc3135f3d534a8153f7d75d587030e5c8551b003c3b7ee823ffb7fc64bf"
+        },
+        "ff16p2.diff": {
+          "url": "https://elm-chan.org/fsw/ff/patch/ff16p2.diff",
+          "bytes": 2259,
+          "sha256": "5cd39f1fc299f0f1dec9fa1ce544dc0bc048b2f6eb3b8161476ed20f9cf1e290"
+        },
+        "ffunicode.zip": {
+          "url": "https://elm-chan.org/fsw/ff/patch/ffunicode.zip",
+          "bytes": 390731,
+          "sha256": "94ee9c278b100abca9375436757b40abf7782cde0a8ba4c2e7189083b5b9dbc3"
+        }
+      },
+      "configuration_headers": [
+        "extensions/storage_extra/config/ffconf.h"
+      ],
+      "license_notes": "Custom permissive ChaN license; upstream LICENSE.txt states equivalence to 1-clause BSD. GPL mentioned only as compatible downstream relicensing, not selected license."
+    },
+    {
+      "id": "storage_extra:spiffs",
+      "paths": [
+        "vendor/spiffs"
+      ],
+      "version": "0.3.7 README version at pinned snapshot",
+      "commit": "3a4cf8ba5ed241867fdaeb6291bef17d2960d689",
+      "upstream_commit_date": "2026-07-16T08:48:14Z",
+      "license": "MIT",
+      "urls": [
+        "https://github.com/pellepl/spiffs",
+        "https://github.com/pellepl/spiffs/commit/3a4cf8ba5ed241867fdaeb6291bef17d2960d689",
+        "https://codeload.github.com/pellepl/spiffs/tar.gz/3a4cf8ba5ed241867fdaeb6291bef17d2960d689"
+      ],
+      "licenses_notices": [
+        "vendor/spiffs/LICENSE"
+      ],
+      "source_archive_sha256": "f4d5aa1c04249141ec9544ba2ed001175ddca5782b7da19151cd8289fedb21de",
+      "download_bytes": 100637,
+      "public_headers": [
+        "vendor/spiffs/src/spiffs.h"
+      ],
+      "cmake_targets": [
+        "LMX::spiffs"
+      ],
+      "targets": [
+        "LMX::spiffs"
+      ],
+      "build_group": "extensions/storage_extra",
+      "purpose": "Independent small flat filesystem for SPI NOR with consistency check and garbage collection.",
+      "selected_profile": "Standard SPIFFS_CACHE=0 avoids non-C99 anonymous cache unions; magic, HAL context parameter and aligned object-index tables enabled.",
+      "state_and_reentrancy": "Mutable spiffs context, descriptors, caller-owned block device; flat names, no directory hierarchy.",
+      "vendor_modifications": [
+        "Vendor source unchanged. config/spiffs_config.h replaces test-only Linux includes with standard C types and explicit selected options."
+      ],
+      "canonical_header_map": {
+        "vendor/spiffs/src/spiffs.h": "spiffs.h"
+      },
+      "validation": "VERIFICATION.json: strict C99 Linux x86_64; build from original inputs and clean retained source; other platforms and physical hardware NOT_RUN.",
+      "configuration_headers": [
+        "extensions/storage_extra/config/spiffs_config.h"
+      ]
+    },
+    {
+      "id": "storage_extra:heatshrink",
+      "paths": [
+        "vendor/heatshrink"
+      ],
+      "version": "0.4.1",
+      "commit": "7d419e1fa4830d0b919b9b6a91fe2fb786cf3280",
+      "upstream_commit_date": "2015-12-08T12:54:27Z",
+      "license": "ISC",
+      "urls": [
+        "https://github.com/atomicobject/heatshrink",
+        "https://github.com/atomicobject/heatshrink/commit/7d419e1fa4830d0b919b9b6a91fe2fb786cf3280",
+        "https://codeload.github.com/atomicobject/heatshrink/tar.gz/7d419e1fa4830d0b919b9b6a91fe2fb786cf3280"
+      ],
+      "licenses_notices": [
+        "vendor/heatshrink/LICENSE",
+        "vendor/heatshrink/greatest.h"
+      ],
+      "source_archive_sha256": "b18a1b7ad6f51eac7ac1a81ca072703bd21d6d8727c05cd505843643705af65d",
+      "download_bytes": 37008,
+      "public_headers": [
+        "vendor/heatshrink/heatshrink_encoder.h",
+        "vendor/heatshrink/heatshrink_decoder.h",
+        "vendor/heatshrink/heatshrink_common.h"
+      ],
+      "cmake_targets": [
+        "LMX::heatshrink"
+      ],
+      "targets": [
+        "LMX::heatshrink"
+      ],
+      "build_group": "extensions/storage_extra",
+      "purpose": "Small-window streaming lossless compression and decompression.",
+      "selected_profile": "Default dynamic-allocation API; static-allocation implementation and upstream tests retained.",
+      "state_and_reentrancy": "Independent mutable encoder/decoder contexts; caller controls streaming and must finish/drain.",
+      "vendor_modifications": [],
+      "canonical_header_map": {
+        "vendor/heatshrink/heatshrink_encoder.h": "heatshrink_encoder.h",
+        "vendor/heatshrink/heatshrink_decoder.h": "heatshrink_decoder.h",
+        "vendor/heatshrink/heatshrink_common.h": "heatshrink_common.h"
+      },
+      "validation": "VERIFICATION.json: strict C99 Linux x86_64; build from original inputs and clean retained source; other platforms and physical hardware NOT_RUN."
+    },
+    {
+      "id": "storage_extra:qcbor",
+      "paths": [
+        "vendor/qcbor"
+      ],
+      "version": "1.7.0 header/CMake version at pinned snapshot",
+      "commit": "7a2f7e66b3a61cf62444bf981a2c1efc0f5f6faa",
+      "upstream_commit_date": "2026-11-21T16:04:54Z",
+      "license": "BSD-3-Clause",
+      "urls": [
+        "https://github.com/laurencelundblade/QCBOR",
+        "https://github.com/laurencelundblade/QCBOR/commit/7a2f7e66b3a61cf62444bf981a2c1efc0f5f6faa",
+        "https://codeload.github.com/laurencelundblade/QCBOR/tar.gz/7a2f7e66b3a61cf62444bf981a2c1efc0f5f6faa"
+      ],
+      "licenses_notices": [
+        "vendor/qcbor/LICENSE"
+      ],
+      "source_archive_sha256": "c9bcd335cf0882d21e2ba2c6e6ae2d7cbafda05c9b6a94946d948ebf3463f338",
+      "download_bytes": 328253,
+      "public_headers": [
+        "vendor/qcbor/inc/qcbor/qcbor.h",
+        "vendor/qcbor/inc/qcbor/UsefulBuf.h",
+        "vendor/qcbor/inc/qcbor/qcbor_common.h",
+        "vendor/qcbor/inc/qcbor/qcbor_encode.h",
+        "vendor/qcbor/inc/qcbor/qcbor_decode.h",
+        "vendor/qcbor/inc/qcbor/qcbor_spiffy_decode.h"
+      ],
+      "cmake_targets": [
+        "LMX::qcbor"
+      ],
+      "targets": [
+        "LMX::qcbor"
+      ],
+      "build_group": "extensions/storage_extra",
+      "purpose": "CBOR encoding/decoding, tags, typed extraction, decimal/bigfloat interchange tags and bounded buffers.",
+      "selected_profile": "Default full C99 profile with floating point; standard C math library on non-MSVC.",
+      "state_and_reentrancy": "Contexts and buffers are mutable per operation. Tagged decimals/bigfloats are data interchange, not arithmetic engines.",
+      "vendor_modifications": [],
+      "canonical_header_map": {
+        "vendor/qcbor/inc/qcbor/qcbor.h": "qcbor/qcbor.h",
+        "vendor/qcbor/inc/qcbor/UsefulBuf.h": "qcbor/UsefulBuf.h",
+        "vendor/qcbor/inc/qcbor/qcbor_common.h": "qcbor/qcbor_common.h",
+        "vendor/qcbor/inc/qcbor/qcbor_encode.h": "qcbor/qcbor_encode.h",
+        "vendor/qcbor/inc/qcbor/qcbor_decode.h": "qcbor/qcbor_decode.h",
+        "vendor/qcbor/inc/qcbor/qcbor_spiffy_decode.h": "qcbor/qcbor_spiffy_decode.h"
+      },
+      "validation": "VERIFICATION.json: strict C99 Linux x86_64; build from original inputs and clean retained source; other platforms and physical hardware NOT_RUN.",
+      "license_notes": "Some older file headers add NON-INFRINGEMENT to the BSD-3-Clause warranty disclaimer; original notices retained."
+    },
+    {
+      "id": "storage_extra:tinycbor",
+      "paths": [
+        "vendor/tinycbor"
+      ],
+      "version": "CMake project 7.2, library VERSION 0.7.2; pinned snapshot",
+      "commit": "56d325f6ed8f40d2ef136afcdf9183510a524549",
+      "upstream_commit_date": "2026-11-18T17:10:32Z",
+      "license": "MIT",
+      "urls": [
+        "https://github.com/intel/tinycbor",
+        "https://github.com/intel/tinycbor/commit/56d325f6ed8f40d2ef136afcdf9183510a524549",
+        "https://codeload.github.com/intel/tinycbor/tar.gz/56d325f6ed8f40d2ef136afcdf9183510a524549"
+      ],
+      "licenses_notices": [
+        "vendor/tinycbor/LICENSE"
+      ],
+      "source_archive_sha256": "61cd57f7fc6e9cfce36916dd5c7390760304ac0c1fe1d4d2517c80fd665fcbfa",
+      "download_bytes": 108127,
+      "public_headers": [
+        "vendor/tinycbor/src/cbor.h"
+      ],
+      "cmake_targets": [
+        "LMX::tinycbor"
+      ],
+      "targets": [
+        "LMX::tinycbor"
+      ],
+      "build_group": "extensions/storage_extra",
+      "purpose": "Independent CBOR encoding/decoding, validation and pretty printing, including binary16/32/64.",
+      "selected_profile": "Hosted C99 CBOR API; existing software binary16 fallback; CBOR-to-JSON and memory-stream code retained but not in selected target.",
+      "state_and_reentrancy": "Mutable encoder/parser iterators and caller-provided buffers.",
+      "vendor_modifications": [
+        "Vendor source unchanged. SHA-256 guarded build view selects upstream software binary16 instead of C23 _Float16 and replaces fallthrough annotations by empty C99 statements."
+      ],
+      "canonical_header_map": {
+        "vendor/tinycbor/src/cbor.h": "cbor.h"
+      },
+      "validation": "VERIFICATION.json: strict C99 Linux x86_64; build from original inputs and clean retained source; other platforms and physical hardware NOT_RUN.",
+      "configuration_headers": [
+        "extensions/storage_extra/config/tinycbor-version.h",
+        "extensions/storage_extra/config/tinycbor-export.h"
+      ]
+    },
+    {
+      "id": "storage_extra:flashdb",
+      "paths": [
+        "vendor/flashdb"
+      ],
+      "version": "2.2.99 header version at pinned snapshot",
+      "commit": "6c722f169f27f99f96670ee00c27b2f59b1505e2",
+      "upstream_commit_date": "2026-11-16T10:59:46Z",
+      "license": "Apache-2.0",
+      "urls": [
+        "https://github.com/armink/FlashDB",
+        "https://github.com/armink/FlashDB/commit/6c722f169f27f99f96670ee00c27b2f59b1505e2",
+        "https://codeload.github.com/armink/FlashDB/tar.gz/6c722f169f27f99f96670ee00c27b2f59b1505e2"
+      ],
+      "licenses_notices": [
+        "vendor/flashdb/LICENSE",
+        "vendor/flashdb/port/fal/LICENSE"
+      ],
+      "source_archive_sha256": "f935e662a512892efe0f77e987fc77f97355ee51aba714027ab17cbcad2e3733",
+      "download_bytes": 7038031,
+      "public_headers": [
+        "vendor/flashdb/inc/flashdb.h",
+        "vendor/flashdb/inc/fdb_def.h",
+        "extensions/storage_extra/config/lmx_flashdb_callbacks.h"
+      ],
+      "cmake_targets": [
+        "LMX::flashdb"
+      ],
+      "targets": [
+        "LMX::flashdb"
+      ],
+      "build_group": "extensions/storage_extra",
+      "purpose": "Reader/writer of native FlashDB sector KV/time-series representation with CRC and garbage collection; LMX defines the meaning of stored data.",
+      "selected_profile": "KVDB+TSDB, standard C FILE sector backend, no read cache; FAL hardware backend/ports retained as source but not linked.",
+      "state_and_reentrancy": "Mutable DB handles and native sector files; caller supplies ownership and locks. libc fflush is not a proof of physical power-loss durability.",
+      "vendor_modifications": [
+        "Vendor files unchanged. SHA-256 guarded build view removes non-C99 function-pointer/void* conversions. In this selected profile *_CTRL_SET_LOCK/UNLOCK receive the address of a typed callback object or NULL; this is an explicit contract difference from upstream. lmx_fdb_set_callbacks provides the direct typed alternative."
+      ],
+      "canonical_header_map": {
+        "vendor/flashdb/inc/flashdb.h": "flashdb.h",
+        "vendor/flashdb/inc/fdb_def.h": "fdb_def.h",
+        "extensions/storage_extra/config/lmx_flashdb_callbacks.h": "lmx_flashdb_callbacks.h"
+      },
+      "validation": "VERIFICATION.json: strict C99 Linux x86_64; build from original inputs and clean retained source; other platforms and physical hardware NOT_RUN.",
+      "configuration_headers": [
+        "extensions/storage_extra/config/fdb_cfg.h"
+      ],
+      "not_compiled_optional_sources": [
+        "vendor/flashdb/port/fal"
+      ]
+    }
+  ]
+}

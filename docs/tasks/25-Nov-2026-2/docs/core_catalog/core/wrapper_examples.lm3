@@ -1,0 +1,28 @@
+# Integration design in the current source syntax, not runtime-tested code.
+# The scalar C function exists in C99 math.h. The LMX body adds its stated
+# domain policy before the explicit low-level call; no function-name dispatcher.
+L2:
+    include: "<math.h>"
+
+mathExample:
+    sqrtContext:
+        private: double: value
+        required: value
+        return: double
+        sqrt:
+            throws: NumericDomain
+            if: value < 0
+                throw: NumericDomain()
+            L2:
+                return: c.sqrt(value)
+    ---
+    @: sqrt sqrtContext\sqrt
+
+# Ordinary L3 caller; the catch is in the caller's block and is not a
+# silently manufactured Result envelope. This declaration alone executes nothing.
+SqrtExampleClient:
+    return: double
+    run:
+        return: mathExample\sqrt(9.0)
+        catch: NumericDomain ()
+            return: -1.0

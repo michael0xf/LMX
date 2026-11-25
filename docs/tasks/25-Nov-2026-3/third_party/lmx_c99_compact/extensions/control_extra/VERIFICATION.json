@@ -1,0 +1,159 @@
+{
+  "status": "PASS",
+  "date": "2026-11-25",
+  "scope": "Fresh rebuild of the final pruned seven-library tree and seven offline usage checks, plus existing local libfixmath/libfixmatrix dependencies.",
+  "platform": "Linux x86_64",
+  "compiler": "cc (Debian 14.2.0-19) 14.2.0",
+  "configuration": "CMake MinSizeRel, GCC -Os -DNDEBUG, C_STANDARD=99, C_EXTENSIONS=OFF, -pedantic-errors; tests use explicit checks not disabled by NDEBUG",
+  "fresh_build_after_pruning": true,
+  "all_compile_commands_strict_c99": true,
+  "compiled_translation_units_including_dependencies_and_tests": 71,
+  "configure_or_build_network_downloads": false,
+  "tests": [
+    {
+      "name": "control_extra.fusion",
+      "status": "PASS",
+      "exit_code": 0,
+      "stdout": "Fusion: stationary/90-degree synthetic IMU and calibration passed",
+      "stderr": ""
+    },
+    {
+      "name": "control_extra.pid",
+      "status": "PASS",
+      "exit_code": 0,
+      "stdout": "PID: plant/clamps/no kick plus derivative step decay and unit-ramp regression passed",
+      "stderr": ""
+    },
+    {
+      "name": "control_extra.canard",
+      "status": "PASS",
+      "exit_code": 0,
+      "stdout": "libcanard: classic CAN single/multiframe, duplicate/CRC rejection, allocation cleanup passed",
+      "stderr": ""
+    },
+    {
+      "name": "control_extra.nanomodbus",
+      "status": "PASS",
+      "exit_code": 0,
+      "stdout": "nanoMODBUS: in-memory TCP holding-register response and exception passed",
+      "stderr": ""
+    },
+    {
+      "name": "control_extra.coremqtt",
+      "status": "PASS",
+      "exit_code": 0,
+      "stdout": "coreMQTT: MQTT5 QoS1 byte vector/round trip, ping, short buffers passed",
+      "stderr": ""
+    },
+    {
+      "name": "control_extra.lwip",
+      "status": "PASS",
+      "exit_code": 0,
+      "stdout": "lwIP: IPv4/IPv6 UDP and IPv4 TCP raw API loopback passed without NIC/OS sockets",
+      "stderr": ""
+    },
+    {
+      "name": "control_extra.fixkalman",
+      "status": "PASS",
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "sizes": [
+    {
+      "target": "LMX::fusion",
+      "archive": "liblmx_fusion.a",
+      "archive_bytes": 21236,
+      "text_bytes": 7060,
+      "data_bytes": 0,
+      "bss_bytes": 0
+    },
+    {
+      "target": "LMX::fixkalman",
+      "archive": "liblmx_fixkalman.a",
+      "archive_bytes": 8980,
+      "text_bytes": 3400,
+      "data_bytes": 16,
+      "bss_bytes": 1412
+    },
+    {
+      "target": "LMX::pid",
+      "archive": "liblmx_pid.a",
+      "archive_bytes": 1932,
+      "text_bytes": 308,
+      "data_bytes": 0,
+      "bss_bytes": 0
+    },
+    {
+      "target": "LMX::canard",
+      "archive": "liblmx_canard.a",
+      "archive_bytes": 20100,
+      "text_bytes": 13117,
+      "data_bytes": 0,
+      "bss_bytes": 0
+    },
+    {
+      "target": "LMX::nanomodbus",
+      "archive": "liblmx_nanomodbus.a",
+      "archive_bytes": 22028,
+      "text_bytes": 13471,
+      "data_bytes": 0,
+      "bss_bytes": 0
+    },
+    {
+      "target": "LMX::coremqtt",
+      "archive": "liblmx_coremqtt.a",
+      "archive_bytes": 73436,
+      "text_bytes": 35351,
+      "data_bytes": 0,
+      "bss_bytes": 0
+    },
+    {
+      "target": "LMX::lwip",
+      "archive": "liblmx_lwip.a",
+      "archive_bytes": 305958,
+      "text_bytes": 116332,
+      "data_bytes": 880,
+      "bss_bytes": 38352
+    }
+  ],
+  "size_definition": "Actual unstripped .a file bytes, plus sum of GNU size text/data/bss across archive members; excludes libc/libm and existing dependency archives. Values are for Linux x86_64 and this release profile only. BSS is zero-initialized runtime storage, not bytes stored in the archive; heap/stack usage can be additional.",
+  "per_library_limit_bytes": 1000000,
+  "all_selected_archives_below_limit": true,
+  "not_run": [
+    {
+      "scope": "Other CPUs, compilers, OSes and real sensor/actuator/CAN/Ethernet/serial hardware",
+      "reason": "Only Linux x86_64 was available; portable/core and existing platform source retained, not hardware-qualified."
+    },
+    {
+      "scope": "MQTT broker integration, full MQTT5/QoS state-machine scenario matrix",
+      "reason": "This check exercises serializer byte vectors, round-trip parsing, malformed input and buffer limits without a broker."
+    },
+    {
+      "scope": "DNS/DHCP/AutoIP/IGMP/MLD/DHCPv6 network exchanges and IPv6 TCP wire behavior",
+      "reason": "Compiled in lwIP; runtime check covers IPv4/IPv6 UDP and IPv4 TCP loopback only."
+    },
+    {
+      "scope": "Complete upstream regression suites, CBMC proofs and static analysis",
+      "reason": "Original test/example source is retained for further work. Full external development harnesses were not imported or run; in particular libcanard upstream development instructions require Unity, 32-bit C/C++20 matrix, clang-tidy, cppcheck and clang-format, which this environment does not provide. This is a collection integration check, not a claim of passing that upstream gate."
+    }
+  ],
+  "source_integrity": "All retained vendor files match pinned downloaded bytes. A single reviewed PID derivative-feedback sign correction is generated into the build tree; PID_FIX.md describes it and the original-fails/corrected-passes regression.",
+  "commands_from_collection_root": [
+    "cmake -S extensions/control_extra -B build-control -G Ninja -DCMAKE_BUILD_TYPE=MinSizeRel -DLMX_CONTROL_EXTRA_BUILD_TESTS=ON",
+    "cmake --build build-control --parallel",
+    "ctest --test-dir build-control --output-on-failure"
+  ],
+  "pid_regression": {
+    "status": "PASS with generated correction; original vendor reproduction fails as expected",
+    "original_step_second_sample": 24.0,
+    "correct_step_second_sample": -24.0,
+    "original_unit_ramp_result": -0.24999,
+    "correct_unit_ramp_expected": -1.0,
+    "tolerance": 0.001,
+    "upstream_report": "https://github.com/pms67/PID/pull/13",
+    "fix_description": "PID_FIX.md",
+    "generator": "prepare_pid.cmake"
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "platform": "Linux x86_64",
+  "compiler": "GCC 14.2.0",
+  "flags": "-Os -DNDEBUG -std=c99 -pedantic-errors",
+  "retained_source_build": "PASS",
+  "tests": [
+    {
+      "name": "science.lsoda",
+      "result": "PASS",
+      "scope": "Two interleaved exponential decays; stiff Robertson t=40 vs independent Radau reference; formatted-string termination and empty string"
+    },
+    {
+      "name": "science.t_erfa_c",
+      "result": "PASS",
+      "scope": "Full retained upstream C validation suite"
+    },
+    {
+      "name": "science.t_erfa_c_extra",
+      "result": "PASS",
+      "scope": "Upstream ERFA-specific version and leap-table tests"
+    }
+  ],
+  "archives": [
+    {
+      "file": "liblmx_lsoda.a",
+      "bytes": 67394,
+      "sha256": "4a044737b895af6f1a2abffc42efb848e30eae44cd06b1a8023691d1c8f6e564",
+      "under_1000000_bytes": true
+    },
+    {
+      "file": "liblmx_erfa.a",
+      "bytes": 776092,
+      "sha256": "776f86b582df276b0ac13958bca3e563cc6a38fe3c650025e4519373d0456d61",
+      "under_1000000_bytes": true
+    }
+  ],
+  "not_run": [
+    "Other OS/CPU platforms",
+    "Physical navigation/time measurements",
+    "Concurrent solver threads",
+    "Complete upstream LSODA error/input matrix"
+  ],
+  "reference_detail": "Robertson upstream example uses loose rtol=1e-4 and rounded answers; tighter check uses SciPy 1.17.0 Radau rtol=1e-11, atol=[1e-13,1e-16,1e-13]. SciPy is a scratch verification tool, absent from runtime and archive.",
+  "original_source_build": "PASS",
+  "original_vs_retained_archive_bytes": "IDENTICAL for both libraries"
+}

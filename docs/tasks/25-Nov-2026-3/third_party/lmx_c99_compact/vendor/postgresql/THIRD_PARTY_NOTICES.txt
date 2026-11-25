@@ -1,0 +1,982 @@
+PostgreSQL libpq 18.7 client selection
+
+The full release retains original notices in vendor/postgresql.
+The following notices additionally cover the linked client support sources.
+
+PostgreSQL Database Management System
+(also known as Postgres, formerly known as Postgres95)
+
+Portions Copyright (c) 1996-2026, PostgreSQL Global Development Group
+
+Portions Copyright (c) 1994, The Regents of the University of California
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose, without fee, and without a written agreement
+is hereby granted, provided that the above copyright notice and this
+paragraph and the following two paragraphs appear in all copies.
+
+IN NO EVENT SHALL THE UNIVERSITY OF CALIFORNIA BE LIABLE TO ANY PARTY FOR
+DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING
+LOST PROFITS, ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS
+DOCUMENTATION, EVEN IF THE UNIVERSITY OF CALIFORNIA HAS BEEN ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+
+THE UNIVERSITY OF CALIFORNIA SPECIFICALLY DISCLAIMS ANY WARRANTIES,
+INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS FOR A PARTICULAR PURPOSE.  THE SOFTWARE PROVIDED HEREUNDER IS
+ON AN "AS IS" BASIS, AND THE UNIVERSITY OF CALIFORNIA HAS NO OBLIGATIONS TO
+PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+
+
+src/common/base64.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * base64.c
+ *	  Encoding and decoding routines for base64 without whitespace.
+ *
+ * Copyright (c) 2001-2025, PostgreSQL Global Development Group
+ *
+ *
+ * IDENTIFICATION
+ *	  src/common/base64.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+
+src/common/cryptohash.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * cryptohash.c
+ *	  Fallback implementations for cryptographic hash functions.
+ *
+ * This is the set of in-core functions used when there are no other
+ * alternative options like OpenSSL.
+ *
+ * Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ * IDENTIFICATION
+ *	  src/common/cryptohash.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+
+src/common/encnames.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * encnames.c
+ *	  Encoding names and routines for working with them.
+ *
+ * Portions Copyright (c) 2001-2025, PostgreSQL Global Development Group
+ *
+ * IDENTIFICATION
+ *	  src/common/encnames.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+src/common/hmac.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * hmac.c
+ *	  Implements Keyed-Hashing for Message Authentication (HMAC)
+ *
+ * Fallback implementation of HMAC, as specified in RFC 2104.
+ *
+ * Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ * IDENTIFICATION
+ *	  src/common/hmac.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+
+src/common/ip.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * ip.c
+ *	  IPv6-aware network access.
+ *
+ * Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ *
+ * IDENTIFICATION
+ *	  src/common/ip.c
+ *
+ * This file and the IPV6 implementation were initially provided by
+ * Nigel Kukard <nkukard@lbsd.net>, Linux Based Systems Design
+ * http://www.lbsd.net.
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+
+src/common/jsonapi.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * jsonapi.c
+ *		JSON parser and lexer interfaces
+ *
+ * Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ * IDENTIFICATION
+ *	  src/common/jsonapi.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+src/common/link-canary.c
+======================================================================
+/*-------------------------------------------------------------------------
+ * link-canary.c
+ *	  Detect whether src/common functions came from frontend or backend.
+ *
+ * Copyright (c) 2018-2025, PostgreSQL Global Development Group
+ *
+ * IDENTIFICATION
+ *	  src/common/link-canary.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+src/common/md5_common.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * md5_common.c
+ *	  Routines shared between all MD5 implementations used for encrypted
+ *	  passwords.
+ *
+ * Sverre H. Huseby <sverrehu@online.no>
+ *
+ * Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ * IDENTIFICATION
+ *	  src/common/md5_common.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+
+src/common/md5.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ *	md5.c
+ *	  Implements the MD5 Message-Digest Algorithm
+ *
+ * Fallback implementation of MD5, as specified in RFC 1321.  This
+ * implementation is a simple one, in that it needs every input byte
+ * to be buffered before doing any calculations.
+ *
+ *	Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ *	Portions Copyright (c) 1994, Regents of the University of California
+ *
+ * IDENTIFICATION
+ *	  src/common/md5.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+/*    $KAME: md5.c,v 1.3 2000/02/22 14:01:17 itojun Exp $     */
+
+/*
+ * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *   notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *   notice, this list of conditions and the following disclaimer in the
+ *   documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the project nor the names of its contributors
+ *   may be used to endorse or promote products derived from this software
+ *   without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE PROJECT AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE PROJECT OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ */
+
+
+
+src/common/pg_prng.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * Pseudo-Random Number Generator
+ *
+ * We use Blackman and Vigna's xoroshiro128** 1.0 algorithm
+ * to have a small, fast PRNG suitable for generating reasonably
+ * good-quality 64-bit data.  This should not be considered
+ * cryptographically strong, however.
+ *
+ * About these generators: https://prng.di.unimi.it/
+ * See also https://en.wikipedia.org/wiki/List_of_random_number_generators
+ *
+ * Copyright (c) 2021-2025, PostgreSQL Global Development Group
+ *
+ * src/common/pg_prng.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+
+src/common/saslprep.c
+======================================================================
+/*-------------------------------------------------------------------------
+ * saslprep.c
+ *		SASLprep normalization, for SCRAM authentication
+ *
+ * The SASLprep algorithm is used to process a user-supplied password into
+ * canonical form.  For more details, see:
+ *
+ * [RFC3454] Preparation of Internationalized Strings ("stringprep"),
+ *	  http://www.ietf.org/rfc/rfc3454.txt
+ *
+ * [RFC4013] SASLprep: Stringprep Profile for User Names and Passwords
+ *	  http://www.ietf.org/rfc/rfc4013.txt
+ *
+ *
+ * Portions Copyright (c) 2017-2025, PostgreSQL Global Development Group
+ *
+ * IDENTIFICATION
+ *	  src/common/saslprep.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+src/common/scram-common.c
+======================================================================
+/*-------------------------------------------------------------------------
+ * scram-common.c
+ *		Shared frontend/backend code for SCRAM authentication
+ *
+ * This contains the common low-level functions needed in both frontend and
+ * backend, for implement the Salted Challenge Response Authentication
+ * Mechanism (SCRAM), per IETF's RFC 5802.
+ *
+ * Portions Copyright (c) 2017-2025, PostgreSQL Global Development Group
+ *
+ * IDENTIFICATION
+ *	  src/common/scram-common.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+src/common/sha1.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ *	sha1.c
+ *	  Implements the SHA1 Secure Hash Algorithm
+ *
+ * Fallback implementation of SHA1, as specified in RFC 3174.
+ *
+ * Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ * IDENTIFICATION
+ *	  src/common/sha1.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+/*	   $KAME: sha1.c,v 1.3 2000/02/22 14:01:18 itojun Exp $    */
+
+/*
+ * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *	  notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *	  notice, this list of conditions and the following disclaimer in the
+ *	  documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the project nor the names of its contributors
+ *	  may be used to endorse or promote products derived from this software
+ *	  without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE PROJECT AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE PROJECT OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ */
+/*
+ * FIPS pub 180-1: Secure Hash Algorithm (SHA-1)
+ * based on: http://www.itl.nist.gov/fipspubs/fip180-1.htm
+ * implemented by Jun-ichiro itojun Itoh <itojun@itojun.org>
+ */
+
+
+
+src/common/sha2.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * sha2.c
+ *	   SHA functions for SHA-224, SHA-256, SHA-384 and SHA-512.
+ *
+ * This includes the fallback implementation for SHA2 cryptographic
+ * hashes.
+ *
+ * Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ * IDENTIFICATION
+ *	  src/common/sha2.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+/*	$OpenBSD: sha2.c,v 1.6 2004/05/03 02:57:36 millert Exp $	*/
+/*
+ * FILE:	sha2.c
+ * AUTHOR:	Aaron D. Gifford <me@aarongifford.com>
+ *
+ * Copyright (c) 2000-2001, Aaron D. Gifford
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *	  notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *	  notice, this list of conditions and the following disclaimer in the
+ *	  documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of contributors
+ *	  may be used to endorse or promote products derived from this software
+ *	  without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTOR(S) ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTOR(S) BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ * $From: sha2.c,v 1.1 2001/11/08 00:01:51 adg Exp adg $
+ */
+
+
+
+
+src/common/string.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * string.c
+ *		string handling helpers
+ *
+ *
+ * Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ *
+ * IDENTIFICATION
+ *	  src/common/string.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+
+
+src/common/unicode_norm.c
+======================================================================
+/*-------------------------------------------------------------------------
+ * unicode_norm.c
+ *		Normalize a Unicode string
+ *
+ * This implements Unicode normalization, per the documentation at
+ * https://www.unicode.org/reports/tr15/.
+ *
+ * Portions Copyright (c) 2017-2025, PostgreSQL Global Development Group
+ *
+ * IDENTIFICATION
+ *	  src/common/unicode_norm.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+src/common/wchar.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * wchar.c
+ *	  Functions for working with multibyte characters in various encodings.
+ *
+ * Portions Copyright (c) 1998-2025, PostgreSQL Global Development Group
+ *
+ * IDENTIFICATION
+ *	  src/common/wchar.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+src/interfaces/libpq/fe-auth-oauth.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * fe-auth-oauth.c
+ *	   The front-end (client) implementation of OAuth/OIDC authentication
+ *	   using the SASL OAUTHBEARER mechanism.
+ *
+ * Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ * IDENTIFICATION
+ *	  src/interfaces/libpq/fe-auth-oauth.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+
+src/interfaces/libpq/fe-auth-scram.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * fe-auth-scram.c
+ *	   The front-end (client) implementation of SCRAM authentication.
+ *
+ * Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ * IDENTIFICATION
+ *	  src/interfaces/libpq/fe-auth-scram.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+
+src/interfaces/libpq/fe-auth.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * fe-auth.c
+ *	   The front-end (client) authorization routines
+ *
+ * Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ * IDENTIFICATION
+ *	  src/interfaces/libpq/fe-auth.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+/*
+ * INTERFACE ROUTINES
+ *	   frontend (client) routines:
+ *		pg_fe_sendauth			send authentication information
+ *		pg_fe_getauthname		get user's name according to the client side
+ *								of the authentication system
+ */
+
+
+
+src/interfaces/libpq/fe-cancel.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * fe-cancel.c
+ *	  functions related to query cancellation
+ *
+ * Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ *
+ * IDENTIFICATION
+ *	  src/interfaces/libpq/fe-cancel.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+
+src/interfaces/libpq/fe-connect.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * fe-connect.c
+ *	  functions related to setting up a connection to the backend
+ *
+ * Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ *
+ * IDENTIFICATION
+ *	  src/interfaces/libpq/fe-connect.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+
+src/interfaces/libpq/fe-exec.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * fe-exec.c
+ *	  functions related to sending a query down to the backend
+ *
+ * Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ *
+ * IDENTIFICATION
+ *	  src/interfaces/libpq/fe-exec.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+src/interfaces/libpq/fe-lobj.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * fe-lobj.c
+ *	  Front-end large object interface
+ *
+ * Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ *
+ * IDENTIFICATION
+ *	  src/interfaces/libpq/fe-lobj.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+
+src/interfaces/libpq/fe-misc.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ *	 FILE
+ *		fe-misc.c
+ *
+ *	 DESCRIPTION
+ *		 miscellaneous useful functions
+ *
+ * The communication routines here are analogous to the ones in
+ * backend/libpq/pqcomm.c and backend/libpq/pqformat.c, but operate
+ * in the considerably different environment of the frontend libpq.
+ * In particular, we work with a bare nonblock-mode socket, rather than
+ * a stdio stream, so that we can avoid unwanted blocking of the application.
+ *
+ * XXX: MOVE DEBUG PRINTOUT TO HIGHER LEVEL.  As is, block and restart
+ * will cause repeat printouts.
+ *
+ * We must speak the same transmitted data representations as the backend
+ * routines.
+ *
+ *
+ * Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ * IDENTIFICATION
+ *	  src/interfaces/libpq/fe-misc.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+
+src/interfaces/libpq/fe-print.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * fe-print.c
+ *	  functions for pretty-printing query results
+ *
+ * Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ * These functions were formerly part of fe-exec.c, but they
+ * didn't really belong there.
+ *
+ * IDENTIFICATION
+ *	  src/interfaces/libpq/fe-print.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+src/interfaces/libpq/fe-protocol3.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * fe-protocol3.c
+ *	  functions that are specific to frontend/backend protocol version 3
+ *
+ * Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ *
+ * IDENTIFICATION
+ *	  src/interfaces/libpq/fe-protocol3.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+src/interfaces/libpq/fe-secure.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * fe-secure.c
+ *	  functions related to setting up a secure connection to the backend.
+ *	  Secure connections are expected to provide confidentiality,
+ *	  message integrity and endpoint authentication.
+ *
+ *
+ * Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ *
+ * IDENTIFICATION
+ *	  src/interfaces/libpq/fe-secure.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+
+src/interfaces/libpq/fe-trace.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ *	fe-trace.c
+ *	  functions for libpq protocol tracing
+ *
+ * Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ * IDENTIFICATION
+ *	  src/interfaces/libpq/fe-trace.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+
+src/interfaces/libpq/legacy-pqsignal.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * legacy-pqsignal.c
+ *	  reliable BSD-style signal(2) routine stolen from RWW who stole it
+ *	  from Stevens...
+ *
+ * Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ *
+ * IDENTIFICATION
+ *	  src/interfaces/libpq/legacy-pqsignal.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+src/interfaces/libpq/libpq-events.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * libpq-events.c
+ *	  functions for supporting the libpq "events" API
+ *
+ * Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ *
+ * IDENTIFICATION
+ *	  src/interfaces/libpq/libpq-events.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+src/interfaces/libpq/pqexpbuffer.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * pqexpbuffer.c
+ *
+ * PQExpBuffer provides an indefinitely-extensible string data type.
+ * It can be used to buffer either ordinary C strings (null-terminated text)
+ * or arbitrary binary data.  All storage is allocated with malloc().
+ *
+ * This module is essentially the same as the backend's StringInfo data type,
+ * but it is intended for use in frontend libpq and client applications.
+ * Thus, it does not rely on palloc() nor elog(), nor psprintf.c which
+ * will exit() on error.
+ *
+ * It does rely on vsnprintf(); if configure finds that libc doesn't provide
+ * a usable vsnprintf(), then a copy of our own implementation of it will
+ * be linked into libpq.
+ *
+ * Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ * src/interfaces/libpq/pqexpbuffer.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+
+src/port/chklocale.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * chklocale.c
+ *		Functions for handling locale-related info
+ *
+ *
+ * Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ *
+ *
+ * IDENTIFICATION
+ *	  src/port/chklocale.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+
+src/port/getpeereid.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * getpeereid.c
+ *		get peer userid for UNIX-domain socket connection
+ *
+ * Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ *
+ *
+ * IDENTIFICATION
+ *	  src/port/getpeereid.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+
+src/port/inet_net_ntop.c
+======================================================================
+/*
+ * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 1996,1999 by Internet Software Consortium.
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
+ * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ *
+ *	  src/port/inet_net_ntop.c
+ */
+
+
+
+src/port/pg_strong_random.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * pg_strong_random.c
+ *	  generate a cryptographically secure random number
+ *
+ * Our definition of "strong" is that it's suitable for generating random
+ * salts and query cancellation keys, during authentication.
+ *
+ * Note: this code is run quite early in postmaster and backend startup;
+ * therefore, even when built for backend, it cannot rely on backend
+ * infrastructure such as elog() or palloc().
+ *
+ * Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ *
+ * IDENTIFICATION
+ *	  src/port/pg_strong_random.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+
+src/port/pgstrcasecmp.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * pgstrcasecmp.c
+ *	   Portable SQL-like case-independent comparisons and conversions.
+ *
+ * SQL99 specifies Unicode-aware case normalization, which we don't yet
+ * have the infrastructure for.  Instead we use tolower() to provide a
+ * locale-aware translation.  However, there are some locales where this
+ * is not right either (eg, Turkish may do strange things with 'i' and
+ * 'I').  Our current compromise is to use tolower() for characters with
+ * the high bit set, and use an ASCII-only downcasing for 7-bit
+ * characters.
+ *
+ * NB: this code should match downcase_truncate_identifier() in scansup.c.
+ *
+ * We also provide strict ASCII-only case conversion functions, which can
+ * be used to implement C/POSIX case folding semantics no matter what the
+ * C library thinks the locale is.
+ *
+ *
+ * Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ *
+ * src/port/pgstrcasecmp.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+src/port/snprintf.c
+======================================================================
+/*
+ * Copyright (c) 1983, 1995, 1996 Eric P. Allman
+ * Copyright (c) 1988, 1993
+ *	The Regents of the University of California.  All rights reserved.
+ * Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *	  notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *	  notice, this list of conditions and the following disclaimer in the
+ *	  documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the University nor the names of its contributors
+ *	  may be used to endorse or promote products derived from this software
+ *	  without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ * src/port/snprintf.c
+ */
+
+
+
+src/port/strerror.c
+======================================================================
+/*-------------------------------------------------------------------------
+ *
+ * strerror.c
+ *	  Replacements for standard strerror() and strerror_r() functions
+ *
+ * Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ *
+ * IDENTIFICATION
+ *	  src/port/strerror.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+
+src/port/timingsafe_bcmp.c
+======================================================================
+/*
+ * src/port/timingsafe_bcmp.c
+ *
+ *	$OpenBSD: timingsafe_bcmp.c,v 1.3 2015/08/31 02:53:57 guenther Exp $
+ */
+
+/*
+ * Copyright (c) 2010 Damien Miller.  All rights reserved.
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
+
+
+Additional public-domain attribution inside src/common/wchar.c:
+Markus Kuhn -- 2001-09-08 -- public domain (wide-character width table).

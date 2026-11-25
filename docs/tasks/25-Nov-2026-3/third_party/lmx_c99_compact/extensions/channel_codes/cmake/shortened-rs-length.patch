@@ -1,0 +1,9 @@
+--- upstream/src/reed-solomon/encode.c
++++ build-view/src/reed-solomon/encode.c
+@@ -30,5 +30,5 @@
+         encoded[msg_length + i] = rs->encoded_remainder.coeff[rs->min_distance - (i + 1)];
+     }
+ 
+-    return rs->block_length;
++    return (ssize_t)(msg_length + rs->min_distance);
+ }

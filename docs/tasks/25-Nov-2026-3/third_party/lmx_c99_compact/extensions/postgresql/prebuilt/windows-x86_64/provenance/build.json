@@ -1,0 +1,70 @@
+{
+  "version": "18.7",
+  "source_archive": "source_archives/postgresql-18.7.tar.bz2",
+  "source_sha256": "441dfae4280cae3e0425e5f876f80559fb0731c140f1aae22b3e5a54d0411bfd",
+  "source_originals_unchanged": true,
+  "compiler": "x86_64-w64-mingw32-gcc-posix (GCC) 14-posix",
+  "target": "x86_64-w64-mingw32",
+  "crt": "MSVCRT (__MSVCRT_VERSION__=0x700; not UCRT)",
+  "host": "Linux x86_64",
+  "cmake": "3.20.5",
+  "cflags": "-O2 -std=c99 -pedantic-errors -DWIN32=1; upstream warnings/hardening",
+  "tls": false,
+  "scram_sha_256": true,
+  "server_built": false,
+  "upstream_link_uses_static_libgcc": true,
+  "additional_compiled_inputs": "Normal MinGW startup/CRT support and statically linked GCC runtime objects; not only PostgreSQL source objects.",
+  "strip_command": "x86_64-w64-mingw32-strip --strip-unneeded <copy-of-libpq.dll>",
+  "runtime_execution": "Not run on Windows or Wine; cross-compiled and PE/link inspected only.",
+  "measurement": {
+    "raw": {
+      "bytes": 780388,
+      "sha256": "d67e0ee1e600e13d43881f0bb430e7e0acacad575eb416a124ef3e5379619ffb"
+    },
+    "stripped": {
+      "bytes": 401267,
+      "sha256": "7c681a11c05a21970802dae7d89196bb5d3c3284755818f8b0c696f3b2c3d993"
+    },
+    "import_library": {
+      "bytes": 133084,
+      "sha256": "26f820891129dd25d725bfa7d5f6f93fe0a6d5185375cdf1410f2bd5456974d6"
+    },
+    "imports": [
+      "ADVAPI32.dll",
+      "KERNEL32.dll",
+      "msvcrt.dll",
+      "Secur32.dll",
+      "SHELL32.dll",
+      "WS2_32.dll"
+    ],
+    "export_count": 210,
+    "observed_runtime_symbols": [
+      "0000000303149e30 T ___chkstk_ms",
+      "0000000303149110 T __do_global_ctors",
+      "00000003031490d0 T __do_global_dtors",
+      "0000000303121370 T __gcc_deregister_frame",
+      "0000000303121360 T __gcc_register_frame",
+      "0000000303149180 T __main",
+      "0000000303149450 T _pei386_runtime_relocator"
+    ],
+    "exports_unchanged_by_strip": true
+  },
+  "compatible_prebuilt_consumers": "Windows x86_64 MinGW-w64 MSVCRT; CMake checks CRT/ABI and SHA256 before importing. Other supported MinGW CRT/architectures build libpq from source.",
+  "allocation_contract": "Release libpq-owned output with the documented PQfreemem/PQclear/etc.; PQtrace FILE* requires the same CRT.",
+  "reproducibility_note": "Sources, build adapters and toolchain package hashes are retained; byte-for-byte reproducibility across timestamps/toolchain installations is not claimed.",
+  "source_archive_path_base": "extensions/postgresql",
+  "windows_sspi": "Upstream native SSPI authentication code retained; compiled, not exercised against a server.",
+  "prebuilt_consumer_validation": {
+    "cmake": "3.20.5",
+    "selected_mode": "bundled-windows-x86_64-msvcrt",
+    "executable_linked": "lmx_postgresql_example.exe",
+    "consumer_imports": [
+      "KERNEL32.dll",
+      "msvcrt.dll",
+      "LIBPQ.dll"
+    ],
+    "copied_dll_bytes": 401267,
+    "copied_dll_sha256": "7c681a11c05a21970802dae7d89196bb5d3c3284755818f8b0c696f3b2c3d993",
+    "execution": false
+  }
+}

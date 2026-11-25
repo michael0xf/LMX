@@ -1,0 +1,50 @@
+cmake_minimum_required(VERSION 3.20)
+if(NOT COMMAND lmx_c99_target)
+    message(FATAL_ERROR "The http_parser group requires the base C99 helper")
+endif()
+set(_http_root "${CMAKE_CURRENT_LIST_DIR}")
+set(_http_view "${CMAKE_CURRENT_BINARY_DIR}/generated/llhttp")
+find_package(Python3 3.8 COMPONENTS Interpreter REQUIRED)
+file(GLOB_RECURSE _http_inputs CONFIGURE_DEPENDS "${LMX_VENDOR_DIR}/llhttp/*")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    ${_http_inputs} "${_http_root}/cmake/prepare_view.py"
+    "${_http_root}/provenance/llhttp.json")
+execute_process(COMMAND "${Python3_EXECUTABLE}" "${_http_root}/cmake/prepare_view.py"
+    --source "${LMX_VENDOR_DIR}/llhttp" --output "${_http_view}"
+    RESULT_VARIABLE _http_view_status OUTPUT_VARIABLE _http_view_log
+    ERROR_VARIABLE _http_view_error)
+if(NOT _http_view_status EQUAL 0)
+    message(FATAL_ERROR "Cannot prepare pinned llhttp C99 view: ${_http_view_error}")
+endif()
+add_library(lmx_llhttp STATIC "${_http_view}/src/api.c"
+    "${_http_view}/src/http.c" "${_http_view}/src/llhttp.c")
+add_library(LMX::llhttp ALIAS lmx_llhttp)
+lmx_c99_target(lmx_llhttp)
+target_include_directories(lmx_llhttp PUBLIC "${_http_view}/include")
+add_library(lmx_http_parser INTERFACE)
+add_library(LMX::http_parser ALIAS lmx_http_parser)
+target_link_libraries(lmx_http_parser INTERFACE LMX::llhttp)
+
+if(BUILD_TESTING)
+    add_executable(lmx_llhttp_streaming_test "${_http_root}/tests/parser_smoke.c")
+    lmx_c99_target(lmx_llhttp_streaming_test)
+    target_link_libraries(lmx_llhttp_streaming_test PRIVATE LMX::llhttp)
+    add_test(NAME http_parser.streaming_and_rejection COMMAND lmx_llhttp_streaming_test)
+    if(UNIX AND TARGET LMX::curl AND TARGET LMX::mbedtls)
+        add_executable(lmx_llhttp_https_probe "${_http_root}/tests/https_probe.c")
+        lmx_c99_target(lmx_llhttp_https_probe)
+        target_link_libraries(lmx_llhttp_https_probe PRIVATE LMX::llhttp LMX::curl
+            LMX::mbedtls Threads::Threads)
+        add_test(NAME http_parser.tls12_tls13_and_framing
+            COMMAND lmx_llhttp_https_probe "${_http_root}/../../tests/tls-fixtures")
+        set_tests_properties(http_parser.tls12_tls13_and_framing PROPERTIES TIMEOUT 30)
+    endif()
+endif()
+if(LMX_BUILD_EXAMPLES)
+    add_executable(lmx_llhttp_example "${_http_root}/examples/parser_minimal.c")
+    lmx_c99_target(lmx_llhttp_example)
+    target_link_libraries(lmx_llhttp_example PRIVATE LMX::llhttp)
+    if(BUILD_TESTING)
+        add_test(NAME http_parser.example COMMAND lmx_llhttp_example)
+    endif()
+endif()

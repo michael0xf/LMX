@@ -1,0 +1,3877 @@
+{
+  "schema_version": 1,
+  "date_utc": "2026-11-25",
+  "scope": "Capability audit of external representations in the inherited 132-component catalog and accepted storage, knowledge and PDF additions; not a function-complete API inventory.",
+  "evidence_root": "third_party/lmx_c99_compact",
+  "basis": [
+    "SOURCES.json identifiers",
+    "selected CMake sources and compile definitions",
+    "retained primary public headers and source documentation"
+  ],
+  "reading_rule": "direction describes compiled capability; header_instantiation and retained_source_only are explicit exceptions. Read/write are not symmetric unless actual APIs and selected build support both.",
+  "application_boundary": "LMX owns application data semantics. YAML/TOML/INI are only foreign-file compatibility when an external consumer requires them. Database/medium formats are lower I/O layers, not a proposed extra object/settings architecture.",
+  "rows": [
+    {
+      "id": "json",
+      "domain": "documents",
+      "formats": [
+        "JSON"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "systems:jsmn",
+          "target": "LMX::jsmn",
+          "read_api": [
+            "jsmn_parse"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/jsmn/jsmn.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "jsmn_parse",
+              "path": "vendor/jsmn/jsmn.h",
+              "line": 99
+            }
+          ]
+        },
+        {
+          "component": "systems:cjson",
+          "target": "LMX::cjson",
+          "read_api": [
+            "cJSON_Parse"
+          ],
+          "write_api": [
+            "cJSON_Print"
+          ],
+          "evidence_path": "vendor/cjson/cJSON.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "cJSON_Parse",
+              "path": "vendor/cjson/cJSON.h",
+              "line": 152
+            },
+            {
+              "symbol": "cJSON_Print",
+              "path": "vendor/cjson/cJSON.h",
+              "line": 152
+            }
+          ]
+        },
+        {
+          "component": "acoustic:jansson",
+          "target": "LMX::jansson",
+          "read_api": [
+            "json_loads"
+          ],
+          "write_api": [
+            "json_dumps"
+          ],
+          "evidence_path": "vendor/jansson/src/jansson.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "json_loads",
+              "path": "vendor/jansson/src/jansson.h",
+              "line": 366
+            },
+            {
+              "symbol": "json_dumps",
+              "path": "vendor/jansson/src/jansson.h",
+              "line": 394
+            }
+          ]
+        }
+      ],
+      "use_ru": "Извлечь данные из JSON; создать JSON для другого потребителя.",
+      "limitations_ru": [
+        "jsmn: tokens only; values and number interpretation belong to the caller.",
+        "cJSON numbers use double; do not silently route arbitrary integers or exact decimal values through double.",
+        "Jansson exposes distinct integer/real values; available range still depends on its compiled types."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix."
+    },
+    {
+      "id": "xml",
+      "domain": "documents",
+      "formats": [
+        "XML"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "documents:yxml",
+          "target": "LMX::yxml",
+          "read_api": [
+            "yxml_parse"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/yxml/yxml.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "yxml_parse",
+              "path": "vendor/yxml/yxml.h",
+              "line": 88
+            }
+          ]
+        },
+        {
+          "component": "documents:ezxml",
+          "target": "LMX::ezxml",
+          "read_api": [
+            "ezxml_parse_str"
+          ],
+          "write_api": [
+            "ezxml_toxml"
+          ],
+          "evidence_path": "vendor/ezxml/ezxml.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "ezxml_parse_str",
+              "path": "vendor/ezxml/ezxml.h",
+              "line": 60
+            },
+            {
+              "symbol": "ezxml_toxml",
+              "path": "vendor/ezxml/ezxml.h",
+              "line": 106
+            }
+          ]
+        },
+        {
+          "component": "xlsxio:expat",
+          "target": "LMX::expat",
+          "read_api": [
+            "XML_Parse"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/expat/lib/expat.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "XML_Parse",
+              "path": "vendor/expat/lib/expat.h",
+              "line": 697
+            }
+          ]
+        }
+      ],
+      "use_ru": "Читать XML-обмен и XML-части контейнеров; создавать XML через ezxml.",
+      "limitations_ru": [
+        "yxml and Expat are event parsers, not writers.",
+        "ezxml constructs/modifies an in-memory tree and serializes it; representation is not a byte-preserving document editor.",
+        "Selected Expat profile enables namespace, DTD and general-entity facilities; external entity handling is application policy."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/documents/CMakeLists.txt",
+        "extensions/xlsxio/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "html",
+      "domain": "documents",
+      "formats": [
+        "HTML"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "documents:gumbo",
+          "target": "LMX::gumbo",
+          "read_api": [
+            "gumbo_parse"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/gumbo/src/gumbo.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "gumbo_parse",
+              "path": "vendor/gumbo/src/gumbo.h",
+              "line": 32
+            }
+          ]
+        },
+        {
+          "component": "documents:md4c",
+          "target": "LMX::md4c_html",
+          "read_api": [],
+          "write_api": [
+            "md_html"
+          ],
+          "evidence_path": "vendor/md4c/src/md4c-html.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "md_html",
+              "path": "vendor/md4c/src/md4c-html.h",
+              "line": 46
+            }
+          ]
+        }
+      ],
+      "use_ru": "Извлечь структуру и текст HTML; получить HTML из Markdown.",
+      "limitations_ru": [
+        "Gumbo parses an HTML tree; no CSS layout, JavaScript execution, browsing or page rendering.",
+        "md_html creates HTML from Markdown; it is not a general HTML DOM serializer."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/documents/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "markdown",
+      "domain": "documents",
+      "formats": [
+        "Markdown"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": false,
+      "direction": "read",
+      "providers": [
+        {
+          "component": "documents:md4c",
+          "target": "LMX::md4c",
+          "read_api": [
+            "md_parse"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/md4c/src/md4c.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "md_parse",
+              "path": "vendor/md4c/src/md4c.h",
+              "line": 442
+            }
+          ]
+        }
+      ],
+      "use_ru": "Разобрать технические заметки и передать события в LMX.",
+      "limitations_ru": [
+        "Parser callbacks and optional syntax extensions; no generic Markdown writer or visual editor."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/documents/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "pdf",
+      "domain": "documents",
+      "formats": [
+        "PDF"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "documents:pdfgen",
+          "target": "LMX::pdfgen",
+          "read_api": [],
+          "write_api": [
+            "pdf_create",
+            "pdf_save"
+          ],
+          "evidence_path": "vendor/pdfgen/pdfgen.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "pdf_create",
+              "path": "vendor/pdfgen/pdfgen.h",
+              "line": 44
+            },
+            {
+              "symbol": "pdf_save",
+              "path": "vendor/pdfgen/pdfgen.h",
+              "line": 49
+            }
+          ]
+        },
+        {
+          "component": "pdf_extra:pdfio",
+          "target": "LMX::pdfio",
+          "read_api": [
+            "pdfioFileOpen",
+            "pdfioFileGetPage",
+            "pdfioObjOpenStream",
+            "pdfioStreamRead"
+          ],
+          "write_api": [
+            "pdfioFileCreate",
+            "pdfioFileCreatePage",
+            "pdfioStreamWrite"
+          ],
+          "evidence_path": "vendor/pdfio/pdfio.h",
+          "availability": "compiled"
+        }
+      ],
+      "use_ru": "Создать PDF, прочитать объекты/страницы/потоки, перенести страницу между файлами.",
+      "limitations_ru": [
+        "PDFGen is a writer; PDFio reads/writes PDF objects, pages and streams. Neither is a page renderer or a general layout/text-extraction engine.",
+        "PDFio ordinary metadata, pages and Flate streams verified. Encrypted CreationDate getter has a recorded KNOWN_FAIL; full encrypted-PDF API correctness is not claimed."
+      ],
+      "verification": "PDFio: 3 passing retained-source tests plus sanitizer checks; separate encrypted-date reproducer KNOWN_FAIL; see extensions/pdf_extra/VERIFICATION.json",
+      "build_evidence": [
+        "extensions/documents/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "xlsx",
+      "domain": "documents",
+      "formats": [
+        "XLSX / OOXML spreadsheet"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "xlsxio:xlsxio",
+          "target": "LMX::xlsxio",
+          "read_api": [
+            "xlsxioread_open"
+          ],
+          "write_api": [
+            "xlsxiowrite_open"
+          ],
+          "evidence_path": "vendor/xlsxio/include/xlsxio_read.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "xlsxioread_open",
+              "path": "vendor/xlsxio/include/xlsxio_read.h",
+              "line": 102
+            },
+            {
+              "symbol": "xlsxiowrite_open",
+              "path": "vendor/xlsxio/include/xlsxio_write.h",
+              "line": 88
+            }
+          ]
+        }
+      ],
+      "use_ru": "Извлечь значения ячеек/листов и создать простой XLSX.",
+      "limitations_ru": [
+        "Streaming table/cell I/O; not an Excel calculation engine or fidelity-preserving workbook editor.",
+        "Reading and writing use separate public headers; writer API is xlsxio_write.h.",
+        "Does not parse legacy binary XLS."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/xlsxio/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "toml",
+      "domain": "documents",
+      "formats": [
+        "TOML"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": false,
+      "direction": "read",
+      "providers": [
+        {
+          "component": "documents:tomlc99",
+          "target": "LMX::tomlc99",
+          "read_api": [
+            "toml_parse"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/tomlc99/toml.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "toml_parse",
+              "path": "vendor/tomlc99/toml.h",
+              "line": 55
+            }
+          ]
+        }
+      ],
+      "use_ru": "Прочитать существующий внешний TOML.",
+      "limitations_ru": [
+        "Reader only. Intended here for importing a foreign file demanded by another consumer; not a proposal for LMX configuration semantics."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/documents/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "yaml",
+      "domain": "documents",
+      "formats": [
+        "YAML"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "documents:libyaml",
+          "target": "LMX::libyaml",
+          "read_api": [
+            "yaml_parser_parse",
+            "yaml_parser_load"
+          ],
+          "write_api": [
+            "yaml_emitter_emit",
+            "yaml_emitter_dump"
+          ],
+          "evidence_path": "vendor/libyaml/include/yaml.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "yaml_parser_parse",
+              "path": "vendor/libyaml/include/yaml.h",
+              "line": 1398
+            },
+            {
+              "symbol": "yaml_parser_load",
+              "path": "vendor/libyaml/include/yaml.h",
+              "line": 1398
+            },
+            {
+              "symbol": "yaml_emitter_emit",
+              "path": "vendor/libyaml/include/yaml.h",
+              "line": 1956
+            },
+            {
+              "symbol": "yaml_emitter_dump",
+              "path": "vendor/libyaml/include/yaml.h",
+              "line": 1961
+            }
+          ]
+        }
+      ],
+      "use_ru": "Читать и создавать YAML для внешних инструментов.",
+      "limitations_ru": [
+        "Events/documents and emitter; application decides tag/schema/value semantics.",
+        "Use for external interoperability when needed, not as an added LMX object/configuration model."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/documents/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "ini",
+      "domain": "documents",
+      "formats": [
+        "INI"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": false,
+      "direction": "read",
+      "providers": [
+        {
+          "component": "text_hash_extra:inih",
+          "target": "LMX::inih",
+          "read_api": [
+            "ini_parse"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/inih/ini.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "ini_parse",
+              "path": "vendor/inih/ini.h",
+              "line": 82
+            }
+          ]
+        }
+      ],
+      "use_ru": "Прочитать INI прибора или внешнего приложения.",
+      "limitations_ru": [
+        "Reader only; dialect is controlled by compiled INI_* options.",
+        "Foreign file compatibility only; no new LMX settings layer is implied."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix."
+    },
+    {
+      "id": "png",
+      "domain": "images",
+      "formats": [
+        "PNG"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "base:stb",
+          "target": "LMX::stb",
+          "read_api": [
+            "stbi_load"
+          ],
+          "write_api": [
+            "stbi_write_png"
+          ],
+          "evidence_path": "vendor/stb/stb_image.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "stbi_load",
+              "path": "vendor/stb/stb_image.h",
+              "line": 143
+            },
+            {
+              "symbol": "stbi_write_png",
+              "path": "vendor/stb/stb_herringbone_wang_tile.h",
+              "line": 140
+            }
+          ]
+        },
+        {
+          "component": "graphics:lodepng",
+          "target": "LMX::lodepng",
+          "read_api": [
+            "lodepng_decode32"
+          ],
+          "write_api": [
+            "lodepng_encode32"
+          ],
+          "evidence_path": "vendor/lodepng/lodepng.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "lodepng_decode32",
+              "path": "vendor/lodepng/lodepng.h",
+              "line": 156
+            },
+            {
+              "symbol": "lodepng_encode32",
+              "path": "vendor/lodepng/lodepng.h",
+              "line": 213
+            }
+          ]
+        },
+        {
+          "component": "graphics:libspng",
+          "target": "LMX::libspng",
+          "read_api": [
+            "spng_decode_image"
+          ],
+          "write_api": [
+            "spng_encode_image"
+          ],
+          "evidence_path": "vendor/libspng/spng/spng.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "spng_decode_image",
+              "path": "vendor/libspng/spng/spng.h",
+              "line": 466
+            },
+            {
+              "symbol": "spng_encode_image",
+              "path": "vendor/libspng/spng/spng.h",
+              "line": 477
+            }
+          ]
+        },
+        {
+          "component": "graphics:tpng",
+          "target": "LMX::tpng",
+          "read_api": [
+            "tpng_get_rgba"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/tpng/tpng.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "tpng_get_rgba",
+              "path": "vendor/tpng/tpng.h",
+              "line": 45
+            }
+          ]
+        }
+      ],
+      "use_ru": "Читать и создавать lossless raster images, с независимыми PNG реализациями.",
+      "limitations_ru": [
+        "libspng encoder and decoder are both compiled: graphics CMake only sets SPNG_STATIC/SPNG_DISABLE_OPT, not an encoder-disable option.",
+        "tpng returns RGBA and has no writer.",
+        "PNG image support does not establish APNG animation support for these selected APIs."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/graphics/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "jpeg",
+      "domain": "images",
+      "formats": [
+        "JPEG"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "base:stb",
+          "target": "LMX::stb",
+          "read_api": [
+            "stbi_load"
+          ],
+          "write_api": [
+            "stbi_write_jpg"
+          ],
+          "evidence_path": "vendor/stb/stb_image.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "stbi_load",
+              "path": "vendor/stb/stb_image.h",
+              "line": 143
+            },
+            {
+              "symbol": "stbi_write_jpg",
+              "path": "vendor/stb/stb_image_write.h",
+              "line": 50
+            }
+          ]
+        },
+        {
+          "component": "graphics:tjpgdec",
+          "target": "LMX::tjpgdec",
+          "read_api": [
+            "jd_prepare",
+            "jd_decomp"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/tjpgdec/src/tjpgd.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "jd_prepare",
+              "path": "vendor/tjpgdec/src/tjpgd.h",
+              "line": 94
+            },
+            {
+              "symbol": "jd_decomp",
+              "path": "vendor/tjpgdec/src/tjpgd.h",
+              "line": 95
+            }
+          ]
+        },
+        {
+          "component": "graphics:nanojpeg",
+          "target": "LMX::nanojpeg",
+          "read_api": [
+            "njDecode"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/nanojpeg/nanojpeg.c",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "njDecode",
+              "path": "vendor/nanojpeg/nanojpeg.c",
+              "line": 116
+            }
+          ]
+        }
+      ],
+      "use_ru": "Извлечь RGB/grayscale из фотографий и создавать baseline JPEG.",
+      "limitations_ru": [
+        "stb reads baseline/progressive; writer emits baseline, not progressive.",
+        "Tiny JPEG Decompressor and NanoJPEG are small baseline alternatives.",
+        "NanoJPEG does not support progressive/lossless/CMYK JPEG or parse Exif/JFIF metadata; no universal camera RAW decoder."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/graphics/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "gif",
+      "domain": "images",
+      "formats": [
+        "GIF"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "graphics:gifdec",
+          "target": "LMX::gifdec",
+          "read_api": [
+            "gd_open_gif",
+            "gd_get_frame"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/gifdec/gifdec.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "gd_open_gif",
+              "path": "vendor/gifdec/gifdec.h",
+              "line": 45
+            },
+            {
+              "symbol": "gd_get_frame",
+              "path": "vendor/gifdec/gifdec.h",
+              "line": 46
+            }
+          ]
+        },
+        {
+          "component": "graphics:msf_gif",
+          "target": "LMX::msf_gif",
+          "read_api": [],
+          "write_api": [
+            "msf_gif_begin",
+            "msf_gif_frame",
+            "msf_gif_end"
+          ],
+          "evidence_path": "vendor/msf_gif/msf_gif.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "msf_gif_begin",
+              "path": "vendor/msf_gif/msf_gif.h",
+              "line": 18
+            },
+            {
+              "symbol": "msf_gif_frame",
+              "path": "vendor/msf_gif/msf_gif.h",
+              "line": 19
+            },
+            {
+              "symbol": "msf_gif_end",
+              "path": "vendor/msf_gif/msf_gif.h",
+              "line": 22
+            }
+          ]
+        },
+        {
+          "component": "media:jo_gif",
+          "target": "LMX::jo_gif",
+          "read_api": [],
+          "write_api": [
+            "jo_gif_start",
+            "jo_gif_frame",
+            "jo_gif_end"
+          ],
+          "evidence_path": "vendor/jo_gif/jo_gif.cpp",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "jo_gif_start",
+              "path": "vendor/jo_gif/jo_gif.cpp",
+              "line": 11
+            },
+            {
+              "symbol": "jo_gif_frame",
+              "path": "vendor/jo_gif/jo_gif.cpp",
+              "line": 12
+            },
+            {
+              "symbol": "jo_gif_end",
+              "path": "vendor/jo_gif/jo_gif.cpp",
+              "line": 15
+            }
+          ]
+        },
+        {
+          "component": "base:stb",
+          "target": "LMX::stb",
+          "read_api": [
+            "stbi_load_gif_from_memory"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/stb/stb_image.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "stbi_load_gif_from_memory",
+              "path": "vendor/stb/stb_image.h",
+              "line": 475
+            }
+          ]
+        }
+      ],
+      "use_ru": "Читать и создавать простую анимацию/инструкции GIF.",
+      "limitations_ru": [
+        "Palette/animation format; color quantization is lossy relative to arbitrary RGBA.",
+        "jo_gif ignores input alpha; selected generated C99 view supplies its C ABI."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/graphics/CMakeLists.txt",
+        "extensions/media/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "qoi",
+      "domain": "images",
+      "formats": [
+        "QOI"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "graphics:qoi",
+          "target": "LMX::qoi",
+          "read_api": [
+            "qoi_decode"
+          ],
+          "write_api": [
+            "qoi_encode"
+          ],
+          "evidence_path": "vendor/qoi/qoi.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "qoi_decode",
+              "path": "vendor/qoi/qoi.h",
+              "line": 45
+            },
+            {
+              "symbol": "qoi_encode",
+              "path": "vendor/qoi/qoi.h",
+              "line": 47
+            }
+          ]
+        }
+      ],
+      "use_ru": "Простой компактный кодек RGB/RGBA.",
+      "limitations_ru": [
+        "Lossless RGB/RGBA raster; not an animated-image/container or color-management library."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/graphics/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "webp",
+      "domain": "images",
+      "formats": [
+        "WebP",
+        "Animated WebP container"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "media:libwebp",
+          "target": "LMX::webp",
+          "read_api": [
+            "WebPDecodeRGBA"
+          ],
+          "write_api": [
+            "WebPEncodeRGBA"
+          ],
+          "evidence_path": "vendor/libwebp/src/webp/decode.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "WebPDecodeRGBA",
+              "path": "vendor/libwebp/src/webp/decode.h",
+              "line": 61
+            },
+            {
+              "symbol": "WebPEncodeRGBA",
+              "path": "vendor/libwebp/src/webp/encode.h",
+              "line": 57
+            }
+          ]
+        },
+        {
+          "component": "media:libwebp",
+          "target": "LMX::webpdemux",
+          "read_api": [
+            "WebPDemux",
+            "WebPAnimDecoderNew"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/libwebp/src/webp/demux.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "WebPDemux",
+              "path": "vendor/libwebp/src/webp/demux.h",
+              "line": 16
+            },
+            {
+              "symbol": "WebPAnimDecoderNew",
+              "path": "vendor/libwebp/src/webp/demux.h",
+              "line": 234
+            }
+          ]
+        },
+        {
+          "component": "media:libwebp",
+          "target": "LMX::webpmux",
+          "read_api": [],
+          "write_api": [
+            "WebPMuxNew",
+            "WebPAnimEncoderNew"
+          ],
+          "evidence_path": "vendor/libwebp/src/webp/mux.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "WebPMuxNew",
+              "path": "vendor/libwebp/src/webp/mux.h",
+              "line": 37
+            },
+            {
+              "symbol": "WebPAnimEncoderNew",
+              "path": "vendor/libwebp/src/webp/mux.h",
+              "line": 414
+            }
+          ]
+        }
+      ],
+      "use_ru": "Читать и создавать WebP и собирать/разбирать анимированный контейнер.",
+      "limitations_ru": [
+        "Compiled encoder, decoder, mux and demux; SIMD disabled in selected C99 profile.",
+        "WebP support is not a general WebM/VP9/AV1 video codec."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/media/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "raster_legacy_rw",
+      "domain": "images",
+      "formats": [
+        "BMP",
+        "TGA",
+        "Radiance HDR RGBE"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "base:stb",
+          "target": "LMX::stb",
+          "read_api": [
+            "stbi_load",
+            "stbi_loadf"
+          ],
+          "write_api": [
+            "stbi_write_bmp",
+            "stbi_write_tga",
+            "stbi_write_hdr"
+          ],
+          "evidence_path": "vendor/stb/stb_image.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "stbi_load",
+              "path": "vendor/stb/stb_image.h",
+              "line": 143
+            },
+            {
+              "symbol": "stbi_loadf",
+              "path": "vendor/stb/stb_image.h",
+              "line": 306
+            },
+            {
+              "symbol": "stbi_write_bmp",
+              "path": "vendor/stb/stb_image_write.h",
+              "line": 48
+            },
+            {
+              "symbol": "stbi_write_tga",
+              "path": "vendor/stb/stb_image_write.h",
+              "line": 49
+            },
+            {
+              "symbol": "stbi_write_hdr",
+              "path": "vendor/stb/stb_image_write.h",
+              "line": 51
+            }
+          ]
+        }
+      ],
+      "use_ru": "Читать и писать простые растровые форматы.",
+      "limitations_ru": [
+        "Subsets documented by stb; no general preservation of image metadata or profiles.",
+        "Radiance RGBE is different from OpenEXR."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix."
+    },
+    {
+      "id": "raster_legacy_read",
+      "domain": "images",
+      "formats": [
+        "PSD composite",
+        "Softimage PIC",
+        "binary PPM/PGM"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": false,
+      "direction": "read",
+      "providers": [
+        {
+          "component": "base:stb",
+          "target": "LMX::stb",
+          "read_api": [
+            "stbi_load"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/stb/stb_image.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "stbi_load",
+              "path": "vendor/stb/stb_image.h",
+              "line": 143
+            }
+          ]
+        }
+      ],
+      "use_ru": "Извлечь итоговое растровое изображение из старых файлов.",
+      "limitations_ru": [
+        "PSD composited image only, no editable Photoshop layer model.",
+        "PNM reader is binary PPM/PGM; do not infer ASCII PBM/PPM support or a PNM writer."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix."
+    },
+    {
+      "id": "font",
+      "domain": "images",
+      "formats": [
+        "TrueType TTF",
+        "OpenType CFF",
+        "TTC"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": false,
+      "direction": "read",
+      "providers": [
+        {
+          "component": "base:stb",
+          "target": "LMX::stb",
+          "read_api": [
+            "stbtt_InitFont",
+            "stbtt_GetCodepointBitmap"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/stb/stb_truetype.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "stbtt_InitFont",
+              "path": "vendor/stb/stb_truetype.h",
+              "line": 120
+            },
+            {
+              "symbol": "stbtt_GetCodepointBitmap",
+              "path": "vendor/stb/stb_truetype.h",
+              "line": 125
+            }
+          ]
+        }
+      ],
+      "use_ru": "Прочитать метрики/контуры и растеризовать glyphs.",
+      "limitations_ru": [
+        "Font outlines/metrics/rasterization, no font writer, complex text shaping or complete typography engine.",
+        "Application must retain suitable font files; the library alone contains no universal character font."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix."
+    },
+    {
+      "id": "gpu_blocks",
+      "domain": "images",
+      "formats": [
+        "BC1/DXT1",
+        "BC3/DXT5",
+        "BC4",
+        "BC5"
+      ],
+      "kind": "codec",
+      "compiled_read": false,
+      "compiled_write": true,
+      "direction": "write",
+      "providers": [
+        {
+          "component": "base:stb",
+          "target": "LMX::stb",
+          "read_api": [],
+          "write_api": [
+            "stb_compress_dxt_block",
+            "stb_compress_bc4_block",
+            "stb_compress_bc5_block"
+          ],
+          "evidence_path": "vendor/stb/stb_dxt.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "stb_compress_dxt_block",
+              "path": "vendor/stb/stb_dxt.h",
+              "line": 6
+            },
+            {
+              "symbol": "stb_compress_bc4_block",
+              "path": "vendor/stb/stb_dxt.h",
+              "line": 60
+            },
+            {
+              "symbol": "stb_compress_bc5_block",
+              "path": "vendor/stb/stb_dxt.h",
+              "line": 61
+            }
+          ]
+        }
+      ],
+      "use_ru": "Создать сжатые texture blocks для внешнего потребителя.",
+      "limitations_ru": [
+        "Block compression only; no DDS/KTX container reader/writer."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix."
+    },
+    {
+      "id": "wav",
+      "domain": "audio",
+      "formats": [
+        "WAV/RIFF",
+        "W64",
+        "RF64"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "media:dr_wav",
+          "target": "LMX::dr_wav",
+          "read_api": [
+            "drwav_init_file",
+            "drwav_read_pcm_frames_f32"
+          ],
+          "write_api": [
+            "drwav_init_file_write",
+            "drwav_write_pcm_frames"
+          ],
+          "evidence_path": "vendor/dr_libs/dr_wav.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "drwav_init_file",
+              "path": "vendor/dr_libs/dr_wav.h",
+              "line": 24
+            },
+            {
+              "symbol": "drwav_read_pcm_frames_f32",
+              "path": "vendor/dr_libs/dr_wav.h",
+              "line": 92
+            },
+            {
+              "symbol": "drwav_init_file_write",
+              "path": "vendor/dr_libs/dr_wav.h",
+              "line": 66
+            },
+            {
+              "symbol": "drwav_write_pcm_frames",
+              "path": "vendor/dr_libs/dr_wav.h",
+              "line": 66
+            }
+          ]
+        },
+        {
+          "component": "media:miniaudio",
+          "target": "LMX::miniaudio",
+          "read_api": [
+            "ma_decoder_init_file"
+          ],
+          "write_api": [
+            "ma_encoder_init_file"
+          ],
+          "evidence_path": "vendor/miniaudio/miniaudio.h",
+          "availability": "compiled",
+          "formats": [
+            "WAV"
+          ],
+          "api_evidence": [
+            {
+              "symbol": "ma_decoder_init_file",
+              "path": "vendor/miniaudio/miniaudio.h",
+              "line": 2523
+            },
+            {
+              "symbol": "ma_encoder_init_file",
+              "path": "vendor/miniaudio/miniaudio.h",
+              "line": 2669
+            }
+          ]
+        }
+      ],
+      "use_ru": "Читать PCM и некоторые WAV encodings, создавать звуковые записи WAV.",
+      "limitations_ru": [
+        "dr_wav writer does not encode compressed WAV formats.",
+        "miniaudio encoder supports WAV only; format enums or custom backend hooks do not imply built-in MP3/FLAC encoders."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/media/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "aiff_rifx",
+      "domain": "audio",
+      "formats": [
+        "AIFF",
+        "RIFX"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": false,
+      "direction": "read",
+      "providers": [
+        {
+          "component": "media:dr_wav",
+          "target": "LMX::dr_wav",
+          "read_api": [
+            "drwav_init_file"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/dr_libs/dr_wav.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "drwav_init_file",
+              "path": "vendor/dr_libs/dr_wav.h",
+              "line": 24
+            }
+          ]
+        }
+      ],
+      "use_ru": "Извлечь аудиоданные из big-endian старых файлов.",
+      "limitations_ru": [
+        "This retained dr_wav revision reads AIFF/RIFX but does not write them or read their metadata.",
+        "AIFF ADPCM unsupported per header."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/media/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "mp3",
+      "domain": "audio",
+      "formats": [
+        "MP3 / MPEG audio Layer III"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": false,
+      "direction": "read",
+      "providers": [
+        {
+          "component": "media:dr_mp3",
+          "target": "LMX::dr_mp3",
+          "read_api": [
+            "drmp3_init_file",
+            "drmp3_read_pcm_frames_f32"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/dr_libs/dr_mp3.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "drmp3_init_file",
+              "path": "vendor/dr_libs/dr_mp3.h",
+              "line": 26
+            },
+            {
+              "symbol": "drmp3_read_pcm_frames_f32",
+              "path": "vendor/dr_libs/dr_mp3.h",
+              "line": 32
+            }
+          ]
+        },
+        {
+          "component": "media:minimp3",
+          "target": "LMX::minimp3",
+          "read_api": [
+            "mp3dec_decode_frame"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/minimp3/minimp3.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "mp3dec_decode_frame",
+              "path": "vendor/minimp3/minimp3.h",
+              "line": 36
+            }
+          ]
+        },
+        {
+          "component": "media:miniaudio",
+          "target": "LMX::miniaudio",
+          "read_api": [
+            "ma_decoder_init_file"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/miniaudio/miniaudio.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "ma_decoder_init_file",
+              "path": "vendor/miniaudio/miniaudio.h",
+              "line": 2523
+            }
+          ]
+        }
+      ],
+      "use_ru": "Превратить MP3 в PCM.",
+      "limitations_ru": [
+        "Decoders only; no MP3 encoder. dr_mp3 and minimp3 share ancestry, so do not count them as fully independent algorithms."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/media/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "flac",
+      "domain": "audio",
+      "formats": [
+        "native FLAC",
+        "Ogg FLAC"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": false,
+      "direction": "read",
+      "providers": [
+        {
+          "component": "media:dr_flac",
+          "target": "LMX::dr_flac",
+          "read_api": [
+            "drflac_open_file",
+            "drflac_read_pcm_frames_s32"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/dr_libs/dr_flac.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "drflac_open_file",
+              "path": "vendor/dr_libs/dr_flac.h",
+              "line": 23
+            },
+            {
+              "symbol": "drflac_read_pcm_frames_s32",
+              "path": "vendor/dr_libs/dr_flac.h",
+              "line": 29
+            }
+          ]
+        },
+        {
+          "component": "media:miniaudio",
+          "target": "LMX::miniaudio",
+          "read_api": [
+            "ma_decoder_init_file"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/miniaudio/miniaudio.h",
+          "availability": "compiled",
+          "formats": [
+            "native FLAC"
+          ],
+          "api_evidence": [
+            {
+              "symbol": "ma_decoder_init_file",
+              "path": "vendor/miniaudio/miniaudio.h",
+              "line": 2523
+            }
+          ]
+        }
+      ],
+      "use_ru": "Извлечь lossless PCM и поддерживаемые metadata.",
+      "limitations_ru": [
+        "Decoder only; no FLAC encoder.",
+        "Ogg FLAC support does not imply an Opus or arbitrary Ogg codec."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/media/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "vorbis",
+      "domain": "audio",
+      "formats": [
+        "Ogg Vorbis"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": false,
+      "direction": "read",
+      "providers": [
+        {
+          "component": "base:stb",
+          "target": "LMX::stb",
+          "read_api": [
+            "stb_vorbis_open_filename",
+            "stb_vorbis_decode_filename"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/stb/stb_vorbis.c",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "stb_vorbis_open_filename",
+              "path": "vendor/stb/stb_vorbis.c",
+              "line": 306
+            },
+            {
+              "symbol": "stb_vorbis_decode_filename",
+              "path": "vendor/stb/stb_vorbis.c",
+              "line": 290
+            }
+          ]
+        }
+      ],
+      "use_ru": "Прочитать Ogg Vorbis.",
+      "limitations_ru": [
+        "Vorbis decoder only; no Vorbis encoder or Opus support."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix."
+    },
+    {
+      "id": "mp1",
+      "domain": "audio",
+      "formats": [
+        "MPEG audio Layer I"
+      ],
+      "kind": "codec",
+      "compiled_read": true,
+      "compiled_write": false,
+      "direction": "read",
+      "providers": [
+        {
+          "component": "media:jo_mp1",
+          "target": "LMX::jo_mp1",
+          "read_api": [
+            "jo_read_mp1"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/jo_mp1/jo_mp1.cpp",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "jo_read_mp1",
+              "path": "vendor/jo_mp1/jo_mp1.cpp",
+              "line": 9
+            }
+          ]
+        }
+      ],
+      "use_ru": "Декодировать старые MPEG Layer I потоки.",
+      "limitations_ru": [
+        "Decoder only; public C99 signature is in generated media view, original source uses C++ references."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/media/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "mp2",
+      "domain": "audio",
+      "formats": [
+        "MPEG-1 audio Layer II"
+      ],
+      "kind": "codec",
+      "compiled_read": true,
+      "compiled_write": false,
+      "direction": "read",
+      "providers": [
+        {
+          "component": "media:pl_mpeg",
+          "target": "LMX::pl_mpeg",
+          "read_api": [
+            "plm_audio_decode"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/pl_mpeg/pl_mpeg.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "plm_audio_decode",
+              "path": "vendor/pl_mpeg/pl_mpeg.h",
+              "line": 805
+            }
+          ]
+        }
+      ],
+      "use_ru": "Декодировать MP2 audio из MPEG-PS или elementary stream.",
+      "limitations_ru": [
+        "Decoder only; distinct from MP3 and from a general MPEG audio writer."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/media/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "soundfont",
+      "domain": "audio",
+      "formats": [
+        "SoundFont2 SF2"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": false,
+      "direction": "read",
+      "providers": [
+        {
+          "component": "media:TinySoundFont",
+          "target": "LMX::tinysoundfont",
+          "read_api": [
+            "tsf_load_filename",
+            "tsf_render_float"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/tinysoundfont/tsf.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "tsf_load_filename",
+              "path": "vendor/tinysoundfont/tsf.h",
+              "line": 65
+            },
+            {
+              "symbol": "tsf_render_float",
+              "path": "vendor/tinysoundfont/tsf.h",
+              "line": 191
+            }
+          ]
+        }
+      ],
+      "use_ru": "Использовать сохранённый банк инструментов и синтезировать звук.",
+      "limitations_ru": [
+        "Reads instruments and synthesizes PCM; not an SF2 writer.",
+        "Does not itself parse standard MIDI files; MIDI event calls are a control API."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/media/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "midi_source",
+      "domain": "audio",
+      "formats": [
+        "Standard MIDI File"
+      ],
+      "kind": "file",
+      "compiled_read": false,
+      "compiled_write": false,
+      "direction": "source_only",
+      "providers": [
+        {
+          "component": "media:TinySoundFont",
+          "target": null,
+          "read_api": [
+            "tml_load_filename"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/tinysoundfont/tml.h",
+          "availability": "retained_source_only",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "tml_load_filename",
+              "path": "vendor/tinysoundfont/tml.h",
+              "line": 117
+            }
+          ]
+        }
+      ],
+      "use_ru": "Исходный задел для MIDI reader, не готовый compiled API.",
+      "limitations_ru": [
+        "tml.h retained but TML_IMPLEMENTATION is not compiled by the selected tinysoundfont adapter.",
+        "No ready compiled MIDI reader target is claimed; requires an explicit C translation unit and validation."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/media/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "mpeg_video",
+      "domain": "video",
+      "formats": [
+        "MPEG-1 video elementary stream"
+      ],
+      "kind": "codec",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "media:pl_mpeg",
+          "target": "LMX::pl_mpeg",
+          "read_api": [
+            "plm_video_decode"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/pl_mpeg/pl_mpeg.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "plm_video_decode",
+              "path": "vendor/pl_mpeg/pl_mpeg.h",
+              "line": 735
+            }
+          ]
+        },
+        {
+          "component": "media:jo_mpeg",
+          "target": "LMX::jo_mpeg",
+          "read_api": [],
+          "write_api": [
+            "jo_write_mpeg"
+          ],
+          "evidence_path": "vendor/jo_mpeg/jo_mpeg.cpp",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "jo_write_mpeg",
+              "path": "vendor/jo_mpeg/jo_mpeg.cpp",
+              "line": 16
+            }
+          ]
+        }
+      ],
+      "use_ru": "Декодировать MPEG-1 и создавать простые video sequences.",
+      "limitations_ru": [
+        "jo_mpeg emits a simple elementary sequence, not an MPEG-PS mux with audio.",
+        "Writer supports 24/25/30/50/60 fps; no modern multiprofile codec promise."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/media/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "mpeg_ps",
+      "domain": "video",
+      "formats": [
+        "MPEG Program Stream"
+      ],
+      "kind": "container",
+      "compiled_read": true,
+      "compiled_write": false,
+      "direction": "read",
+      "providers": [
+        {
+          "component": "media:pl_mpeg",
+          "target": "LMX::pl_mpeg",
+          "read_api": [
+            "plm_demux_decode"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/pl_mpeg/pl_mpeg.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "plm_demux_decode",
+              "path": "vendor/pl_mpeg/pl_mpeg.h",
+              "line": 665
+            }
+          ]
+        }
+      ],
+      "use_ru": "Извлечь video/audio packets и декодировать поддерживаемые streams.",
+      "limitations_ru": [
+        "Demux/read only; available bundled decoders are MPEG-1 video and MP2 audio.",
+        "Does not mean MPEG-2/4/HEVC decoding or arbitrary .mpg playback."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/media/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "h264",
+      "domain": "video",
+      "formats": [
+        "H.264/AVC baseline-oriented elementary stream"
+      ],
+      "kind": "codec",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "media:h264bsd",
+          "target": "LMX::h264bsd",
+          "read_api": [
+            "h264bsdDecode"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/h264bsd/src/h264bsd_decoder.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "h264bsdDecode",
+              "path": "vendor/h264bsd/src/h264bsd_decoder.h",
+              "line": 65
+            }
+          ]
+        },
+        {
+          "component": "media:minih264",
+          "target": "LMX::minih264",
+          "read_api": [],
+          "write_api": [
+            "H264E_encode"
+          ],
+          "evidence_path": "vendor/minih264/minih264e.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "H264E_encode",
+              "path": "vendor/minih264/minih264e.h",
+              "line": 291
+            }
+          ]
+        }
+      ],
+      "use_ru": "Читать поддерживаемый H.264 и кодировать raw YUV frames.",
+      "limitations_ru": [
+        "Selected decoder is h264bsd baseline-oriented implementation; do not claim general High-profile/CABAC support.",
+        "Raw elementary-stream codec; no MP4/MOV demux/mux.",
+        "Encoder has width/height/alignment and callback threading constraints documented in its header."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/media/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "webm",
+      "domain": "video",
+      "formats": [
+        "WebM/Matroska subset"
+      ],
+      "kind": "container",
+      "compiled_read": true,
+      "compiled_write": false,
+      "direction": "read",
+      "providers": [
+        {
+          "component": "media:nestegg",
+          "target": "LMX::nestegg",
+          "read_api": [
+            "nestegg_init",
+            "nestegg_read_packet"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/nestegg/include/nestegg/nestegg.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "nestegg_init",
+              "path": "vendor/nestegg/include/nestegg/nestegg.h",
+              "line": 30
+            },
+            {
+              "symbol": "nestegg_read_packet",
+              "path": "vendor/nestegg/include/nestegg/nestegg.h",
+              "line": 33
+            }
+          ]
+        }
+      ],
+      "use_ru": "Извлечь дорожки и compressed packets из поддерживаемого WebM.",
+      "limitations_ru": [
+        "Demux only: returns compressed packets, metadata and codec identifiers.",
+        "No WebM writer or bundled general VP8/VP9/AV1/Opus decoder follows from nestegg."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/media/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "zip",
+      "domain": "archives",
+      "formats": [
+        "ZIP"
+      ],
+      "kind": "container",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "systems:miniz",
+          "target": "LMX::miniz",
+          "read_api": [
+            "mz_zip_reader_init_file"
+          ],
+          "write_api": [
+            "mz_zip_writer_init_file"
+          ],
+          "evidence_path": "vendor/miniz/miniz_zip.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "mz_zip_reader_init_file",
+              "path": "vendor/miniz/miniz_zip.h",
+              "line": 223
+            },
+            {
+              "symbol": "mz_zip_writer_init_file",
+              "path": "vendor/miniz/miniz_zip.h",
+              "line": 369
+            }
+          ]
+        },
+        {
+          "component": "archives:kuba_zip",
+          "target": "LMX::kuba_zip",
+          "read_api": [
+            "zip_open",
+            "zip_entry_read"
+          ],
+          "write_api": [
+            "zip_entry_write"
+          ],
+          "evidence_path": "vendor/kuba_zip/src/zip.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "zip_open",
+              "path": "vendor/kuba_zip/src/zip.h",
+              "line": 159
+            },
+            {
+              "symbol": "zip_entry_read",
+              "path": "vendor/kuba_zip/src/zip.h",
+              "line": 433
+            },
+            {
+              "symbol": "zip_entry_write",
+              "path": "vendor/kuba_zip/src/zip.h",
+              "line": 401
+            }
+          ]
+        },
+        {
+          "component": "xlsxio:minizip",
+          "target": "LMX::minizip",
+          "read_api": [
+            "unzOpen"
+          ],
+          "write_api": [
+            "zipOpen"
+          ],
+          "evidence_path": "vendor/zlib/contrib/minizip/unzip.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "unzOpen",
+              "path": "vendor/zlib/contrib/minizip/unzip.h",
+              "line": 167
+            },
+            {
+              "symbol": "zipOpen",
+              "path": "vendor/zlib/contrib/minizip/zip.h",
+              "line": 117
+            }
+          ]
+        }
+      ],
+      "use_ru": "Извлечь и создать ZIP, в том числе для OOXML packages.",
+      "limitations_ru": [
+        "Both directions with stored/DEFLATE entries; supported ZIP64/encryption/extra methods differ by backend.",
+        "Do not infer support for all ZIP compression/encryption extensions from a .zip suffix.",
+        "MiniZip writer declarations are in contrib/minizip/zip.h; namespaced includes avoid kuba_zip collision."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/archives/CMakeLists.txt",
+        "extensions/xlsxio/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "tar",
+      "domain": "archives",
+      "formats": [
+        "TAR basic subset"
+      ],
+      "kind": "container",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "systems:microtar",
+          "target": "LMX::microtar",
+          "read_api": [
+            "mtar_read_header",
+            "mtar_read_data"
+          ],
+          "write_api": [
+            "mtar_write_header",
+            "mtar_write_data"
+          ],
+          "evidence_path": "vendor/microtar/src/microtar.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "mtar_read_header",
+              "path": "vendor/microtar/src/microtar.h",
+              "line": 72
+            },
+            {
+              "symbol": "mtar_read_data",
+              "path": "vendor/microtar/src/microtar.h",
+              "line": 73
+            },
+            {
+              "symbol": "mtar_write_header",
+              "path": "vendor/microtar/src/microtar.h",
+              "line": 75
+            },
+            {
+              "symbol": "mtar_write_data",
+              "path": "vendor/microtar/src/microtar.h",
+              "line": 78
+            }
+          ]
+        }
+      ],
+      "use_ru": "Извлечь и создать простой tar archive.",
+      "limitations_ru": [
+        "100-byte name/linkname fields and unsigned sizes in public header; no promise of PAX/GNU long-name/large-file extensions.",
+        "No built-in gzip/xz layer; compose compression separately."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix."
+    },
+    {
+      "id": "deflate",
+      "domain": "archives",
+      "formats": [
+        "raw DEFLATE",
+        "zlib stream",
+        "gzip"
+      ],
+      "kind": "codec",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "base:zlib",
+          "target": "LMX::zlib",
+          "read_api": [
+            "inflate",
+            "gzread"
+          ],
+          "write_api": [
+            "deflate",
+            "gzwrite"
+          ],
+          "evidence_path": "vendor/zlib/zlib.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "inflate",
+              "path": "vendor/zlib/zlib.h",
+              "line": 107
+            },
+            {
+              "symbol": "gzread",
+              "path": "vendor/zlib/zlib.h",
+              "line": 895
+            },
+            {
+              "symbol": "deflate",
+              "path": "vendor/zlib/zlib.h",
+              "line": 28
+            },
+            {
+              "symbol": "gzwrite",
+              "path": "vendor/zlib/zlib.h",
+              "line": 1526
+            }
+          ]
+        },
+        {
+          "component": "systems:miniz",
+          "target": "LMX::miniz",
+          "read_api": [
+            "mz_inflate"
+          ],
+          "write_api": [
+            "mz_deflate"
+          ],
+          "evidence_path": "vendor/miniz/miniz.h",
+          "availability": "compiled",
+          "formats": [
+            "raw DEFLATE",
+            "zlib stream"
+          ],
+          "api_evidence": [
+            {
+              "symbol": "mz_inflate",
+              "path": "vendor/miniz/miniz.h",
+              "line": 434
+            },
+            {
+              "symbol": "mz_deflate",
+              "path": "vendor/miniz/miniz.h",
+              "line": 369
+            }
+          ]
+        }
+      ],
+      "use_ru": "Распаковывать и создавать standard compressed streams.",
+      "limitations_ru": [
+        "gzip container support here comes from zlib; do not infer full gz* API in miniz.",
+        "A compressor is not a multi-file archive format."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix."
+    },
+    {
+      "id": "lz4",
+      "domain": "archives",
+      "formats": [
+        "LZ4 block",
+        "LZ4 frame"
+      ],
+      "kind": "codec",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "systems:lz4",
+          "target": "LMX::lz4",
+          "read_api": [
+            "LZ4_decompress_safe"
+          ],
+          "write_api": [
+            "LZ4_compress_default"
+          ],
+          "evidence_path": "vendor/lz4/lib/lz4.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "LZ4_decompress_safe",
+              "path": "vendor/lz4/lib/lz4.h",
+              "line": 67
+            },
+            {
+              "symbol": "LZ4_compress_default",
+              "path": "vendor/lz4/lib/lz4.h",
+              "line": 181
+            }
+          ]
+        },
+        {
+          "component": "systems:lz4",
+          "target": "LMX::lz4",
+          "read_api": [
+            "LZ4F_decompress"
+          ],
+          "write_api": [
+            "LZ4F_compressFrame"
+          ],
+          "evidence_path": "vendor/lz4/lib/lz4frame.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "LZ4F_decompress",
+              "path": "vendor/lz4/lib/lz4frame.h",
+              "line": 525
+            },
+            {
+              "symbol": "LZ4F_compressFrame",
+              "path": "vendor/lz4/lib/lz4frame.h",
+              "line": 241
+            }
+          ]
+        }
+      ],
+      "use_ru": "Быстрое сжатие/распаковка block и framed data.",
+      "limitations_ru": [
+        "Block API needs external original-size/boundary information; frame API carries framing."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix."
+    },
+    {
+      "id": "zstd",
+      "domain": "archives",
+      "formats": [
+        "Zstandard modern frames"
+      ],
+      "kind": "codec",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "archives:zstd",
+          "target": "LMX::zstd",
+          "read_api": [
+            "ZSTD_decompress"
+          ],
+          "write_api": [
+            "ZSTD_compress"
+          ],
+          "evidence_path": "vendor/zstd/lib/zstd.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "ZSTD_decompress",
+              "path": "vendor/zstd/lib/zstd.h",
+              "line": 164
+            },
+            {
+              "symbol": "ZSTD_compress",
+              "path": "vendor/zstd/lib/zstd.h",
+              "line": 154
+            }
+          ]
+        }
+      ],
+      "use_ru": "Читать и создавать zstd streams и использовать словари.",
+      "limitations_ru": [
+        "Selected amalgamation disables legacy <=0.7 frames and assembly; dictionary APIs included."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/archives/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "lzma_7z",
+      "domain": "archives",
+      "formats": [
+        "7z",
+        "LZMA",
+        "LZMA2",
+        "PPMd7 decode"
+      ],
+      "kind": "container",
+      "compiled_read": true,
+      "compiled_write": false,
+      "direction": "read",
+      "providers": [
+        {
+          "component": "archives:lzma_sdk",
+          "target": "LMX::lzma_sdk",
+          "read_api": [
+            "SzArEx_Open",
+            "SzArEx_Extract"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/lzma_sdk/C/7z.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "SzArEx_Open",
+              "path": "vendor/lzma_sdk/C/7z.h",
+              "line": 189
+            },
+            {
+              "symbol": "SzArEx_Extract",
+              "path": "vendor/lzma_sdk/C/7z.h",
+              "line": 156
+            }
+          ]
+        },
+        {
+          "component": "archives:lzma_sdk",
+          "target": "LMX::lzma_sdk",
+          "read_api": [
+            "LzmaDecode"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/lzma_sdk/C/LzmaDec.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "LzmaDecode",
+              "path": "vendor/lzma_sdk/C/LzmaDec.h",
+              "line": 211
+            }
+          ]
+        }
+      ],
+      "use_ru": "Извлечь поддерживаемые 7z и декодировать raw LZMA/LZMA2.",
+      "limitations_ru": [
+        "CMake explicitly defines Z7_EXTRACT_ONLY and lists decoder sources; encoder headers/source existence does not create a writer target.",
+        "No XZ container API or encrypted-7z support is established by this selected source list."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/archives/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "heatshrink",
+      "domain": "archives",
+      "formats": [
+        "heatshrink compressed byte stream"
+      ],
+      "kind": "codec",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "storage_extra:heatshrink",
+          "target": "LMX::heatshrink",
+          "read_api": [
+            "heatshrink_decoder_sink"
+          ],
+          "write_api": [
+            "heatshrink_encoder_sink"
+          ],
+          "evidence_path": "vendor/heatshrink/heatshrink_encoder.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "heatshrink_decoder_sink",
+              "path": "vendor/heatshrink/heatshrink_decoder.h",
+              "line": 87
+            },
+            {
+              "symbol": "heatshrink_encoder_sink",
+              "path": "vendor/heatshrink/heatshrink_encoder.h",
+              "line": 96
+            }
+          ]
+        }
+      ],
+      "use_ru": "Компактный streaming codec для малой памяти.",
+      "limitations_ru": [
+        "Streaming codec; caller must preserve window/lookahead parameters and framing/length conventions.",
+        "Not a general ZIP/TAR container."
+      ],
+      "verification": "storage_extra VERIFICATION.json: original and retained builds, six focused tests PASS; exact scope and NOT_RUN items recorded there.",
+      "build_evidence": [
+        "extensions/storage_extra/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "messagepack",
+      "domain": "binary_data",
+      "formats": [
+        "MessagePack"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "archives:cmp",
+          "target": "LMX::cmp",
+          "read_api": [
+            "cmp_read_object"
+          ],
+          "write_api": [
+            "cmp_write_object"
+          ],
+          "evidence_path": "vendor/cmp/cmp.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "cmp_read_object",
+              "path": "vendor/cmp/cmp.h",
+              "line": 324
+            },
+            {
+              "symbol": "cmp_write_object",
+              "path": "vendor/cmp/cmp.h",
+              "line": 237
+            }
+          ]
+        },
+        {
+          "component": "archives:mpack",
+          "target": "LMX::mpack",
+          "read_api": [
+            "mpack_read_tag"
+          ],
+          "write_api": [
+            "mpack_write_tag"
+          ],
+          "evidence_path": "vendor/mpack/src/mpack/mpack.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "mpack_read_tag",
+              "path": "vendor/mpack/src/mpack/mpack-reader.h",
+              "line": 270
+            },
+            {
+              "symbol": "mpack_write_tag",
+              "path": "vendor/mpack/src/mpack/mpack-writer.h",
+              "line": 548
+            }
+          ]
+        }
+      ],
+      "use_ru": "Читать и создавать typed MessagePack с двумя API.",
+      "limitations_ru": [
+        "Type/buffer/tree ownership belongs to caller; extension type meanings are application-defined."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/archives/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "protobuf",
+      "domain": "binary_data",
+      "formats": [
+        "Protocol Buffers wire format"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "archives:nanopb",
+          "target": "LMX::nanopb",
+          "read_api": [
+            "pb_decode"
+          ],
+          "write_api": [
+            "pb_encode"
+          ],
+          "evidence_path": "vendor/nanopb/pb_decode.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "pb_decode",
+              "path": "vendor/nanopb/pb_decode.h",
+              "line": 1
+            },
+            {
+              "symbol": "pb_encode",
+              "path": "vendor/nanopb/pb.h",
+              "line": 2
+            }
+          ]
+        }
+      ],
+      "use_ru": "Обмен данными с schema-defined devices/services.",
+      "limitations_ru": [
+        "Requires the matching schema and generated C field descriptors; arbitrary bytes are not self-describing.",
+        "Encoder declarations are pb_encode.h; generator/protoc are host tooling, not part of the C runtime."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/archives/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "cbor",
+      "domain": "binary_data",
+      "formats": [
+        "CBOR"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "storage_extra:qcbor",
+          "target": "LMX::qcbor",
+          "read_api": [
+            "QCBORDecode_GetNext"
+          ],
+          "write_api": [
+            "QCBOREncode_Finish"
+          ],
+          "evidence_path": "vendor/qcbor/inc/qcbor/qcbor_decode.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "QCBORDecode_GetNext",
+              "path": "vendor/qcbor/inc/qcbor/qcbor_decode.h",
+              "line": 66
+            },
+            {
+              "symbol": "QCBOREncode_Finish",
+              "path": "vendor/qcbor/inc/qcbor/qcbor_encode.h",
+              "line": 190
+            }
+          ]
+        },
+        {
+          "component": "storage_extra:tinycbor",
+          "target": "LMX::tinycbor",
+          "read_api": [
+            "cbor_parser_init"
+          ],
+          "write_api": [
+            "cbor_encoder_init"
+          ],
+          "evidence_path": "vendor/tinycbor/src/cbor.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "cbor_parser_init",
+              "path": "vendor/tinycbor/src/cbor.h",
+              "line": 355
+            },
+            {
+              "symbol": "cbor_encoder_init",
+              "path": "vendor/tinycbor/src/cbor.h",
+              "line": 241
+            }
+          ]
+        }
+      ],
+      "use_ru": "Читать и создавать self-describing typed binary values.",
+      "limitations_ru": [
+        "Both targets compiled and cross-decoding tested; tagged decimal/bigfloat values are interchange representations, not arithmetic implementations.",
+        "QCBOR encode header is qcbor_encode.h. TinyCBOR JSON conversion not in portable target."
+      ],
+      "verification": "storage_extra VERIFICATION.json: original and retained builds, six focused tests PASS; exact scope and NOT_RUN items recorded there.",
+      "build_evidence": [
+        "extensions/storage_extra/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "bson",
+      "domain": "binary_data",
+      "formats": [
+        "BSON",
+        "MongoDB Extended JSON bridge"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "databases:mongo_c_driver",
+          "target": "LMX::bson",
+          "read_api": [
+            "bson_new_from_data",
+            "bson_new_from_json"
+          ],
+          "write_api": [
+            "bson_append_int32",
+            "bson_as_canonical_extended_json"
+          ],
+          "evidence_path": "vendor/mongo_c_driver/src/libbson/src/bson/bson.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "bson_new_from_data",
+              "path": "vendor/mongo_c_driver/src/libbson/src/bson/bson.h",
+              "line": 222
+            },
+            {
+              "symbol": "bson_new_from_json",
+              "path": "vendor/mongo_c_driver/src/libbson/src/bson/bson.h",
+              "line": 168
+            },
+            {
+              "symbol": "bson_append_int32",
+              "path": "vendor/mongo_c_driver/src/libbson/src/bson/bson.h",
+              "line": 122
+            },
+            {
+              "symbol": "bson_as_canonical_extended_json",
+              "path": "vendor/mongo_c_driver/src/libbson/src/bson/bson.h",
+              "line": 478
+            }
+          ]
+        }
+      ],
+      "use_ru": "Извлечь и создать BSON documents, преобразовать поддерживаемый Extended JSON.",
+      "limitations_ru": [
+        "libbson works on local data without a MongoDB server.",
+        "Does not read WiredTiger/MongoDB database storage files; mongoc is a network client."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix."
+    },
+    {
+      "id": "gltf",
+      "domain": "models",
+      "formats": [
+        "glTF 2.0 JSON",
+        "GLB"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "documents:cgltf",
+          "target": "LMX::cgltf",
+          "read_api": [
+            "cgltf_parse",
+            "cgltf_load_buffers"
+          ],
+          "write_api": [
+            "cgltf_write_file"
+          ],
+          "evidence_path": "vendor/cgltf/cgltf.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "cgltf_parse",
+              "path": "vendor/cgltf/cgltf.h",
+              "line": 17
+            },
+            {
+              "symbol": "cgltf_load_buffers",
+              "path": "vendor/cgltf/cgltf.h",
+              "line": 37
+            },
+            {
+              "symbol": "cgltf_write_file",
+              "path": "vendor/cgltf/cgltf_write.h",
+              "line": 17
+            }
+          ]
+        }
+      ],
+      "use_ru": "Прочитать scene/mesh/material metadata и buffers; создать glTF/GLB.",
+      "limitations_ru": [
+        "Writer header is cgltf_write.h: GLB can include supplied binary buffer; JSON-only output also supported.",
+        "External buffers and images are not automatically written.",
+        "Compression-extension metadata is not a Draco/BasisU decoder; referenced assets/codecs remain separate."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/documents/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "obj",
+      "domain": "models",
+      "formats": [
+        "Wavefront OBJ",
+        "MTL companion"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": false,
+      "direction": "read",
+      "providers": [
+        {
+          "component": "documents:fast_obj",
+          "target": "LMX::fast_obj",
+          "read_api": [
+            "fast_obj_read"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/fast_obj/fast_obj.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "fast_obj_read",
+              "path": "vendor/fast_obj/fast_obj.h",
+              "line": 175
+            }
+          ]
+        }
+      ],
+      "use_ru": "Извлечь mesh geometry, indices и material references.",
+      "limitations_ru": [
+        "Reader only; does not create OBJ/MTL or decode texture images."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
+      "build_evidence": [
+        "extensions/documents/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "shapefile",
+      "domain": "geospatial",
+      "formats": [
+        "ESRI Shapefile SHP/SHX",
+        "DBF"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "geospatial:shapelib",
+          "target": "LMX::shapelib",
+          "read_api": [
+            "SHPOpen",
+            "SHPReadObject",
+            "DBFOpen"
+          ],
+          "write_api": [
+            "SHPCreate",
+            "SHPWriteObject",
+            "DBFWriteStringAttribute"
+          ],
+          "evidence_path": "vendor/shapelib/shapefil.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "SHPOpen",
+              "path": "vendor/shapelib/shapefil.h",
+              "line": 273
+            },
+            {
+              "symbol": "SHPReadObject",
+              "path": "vendor/shapelib/shapefil.h",
+              "line": 286
+            },
+            {
+              "symbol": "DBFOpen",
+              "path": "vendor/shapelib/shapefil.h",
+              "line": 491
+            },
+            {
+              "symbol": "SHPCreate",
+              "path": "vendor/shapelib/shapefil.h",
+              "line": 292
+            },
+            {
+              "symbol": "SHPWriteObject",
+              "path": "vendor/shapelib/shapefil.h",
+              "line": 300
+            },
+            {
+              "symbol": "DBFWriteStringAttribute",
+              "path": "vendor/shapelib/shapefil.h",
+              "line": 544
+            }
+          ]
+        }
+      ],
+      "use_ru": "Читать и создавать vector geometry и attribute tables.",
+      "limitations_ru": [
+        "SHP/SHX/DBF I/O; not a complete GIS renderer or CRS/.prj interpreter.",
+        "DBF encoding/codepage handling must match the external data; do not assume automatic Unicode normalization."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix."
+    },
+    {
+      "id": "nmea",
+      "domain": "geospatial",
+      "formats": [
+        "NMEA 0183 supported sentences"
+      ],
+      "kind": "wire_or_text",
+      "compiled_read": true,
+      "compiled_write": false,
+      "direction": "read",
+      "providers": [
+        {
+          "component": "geospatial:minmea",
+          "target": "LMX::minmea",
+          "read_api": [
+            "minmea_parse_rmc",
+            "minmea_parse_gga"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/minmea/minmea.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "minmea_parse_rmc",
+              "path": "vendor/minmea/minmea.h",
+              "line": 244
+            },
+            {
+              "symbol": "minmea_parse_gga",
+              "path": "vendor/minmea/minmea.h",
+              "line": 245
+            }
+          ]
+        }
+      ],
+      "use_ru": "Извлечь GPS positions, time, satellites and navigation readings.",
+      "limitations_ru": [
+        "Supported sentence parsers and checksum helpers; not a universal NMEA sentence writer."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix."
+    },
+    {
+      "id": "tle",
+      "domain": "geospatial",
+      "formats": [
+        "TLE two-line orbital elements"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": false,
+      "direction": "read",
+      "providers": [
+        {
+          "component": "orbits:sgp4",
+          "target": "LMX::sgp4",
+          "read_api": [
+            "parseLines"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/sgp4/src/c/TLE.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "parseLines",
+              "path": "vendor/sgp4/src/c/TLE.h",
+              "line": 28
+            }
+          ]
+        }
+      ],
+      "use_ru": "Прочитать сохранённые TLE и вычислить orbital states.",
+      "limitations_ru": [
+        "TLE parsing plus SGP4 propagation; no TLE writer or orbit-fitting/inverse TLE production."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix."
+    },
+    {
+      "id": "fasta_fastq",
+      "domain": "science",
+      "formats": [
+        "FASTA",
+        "FASTQ"
+      ],
+      "kind": "file",
+      "compiled_read": false,
+      "compiled_write": false,
+      "direction": "source_only",
+      "providers": [
+        {
+          "component": "base:klib",
+          "target": "LMX::klib_headers",
+          "read_api": [
+            "kseq_read"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/klib/kseq.h",
+          "availability": "header_instantiation",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "kseq_read",
+              "path": "vendor/klib/kseq.h",
+              "line": 178
+            }
+          ]
+        }
+      ],
+      "use_ru": "Задел для последовательностей и quality scores; требуется C instantiation.",
+      "limitations_ru": [
+        "Macro-generated parser; caller supplies read callback and KSEQ_INIT instantiation.",
+        "No generic writer or SAM/BAM parser is implied; compiled library archive alone does not instantiate kseq for a chosen stream type."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix."
+    },
+    {
+      "id": "bgzf",
+      "domain": "science",
+      "formats": [
+        "BGZF"
+      ],
+      "kind": "codec",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "base:klib",
+          "target": "LMX::klib",
+          "read_api": [
+            "bgzf_read"
+          ],
+          "write_api": [
+            "bgzf_write"
+          ],
+          "evidence_path": "vendor/klib/bgzf.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "bgzf_read",
+              "path": "vendor/klib/bgzf.h",
+              "line": 102
+            },
+            {
+              "symbol": "bgzf_write",
+              "path": "vendor/klib/bgzf.h",
+              "line": 112
+            }
+          ]
+        }
+      ],
+      "use_ru": "Читать и писать seekable blocked gzip для bioinformatics data.",
+      "limitations_ru": [
+        "Selected UNIX/POSIX klib profile with zlib; not universally enabled on every platform.",
+        "BGZF compression/container support is not complete BAM/CRAM decoding."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix."
+    },
+    {
+      "id": "newick",
+      "domain": "science",
+      "formats": [
+        "Newick/NHX tree subset"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "base:klib",
+          "target": "LMX::klib",
+          "read_api": [
+            "kn_parse"
+          ],
+          "write_api": [
+            "kn_format"
+          ],
+          "evidence_path": "vendor/klib/knhx.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "kn_parse",
+              "path": "vendor/klib/knhx.h",
+              "line": 28
+            },
+            {
+              "symbol": "kn_format",
+              "path": "vendor/klib/knhx.h",
+              "line": 29
+            }
+          ]
+        }
+      ],
+      "use_ru": "Прочитать и сформировать phylogenetic tree notation.",
+      "limitations_ru": [
+        "Node/name/distance representation; do not promise preservation of every NHX extension or comments."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix."
+    },
+    {
+      "id": "sqlite",
+      "domain": "storage",
+      "formats": [
+        "SQLite database file"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "base:sqlite3",
+          "target": "LMX::sqlite3",
+          "read_api": [
+            "sqlite3_open",
+            "sqlite3_prepare_v2"
+          ],
+          "write_api": [
+            "sqlite3_step",
+            "sqlite3_backup_init"
+          ],
+          "evidence_path": "vendor/sqlite3/sqlite3.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "sqlite3_open",
+              "path": "vendor/sqlite3/sqlite3.h",
+              "line": 267
+            },
+            {
+              "symbol": "sqlite3_prepare_v2",
+              "path": "vendor/sqlite3/sqlite3.h",
+              "line": 271
+            },
+            {
+              "symbol": "sqlite3_step",
+              "path": "vendor/sqlite3/sqlite3.h",
+              "line": 371
+            },
+            {
+              "symbol": "sqlite3_backup_init",
+              "path": "vendor/sqlite3/sqlite3.h",
+              "line": 9633
+            }
+          ]
+        }
+      ],
+      "use_ru": "Открыть внешний SQLite archive, извлечь rows и создать/backup database.",
+      "limitations_ru": [
+        "Full SQLite file engine with its own transaction/WAL rules; LMX decides application meaning.",
+        "No SQLCipher encryption or PostgreSQL/MySQL physical-file compatibility is established."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix."
+    },
+    {
+      "id": "flashdb",
+      "domain": "storage",
+      "formats": [
+        "FlashDB native sector KV/time-series representation"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "storage_extra:flashdb",
+          "target": "LMX::flashdb",
+          "read_api": [
+            "fdb_kv_get_blob",
+            "fdb_tsl_iter"
+          ],
+          "write_api": [
+            "fdb_kv_set_blob",
+            "fdb_tsl_append"
+          ],
+          "evidence_path": "vendor/flashdb/inc/flashdb.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "fdb_kv_get_blob",
+              "path": "vendor/flashdb/inc/flashdb.h",
+              "line": 52
+            },
+            {
+              "symbol": "fdb_tsl_iter",
+              "path": "vendor/flashdb/inc/flashdb.h",
+              "line": 64
+            },
+            {
+              "symbol": "fdb_kv_set_blob",
+              "path": "vendor/flashdb/inc/flashdb.h",
+              "line": 51
+            },
+            {
+              "symbol": "fdb_tsl_append",
+              "path": "vendor/flashdb/inc/flashdb.h",
+              "line": 62
+            }
+          ]
+        }
+      ],
+      "use_ru": "Читать и создавать sector journals/blobs/records в формате FlashDB.",
+      "limitations_ru": [
+        "Lower-level native representation; no replacement LMX object/settings architecture.",
+        "Verified C FILE sector backend; real flash/FAL execution NOT_RUN.",
+        "Typed callback adaptation changes only SET_LOCK/UNLOCK control argument contract; see storage_extra README."
+      ],
+      "verification": "storage_extra VERIFICATION.json: original and retained builds, six focused tests PASS; exact scope and NOT_RUN items recorded there.",
+      "build_evidence": [
+        "extensions/storage_extra/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "fat",
+      "domain": "media_filesystems",
+      "formats": [
+        "FAT12",
+        "FAT16",
+        "FAT32",
+        "exFAT"
+      ],
+      "kind": "medium",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "storage_extra:fatfs",
+          "target": "LMX::fatfs",
+          "read_api": [
+            "f_mount",
+            "f_read"
+          ],
+          "write_api": [
+            "f_write",
+            "f_mkfs"
+          ],
+          "evidence_path": "vendor/fatfs/source/ff.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "f_mount",
+              "path": "vendor/fatfs/source/ff.h",
+              "line": 349
+            },
+            {
+              "symbol": "f_read",
+              "path": "vendor/fatfs/source/ff.h",
+              "line": 325
+            },
+            {
+              "symbol": "f_write",
+              "path": "vendor/fatfs/source/ff.h",
+              "line": 326
+            },
+            {
+              "symbol": "f_mkfs",
+              "path": "vendor/fatfs/source/ff.h",
+              "line": 279
+            }
+          ]
+        }
+      ],
+      "use_ru": "Открыть, создать и изменять файлы на совместимых block media.",
+      "limitations_ru": [
+        "Needs caller block-device driver; a filesystem codec is not an OS disk-enumeration driver.",
+        "Selected profile UTF-8 LFN + CP437 OEM short names; Unicode case conversion retained; fixed date without RTC.",
+        "FAT and exFAT RAM roundtrip tested; separate FAT32 image and physical-media testing NOT_RUN."
+      ],
+      "verification": "storage_extra VERIFICATION.json: original and retained builds, six focused tests PASS; exact scope and NOT_RUN items recorded there.",
+      "build_evidence": [
+        "extensions/storage_extra/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "littlefs",
+      "domain": "media_filesystems",
+      "formats": [
+        "littlefs on-disk format"
+      ],
+      "kind": "medium",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "storage_extra:littlefs",
+          "target": "LMX::littlefs",
+          "read_api": [
+            "lfs_mount",
+            "lfs_file_read"
+          ],
+          "write_api": [
+            "lfs_format",
+            "lfs_file_write"
+          ],
+          "evidence_path": "vendor/littlefs/lfs.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "lfs_mount",
+              "path": "vendor/littlefs/lfs.h",
+              "line": 495
+            },
+            {
+              "symbol": "lfs_file_read",
+              "path": "vendor/littlefs/lfs.h",
+              "line": 614
+            },
+            {
+              "symbol": "lfs_format",
+              "path": "vendor/littlefs/lfs.h",
+              "line": 484
+            },
+            {
+              "symbol": "lfs_file_write",
+              "path": "vendor/littlefs/lfs.h",
+              "line": 624
+            }
+          ]
+        }
+      ],
+      "use_ru": "Доступ к hierarchical filesystem на NOR-like flash.",
+      "limitations_ru": [
+        "Requires erase/read/prog/sync callbacks and matching geometry/configuration.",
+        "File system format is not FAT; RAM NOR test does not prove physical power-cut behavior."
+      ],
+      "verification": "storage_extra VERIFICATION.json: original and retained builds, six focused tests PASS; exact scope and NOT_RUN items recorded there.",
+      "build_evidence": [
+        "extensions/storage_extra/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "spiffs",
+      "domain": "media_filesystems",
+      "formats": [
+        "SPIFFS on-disk format"
+      ],
+      "kind": "medium",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "storage_extra:spiffs",
+          "target": "LMX::spiffs",
+          "read_api": [
+            "SPIFFS_mount",
+            "SPIFFS_read"
+          ],
+          "write_api": [
+            "SPIFFS_format",
+            "SPIFFS_write"
+          ],
+          "evidence_path": "vendor/spiffs/src/spiffs.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "SPIFFS_mount",
+              "path": "vendor/spiffs/src/spiffs.h",
+              "line": 391
+            },
+            {
+              "symbol": "SPIFFS_read",
+              "path": "vendor/spiffs/src/spiffs.h",
+              "line": 461
+            },
+            {
+              "symbol": "SPIFFS_format",
+              "path": "vendor/spiffs/src/spiffs.h",
+              "line": 380
+            },
+            {
+              "symbol": "SPIFFS_write",
+              "path": "vendor/spiffs/src/spiffs.h",
+              "line": 471
+            }
+          ]
+        }
+      ],
+      "use_ru": "Независимый доступ к flat flash filesystem, включая consistency check.",
+      "limitations_ru": [
+        "Flat names, no directories; format/configuration geometry must match.",
+        "Selected ISO C99 profile has cache off; physical media and exhaustive recovery tests NOT_RUN."
+      ],
+      "verification": "storage_extra VERIFICATION.json: original and retained builds, six focused tests PASS; exact scope and NOT_RUN items recorded there.",
+      "build_evidence": [
+        "extensions/storage_extra/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "qr",
+      "domain": "optical_codes",
+      "formats": [
+        "QR Code"
+      ],
+      "kind": "optical_symbol",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "extras:quirc",
+          "target": "LMX::quirc",
+          "read_api": [
+            "quirc_decode"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/quirc/lib/quirc.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "quirc_decode",
+              "path": "vendor/quirc/lib/quirc.h",
+              "line": 168
+            }
+          ]
+        },
+        {
+          "component": "extras:qrcodegen",
+          "target": "LMX::qrcodegen",
+          "read_api": [],
+          "write_api": [
+            "qrcodegen_encodeBinary",
+            "qrcodegen_encodeText"
+          ],
+          "evidence_path": "vendor/qrcodegen/c/qrcodegen.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "qrcodegen_encodeBinary",
+              "path": "vendor/qrcodegen/c/qrcodegen.h",
+              "line": 45
+            },
+            {
+              "symbol": "qrcodegen_encodeText",
+              "path": "vendor/qrcodegen/c/qrcodegen.h",
+              "line": 45
+            }
+          ]
+        }
+      ],
+      "use_ru": "Прочитать QR с изображения и создать QR matrix.",
+      "limitations_ru": [
+        "quirc reads codes from grayscale pixels; qrcodegen creates a module matrix.",
+        "Image file decoding/encoding is a separate step; neither is a universal barcode reader."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix."
+    },
+    {
+      "id": "certificates",
+      "domain": "security_interchange",
+      "formats": [
+        "X.509 certificate/CSR DER",
+        "PEM",
+        "public/private-key DER/PEM"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "base:mbedtls",
+          "target": "LMX::mbedx509",
+          "read_api": [
+            "mbedtls_x509_crt_parse"
+          ],
+          "write_api": [
+            "mbedtls_x509write_crt_pem"
+          ],
+          "evidence_path": "vendor/mbedtls/include/mbedtls/x509_crt.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "mbedtls_x509_crt_parse",
+              "path": "vendor/mbedtls/include/mbedtls/x509_crt.h",
+              "line": 529
+            },
+            {
+              "symbol": "mbedtls_x509write_crt_pem",
+              "path": "vendor/mbedtls/include/mbedtls/x509_crt.h",
+              "line": 1196
+            }
+          ]
+        },
+        {
+          "component": "base:mbedtls",
+          "target": "LMX::mbedcrypto",
+          "read_api": [
+            "mbedtls_pk_parse_key"
+          ],
+          "write_api": [
+            "mbedtls_pk_write_key_pem"
+          ],
+          "evidence_path": "vendor/mbedtls/include/mbedtls/pk.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "mbedtls_pk_parse_key",
+              "path": "vendor/mbedtls/include/mbedtls/pk.h",
+              "line": 1116
+            },
+            {
+              "symbol": "mbedtls_pk_write_key_pem",
+              "path": "vendor/mbedtls/include/mbedtls/pk.h",
+              "line": 1260
+            }
+          ]
+        }
+      ],
+      "use_ru": "Прочитать сертификаты/ключи локальной инфраструктуры и сформировать поддерживаемые DER/PEM objects.",
+      "limitations_ru": [
+        "Parse/write support does not assert trust; the application supplies policy, trust anchors, time and randomness where operations require them.",
+        "Selected shared Mbed TLS profile uses POSIX threads/MinGW winpthreads.",
+        "No OpenPGP, arbitrary PKCS#12 or PDF signature format support is inferred."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix."
+    },
+    {
+      "id": "tinyspline_json",
+      "domain": "science",
+      "formats": [
+        "TinySpline JSON serialization"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "base:tinyspline",
+          "target": "LMX::tinyspline",
+          "read_api": [
+            "ts_bspline_parse_json",
+            "ts_bspline_load"
+          ],
+          "write_api": [
+            "ts_bspline_to_json",
+            "ts_bspline_save"
+          ],
+          "evidence_path": "vendor/tinyspline/src/tinyspline.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "ts_bspline_parse_json",
+              "path": "vendor/tinyspline/src/tinyspline.h",
+              "line": 2572
+            },
+            {
+              "symbol": "ts_bspline_load",
+              "path": "vendor/tinyspline/src/tinyspline.h",
+              "line": 2629
+            },
+            {
+              "symbol": "ts_bspline_to_json",
+              "path": "vendor/tinyspline/src/tinyspline.h",
+              "line": 2538
+            },
+            {
+              "symbol": "ts_bspline_save",
+              "path": "vendor/tinyspline/src/tinyspline.h",
+              "line": 2593
+            }
+          ]
+        }
+      ],
+      "use_ru": "Обмен control points, knots, degree и другими spline parameters.",
+      "limitations_ru": [
+        "Specific spline schema, not an additional generic JSON API; embedded Parson names are private-prefixed."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix."
+    },
+    {
+      "id": "native_nn",
+      "domain": "models",
+      "formats": [
+        "Genann text model",
+        "KANN native model",
+        "Tinn native model"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "genann:genann",
+          "target": "LMX::genann",
+          "read_api": [
+            "genann_read"
+          ],
+          "write_api": [
+            "genann_write"
+          ],
+          "evidence_path": "vendor/genann/genann.h",
+          "availability": "compiled",
+          "formats": [
+            "Genann text model"
+          ],
+          "api_evidence": [
+            {
+              "symbol": "genann_read",
+              "path": "vendor/genann/genann.h",
+              "line": 77
+            },
+            {
+              "symbol": "genann_write",
+              "path": "vendor/genann/genann.h",
+              "line": 76
+            }
+          ]
+        },
+        {
+          "component": "kann:kann",
+          "target": "LMX::kann",
+          "read_api": [
+            "kann_load"
+          ],
+          "write_api": [
+            "kann_save"
+          ],
+          "evidence_path": "vendor/kann/kann.h",
+          "availability": "compiled",
+          "formats": [
+            "KANN native model"
+          ],
+          "api_evidence": [
+            {
+              "symbol": "kann_load",
+              "path": "vendor/kann/kann.h",
+              "line": 243
+            },
+            {
+              "symbol": "kann_save",
+              "path": "vendor/kann/kann.h",
+              "line": 241
+            }
+          ]
+        },
+        {
+          "component": "micro_mlp:tinn",
+          "target": "LMX::tinn",
+          "read_api": [
+            "xtload"
+          ],
+          "write_api": [
+            "xtsave"
+          ],
+          "evidence_path": "vendor/tinn/Tinn.h",
+          "availability": "compiled",
+          "formats": [
+            "Tinn native model"
+          ],
+          "api_evidence": [
+            {
+              "symbol": "xtload",
+              "path": "vendor/tinn/Tinn.h",
+              "line": 36
+            },
+            {
+              "symbol": "xtsave",
+              "path": "vendor/tinn/Tinn.h",
+              "line": 34
+            }
+          ]
+        }
+      ],
+      "use_ru": "Сохранить или восстановить небольшой model именно соответствующей библиотеки.",
+      "limitations_ru": [
+        "Three unrelated native formats; not interchangeable, not ONNX/GGUF/SafeTensors.",
+        "Version/type/endianness assumptions must be checked when moving native binary models between environments."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix."
+    },
+    {
+      "id": "mint_native",
+      "domain": "models",
+      "formats": [
+        "Mint converted native model"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": false,
+      "direction": "read",
+      "providers": [
+        {
+          "component": "tensors:mint",
+          "target": "LMX::mint",
+          "read_api": [
+            "mt_model_load"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/mint/mint.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "mt_model_load",
+              "path": "vendor/mint/mint.h",
+              "line": 381
+            }
+          ]
+        }
+      ],
+      "use_ru": "Прочитать уже подготовленный model artifact Mint.",
+      "limitations_ru": [
+        "Header says models must first be converted from ONNX.",
+        "Native C API is not an ONNX file reader; external conversion tooling and operator support are separate concerns."
+      ],
+      "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix."
+    },
+    {
+      "id": "tiff",
+      "domain": "images",
+      "formats": [
+        "TIFF",
+        "BigTIFF"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "knowledge_extra:libtiff",
+          "target": "LMX::tiff",
+          "read_api": [
+            "TIFFOpen",
+            "TIFFReadScanline"
+          ],
+          "write_api": [
+            "TIFFWriteScanline"
+          ],
+          "evidence_path": "vendor/libtiff/libtiff/tiffio.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "TIFFOpen",
+              "path": "vendor/libtiff/libtiff/tiffio.h",
+              "line": 537
+            },
+            {
+              "symbol": "TIFFReadScanline",
+              "path": "vendor/libtiff/libtiff/tiffio.h",
+              "line": 465
+            },
+            {
+              "symbol": "TIFFWriteScanline",
+              "path": "vendor/libtiff/libtiff/tiffio.h",
+              "line": 467
+            }
+          ]
+        }
+      ],
+      "use_ru": "Извлечь и создать multipage/scientific/fax raster TIFF.",
+      "limitations_ru": [
+        "Both endian variants; selected internal codecs include uncompressed/LZW/PackBits/CCITT/LogLuv/NeXT/Thunder/MDI.",
+        "External JPEG/ZSTD/LZMA/WebP codecs disabled; old-JPEG, JBIG, LERC and PixarLog are also OFF in the final selected profile.",
+        "No universal support for every TIFF compression/tag extension."
+      ],
+      "verification": "Retained strict C99 build; 20 TIFF/BigTIFF x endian x none/LZW/PackBits/AdobeDeflate/Deflate roundtrips PASS; LZW/Deflate horizontal predictor and exact pixels/metadata checked.",
+      "build_evidence": [
+        "extensions/knowledge_extra/CMakeLists.txt"
+      ],
+      "verified_profile": "Deflate/AdobeDeflate enabled via existing zlib; 20 TIFF/BigTIFF/endian/codec roundtrips PASS with horizontal predictor for LZW/Deflate"
+    },
+    {
+      "id": "xls",
+      "domain": "documents",
+      "formats": [
+        "Excel binary XLS / BIFF in OLE"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": false,
+      "direction": "read",
+      "providers": [
+        {
+          "component": "knowledge_extra:libxls",
+          "target": "LMX::xls",
+          "read_api": [
+            "xls_open_file",
+            "xls_parseWorkSheet"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/libxls/include/xls.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "xls_open_file",
+              "path": "vendor/libxls/include/xls.h",
+              "line": 77
+            },
+            {
+              "symbol": "xls_parseWorkSheet",
+              "path": "vendor/libxls/include/xls.h",
+              "line": 73
+            }
+          ]
+        }
+      ],
+      "use_ru": "Извлечь sheets/cell values из старых XLS.",
+      "limitations_ru": [
+        "Read only; no XLS writer, no XLSX.",
+        "No iconv in selected profile; BIFF8 UTF-16→UTF-8 uses upstream conversion, legacy code pages are not normalized.",
+        "Does not calculate formulas or implement arbitrary OLE document readers."
+      ],
+      "verification": "Companion knowledge_extra VERIFICATION.json: retained strict C99 build and focused API test PASS; not an exhaustive format conformance claim.",
+      "build_evidence": [
+        "extensions/knowledge_extra/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "mat",
+      "domain": "science",
+      "formats": [
+        "MAT v4",
+        "MAT v5"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "knowledge_extra:matio",
+          "target": "LMX::matio",
+          "read_api": [
+            "Mat_Open",
+            "Mat_VarRead"
+          ],
+          "write_api": [
+            "Mat_CreateVer",
+            "Mat_VarWrite"
+          ],
+          "evidence_path": "vendor/matio/src/matio.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "Mat_Open",
+              "path": "vendor/matio/src/matio.h",
+              "line": 277
+            },
+            {
+              "symbol": "Mat_VarRead",
+              "path": "vendor/matio/src/matio.h",
+              "line": 318
+            },
+            {
+              "symbol": "Mat_CreateVer",
+              "path": "vendor/matio/src/matio.h",
+              "line": 274
+            },
+            {
+              "symbol": "Mat_VarWrite",
+              "path": "vendor/matio/src/matio.h",
+              "line": 335
+            }
+          ]
+        }
+      ],
+      "use_ru": "Читать и создавать scientific matrix/array files MAT4/5.",
+      "limitations_ru": [
+        "MAT 7.3/HDF5 is disabled; compressed MAT5 uses zlib.",
+        "Compiled MCOS paths were not exercised by focused tests."
+      ],
+      "verification": "Companion knowledge_extra VERIFICATION.json: retained strict C99 build and focused API test PASS; not an exhaustive format conformance claim.",
+      "build_evidence": [
+        "extensions/knowledge_extra/CMakeLists.txt"
+      ]
+    },
+    {
+      "id": "datamatrix",
+      "domain": "optical_codes",
+      "formats": [
+        "Data Matrix ECC200"
+      ],
+      "kind": "optical_symbol",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "knowledge_extra:libdmtx",
+          "target": "LMX::dmtx",
+          "read_api": [
+            "dmtxDecodeMatrixRegion"
+          ],
+          "write_api": [
+            "dmtxEncodeDataMatrix"
+          ],
+          "evidence_path": "vendor/libdmtx/dmtx.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_evidence": [
+            {
+              "symbol": "dmtxDecodeMatrixRegion",
+              "path": "vendor/libdmtx/dmtx.h",
+              "line": 577
+            },
+            {
+              "symbol": "dmtxEncodeDataMatrix",
+              "path": "vendor/libdmtx/dmtx.h",
+              "line": 564
+            }
+          ]
+        }
+      ],
+      "use_ru": "Создать и прочитать ECC200 symbols, включая binary payload.",
+      "limitations_ru": [
+        "Memory image/symbol API, not an image-container codec.",
+        "Data Matrix ECC200 does not imply QR, Aztec, PDF417 or all barcode families."
+      ],
+      "verification": "Companion knowledge_extra VERIFICATION.json: retained strict C99 build and focused API test PASS; not an exhaustive format conformance claim.",
+      "build_evidence": [
+        "extensions/knowledge_extra/CMakeLists.txt"
+      ]
+    }
+  ],
+  "gaps": [
+    {
+      "area": "PDF consumption",
+      "status": "PDFio parses objects, metadata and decoded streams and copies pages. General page rendering and text extraction with reading-order reconstruction are not provided."
+    },
+    {
+      "area": "Office documents and slides",
+      "status": "ZIP/XML can extract package parts, but DOCX/ODT/PPTX/ODS semantic readers/renderers are not provided by those low-level codecs."
+    },
+    {
+      "area": "Scientific containers",
+      "status": "MAT4/5 are included. HDF5 and all netCDF profiles are excluded by explicit selection decisions; MAT7.3, NumPy NPY/NPZ and DICOM are not established by a verified target in this matrix."
+    },
+    {
+      "area": "Modern image formats",
+      "status": "No selected AVIF/HEIF/JPEG XL/OpenEXR/SVG renderer identified. TIFF codec coverage is explicitly profile-limited."
+    },
+    {
+      "area": "Modern audio/video",
+      "status": "No general MP4/MOV reader/writer, HEVC/AV1/VP9 codec, AAC/Opus codec, or MP3/FLAC/Vorbis encoder identified; nestegg only demuxes."
+    },
+    {
+      "area": "Additional archives",
+      "status": "No selected RAR/BZip2/XZ-container codec; selected LZMA SDK cannot create 7z archives."
+    },
+    {
+      "area": "Generic tables",
+      "status": "No dedicated CSV/TSV parser/writer target identified; correct quote/newline rules would need a small explicit adapter."
+    },
+    {
+      "area": "Model exchange",
+      "status": "Mint native-converted model is not direct ONNX reading; GGUF/SafeTensors import is not established."
+    },
+    {
+      "area": "Bioinformatics structures",
+      "status": "FASTA/FASTQ macro parser and BGZF exist; complete SAM/BAM/CRAM/VCF semantics are not implied."
+    }
+  ],
+  "wire_only_boundaries": [
+    {
+      "component": "databases:hiredis",
+      "purpose": "RESP request/reply client",
+      "does_not_imply": "Redis RDB/AOF disk-format reader."
+    },
+    {
+      "component": "postgresql:postgresql-libpq",
+      "purpose": "PostgreSQL client protocol",
+      "does_not_imply": "PostgreSQL data directory/WAL physical-format reader."
+    },
+    {
+      "component": "databases:mongo_c_driver",
+      "purpose": "MongoDB wire client plus local libbson",
+      "does_not_imply": "WiredTiger storage-file reader."
+    },
+    {
+      "component": "http_parser:llhttp",
+      "purpose": "HTTP request/response parsing",
+      "does_not_imply": "HTML rendering or a web browser."
+    }
+  ],
+  "audit_missing_evidence_paths": [],
+  "audit_no_symbol_found": [],
+  "compiled_entry_count": 62,
+  "source_only_entry_count": 2
+}

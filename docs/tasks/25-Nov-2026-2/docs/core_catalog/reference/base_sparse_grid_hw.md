@@ -1,0 +1,17 @@
+# base:sparse_grid_hw
+
+[Первичный LMX-каталог](../catalog/base_sparse_grid_hw.lmx) · [Тела LMX](../bindings/base_sparse_grid_hw.lm3) · [Формат и shim по запросу](../CATALOG_FORMAT.ru.md)
+
+Версия: `upstream-snapshot-2026-11-25`.
+Записей: **118**; кандидатов вызова: **59**; scalar prototypes: **17**.
+
+Пакеты: `math\integrate`.
+CMake: `LMX::sparse_grid_hw`, `LMX::quadrature`.
+
+| Категория | Записи |
+|---|---:|
+| function | 118 |
+
+Имена легко искать в секции `Entries`; первый элемент вложенного `spec` даёт индекс полной C-сигнатуры в `Signatures` (таблицы сгруппированы по 32 записи; формула поиска описана в формате). Все исходные позиции и варианты сохранены. Компонентные таблицы являются DATA, а не аргументами callable. Статус LMX runtime: `NOT_RUN`.
+
+Для одной функции: `python3 tools/build_c_catalog.py --catalog-root . --emit-shim <capi_id> --shim-output /tmp/lmx_one.c` (из `docs/core_catalog`).

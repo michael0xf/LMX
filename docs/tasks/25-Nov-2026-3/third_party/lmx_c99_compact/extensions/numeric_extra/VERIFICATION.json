@@ -1,0 +1,116 @@
+{
+  "status": "PASS",
+  "scope": "Ten added numeric backends, standalone C99 build and executable usage checks",
+  "platform": "Linux x86_64",
+  "compiler": "cc (Debian 14.2.0-19) 14.2.0",
+  "configuration": "CMake MinSizeRel; C_STANDARD=99; C_EXTENSIONS=OFF; -pedantic-errors",
+  "tests": [
+    {
+      "name": "lmx_numeric_extra_check",
+      "stdout": "LibBF sqrt(2), 256 bits: 1.414213562373095048801688724209698078569671875376948073176679737990732\nSame task, LibBF / SoftFloat / libfixmath: 3 * 0.5 = 1.5\nCMINPACK root x^2=2: 1.414213562373095\nPASS: 7 numeric libraries; arbitrary real, IEEE formats, fixed-point matrices, half conversion, nonlinear roots, exact rationals"
+    },
+    {
+      "name": "lmx_numeric_alternatives_check",
+      "stdout": "PASS: PFFFT float/double impulse FFT and inverse; PCG seeded vector and jump-ahead"
+    },
+    {
+      "name": "lmx_libtomfloat_check",
+      "stdout": "PASS: experimental LibTomFloat, 3*0.5=1.5, 256-bit epsilon/sqrt2, sqrt0 and full signed-long fixes"
+    }
+  ],
+  "sizes": [
+    {
+      "archive": "liblmx_cminpack.a",
+      "archive_bytes": 75222,
+      "text_bytes": 31068,
+      "data_bytes": 0,
+      "bss_bytes": 0
+    },
+    {
+      "archive": "liblmx_fixmath.a",
+      "archive_bytes": 17928,
+      "text_bytes": 4759,
+      "data_bytes": 0,
+      "bss_bytes": 0
+    },
+    {
+      "archive": "liblmx_fixmatrix.a",
+      "archive_bytes": 25144,
+      "text_bytes": 8768,
+      "data_bytes": 0,
+      "bss_bytes": 0
+    },
+    {
+      "archive": "liblmx_fp16.a",
+      "archive_bytes": 2498,
+      "text_bytes": 476,
+      "data_bytes": 0,
+      "bss_bytes": 0
+    },
+    {
+      "archive": "liblmx_imath.a",
+      "archive_bytes": 52900,
+      "text_bytes": 26426,
+      "data_bytes": 72,
+      "bss_bytes": 0
+    },
+    {
+      "archive": "liblmx_libbf.a",
+      "archive_bytes": 90992,
+      "text_bytes": 57063,
+      "data_bytes": 0,
+      "bss_bytes": 0
+    },
+    {
+      "archive": "liblmx_pcg.a",
+      "archive_bytes": 50806,
+      "text_bytes": 10786,
+      "data_bytes": 16,
+      "bss_bytes": 0
+    },
+    {
+      "archive": "liblmx_pffft.a",
+      "archive_bytes": 79692,
+      "text_bytes": 56463,
+      "data_bytes": 0,
+      "bss_bytes": 0
+    },
+    {
+      "archive": "liblmx_softfloat.a",
+      "archive_bytes": 484220,
+      "text_bytes": 66043,
+      "data_bytes": 2,
+      "bss_bytes": 34
+    },
+    {
+      "archive": "liblmx_tomfloat.a",
+      "archive_bytes": 86284,
+      "text_bytes": 10576,
+      "data_bytes": 0,
+      "bss_bytes": 0
+    }
+  ],
+  "size_limit_bytes": 1000000,
+  "all_archives_below_limit": true,
+  "cross_platform_execution": "NOT_RUN",
+  "lmx_wrappers_execution": "NOT_RUN",
+  "upstream_exhaustive_tests": "NOT_RUN; only retained focused usage checks executed",
+  "license_review": "Retained production sources and notices inspected; no copyleft dependency in selected targets",
+  "network_at_build": "none",
+  "total_added_archive_bytes": 965686,
+  "existing_dependency": "LibTomMath already present in original collection; standalone fallback builds it with MP_32BIT, excluded from added-backend total",
+  "experimental_libtomfloat": {
+    "upstream_baseline": "53/53 strict C99 compilation passed; actual numerical smoke found sqrt(0) failure and signed-long truncation",
+    "selected_build_fixes": [
+      "sqrt(0) early return",
+      "mpf_const_d via full-width mp_set_l, including LONG_MIN"
+    ],
+    "unimplemented_declarations": [
+      "mpf_from_string",
+      "mpf_to_string"
+    ],
+    "general_accuracy": "NOT_PROVEN; upstream experimental warning retained"
+  },
+  "ctest": "PASS: 3/3 numeric_extra.usage, numeric_extra.alternatives, numeric_extra.libtomfloat",
+  "libbf_allocation_fix": "Initial parse limb allocation checked before use in generated view; regression with zero owner budget passes under ASan/UBSan in docs/core_catalog/new_primitives."
+}

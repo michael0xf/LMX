@@ -1,0 +1,12 @@
+function(_extras_test name source)
+    add_executable(lmx_extras_${name} "${_extras_root}/tests/${source}")
+    lmx_c99_target(lmx_extras_${name})
+    target_link_libraries(lmx_extras_${name} PRIVATE ${ARGN})
+    add_test(NAME extras_${name} COMMAND lmx_extras_${name})
+endfunction()
+_extras_test(qr_roundtrip qr_roundtrip.c LMX::qrcodegen LMX::quirc)
+_extras_test(cglm_math cglm_math.c LMX::cglm)
+_extras_test(path_regex_test path_regex.c LMX::whereami LMX::tiny_regex_c)
+_extras_test(dialog_query dialog_query.c LMX::tinyfiledialogs)
+set_tests_properties(extras_dialog_query PROPERTIES TIMEOUT 20)
+

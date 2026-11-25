@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-25",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "architecture": "x86_64",
+  "compiler": "cc (Debian 14.2.0-19) 14.2.0",
+  "build_type": "MinSizeRel",
+  "required_flags": [
+    "-Os",
+    "-std=c99",
+    "-pedantic-errors"
+  ],
+  "compile_command_count": 101,
+  "all_compiled_translation_units_match_flags": true,
+  "full_source_build": "PASS before private Add symbol rename; final retained profile rechecked after rename",
+  "retained_tree_build": "PASS",
+  "ctest": {
+    "passed": 6,
+    "failed": 0,
+    "tests": [
+      "knowledge_extra.lbfgs",
+      "knowledge_extra.dmtx",
+      "knowledge_extra.pcre2",
+      "knowledge_extra.tiff",
+      "knowledge_extra.xls",
+      "knowledge_extra.matio"
+    ]
+  },
+  "selected_archives": [
+    {
+      "component": "knowledge_extra:pcre2",
+      "path": "pcre2/libpcre2-8.a",
+      "bytes": 483046,
+      "sha256": "cee62aa110ad086912c975aaa6987794d7ca49809551ecba128e87ae79e2a055"
+    },
+    {
+      "component": "knowledge_extra:pcre2",
+      "path": "pcre2/libpcre2-posix.a",
+      "bytes": 4958,
+      "sha256": "4460d7d0a48e8ece17cece881f9ce5906e3c38b364f0140834df58f4b3ff5838"
+    },
+    {
+      "component": "knowledge_extra:liblbfgs",
+      "path": "liblmx_lbfgs.a",
+      "bytes": 17826,
+      "sha256": "bfb5ad0413cc9b6fbcdf9a2a07b589a1b8dea513dc5a0ab202664c4003d5d5ab"
+    },
+    {
+      "component": "knowledge_extra:libdmtx",
+      "path": "liblmx_dmtx.a",
+      "bytes": 75432,
+      "sha256": "ec344ad8500ccc246391caa57c79878197b64b002dc4a7ddd4551ba1a443a772"
+    },
+    {
+      "component": "knowledge_extra:libtiff",
+      "path": "tiff/libtiff/libtiff.a",
+      "bytes": 623182,
+      "sha256": "38f4cee39af9104787cc71b2d9c6c2bb22057f601ba7235126312c282f7d369f"
+    },
+    {
+      "component": "knowledge_extra:libxls",
+      "path": "liblmx_xls.a",
+      "bytes": 90160,
+      "sha256": "a7468b7e1833a39e10cf524745205cd7f456cb0452466634886b1eb28e6e0e34"
+    },
+    {
+      "component": "knowledge_extra:matio",
+      "path": "liblmx_matio.a",
+      "bytes": 451916,
+      "sha256": "f34e0f885582333123987b224a64e0ca2d63c7f9dbe46c41c680b5a6b9d836a1"
+    }
+  ],
+  "retained_vendor_file_manifest_sha256": "ffd995271240d721d29c5e462aa8485ddbcf92644be693b07e364873657ade49",
+  "upstream_files_unchanged": true,
+  "build_view_changes": [
+    {
+      "component": "pcre2",
+      "change": "5687-byte NUL-separated compile-error table uses an unsigned char initializer instead of a concatenated 5686-byte literal; original input hash guarded, no warning suppression.",
+      "equivalence": "C-compiled original initializer and adapted initializer compared by sizeof and memcmp: PASS (5687 bytes).",
+      "table_sha256": "c7b3e76cce2908a1a640529435ea6f195f823f1349d387d3beb6449398313247"
+    },
+    {
+      "component": "libtiff",
+      "change": "Only CMake project LANGUAGES C CXX becomes LANGUAGES C in copied build view. C++ stream API is disabled; no library C source changed."
+    }
+  ],
+  "warnings": {
+    "count": 14,
+    "summary": "Original libtiff -Winline diagnostics under -Os; no compiler warnings suppressed.",
+    "kinds": [
+      "[-Winline]"
+    ]
+  },
+  "standalone_zlib": "System zlib 1.3.1 used for this isolated profile test; integrated archive uses existing LMX::zlib when present. No download.",
+  "not_run": [
+    "Full upstream test suites / omitted binary corpora",
+    "Windows, macOS, embedded CPUs, 32-bit and big-endian hardware",
+    "External TIFF codecs and MAT7.3/HDF5",
+    "MCOS input corpus",
+    "Performance / peak RAM / fuzz campaigns / safety certification"
+  ],
+  "tests_cover": {
+    "lbfgs": "Rosenbrock minimum and invalid dimension rejection",
+    "dmtx": "ECC200 encode/decode binary payload including NUL and 255",
+    "pcre2": "UTF8 Unicode properties, captures, no-match and invalid regex rejection",
+    "tiff": "20 roundtrips: classic TIFF/BigTIFF x little/big endian x none/LZW/PackBits/AdobeDeflate/Deflate; horizontal predictor for LZW/Deflate; exact pixels and metadata",
+    "xls": "Upstream workbook represented as source array: sheet/cell parsing, expected a/h values, invalid small buffer rejection",
+    "matio": "MAT4, plain MAT5 and zlib MAT5: numeric matrix exact comparison, struct field, missing variable"
+  },
+  "namespace_check": {
+    "baseline_archives": 159,
+    "matio_conflicts_after_private_Add_rename": [],
+    "Add_exported": false,
+    "lmx_matio_Add_exported": true,
+    "public_Mat_API_unchanged": true
+  },
+  "tiff_deflate_followup": {
+    "result": "PASS, 6/6 group tests repeated from retained sources",
+    "profile": "Existing zlib is now reused by TIFF and matio; no added zlib copy",
+    "archive_bytes": 623182
+  }
+}

@@ -3005,7 +3005,7 @@ fn: lmx_graph_written_whole (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: raw; size_t@:
     int: contract 0
     int: kind 0
     c.memset((cast: (@) from), 0, (width + 1U) * sizeof(size_t))
-    if: lmx_graph_bind_fields_mode(g, args, raw, from, 1) = 0
+    if: lmx_graph_bind_fields_mode(g, args, raw, from, 1, 0) = 0
         return: 0
     while: i < width
         if: from[i] = 0U
@@ -3189,7 +3189,9 @@ end: lmx_graph_bind_formals
 # Does the Structure give formals of the signature by its fields -- a named field by name, an unnamed field by position,
 # each formal by one field at most (the book, whole-arguments)? from[slot] 1 + the index of its field, 0 for none (the caller's array, width
 # + 1 long). The caller tells what an unsupplied formal needs (a default of a call; none for a receiver). 1 or 0.
-fn: lmx_graph_bind_fields_mode (c.LmxGraph@: g; c.Lmx@: formals; c.Lmx@: structure; size_t@: from; int: pure) int
+# reason, when it is not 0, answers 1 for the one refusal that is a missing requirement -- a named field that names no
+# formal of the signature -- and 0 for every other one and for success; the selection asks the boolean alone.
+fn: lmx_graph_bind_fields_mode (c.LmxGraph@: g; c.Lmx@: formals; c.Lmx@: structure; size_t@: from; int: pure; int@: reason) int
     char@: name 0
     char@: declared 0
     size_t: width lmx_graph_formal_width(g, formals)
@@ -3198,6 +3200,9 @@ fn: lmx_graph_bind_fields_mode (c.LmxGraph@: g; c.Lmx@: formals; c.Lmx@: structu
     size_t: slot 0U
     if: from = 0
         return: 0
+    if: reason != 0
+        reason[0] := 0
+    ---
     while: i < n
         name := c.lmx_graph_slot_name(g, structure, i)
         if: pure != 0
@@ -3209,6 +3214,10 @@ fn: lmx_graph_bind_fields_mode (c.LmxGraph@: g; c.Lmx@: formals; c.Lmx@: structu
         slot := i
         if: name != 0
             slot := lmx_graph_formal_ordinal(g, formals, name)
+            if: slot >= width && reason != 0
+                reason[0] := 1
+            ---
+        ---
         if: slot >= width
             return: 0
         if: from[slot] != 0U
@@ -3223,7 +3232,7 @@ fn: lmx_graph_bind_fields_mode (c.LmxGraph@: g; c.Lmx@: formals; c.Lmx@: structu
     return: 1
 
 fn: lmx_graph_bind_fields (c.LmxGraph@: g; c.Lmx@: formals; c.Lmx@: structure; size_t@: from) int
-    return: lmx_graph_bind_fields_mode(g, formals, structure, from, 0)
+    return: lmx_graph_bind_fields_mode(g, formals, structure, from, 0, 0)
 end: lmx_graph_bind_fields
 
 # Bind written arguments to the selected method before evaluating any of them. The map and the seen set belong
@@ -3265,7 +3274,7 @@ fn: lmx_graph_bind_call_mode (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: code; c.Lmx
         from := (cast: (size_t@) c.calloc(width + 1U, sizeof(size_t)))
         if: from = 0
             return: 4
-        whole := lmx_graph_bind_fields_mode(g, args, (cast: (c.Lmx@) c.lmx_graph_get_in(g, expression, 0U)), from, 1)
+        whole := lmx_graph_bind_fields_mode(g, args, (cast: (c.Lmx@) c.lmx_graph_get_in(g, expression, 0U)), from, 1, 0)
         c.free((cast: (@) from))
         if: whole != 0
             return: 0
@@ -7004,6 +7013,7 @@ fn: lmx_graph_launch_value (c.LmxGraph@: g; c.Lmx@: given_args; c.Lmx@: given_da
     size_t: i 0U
     size_t: slot 0U
     int: status 0
+    int: reason 0
     if: data = 0
         data := code
     if: out = 0 || c.lmx_graph_kind(g, (cast: (@) code)) != 4 || c.lmx_graph_kind(g, (cast: (@) data)) != 4
@@ -7021,8 +7031,15 @@ fn: lmx_graph_launch_value (c.LmxGraph@: g; c.Lmx@: given_args; c.Lmx@: given_da
     c.lmx_execution_roots_push(g\arena, @ data_roots, 0, 0U, 0, 0U, (cast: (@) data), 0)
     c.lmx_execution_roots_push(g\arena, @ actual_roots, (cast: (@) values), count, 0, 0U, (cast: (@) args), 0)
     if: status = 0 && args != 0
-        if: lmx_graph_bind_fields(g, data, args, from) = 0
+        reason := 0
+        if: lmx_graph_bind_fields_mode(g, data, args, from, 0, @ reason) = 0
+            # The fields do not give the formals of the data. A named field that names no formal is the refusal of a
+            # requirement (3, as lmx_graph_work_require answers it); any other miss -- an extra position, a field
+            # supplied twice, a required formal not supplied -- is 5.
             status := 5
+            if: reason != 0
+                status := 3
+            ---
         ---
     ---
     while: i < count && status = 0

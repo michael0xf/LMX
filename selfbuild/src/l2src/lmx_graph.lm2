@@ -3247,6 +3247,13 @@ fn: lmx_graph_dump_at (c.LmxGraph@: g; c.Lmx@: lmx; c.FILE@: f; int: depth; @@: 
             continue
         if: kind = 5
             name := lmx_graph_name_of(g, value)
+            # A null reference to data -- the address itself is zero -- prints its name, its type and the zero, as a
+            # null reference to a Structure does below. A referent that has no name is another case: it refuses.
+            if: name != 0 && c.lmx_arena_pointer_void_read(value) = 0
+                c.fprintf(f, "@: %s int 0\n", name)
+                i := i + 1U
+                continue
+            ---
             head := lmx_graph_name_of(g, c.lmx_arena_pointer_void_read(value))
             if: name = 0 || head = 0
                 return: 1

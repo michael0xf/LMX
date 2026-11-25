@@ -1,0 +1,18 @@
+BfsVisit:
+    return: int
+    next:
+        throws: copy(foldl\throws) Stop ReceiverIndex
+        if: head = tail
+            throw: Stop()
+        int: vertex queue[head]
+        head += 1
+        nextDistance := distance[vertex] + 1
+        tail := \foldl(graph[vertex]; (tail record); BfsDiscover\run)
+        return: vertex
+
+BfsFunctional:
+    return: int
+    run:
+        throws: copy(collect\throws)
+        collect(BfsVisit\next)
+        return: 0

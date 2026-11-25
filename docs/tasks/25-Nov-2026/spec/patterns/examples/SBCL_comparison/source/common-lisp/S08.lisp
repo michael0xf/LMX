@@ -1,0 +1,5 @@
+(defun example (items completed)
+  (let* ((distinct (remove-duplicates items :from-end t :test #'=))
+         (pending (remove-if (lambda (x) (member x completed :test #'=)) distinct)))
+    (list pending (- (length items) (length distinct))
+          (- (length distinct) (length pending)))))

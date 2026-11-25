@@ -1,0 +1,17 @@
+CountedReplacement:
+    Match@: matched
+    return: char[]
+    make:
+        changed += 1
+        return: replacement
+
+Example:
+    char[]: text
+    char[]: needle
+    char[]: replacement
+    return: @
+    run:
+        throws: copy(byteText\throws) copy(replace\throws)
+        int: changed 0
+        char[]: out replace(byteText(text); needle; CountedReplacement\make)
+        return: (out; changed)

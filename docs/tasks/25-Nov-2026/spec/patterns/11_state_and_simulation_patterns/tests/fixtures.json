@@ -1,0 +1,317 @@
+{
+  "double_buffer": [
+    {
+      "name": "empty",
+      "cells": [],
+      "steps": 3
+    },
+    {
+      "name": "zero_steps",
+      "cells": [
+        1,
+        0,
+        1,
+        1
+      ],
+      "steps": 0
+    },
+    {
+      "name": "one_cell",
+      "cells": [
+        1
+      ],
+      "steps": 1
+    },
+    {
+      "name": "two_cells_same_neighbour",
+      "cells": [
+        1,
+        0
+      ],
+      "steps": 1
+    },
+    {
+      "name": "synchronous_not_in_place",
+      "cells": [
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "steps": 1
+    },
+    {
+      "name": "several_generations",
+      "cells": [
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "steps": 3
+    },
+    {
+      "name": "invalid_steps_precede_invalid_cell",
+      "cells": [
+        2
+      ],
+      "steps": -1
+    },
+    {
+      "name": "invalid_cell_even_with_zero_steps",
+      "cells": [
+        0,
+        2,
+        1
+      ],
+      "steps": 0
+    }
+  ],
+  "dirty_flag": [
+    {
+      "name": "no_reads",
+      "values": [
+        3,
+        1,
+        5
+      ],
+      "ops": [
+        [
+          "S",
+          0,
+          9
+        ],
+        [
+          "S",
+          1,
+          4
+        ]
+      ]
+    },
+    {
+      "name": "empty_get_and_bad_set",
+      "values": [],
+      "ops": [
+        [
+          "G"
+        ],
+        [
+          "G"
+        ],
+        [
+          "S",
+          0,
+          1
+        ],
+        [
+          "G"
+        ]
+      ]
+    },
+    {
+      "name": "coalesce_and_cache",
+      "values": [
+        3,
+        1,
+        5
+      ],
+      "ops": [
+        [
+          "G"
+        ],
+        [
+          "G"
+        ],
+        [
+          "S",
+          0,
+          9
+        ],
+        [
+          "S",
+          2,
+          2
+        ],
+        [
+          "G"
+        ],
+        [
+          "G"
+        ]
+      ]
+    },
+    {
+      "name": "same_value_write_is_dirty",
+      "values": [
+        3
+      ],
+      "ops": [
+        [
+          "G"
+        ],
+        [
+          "S",
+          0,
+          3
+        ],
+        [
+          "G"
+        ]
+      ]
+    },
+    {
+      "name": "delete_maximum_by_reset",
+      "values": [
+        9,
+        2
+      ],
+      "ops": [
+        [
+          "G"
+        ],
+        [
+          "R",
+          [
+            -4,
+            -7
+          ]
+        ],
+        [
+          "G"
+        ],
+        [
+          "R",
+          []
+        ],
+        [
+          "G"
+        ]
+      ]
+    },
+    {
+      "name": "invalid_set_is_atomic",
+      "values": [
+        1
+      ],
+      "ops": [
+        [
+          "G"
+        ],
+        [
+          "S",
+          -1,
+          9
+        ],
+        [
+          "S",
+          1,
+          9
+        ],
+        [
+          "G"
+        ]
+      ]
+    },
+    {
+      "name": "integer_extremes",
+      "values": [
+        -2147483648,
+        2147483647
+      ],
+      "ops": [
+        [
+          "G"
+        ],
+        [
+          "S",
+          1,
+          -2147483648
+        ],
+        [
+          "G"
+        ]
+      ]
+    }
+  ],
+  "fixed_timestep": [
+    {
+      "name": "empty",
+      "step": 10,
+      "deltas": []
+    },
+    {
+      "name": "zero_frames",
+      "step": 10,
+      "deltas": [
+        0,
+        0
+      ]
+    },
+    {
+      "name": "accumulate_catch_up_and_remainder",
+      "step": 10,
+      "deltas": [
+        6,
+        4,
+        25,
+        0,
+        5
+      ]
+    },
+    {
+      "name": "single_large_frame",
+      "step": 7,
+      "deltas": [
+        100
+      ]
+    },
+    {
+      "name": "exact_partition",
+      "step": 7,
+      "deltas": [
+        7,
+        14,
+        0,
+        79
+      ]
+    },
+    {
+      "name": "step_zero",
+      "step": 0,
+      "deltas": [
+        1
+      ]
+    },
+    {
+      "name": "step_negative",
+      "step": -1,
+      "deltas": []
+    },
+    {
+      "name": "negative_elapsed_before_effects",
+      "step": 1,
+      "deltas": [
+        100,
+        -1
+      ]
+    },
+    {
+      "name": "overflow_before_effects",
+      "step": 2147483647,
+      "deltas": [
+        2147483647,
+        1
+      ]
+    },
+    {
+      "name": "largest_safe_total",
+      "step": 2147483647,
+      "deltas": [
+        2147483646,
+        1
+      ]
+    }
+  ]
+}

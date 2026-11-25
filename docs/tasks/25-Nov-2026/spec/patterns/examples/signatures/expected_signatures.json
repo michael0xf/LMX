@@ -1,0 +1,276 @@
+{
+  "scope": "Normative declaration examples; admit in a declaration/library context. No function bodies are synthesized and no automatic root entry is claimed.",
+  "parser": "NOT_RUN",
+  "translator": "NOT_RUN",
+  "runtime": "NOT_RUN",
+  "type_models": {
+    "Model": {
+      "key": "int",
+      "value": "int"
+    }
+  },
+  "cases": [
+    {
+      "id": "AR01",
+      "code": "readValue :: `->`(int)",
+      "inputs": [],
+      "result": "int",
+      "note_ru": "Нет входов; результат int."
+    },
+    {
+      "id": "AR02",
+      "code": "readValues :: `->`(int[])",
+      "inputs": [],
+      "result": "int[]",
+      "note_ru": "Нет входов; результат — один массив."
+    },
+    {
+      "id": "AR03",
+      "code": "reset :: `->`(void)",
+      "inputs": [],
+      "result": "void",
+      "note_ru": "Процедура без входов и без возвращаемого значения."
+    },
+    {
+      "id": "AR04",
+      "code": "doubleValue :: int -> int",
+      "inputs": [
+        "int"
+      ],
+      "result": "int",
+      "note_ru": "Один int на входе и int на выходе."
+    },
+    {
+      "id": "AR05",
+      "code": "positive :: int -> int",
+      "inputs": [
+        "int"
+      ],
+      "result": "int",
+      "note_ru": "Тип предиката: флаг кодируется int; тело предиката здесь не задаётся."
+    },
+    {
+      "id": "AR06",
+      "code": "scale :: double -> double",
+      "inputs": [
+        "double"
+      ],
+      "result": "double",
+      "note_ru": "Один double; конструктор не специализируется на int."
+    },
+    {
+      "id": "AR07",
+      "code": "add :: int -> int int",
+      "inputs": [
+        "int",
+        "int"
+      ],
+      "result": "int",
+      "note_ru": "Два аргумента; последний из трёх TYPE — результат."
+    },
+    {
+      "id": "AR08",
+      "code": "add3 :: int -> int int int",
+      "inputs": [
+        "int",
+        "int",
+        "int"
+      ],
+      "result": "int",
+      "note_ru": "Три аргумента; длина правой последовательности не фиксирована."
+    },
+    {
+      "id": "AR09",
+      "code": "blend :: int -> double double double",
+      "inputs": [
+        "int",
+        "double",
+        "double"
+      ],
+      "result": "double",
+      "note_ru": "Разные типы входов, порядок сохраняется."
+    },
+    {
+      "id": "AR10",
+      "code": "textSize :: char[] -> int",
+      "inputs": [
+        "char[]"
+      ],
+      "result": "int",
+      "note_ru": "Текстовый массив — один аргумент, а не поток символов."
+    },
+    {
+      "id": "AR11",
+      "code": "joinText :: char[] -> char[] char[]",
+      "inputs": [
+        "char[]",
+        "char[]"
+      ],
+      "result": "char[]",
+      "note_ru": "Два массива на входе, один на выходе."
+    },
+    {
+      "id": "AR12",
+      "code": "total :: int[] -> int",
+      "inputs": [
+        "int[]"
+      ],
+      "result": "int",
+      "note_ru": "Редукция массива описывается одной входной позицией."
+    },
+    {
+      "id": "AR13",
+      "code": "combine :: int[] -> int[] int[]",
+      "inputs": [
+        "int[]",
+        "int[]"
+      ],
+      "result": "int[]",
+      "note_ru": "Оба массива целые; элементы не становятся формалами."
+    },
+    {
+      "id": "AR14",
+      "code": "scaled :: int[] -> int int[]",
+      "inputs": [
+        "int[]",
+        "int"
+      ],
+      "result": "int[]",
+      "note_ru": "Массив, коэффициент, массив результата."
+    },
+    {
+      "id": "AR15",
+      "code": "inspect :: Model@ -> int",
+      "inputs": [
+        "Model@"
+      ],
+      "result": "int",
+      "note_ru": "Ссылка с полным требованием Model."
+    },
+    {
+      "id": "AR16",
+      "code": "change :: Model@ -> int void",
+      "inputs": [
+        "Model@",
+        "int"
+      ],
+      "result": "void",
+      "note_ru": "Ссылка и новое значение; процедура не возвращает фиктивный 0."
+    },
+    {
+      "id": "AR17",
+      "code": "find :: Model[] -> int Model@",
+      "inputs": [
+        "Model[]",
+        "int"
+      ],
+      "result": "Model@",
+      "note_ru": "Массив моделей и ключ; результат — ссылка с требованием Model."
+    },
+    {
+      "id": "AR18",
+      "code": "writeCell :: int@ -> int void",
+      "inputs": [
+        "int@",
+        "int"
+      ],
+      "result": "void",
+      "note_ru": "Типизированная ссылка на int плюс значение для записи."
+    },
+    {
+      "id": "AR19",
+      "code": "readCell :: int@ -> int",
+      "inputs": [
+        "int@"
+      ],
+      "result": "int",
+      "note_ru": "Ссылка — один TYPE, уровень @ сохранён."
+    },
+    {
+      "id": "AR20",
+      "code": "makeAdder :: int -> (int -> int)",
+      "inputs": [
+        "int"
+      ],
+      "result": "(int -> int)",
+      "note_ru": "Результат — одна полная сигнатура функции."
+    },
+    {
+      "id": "AR21",
+      "code": "invoke :: (int -> int) -> int int",
+      "inputs": [
+        "(int -> int)",
+        "int"
+      ],
+      "result": "int",
+      "note_ru": "Callable и число на входе; число на выходе."
+    },
+    {
+      "id": "AR22",
+      "code": "compose :: (int -> int) -> (int -> int) (int -> int)",
+      "inputs": [
+        "(int -> int)",
+        "(int -> int)"
+      ],
+      "result": "(int -> int)",
+      "note_ru": "Два callable на входе, callable на выходе."
+    },
+    {
+      "id": "AR23",
+      "code": "transform :: (int -> int) -> int[] int[]",
+      "inputs": [
+        "(int -> int)",
+        "int[]"
+      ],
+      "result": "int[]",
+      "note_ru": "Callable и один массив; описания callable не раскрываются."
+    },
+    {
+      "id": "AR24",
+      "code": "thunkFactory :: int -> (`->`(int))",
+      "inputs": [
+        "int"
+      ],
+      "result": "`->`(int)",
+      "note_ru": "Один аргумент; результат — функция без аргументов, возвращающая int."
+    },
+    {
+      "id": "AR25",
+      "code": "acceptThunk :: (`->`(int)) -> int",
+      "inputs": [
+        "`->`(int)"
+      ],
+      "result": "int",
+      "note_ru": "Функция без аргументов — один входной callable TYPE."
+    },
+    {
+      "id": "AR26",
+      "code": "curried3 :: int -> (int -> (int -> int))",
+      "inputs": [
+        "int"
+      ],
+      "result": "(int -> (int -> int))",
+      "note_ru": "Три явно вложенных одноаргументных уровня; это описание, не автоматическое каррирование тела."
+    },
+    {
+      "id": "AR27",
+      "code": "addGrouped :: (int -> int int)",
+      "inputs": [
+        "int",
+        "int"
+      ],
+      "result": "int",
+      "note_ru": "Группировка всего конструктора не меняет его полученную сигнатуру."
+    },
+    {
+      "id": "AR28",
+      "code": "addCallForm :: `->`(int; int; int)",
+      "inputs": [
+        "int",
+        "int"
+      ],
+      "result": "int",
+      "note_ru": "Обычная форма того же конструктора с тем же порядком TYPE."
+    }
+  ]
+}

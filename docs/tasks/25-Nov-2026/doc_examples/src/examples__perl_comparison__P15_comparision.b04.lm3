@@ -1,0 +1,14 @@
+Identifier:
+    char[]: text
+    return: int
+    test:
+        throws: copy(byteText\throws) copy(atLeast\throws) copy(RxThenOperand\then\throws) copy(matches\throws)
+        return: matches(byteText(text); (then asciiLetter (asciiWord atLeast 0)))
+
+Example:
+    @: items
+    return: @
+    run:
+        throws: copy(filter\throws)
+        @: accepted filter(items; Identifier\test)
+        return: (accepted; length(items) - length(accepted))

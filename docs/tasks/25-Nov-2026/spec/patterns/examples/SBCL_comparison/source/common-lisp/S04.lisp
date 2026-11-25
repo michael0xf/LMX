@@ -1,0 +1,5 @@
+(defun example (quantities prices)
+  (let* ((totals (mapcar #'* quantities prices))
+         (count (length totals)))
+    (list totals (reduce #'+ totals :initial-value 0)
+          (- (length quantities) count) (- (length prices) count))))

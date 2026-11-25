@@ -1,0 +1,18 @@
+Neighborhood:
+    int: x
+    return: @
+    expand:
+        return: (x - 1; x; x + 1)
+
+Nonnegative:
+    int: value
+    return: int
+    accepts:
+        return: value >= 0
+
+Example:
+    int[]: xs
+    return: @
+    run:
+        throws: copy(FxListBind\bind\throws) copy(filter\throws) copy(unique\throws)
+        return: unique(filter(bind(xs; Neighborhood\expand); Nonnegative\accepts))

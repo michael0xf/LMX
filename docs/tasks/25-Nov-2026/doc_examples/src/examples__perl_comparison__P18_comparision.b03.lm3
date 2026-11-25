@@ -1,0 +1,31 @@
+Example:
+    char[]: text
+    char[]: needle
+    char[]: replacement
+    return: @
+    run:
+        throws: copy(FxSeqPush\append\throws) copy(record\throws)
+        char[]: out []
+        int: changed 0
+        int: i 0
+        while: 1
+            int: same length(needle) <= length(text) - i
+            int: j 0
+            while: same != 0 && j < length(needle)
+                if: text[i + j] != needle[j]
+                    same := 0
+                j += 1
+            if: same != 0
+                changed += 1
+                j := 0
+                while: j < length(replacement)
+                    FxSeqPush\append(out; (replacement[j] record))
+                    j += 1
+                if: length(needle) != 0
+                    i += length(needle)
+                    continue
+            ---
+            if: i = length(text)
+                return: (out; changed)
+            FxSeqPush\append(out; (text[i] record))
+            i += 1

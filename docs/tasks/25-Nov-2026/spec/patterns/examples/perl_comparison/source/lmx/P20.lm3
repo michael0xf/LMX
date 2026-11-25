@@ -1,0 +1,17 @@
+RepeatedWord:
+    char[]: text
+    return: FxMaybe@
+    parse:
+        throws: copy(byteText\throws) copy(atLeast\throws) copy(capture\throws) copy(sameAs\throws) copy(RxThenOperand\then\throws) copy(wholeMatch\throws) copy(captureValue\throws)
+        @: parsed wholeMatch(byteText(text); (then capture("word"; (asciiLetter atLeast 1)) " " sameAs("word")))
+        if: parsed\present = 0
+            return: none()
+        return: captureValue(parsed\value; "word")
+
+Example:
+    @: lines
+    return: @
+    run:
+        throws: copy(filterMap\throws)
+        @: repaired filterMap(lines; RepeatedWord\parse)
+        return: (repaired; length(lines) - length(repaired))

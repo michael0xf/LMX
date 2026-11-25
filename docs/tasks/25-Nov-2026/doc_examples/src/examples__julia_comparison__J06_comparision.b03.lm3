@@ -1,0 +1,17 @@
+Example:
+    int[]: xs
+    return: @
+    run:
+        throws: copy(FxSeqPush\append\throws) copy(record\throws)
+        int[]: out []
+        int: i 0
+        while: i < length(xs)
+            if: xs[i] % 2 != 0
+                int: j 0
+                while: j < length(out) && out[j] != xs[i]
+                    j += 1
+                if: j = length(out)
+                    FxSeqPush\append(out; (xs[i] record))
+            ---
+            i += 1
+        return: out

@@ -1,0 +1,13 @@
+Example:
+    @: xs
+    return: @
+    run:
+        throws: copy(FxSeqInfo\get\throws) copy(FxSeqAllocate\make\throws) copy(FxSeqRead\read\throws) copy(FxSeqStore\write\throws)
+        @: info FxSeqInfo\get(xs)
+        int: n length(xs)
+        @: out FxSeqAllocate\make(info\arrayType; n)
+        int: i 0
+        while: i < n
+            FxSeqStore\write(out; i; FxSeqRead\read(xs; n - i - 1))
+            i += 1
+        return: out

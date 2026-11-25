@@ -1,0 +1,17 @@
+Example:
+    int[]: xs
+    int: seed
+    return: @
+    run:
+        throws: copy(FxSeqPush\append\throws) copy(record\throws)
+        @[]: out []
+        int: balance seed
+        int: i 0
+        while: 1
+            if: balance < 0
+                FxSeqPush\append(out; (balance record))
+            if: i = length(xs)
+                break
+            balance += xs[i]
+            i += 1
+        return: out

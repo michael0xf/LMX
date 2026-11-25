@@ -1,0 +1,30 @@
+EditWrite:
+    int: west
+    int: j
+    return: int
+    cell:
+        throws: copy(EditCell\value\throws)
+        current[j] := EditCell\value(west; j)
+        return: current[j]
+
+EditRow:
+    @: previous
+    int: i
+    return: @
+    build:
+        throws: copy(FxSeqAllocate\make\throws) copy(range\throws) copy(foldl\throws) ReceiverIndex
+        @: current FxSeqAllocate\make(int[]; length(right) + 1)
+        current[0] := i
+        foldl(range(1; length(right) + 1); (i record); EditWrite\cell)
+        return: current
+
+EditDistance:
+    @: left
+    @: right
+    @: same
+    return: int
+    run:
+        throws: copy(range\throws) copy(foldl\throws) ReceiverIndex
+        @: initial range(0; length(right) + 1)
+        @: previous \foldl(range(1; length(left) + 1); (initial record); EditRow\build)
+        return: previous[length(right)]

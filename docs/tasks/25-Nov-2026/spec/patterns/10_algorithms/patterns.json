@@ -1,0 +1,1115 @@
+{
+  "group_title_ru": "Распространённые алгоритмы",
+  "group_title_en": "Common algorithms",
+  "languages": [
+    "Python",
+    "C++",
+    "Java",
+    "JavaScript"
+  ],
+  "language_pairs_scope": "Each pattern.languages is the exact pair; the top-level list is their union.",
+  "revision_date": "2026-11-24",
+  "rationale_ru": "Языки выбираются по задаче: generic search и weighted graphs — Python/C++; обходы и зависимости — Python/Java; индексная union-find — C++/Java; обработка токенов — Python/JavaScript.",
+  "overview_ru": "Шесть полноценных алгоритмов для произвольных допустимых входов. Общие тела LMX существуют один раз и входят в полную границу.",
+  "patterns": [
+    {
+      "id": 100,
+      "name": "Lower bound / двоичный поиск границы",
+      "slug": "lower_bound",
+      "scope": "algorithm_implementation",
+      "languages": [
+        "Python",
+        "C++"
+      ],
+      "contract_id": "algorithm-100",
+      "summary_ru": "Найти первую позицию, на которой элемент перестаёт быть меньше ключа; равные значения остаются справа от границы.",
+      "scenario_ru": "items — конечная random-access последовательность любого допустимого типа; needle — самостоятельное значение, необязательно того же типа. less(element, needle) — стабильный полный int-предикат без изменения inputs. Для выбранного ключа вход заранее разбит на true-префикс и false-суффикс. Возвращается индекс первой false-позиции, либо n. Отсортированность не проверяется линейным проходом; равенство вообще не вызывается. Пустой вход даёт 0 без вызова less. В LMX needle передаётся как одна готовая запись `(needle record)`; существующий FxApply допускает фактические типы элементов и ключа. Поэтому нет ограничения ни на int, ни на одинаковый тип аргументов comparator.",
+      "expected_ru": "Найти первую позицию, на которой элемент перестаёт быть меньше ключа; равные значения остаются справа от границы.",
+      "lmx_notes_ru": "Обе формы выбирают один и тот же middle и дают одинаковую последовательность вызовов less. Процедурный канонический исходник размещён в общем ядре как FxLowerBound; файл в procedural — только fixture-alias, он не заменяет тело при измерении. Функциональная форма показывает самостоятельную рекурсивную реализацию без while.",
+      "comparison_ru": "C++ представляет generic algorithms и явный comparator; Python — обычные упорядоченные коллекции и bisect. В основных листингах обе стороны показывают двоичный алгоритм, поэтому размер вызова готовой библиотеки не сравнивается с чужим телом.",
+      "limits_ru": "Процедурная форма: O(log(n+1)) обращений к random-access входу и comparator, O(1) дополнительных значений. Функциональная форма рекурсивно сужает тот же интервал и имеет O(log(n+1)) глубину вызовов без предположения об оптимизации хвостовой рекурсии. Стоимость callback оплачивается отдельно.",
+      "source": "100_lower_bound_comparision.md",
+      "listings": [
+        {
+          "language": "LMX",
+          "variant": "functional",
+          "source": "examples/lmx/100_lower_bound.lm3",
+          "code": "LowerBoundStep:\n    int: low\n    int: high\n    return: int\n    search:\n        throws: copy(FxSeqRead\\read\\throws) copy(FxApply\\apply\\throws) copy(FxSeqPredicate\\truth\\throws)\n        if: low >= high\n            return: low\n        int: middle low + (high - low) / 2\n        @: item FxSeqRead\\read(items; middle)\n        @: flag FxApply\\apply(less; FxTwo\\make(item; needle))\n        if: FxSeqPredicate\\truth(flag) != 0\n            return: search(middle + 1; high)\n        return: search(low; middle)\n\nLowerBound:\n    @: items\n    @: needle\n    @: less\n    return: int\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(LowerBoundStep\\search\\throws)\n        FxSeqInfo\\get(items)\n        return: LowerBoundStep\\search(0; length(items))\n",
+          "publication_role": "compatibility_mirror_not_separate_comparison",
+          "metrics": {
+            "characters": 534,
+            "nonblank_lines": 23,
+            "utf8_bytes": 740,
+            "sha256": "83967f457be7f3196689ec51a08a5279856a8c1c0cd983056e95d2c7746860d7"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "source_file": "examples/lmx/100_lower_bound.lm3",
+          "source_files": [
+            "examples/lmx/100_lower_bound.lm3"
+          ],
+          "source_file_is_fragment": false
+        },
+        {
+          "language": "Python",
+          "variant": "implementation",
+          "source": "examples/python/100_lower_bound.py",
+          "code": "from operator import lt\n\n\ndef lower_bound(items, needle, less=lt):\n    low, high = 0, len(items)\n    while low < high:\n        middle = low + (high - low) // 2\n        if less(items[middle], needle):\n            low = middle + 1\n        else:\n            high = middle\n    return low\n",
+          "metrics": {
+            "characters": 182,
+            "nonblank_lines": 10,
+            "utf8_bytes": 284,
+            "sha256": "12bc9cccd86a995b05e7f7fbd27e8cee0933fdcfbd79c386546c0c90b8a91180"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "execution": "PASS",
+          "cases": 125,
+          "source_file": "examples/python/100_lower_bound.py"
+        },
+        {
+          "language": "C++",
+          "variant": "implementation",
+          "source": "examples/cpp/100_lower_bound.cpp",
+          "code": "#include <cstddef>\n#include <functional>\n#include <vector>\n\ntemplate<class T, class U, class Less = std::less<>>\nstd::size_t lowerBound(const std::vector<T>& items, const U& needle, Less less = {}) {\n    std::size_t low = 0, high = items.size();\n    while (low < high) {\n        const auto middle = low + (high - low) / 2;\n        if (less(items[middle], needle)) low = middle + 1;\n        else high = middle;\n    }\n    return low;\n}\n",
+          "metrics": {
+            "characters": 328,
+            "nonblank_lines": 13,
+            "utf8_bytes": 434,
+            "sha256": "b739107bc3e47434a585a4d53e92b30d2ad0e0339551e27a96d6775c28e4b91a"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "execution": "PASS",
+          "cases": 125,
+          "source_file": "examples/cpp/100_lower_bound.cpp"
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "contract_id": "algorithm-100",
+          "source": "examples/lmx/procedural/100_lower_bound.lm3",
+          "code": "FxLowerBound:\n    private:\n        @: items\n        @: needle\n        @: less\n    required: items needle less\n    return: int\n    lowerBound:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqRead\\read\\throws) copy(FxApply\\apply\\throws) copy(FxSeqPredicate\\truth\\throws)\n        FxSeqInfo\\get(items)\n        int: low 0\n        int: high length(items)\n        while: low < high\n            int: middle low + (high - low) / 2\n            @: item FxSeqRead\\read(items; middle)\n            @: flag FxApply\\apply(less; FxTwo\\make(item; needle))\n            if: FxSeqPredicate\\truth(flag) != 0\n                low := middle + 1\n            else:\n                high := middle\n        ---\n        return: low\n",
+          "common_sources": [],
+          "closure_sources": [
+            "../LMX_Fn_Receivers/src/lowerBound.lmx"
+          ],
+          "entry": "FxLowerBound\\lowerBound(items; needleRecord; less)",
+          "metrics": {
+            "characters": 453,
+            "characters_with_whitespace": 706,
+            "nonblank_lines": 22,
+            "utf8_bytes": 706,
+            "sha256": "8561889d551faea8de47eec444b93ee46b480cf27f02e932d821f11a5dd5be37"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "p0_status": "NOT_RUN",
+          "runtime_status": "NOT_RUN",
+          "source_file": "../LMX_Fn_Receivers/src/lowerBound.lmx",
+          "entry_source_file": "examples/lmx/procedural/100_lower_bound.lm3",
+          "fragment_code": "FxLowerBound:\n    private:\n        @: items\n        @: needle\n        @: less\n    required: items needle less\n    return: int\n    lowerBound:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqRead\\read\\throws) copy(FxApply\\apply\\throws) copy(FxSeqPredicate\\truth\\throws)\n        FxSeqInfo\\get(items)\n        int: low 0\n        int: high length(items)\n        while: low < high\n            int: middle low + (high - low) / 2\n            @: item FxSeqRead\\read(items; middle)\n            @: flag FxApply\\apply(less; FxTwo\\make(item; needle))\n            if: FxSeqPredicate\\truth(flag) != 0\n                low := middle + 1\n            else:\n                high := middle\n        ---\n        return: low\n",
+          "source_files": [
+            "../LMX_Fn_Receivers/src/lowerBound.lmx"
+          ],
+          "source_file_is_fragment": false,
+          "runtime_execution": "NOT_RUN"
+        },
+        "functional": {
+          "contract_id": "algorithm-100",
+          "source": "examples/lmx/100_lower_bound.lm3",
+          "code": "LowerBoundStep:\n    int: low\n    int: high\n    return: int\n    search:\n        throws: copy(FxSeqRead\\read\\throws) copy(FxApply\\apply\\throws) copy(FxSeqPredicate\\truth\\throws)\n        if: low >= high\n            return: low\n        int: middle low + (high - low) / 2\n        @: item FxSeqRead\\read(items; middle)\n        @: flag FxApply\\apply(less; FxTwo\\make(item; needle))\n        if: FxSeqPredicate\\truth(flag) != 0\n            return: search(middle + 1; high)\n        return: search(low; middle)\n\nLowerBound:\n    @: items\n    @: needle\n    @: less\n    return: int\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(LowerBoundStep\\search\\throws)\n        FxSeqInfo\\get(items)\n        return: LowerBoundStep\\search(0; length(items))\n",
+          "common_sources": [],
+          "closure_sources": [
+            "examples/lmx/100_lower_bound.lm3"
+          ],
+          "entry": "LowerBound\\run(items; needleRecord; less)",
+          "metrics": {
+            "characters": 534,
+            "characters_with_whitespace": 740,
+            "nonblank_lines": 23,
+            "utf8_bytes": 740,
+            "sha256": "83967f457be7f3196689ec51a08a5279856a8c1c0cd983056e95d2c7746860d7"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "p0_status": "NOT_RUN",
+          "runtime_status": "NOT_RUN",
+          "source_file": "examples/lmx/100_lower_bound.lm3",
+          "entry_source_file": "examples/lmx/100_lower_bound.lm3",
+          "fragment_code": "LowerBoundStep:\n    int: low\n    int: high\n    return: int\n    search:\n        throws: copy(FxSeqRead\\read\\throws) copy(FxApply\\apply\\throws) copy(FxSeqPredicate\\truth\\throws)\n        if: low >= high\n            return: low\n        int: middle low + (high - low) / 2\n        @: item FxSeqRead\\read(items; middle)\n        @: flag FxApply\\apply(less; FxTwo\\make(item; needle))\n        if: FxSeqPredicate\\truth(flag) != 0\n            return: search(middle + 1; high)\n        return: search(low; middle)\n\nLowerBound:\n    @: items\n    @: needle\n    @: less\n    return: int\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(LowerBoundStep\\search\\throws)\n        FxSeqInfo\\get(items)\n        return: LowerBoundStep\\search(0; length(items))\n",
+          "source_files": [
+            "examples/lmx/100_lower_bound.lm3"
+          ],
+          "source_file_is_fragment": false,
+          "runtime_execution": "NOT_RUN"
+        }
+      },
+      "sources": [
+        {
+          "title": "C++ working draft: lower_bound",
+          "url": "https://eel.is/c++draft/lower.bound"
+        },
+        {
+          "title": "Python: bisect_left",
+          "url": "https://docs.python.org/3/library/bisect.html"
+        }
+      ],
+      "acceptance_cases": [
+        "lb_empty",
+        "lb_duplicates",
+        "lb_after",
+        "lb_before",
+        "lb_between"
+      ],
+      "metrics_status": "CURRENT_FULL_SOURCE",
+      "lmx_operation_phase": "after_root_startup",
+      "shared_dependencies_in_measurement": [],
+      "standard_library_dependencies": [
+        "FxApply",
+        "FxSeqRead",
+        "FxSeqAllocate",
+        "fill",
+        "map",
+        "foldl",
+        "collect",
+        "range"
+      ],
+      "measurement_boundary": "Full algorithm bodies plus local common definitions. Generic core operations remain separately listed standard-library dependencies. No measurements recomputed.",
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "style_note": "Общие определения включаются в полную границу каждого варианта ровно один раз; различаются явный процедурный обход и функциональная организация того же алгоритма.",
+      "comparison_file": "100_lower_bound_comparision.md",
+      "kind": "algorithm"
+    },
+    {
+      "id": 101,
+      "name": "Breadth-first search / поиск в ширину",
+      "slug": "breadth_first_search",
+      "scope": "algorithm_implementation",
+      "languages": [
+        "Python",
+        "Java"
+      ],
+      "contract_id": "algorithm-101",
+      "summary_ru": "Вычислить минимальное число рёбер от стартовой вершины ко всем вершинам графа.",
+      "scenario_ru": "graph — конечный ориентированный граф в виде массива строк соседей; вершины имеют индексы 0..V-1. Каждая строка содержит допустимые int-индексы, порядок сохраняется. Петли и повторные рёбра разрешены. При V>0 start — допустимая вершина; при V=0 используется start=-1 и возвращается пустой массив. Результат содержит V целых расстояний: start имеет 0, недостижимые вершины — -1. Исходные строки не меняются. Посещение отмечается при постановке в очередь, поэтому каждая вершина ставится не более одного раза.",
+      "expected_ru": "Вычислить минимальное число рёбер от стартовой вершины ко всем вершинам графа.",
+      "lmx_notes_ru": "Подготовка distance/queue и единственный шаг обнаружения BfsDiscover общие. Процедурный driver содержит два while; функциональный заменяет поток вершин на collect и обход соседей на foldl. Локальные distance, queue, head, tail и nextDistance доступны callback через существующее динамическое связывание; это намеренная возможность LMX, поэтому повторять их параметры и контейнер состояния не требуется. Эта форма использует функциональные комбинаторы над приватным изменяемым рабочим состоянием и не выдаётся за persistent-очередь.",
+      "comparison_ru": "Python показывает компактную обработку списков соседей, Java — явные массивы расстояний и FIFO-очередь ограниченной ёмкости V. Это типичные реализации обхода графа с одинаковым наблюдаемым результатом.",
+      "limits_ru": "O(V+E) времени в худшем случае, O(V) дополнительного рабочего состояния; недостижимые рёбра не обходятся. Функциональная collect дополнительно создаёт конечную последовательность посещённых вершин размера не больше V. Оценка размера живых значений не обещает конкретную политику освобождения арены runtime.",
+      "source": "101_breadth_first_search_comparision.md",
+      "listings": [
+        {
+          "language": "LMX",
+          "variant": "functional",
+          "source": "examples/lmx/101_breadth_first_search.lm3",
+          "code": "AlgorithmArray:\n    int: arrayType\n    int: size\n    @: value\n    return: @\n    make:\n        throws: copy(FxSeqAllocate\\make\\throws) copy(FxArrayFill\\fill\\throws)\n        @: out FxSeqAllocate\\make(arrayType; size)\n        return: FxArrayFill\\fill(out; value)\n\nBreadthFirst:\n    @: graph\n    int: start\n    @: traverse\n    return: @\n    run:\n        throws: copy(AlgorithmArray\\make\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxApply\\apply\\throws) ReceiverIndex\n        int: n length(graph)\n        @: distance AlgorithmArray\\make(int[]; n; (-1 record))\n        if: n = 0\n            return: distance\n        @: queue FxSeqAllocate\\make(int[]; n)\n        queue[0] := start\n        distance[start] := 0\n        int: head 0\n        int: tail 1\n        int: nextDistance 0\n        FxApply\\apply(traverse; ())\n        return: distance\n\nBfsDiscover:\n    int: tail\n    int: vertex\n    return: int\n    run:\n        throws: ReceiverIndex\n        if: distance[vertex] = -1\n            distance[vertex] := nextDistance\n            queue[tail] := vertex\n            tail += 1\n        return: tail\n\nBfsVisit:\n    return: int\n    next:\n        throws: copy(foldl\\throws) Stop ReceiverIndex\n        if: head = tail\n            throw: Stop()\n        int: vertex queue[head]\n        head += 1\n        nextDistance := distance[vertex] + 1\n        tail := \\foldl(graph[vertex]; (tail record); BfsDiscover\\run)\n        return: vertex\n\nBfsFunctional:\n    return: int\n    run:\n        throws: copy(collect\\throws)\n        collect(BfsVisit\\next)\n        return: 0\n",
+          "publication_role": "compatibility_mirror_not_separate_comparison",
+          "metrics": {
+            "characters": 1044,
+            "nonblank_lines": 56,
+            "utf8_bytes": 1544,
+            "sha256": "d0eba378b08168365d2615ab1492c671a600437e8e515931c825361b7ecd8e8d"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "source_file": "examples/lmx/101_breadth_first_search.lm3",
+          "source_files": [
+            "examples/lmx/common/array.lm3",
+            "examples/lmx/common/101_breadth_first_search.lm3",
+            "examples/lmx/101_breadth_first_search.lm3"
+          ],
+          "source_file_is_fragment": true
+        },
+        {
+          "language": "Python",
+          "variant": "implementation",
+          "source": "examples/python/101_breadth_first_search.py",
+          "code": "def breadth_first_search(graph, start):\n    distance = [-1] * len(graph)\n    if not graph:\n        return distance\n    queue = [start]\n    distance[start] = 0\n    head = 0\n    while head < len(queue):\n        vertex = queue[head]\n        head += 1\n        for neighbor in graph[vertex]:\n            if distance[neighbor] == -1:\n                distance[neighbor] = distance[vertex] + 1\n                queue.append(neighbor)\n    return distance\n",
+          "metrics": {
+            "characters": 293,
+            "nonblank_lines": 15,
+            "utf8_bytes": 445,
+            "sha256": "668d4b18d3d7f6f1b59c18fb0d21e714a348af0d99c56540915f6dae525cc3ad"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "execution": "PASS",
+          "cases": 124,
+          "source_file": "examples/python/101_breadth_first_search.py"
+        },
+        {
+          "language": "Java",
+          "variant": "implementation",
+          "source": "examples/java/101_breadth_first_search.java",
+          "code": "import java.util.Arrays;\n\nfinal class BreadthFirstExample {\n    static int[] run(int[][] graph, int start) {\n        int[] distance = new int[graph.length];\n        Arrays.fill(distance, -1);\n        if (graph.length == 0) return distance;\n        int[] queue = new int[graph.length];\n        int head = 0, tail = 1;\n        queue[0] = start;\n        distance[start] = 0;\n        while (head < tail) {\n            int vertex = queue[head++];\n            for (int neighbor : graph[vertex]) {\n                if (distance[neighbor] == -1) {\n                    distance[neighbor] = distance[vertex] + 1;\n                    queue[tail++] = neighbor;\n                }\n            }\n        }\n        return distance;\n    }\n}\n",
+          "metrics": {
+            "characters": 447,
+            "nonblank_lines": 22,
+            "utf8_bytes": 723,
+            "sha256": "e8a606a187bc26135027c655396eb3fd5fb09e347a5d404a251356cdc3e48d8c"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "execution": "PASS",
+          "cases": 124,
+          "source_file": "examples/java/101_breadth_first_search.java"
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "contract_id": "algorithm-101",
+          "source": "examples/lmx/procedural/101_breadth_first_search.lm3",
+          "code": "AlgorithmArray:\n    int: arrayType\n    int: size\n    @: value\n    return: @\n    make:\n        throws: copy(FxSeqAllocate\\make\\throws) copy(FxArrayFill\\fill\\throws)\n        @: out FxSeqAllocate\\make(arrayType; size)\n        return: FxArrayFill\\fill(out; value)\n\nBreadthFirst:\n    @: graph\n    int: start\n    @: traverse\n    return: @\n    run:\n        throws: copy(AlgorithmArray\\make\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxApply\\apply\\throws) ReceiverIndex\n        int: n length(graph)\n        @: distance AlgorithmArray\\make(int[]; n; (-1 record))\n        if: n = 0\n            return: distance\n        @: queue FxSeqAllocate\\make(int[]; n)\n        queue[0] := start\n        distance[start] := 0\n        int: head 0\n        int: tail 1\n        int: nextDistance 0\n        FxApply\\apply(traverse; ())\n        return: distance\n\nBfsDiscover:\n    int: tail\n    int: vertex\n    return: int\n    run:\n        throws: ReceiverIndex\n        if: distance[vertex] = -1\n            distance[vertex] := nextDistance\n            queue[tail] := vertex\n            tail += 1\n        return: tail\n\nBfsProcedural:\n    return: int\n    run:\n        throws: copy(BfsDiscover\\run\\throws)\n        while: head < tail\n            int: vertex queue[head]\n            head += 1\n            nextDistance := distance[vertex] + 1\n            @: row graph[vertex]\n            int: i 0\n            while: i < length(row)\n                tail := BfsDiscover\\run(tail; row[i])\n                i += 1\n        ---\n        return: 0\n",
+          "common_sources": [
+            "examples/lmx/common/101_breadth_first_search.lm3"
+          ],
+          "closure_sources": [
+            "examples/lmx/common/array.lm3",
+            "examples/lmx/common/101_breadth_first_search.lm3",
+            "examples/lmx/procedural/101_breadth_first_search.lm3"
+          ],
+          "entry": "BreadthFirst\\run(graph; start; BfsProcedural\\run)",
+          "metrics": {
+            "characters": 970,
+            "characters_with_whitespace": 1504,
+            "nonblank_lines": 54,
+            "utf8_bytes": 1504,
+            "sha256": "d9f8661a4da267ccd6eaa9d8e42c85aa14a4c98dd3b8f517bbbf942c75867fd3"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "p0_status": "NOT_RUN",
+          "runtime_status": "NOT_RUN",
+          "source_file": "examples/lmx/procedural/101_breadth_first_search.lm3",
+          "entry_source_file": "examples/lmx/procedural/101_breadth_first_search.lm3",
+          "fragment_code": "BfsProcedural:\n    return: int\n    run:\n        throws: copy(BfsDiscover\\run\\throws)\n        while: head < tail\n            int: vertex queue[head]\n            head += 1\n            nextDistance := distance[vertex] + 1\n            @: row graph[vertex]\n            int: i 0\n            while: i < length(row)\n                tail := BfsDiscover\\run(tail; row[i])\n                i += 1\n        ---\n        return: 0\n",
+          "source_files": [
+            "examples/lmx/common/array.lm3",
+            "examples/lmx/common/101_breadth_first_search.lm3",
+            "examples/lmx/procedural/101_breadth_first_search.lm3"
+          ],
+          "source_file_is_fragment": true,
+          "runtime_execution": "NOT_RUN"
+        },
+        "functional": {
+          "contract_id": "algorithm-101",
+          "source": "examples/lmx/101_breadth_first_search.lm3",
+          "code": "AlgorithmArray:\n    int: arrayType\n    int: size\n    @: value\n    return: @\n    make:\n        throws: copy(FxSeqAllocate\\make\\throws) copy(FxArrayFill\\fill\\throws)\n        @: out FxSeqAllocate\\make(arrayType; size)\n        return: FxArrayFill\\fill(out; value)\n\nBreadthFirst:\n    @: graph\n    int: start\n    @: traverse\n    return: @\n    run:\n        throws: copy(AlgorithmArray\\make\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxApply\\apply\\throws) ReceiverIndex\n        int: n length(graph)\n        @: distance AlgorithmArray\\make(int[]; n; (-1 record))\n        if: n = 0\n            return: distance\n        @: queue FxSeqAllocate\\make(int[]; n)\n        queue[0] := start\n        distance[start] := 0\n        int: head 0\n        int: tail 1\n        int: nextDistance 0\n        FxApply\\apply(traverse; ())\n        return: distance\n\nBfsDiscover:\n    int: tail\n    int: vertex\n    return: int\n    run:\n        throws: ReceiverIndex\n        if: distance[vertex] = -1\n            distance[vertex] := nextDistance\n            queue[tail] := vertex\n            tail += 1\n        return: tail\n\nBfsVisit:\n    return: int\n    next:\n        throws: copy(foldl\\throws) Stop ReceiverIndex\n        if: head = tail\n            throw: Stop()\n        int: vertex queue[head]\n        head += 1\n        nextDistance := distance[vertex] + 1\n        tail := \\foldl(graph[vertex]; (tail record); BfsDiscover\\run)\n        return: vertex\n\nBfsFunctional:\n    return: int\n    run:\n        throws: copy(collect\\throws)\n        collect(BfsVisit\\next)\n        return: 0\n",
+          "common_sources": [
+            "examples/lmx/common/101_breadth_first_search.lm3"
+          ],
+          "closure_sources": [
+            "examples/lmx/common/array.lm3",
+            "examples/lmx/common/101_breadth_first_search.lm3",
+            "examples/lmx/101_breadth_first_search.lm3"
+          ],
+          "entry": "BreadthFirst\\run(graph; start; BfsFunctional\\run)",
+          "metrics": {
+            "characters": 1044,
+            "characters_with_whitespace": 1544,
+            "nonblank_lines": 56,
+            "utf8_bytes": 1544,
+            "sha256": "d0eba378b08168365d2615ab1492c671a600437e8e515931c825361b7ecd8e8d"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "p0_status": "NOT_RUN",
+          "runtime_status": "NOT_RUN",
+          "source_file": "examples/lmx/101_breadth_first_search.lm3",
+          "entry_source_file": "examples/lmx/101_breadth_first_search.lm3",
+          "fragment_code": "BfsVisit:\n    return: int\n    next:\n        throws: copy(foldl\\throws) Stop ReceiverIndex\n        if: head = tail\n            throw: Stop()\n        int: vertex queue[head]\n        head += 1\n        nextDistance := distance[vertex] + 1\n        tail := \\foldl(graph[vertex]; (tail record); BfsDiscover\\run)\n        return: vertex\n\nBfsFunctional:\n    return: int\n    run:\n        throws: copy(collect\\throws)\n        collect(BfsVisit\\next)\n        return: 0\n",
+          "source_files": [
+            "examples/lmx/common/array.lm3",
+            "examples/lmx/common/101_breadth_first_search.lm3",
+            "examples/lmx/101_breadth_first_search.lm3"
+          ],
+          "source_file_is_fragment": true,
+          "runtime_execution": "NOT_RUN"
+        }
+      },
+      "sources": [
+        {
+          "title": "Boost.Graph: breadth_first_search",
+          "url": "https://www.boost.org/doc/libs/1_82_0/libs/graph/doc/breadth_first_search.html"
+        },
+        {
+          "title": "Java: Arrays.fill",
+          "url": "https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Arrays.html"
+        }
+      ],
+      "acceptance_cases": [
+        "bfs_empty",
+        "bfs_branch_unreachable",
+        "bfs_self_duplicate",
+        "bfs_other_start"
+      ],
+      "metrics_status": "CURRENT_FULL_SOURCE",
+      "lmx_operation_phase": "after_root_startup",
+      "shared_dependencies_in_measurement": [
+        "examples/lmx/common/array.lm3",
+        "examples/lmx/common/101_breadth_first_search.lm3"
+      ],
+      "standard_library_dependencies": [
+        "FxApply",
+        "FxSeqRead",
+        "FxSeqAllocate",
+        "fill",
+        "map",
+        "foldl",
+        "collect",
+        "range"
+      ],
+      "measurement_boundary": "Full algorithm bodies plus local common definitions. Generic core operations remain separately listed standard-library dependencies. No measurements recomputed.",
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "style_note": "Общие определения включаются в полную границу каждого варианта ровно один раз; различаются явный процедурный обход и функциональная организация того же алгоритма.",
+      "comparison_file": "101_breadth_first_search_comparision.md",
+      "kind": "algorithm"
+    },
+    {
+      "id": 102,
+      "name": "Kahn topological sort / порядок зависимостей",
+      "slug": "topological_sort",
+      "scope": "algorithm_implementation",
+      "languages": [
+        "Python",
+        "Java"
+      ],
+      "contract_id": "algorithm-102",
+      "summary_ru": "Выдать детерминированный порядок выполнения зависимостей либо сообщить о цикле.",
+      "scenario_ru": "graph задаётся списками исходящих рёбер с допустимыми индексами 0..V-1; разрешены кратные рёбра и петли. Результат — присутствующий массив всех вершин, либо отсутствие при любом цикле, включая цикл в отдельной компоненте. Пустой граф даёт присутствующий пустой массив. Начальные вершины с нулевой входящей степенью ставятся в очередь по возрастанию индекса; затем действует FIFO, а соседи рассматриваются в порядке строки graph. Это определяет точный порядок при нескольких допустимых сортировках. Каждое кратное ребро отдельно увеличивает и уменьшает степень. Частичный порядок при цикле наружу не возвращается.",
+      "expected_ru": "Выдать детерминированный порядок выполнения зависимостей либо сообщить о цикле.",
+      "lmx_notes_ru": "TopoCount, TopoEnqueue и TopoRemove записаны один раз. Процедурная форма явно обходит строки и очередь. Функциональная использует map для строк и начальных вершин, foldl для каждого ряда рёбер и collect до исчерпания очереди. Обе формы вызывают один общий Topological\\run, который различает none и some(empty array). Python None и Java null в fixture означают отсутствие, а не пустой успешный результат.",
+      "comparison_ru": "Python удобен для обработки зависимостей и DAG; Java показывает ту же работу на массивах с явной очередью. Оба листинга реализуют именно зафиксированный FIFO-порядок, а не произвольную топологическую перестановку.",
+      "limits_ru": "O(V+E) времени, O(V) основной дополнительной памяти. Функциональные map/collect создают дополнительные временные результаты суммарного логического размера O(V), а foldl обрабатывает каждое ребро один раз при подсчёте и не более одного раза при снятии.",
+      "source": "102_topological_sort_comparision.md",
+      "listings": [
+        {
+          "language": "LMX",
+          "variant": "functional",
+          "source": "examples/lmx/102_topological_sort.lm3",
+          "code": "AlgorithmArray:\n    int: arrayType\n    int: size\n    @: value\n    return: @\n    make:\n        throws: copy(FxSeqAllocate\\make\\throws) copy(FxArrayFill\\fill\\throws)\n        @: out FxSeqAllocate\\make(arrayType; size)\n        return: FxArrayFill\\fill(out; value)\n\nTopological:\n    @: graph\n    @: traverse\n    return: FxMaybe@\n    run:\n        throws: copy(AlgorithmArray\\make\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxApply\\apply\\throws) FxRecordArity\n        int: n length(graph)\n        @: degree AlgorithmArray\\make(int[]; n; (0 record))\n        @: queue FxSeqAllocate\\make(int[]; n)\n        int: head 0\n        int: tail 0\n        FxApply\\apply(traverse; ())\n        if: tail != n\n            return: none()\n        return: some(queue)\n\nTopoCount:\n    int: ignored\n    int: vertex\n    return: int\n    run:\n        throws: ReceiverIndex\n        degree[vertex] += 1\n        return: 0\n\nTopoEnqueue:\n    int: vertex\n    return: int\n    run:\n        throws: ReceiverIndex\n        if: degree[vertex] = 0\n            queue[tail] := vertex\n            tail += 1\n        return: vertex\n\nTopoRemove:\n    int: tail\n    int: vertex\n    return: int\n    run:\n        throws: ReceiverIndex\n        degree[vertex] -= 1\n        if: degree[vertex] = 0\n            queue[tail] := vertex\n            tail += 1\n        return: tail\n\nTopoRow:\n    @: row\n    return: int\n    count:\n        throws: copy(foldl\\throws)\n        return: \\foldl(row; (0 record); TopoCount\\run)\n\nTopoVisit:\n    return: int\n    next:\n        throws: copy(foldl\\throws) Stop ReceiverIndex\n        if: head = tail\n            throw: Stop()\n        int: vertex queue[head]\n        head += 1\n        tail := \\foldl(graph[vertex]; (tail record); TopoRemove\\run)\n        return: vertex\n\nTopoFunctional:\n    return: int\n    run:\n        throws: copy(map\\throws) copy(range\\throws) copy(collect\\throws)\n        map(graph; TopoRow\\count)\n        map(range(0; n); TopoEnqueue\\run)\n        collect(TopoVisit\\next)\n        return: 0\n",
+          "publication_role": "compatibility_mirror_not_separate_comparison",
+          "metrics": {
+            "characters": 1335,
+            "nonblank_lines": 76,
+            "utf8_bytes": 1981,
+            "sha256": "58c1b1af7eafad99b654898dca4d12e47d2b335f48e3c9f982686372a8da3dd8"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "source_file": "examples/lmx/102_topological_sort.lm3",
+          "source_files": [
+            "examples/lmx/common/array.lm3",
+            "examples/lmx/common/102_topological_sort.lm3",
+            "examples/lmx/102_topological_sort.lm3"
+          ],
+          "source_file_is_fragment": true
+        },
+        {
+          "language": "Python",
+          "variant": "implementation",
+          "source": "examples/python/102_topological_sort.py",
+          "code": "def topological_sort(graph):\n    degree = [0] * len(graph)\n    for row in graph:\n        for vertex in row:\n            degree[vertex] += 1\n    order = [v for v, incoming in enumerate(degree) if incoming == 0]\n    head = 0\n    while head < len(order):\n        vertex = order[head]\n        head += 1\n        for neighbor in graph[vertex]:\n            degree[neighbor] -= 1\n            if degree[neighbor] == 0:\n                order.append(neighbor)\n    return order if len(order) == len(graph) else None\n",
+          "metrics": {
+            "characters": 333,
+            "nonblank_lines": 15,
+            "utf8_bytes": 504,
+            "sha256": "0d027f84ab532624315bcba7cd6fda588f2494ce9f63ff9d676cc934f95b2390"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "execution": "PASS",
+          "cases": 125,
+          "source_file": "examples/python/102_topological_sort.py"
+        },
+        {
+          "language": "Java",
+          "variant": "implementation",
+          "source": "examples/java/102_topological_sort.java",
+          "code": "final class TopologicalExample {\n    static int[] run(int[][] graph) {\n        int[] degree = new int[graph.length], order = new int[graph.length];\n        for (int[] row : graph) {\n            for (int vertex : row) degree[vertex]++;\n        }\n        int head = 0, tail = 0;\n        for (int vertex = 0; vertex < graph.length; ++vertex) {\n            if (degree[vertex] == 0) order[tail++] = vertex;\n        }\n        while (head < tail) {\n            for (int neighbor : graph[order[head++]]) {\n                if (--degree[neighbor] == 0) order[tail++] = neighbor;\n            }\n        }\n        return tail == graph.length ? order : null;\n    }\n}\n",
+          "metrics": {
+            "characters": 423,
+            "nonblank_lines": 18,
+            "utf8_bytes": 653,
+            "sha256": "c03310486a07be6853b495cf1cad8dde59cdb2454942d5f921e0ffe3f0fcd5aa"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "execution": "PASS",
+          "cases": 125,
+          "source_file": "examples/java/102_topological_sort.java"
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "contract_id": "algorithm-102",
+          "source": "examples/lmx/procedural/102_topological_sort.lm3",
+          "code": "AlgorithmArray:\n    int: arrayType\n    int: size\n    @: value\n    return: @\n    make:\n        throws: copy(FxSeqAllocate\\make\\throws) copy(FxArrayFill\\fill\\throws)\n        @: out FxSeqAllocate\\make(arrayType; size)\n        return: FxArrayFill\\fill(out; value)\n\nTopological:\n    @: graph\n    @: traverse\n    return: FxMaybe@\n    run:\n        throws: copy(AlgorithmArray\\make\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxApply\\apply\\throws) FxRecordArity\n        int: n length(graph)\n        @: degree AlgorithmArray\\make(int[]; n; (0 record))\n        @: queue FxSeqAllocate\\make(int[]; n)\n        int: head 0\n        int: tail 0\n        FxApply\\apply(traverse; ())\n        if: tail != n\n            return: none()\n        return: some(queue)\n\nTopoCount:\n    int: ignored\n    int: vertex\n    return: int\n    run:\n        throws: ReceiverIndex\n        degree[vertex] += 1\n        return: 0\n\nTopoEnqueue:\n    int: vertex\n    return: int\n    run:\n        throws: ReceiverIndex\n        if: degree[vertex] = 0\n            queue[tail] := vertex\n            tail += 1\n        return: vertex\n\nTopoRemove:\n    int: tail\n    int: vertex\n    return: int\n    run:\n        throws: ReceiverIndex\n        degree[vertex] -= 1\n        if: degree[vertex] = 0\n            queue[tail] := vertex\n            tail += 1\n        return: tail\n\nTopoProcedural:\n    return: int\n    run:\n        throws: copy(TopoCount\\run\\throws) copy(TopoEnqueue\\run\\throws) copy(TopoRemove\\run\\throws)\n        int: i 0\n        while: i < n\n            @: row graph[i]\n            int: j 0\n            while: j < length(row)\n                TopoCount\\run(0; row[j])\n                j += 1\n            i += 1\n        ---\n        i := 0\n        while: i < n\n            TopoEnqueue\\run(i)\n            i += 1\n        ---\n        while: head < tail\n            @: row graph[queue[head]]\n            head += 1\n            int: j 0\n            while: j < length(row)\n                tail := TopoRemove\\run(tail; row[j])\n                j += 1\n        ---\n        return: 0\n",
+          "common_sources": [
+            "examples/lmx/common/102_topological_sort.lm3"
+          ],
+          "closure_sources": [
+            "examples/lmx/common/array.lm3",
+            "examples/lmx/common/102_topological_sort.lm3",
+            "examples/lmx/procedural/102_topological_sort.lm3"
+          ],
+          "entry": "Topological\\run(graph; TopoProcedural\\run)",
+          "metrics": {
+            "characters": 1236,
+            "characters_with_whitespace": 2024,
+            "nonblank_lines": 79,
+            "utf8_bytes": 2024,
+            "sha256": "1604478b63a7be387784df4f054c76510ffcdb0fcd38ef24b03c1147f894a853"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "p0_status": "NOT_RUN",
+          "runtime_status": "NOT_RUN",
+          "source_file": "examples/lmx/procedural/102_topological_sort.lm3",
+          "entry_source_file": "examples/lmx/procedural/102_topological_sort.lm3",
+          "fragment_code": "TopoProcedural:\n    return: int\n    run:\n        throws: copy(TopoCount\\run\\throws) copy(TopoEnqueue\\run\\throws) copy(TopoRemove\\run\\throws)\n        int: i 0\n        while: i < n\n            @: row graph[i]\n            int: j 0\n            while: j < length(row)\n                TopoCount\\run(0; row[j])\n                j += 1\n            i += 1\n        ---\n        i := 0\n        while: i < n\n            TopoEnqueue\\run(i)\n            i += 1\n        ---\n        while: head < tail\n            @: row graph[queue[head]]\n            head += 1\n            int: j 0\n            while: j < length(row)\n                tail := TopoRemove\\run(tail; row[j])\n                j += 1\n        ---\n        return: 0\n",
+          "source_files": [
+            "examples/lmx/common/array.lm3",
+            "examples/lmx/common/102_topological_sort.lm3",
+            "examples/lmx/procedural/102_topological_sort.lm3"
+          ],
+          "source_file_is_fragment": true,
+          "runtime_execution": "NOT_RUN"
+        },
+        "functional": {
+          "contract_id": "algorithm-102",
+          "source": "examples/lmx/102_topological_sort.lm3",
+          "code": "AlgorithmArray:\n    int: arrayType\n    int: size\n    @: value\n    return: @\n    make:\n        throws: copy(FxSeqAllocate\\make\\throws) copy(FxArrayFill\\fill\\throws)\n        @: out FxSeqAllocate\\make(arrayType; size)\n        return: FxArrayFill\\fill(out; value)\n\nTopological:\n    @: graph\n    @: traverse\n    return: FxMaybe@\n    run:\n        throws: copy(AlgorithmArray\\make\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxApply\\apply\\throws) FxRecordArity\n        int: n length(graph)\n        @: degree AlgorithmArray\\make(int[]; n; (0 record))\n        @: queue FxSeqAllocate\\make(int[]; n)\n        int: head 0\n        int: tail 0\n        FxApply\\apply(traverse; ())\n        if: tail != n\n            return: none()\n        return: some(queue)\n\nTopoCount:\n    int: ignored\n    int: vertex\n    return: int\n    run:\n        throws: ReceiverIndex\n        degree[vertex] += 1\n        return: 0\n\nTopoEnqueue:\n    int: vertex\n    return: int\n    run:\n        throws: ReceiverIndex\n        if: degree[vertex] = 0\n            queue[tail] := vertex\n            tail += 1\n        return: vertex\n\nTopoRemove:\n    int: tail\n    int: vertex\n    return: int\n    run:\n        throws: ReceiverIndex\n        degree[vertex] -= 1\n        if: degree[vertex] = 0\n            queue[tail] := vertex\n            tail += 1\n        return: tail\n\nTopoRow:\n    @: row\n    return: int\n    count:\n        throws: copy(foldl\\throws)\n        return: \\foldl(row; (0 record); TopoCount\\run)\n\nTopoVisit:\n    return: int\n    next:\n        throws: copy(foldl\\throws) Stop ReceiverIndex\n        if: head = tail\n            throw: Stop()\n        int: vertex queue[head]\n        head += 1\n        tail := \\foldl(graph[vertex]; (tail record); TopoRemove\\run)\n        return: vertex\n\nTopoFunctional:\n    return: int\n    run:\n        throws: copy(map\\throws) copy(range\\throws) copy(collect\\throws)\n        map(graph; TopoRow\\count)\n        map(range(0; n); TopoEnqueue\\run)\n        collect(TopoVisit\\next)\n        return: 0\n",
+          "common_sources": [
+            "examples/lmx/common/102_topological_sort.lm3"
+          ],
+          "closure_sources": [
+            "examples/lmx/common/array.lm3",
+            "examples/lmx/common/102_topological_sort.lm3",
+            "examples/lmx/102_topological_sort.lm3"
+          ],
+          "entry": "Topological\\run(graph; TopoFunctional\\run)",
+          "metrics": {
+            "characters": 1335,
+            "characters_with_whitespace": 1981,
+            "nonblank_lines": 76,
+            "utf8_bytes": 1981,
+            "sha256": "58c1b1af7eafad99b654898dca4d12e47d2b335f48e3c9f982686372a8da3dd8"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "p0_status": "NOT_RUN",
+          "runtime_status": "NOT_RUN",
+          "source_file": "examples/lmx/102_topological_sort.lm3",
+          "entry_source_file": "examples/lmx/102_topological_sort.lm3",
+          "fragment_code": "TopoRow:\n    @: row\n    return: int\n    count:\n        throws: copy(foldl\\throws)\n        return: \\foldl(row; (0 record); TopoCount\\run)\n\nTopoVisit:\n    return: int\n    next:\n        throws: copy(foldl\\throws) Stop ReceiverIndex\n        if: head = tail\n            throw: Stop()\n        int: vertex queue[head]\n        head += 1\n        tail := \\foldl(graph[vertex]; (tail record); TopoRemove\\run)\n        return: vertex\n\nTopoFunctional:\n    return: int\n    run:\n        throws: copy(map\\throws) copy(range\\throws) copy(collect\\throws)\n        map(graph; TopoRow\\count)\n        map(range(0; n); TopoEnqueue\\run)\n        collect(TopoVisit\\next)\n        return: 0\n",
+          "source_files": [
+            "examples/lmx/common/array.lm3",
+            "examples/lmx/common/102_topological_sort.lm3",
+            "examples/lmx/102_topological_sort.lm3"
+          ],
+          "source_file_is_fragment": true,
+          "runtime_execution": "NOT_RUN"
+        }
+      },
+      "sources": [
+        {
+          "title": "Sedgewick / Wayne: TopologicalX",
+          "url": "https://algs4.cs.princeton.edu/code/edu/princeton/cs/algs4/TopologicalX.java.html"
+        },
+        {
+          "title": "Python: graphlib.TopologicalSorter",
+          "url": "https://docs.python.org/3/library/graphlib.html"
+        }
+      ],
+      "acceptance_cases": [
+        "topo_empty",
+        "topo_fifo",
+        "topo_duplicate",
+        "topo_cycle",
+        "topo_self"
+      ],
+      "metrics_status": "CURRENT_FULL_SOURCE",
+      "lmx_operation_phase": "after_root_startup",
+      "shared_dependencies_in_measurement": [
+        "examples/lmx/common/array.lm3",
+        "examples/lmx/common/102_topological_sort.lm3"
+      ],
+      "standard_library_dependencies": [
+        "FxApply",
+        "FxSeqRead",
+        "FxSeqAllocate",
+        "fill",
+        "map",
+        "foldl",
+        "collect",
+        "range"
+      ],
+      "measurement_boundary": "Full algorithm bodies plus local common definitions. Generic core operations remain separately listed standard-library dependencies. No measurements recomputed.",
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "style_note": "Общие определения включаются в полную границу каждого варианта ровно один раз; различаются явный процедурный обход и функциональная организация того же алгоритма.",
+      "comparison_file": "102_topological_sort_comparision.md",
+      "kind": "algorithm"
+    },
+    {
+      "id": 103,
+      "name": "Union–find / непересекающиеся множества",
+      "slug": "union_find",
+      "scope": "algorithm_implementation",
+      "languages": [
+        "C++",
+        "Java"
+      ],
+      "contract_id": "algorithm-103",
+      "summary_ru": "Объединить произвольную последовательность пар и вернуть представителя компоненты каждой вершины.",
+      "scenario_ru": "n — неотрицательное число элементов 0..n-1. pairs — конечная последовательность двухэлементных пар допустимых индексов. Начально каждый элемент образует своё множество. Для каждой пары корни находятся с path halving; меньшая компонента прикрепляется к большей. При равных размерах выигрывает корень первого аргумента пары. Повторное объединение одной компоненты и self-union ничего не меняют. Результат — n представителей после всех операций; входные пары не меняются. n=0 допускает только пустой список пар и возвращает []. Наблюдаемы точные представители согласно правилу tie, а не только совпадение количества компонент.",
+      "expected_ru": "Объединить произвольную последовательность пар и вернуть представителя компоненты каждой вершины.",
+      "lmx_notes_ru": "Само локальное сжатие пути и объединение — одно общее изменяемое тело. Процедурная форма содержит циклы инициализации, объединений и выдачи результата; функциональная выражает эти проходы через map/foldl/map. Это максимальное использование имеющихся общих проходов при сохранении данного алгоритма; превращение рабочего леса в persistent-значение изменило бы договор представления и стоимость, поэтому здесь такого утверждения нет.",
+      "comparison_ru": "C++ и Java — характерные языки реализаций индексных структур данных. В обоих есть изменяемые плотные массивы, поэтому сравниваются одинаковые union-by-size и path-halving, а не persistent-структура против изменяемого массива.",
+      "limits_ru": "Инициализация O(n); для m объединений и финального обхода стандартная амортизированная оценка — O(n+(m+n)α(n)), O(n) памяти. Отдельная операция не объявлена безусловно O(1). Функциональная форма добавляет временные map-результаты O(n).",
+      "source": "103_union_find_comparision.md",
+      "listings": [
+        {
+          "language": "LMX",
+          "variant": "functional",
+          "source": "examples/lmx/103_union_find.lm3",
+          "code": "AlgorithmArray:\n    int: arrayType\n    int: size\n    @: value\n    return: @\n    make:\n        throws: copy(FxSeqAllocate\\make\\throws) copy(FxArrayFill\\fill\\throws)\n        @: out FxSeqAllocate\\make(arrayType; size)\n        return: FxArrayFill\\fill(out; value)\n\nUnionFind:\n    int: n\n    @: pairs\n    @: traverse\n    return: @\n    run:\n        throws: copy(AlgorithmArray\\make\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxApply\\apply\\throws)\n        @: parent FxSeqAllocate\\make(int[]; n)\n        @: size AlgorithmArray\\make(int[]; n; (1 record))\n        @: labels FxSeqAllocate\\make(int[]; n)\n        FxApply\\apply(traverse; ())\n        return: labels\n\nDsuInitialize:\n    int: vertex\n    return: int\n    run:\n        throws: ReceiverIndex\n        parent[vertex] := vertex\n        return: vertex\n\nDsuRoot:\n    int: vertex\n    return: int\n    run:\n        throws: ReceiverIndex\n        while: parent[vertex] != vertex\n            parent[vertex] := parent[parent[vertex]]\n            vertex := parent[vertex]\n        return: vertex\n\nDsuJoin:\n    int: count\n    @: pair\n    return: int\n    run:\n        throws: copy(DsuRoot\\run\\throws)\n        int: a DsuRoot\\run(pair[0])\n        int: b DsuRoot\\run(pair[1])\n        if: a = b\n            return: count\n        if: size[a] < size[b]\n            (a b) := (b a)\n        parent[b] := a\n        size[a] += size[b]\n        return: count - 1\n\nDsuEmit:\n    int: vertex\n    return: int\n    run:\n        throws: copy(DsuRoot\\run\\throws)\n        labels[vertex] := DsuRoot\\run(vertex)\n        return: labels[vertex]\n\nDsuFunctional:\n    return: int\n    run:\n        throws: copy(range\\throws) copy(map\\throws) copy(foldl\\throws)\n        @: vertices range(0; n)\n        map(vertices; DsuInitialize\\run)\n        int: count \\foldl(pairs; (n record); DsuJoin\\run)\n        map(vertices; DsuEmit\\run)\n        return: count\n",
+          "publication_role": "compatibility_mirror_not_separate_comparison",
+          "metrics": {
+            "characters": 1279,
+            "nonblank_lines": 68,
+            "utf8_bytes": 1852,
+            "sha256": "f23bf1175d571a55421d161b507a6f6e0b779400c98dd527f7e16fd52c332206"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "source_file": "examples/lmx/103_union_find.lm3",
+          "source_files": [
+            "examples/lmx/common/array.lm3",
+            "examples/lmx/common/103_union_find.lm3",
+            "examples/lmx/103_union_find.lm3"
+          ],
+          "source_file_is_fragment": true
+        },
+        {
+          "language": "C++",
+          "variant": "implementation",
+          "source": "examples/cpp/103_union_find.cpp",
+          "code": "#include <array>\n#include <utility>\n#include <vector>\n\nstd::vector<int> unionFind(int n, const std::vector<std::array<int, 2>>& pairs) {\n    std::vector<int> parent(n), size(n, 1), labels(n);\n    for (int vertex = 0; vertex < n; ++vertex) parent[vertex] = vertex;\n    const auto root = [&](int vertex) {\n        while (parent[vertex] != vertex) {\n            parent[vertex] = parent[parent[vertex]];\n            vertex = parent[vertex];\n        }\n        return vertex;\n    };\n    for (const auto& pair : pairs) {\n        auto a = root(pair[0]), b = root(pair[1]);\n        if (a == b) continue;\n        if (size[a] < size[b]) std::swap(a, b);\n        parent[b] = a;\n        size[a] += size[b];\n    }\n    for (int vertex = 0; vertex < n; ++vertex) labels[vertex] = root(vertex);\n    return labels;\n}\n",
+          "metrics": {
+            "characters": 578,
+            "nonblank_lines": 23,
+            "utf8_bytes": 799,
+            "sha256": "4adb05cd21dd5513c2a5e982dddb1896f3ad1c65ea92b88d6e3c4260290395b2"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "execution": "PASS",
+          "cases": 123,
+          "source_file": "examples/cpp/103_union_find.cpp"
+        },
+        {
+          "language": "Java",
+          "variant": "implementation",
+          "source": "examples/java/103_union_find.java",
+          "code": "import java.util.Arrays;\n\nfinal class UnionFindExample {\n    private static int root(int[] parent, int vertex) {\n        while (parent[vertex] != vertex) {\n            parent[vertex] = parent[parent[vertex]];\n            vertex = parent[vertex];\n        }\n        return vertex;\n    }\n\n    static int[] run(int n, int[][] pairs) {\n        int[] parent = new int[n], size = new int[n], labels = new int[n];\n        Arrays.fill(size, 1);\n        for (int vertex = 0; vertex < n; ++vertex) parent[vertex] = vertex;\n        for (int[] pair : pairs) {\n            int a = root(parent, pair[0]), b = root(parent, pair[1]);\n            if (a == b) continue;\n            if (size[a] < size[b]) {\n                int saved = a;\n                a = b;\n                b = saved;\n            }\n            parent[b] = a;\n            size[a] += size[b];\n        }\n        for (int vertex = 0; vertex < n; ++vertex) labels[vertex] = root(parent, vertex);\n        return labels;\n    }\n}\n",
+          "metrics": {
+            "characters": 608,
+            "nonblank_lines": 28,
+            "utf8_bytes": 973,
+            "sha256": "19ee3298a20e19a9b35c5deb2e494198952a034fd321149a5ef6b852af443d2c"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "execution": "PASS",
+          "cases": 123,
+          "source_file": "examples/java/103_union_find.java"
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "contract_id": "algorithm-103",
+          "source": "examples/lmx/procedural/103_union_find.lm3",
+          "code": "AlgorithmArray:\n    int: arrayType\n    int: size\n    @: value\n    return: @\n    make:\n        throws: copy(FxSeqAllocate\\make\\throws) copy(FxArrayFill\\fill\\throws)\n        @: out FxSeqAllocate\\make(arrayType; size)\n        return: FxArrayFill\\fill(out; value)\n\nUnionFind:\n    int: n\n    @: pairs\n    @: traverse\n    return: @\n    run:\n        throws: copy(AlgorithmArray\\make\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxApply\\apply\\throws)\n        @: parent FxSeqAllocate\\make(int[]; n)\n        @: size AlgorithmArray\\make(int[]; n; (1 record))\n        @: labels FxSeqAllocate\\make(int[]; n)\n        FxApply\\apply(traverse; ())\n        return: labels\n\nDsuInitialize:\n    int: vertex\n    return: int\n    run:\n        throws: ReceiverIndex\n        parent[vertex] := vertex\n        return: vertex\n\nDsuRoot:\n    int: vertex\n    return: int\n    run:\n        throws: ReceiverIndex\n        while: parent[vertex] != vertex\n            parent[vertex] := parent[parent[vertex]]\n            vertex := parent[vertex]\n        return: vertex\n\nDsuJoin:\n    int: count\n    @: pair\n    return: int\n    run:\n        throws: copy(DsuRoot\\run\\throws)\n        int: a DsuRoot\\run(pair[0])\n        int: b DsuRoot\\run(pair[1])\n        if: a = b\n            return: count\n        if: size[a] < size[b]\n            (a b) := (b a)\n        parent[b] := a\n        size[a] += size[b]\n        return: count - 1\n\nDsuEmit:\n    int: vertex\n    return: int\n    run:\n        throws: copy(DsuRoot\\run\\throws)\n        labels[vertex] := DsuRoot\\run(vertex)\n        return: labels[vertex]\n\nDsuProcedural:\n    return: int\n    run:\n        throws: copy(DsuInitialize\\run\\throws) copy(DsuJoin\\run\\throws) copy(DsuEmit\\run\\throws)\n        int: vertex 0\n        while: vertex < n\n            DsuInitialize\\run(vertex)\n            vertex += 1\n        ---\n        int: count n\n        int: i 0\n        while: i < length(pairs)\n            count := DsuJoin\\run(count; pairs[i])\n            i += 1\n        ---\n        vertex := 0\n        while: vertex < n\n            DsuEmit\\run(vertex)\n            vertex += 1\n        ---\n        return: count\n",
+          "common_sources": [
+            "examples/lmx/common/103_union_find.lm3"
+          ],
+          "closure_sources": [
+            "examples/lmx/common/array.lm3",
+            "examples/lmx/common/103_union_find.lm3",
+            "examples/lmx/procedural/103_union_find.lm3"
+          ],
+          "entry": "UnionFind\\run(n; pairs; DsuProcedural\\run)",
+          "metrics": {
+            "characters": 1379,
+            "characters_with_whitespace": 2100,
+            "nonblank_lines": 80,
+            "utf8_bytes": 2100,
+            "sha256": "704a1c741ce8b7d3c1a4f3e03c5714f06d7bf09a6f65b966ee952f26074cc38e"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "p0_status": "NOT_RUN",
+          "runtime_status": "NOT_RUN",
+          "source_file": "examples/lmx/procedural/103_union_find.lm3",
+          "entry_source_file": "examples/lmx/procedural/103_union_find.lm3",
+          "fragment_code": "DsuProcedural:\n    return: int\n    run:\n        throws: copy(DsuInitialize\\run\\throws) copy(DsuJoin\\run\\throws) copy(DsuEmit\\run\\throws)\n        int: vertex 0\n        while: vertex < n\n            DsuInitialize\\run(vertex)\n            vertex += 1\n        ---\n        int: count n\n        int: i 0\n        while: i < length(pairs)\n            count := DsuJoin\\run(count; pairs[i])\n            i += 1\n        ---\n        vertex := 0\n        while: vertex < n\n            DsuEmit\\run(vertex)\n            vertex += 1\n        ---\n        return: count\n",
+          "source_files": [
+            "examples/lmx/common/array.lm3",
+            "examples/lmx/common/103_union_find.lm3",
+            "examples/lmx/procedural/103_union_find.lm3"
+          ],
+          "source_file_is_fragment": true,
+          "runtime_execution": "NOT_RUN"
+        },
+        "functional": {
+          "contract_id": "algorithm-103",
+          "source": "examples/lmx/103_union_find.lm3",
+          "code": "AlgorithmArray:\n    int: arrayType\n    int: size\n    @: value\n    return: @\n    make:\n        throws: copy(FxSeqAllocate\\make\\throws) copy(FxArrayFill\\fill\\throws)\n        @: out FxSeqAllocate\\make(arrayType; size)\n        return: FxArrayFill\\fill(out; value)\n\nUnionFind:\n    int: n\n    @: pairs\n    @: traverse\n    return: @\n    run:\n        throws: copy(AlgorithmArray\\make\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxApply\\apply\\throws)\n        @: parent FxSeqAllocate\\make(int[]; n)\n        @: size AlgorithmArray\\make(int[]; n; (1 record))\n        @: labels FxSeqAllocate\\make(int[]; n)\n        FxApply\\apply(traverse; ())\n        return: labels\n\nDsuInitialize:\n    int: vertex\n    return: int\n    run:\n        throws: ReceiverIndex\n        parent[vertex] := vertex\n        return: vertex\n\nDsuRoot:\n    int: vertex\n    return: int\n    run:\n        throws: ReceiverIndex\n        while: parent[vertex] != vertex\n            parent[vertex] := parent[parent[vertex]]\n            vertex := parent[vertex]\n        return: vertex\n\nDsuJoin:\n    int: count\n    @: pair\n    return: int\n    run:\n        throws: copy(DsuRoot\\run\\throws)\n        int: a DsuRoot\\run(pair[0])\n        int: b DsuRoot\\run(pair[1])\n        if: a = b\n            return: count\n        if: size[a] < size[b]\n            (a b) := (b a)\n        parent[b] := a\n        size[a] += size[b]\n        return: count - 1\n\nDsuEmit:\n    int: vertex\n    return: int\n    run:\n        throws: copy(DsuRoot\\run\\throws)\n        labels[vertex] := DsuRoot\\run(vertex)\n        return: labels[vertex]\n\nDsuFunctional:\n    return: int\n    run:\n        throws: copy(range\\throws) copy(map\\throws) copy(foldl\\throws)\n        @: vertices range(0; n)\n        map(vertices; DsuInitialize\\run)\n        int: count \\foldl(pairs; (n record); DsuJoin\\run)\n        map(vertices; DsuEmit\\run)\n        return: count\n",
+          "common_sources": [
+            "examples/lmx/common/103_union_find.lm3"
+          ],
+          "closure_sources": [
+            "examples/lmx/common/array.lm3",
+            "examples/lmx/common/103_union_find.lm3",
+            "examples/lmx/103_union_find.lm3"
+          ],
+          "entry": "UnionFind\\run(n; pairs; DsuFunctional\\run)",
+          "metrics": {
+            "characters": 1279,
+            "characters_with_whitespace": 1852,
+            "nonblank_lines": 68,
+            "utf8_bytes": 1852,
+            "sha256": "f23bf1175d571a55421d161b507a6f6e0b779400c98dd527f7e16fd52c332206"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "p0_status": "NOT_RUN",
+          "runtime_status": "NOT_RUN",
+          "source_file": "examples/lmx/103_union_find.lm3",
+          "entry_source_file": "examples/lmx/103_union_find.lm3",
+          "fragment_code": "DsuFunctional:\n    return: int\n    run:\n        throws: copy(range\\throws) copy(map\\throws) copy(foldl\\throws)\n        @: vertices range(0; n)\n        map(vertices; DsuInitialize\\run)\n        int: count \\foldl(pairs; (n record); DsuJoin\\run)\n        map(vertices; DsuEmit\\run)\n        return: count\n",
+          "source_files": [
+            "examples/lmx/common/array.lm3",
+            "examples/lmx/common/103_union_find.lm3",
+            "examples/lmx/103_union_find.lm3"
+          ],
+          "source_file_is_fragment": true,
+          "runtime_execution": "NOT_RUN"
+        }
+      },
+      "sources": [
+        {
+          "title": "Sedgewick / Wayne: weighted union with path halving",
+          "url": "https://algs4.cs.princeton.edu/15uf/WeightedQuickUnionPathHalvingUF.java.html"
+        }
+      ],
+      "acceptance_cases": [
+        "dsu_empty",
+        "dsu_tie_and_repeat",
+        "dsu_size_wins"
+      ],
+      "metrics_status": "CURRENT_FULL_SOURCE",
+      "lmx_operation_phase": "after_root_startup",
+      "shared_dependencies_in_measurement": [
+        "examples/lmx/common/array.lm3",
+        "examples/lmx/common/103_union_find.lm3"
+      ],
+      "standard_library_dependencies": [
+        "FxApply",
+        "FxSeqRead",
+        "FxSeqAllocate",
+        "fill",
+        "map",
+        "foldl",
+        "collect",
+        "range"
+      ],
+      "measurement_boundary": "Full algorithm bodies plus local common definitions. Generic core operations remain separately listed standard-library dependencies. No measurements recomputed.",
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "style_note": "Общие определения включаются в полную границу каждого варианта ровно один раз; различаются явный процедурный обход и функциональная организация того же алгоритма.",
+      "comparison_file": "103_union_find_comparision.md",
+      "kind": "algorithm"
+    },
+    {
+      "id": 104,
+      "name": "Levenshtein distance / расстояние редактирования",
+      "slug": "edit_distance",
+      "scope": "algorithm_implementation",
+      "languages": [
+        "Python",
+        "JavaScript"
+      ],
+      "contract_id": "algorithm-104",
+      "summary_ru": "Найти минимальное число вставок, удалений и замен между двумя последовательностями произвольных токенов.",
+      "scenario_ru": "left и right — конечные random-access последовательности; same(a,b) — заданный стабильный полный предикат равенства без изменения inputs. Любые фактические типы, в том числе записи, поддерживаются через существующий допуск callback. Вставка, удаление и замена имеют стоимость 1; совпадение — 0. Возвращается одно неотрицательное целое, edit script не строится. same вызывается ровно n*m раз, сначала по left, внутри по right; при пустой стороне не вызывается. Текст предварительно представлен одинаковыми токенами: пример с emoji работает над явно заданными токенами и не предполагает равенство UTF-16 code units, байтов, Unicode scalar values или графем. Нормализация текста не выполняется.",
+      "expected_ru": "Найти минимальное число вставок, удалений и замен между двумя последовательностями произвольных токенов.",
+      "lmx_notes_ru": "Общий EditCell вычисляет единственную клетку. Процедурная форма использует два while и явное заполнение начальной строки; функциональная — вложенные foldl по range. Последняя сохраняет приватную текущую строку и записывает результат клетки, чтобы не копировать растущий префикс при каждом шаге. В коде нет ограничения токенов типом int и нет встроенного сравнения строк вместо переданного same.",
+      "comparison_ru": "Python — естественный контроль для последовательностей и NLP; JavaScript — для обработки пользовательского текста и токенов на клиенте. Оба примера принимают массивы и явный comparator, поэтому строковая кодировка не подменяет задачу.",
+      "limits_ru": "Ровно n*m вызовов same, O(n*m+n+m) всех шагов с учётом пустых сторон и начальной строки; O(m) одновременно нужных элементов строк DP. Каждая строка создаётся заново, поэтому совокупный объём выделений — O(n*m); освобождение завершённых строк зависит от runtime. Функциональный внешний fold также создаёт range длины n, внутренний — range длины m: логическая дополнительная память функциональной формы O(n+m), а не безусловно O(m).",
+      "source": "104_edit_distance_comparision.md",
+      "listings": [
+        {
+          "language": "LMX",
+          "variant": "functional",
+          "source": "examples/lmx/104_edit_distance.lm3",
+          "code": "EditCell:\n    int: west\n    int: j\n    return: int\n    value:\n        throws: copy(FxSeqRead\\read\\throws) copy(FxApply\\apply\\throws) copy(FxSeqPredicate\\truth\\throws) ReceiverIndex\n        @: first FxSeqRead\\read(left; i - 1)\n        @: second FxSeqRead\\read(right; j - 1)\n        @: flag FxApply\\apply(same; FxTwo\\make(first; second))\n        int: cost 1\n        if: FxSeqPredicate\\truth(flag) != 0\n            cost := 0\n        int: best previous[j] + 1\n        if: west + 1 < best\n            best := west + 1\n        if: previous[j - 1] + cost < best\n            best := previous[j - 1] + cost\n        return: best\n\nEditWrite:\n    int: west\n    int: j\n    return: int\n    cell:\n        throws: copy(EditCell\\value\\throws)\n        current[j] := EditCell\\value(west; j)\n        return: current[j]\n\nEditRow:\n    @: previous\n    int: i\n    return: @\n    build:\n        throws: copy(FxSeqAllocate\\make\\throws) copy(range\\throws) copy(foldl\\throws) ReceiverIndex\n        @: current FxSeqAllocate\\make(int[]; length(right) + 1)\n        current[0] := i\n        foldl(range(1; length(right) + 1); (i record); EditWrite\\cell)\n        return: current\n\nEditDistance:\n    @: left\n    @: right\n    @: same\n    return: int\n    run:\n        throws: copy(range\\throws) copy(foldl\\throws) ReceiverIndex\n        @: initial range(0; length(right) + 1)\n        @: previous \\foldl(range(1; length(left) + 1); (initial record); EditRow\\build)\n        return: previous[length(right)]\n",
+          "publication_role": "compatibility_mirror_not_separate_comparison",
+          "metrics": {
+            "characters": 1030,
+            "nonblank_lines": 46,
+            "utf8_bytes": 1464,
+            "sha256": "49ad99541d4bea5638c7d93234c52f35a65a164496da6edf7d45a0b26c11d152"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "source_file": "examples/lmx/104_edit_distance.lm3",
+          "source_files": [
+            "examples/lmx/common/104_edit_distance.lm3",
+            "examples/lmx/104_edit_distance.lm3"
+          ],
+          "source_file_is_fragment": true
+        },
+        {
+          "language": "Python",
+          "variant": "implementation",
+          "source": "examples/python/104_edit_distance.py",
+          "code": "from operator import eq\n\n\ndef edit_distance(left, right, same=eq):\n    previous = list(range(len(right) + 1))\n    for i, first in enumerate(left, 1):\n        current = [i]\n        for j, second in enumerate(right, 1):\n            cost = 0 if same(first, second) else 1\n            current.append(min(previous[j] + 1, current[-1] + 1,\n                               previous[j - 1] + cost))\n        previous = current\n    return previous[-1]\n",
+          "metrics": {
+            "characters": 296,
+            "nonblank_lines": 11,
+            "utf8_bytes": 441,
+            "sha256": "fbf685a01fcaa11a90ad1bc5dce20bacc74e708dcff43e8fc7c7ccaf3acfa49f"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "execution": "PASS",
+          "cases": 125,
+          "source_file": "examples/python/104_edit_distance.py"
+        },
+        {
+          "language": "JavaScript",
+          "variant": "implementation",
+          "source": "examples/javascript/104_edit_distance.js",
+          "code": "function editDistance(left, right, same = (a, b) => a === b) {\n    let previous = Array.from({length: right.length + 1}, (_, index) => index);\n    for (let i = 1; i <= left.length; ++i) {\n        const current = [i];\n        for (let j = 1; j <= right.length; ++j) {\n            const cost = same(left[i - 1], right[j - 1]) ? 0 : 1;\n            current.push(Math.min(previous[j] + 1, current[j - 1] + 1,\n                                  previous[j - 1] + cost));\n        }\n        previous = current;\n    }\n    return previous[right.length];\n}\n\nmodule.exports = {editDistance};\n",
+          "metrics": {
+            "characters": 388,
+            "nonblank_lines": 14,
+            "utf8_bytes": 579,
+            "sha256": "9bde75e5d41a86e6aac1dc381838a1cb4b1f4aa3300f473af3fb47a05b7e4a50"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "execution": "PASS",
+          "cases": 125,
+          "source_file": "examples/javascript/104_edit_distance.js"
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "contract_id": "algorithm-104",
+          "source": "examples/lmx/procedural/104_edit_distance.lm3",
+          "code": "EditCell:\n    int: west\n    int: j\n    return: int\n    value:\n        throws: copy(FxSeqRead\\read\\throws) copy(FxApply\\apply\\throws) copy(FxSeqPredicate\\truth\\throws) ReceiverIndex\n        @: first FxSeqRead\\read(left; i - 1)\n        @: second FxSeqRead\\read(right; j - 1)\n        @: flag FxApply\\apply(same; FxTwo\\make(first; second))\n        int: cost 1\n        if: FxSeqPredicate\\truth(flag) != 0\n            cost := 0\n        int: best previous[j] + 1\n        if: west + 1 < best\n            best := west + 1\n        if: previous[j - 1] + cost < best\n            best := previous[j - 1] + cost\n        return: best\n\nEditDistance:\n    @: left\n    @: right\n    @: same\n    return: int\n    run:\n        throws: copy(FxSeqAllocate\\make\\throws) copy(EditCell\\value\\throws)\n        int: m length(right)\n        @: previous FxSeqAllocate\\make(int[]; m + 1)\n        int: j 0\n        while: j <= m\n            previous[j] := j\n            j += 1\n        ---\n        int: i 1\n        while: i <= length(left)\n            @: current FxSeqAllocate\\make(int[]; m + 1)\n            current[0] := i\n            j := 1\n            while: j <= m\n                current[j] := EditCell\\value(current[j - 1]; j)\n                j += 1\n            previous := current\n            i += 1\n        ---\n        return: previous[m]\n",
+          "common_sources": [
+            "examples/lmx/common/104_edit_distance.lm3"
+          ],
+          "closure_sources": [
+            "examples/lmx/common/104_edit_distance.lm3",
+            "examples/lmx/procedural/104_edit_distance.lm3"
+          ],
+          "entry": "EditDistance\\run(left; right; same)",
+          "metrics": {
+            "characters": 799,
+            "characters_with_whitespace": 1310,
+            "nonblank_lines": 44,
+            "utf8_bytes": 1310,
+            "sha256": "eaa86a98724591fc7df114647581f4ca9b052940d58e240ec8f169eb76c0a9cb"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "p0_status": "NOT_RUN",
+          "runtime_status": "NOT_RUN",
+          "source_file": "examples/lmx/procedural/104_edit_distance.lm3",
+          "entry_source_file": "examples/lmx/procedural/104_edit_distance.lm3",
+          "fragment_code": "EditDistance:\n    @: left\n    @: right\n    @: same\n    return: int\n    run:\n        throws: copy(FxSeqAllocate\\make\\throws) copy(EditCell\\value\\throws)\n        int: m length(right)\n        @: previous FxSeqAllocate\\make(int[]; m + 1)\n        int: j 0\n        while: j <= m\n            previous[j] := j\n            j += 1\n        ---\n        int: i 1\n        while: i <= length(left)\n            @: current FxSeqAllocate\\make(int[]; m + 1)\n            current[0] := i\n            j := 1\n            while: j <= m\n                current[j] := EditCell\\value(current[j - 1]; j)\n                j += 1\n            previous := current\n            i += 1\n        ---\n        return: previous[m]\n",
+          "source_files": [
+            "examples/lmx/common/104_edit_distance.lm3",
+            "examples/lmx/procedural/104_edit_distance.lm3"
+          ],
+          "source_file_is_fragment": true,
+          "runtime_execution": "NOT_RUN"
+        },
+        "functional": {
+          "contract_id": "algorithm-104",
+          "source": "examples/lmx/104_edit_distance.lm3",
+          "code": "EditCell:\n    int: west\n    int: j\n    return: int\n    value:\n        throws: copy(FxSeqRead\\read\\throws) copy(FxApply\\apply\\throws) copy(FxSeqPredicate\\truth\\throws) ReceiverIndex\n        @: first FxSeqRead\\read(left; i - 1)\n        @: second FxSeqRead\\read(right; j - 1)\n        @: flag FxApply\\apply(same; FxTwo\\make(first; second))\n        int: cost 1\n        if: FxSeqPredicate\\truth(flag) != 0\n            cost := 0\n        int: best previous[j] + 1\n        if: west + 1 < best\n            best := west + 1\n        if: previous[j - 1] + cost < best\n            best := previous[j - 1] + cost\n        return: best\n\nEditWrite:\n    int: west\n    int: j\n    return: int\n    cell:\n        throws: copy(EditCell\\value\\throws)\n        current[j] := EditCell\\value(west; j)\n        return: current[j]\n\nEditRow:\n    @: previous\n    int: i\n    return: @\n    build:\n        throws: copy(FxSeqAllocate\\make\\throws) copy(range\\throws) copy(foldl\\throws) ReceiverIndex\n        @: current FxSeqAllocate\\make(int[]; length(right) + 1)\n        current[0] := i\n        foldl(range(1; length(right) + 1); (i record); EditWrite\\cell)\n        return: current\n\nEditDistance:\n    @: left\n    @: right\n    @: same\n    return: int\n    run:\n        throws: copy(range\\throws) copy(foldl\\throws) ReceiverIndex\n        @: initial range(0; length(right) + 1)\n        @: previous \\foldl(range(1; length(left) + 1); (initial record); EditRow\\build)\n        return: previous[length(right)]\n",
+          "common_sources": [
+            "examples/lmx/common/104_edit_distance.lm3"
+          ],
+          "closure_sources": [
+            "examples/lmx/common/104_edit_distance.lm3",
+            "examples/lmx/104_edit_distance.lm3"
+          ],
+          "entry": "EditDistance\\run(left; right; same)",
+          "metrics": {
+            "characters": 1030,
+            "characters_with_whitespace": 1464,
+            "nonblank_lines": 46,
+            "utf8_bytes": 1464,
+            "sha256": "49ad99541d4bea5638c7d93234c52f35a65a164496da6edf7d45a0b26c11d152"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "p0_status": "NOT_RUN",
+          "runtime_status": "NOT_RUN",
+          "source_file": "examples/lmx/104_edit_distance.lm3",
+          "entry_source_file": "examples/lmx/104_edit_distance.lm3",
+          "fragment_code": "EditWrite:\n    int: west\n    int: j\n    return: int\n    cell:\n        throws: copy(EditCell\\value\\throws)\n        current[j] := EditCell\\value(west; j)\n        return: current[j]\n\nEditRow:\n    @: previous\n    int: i\n    return: @\n    build:\n        throws: copy(FxSeqAllocate\\make\\throws) copy(range\\throws) copy(foldl\\throws) ReceiverIndex\n        @: current FxSeqAllocate\\make(int[]; length(right) + 1)\n        current[0] := i\n        foldl(range(1; length(right) + 1); (i record); EditWrite\\cell)\n        return: current\n\nEditDistance:\n    @: left\n    @: right\n    @: same\n    return: int\n    run:\n        throws: copy(range\\throws) copy(foldl\\throws) ReceiverIndex\n        @: initial range(0; length(right) + 1)\n        @: previous \\foldl(range(1; length(left) + 1); (initial record); EditRow\\build)\n        return: previous[length(right)]\n",
+          "source_files": [
+            "examples/lmx/common/104_edit_distance.lm3",
+            "examples/lmx/104_edit_distance.lm3"
+          ],
+          "source_file_is_fragment": true,
+          "runtime_execution": "NOT_RUN"
+        }
+      },
+      "sources": [
+        {
+          "title": "Manning / Raghavan / Schütze: edit distance",
+          "url": "https://nlp.stanford.edu/IR-book/html/htmledition/edit-distance-1.html"
+        }
+      ],
+      "acceptance_cases": [
+        "edit_empty",
+        "edit_insert",
+        "edit_kitten",
+        "edit_unicode_tokens",
+        "edit_records"
+      ],
+      "metrics_status": "CURRENT_FULL_SOURCE",
+      "lmx_operation_phase": "after_root_startup",
+      "shared_dependencies_in_measurement": [
+        "examples/lmx/common/104_edit_distance.lm3"
+      ],
+      "standard_library_dependencies": [
+        "FxApply",
+        "FxSeqRead",
+        "FxSeqAllocate",
+        "fill",
+        "map",
+        "foldl",
+        "collect",
+        "range"
+      ],
+      "measurement_boundary": "Full algorithm bodies plus local common definitions. Generic core operations remain separately listed standard-library dependencies. No measurements recomputed.",
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "style_note": "Общие определения включаются в полную границу каждого варианта ровно один раз; различаются явный процедурный обход и функциональная организация того же алгоритма.",
+      "comparison_file": "104_edit_distance_comparision.md",
+      "kind": "algorithm"
+    },
+    {
+      "id": 105,
+      "name": "Dijkstra / кратчайшие взвешенные пути",
+      "slug": "dijkstra",
+      "scope": "algorithm_implementation",
+      "languages": [
+        "Python",
+        "C++"
+      ],
+      "contract_id": "algorithm-105",
+      "summary_ru": "Вычислить кратчайшие расстояния в ориентированном графе с неотрицательными весами.",
+      "scenario_ru": "graph — массив строк рёбер [vertex, weight]; вершины 0..V-1, веса — точные неотрицательные целые. Самопетли, нулевые веса и кратные рёбра разрешены. При V>0 start допустим; при V=0 используется start=-1. Результат содержит V точных расстояний, -1 обозначает недостижимую вершину. Общая область сравнения требует, чтобы все рассматриваемые суммы distance[u]+weight помещались в signed 64-bit; LMX сохраняет их в bigint[], Python — в int, C++ — в int64_t. Это явная общая граница машинной C++-реализации, не свойство bigint LMX. При равном расстоянии первой выбирается меньшая вершина; исходный graph не меняется. Отрицательные веса не входят в договор и не проверяются скрытым дополнительным проходом.",
+      "expected_ru": "Вычислить кратчайшие расстояния в ориентированном графе с неотрицательными весами.",
+      "lmx_notes_ru": "DijkstraPick и DijkstraRelax общие. Процедурная форма содержит явные проходы по шагам, вершинам и рёбрам. Функциональная использует foldl для выбора и релаксации, collect — для последовательности settled-вершин до Stop. Sentinel -1 не смешивается с достижимым нулевым расстоянием. bigint в LMX исключает искусственное сужение его арифметики ради контрольного C++-типа.",
+      "comparison_ru": "C++ естественен для численных графовых алгоритмов с явной стоимостью памяти, Python — для компактной проверяемой реализации. Во всех языках используется одна версия с линейным поиском минимальной unsettled-вершины; heap отсутствует на обеих сторонах.",
+      "limits_ru": "Именно для приведённых тел: O(V²+E) времени и O(V) основного рабочего состояния. Эта оценка следует из не более V выборов минимума по V вершинам и одного рассмотрения каждого достижимого ребра. Функциональные range/collect добавляют временные последовательности O(V) живого размера, а не меняют алгоритм на heap-вариант.",
+      "source": "105_dijkstra_comparision.md",
+      "listings": [
+        {
+          "language": "LMX",
+          "variant": "functional",
+          "source": "examples/lmx/105_dijkstra.lm3",
+          "code": "AlgorithmArray:\n    int: arrayType\n    int: size\n    @: value\n    return: @\n    make:\n        throws: copy(FxSeqAllocate\\make\\throws) copy(FxArrayFill\\fill\\throws)\n        @: out FxSeqAllocate\\make(arrayType; size)\n        return: FxArrayFill\\fill(out; value)\n\nDijkstra:\n    @: graph\n    int: start\n    @: traverse\n    return: @\n    run:\n        throws: copy(AlgorithmArray\\make\\throws) copy(FxApply\\apply\\throws) ReceiverIndex\n        int: n length(graph)\n        @: distance AlgorithmArray\\make(bigint[]; n; (-1 record))\n        @: settled AlgorithmArray\\make(int[]; n; (0 record))\n        if: n = 0\n            return: distance\n        distance[start] := 0\n        int: best -1\n        FxApply\\apply(traverse; ())\n        return: distance\n\nDijkstraPick:\n    int: chosen\n    int: vertex\n    return: int\n    run:\n        throws: ReceiverIndex\n        if: settled[vertex] = 0 && distance[vertex] >= 0\n            if: chosen = -1\n                return: vertex\n            if: distance[vertex] < distance[chosen]\n                return: vertex\n        ---\n        return: chosen\n\nDijkstraRelax:\n    int: ignored\n    @: edge\n    return: int\n    run:\n        throws: ReceiverIndex\n        int: vertex edge[0]\n        bigint: candidate distance[best] + edge[1]\n        if: distance[vertex] = -1 || candidate < distance[vertex]\n            distance[vertex] := candidate\n        return: 0\n\nDijkstraStep:\n    return: int\n    next:\n        throws: copy(range\\throws) copy(foldl\\throws) ReceiverIndex Stop\n        best := \\foldl(range(0; n); (-1 record); DijkstraPick\\run)\n        if: best = -1\n            throw: Stop()\n        settled[best] := 1\n        foldl(graph[best]; (0 record); DijkstraRelax\\run)\n        return: best\n\nDijkstraFunctional:\n    return: int\n    run:\n        throws: copy(collect\\throws)\n        collect(DijkstraStep\\next)\n        return: 0\n",
+          "publication_role": "compatibility_mirror_not_separate_comparison",
+          "metrics": {
+            "characters": 1260,
+            "nonblank_lines": 65,
+            "utf8_bytes": 1854,
+            "sha256": "50a56dfcf04cd86f17d7c452d5b09472b8826b833323e08916023e85aea69ffc"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "source_file": "examples/lmx/105_dijkstra.lm3",
+          "source_files": [
+            "examples/lmx/common/array.lm3",
+            "examples/lmx/common/105_dijkstra.lm3",
+            "examples/lmx/105_dijkstra.lm3"
+          ],
+          "source_file_is_fragment": true
+        },
+        {
+          "language": "Python",
+          "variant": "implementation",
+          "source": "examples/python/105_dijkstra.py",
+          "code": "def dijkstra(graph, start):\n    distance = [-1] * len(graph)\n    settled = [False] * len(graph)\n    if not graph:\n        return distance\n    distance[start] = 0\n    for _ in graph:\n        best = -1\n        for vertex, value in enumerate(distance):\n            if not settled[vertex] and value >= 0:\n                if best == -1 or value < distance[best]:\n                    best = vertex\n        if best == -1:\n            break\n        settled[best] = True\n        for neighbor, weight in graph[best]:\n            candidate = distance[best] + weight\n            if distance[neighbor] == -1 or candidate < distance[neighbor]:\n                distance[neighbor] = candidate\n    return distance\n",
+          "metrics": {
+            "characters": 443,
+            "nonblank_lines": 20,
+            "utf8_bytes": 697,
+            "sha256": "dc4dfb7f3a0d8fb895a2e5f6df339bbeae59eca0437157379bdf1db124275f73"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "execution": "PASS",
+          "cases": 124,
+          "source_file": "examples/python/105_dijkstra.py"
+        },
+        {
+          "language": "C++",
+          "variant": "implementation",
+          "source": "examples/cpp/105_dijkstra.cpp",
+          "code": "#include <cstdint>\n#include <utility>\n#include <vector>\n\nstd::vector<std::int64_t> dijkstra(\n    const std::vector<std::vector<std::pair<int, std::int64_t>>>& graph, int start) {\n    std::vector<std::int64_t> distance(graph.size(), -1);\n    std::vector<bool> settled(graph.size(), false);\n    if (graph.empty()) return distance;\n    distance[start] = 0;\n    for (std::size_t step = 0; step < graph.size(); ++step) {\n        int best = -1;\n        for (int vertex = 0; vertex < static_cast<int>(graph.size()); ++vertex) {\n            if (!settled[vertex] && distance[vertex] >= 0 &&\n                (best == -1 || distance[vertex] < distance[best])) best = vertex;\n        }\n        if (best == -1) break;\n        settled[best] = true;\n        for (const auto& [neighbor, weight] : graph[best]) {\n            const auto candidate = distance[best] + weight;\n            if (distance[neighbor] == -1 || candidate < distance[neighbor])\n                distance[neighbor] = candidate;\n        }\n    }\n    return distance;\n}\n",
+          "metrics": {
+            "characters": 753,
+            "nonblank_lines": 25,
+            "utf8_bytes": 1019,
+            "sha256": "5e89dbf09139e4ee9e08cfc9579e030799cad9b6ce12495da59d5b3a6302f2b7"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "execution": "PASS",
+          "cases": 124,
+          "source_file": "examples/cpp/105_dijkstra.cpp"
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "contract_id": "algorithm-105",
+          "source": "examples/lmx/procedural/105_dijkstra.lm3",
+          "code": "AlgorithmArray:\n    int: arrayType\n    int: size\n    @: value\n    return: @\n    make:\n        throws: copy(FxSeqAllocate\\make\\throws) copy(FxArrayFill\\fill\\throws)\n        @: out FxSeqAllocate\\make(arrayType; size)\n        return: FxArrayFill\\fill(out; value)\n\nDijkstra:\n    @: graph\n    int: start\n    @: traverse\n    return: @\n    run:\n        throws: copy(AlgorithmArray\\make\\throws) copy(FxApply\\apply\\throws) ReceiverIndex\n        int: n length(graph)\n        @: distance AlgorithmArray\\make(bigint[]; n; (-1 record))\n        @: settled AlgorithmArray\\make(int[]; n; (0 record))\n        if: n = 0\n            return: distance\n        distance[start] := 0\n        int: best -1\n        FxApply\\apply(traverse; ())\n        return: distance\n\nDijkstraPick:\n    int: chosen\n    int: vertex\n    return: int\n    run:\n        throws: ReceiverIndex\n        if: settled[vertex] = 0 && distance[vertex] >= 0\n            if: chosen = -1\n                return: vertex\n            if: distance[vertex] < distance[chosen]\n                return: vertex\n        ---\n        return: chosen\n\nDijkstraRelax:\n    int: ignored\n    @: edge\n    return: int\n    run:\n        throws: ReceiverIndex\n        int: vertex edge[0]\n        bigint: candidate distance[best] + edge[1]\n        if: distance[vertex] = -1 || candidate < distance[vertex]\n            distance[vertex] := candidate\n        return: 0\n\nDijkstraProcedural:\n    return: int\n    run:\n        throws: copy(DijkstraPick\\run\\throws) copy(DijkstraRelax\\run\\throws)\n        int: step 0\n        while: step < n\n            best := -1\n            int: vertex 0\n            while: vertex < n\n                best := DijkstraPick\\run(best; vertex)\n                vertex += 1\n            ---\n            if: best = -1\n                return: 0\n            settled[best] := 1\n            @: row graph[best]\n            int: i 0\n            while: i < length(row)\n                DijkstraRelax\\run(0; row[i])\n                i += 1\n            step += 1\n        ---\n        return: 0\n",
+          "common_sources": [
+            "examples/lmx/common/105_dijkstra.lm3"
+          ],
+          "closure_sources": [
+            "examples/lmx/common/array.lm3",
+            "examples/lmx/common/105_dijkstra.lm3",
+            "examples/lmx/procedural/105_dijkstra.lm3"
+          ],
+          "entry": "Dijkstra\\run(graph; start; DijkstraProcedural\\run)",
+          "metrics": {
+            "characters": 1255,
+            "characters_with_whitespace": 2018,
+            "nonblank_lines": 72,
+            "utf8_bytes": 2018,
+            "sha256": "445f1dcde243297898286e13c81f819a589a7b5706d214e2e3d2908aa1fb5a8b"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "p0_status": "NOT_RUN",
+          "runtime_status": "NOT_RUN",
+          "source_file": "examples/lmx/procedural/105_dijkstra.lm3",
+          "entry_source_file": "examples/lmx/procedural/105_dijkstra.lm3",
+          "fragment_code": "DijkstraProcedural:\n    return: int\n    run:\n        throws: copy(DijkstraPick\\run\\throws) copy(DijkstraRelax\\run\\throws)\n        int: step 0\n        while: step < n\n            best := -1\n            int: vertex 0\n            while: vertex < n\n                best := DijkstraPick\\run(best; vertex)\n                vertex += 1\n            ---\n            if: best = -1\n                return: 0\n            settled[best] := 1\n            @: row graph[best]\n            int: i 0\n            while: i < length(row)\n                DijkstraRelax\\run(0; row[i])\n                i += 1\n            step += 1\n        ---\n        return: 0\n",
+          "source_files": [
+            "examples/lmx/common/array.lm3",
+            "examples/lmx/common/105_dijkstra.lm3",
+            "examples/lmx/procedural/105_dijkstra.lm3"
+          ],
+          "source_file_is_fragment": true,
+          "runtime_execution": "NOT_RUN"
+        },
+        "functional": {
+          "contract_id": "algorithm-105",
+          "source": "examples/lmx/105_dijkstra.lm3",
+          "code": "AlgorithmArray:\n    int: arrayType\n    int: size\n    @: value\n    return: @\n    make:\n        throws: copy(FxSeqAllocate\\make\\throws) copy(FxArrayFill\\fill\\throws)\n        @: out FxSeqAllocate\\make(arrayType; size)\n        return: FxArrayFill\\fill(out; value)\n\nDijkstra:\n    @: graph\n    int: start\n    @: traverse\n    return: @\n    run:\n        throws: copy(AlgorithmArray\\make\\throws) copy(FxApply\\apply\\throws) ReceiverIndex\n        int: n length(graph)\n        @: distance AlgorithmArray\\make(bigint[]; n; (-1 record))\n        @: settled AlgorithmArray\\make(int[]; n; (0 record))\n        if: n = 0\n            return: distance\n        distance[start] := 0\n        int: best -1\n        FxApply\\apply(traverse; ())\n        return: distance\n\nDijkstraPick:\n    int: chosen\n    int: vertex\n    return: int\n    run:\n        throws: ReceiverIndex\n        if: settled[vertex] = 0 && distance[vertex] >= 0\n            if: chosen = -1\n                return: vertex\n            if: distance[vertex] < distance[chosen]\n                return: vertex\n        ---\n        return: chosen\n\nDijkstraRelax:\n    int: ignored\n    @: edge\n    return: int\n    run:\n        throws: ReceiverIndex\n        int: vertex edge[0]\n        bigint: candidate distance[best] + edge[1]\n        if: distance[vertex] = -1 || candidate < distance[vertex]\n            distance[vertex] := candidate\n        return: 0\n\nDijkstraStep:\n    return: int\n    next:\n        throws: copy(range\\throws) copy(foldl\\throws) ReceiverIndex Stop\n        best := \\foldl(range(0; n); (-1 record); DijkstraPick\\run)\n        if: best = -1\n            throw: Stop()\n        settled[best] := 1\n        foldl(graph[best]; (0 record); DijkstraRelax\\run)\n        return: best\n\nDijkstraFunctional:\n    return: int\n    run:\n        throws: copy(collect\\throws)\n        collect(DijkstraStep\\next)\n        return: 0\n",
+          "common_sources": [
+            "examples/lmx/common/105_dijkstra.lm3"
+          ],
+          "closure_sources": [
+            "examples/lmx/common/array.lm3",
+            "examples/lmx/common/105_dijkstra.lm3",
+            "examples/lmx/105_dijkstra.lm3"
+          ],
+          "entry": "Dijkstra\\run(graph; start; DijkstraFunctional\\run)",
+          "metrics": {
+            "characters": 1260,
+            "characters_with_whitespace": 1854,
+            "nonblank_lines": 65,
+            "utf8_bytes": 1854,
+            "sha256": "50a56dfcf04cd86f17d7c452d5b09472b8826b833323e08916023e85aea69ffc"
+          },
+          "metrics_status": "CURRENT_FULL_SOURCE",
+          "p0_status": "NOT_RUN",
+          "runtime_status": "NOT_RUN",
+          "source_file": "examples/lmx/105_dijkstra.lm3",
+          "entry_source_file": "examples/lmx/105_dijkstra.lm3",
+          "fragment_code": "DijkstraStep:\n    return: int\n    next:\n        throws: copy(range\\throws) copy(foldl\\throws) ReceiverIndex Stop\n        best := \\foldl(range(0; n); (-1 record); DijkstraPick\\run)\n        if: best = -1\n            throw: Stop()\n        settled[best] := 1\n        foldl(graph[best]; (0 record); DijkstraRelax\\run)\n        return: best\n\nDijkstraFunctional:\n    return: int\n    run:\n        throws: copy(collect\\throws)\n        collect(DijkstraStep\\next)\n        return: 0\n",
+          "source_files": [
+            "examples/lmx/common/array.lm3",
+            "examples/lmx/common/105_dijkstra.lm3",
+            "examples/lmx/105_dijkstra.lm3"
+          ],
+          "source_file_is_fragment": true,
+          "runtime_execution": "NOT_RUN"
+        }
+      },
+      "sources": [
+        {
+          "title": "Boost.Graph: Dijkstra shortest paths",
+          "url": "https://www.boost.org/doc/libs/1_82_0/libs/graph/doc/dijkstra_shortest_paths.html"
+        }
+      ],
+      "acceptance_cases": [
+        "dijkstra_empty",
+        "dijkstra_relaxation",
+        "dijkstra_zero_parallel",
+        "dijkstra_large"
+      ],
+      "metrics_status": "CURRENT_FULL_SOURCE",
+      "lmx_operation_phase": "after_root_startup",
+      "shared_dependencies_in_measurement": [
+        "examples/lmx/common/array.lm3",
+        "examples/lmx/common/105_dijkstra.lm3"
+      ],
+      "standard_library_dependencies": [
+        "FxApply",
+        "FxSeqRead",
+        "FxSeqAllocate",
+        "fill",
+        "map",
+        "foldl",
+        "collect",
+        "range"
+      ],
+      "measurement_boundary": "Full algorithm bodies plus local common definitions. Generic core operations remain separately listed standard-library dependencies. No measurements recomputed.",
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "style_note": "Общие определения включаются в полную границу каждого варианта ровно один раз; различаются явный процедурный обход и функциональная организация того же алгоритма.",
+      "comparison_file": "105_dijkstra_comparision.md",
+      "kind": "algorithm"
+    }
+  ],
+  "display_order": [
+    100,
+    101,
+    102,
+    103,
+    104,
+    105
+  ],
+  "metrics_policy": {
+    "status": "CURRENT_FULL_SOURCE",
+    "note_ru": "Все сравниваемые границы исходников пересчитаны после добавления примеров. PDF и XLSX используют общую модель PUBLICATION_DATA.json."
+  },
+  "lmx_execution_contract": {
+    "startup_target": "root",
+    "startup_level": "L3 Thread",
+    "root_has_data": false,
+    "case_operation_phase": "after_root_startup",
+    "P0": "NOT_RUN",
+    "L3": "NOT_RUN"
+  },
+  "metrics_status": "CURRENT_FULL_SOURCE",
+  "language_pairing": "per_record"
+}

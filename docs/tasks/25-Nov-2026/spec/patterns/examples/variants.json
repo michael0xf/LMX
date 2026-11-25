@@ -1,0 +1,2715 @@
+{
+  "format": "lmx-dual-style-variants-v1",
+  "rule": "Compare both complete styles; no shortest-only selection; foreign controls unchanged.",
+  "records": [
+    {
+      "original_source_sha256_at_import": "fb106d4c39548893dc65851a996f1ed023b40b20696a41022a91f6f95e31cd10",
+      "expected_ru": "ApplyProbe\\run() → 1408 (14 и8).",
+      "implementation_comparison": "library_comparisons/h01_apply_comparision.md",
+      "id": "H01",
+      "title_ru": "Replace and invoke a first-class callable",
+      "selected": "functional",
+      "alternative": null,
+      "eligible_variants": [
+        "procedural",
+        "functional"
+      ],
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "variants": [
+        {
+          "id": "procedural",
+          "label_ru": "Процедурный LMX",
+          "code": "Arithmetic:\n    int: value\n    return: int\n    twice:\n        return: value * 2\n    plusOne:\n        return: value + 1\n\nApplyProbe:\n    return: int\n    run:\n        @: chosen Arithmetic\\twice\n        int: first chosen(7)\n        chosen := Arithmetic\\plusOne\n        return: first * 100 + chosen(7)\n",
+          "metrics": {
+            "characters": 191,
+            "characters_with_whitespace": 298,
+            "nonblank_lines": 14,
+            "utf8_bytes": 298,
+            "sha256": "5c9e0e0175c28a8002667ba607c18ef246b4de250362328ac0605a907a762061"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "ApplyProbe\\run()",
+              "expected": 1408
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Сценарий наблюдает две записи и два чтения одной callable-ячейки. Эти эффекты обязательны в обоих стилях; прямой вызов выбранной функции уже является минимальной композицией."
+        },
+        {
+          "id": "functional",
+          "label_ru": "Функциональный LMX",
+          "code": "Arithmetic:\n    int: value\n    return: int\n    twice:\n        return: value * 2\n    plusOne:\n        return: value + 1\n\nApplyProbe:\n    return: int\n    run:\n        @: chosen Arithmetic\\twice\n        int: first chosen(7)\n        chosen := Arithmetic\\plusOne\n        return: first * 100 + chosen(7)\n",
+          "metrics": {
+            "characters": 191,
+            "characters_with_whitespace": 298,
+            "nonblank_lines": 14,
+            "utf8_bytes": 298,
+            "sha256": "5c9e0e0175c28a8002667ba607c18ef246b4de250362328ac0605a907a762061"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "ApplyProbe\\run()",
+              "expected": 1408
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Сценарий наблюдает две записи и два чтения одной callable-ячейки. Эти эффекты обязательны в обоих стилях; прямой вызов выбранной функции уже является минимальной композицией."
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "code": "Arithmetic:\n    int: value\n    return: int\n    twice:\n        return: value * 2\n    plusOne:\n        return: value + 1\n\nApplyProbe:\n    return: int\n    run:\n        @: chosen Arithmetic\\twice\n        int: first chosen(7)\n        chosen := Arithmetic\\plusOne\n        return: first * 100 + chosen(7)\n",
+          "source_file": "haskell_comparision/source/lmx/H01.lm3",
+          "contract_id": "root/H01",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 191,
+            "characters_with_whitespace": 298,
+            "nonblank_lines": 14,
+            "utf8_bytes": 298,
+            "sha256": "5c9e0e0175c28a8002667ba607c18ef246b4de250362328ac0605a907a762061"
+          }
+        },
+        "functional": {
+          "code": "Arithmetic:\n    int: value\n    return: int\n    twice:\n        return: value * 2\n    plusOne:\n        return: value + 1\n\nApplyProbe:\n    return: int\n    run:\n        @: chosen Arithmetic\\twice\n        int: first chosen(7)\n        chosen := Arithmetic\\plusOne\n        return: first * 100 + chosen(7)\n",
+          "source_file": "haskell_comparision/source/lmx/H01.lm3",
+          "contract_id": "root/H01",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 191,
+            "characters_with_whitespace": 298,
+            "nonblank_lines": 14,
+            "utf8_bytes": 298,
+            "sha256": "5c9e0e0175c28a8002667ba607c18ef246b4de250362328ac0605a907a762061"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Сценарий наблюдает две записи и два чтения одной callable-ячейки. Эти эффекты обязательны в обоих стилях; прямой вызов выбранной функции уже является минимальной композицией.",
+      "lmx_operation_phase": "after_root_startup",
+      "comparison_status": "complete_pair",
+      "foreign_source": "haskell_comparision/source/haskell/H01.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE"
+    },
+    {
+      "original_source_sha256_at_import": "2ed819169b5d527aec3a0a7aa3a150930a8be01e5dc27e72b6db9ba4b450b66a",
+      "expected_ru": "SignatureProbe\\run() → 2772 (27 и72).",
+      "implementation_comparison": null,
+      "id": "H02",
+      "title_ru": "Named signature positions versus candidate names",
+      "selected": "functional",
+      "alternative": null,
+      "eligible_variants": [
+        "procedural",
+        "functional"
+      ],
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "variants": [
+        {
+          "id": "procedural",
+          "label_ru": "Процедурный LMX",
+          "code": "PairOperation :: (int: a; int: b; return: int)\n\nCandidate:\n    int: b\n    int: a\n    return: int\n    encode:\n        return: b * 10 + a\n\nSignatureProbe:\n    return: int\n    run:\n        PairOperation@: selected Candidate\\encode\n        int: first selected(a := 2; b := 7)\n        int: second Candidate\\encode(a := 2; b := 7)\n        return: first * 100 + second\n",
+          "metrics": {
+            "characters": 245,
+            "characters_with_whitespace": 362,
+            "nonblank_lines": 14,
+            "utf8_bytes": 362,
+            "sha256": "d29ee535947aabaf29212394f4aef3c38dc95478805b8e0f97d374472642f19e"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "SignatureProbe\\run()",
+              "expected": 2772
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Процедурный вариант сохраняет результаты двух вызовов явно; функциональный объединяет их арифметическим выражением. Позиционное принятие сигнатуры и именованные аргументы проверяются одинаково."
+        },
+        {
+          "id": "functional",
+          "label_ru": "Функциональный LMX",
+          "code": "PairOperation :: (int: a; int: b; return: int)\n\nCandidate:\n    int: b\n    int: a\n    return: int\n    encode:\n        return: b * 10 + a\n\nSignatureProbe:\n    return: int\n    run:\n        PairOperation@: selected Candidate\\encode\n        return: selected(a := 2; b := 7) * 100 + Candidate\\encode(a := 2; b := 7)\n",
+          "metrics": {
+            "characters": 215,
+            "characters_with_whitespace": 310,
+            "nonblank_lines": 12,
+            "utf8_bytes": 310,
+            "sha256": "252fd568e46734139bbc6309b1ef1b329d00c1c5aa7aed5dcae824ef068832b3"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "SignatureProbe\\run()",
+              "expected": 2772
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Процедурный вариант сохраняет результаты двух вызовов явно; функциональный объединяет их арифметическим выражением. Позиционное принятие сигнатуры и именованные аргументы проверяются одинаково."
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "code": "PairOperation :: (int: a; int: b; return: int)\n\nCandidate:\n    int: b\n    int: a\n    return: int\n    encode:\n        return: b * 10 + a\n\nSignatureProbe:\n    return: int\n    run:\n        PairOperation@: selected Candidate\\encode\n        int: first selected(a := 2; b := 7)\n        int: second Candidate\\encode(a := 2; b := 7)\n        return: first * 100 + second\n",
+          "source_file": "haskell_comparision/source/lmx/procedural/H02.lm3",
+          "contract_id": "root/H02",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 245,
+            "characters_with_whitespace": 362,
+            "nonblank_lines": 14,
+            "utf8_bytes": 362,
+            "sha256": "d29ee535947aabaf29212394f4aef3c38dc95478805b8e0f97d374472642f19e"
+          }
+        },
+        "functional": {
+          "code": "PairOperation :: (int: a; int: b; return: int)\n\nCandidate:\n    int: b\n    int: a\n    return: int\n    encode:\n        return: b * 10 + a\n\nSignatureProbe:\n    return: int\n    run:\n        PairOperation@: selected Candidate\\encode\n        return: selected(a := 2; b := 7) * 100 + Candidate\\encode(a := 2; b := 7)\n",
+          "source_file": "haskell_comparision/source/lmx/H02.lm3",
+          "contract_id": "root/H02",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 215,
+            "characters_with_whitespace": 310,
+            "nonblank_lines": 12,
+            "utf8_bytes": 310,
+            "sha256": "252fd568e46734139bbc6309b1ef1b329d00c1c5aa7aed5dcae824ef068832b3"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "style_note": "Процедурный вариант сохраняет результаты двух вызовов явно; функциональный объединяет их арифметическим выражением. Позиционное принятие сигнатуры и именованные аргументы проверяются одинаково.",
+      "lmx_operation_phase": "after_root_startup",
+      "comparison_status": "related_analogy",
+      "foreign_source": "haskell_comparision/source/haskell/H02.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE"
+    },
+    {
+      "original_source_sha256_at_import": "e5563b3bed8028416bec3c3355b8e8ffc58bbc820d9be3b8086ca7d52c6fe2d1",
+      "expected_ru": "ClosureProbe\\run() → 6101006 (6,101,6).",
+      "implementation_comparison": "library_comparisons/h03_capture_comparision.md",
+      "id": "H03",
+      "title_ru": "Independent bound prefixes and residual callable admission",
+      "selected": "functional",
+      "alternative": null,
+      "eligible_variants": [
+        "procedural",
+        "functional"
+      ],
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "variants": [
+        {
+          "id": "procedural",
+          "label_ru": "Процедурный LMX",
+          "code": "CapturePrototype:\n    int: saved 0\n    @: binary 0\n    inputs:\n        int: second\n        return: int\n        apply:\n            return: node\\binary(node\\saved; second)\n\nCurry:\n    @: binary\n    int: first\n    return: @\n    capture:\n        @: instance (copy(CapturePrototype))\n        @: owner parent(instance\\inputs)\n        owner\\saved := first\n        owner\\binary := binary\n        return: instance\\inputs\\apply\n\nAddition:\n    int: first\n    int: second\n    return: int\n    add:\n        return: first + second\n\nClosureProbe:\n    return: int\n    run:\n        @: add5 Curry\\capture(Addition\\add; 5)\n        @: add100 Curry\\capture(Addition\\add; 100)\n        int: saved 1000\n        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n",
+          "metrics": {
+            "characters": 495,
+            "characters_with_whitespace": 741,
+            "nonblank_lines": 31,
+            "utf8_bytes": 741,
+            "sha256": "6505baaf9fa1353319900de9484fd8dff8d5e85d4800c6596537df59f905a8d1"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "ClosureProbe\\run()",
+              "expected": 6101006,
+              "components": [
+                6,
+                101,
+                6
+              ],
+              "original_callable_unchanged": true,
+              "independent_prefixes": [
+                5,
+                100
+              ]
+            },
+            {
+              "variant": "Explicit saved actual through returned method",
+              "invoke": "add5(1; saved := 25)",
+              "expected_rejection": "unknown explicit formal; the returned callable only exposes p0, saved is not a formal",
+              "setup": "Obtain add5 with partial(Addition\\add; prefix := (5)), then attempt the explicit saved actual."
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Процедурный вариант целиком показывает отдельные копии окружения и прямой вызов. Функциональный использует общий partial; сохранённый вход не становится доступным именованным аргументом остаточной функции."
+        },
+        {
+          "id": "functional",
+          "label_ru": "Функциональный LMX",
+          "code": "Addition:\n    int: first\n    int: second\n    return: int\n    add:\n        return: first + second\n\nClosureProbe:\n    return: int\n    run:\n        throws: copy(partial\\throws)\n        @: add5 partial(Addition\\add; (5))\n        @: add100 partial(Addition\\add; (100))\n        int: saved 1000\n        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n",
+          "metrics": {
+            "characters": 239,
+            "characters_with_whitespace": 351,
+            "nonblank_lines": 14,
+            "utf8_bytes": 351,
+            "sha256": "29df456d160dbebb7f55cdc14c13dac04a0ff1918f2d84d9370fb7efb4afba33"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "ClosureProbe\\run()",
+              "expected": 6101006,
+              "components": [
+                6,
+                101,
+                6
+              ],
+              "original_callable_unchanged": true,
+              "independent_prefixes": [
+                5,
+                100
+              ]
+            },
+            {
+              "variant": "Explicit saved actual through returned method",
+              "invoke": "add5(1; saved := 25)",
+              "expected_rejection": "unknown explicit formal; the returned callable only exposes p0, saved is not a formal",
+              "setup": "Obtain add5 with partial(Addition\\add; prefix := (5)), then attempt the explicit saved actual."
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Процедурный вариант целиком показывает отдельные копии окружения и прямой вызов. Функциональный использует общий partial; сохранённый вход не становится доступным именованным аргументом остаточной функции."
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "code": "CapturePrototype:\n    int: saved 0\n    @: binary 0\n    inputs:\n        int: second\n        return: int\n        apply:\n            return: node\\binary(node\\saved; second)\n\nCurry:\n    @: binary\n    int: first\n    return: @\n    capture:\n        @: instance (copy(CapturePrototype))\n        @: owner parent(instance\\inputs)\n        owner\\saved := first\n        owner\\binary := binary\n        return: instance\\inputs\\apply\n\nAddition:\n    int: first\n    int: second\n    return: int\n    add:\n        return: first + second\n\nClosureProbe:\n    return: int\n    run:\n        @: add5 Curry\\capture(Addition\\add; 5)\n        @: add100 Curry\\capture(Addition\\add; 100)\n        int: saved 1000\n        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n",
+          "source_file": "haskell_comparision/source/lmx/procedural/H03.lm3",
+          "contract_id": "root/H03",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 495,
+            "characters_with_whitespace": 741,
+            "nonblank_lines": 31,
+            "utf8_bytes": 741,
+            "sha256": "6505baaf9fa1353319900de9484fd8dff8d5e85d4800c6596537df59f905a8d1"
+          }
+        },
+        "functional": {
+          "code": "Addition:\n    int: first\n    int: second\n    return: int\n    add:\n        return: first + second\n\nClosureProbe:\n    return: int\n    run:\n        throws: copy(partial\\throws)\n        @: add5 partial(Addition\\add; (5))\n        @: add100 partial(Addition\\add; (100))\n        int: saved 1000\n        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n",
+          "source_file": "haskell_comparision/source/lmx/H03.lm3",
+          "contract_id": "root/H03",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 239,
+            "characters_with_whitespace": 351,
+            "nonblank_lines": 14,
+            "utf8_bytes": 351,
+            "sha256": "29df456d160dbebb7f55cdc14c13dac04a0ff1918f2d84d9370fb7efb4afba33"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "style_note": "Процедурный вариант целиком показывает отдельные копии окружения и прямой вызов. Функциональный использует общий partial; сохранённый вход не становится доступным именованным аргументом остаточной функции.",
+      "lmx_operation_phase": "after_root_startup",
+      "comparison_status": "complete_pair",
+      "foreign_source": "haskell_comparision/source/haskell/H03.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE"
+    },
+    {
+      "original_source_sha256_at_import": "9cb8c983e3aaebc3b4e6b7959f0a9a6d23512a27249b3ad787e711ef6ac89168",
+      "expected_ru": "DefaultProbe\\run() → 6260106 (6,26,1,6).",
+      "implementation_comparison": null,
+      "id": "H04",
+      "title_ru": "Overrideable copied default",
+      "selected": "functional",
+      "alternative": null,
+      "eligible_variants": [
+        "procedural",
+        "functional"
+      ],
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "variants": [
+        {
+          "id": "procedural",
+          "label_ru": "Процедурный LMX",
+          "code": "Addition:\n    int: x\n    int: y\n    return: int\n    add:\n        return: x + y\n\nDefaultProbe:\n    return: int\n    run:\n        int: y 100\n        @: fiveContext (merge(Addition; (int: y 5)))\n        @: add5 fiveContext\\add\n        int: first add5(1)\n        int: second add5(1; y := 25)\n        int: third add5(1; y := 0)\n        int: fourth add5(1)\n        return: first * 1000000 + second * 10000 + third * 100 + fourth\n",
+          "metrics": {
+            "characters": 265,
+            "characters_with_whitespace": 422,
+            "nonblank_lines": 17,
+            "utf8_bytes": 422,
+            "sha256": "f95caed4e498307ca0786adc291705127094c7a6cf9a52950360d0cb29d5661c"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "DefaultProbe\\run()",
+              "expected": 6260106,
+              "components": [
+                6,
+                26,
+                1,
+                6
+              ],
+              "copied_default_after": 5
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Процедурный вариант сохраняет четыре наблюдения по шагам; функциональный непосредственно компонует их. Оба проверяют отсутствующий аргумент, явные25/0 и повторное значение по умолчанию."
+        },
+        {
+          "id": "functional",
+          "label_ru": "Функциональный LMX",
+          "code": "Addition:\n    int: x\n    int: y\n    return: int\n    add:\n        return: x + y\n\nDefaultProbe:\n    return: int\n    run:\n        int: y 100\n        @: fiveContext (merge(Addition; (int: y 5)))\n        @: add5 fiveContext\\add\n        return: add5(1) * 1000000 + add5(1; y := 25) * 10000 + add5(1; y := 0) * 100 + add5(1)\n",
+          "metrics": {
+            "characters": 205,
+            "characters_with_whitespace": 318,
+            "nonblank_lines": 13,
+            "utf8_bytes": 318,
+            "sha256": "8df2b2495dbe10e31c0230e9f3b0b5a66dfb4d70a636be3d735e0e64a46c1234"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "DefaultProbe\\run()",
+              "expected": 6260106,
+              "components": [
+                6,
+                26,
+                1,
+                6
+              ],
+              "copied_default_after": 5
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Процедурный вариант сохраняет четыре наблюдения по шагам; функциональный непосредственно компонует их. Оба проверяют отсутствующий аргумент, явные25/0 и повторное значение по умолчанию."
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "code": "Addition:\n    int: x\n    int: y\n    return: int\n    add:\n        return: x + y\n\nDefaultProbe:\n    return: int\n    run:\n        int: y 100\n        @: fiveContext (merge(Addition; (int: y 5)))\n        @: add5 fiveContext\\add\n        int: first add5(1)\n        int: second add5(1; y := 25)\n        int: third add5(1; y := 0)\n        int: fourth add5(1)\n        return: first * 1000000 + second * 10000 + third * 100 + fourth\n",
+          "source_file": "haskell_comparision/source/lmx/procedural/H04.lm3",
+          "contract_id": "root/H04",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 265,
+            "characters_with_whitespace": 422,
+            "nonblank_lines": 17,
+            "utf8_bytes": 422,
+            "sha256": "f95caed4e498307ca0786adc291705127094c7a6cf9a52950360d0cb29d5661c"
+          }
+        },
+        "functional": {
+          "code": "Addition:\n    int: x\n    int: y\n    return: int\n    add:\n        return: x + y\n\nDefaultProbe:\n    return: int\n    run:\n        int: y 100\n        @: fiveContext (merge(Addition; (int: y 5)))\n        @: add5 fiveContext\\add\n        return: add5(1) * 1000000 + add5(1; y := 25) * 10000 + add5(1; y := 0) * 100 + add5(1)\n",
+          "source_file": "haskell_comparision/source/lmx/H04.lm3",
+          "contract_id": "root/H04",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 205,
+            "characters_with_whitespace": 318,
+            "nonblank_lines": 13,
+            "utf8_bytes": 318,
+            "sha256": "8df2b2495dbe10e31c0230e9f3b0b5a66dfb4d70a636be3d735e0e64a46c1234"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "style_note": "Процедурный вариант сохраняет четыре наблюдения по шагам; функциональный непосредственно компонует их. Оба проверяют отсутствующий аргумент, явные25/0 и повторное значение по умолчанию.",
+      "lmx_operation_phase": "after_root_startup",
+      "comparison_status": "complete_pair",
+      "foreign_source": "haskell_comparision/source/haskell/H04.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE"
+    },
+    {
+      "id": "H05",
+      "title_ru": "Dynamic and lexical binding after a graph copy",
+      "selected": "functional",
+      "alternative": null,
+      "eligible_variants": [
+        "procedural",
+        "functional"
+      ],
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "variants": [
+        {
+          "id": "procedural",
+          "label_ru": "Процедурный LMX",
+          "code": "Source:\n    int: y 5\n    methods:\n        int: x\n        return: int\n        dynamic:\n            return: x + y\n        lexical:\n            return: x + node\\y\n\nBindingProbe:\n    return: int\n    run:\n        @: copied (copy(Source))\n        Source\\y := 8\n        int: y 25\n        int: a copied\\methods\\dynamic(1)\n        int: b copied\\methods\\lexical(1)\n        return: a * 100 + b\n",
+          "metrics": {
+            "characters": 218,
+            "characters_with_whitespace": 383,
+            "nonblank_lines": 18,
+            "utf8_bytes": 383,
+            "sha256": "b745ff9743cb9c72924a2c3f1bbe749a66388083b9df8d6ead457fa1e3577dde"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "BindingProbe\\run()",
+              "expected": 2606,
+              "original_y_after": 8,
+              "copied_y_after": 5
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Копирование графа и последующая запись в источник обязательны. Процедурный вариант сохраняет два чтения; функциональный объединяет их выражением, сохраняя динамический и лексический пути."
+        },
+        {
+          "id": "functional",
+          "label_ru": "Функциональный LMX",
+          "code": "Source:\n    int: y 5\n    methods:\n        int: x\n        return: int\n        dynamic:\n            return: x + y\n        lexical:\n            return: x + node\\y\n\nBindingProbe:\n    return: int\n    run:\n        @: copied (copy(Source))\n        Source\\y := 8\n        int: y 25\n        return: copied\\methods\\dynamic(1) * 100 + copied\\methods\\lexical(1)\n",
+          "metrics": {
+            "characters": 206,
+            "characters_with_whitespace": 349,
+            "nonblank_lines": 16,
+            "utf8_bytes": 349,
+            "sha256": "1efa0aab92f30b89bcf2ae9740f60b482101d12c1e9767c13d10298100c2d34d"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "BindingProbe\\run()",
+              "expected": 2606,
+              "original_y_after": 8,
+              "copied_y_after": 5
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Копирование графа и последующая запись в источник обязательны. Процедурный вариант сохраняет два чтения; функциональный объединяет их выражением, сохраняя динамический и лексический пути."
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "code": "Source:\n    int: y 5\n    methods:\n        int: x\n        return: int\n        dynamic:\n            return: x + y\n        lexical:\n            return: x + node\\y\n\nBindingProbe:\n    return: int\n    run:\n        @: copied (copy(Source))\n        Source\\y := 8\n        int: y 25\n        int: a copied\\methods\\dynamic(1)\n        int: b copied\\methods\\lexical(1)\n        return: a * 100 + b\n",
+          "source_file": "haskell_comparision/source/lmx/procedural/H05.lm3",
+          "contract_id": "root/H05",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 218,
+            "characters_with_whitespace": 383,
+            "nonblank_lines": 18,
+            "utf8_bytes": 383,
+            "sha256": "b745ff9743cb9c72924a2c3f1bbe749a66388083b9df8d6ead457fa1e3577dde"
+          }
+        },
+        "functional": {
+          "code": "Source:\n    int: y 5\n    methods:\n        int: x\n        return: int\n        dynamic:\n            return: x + y\n        lexical:\n            return: x + node\\y\n\nBindingProbe:\n    return: int\n    run:\n        @: copied (copy(Source))\n        Source\\y := 8\n        int: y 25\n        return: copied\\methods\\dynamic(1) * 100 + copied\\methods\\lexical(1)\n",
+          "source_file": "haskell_comparision/source/lmx/H05.lm3",
+          "contract_id": "root/H05",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 206,
+            "characters_with_whitespace": 349,
+            "nonblank_lines": 16,
+            "utf8_bytes": 349,
+            "sha256": "1efa0aab92f30b89bcf2ae9740f60b482101d12c1e9767c13d10298100c2d34d"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "style_note": "Копирование графа и последующая запись в источник обязательны. Процедурный вариант сохраняет два чтения; функциональный объединяет их выражением, сохраняя динамический и лексический пути.",
+      "lmx_operation_phase": "after_root_startup",
+      "comparison_status": "related_analogy",
+      "foreign_source": "haskell_comparision/source/haskell/H05.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE"
+    },
+    {
+      "original_source_sha256_at_import": "1f22501e164c17579a1f38a0c364396f03a7d747aa033309e2a071cdce075354",
+      "expected_ru": "CompositionProbe\\run() → 910 (9 и10). Журнал эффектов: twice,next,next,twice.",
+      "implementation_comparison": "library_comparisons/h06_pipe_comparision.md",
+      "id": "H06",
+      "title_ru": "Order of two composed computations",
+      "selected": "functional",
+      "alternative": null,
+      "eligible_variants": [
+        "procedural",
+        "functional"
+      ],
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "variants": [
+        {
+          "id": "procedural",
+          "label_ru": "Процедурный LMX",
+          "code": "Functions:\n    int: x\n    return: int\n    twice:\n        return: x * 2\n    next:\n        return: x + 1\n\nCompositionProbe:\n    return: int\n    run:\n        int: first Functions\\twice(4)\n        first := Functions\\next(first)\n        int: second Functions\\next(4)\n        second := Functions\\twice(second)\n        return: first * 100 + second\n",
+          "metrics": {
+            "characters": 223,
+            "characters_with_whitespace": 341,
+            "nonblank_lines": 15,
+            "utf8_bytes": 341,
+            "sha256": "f6742f1da51a267be70b3ec7a51b150f6eed38242e9c75e1f5c301aa725501c2"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "CompositionProbe\\run()",
+              "expected": 910,
+              "components": [
+                9,
+                10
+              ]
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Процедурный вариант явно хранит промежуточные стадии; функциональный использует краткие вложенные вызовы. Обе последовательности наблюдаются: next(twice(4))=9 и twice(next(4))=10."
+        },
+        {
+          "id": "functional",
+          "label_ru": "Функциональный LMX",
+          "code": "Functions:\n    int: x\n    return: int\n    twice:\n        return: x * 2\n    next:\n        return: x + 1\n\nCompositionProbe:\n    return: int\n    run:\n        return: Functions\\next(Functions\\twice(4)) * 100 + Functions\\twice(Functions\\next(4))\n",
+          "metrics": {
+            "characters": 167,
+            "characters_with_whitespace": 241,
+            "nonblank_lines": 11,
+            "utf8_bytes": 241,
+            "sha256": "087e663312eef267106bea154c2762a5facf5e88e7e45b98eb1bbe460a16fe2d"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "CompositionProbe\\run()",
+              "expected": 910,
+              "components": [
+                9,
+                10
+              ]
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Процедурный вариант явно хранит промежуточные стадии; функциональный использует краткие вложенные вызовы. Обе последовательности наблюдаются: next(twice(4))=9 и twice(next(4))=10."
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "code": "Functions:\n    int: x\n    return: int\n    twice:\n        return: x * 2\n    next:\n        return: x + 1\n\nCompositionProbe:\n    return: int\n    run:\n        int: first Functions\\twice(4)\n        first := Functions\\next(first)\n        int: second Functions\\next(4)\n        second := Functions\\twice(second)\n        return: first * 100 + second\n",
+          "source_file": "haskell_comparision/source/lmx/procedural/H06.lm3",
+          "contract_id": "root/H06",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 223,
+            "characters_with_whitespace": 341,
+            "nonblank_lines": 15,
+            "utf8_bytes": 341,
+            "sha256": "f6742f1da51a267be70b3ec7a51b150f6eed38242e9c75e1f5c301aa725501c2"
+          }
+        },
+        "functional": {
+          "code": "Functions:\n    int: x\n    return: int\n    twice:\n        return: x * 2\n    next:\n        return: x + 1\n\nCompositionProbe:\n    return: int\n    run:\n        return: Functions\\next(Functions\\twice(4)) * 100 + Functions\\twice(Functions\\next(4))\n",
+          "source_file": "haskell_comparision/source/lmx/H06.lm3",
+          "contract_id": "root/H06",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 167,
+            "characters_with_whitespace": 241,
+            "nonblank_lines": 11,
+            "utf8_bytes": 241,
+            "sha256": "087e663312eef267106bea154c2762a5facf5e88e7e45b98eb1bbe460a16fe2d"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "style_note": "Процедурный вариант явно хранит промежуточные стадии; функциональный использует краткие вложенные вызовы. Обе последовательности наблюдаются: next(twice(4))=9 и twice(next(4))=10.",
+      "lmx_operation_phase": "after_root_startup",
+      "comparison_status": "complete_pair",
+      "foreign_source": "haskell_comparision/source/haskell/H06.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE"
+    },
+    {
+      "original_source_sha256_at_import": "1c488e7a742d7c4f563e1c136b7e868997c580a92a62231399135af5ff2d95fb",
+      "expected_ru": "После сброса Meter\\calls две prepared-активации дают2,4 при2 вызовах next; две raw-активации дают3,7 при4 вызовах next.",
+      "implementation_comparison": "library_comparisons/h07_evaluation_modes_comparision.md",
+      "id": "H07",
+      "title_ru": "Prepared value versus raw source occurrence",
+      "selected": "functional",
+      "alternative": null,
+      "eligible_variants": [
+        "procedural",
+        "functional"
+      ],
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "variants": [
+        {
+          "id": "procedural",
+          "label_ru": "Процедурный LMX",
+          "code": "PreparedOps:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: int\n    twice:\n        return: \\left + \\left\n\nRawOps:\n    merge: sys\\OPERANDS_TEMPLATE (const: int: PASS_ARGS_AS_IS 1)\n    return: int\n    twice:\n        return: sys\\eval(left) + sys\\eval(left)\n\nMeter:\n    int: calls 0\n    return: int\n    next:\n        node\\calls += 1\n        return: node\\calls\n\nEvaluation:\n    return: int\n    prepared:\n        return: (Meter\\next() PreparedOps\\twice 0)\n    raw:\n        return: (Meter\\next() RawOps\\twice 0)\n",
+          "metrics": {
+            "characters": 354,
+            "characters_with_whitespace": 502,
+            "nonblank_lines": 22,
+            "utf8_bytes": 502,
+            "sha256": "37c80f57054abb22f7bdea1153c9b0f319d3db236466e4994df220c7a09bd225"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "setup": "Meter\\calls := 0",
+              "sequence": [
+                "Evaluation\\prepared()",
+                "Evaluation\\prepared()"
+              ],
+              "expected": [
+                2,
+                4
+              ],
+              "calls_after": 2
+            },
+            {
+              "setup": "Meter\\calls := 0",
+              "sequence": [
+                "Evaluation\\raw()",
+                "Evaluation\\raw()"
+              ],
+              "expected": [
+                3,
+                7
+              ],
+              "calls_after": 4
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Это проверка prepared/raw ролей и повторного вычисления исходного occurrence. Замена сохраняемого узла на lambda или заранее вычисленное значение изменила бы договор, поэтому минимальная запись общая."
+        },
+        {
+          "id": "functional",
+          "label_ru": "Функциональный LMX",
+          "code": "PreparedOps:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: int\n    twice:\n        return: \\left + \\left\n\nRawOps:\n    merge: sys\\OPERANDS_TEMPLATE (const: int: PASS_ARGS_AS_IS 1)\n    return: int\n    twice:\n        return: sys\\eval(left) + sys\\eval(left)\n\nMeter:\n    int: calls 0\n    return: int\n    next:\n        node\\calls += 1\n        return: node\\calls\n\nEvaluation:\n    return: int\n    prepared:\n        return: (Meter\\next() PreparedOps\\twice 0)\n    raw:\n        return: (Meter\\next() RawOps\\twice 0)\n",
+          "metrics": {
+            "characters": 354,
+            "characters_with_whitespace": 502,
+            "nonblank_lines": 22,
+            "utf8_bytes": 502,
+            "sha256": "37c80f57054abb22f7bdea1153c9b0f319d3db236466e4994df220c7a09bd225"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "setup": "Meter\\calls := 0",
+              "sequence": [
+                "Evaluation\\prepared()",
+                "Evaluation\\prepared()"
+              ],
+              "expected": [
+                2,
+                4
+              ],
+              "calls_after": 2
+            },
+            {
+              "setup": "Meter\\calls := 0",
+              "sequence": [
+                "Evaluation\\raw()",
+                "Evaluation\\raw()"
+              ],
+              "expected": [
+                3,
+                7
+              ],
+              "calls_after": 4
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Это проверка prepared/raw ролей и повторного вычисления исходного occurrence. Замена сохраняемого узла на lambda или заранее вычисленное значение изменила бы договор, поэтому минимальная запись общая."
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "code": "PreparedOps:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: int\n    twice:\n        return: \\left + \\left\n\nRawOps:\n    merge: sys\\OPERANDS_TEMPLATE (const: int: PASS_ARGS_AS_IS 1)\n    return: int\n    twice:\n        return: sys\\eval(left) + sys\\eval(left)\n\nMeter:\n    int: calls 0\n    return: int\n    next:\n        node\\calls += 1\n        return: node\\calls\n\nEvaluation:\n    return: int\n    prepared:\n        return: (Meter\\next() PreparedOps\\twice 0)\n    raw:\n        return: (Meter\\next() RawOps\\twice 0)\n",
+          "source_file": "haskell_comparision/source/lmx/H07.lm3",
+          "contract_id": "root/H07",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 354,
+            "characters_with_whitespace": 502,
+            "nonblank_lines": 22,
+            "utf8_bytes": 502,
+            "sha256": "37c80f57054abb22f7bdea1153c9b0f319d3db236466e4994df220c7a09bd225"
+          }
+        },
+        "functional": {
+          "code": "PreparedOps:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: int\n    twice:\n        return: \\left + \\left\n\nRawOps:\n    merge: sys\\OPERANDS_TEMPLATE (const: int: PASS_ARGS_AS_IS 1)\n    return: int\n    twice:\n        return: sys\\eval(left) + sys\\eval(left)\n\nMeter:\n    int: calls 0\n    return: int\n    next:\n        node\\calls += 1\n        return: node\\calls\n\nEvaluation:\n    return: int\n    prepared:\n        return: (Meter\\next() PreparedOps\\twice 0)\n    raw:\n        return: (Meter\\next() RawOps\\twice 0)\n",
+          "source_file": "haskell_comparision/source/lmx/H07.lm3",
+          "contract_id": "root/H07",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 354,
+            "characters_with_whitespace": 502,
+            "nonblank_lines": 22,
+            "utf8_bytes": 502,
+            "sha256": "37c80f57054abb22f7bdea1153c9b0f319d3db236466e4994df220c7a09bd225"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Это проверка prepared/raw ролей и повторного вычисления исходного occurrence. Замена сохраняемого узла на lambda или заранее вычисленное значение изменила бы договор, поэтому минимальная запись общая.",
+      "lmx_operation_phase": "after_root_startup",
+      "comparison_status": "related_analogy",
+      "foreign_source": "haskell_comparision/source/haskell/H07.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE"
+    },
+    {
+      "id": "H08",
+      "title_ru": "Owned formal copy versus caller place",
+      "selected": "functional",
+      "alternative": null,
+      "eligible_variants": [
+        "procedural",
+        "functional"
+      ],
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "variants": [
+        {
+          "id": "procedural",
+          "label_ru": "Процедурный LMX",
+          "code": "Free:\n    step:\n        y += 3\n\nOwn:\n    int: y\n    step:\n        Free\\step()\n\nStateProbe:\n    @: action\n    return: int\n    run:\n        int: y 0\n        action()\n        return: y\n",
+          "metrics": {
+            "characters": 94,
+            "characters_with_whitespace": 182,
+            "nonblank_lines": 14,
+            "utf8_bytes": 182,
+            "sha256": "1621071225ae4b31e554d0190b5f70ab55878decc47ea9dc88043afbda551895"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "StateProbe\\run(Own\\step)",
+              "expected": 0
+            },
+            {
+              "invoke": "StateProbe\\run(Free\\step)",
+              "expected": 3
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Проверяемый эффект — изменение собственной ячейки формального параметра либо живого места вызывающего. Одно тело операции и runner необходимы в обоих стилях; дополнительная обвязка не меняет стиль наблюдаемой операции."
+        },
+        {
+          "id": "functional",
+          "label_ru": "Функциональный LMX",
+          "code": "Free:\n    step:\n        y += 3\n\nOwn:\n    int: y\n    step:\n        Free\\step()\n\nStateProbe:\n    @: action\n    return: int\n    run:\n        int: y 0\n        action()\n        return: y\n",
+          "metrics": {
+            "characters": 94,
+            "characters_with_whitespace": 182,
+            "nonblank_lines": 14,
+            "utf8_bytes": 182,
+            "sha256": "1621071225ae4b31e554d0190b5f70ab55878decc47ea9dc88043afbda551895"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "StateProbe\\run(Own\\step)",
+              "expected": 0
+            },
+            {
+              "invoke": "StateProbe\\run(Free\\step)",
+              "expected": 3
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Проверяемый эффект — изменение собственной ячейки формального параметра либо живого места вызывающего. Одно тело операции и runner необходимы в обоих стилях; дополнительная обвязка не меняет стиль наблюдаемой операции."
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "code": "Free:\n    step:\n        y += 3\n\nOwn:\n    int: y\n    step:\n        Free\\step()\n\nStateProbe:\n    @: action\n    return: int\n    run:\n        int: y 0\n        action()\n        return: y\n",
+          "source_file": "haskell_comparision/source/lmx/H08.lm3",
+          "contract_id": "root/H08",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 94,
+            "characters_with_whitespace": 182,
+            "nonblank_lines": 14,
+            "utf8_bytes": 182,
+            "sha256": "1621071225ae4b31e554d0190b5f70ab55878decc47ea9dc88043afbda551895"
+          }
+        },
+        "functional": {
+          "code": "Free:\n    step:\n        y += 3\n\nOwn:\n    int: y\n    step:\n        Free\\step()\n\nStateProbe:\n    @: action\n    return: int\n    run:\n        int: y 0\n        action()\n        return: y\n",
+          "source_file": "haskell_comparision/source/lmx/H08.lm3",
+          "contract_id": "root/H08",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 94,
+            "characters_with_whitespace": 182,
+            "nonblank_lines": 14,
+            "utf8_bytes": 182,
+            "sha256": "1621071225ae4b31e554d0190b5f70ab55878decc47ea9dc88043afbda551895"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Проверяемый эффект — изменение собственной ячейки формального параметра либо живого места вызывающего. Одно тело операции и runner необходимы в обоих стилях; дополнительная обвязка не меняет стиль наблюдаемой операции.",
+      "lmx_operation_phase": "after_root_startup",
+      "comparison_status": "related_analogy",
+      "foreign_source": "haskell_comparision/source/haskell/H08.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE"
+    },
+    {
+      "id": "H09",
+      "title_ru": "Finite iterator with a live declaration and body",
+      "selected": "functional",
+      "alternative": null,
+      "eligible_variants": [
+        "procedural",
+        "functional"
+      ],
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "variants": [
+        {
+          "id": "procedural",
+          "label_ru": "Процедурный LMX",
+          "code": "Cycles:\n    @: iteration\n    @: body\n    iterate:\n        while: 1\n            iteration()\n            catch: Stop ()\n                break\n            body()\n\nNumbers:\n    int: position 0\n    return: int\n    next:\n        throws: Stop\n        if: node\\position >= 3\n            throw: Stop()\n        node\\position += 1\n        return: node\\position\n    demo:\n        node\\position := 0\n        int: total 0\n        Cycles\\iterate: int: item Numbers\\next()\n            item *= 2\n            total += item\n        return: total\n",
+          "metrics": {
+            "characters": 285,
+            "characters_with_whitespace": 527,
+            "nonblank_lines": 25,
+            "utf8_bytes": 527,
+            "sha256": "29a9c1336f27efd0d80ee9a5db1f166ed9b7cee5d1d336097da056c1ec01c486"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "Numbers\\demo()",
+              "expected": 12,
+              "next_invocations": 4,
+              "body_invocations": 3
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Принятая декларация и тело работают в живом контексте. Stop источника поглощается, Stop тела распространяется под исходным именем. Существующий общий адаптер имеет иной failure-envelope API, поэтому корректная минимальная форма здесь общая."
+        },
+        {
+          "id": "functional",
+          "label_ru": "Функциональный LMX",
+          "code": "Cycles:\n    @: iteration\n    @: body\n    iterate:\n        while: 1\n            iteration()\n            catch: Stop ()\n                break\n            body()\n\nNumbers:\n    int: position 0\n    return: int\n    next:\n        throws: Stop\n        if: node\\position >= 3\n            throw: Stop()\n        node\\position += 1\n        return: node\\position\n    demo:\n        node\\position := 0\n        int: total 0\n        Cycles\\iterate: int: item Numbers\\next()\n            item *= 2\n            total += item\n        return: total\n",
+          "metrics": {
+            "characters": 285,
+            "characters_with_whitespace": 527,
+            "nonblank_lines": 25,
+            "utf8_bytes": 527,
+            "sha256": "29a9c1336f27efd0d80ee9a5db1f166ed9b7cee5d1d336097da056c1ec01c486"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "Numbers\\demo()",
+              "expected": 12,
+              "next_invocations": 4,
+              "body_invocations": 3
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Принятая декларация и тело работают в живом контексте. Stop источника поглощается, Stop тела распространяется под исходным именем. Существующий общий адаптер имеет иной failure-envelope API, поэтому корректная минимальная форма здесь общая."
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "code": "Cycles:\n    @: iteration\n    @: body\n    iterate:\n        while: 1\n            iteration()\n            catch: Stop ()\n                break\n            body()\n\nNumbers:\n    int: position 0\n    return: int\n    next:\n        throws: Stop\n        if: node\\position >= 3\n            throw: Stop()\n        node\\position += 1\n        return: node\\position\n    demo:\n        node\\position := 0\n        int: total 0\n        Cycles\\iterate: int: item Numbers\\next()\n            item *= 2\n            total += item\n        return: total\n",
+          "source_file": "haskell_comparision/source/lmx/H09.lm3",
+          "contract_id": "root/H09",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 285,
+            "characters_with_whitespace": 527,
+            "nonblank_lines": 25,
+            "utf8_bytes": 527,
+            "sha256": "29a9c1336f27efd0d80ee9a5db1f166ed9b7cee5d1d336097da056c1ec01c486"
+          }
+        },
+        "functional": {
+          "code": "Cycles:\n    @: iteration\n    @: body\n    iterate:\n        while: 1\n            iteration()\n            catch: Stop ()\n                break\n            body()\n\nNumbers:\n    int: position 0\n    return: int\n    next:\n        throws: Stop\n        if: node\\position >= 3\n            throw: Stop()\n        node\\position += 1\n        return: node\\position\n    demo:\n        node\\position := 0\n        int: total 0\n        Cycles\\iterate: int: item Numbers\\next()\n            item *= 2\n            total += item\n        return: total\n",
+          "source_file": "haskell_comparision/source/lmx/H09.lm3",
+          "contract_id": "root/H09",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 285,
+            "characters_with_whitespace": 527,
+            "nonblank_lines": 25,
+            "utf8_bytes": 527,
+            "sha256": "29a9c1336f27efd0d80ee9a5db1f166ed9b7cee5d1d336097da056c1ec01c486"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Принятая декларация и тело работают в живом контексте. Stop источника поглощается, Stop тела распространяется под исходным именем. Существующий общий адаптер имеет иной failure-envelope API, поэтому корректная минимальная форма здесь общая.",
+      "lmx_operation_phase": "after_root_startup",
+      "comparison_status": "related_analogy",
+      "foreign_source": "haskell_comparision/source/haskell/H09.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE"
+    },
+    {
+      "original_source_sha256_at_import": "44ab8ad94a93860b38f084465e82020ab6ee52f28d043d576acb698ea93867bc",
+      "expected_ru": "MergeProbe\\run() → 257; width=2, height=5, depth=7. Оба исходных значения сохранены.",
+      "implementation_comparison": "library_comparisons/r01_derive_comparision.md",
+      "retained_explanation_ru": "Результат **257**. `height` занимает соответствующий слот модели с новым значением `5`; `depth` добавляется. Поля обоих источников не изменены. Вариант с подходящими методами использует тот же контракт копирования и связывания, а не особую операцию над классами.\n\nHaskell может выразить обновление заранее известной записи:\n\n```haskell\ndata Size = Size { width :: Int, height :: Int, depth :: Int }\n\nrecordExample :: Size\nrecordExample = (Size 2 3 0) { height = 5, depth = 7 }\n```\n\nЗдесь поле `depth` заранее входит в `Size`. Чтобы добавлять произвольные именованные узлы вместе с исполняемым содержимым, потребуется выбранное представление данных: словарь, AST, граф или другая явная модель и её операции. Обычное значение типа `Int -> Int` само по себе не даёт API перечисления и замены внутренних узлов функции. Это граница рассматриваемого аналога, а не запрет решить задачу на Haskell. [Haskell: записи и объявления](https://www.haskell.org/onlinereport/haskell2010/haskellch4.html); [LMX: композиция](../LMX_semantics.en.md#composition).\n\nЕсли затем приложение явно переназначит ссылку на `result`, оно будет использовать новую ветвь. Независимо сохранённая другая копия автоматически не обновится. «Изменение структуры» и «глобальная синхронизация всех когда-либо созданных копий» — разные обязательства.",
+      "id": "R01",
+      "title_ru": "Merge an existing record and add a field",
+      "selected": "functional",
+      "alternative": null,
+      "eligible_variants": [
+        "procedural",
+        "functional"
+      ],
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "variants": [
+        {
+          "id": "procedural",
+          "label_ru": "Процедурный LMX",
+          "code": "RecordModel:\n    int: width 2\n    int: height 3\n\nRecordPatch:\n    int: height 5\n    int: depth 7\n\nMergeProbe:\n    return: int\n    run:\n        @: result (merge(RecordModel; RecordPatch))\n        return: result\\width * 100 + result\\height * 10 + result\\depth\n",
+          "metrics": {
+            "characters": 184,
+            "characters_with_whitespace": 258,
+            "nonblank_lines": 11,
+            "utf8_bytes": 258,
+            "sha256": "44ab8ad94a93860b38f084465e82020ab6ee52f28d043d576acb698ea93867bc"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "MergeProbe\\run()",
+              "expected": 257,
+              "components": [
+                2,
+                5,
+                7
+              ],
+              "source_values_unchanged": true
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Процедурный вариант использует прямой merge полей, функциональный — канонический derive. Оба добавляют отсутствовавшее поле depth и сохраняют исходные структуры."
+        },
+        {
+          "id": "functional",
+          "label_ru": "Функциональный LMX",
+          "code": "RecordModel:\n    int: width 2\n    int: height 3\n\nRecordPatch:\n    int: height 5\n    int: depth 7\n\nMergeProbe:\n    return: int\n    run:\n        @: result derive(RecordModel; RecordPatch)\n        return: result\\width * 100 + result\\height * 10 + result\\depth\n",
+          "metrics": {
+            "characters": 183,
+            "characters_with_whitespace": 257,
+            "nonblank_lines": 11,
+            "utf8_bytes": 257,
+            "sha256": "7c9c547785d0630e2a6e524650ad4be5a2ab3b0bb99cdcca99f53e0dba75dd4f"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "MergeProbe\\run()",
+              "expected": 257,
+              "components": [
+                2,
+                5,
+                7
+              ],
+              "source_values_unchanged": true
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Процедурный вариант использует прямой merge полей, функциональный — канонический derive. Оба добавляют отсутствовавшее поле depth и сохраняют исходные структуры."
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "code": "RecordModel:\n    int: width 2\n    int: height 3\n\nRecordPatch:\n    int: height 5\n    int: depth 7\n\nMergeProbe:\n    return: int\n    run:\n        @: result (merge(RecordModel; RecordPatch))\n        return: result\\width * 100 + result\\height * 10 + result\\depth\n",
+          "source_file": "haskell_comparision/source/lmx/procedural/R01.lm3",
+          "contract_id": "root/R01",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 184,
+            "characters_with_whitespace": 258,
+            "nonblank_lines": 11,
+            "utf8_bytes": 258,
+            "sha256": "44ab8ad94a93860b38f084465e82020ab6ee52f28d043d576acb698ea93867bc"
+          }
+        },
+        "functional": {
+          "code": "RecordModel:\n    int: width 2\n    int: height 3\n\nRecordPatch:\n    int: height 5\n    int: depth 7\n\nMergeProbe:\n    return: int\n    run:\n        @: result derive(RecordModel; RecordPatch)\n        return: result\\width * 100 + result\\height * 10 + result\\depth\n",
+          "source_file": "haskell_comparision/source/lmx/R01.lm3",
+          "contract_id": "root/R01",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 183,
+            "characters_with_whitespace": 257,
+            "nonblank_lines": 11,
+            "utf8_bytes": 257,
+            "sha256": "7c9c547785d0630e2a6e524650ad4be5a2ab3b0bb99cdcca99f53e0dba75dd4f"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "style_note": "Процедурный вариант использует прямой merge полей, функциональный — канонический derive. Оба добавляют отсутствовавшее поле depth и сохраняют исходные структуры.",
+      "lmx_operation_phase": "after_root_startup",
+      "comparison_status": "related_analogy",
+      "foreign_source": "haskell_comparision/source/haskell/R01.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE"
+    },
+    {
+      "id": "R02",
+      "title_ru": "Copy a field stream into group assignment",
+      "selected": "functional",
+      "alternative": null,
+      "eligible_variants": [
+        "procedural",
+        "functional"
+      ],
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "variants": [
+        {
+          "id": "procedural",
+          "label_ru": "Процедурный LMX",
+          "code": "Pair:\n    int: first 2\n    int: second 7\n\nStreamProbe:\n    return: int\n    run:\n        int: a 0\n        int: b 0\n        (a b) := copy(Pair)\n        return: a * 10 + b\n",
+          "metrics": {
+            "characters": 93,
+            "characters_with_whitespace": 169,
+            "nonblank_lines": 10,
+            "utf8_bytes": 169,
+            "sha256": "e2fc29d306076753d8fd7d9f777ddb59356ca0ea7ef640ab4007220e07ac0089"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "StreamProbe\\run()",
+              "expected": 27,
+              "components": [
+                2,
+                7
+              ]
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Групповое присваивание принимает поток полей `copy(Pair)` напрямую; внешняя группа вокруг `copy` для этого списка мест не нужна. В обоих стилях сохранены позиционные записи a=2 и b=7, чтение всех правых значений до первой записи и результат 27. Минимальная форма общая."
+        },
+        {
+          "id": "functional",
+          "label_ru": "Функциональный LMX",
+          "code": "Pair:\n    int: first 2\n    int: second 7\n\nStreamProbe:\n    return: int\n    run:\n        int: a 0\n        int: b 0\n        (a b) := copy(Pair)\n        return: a * 10 + b\n",
+          "metrics": {
+            "characters": 93,
+            "characters_with_whitespace": 169,
+            "nonblank_lines": 10,
+            "utf8_bytes": 169,
+            "sha256": "e2fc29d306076753d8fd7d9f777ddb59356ca0ea7ef640ab4007220e07ac0089"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "StreamProbe\\run()",
+              "expected": 27,
+              "components": [
+                2,
+                7
+              ]
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Групповое присваивание принимает поток полей `copy(Pair)` напрямую; внешняя группа вокруг `copy` для этого списка мест не нужна. В обоих стилях сохранены позиционные записи a=2 и b=7, чтение всех правых значений до первой записи и результат 27. Минимальная форма общая."
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "code": "Pair:\n    int: first 2\n    int: second 7\n\nStreamProbe:\n    return: int\n    run:\n        int: a 0\n        int: b 0\n        (a b) := copy(Pair)\n        return: a * 10 + b\n",
+          "source_file": "haskell_comparision/source/lmx/R02.lm3",
+          "contract_id": "root/R02",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 93,
+            "characters_with_whitespace": 169,
+            "nonblank_lines": 10,
+            "utf8_bytes": 169,
+            "sha256": "e2fc29d306076753d8fd7d9f777ddb59356ca0ea7ef640ab4007220e07ac0089"
+          }
+        },
+        "functional": {
+          "code": "Pair:\n    int: first 2\n    int: second 7\n\nStreamProbe:\n    return: int\n    run:\n        int: a 0\n        int: b 0\n        (a b) := copy(Pair)\n        return: a * 10 + b\n",
+          "source_file": "haskell_comparision/source/lmx/R02.lm3",
+          "contract_id": "root/R02",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 93,
+            "characters_with_whitespace": 169,
+            "nonblank_lines": 10,
+            "utf8_bytes": 169,
+            "sha256": "e2fc29d306076753d8fd7d9f777ddb59356ca0ea7ef640ab4007220e07ac0089"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Групповое присваивание принимает поток полей `copy(Pair)` напрямую; внешняя группа вокруг `copy` для этого списка мест не нужна. В обоих стилях сохранены позиционные записи a=2 и b=7, чтение всех правых значений до первой записи и результат 27. Минимальная форма общая.",
+      "lmx_operation_phase": "after_root_startup",
+      "comparison_status": "related_analogy",
+      "foreign_source": "haskell_comparision/source/haskell/R02.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE"
+    },
+    {
+      "id": "R03",
+      "title_ru": "Imported parent identity versus copied parent identity",
+      "selected": "functional",
+      "alternative": null,
+      "eligible_variants": [
+        "procedural",
+        "functional"
+      ],
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "variants": [
+        {
+          "id": "procedural",
+          "label_ru": "Процедурный LMX",
+          "code": "Provider:\n    int: value 7\n    return: int\n    read:\n        return: value\n\nImportProbe:\n    return: int\n    run:\n        import: Provider\n        int: value 99\n        int: original read()\n        @: copied (copy(Provider))\n        @: copiedOwner parent(copied\\read)\n        copiedOwner\\value := 12\n        return: original * 100 + copied\\read()\n",
+          "metrics": {
+            "characters": 226,
+            "characters_with_whitespace": 347,
+            "nonblank_lines": 15,
+            "utf8_bytes": 347,
+            "sha256": "8a0f6994503baba726d5244625f31cfd5edc48111741b22d6af0ba37aa2d99fa"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "ImportProbe\\run()",
+              "expected": 712,
+              "provider_value_after": 7,
+              "copied_owner_value_after": 12,
+              "grouping_container_value_after": 7
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Обязательны import исходного владельца, copy графа и запись в владельца копии. Эти наблюдаемые операции одинаковы; искусственная функциональная обвязка не вводится."
+        },
+        {
+          "id": "functional",
+          "label_ru": "Функциональный LMX",
+          "code": "Provider:\n    int: value 7\n    return: int\n    read:\n        return: value\n\nImportProbe:\n    return: int\n    run:\n        import: Provider\n        int: value 99\n        int: original read()\n        @: copied (copy(Provider))\n        @: copiedOwner parent(copied\\read)\n        copiedOwner\\value := 12\n        return: original * 100 + copied\\read()\n",
+          "metrics": {
+            "characters": 226,
+            "characters_with_whitespace": 347,
+            "nonblank_lines": 15,
+            "utf8_bytes": 347,
+            "sha256": "8a0f6994503baba726d5244625f31cfd5edc48111741b22d6af0ba37aa2d99fa"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "ImportProbe\\run()",
+              "expected": 712,
+              "provider_value_after": 7,
+              "copied_owner_value_after": 12,
+              "grouping_container_value_after": 7
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Обязательны import исходного владельца, copy графа и запись в владельца копии. Эти наблюдаемые операции одинаковы; искусственная функциональная обвязка не вводится."
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "code": "Provider:\n    int: value 7\n    return: int\n    read:\n        return: value\n\nImportProbe:\n    return: int\n    run:\n        import: Provider\n        int: value 99\n        int: original read()\n        @: copied (copy(Provider))\n        @: copiedOwner parent(copied\\read)\n        copiedOwner\\value := 12\n        return: original * 100 + copied\\read()\n",
+          "source_file": "haskell_comparision/source/lmx/R03.lm3",
+          "contract_id": "root/R03",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 226,
+            "characters_with_whitespace": 347,
+            "nonblank_lines": 15,
+            "utf8_bytes": 347,
+            "sha256": "8a0f6994503baba726d5244625f31cfd5edc48111741b22d6af0ba37aa2d99fa"
+          }
+        },
+        "functional": {
+          "code": "Provider:\n    int: value 7\n    return: int\n    read:\n        return: value\n\nImportProbe:\n    return: int\n    run:\n        import: Provider\n        int: value 99\n        int: original read()\n        @: copied (copy(Provider))\n        @: copiedOwner parent(copied\\read)\n        copiedOwner\\value := 12\n        return: original * 100 + copied\\read()\n",
+          "source_file": "haskell_comparision/source/lmx/R03.lm3",
+          "contract_id": "root/R03",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 226,
+            "characters_with_whitespace": 347,
+            "nonblank_lines": 15,
+            "utf8_bytes": 347,
+            "sha256": "8a0f6994503baba726d5244625f31cfd5edc48111741b22d6af0ba37aa2d99fa"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Обязательны import исходного владельца, copy графа и запись в владельца копии. Эти наблюдаемые операции одинаковы; искусственная функциональная обвязка не вводится.",
+      "lmx_operation_phase": "after_root_startup",
+      "comparison_status": "related_analogy",
+      "foreign_source": "haskell_comparision/source/haskell/R03.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE"
+    },
+    {
+      "id": "R04",
+      "title_ru": "Computed initializer, local write and repeated activation",
+      "selected": "functional",
+      "alternative": null,
+      "eligible_variants": [
+        "procedural",
+        "functional"
+      ],
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "variants": [
+        {
+          "id": "procedural",
+          "label_ru": "Процедурный LMX",
+          "code": "ReadSource:\n    int: calls 0\n    return: int\n    next:\n        node\\calls += 1\n        return: 40 + node\\calls\n\nComputedInput:\n    int: value ReadSource\\next()\n    return: int\n    changeLocal:\n        int: seen value\n        value := 99\n        return: seen\n\nLocalProbe:\n    return: int\n    run:\n        ReadSource\\calls := 0\n        int: first ComputedInput\\changeLocal()\n        int: second ComputedInput\\changeLocal()\n        return: first * 100 + second\n    explicitInitialization:\n        ReadSource\\calls := 0\n        int: i\n        i := ReadSource\\next()\n        i += 3\n        return: i\n",
+          "metrics": {
+            "characters": 383,
+            "characters_with_whitespace": 595,
+            "nonblank_lines": 26,
+            "utf8_bytes": 595,
+            "sha256": "5f9c0d63ff8e857abe5103b9e1b2f2ff573413b21746d50b6ced2f8b40b7bbed"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "LocalProbe\\run()",
+              "expected": 4142,
+              "producer_calls": 2
+            },
+            {
+              "invoke": "LocalProbe\\explicitInitialization()",
+              "expected": 44,
+              "producer_calls": 1
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Инициализатор с побочным эффектом и различие локальной/графовой записи являются предметом проверки. Их порядок, число вызовов и два отдельных entry сохраняются одинаково."
+        },
+        {
+          "id": "functional",
+          "label_ru": "Функциональный LMX",
+          "code": "ReadSource:\n    int: calls 0\n    return: int\n    next:\n        node\\calls += 1\n        return: 40 + node\\calls\n\nComputedInput:\n    int: value ReadSource\\next()\n    return: int\n    changeLocal:\n        int: seen value\n        value := 99\n        return: seen\n\nLocalProbe:\n    return: int\n    run:\n        ReadSource\\calls := 0\n        int: first ComputedInput\\changeLocal()\n        int: second ComputedInput\\changeLocal()\n        return: first * 100 + second\n    explicitInitialization:\n        ReadSource\\calls := 0\n        int: i\n        i := ReadSource\\next()\n        i += 3\n        return: i\n",
+          "metrics": {
+            "characters": 383,
+            "characters_with_whitespace": 595,
+            "nonblank_lines": 26,
+            "utf8_bytes": 595,
+            "sha256": "5f9c0d63ff8e857abe5103b9e1b2f2ff573413b21746d50b6ced2f8b40b7bbed"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "LocalProbe\\run()",
+              "expected": 4142,
+              "producer_calls": 2
+            },
+            {
+              "invoke": "LocalProbe\\explicitInitialization()",
+              "expected": 44,
+              "producer_calls": 1
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Инициализатор с побочным эффектом и различие локальной/графовой записи являются предметом проверки. Их порядок, число вызовов и два отдельных entry сохраняются одинаково."
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "code": "ReadSource:\n    int: calls 0\n    return: int\n    next:\n        node\\calls += 1\n        return: 40 + node\\calls\n\nComputedInput:\n    int: value ReadSource\\next()\n    return: int\n    changeLocal:\n        int: seen value\n        value := 99\n        return: seen\n\nLocalProbe:\n    return: int\n    run:\n        ReadSource\\calls := 0\n        int: first ComputedInput\\changeLocal()\n        int: second ComputedInput\\changeLocal()\n        return: first * 100 + second\n    explicitInitialization:\n        ReadSource\\calls := 0\n        int: i\n        i := ReadSource\\next()\n        i += 3\n        return: i\n",
+          "source_file": "haskell_comparision/source/lmx/R04.lm3",
+          "contract_id": "root/R04",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 383,
+            "characters_with_whitespace": 595,
+            "nonblank_lines": 26,
+            "utf8_bytes": 595,
+            "sha256": "5f9c0d63ff8e857abe5103b9e1b2f2ff573413b21746d50b6ced2f8b40b7bbed"
+          }
+        },
+        "functional": {
+          "code": "ReadSource:\n    int: calls 0\n    return: int\n    next:\n        node\\calls += 1\n        return: 40 + node\\calls\n\nComputedInput:\n    int: value ReadSource\\next()\n    return: int\n    changeLocal:\n        int: seen value\n        value := 99\n        return: seen\n\nLocalProbe:\n    return: int\n    run:\n        ReadSource\\calls := 0\n        int: first ComputedInput\\changeLocal()\n        int: second ComputedInput\\changeLocal()\n        return: first * 100 + second\n    explicitInitialization:\n        ReadSource\\calls := 0\n        int: i\n        i := ReadSource\\next()\n        i += 3\n        return: i\n",
+          "source_file": "haskell_comparision/source/lmx/R04.lm3",
+          "contract_id": "root/R04",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 383,
+            "characters_with_whitespace": 595,
+            "nonblank_lines": 26,
+            "utf8_bytes": 595,
+            "sha256": "5f9c0d63ff8e857abe5103b9e1b2f2ff573413b21746d50b6ced2f8b40b7bbed"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Инициализатор с побочным эффектом и различие локальной/графовой записи являются предметом проверки. Их порядок, число вызовов и два отдельных entry сохраняются одинаково.",
+      "lmx_operation_phase": "after_root_startup",
+      "comparison_status": "related_analogy",
+      "foreign_source": "haskell_comparision/source/haskell/R04.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE"
+    },
+    {
+      "id": "R06a",
+      "title_ru": "Graph copy preserving shared targets",
+      "selected": "functional",
+      "alternative": null,
+      "eligible_variants": [
+        "procedural",
+        "functional"
+      ],
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "variants": [
+        {
+          "id": "procedural",
+          "label_ru": "Процедурный LMX",
+          "code": "SharedValue:\n    int: value 7\n\nSharedPair:\n    @: left SharedValue\n    @: right SharedValue\n\nSharingProbe:\n    return: int\n    run:\n        @: copied (copy(SharedPair))\n        copied\\left\\value := 21\n        return: copied\\right\\value * 100 + SharedValue\\value\n",
+          "metrics": {
+            "characters": 189,
+            "characters_with_whitespace": 262,
+            "nonblank_lines": 11,
+            "utf8_bytes": 262,
+            "sha256": "89651e6ebb49598ba2835aa155dc1ada59ad18b3bfea79ad3f47d844e66f2ecf"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "SharingProbe\\run()",
+              "expected": 2107,
+              "identity": "copied left and right share one copied target; original is distinct"
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Оба стиля должны выполнить настоящий graph copy и проверить сохранённую общую цель после записи. Числовая имитация или сборка новой записи не эквивалентна этому договору."
+        },
+        {
+          "id": "functional",
+          "label_ru": "Функциональный LMX",
+          "code": "SharedValue:\n    int: value 7\n\nSharedPair:\n    @: left SharedValue\n    @: right SharedValue\n\nSharingProbe:\n    return: int\n    run:\n        @: copied (copy(SharedPair))\n        copied\\left\\value := 21\n        return: copied\\right\\value * 100 + SharedValue\\value\n",
+          "metrics": {
+            "characters": 189,
+            "characters_with_whitespace": 262,
+            "nonblank_lines": 11,
+            "utf8_bytes": 262,
+            "sha256": "89651e6ebb49598ba2835aa155dc1ada59ad18b3bfea79ad3f47d844e66f2ecf"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "SharingProbe\\run()",
+              "expected": 2107,
+              "identity": "copied left and right share one copied target; original is distinct"
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Оба стиля должны выполнить настоящий graph copy и проверить сохранённую общую цель после записи. Числовая имитация или сборка новой записи не эквивалентна этому договору."
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "code": "SharedValue:\n    int: value 7\n\nSharedPair:\n    @: left SharedValue\n    @: right SharedValue\n\nSharingProbe:\n    return: int\n    run:\n        @: copied (copy(SharedPair))\n        copied\\left\\value := 21\n        return: copied\\right\\value * 100 + SharedValue\\value\n",
+          "source_file": "haskell_comparision/source/lmx/R06a.lm3",
+          "contract_id": "root/R06a",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 189,
+            "characters_with_whitespace": 262,
+            "nonblank_lines": 11,
+            "utf8_bytes": 262,
+            "sha256": "89651e6ebb49598ba2835aa155dc1ada59ad18b3bfea79ad3f47d844e66f2ecf"
+          }
+        },
+        "functional": {
+          "code": "SharedValue:\n    int: value 7\n\nSharedPair:\n    @: left SharedValue\n    @: right SharedValue\n\nSharingProbe:\n    return: int\n    run:\n        @: copied (copy(SharedPair))\n        copied\\left\\value := 21\n        return: copied\\right\\value * 100 + SharedValue\\value\n",
+          "source_file": "haskell_comparision/source/lmx/R06a.lm3",
+          "contract_id": "root/R06a",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 189,
+            "characters_with_whitespace": 262,
+            "nonblank_lines": 11,
+            "utf8_bytes": 262,
+            "sha256": "89651e6ebb49598ba2835aa155dc1ada59ad18b3bfea79ad3f47d844e66f2ecf"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Оба стиля должны выполнить настоящий graph copy и проверить сохранённую общую цель после записи. Числовая имитация или сборка новой записи не эквивалентна этому договору.",
+      "lmx_operation_phase": "after_root_startup",
+      "comparison_status": "related_analogy",
+      "foreign_source": "haskell_comparision/source/haskell/R06a.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE"
+    },
+    {
+      "id": "R06b",
+      "title_ru": "Graph copy preserving a cycle",
+      "selected": "functional",
+      "alternative": null,
+      "eligible_variants": [
+        "procedural",
+        "functional"
+      ],
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "variants": [
+        {
+          "id": "procedural",
+          "label_ru": "Процедурный LMX",
+          "code": "Ring:\n    int: value 3\n    @: self\n\nCycleProbe:\n    return: int\n    run:\n        Ring\\self := Ring\n        @: copied (copy(Ring))\n        copied\\self\\value := 8\n        return: copied\\self\\value * 10 + Ring\\value\n",
+          "metrics": {
+            "characters": 139,
+            "characters_with_whitespace": 213,
+            "nonblank_lines": 10,
+            "utf8_bytes": 213,
+            "sha256": "6fe929ca2086d62a65e57972c0dba8fc385d696cd2b965049ceb5c56d86fc2a4"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "CycleProbe\\run()",
+              "expected": 83,
+              "identity": "self-cycle remains inside the copy; grouping wrapper is a distinct Structure with its own cells",
+              "copied_ring_value_after": 8,
+              "grouping_container_value_after": 3
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Оба стиля обязаны сохранить и проверить цикл графа. copy, запись через self и чтение исходника — минимальные необходимые операции."
+        },
+        {
+          "id": "functional",
+          "label_ru": "Функциональный LMX",
+          "code": "Ring:\n    int: value 3\n    @: self\n\nCycleProbe:\n    return: int\n    run:\n        Ring\\self := Ring\n        @: copied (copy(Ring))\n        copied\\self\\value := 8\n        return: copied\\self\\value * 10 + Ring\\value\n",
+          "metrics": {
+            "characters": 139,
+            "characters_with_whitespace": 213,
+            "nonblank_lines": 10,
+            "utf8_bytes": 213,
+            "sha256": "6fe929ca2086d62a65e57972c0dba8fc385d696cd2b965049ceb5c56d86fc2a4"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "CycleProbe\\run()",
+              "expected": 83,
+              "identity": "self-cycle remains inside the copy; grouping wrapper is a distinct Structure with its own cells",
+              "copied_ring_value_after": 8,
+              "grouping_container_value_after": 3
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Оба стиля обязаны сохранить и проверить цикл графа. copy, запись через self и чтение исходника — минимальные необходимые операции."
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "code": "Ring:\n    int: value 3\n    @: self\n\nCycleProbe:\n    return: int\n    run:\n        Ring\\self := Ring\n        @: copied (copy(Ring))\n        copied\\self\\value := 8\n        return: copied\\self\\value * 10 + Ring\\value\n",
+          "source_file": "haskell_comparision/source/lmx/R06b.lm3",
+          "contract_id": "root/R06b",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 139,
+            "characters_with_whitespace": 213,
+            "nonblank_lines": 10,
+            "utf8_bytes": 213,
+            "sha256": "6fe929ca2086d62a65e57972c0dba8fc385d696cd2b965049ceb5c56d86fc2a4"
+          }
+        },
+        "functional": {
+          "code": "Ring:\n    int: value 3\n    @: self\n\nCycleProbe:\n    return: int\n    run:\n        Ring\\self := Ring\n        @: copied (copy(Ring))\n        copied\\self\\value := 8\n        return: copied\\self\\value * 10 + Ring\\value\n",
+          "source_file": "haskell_comparision/source/lmx/R06b.lm3",
+          "contract_id": "root/R06b",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 139,
+            "characters_with_whitespace": 213,
+            "nonblank_lines": 10,
+            "utf8_bytes": 213,
+            "sha256": "6fe929ca2086d62a65e57972c0dba8fc385d696cd2b965049ceb5c56d86fc2a4"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Оба стиля обязаны сохранить и проверить цикл графа. copy, запись через self и чтение исходника — минимальные необходимые операции.",
+      "lmx_operation_phase": "after_root_startup",
+      "comparison_status": "related_analogy",
+      "foreign_source": "haskell_comparision/source/haskell/R06b.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE"
+    },
+    {
+      "id": "R07",
+      "title_ru": "User operand and preserved computation",
+      "selected": "functional",
+      "alternative": null,
+      "eligible_variants": [
+        "procedural",
+        "functional"
+      ],
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "variants": [
+        {
+          "id": "procedural",
+          "label_ru": "Процедурный LMX",
+          "code": "Operands:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: int\n    add:\n        return: \\left + \\right[0]\n    Example:\n        int: n\n        return: int\n        calculate:\n            return: (n add 3) add n\n        demo:\n            return: calculate(2) + calculate(5)\n",
+          "metrics": {
+            "characters": 159,
+            "characters_with_whitespace": 266,
+            "nonblank_lines": 12,
+            "utf8_bytes": 266,
+            "sha256": "c217ade3cd30247ba7e03c5435d98caf05aa146218c86715089ebd074506f9cb"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "Operands\\Example\\demo()",
+              "expected": 20,
+              "components": [
+                7,
+                13
+              ]
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Это упражнение самого пользовательского операнда в обычном Expression, а не только вычисления числа20. Общий шаблон и форма вызова обязательны в обоих стилях."
+        },
+        {
+          "id": "functional",
+          "label_ru": "Функциональный LMX",
+          "code": "Operands:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: int\n    add:\n        return: \\left + \\right[0]\n    Example:\n        int: n\n        return: int\n        calculate:\n            return: (n add 3) add n\n        demo:\n            return: calculate(2) + calculate(5)\n",
+          "metrics": {
+            "characters": 159,
+            "characters_with_whitespace": 266,
+            "nonblank_lines": 12,
+            "utf8_bytes": 266,
+            "sha256": "c217ade3cd30247ba7e03c5435d98caf05aa146218c86715089ebd074506f9cb"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "Operands\\Example\\demo()",
+              "expected": 20,
+              "components": [
+                7,
+                13
+              ]
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Это упражнение самого пользовательского операнда в обычном Expression, а не только вычисления числа20. Общий шаблон и форма вызова обязательны в обоих стилях."
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "code": "Operands:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: int\n    add:\n        return: \\left + \\right[0]\n    Example:\n        int: n\n        return: int\n        calculate:\n            return: (n add 3) add n\n        demo:\n            return: calculate(2) + calculate(5)\n",
+          "source_file": "haskell_comparision/source/lmx/R07.lm3",
+          "contract_id": "root/R07",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 159,
+            "characters_with_whitespace": 266,
+            "nonblank_lines": 12,
+            "utf8_bytes": 266,
+            "sha256": "c217ade3cd30247ba7e03c5435d98caf05aa146218c86715089ebd074506f9cb"
+          }
+        },
+        "functional": {
+          "code": "Operands:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: int\n    add:\n        return: \\left + \\right[0]\n    Example:\n        int: n\n        return: int\n        calculate:\n            return: (n add 3) add n\n        demo:\n            return: calculate(2) + calculate(5)\n",
+          "source_file": "haskell_comparision/source/lmx/R07.lm3",
+          "contract_id": "root/R07",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 159,
+            "characters_with_whitespace": 266,
+            "nonblank_lines": 12,
+            "utf8_bytes": 266,
+            "sha256": "c217ade3cd30247ba7e03c5435d98caf05aa146218c86715089ebd074506f9cb"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Это упражнение самого пользовательского операнда в обычном Expression, а не только вычисления числа20. Общий шаблон и форма вызова обязательны в обоих стилях.",
+      "lmx_operation_phase": "after_root_startup",
+      "comparison_status": "related_analogy",
+      "foreign_source": "haskell_comparision/source/haskell/R07.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE"
+    },
+    {
+      "id": "R09",
+      "title_ru": "Uninitialized payload and local versus graph write",
+      "selected": "functional",
+      "alternative": null,
+      "eligible_variants": [
+        "procedural",
+        "functional"
+      ],
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "variants": [
+        {
+          "id": "procedural",
+          "label_ru": "Процедурный LMX",
+          "code": "UninitializedGraph:\n    int: number\n    @: reference\n    return: int\n    localWrite:\n        number := 5\n        return: number\n    graphWrite:\n        UninitializedGraph\\number := 5\n        return: UninitializedGraph\\number\n\nReadyValues:\n    int: number 0\n    @: reference 0\n",
+          "metrics": {
+            "characters": 189,
+            "characters_with_whitespace": 276,
+            "nonblank_lines": 13,
+            "utf8_bytes": 276,
+            "sha256": "97e5e04d20f6d69074278ad57cb6f2a022825ff3fd553a211b22c7b671d70c73"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "UninitializedGraph\\localWrite()",
+              "expected": 5,
+              "source_record_after": "uninit:int",
+              "source_value_size_after": 0
+            },
+            {
+              "invoke": "UninitializedGraph\\graphWrite()",
+              "expected": 5,
+              "source_record_after": "int",
+              "source_value_after": 5,
+              "require_old_new_raw_address_equality": false
+            },
+            {
+              "inspection": "Fresh source before either ordinary case operation",
+              "uninitialized_value_size": 0,
+              "ready_controls": [
+                "numeric 0",
+                "null reference 0"
+              ],
+              "nil_means": "typed absence"
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Неинициализированные поля и отдельные пути локальной/графовой записи нельзя заменить значениями-константами. Минимальная форма одинакова."
+        },
+        {
+          "id": "functional",
+          "label_ru": "Функциональный LMX",
+          "code": "UninitializedGraph:\n    int: number\n    @: reference\n    return: int\n    localWrite:\n        number := 5\n        return: number\n    graphWrite:\n        UninitializedGraph\\number := 5\n        return: UninitializedGraph\\number\n\nReadyValues:\n    int: number 0\n    @: reference 0\n",
+          "metrics": {
+            "characters": 189,
+            "characters_with_whitespace": 276,
+            "nonblank_lines": 13,
+            "utf8_bytes": 276,
+            "sha256": "97e5e04d20f6d69074278ad57cb6f2a022825ff3fd553a211b22c7b671d70c73"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "UninitializedGraph\\localWrite()",
+              "expected": 5,
+              "source_record_after": "uninit:int",
+              "source_value_size_after": 0
+            },
+            {
+              "invoke": "UninitializedGraph\\graphWrite()",
+              "expected": 5,
+              "source_record_after": "int",
+              "source_value_after": 5,
+              "require_old_new_raw_address_equality": false
+            },
+            {
+              "inspection": "Fresh source before either ordinary case operation",
+              "uninitialized_value_size": 0,
+              "ready_controls": [
+                "numeric 0",
+                "null reference 0"
+              ],
+              "nil_means": "typed absence"
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Неинициализированные поля и отдельные пути локальной/графовой записи нельзя заменить значениями-константами. Минимальная форма одинакова."
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "code": "UninitializedGraph:\n    int: number\n    @: reference\n    return: int\n    localWrite:\n        number := 5\n        return: number\n    graphWrite:\n        UninitializedGraph\\number := 5\n        return: UninitializedGraph\\number\n\nReadyValues:\n    int: number 0\n    @: reference 0\n",
+          "source_file": "haskell_comparision/source/lmx/R09.lm3",
+          "contract_id": "root/R09",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 189,
+            "characters_with_whitespace": 276,
+            "nonblank_lines": 13,
+            "utf8_bytes": 276,
+            "sha256": "97e5e04d20f6d69074278ad57cb6f2a022825ff3fd553a211b22c7b671d70c73"
+          }
+        },
+        "functional": {
+          "code": "UninitializedGraph:\n    int: number\n    @: reference\n    return: int\n    localWrite:\n        number := 5\n        return: number\n    graphWrite:\n        UninitializedGraph\\number := 5\n        return: UninitializedGraph\\number\n\nReadyValues:\n    int: number 0\n    @: reference 0\n",
+          "source_file": "haskell_comparision/source/lmx/R09.lm3",
+          "contract_id": "root/R09",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 189,
+            "characters_with_whitespace": 276,
+            "nonblank_lines": 13,
+            "utf8_bytes": 276,
+            "sha256": "97e5e04d20f6d69074278ad57cb6f2a022825ff3fd553a211b22c7b671d70c73"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Неинициализированные поля и отдельные пути локальной/графовой записи нельзя заменить значениями-константами. Минимальная форма одинакова.",
+      "lmx_operation_phase": "after_root_startup",
+      "comparison_status": "related_analogy",
+      "foreign_source": "haskell_comparision/source/haskell/R09.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE"
+    },
+    {
+      "id": "A01",
+      "title_ru": "Shared structural slots and replacement field identity",
+      "selected": "functional",
+      "alternative": null,
+      "eligible_variants": [
+        "procedural",
+        "functional"
+      ],
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "variants": [
+        {
+          "id": "procedural",
+          "label_ru": "Процедурный LMX",
+          "code": "Slots:\n    int: x 1\n    int: y 2\n\nReplacement:\n    int: z 9\n\nSlotProbe:\n    return: int\n    run:\n        @: same Slots\n        same[1] := Replacement[0]\n        return: length(Slots) * 100 + Slots\\z\n",
+          "metrics": {
+            "characters": 126,
+            "characters_with_whitespace": 199,
+            "nonblank_lines": 11,
+            "utf8_bytes": 199,
+            "sha256": "fe7e44ff9bf3a9188a9da359003f633d5b6c9167128420f73f5223be1a044b86"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "SlotProbe\\run()",
+              "expected": 209,
+              "length_after": 2,
+              "new_field_name": "z"
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Проверяется замена структурной позиции с изменением видимого имени поля и сохранением общего descriptor. Нужна настоящая запись в слот; обе формы минимально совпадают."
+        },
+        {
+          "id": "functional",
+          "label_ru": "Функциональный LMX",
+          "code": "Slots:\n    int: x 1\n    int: y 2\n\nReplacement:\n    int: z 9\n\nSlotProbe:\n    return: int\n    run:\n        @: same Slots\n        same[1] := Replacement[0]\n        return: length(Slots) * 100 + Slots\\z\n",
+          "metrics": {
+            "characters": 126,
+            "characters_with_whitespace": 199,
+            "nonblank_lines": 11,
+            "utf8_bytes": 199,
+            "sha256": "fe7e44ff9bf3a9188a9da359003f633d5b6c9167128420f73f5223be1a044b86"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "SlotProbe\\run()",
+              "expected": 209,
+              "length_after": 2,
+              "new_field_name": "z"
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Проверяется замена структурной позиции с изменением видимого имени поля и сохранением общего descriptor. Нужна настоящая запись в слот; обе формы минимально совпадают."
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "code": "Slots:\n    int: x 1\n    int: y 2\n\nReplacement:\n    int: z 9\n\nSlotProbe:\n    return: int\n    run:\n        @: same Slots\n        same[1] := Replacement[0]\n        return: length(Slots) * 100 + Slots\\z\n",
+          "source_file": "haskell_comparision/source/lmx/A01.lm3",
+          "contract_id": "root/A01",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 126,
+            "characters_with_whitespace": 199,
+            "nonblank_lines": 11,
+            "utf8_bytes": 199,
+            "sha256": "fe7e44ff9bf3a9188a9da359003f633d5b6c9167128420f73f5223be1a044b86"
+          }
+        },
+        "functional": {
+          "code": "Slots:\n    int: x 1\n    int: y 2\n\nReplacement:\n    int: z 9\n\nSlotProbe:\n    return: int\n    run:\n        @: same Slots\n        same[1] := Replacement[0]\n        return: length(Slots) * 100 + Slots\\z\n",
+          "source_file": "haskell_comparision/source/lmx/A01.lm3",
+          "contract_id": "root/A01",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 126,
+            "characters_with_whitespace": 199,
+            "nonblank_lines": 11,
+            "utf8_bytes": 199,
+            "sha256": "fe7e44ff9bf3a9188a9da359003f633d5b6c9167128420f73f5223be1a044b86"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Проверяется замена структурной позиции с изменением видимого имени поля и сохранением общего descriptor. Нужна настоящая запись в слот; обе формы минимально совпадают.",
+      "lmx_operation_phase": "after_root_startup",
+      "comparison_status": "related_analogy",
+      "foreign_source": "haskell_comparision/source/haskell/A01.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE"
+    },
+    {
+      "original_source_sha256_at_import": "0a0cf80504bb87438fe80bb8ac9bc8284388b8e997cb152e2cf3c1f0f1e785a7",
+      "expected_ru": "AB-09 и QZ-70 принимаются; неверная длина, разделитель, NUL и символы вне ASCII-диапазонов отклоняются. Все 11 исходных случаев сохранены.",
+      "implementation_comparison": "library_comparisons/v02_character_range_comparision.md",
+      "retained_explanation_ru": "| Вход для `TicketCode\\accepts(...)` | Результат |\n| --- | ---: |\n| `\"AB-09\"`, `\"QZ-70\"` | 1 |\n| `\"\"`, `\"AB-9\"`, `\"AB-090\"` | 0 |\n| `\"ab-09\"`, `\"AB-0X\"`, `\"XAB-09Y\"` | 0 |\n| Пять символов `A, B, NUL, 0, 9` | 0 |\n\nСначала проверяется длина, затем элементы. Поиска подстроки нет. Все эти значения могут иметь одинаковый интерфейс массива символов; различие содержимого устанавливает исполняемый checker. Его можно использовать как требуемую проверку при допуске, а можно вызвать напрямую, как здесь.\n\nHaskell-эквивалент проверки:\n\n```haskell\nimport Data.Ix (inRange)\n\naccepts :: String -> Bool\naccepts [a,b,'-',c,d] =\n  all (inRange ('A','Z')) [a,b] &&\n  all (inRange ('0','9')) [c,d]\naccepts _ = False\n```\n\nЭтот пример не претендует на полную реализацию синтаксиса регулярных выражений. Он показывает, как требование к содержимому становится обычным проверяющим кодом рядом с интерфейсом. [Основание](../LMX_semantics.en.md#graph-tests).\n\nВключительные границы и перевёрнутый диапазон обрабатываются одинаково. Haskell фиксирует пару типом, LMX проверяет ровно два правых аргумента и сообщает RangeArity. Реализации сравниваются отдельно от клиентов.",
+      "id": "V02",
+      "title_ru": "Whole ASCII ticket-code predicate",
+      "selected": "functional",
+      "alternative": null,
+      "eligible_variants": [
+        "procedural",
+        "functional"
+      ],
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "variants": [
+        {
+          "id": "procedural",
+          "label_ru": "Процедурный LMX",
+          "code": "TicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        if: length(candidate) != 5\n            return: 0\n        int: i 0\n        while: i < 5\n            if: i != 2\n                char: first '0'\n                char: last '9'\n                if: i < 2\n                    first := 'A'\n                    last := 'Z'\n                if: candidate[i] < first || candidate[i] > last\n                    return: 0\n                ---\n            i += 1\n        return: candidate[2] = '-'\n",
+          "metrics": {
+            "characters": 226,
+            "characters_with_whitespace": 503,
+            "nonblank_lines": 19,
+            "utf8_bytes": 503,
+            "sha256": "d926c7d970622a0b2995a5e81add3238db507e9d81adb1baec2f80367d45a56d"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "TicketCode\\accepts(\"AB-09\")",
+              "expected": 1
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"QZ-70\")",
+              "expected": 1
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"\")",
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"AB-9\")",
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"AB-090\")",
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"ab-09\")",
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"AB-0X\")",
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"XAB-09Y\")",
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(candidate := fixture)",
+              "fixture_codepoints": [
+                65,
+                66,
+                0,
+                48,
+                57
+              ],
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"ÄB-09\")",
+              "expected": 0,
+              "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"AB-٠9\")",
+              "expected": 0,
+              "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Процедурный вариант перебирает позиции и проверяет ASCII-границы явно. Функциональный строит общий Pattern и применяет matches к полному byteText. Договор — ровно две ASCII-буквы, дефис и две ASCII-цифры."
+        },
+        {
+          "id": "functional",
+          "label_ru": "Функциональный LMX",
+          "code": "TicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        throws: copy(matches\\throws)\n        return: matches(byteText(candidate); (within(\"A\"; \"Z\") times 2) then \"-\" then (asciiDigit times 2))\n",
+          "metrics": {
+            "characters": 160,
+            "characters_with_whitespace": 208,
+            "nonblank_lines": 6,
+            "utf8_bytes": 208,
+            "sha256": "0246eb09dd1852f7d77164d3d49cff396293a02bc1be68aad53edff72921f414"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "TicketCode\\accepts(\"AB-09\")",
+              "expected": 1
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"QZ-70\")",
+              "expected": 1
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"\")",
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"AB-9\")",
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"AB-090\")",
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"ab-09\")",
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"AB-0X\")",
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"XAB-09Y\")",
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(candidate := fixture)",
+              "fixture_codepoints": [
+                65,
+                66,
+                0,
+                48,
+                57
+              ],
+              "expected": 0
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"ÄB-09\")",
+              "expected": 0,
+              "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+            },
+            {
+              "invoke": "TicketCode\\accepts(\"AB-٠9\")",
+              "expected": 0,
+              "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Процедурный вариант перебирает позиции и проверяет ASCII-границы явно. Функциональный строит общий Pattern и применяет matches к полному byteText. Договор — ровно две ASCII-буквы, дефис и две ASCII-цифры."
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "code": "TicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        if: length(candidate) != 5\n            return: 0\n        int: i 0\n        while: i < 5\n            if: i != 2\n                char: first '0'\n                char: last '9'\n                if: i < 2\n                    first := 'A'\n                    last := 'Z'\n                if: candidate[i] < first || candidate[i] > last\n                    return: 0\n                ---\n            i += 1\n        return: candidate[2] = '-'\n",
+          "source_file": "haskell_comparision/source/lmx/procedural/V02.lm3",
+          "contract_id": "root/V02",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 226,
+            "characters_with_whitespace": 503,
+            "nonblank_lines": 19,
+            "utf8_bytes": 503,
+            "sha256": "d926c7d970622a0b2995a5e81add3238db507e9d81adb1baec2f80367d45a56d"
+          }
+        },
+        "functional": {
+          "code": "TicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        throws: copy(matches\\throws)\n        return: matches(byteText(candidate); (within(\"A\"; \"Z\") times 2) then \"-\" then (asciiDigit times 2))\n",
+          "source_file": "haskell_comparision/source/lmx/V02.lm3",
+          "contract_id": "root/V02",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 160,
+            "characters_with_whitespace": 208,
+            "nonblank_lines": 6,
+            "utf8_bytes": 208,
+            "sha256": "0246eb09dd1852f7d77164d3d49cff396293a02bc1be68aad53edff72921f414"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "style_note": "Процедурный вариант перебирает позиции и проверяет ASCII-границы явно. Функциональный строит общий Pattern и применяет matches к полному byteText. Договор — ровно две ASCII-буквы, дефис и две ASCII-цифры.",
+      "lmx_operation_phase": "after_root_startup",
+      "comparison_status": "complete_pair",
+      "foreign_source": "haskell_comparision/source/haskell/V02.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE"
+    },
+    {
+      "original_source_sha256_at_import": "43af40df4f2b527213801e904efbdc223c8afcc927d06cbc6f17b2df5b28d972",
+      "expected_ru": "sample даёт вердикт 1 при одном чтении; biased — 0 при одном чтении; readsTwice — 0 при двух чтениях. Повторная проверка сбрасывает счётчик.",
+      "retained_explanation_ru": "| Вызов | Вердикт | Число чтений |\n| --- | ---: | ---: |\n| `SamplingCheck\\check(candidate := Measurement\\sample)` | 1 | 1 |\n| `SamplingCheck\\check(candidate := Measurement\\biased)` | 0 | 1 |\n| `SamplingCheck\\check(candidate := Measurement\\readsTwice)` | 0 | 2 |\n\nВыполняется настоящий кандидат. Подменена его зависимость `read`, а не весь проверяемый алгоритм. Собственное незаполненное `read` кандидата получает обычную локальную ссылку checker через autofill; `gain` передан явно. Счётчик mock расположен в явно доступном лексическом состоянии.\n\nПоследний кандидат специально возвращает правильное число `28`, но делает два чтения. Проверка только результата пропустила бы дефект. Haskell-аналог — параметр `readSample :: IO Int` у `sample`, с тестовым действием, которое возвращает `7` и увеличивает `IORef`. Подмена зависимости не требует отдельного языка тестов ни в одном варианте.\n\nКонтрольный повтор первого вызова опять даёт `1` и ровно одно чтение: checker явно сбрасывает свой счётчик. [Основание](../LMX_semantics.en.md#binding-autofill); V02 английского корпуса.",
+      "id": "V03",
+      "title_ru": "Inject a read dependency and check interaction counts",
+      "selected": "functional",
+      "alternative": null,
+      "eligible_variants": [
+        "procedural",
+        "functional"
+      ],
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "variants": [
+        {
+          "id": "procedural",
+          "label_ru": "Процедурный LMX",
+          "code": "Measurement:\n    int: gain\n    @: read\n    return: int\n    sample:\n        return: read() * gain\n    biased:\n        return: sample() + 1\n    readsTwice:\n        int: discarded read()\n        return: sample()\n\nSamplingCheck:\n    @: candidate\n    int: calls 0\n    return: int\n    fixedRead:\n        node\\calls += 1\n        return: 7\n    check:\n        node\\calls := 0\n        @: read fixedRead\n        int: result candidate(gain := 4)\n        if: result != 28\n            return: 0\n        return: node\\calls = 1\n",
+          "metrics": {
+            "characters": 308,
+            "characters_with_whitespace": 512,
+            "nonblank_lines": 25,
+            "utf8_bytes": 512,
+            "sha256": "2516827ee9c9814de3719020a767a480226e2d6ac40f6d6d47a7ca63ffb52a32"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "SamplingCheck\\check(candidate := Measurement\\sample)",
+              "expected": 1,
+              "calls_after": 1
+            },
+            {
+              "invoke": "SamplingCheck\\check(candidate := Measurement\\biased)",
+              "expected": 0,
+              "calls_after": 1
+            },
+            {
+              "invoke": "SamplingCheck\\check(candidate := Measurement\\readsTwice)",
+              "expected": 0,
+              "calls_after": 2
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Процедурный вариант ветвится по результату; функциональный соединяет проверки выражением. Сам candidate вызывается ровно один раз, счётчик чтений сохраняется."
+        },
+        {
+          "id": "functional",
+          "label_ru": "Функциональный LMX",
+          "code": "Measurement:\n    int: gain\n    @: read\n    return: int\n    sample:\n        return: read() * gain\n    biased:\n        return: sample() + 1\n    readsTwice:\n        int: discarded read()\n        return: sample()\n\nSamplingCheck:\n    @: candidate\n    int: calls 0\n    return: int\n    fixedRead:\n        node\\calls += 1\n        return: 7\n    check:\n        node\\calls := 0\n        @: read fixedRead\n        int: result candidate(gain := 4)\n        return: result = 28 && node\\calls = 1\n",
+          "metrics": {
+            "characters": 298,
+            "characters_with_whitespace": 480,
+            "nonblank_lines": 23,
+            "utf8_bytes": 480,
+            "sha256": "b4c730a3673836c65edd4bc0801136145c55e1dfc0f9620b2e4ecba3ede626f7"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "SamplingCheck\\check(candidate := Measurement\\sample)",
+              "expected": 1,
+              "calls_after": 1
+            },
+            {
+              "invoke": "SamplingCheck\\check(candidate := Measurement\\biased)",
+              "expected": 0,
+              "calls_after": 1
+            },
+            {
+              "invoke": "SamplingCheck\\check(candidate := Measurement\\readsTwice)",
+              "expected": 0,
+              "calls_after": 2
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Процедурный вариант ветвится по результату; функциональный соединяет проверки выражением. Сам candidate вызывается ровно один раз, счётчик чтений сохраняется."
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "code": "Measurement:\n    int: gain\n    @: read\n    return: int\n    sample:\n        return: read() * gain\n    biased:\n        return: sample() + 1\n    readsTwice:\n        int: discarded read()\n        return: sample()\n\nSamplingCheck:\n    @: candidate\n    int: calls 0\n    return: int\n    fixedRead:\n        node\\calls += 1\n        return: 7\n    check:\n        node\\calls := 0\n        @: read fixedRead\n        int: result candidate(gain := 4)\n        if: result != 28\n            return: 0\n        return: node\\calls = 1\n",
+          "source_file": "haskell_comparision/source/lmx/procedural/V03.lm3",
+          "contract_id": "root/V03",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 308,
+            "characters_with_whitespace": 512,
+            "nonblank_lines": 25,
+            "utf8_bytes": 512,
+            "sha256": "2516827ee9c9814de3719020a767a480226e2d6ac40f6d6d47a7ca63ffb52a32"
+          }
+        },
+        "functional": {
+          "code": "Measurement:\n    int: gain\n    @: read\n    return: int\n    sample:\n        return: read() * gain\n    biased:\n        return: sample() + 1\n    readsTwice:\n        int: discarded read()\n        return: sample()\n\nSamplingCheck:\n    @: candidate\n    int: calls 0\n    return: int\n    fixedRead:\n        node\\calls += 1\n        return: 7\n    check:\n        node\\calls := 0\n        @: read fixedRead\n        int: result candidate(gain := 4)\n        return: result = 28 && node\\calls = 1\n",
+          "source_file": "haskell_comparision/source/lmx/V03.lm3",
+          "contract_id": "root/V03",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 298,
+            "characters_with_whitespace": 480,
+            "nonblank_lines": 23,
+            "utf8_bytes": 480,
+            "sha256": "b4c730a3673836c65edd4bc0801136145c55e1dfc0f9620b2e4ecba3ede626f7"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "style_note": "Процедурный вариант ветвится по результату; функциональный соединяет проверки выражением. Сам candidate вызывается ровно один раз, счётчик чтений сохраняется.",
+      "lmx_operation_phase": "after_root_startup",
+      "comparison_status": "complete_pair",
+      "foreign_source": "haskell_comparision/source/haskell/V03.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE"
+    },
+    {
+      "id": "V04",
+      "title_ru": "Distinguish a named failure from a numeric result",
+      "selected": "functional",
+      "alternative": null,
+      "eligible_variants": [
+        "procedural",
+        "functional"
+      ],
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "variants": [
+        {
+          "id": "procedural",
+          "label_ru": "Процедурный LMX",
+          "code": "UnavailableSensor:\n    return: int\n    read:\n        throws: NoSample\n        throw: NoSample()\n    zero:\n        return: 0\n\nFailureCheck:\n    @: candidate\n    return: int\n    check:\n        candidate()\n        return: 0\n        catch: NoSample ()\n            return: 1\n",
+          "metrics": {
+            "characters": 160,
+            "characters_with_whitespace": 270,
+            "nonblank_lines": 15,
+            "utf8_bytes": 270,
+            "sha256": "9dba0380b48df28fad71d803579da6dc8d24392ded88768096b93bd148589728"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "FailureCheck\\check(candidate := UnavailableSensor\\read)",
+              "expected": 1
+            },
+            {
+              "invoke": "FailureCheck\\check(candidate := UnavailableSensor\\zero)",
+              "expected": 0
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Именованный catch отличает NoSample от нормального нулевого результата. Его минимальная прямая форма общая; универсальное recover изменило бы границу типов/ошибок."
+        },
+        {
+          "id": "functional",
+          "label_ru": "Функциональный LMX",
+          "code": "UnavailableSensor:\n    return: int\n    read:\n        throws: NoSample\n        throw: NoSample()\n    zero:\n        return: 0\n\nFailureCheck:\n    @: candidate\n    return: int\n    check:\n        candidate()\n        return: 0\n        catch: NoSample ()\n            return: 1\n",
+          "metrics": {
+            "characters": 160,
+            "characters_with_whitespace": 270,
+            "nonblank_lines": 15,
+            "utf8_bytes": 270,
+            "sha256": "9dba0380b48df28fad71d803579da6dc8d24392ded88768096b93bd148589728"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "invoke": "FailureCheck\\check(candidate := UnavailableSensor\\read)",
+              "expected": 1
+            },
+            {
+              "invoke": "FailureCheck\\check(candidate := UnavailableSensor\\zero)",
+              "expected": 0
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Именованный catch отличает NoSample от нормального нулевого результата. Его минимальная прямая форма общая; универсальное recover изменило бы границу типов/ошибок."
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "code": "UnavailableSensor:\n    return: int\n    read:\n        throws: NoSample\n        throw: NoSample()\n    zero:\n        return: 0\n\nFailureCheck:\n    @: candidate\n    return: int\n    check:\n        candidate()\n        return: 0\n        catch: NoSample ()\n            return: 1\n",
+          "source_file": "haskell_comparision/source/lmx/V04.lm3",
+          "contract_id": "root/V04",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 160,
+            "characters_with_whitespace": 270,
+            "nonblank_lines": 15,
+            "utf8_bytes": 270,
+            "sha256": "9dba0380b48df28fad71d803579da6dc8d24392ded88768096b93bd148589728"
+          }
+        },
+        "functional": {
+          "code": "UnavailableSensor:\n    return: int\n    read:\n        throws: NoSample\n        throw: NoSample()\n    zero:\n        return: 0\n\nFailureCheck:\n    @: candidate\n    return: int\n    check:\n        candidate()\n        return: 0\n        catch: NoSample ()\n            return: 1\n",
+          "source_file": "haskell_comparision/source/lmx/V04.lm3",
+          "contract_id": "root/V04",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 160,
+            "characters_with_whitespace": 270,
+            "nonblank_lines": 15,
+            "utf8_bytes": 270,
+            "sha256": "9dba0380b48df28fad71d803579da6dc8d24392ded88768096b93bd148589728"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Именованный catch отличает NoSample от нормального нулевого результата. Его минимальная прямая форма общая; универсальное recover изменило бы границу типов/ошибок.",
+      "lmx_operation_phase": "after_root_startup",
+      "comparison_status": "complete_pair",
+      "foreign_source": "haskell_comparision/source/haskell/V04.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE"
+    },
+    {
+      "id": "V05",
+      "title_ru": "Command/read integration check and fault modes",
+      "selected": "functional",
+      "alternative": null,
+      "eligible_variants": [
+        "procedural",
+        "functional"
+      ],
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "variants": [
+        {
+          "id": "procedural",
+          "label_ru": "Процедурный LMX",
+          "code": "Indicator:\n    int: command\n    int: fault 0\n    int: commanded 0\n    int: sensed 0\n    int: writes 0\n    int: reads 0\n    int: trace 0\n    return: int\n    mark:\n        node\\trace := node\\trace * 10 + command\n        return: 1\n    set:\n        node\\commanded := command\n        node\\writes += 1\n        mark()\n        if: node\\fault = 0\n            node\\sensed := command\n        if: node\\fault = 1\n            node\\sensed := 0\n        if: node\\fault = 2\n            node\\sensed := 1\n        return: 1\n    observe:\n        node\\reads += 1\n        mark(2)\n        return: node\\sensed\n\nCommissioning:\n    @: candidate\n    int: command\n    return: int\n    cycle:\n        int: ack candidate\\set(command := command)\n        int: seen candidate\\observe()\n        return: ack = 1 && seen = command\n    check:\n        int: on cycle(command := 1)\n        int: off cycle(command := 0)\n        return: on && off\n",
+          "metrics": {
+            "characters": 547,
+            "characters_with_whitespace": 902,
+            "nonblank_lines": 39,
+            "utf8_bytes": 902,
+            "sha256": "37a72ebca803e0c1c741019e9c8edc0ed40042b25dd300a599e4fb748115062a"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "setup": "Fresh (merge(Indicator; (int: fault 0))) supplied as candidate",
+              "invoke": "Commissioning\\check(candidate := device)",
+              "expected": 1,
+              "writes": 2,
+              "reads": 2,
+              "trace": 1202,
+              "commanded_after": 0,
+              "sensed_after": 0,
+              "observe_from": "The actual copied owner parent(device\\set), not the grouping container."
+            },
+            {
+              "setup": "Fresh (merge(Indicator; (int: fault 1))) supplied as candidate",
+              "invoke": "Commissioning\\check(candidate := device)",
+              "expected": 0,
+              "writes": 2,
+              "reads": 2,
+              "trace": 1202,
+              "commanded_after": 0,
+              "sensed_after": 0,
+              "observe_from": "The actual copied owner parent(device\\set), not the grouping container."
+            },
+            {
+              "setup": "Fresh (merge(Indicator; (int: fault 2))) supplied as candidate",
+              "invoke": "Commissioning\\check(candidate := device)",
+              "expected": 0,
+              "writes": 2,
+              "reads": 2,
+              "trace": 1202,
+              "commanded_after": 0,
+              "sensed_after": 1,
+              "observe_from": "The actual copied owner parent(device\\set), not the grouping container."
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Оба цикла set/observe должны выполняться безусловно, в том числе после неуспешного первого. Замена на короткое замыкание пропустила бы off. Общие mark/cycle и обязательные эффекты сохраняются."
+        },
+        {
+          "id": "functional",
+          "label_ru": "Функциональный LMX",
+          "code": "Indicator:\n    int: command\n    int: fault 0\n    int: commanded 0\n    int: sensed 0\n    int: writes 0\n    int: reads 0\n    int: trace 0\n    return: int\n    mark:\n        node\\trace := node\\trace * 10 + command\n        return: 1\n    set:\n        node\\commanded := command\n        node\\writes += 1\n        mark()\n        if: node\\fault = 0\n            node\\sensed := command\n        if: node\\fault = 1\n            node\\sensed := 0\n        if: node\\fault = 2\n            node\\sensed := 1\n        return: 1\n    observe:\n        node\\reads += 1\n        mark(2)\n        return: node\\sensed\n\nCommissioning:\n    @: candidate\n    int: command\n    return: int\n    cycle:\n        int: ack candidate\\set(command := command)\n        int: seen candidate\\observe()\n        return: ack = 1 && seen = command\n    check:\n        int: on cycle(command := 1)\n        int: off cycle(command := 0)\n        return: on && off\n",
+          "metrics": {
+            "characters": 547,
+            "characters_with_whitespace": 902,
+            "nonblank_lines": 39,
+            "utf8_bytes": 902,
+            "sha256": "37a72ebca803e0c1c741019e9c8edc0ed40042b25dd300a599e4fb748115062a"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "setup": "Fresh (merge(Indicator; (int: fault 0))) supplied as candidate",
+              "invoke": "Commissioning\\check(candidate := device)",
+              "expected": 1,
+              "writes": 2,
+              "reads": 2,
+              "trace": 1202,
+              "commanded_after": 0,
+              "sensed_after": 0,
+              "observe_from": "The actual copied owner parent(device\\set), not the grouping container."
+            },
+            {
+              "setup": "Fresh (merge(Indicator; (int: fault 1))) supplied as candidate",
+              "invoke": "Commissioning\\check(candidate := device)",
+              "expected": 0,
+              "writes": 2,
+              "reads": 2,
+              "trace": 1202,
+              "commanded_after": 0,
+              "sensed_after": 0,
+              "observe_from": "The actual copied owner parent(device\\set), not the grouping container."
+            },
+            {
+              "setup": "Fresh (merge(Indicator; (int: fault 2))) supplied as candidate",
+              "invoke": "Commissioning\\check(candidate := device)",
+              "expected": 0,
+              "writes": 2,
+              "reads": 2,
+              "trace": 1202,
+              "commanded_after": 0,
+              "sensed_after": 1,
+              "observe_from": "The actual copied owner parent(device\\set), not the grouping container."
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Оба цикла set/observe должны выполняться безусловно, в том числе после неуспешного первого. Замена на короткое замыкание пропустила бы off. Общие mark/cycle и обязательные эффекты сохраняются."
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "code": "Indicator:\n    int: command\n    int: fault 0\n    int: commanded 0\n    int: sensed 0\n    int: writes 0\n    int: reads 0\n    int: trace 0\n    return: int\n    mark:\n        node\\trace := node\\trace * 10 + command\n        return: 1\n    set:\n        node\\commanded := command\n        node\\writes += 1\n        mark()\n        if: node\\fault = 0\n            node\\sensed := command\n        if: node\\fault = 1\n            node\\sensed := 0\n        if: node\\fault = 2\n            node\\sensed := 1\n        return: 1\n    observe:\n        node\\reads += 1\n        mark(2)\n        return: node\\sensed\n\nCommissioning:\n    @: candidate\n    int: command\n    return: int\n    cycle:\n        int: ack candidate\\set(command := command)\n        int: seen candidate\\observe()\n        return: ack = 1 && seen = command\n    check:\n        int: on cycle(command := 1)\n        int: off cycle(command := 0)\n        return: on && off\n",
+          "source_file": "haskell_comparision/source/lmx/V05.lm3",
+          "contract_id": "root/V05",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 547,
+            "characters_with_whitespace": 902,
+            "nonblank_lines": 39,
+            "utf8_bytes": 902,
+            "sha256": "37a72ebca803e0c1c741019e9c8edc0ed40042b25dd300a599e4fb748115062a"
+          }
+        },
+        "functional": {
+          "code": "Indicator:\n    int: command\n    int: fault 0\n    int: commanded 0\n    int: sensed 0\n    int: writes 0\n    int: reads 0\n    int: trace 0\n    return: int\n    mark:\n        node\\trace := node\\trace * 10 + command\n        return: 1\n    set:\n        node\\commanded := command\n        node\\writes += 1\n        mark()\n        if: node\\fault = 0\n            node\\sensed := command\n        if: node\\fault = 1\n            node\\sensed := 0\n        if: node\\fault = 2\n            node\\sensed := 1\n        return: 1\n    observe:\n        node\\reads += 1\n        mark(2)\n        return: node\\sensed\n\nCommissioning:\n    @: candidate\n    int: command\n    return: int\n    cycle:\n        int: ack candidate\\set(command := command)\n        int: seen candidate\\observe()\n        return: ack = 1 && seen = command\n    check:\n        int: on cycle(command := 1)\n        int: off cycle(command := 0)\n        return: on && off\n",
+          "source_file": "haskell_comparision/source/lmx/V05.lm3",
+          "contract_id": "root/V05",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 547,
+            "characters_with_whitespace": 902,
+            "nonblank_lines": 39,
+            "utf8_bytes": 902,
+            "sha256": "37a72ebca803e0c1c741019e9c8edc0ed40042b25dd300a599e4fb748115062a"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Оба цикла set/observe должны выполняться безусловно, в том числе после неуспешного первого. Замена на короткое замыкание пропустила бы off. Общие mark/cycle и обязательные эффекты сохраняются.",
+      "lmx_operation_phase": "after_root_startup",
+      "comparison_status": "complete_pair",
+      "foreign_source": "haskell_comparision/source/haskell/V05.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE"
+    },
+    {
+      "id": "M01",
+      "title_ru": "Serial state updates at one Message owner",
+      "selected": "functional",
+      "alternative": null,
+      "eligible_variants": [
+        "procedural",
+        "functional"
+      ],
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "variants": [
+        {
+          "id": "procedural",
+          "label_ru": "Процедурный LMX",
+          "code": "Counter:\n    int: value 0\n    int: delta\n    return: int\n    add:\n        node\\value += delta\n        return: read()\n    read:\n        return: node\\value\n",
+          "metrics": {
+            "characters": 93,
+            "characters_with_whitespace": 154,
+            "nonblank_lines": 9,
+            "utf8_bytes": 154,
+            "sha256": "f83d23836f4fd74f0842162e723736fa68fd1f851a7bdfbd484e042f47b5eae2"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "kind": "transport fixture",
+              "setup": "One owner; fresh Counter; value=0",
+              "calls": [
+                "Counter\\add(delta := 4)",
+                "Counter\\add(delta := 9)"
+              ],
+              "observe": "Counter\\read()",
+              "expected": 13,
+              "constraint": "one serial turn per admitted input; either arrival order"
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Сериализованное изменение состояния одного Message-owner — сам договор. Одна запись и вызов общего read являются минимальной формой в обоих стилях."
+        },
+        {
+          "id": "functional",
+          "label_ru": "Функциональный LMX",
+          "code": "Counter:\n    int: value 0\n    int: delta\n    return: int\n    add:\n        node\\value += delta\n        return: read()\n    read:\n        return: node\\value\n",
+          "metrics": {
+            "characters": 93,
+            "characters_with_whitespace": 154,
+            "nonblank_lines": 9,
+            "utf8_bytes": 154,
+            "sha256": "f83d23836f4fd74f0842162e723736fa68fd1f851a7bdfbd484e042f47b5eae2"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "kind": "transport fixture",
+              "setup": "One owner; fresh Counter; value=0",
+              "calls": [
+                "Counter\\add(delta := 4)",
+                "Counter\\add(delta := 9)"
+              ],
+              "observe": "Counter\\read()",
+              "expected": 13,
+              "constraint": "one serial turn per admitted input; either arrival order"
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Сериализованное изменение состояния одного Message-owner — сам договор. Одна запись и вызов общего read являются минимальной формой в обоих стилях."
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "code": "Counter:\n    int: value 0\n    int: delta\n    return: int\n    add:\n        node\\value += delta\n        return: read()\n    read:\n        return: node\\value\n",
+          "source_file": "haskell_comparision/source/lmx/M01.lm3",
+          "contract_id": "root/M01",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 93,
+            "characters_with_whitespace": 154,
+            "nonblank_lines": 9,
+            "utf8_bytes": 154,
+            "sha256": "f83d23836f4fd74f0842162e723736fa68fd1f851a7bdfbd484e042f47b5eae2"
+          }
+        },
+        "functional": {
+          "code": "Counter:\n    int: value 0\n    int: delta\n    return: int\n    add:\n        node\\value += delta\n        return: read()\n    read:\n        return: node\\value\n",
+          "source_file": "haskell_comparision/source/lmx/M01.lm3",
+          "contract_id": "root/M01",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 93,
+            "characters_with_whitespace": 154,
+            "nonblank_lines": 9,
+            "utf8_bytes": 154,
+            "sha256": "f83d23836f4fd74f0842162e723736fa68fd1f851a7bdfbd484e042f47b5eae2"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Сериализованное изменение состояния одного Message-owner — сам договор. Одна запись и вызов общего read являются минимальной формой в обоих стилях.",
+      "lmx_operation_phase": "after_root_startup",
+      "comparison_status": "complete_pair",
+      "foreign_source": "haskell_comparision/source/haskell/M01.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE"
+    },
+    {
+      "id": "M05",
+      "title_ru": "Void Message procedure without a fabricated reply",
+      "selected": "functional",
+      "alternative": null,
+      "eligible_variants": [
+        "procedural",
+        "functional"
+      ],
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "variants": [
+        {
+          "id": "procedural",
+          "label_ru": "Процедурный LMX",
+          "code": "Lamp:\n    int: state 0\n    int: command\n    set:\n        node\\state := command\n",
+          "metrics": {
+            "characters": 49,
+            "characters_with_whitespace": 79,
+            "nonblank_lines": 5,
+            "utf8_bytes": 79,
+            "sha256": "718e22e1385ae361666370a044ac07f89728f867a8bcabbb8464a42b3607e1eb"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "kind": "transport fixture",
+              "invoke": "Lamp\\set(command := 1)",
+              "expected_stored_state": 1,
+              "expected_application_replies": 0,
+              "constraint": "No synthetic ACK or unanswered event merely for having no result contract"
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Единственная операция — void-процедура Message с записью состояния и без выдуманного reply. Обе формы совпадают; возвращаемое значение не добавляется."
+        },
+        {
+          "id": "functional",
+          "label_ru": "Функциональный LMX",
+          "code": "Lamp:\n    int: state 0\n    int: command\n    set:\n        node\\state := command\n",
+          "metrics": {
+            "characters": 49,
+            "characters_with_whitespace": 79,
+            "nonblank_lines": 5,
+            "utf8_bytes": 79,
+            "sha256": "718e22e1385ae361666370a044ac07f89728f867a8bcabbb8464a42b3607e1eb"
+          },
+          "correct_for_scenario": true,
+          "cases": [
+            {
+              "kind": "transport fixture",
+              "invoke": "Lamp\\set(command := 1)",
+              "expected_stored_state": 1,
+              "expected_application_replies": 0,
+              "constraint": "No synthetic ACK or unanswered event merely for having no result contract"
+            }
+          ],
+          "load_before": [],
+          "notes_ru": "Единственная операция — void-процедура Message с записью состояния и без выдуманного reply. Обе формы совпадают; возвращаемое значение не добавляется."
+        }
+      ],
+      "lmx_variants": {
+        "procedural": {
+          "code": "Lamp:\n    int: state 0\n    int: command\n    set:\n        node\\state := command\n",
+          "source_file": "haskell_comparision/source/lmx/M05.lm3",
+          "contract_id": "root/M05",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 49,
+            "characters_with_whitespace": 79,
+            "nonblank_lines": 5,
+            "utf8_bytes": 79,
+            "sha256": "718e22e1385ae361666370a044ac07f89728f867a8bcabbb8464a42b3607e1eb"
+          }
+        },
+        "functional": {
+          "code": "Lamp:\n    int: state 0\n    int: command\n    set:\n        node\\state := command\n",
+          "source_file": "haskell_comparision/source/lmx/M05.lm3",
+          "contract_id": "root/M05",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 49,
+            "characters_with_whitespace": 79,
+            "nonblank_lines": 5,
+            "utf8_bytes": 79,
+            "sha256": "718e22e1385ae361666370a044ac07f89728f867a8bcabbb8464a42b3607e1eb"
+          }
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Единственная операция — void-процедура Message с записью состояния и без выдуманного reply. Обе формы совпадают; возвращаемое значение не добавляется.",
+      "lmx_operation_phase": "after_root_startup",
+      "comparison_status": "related_analogy",
+      "foreign_source": "haskell_comparision/source/haskell/M05.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE"
+    }
+  ],
+  "lmx_execution_contract": {
+    "startup_target": "root",
+    "startup_level": "L3 Thread",
+    "root_has_data": false,
+    "root_accepts_user_arguments": false,
+    "local_declarations_and_calls": "The ordinary common language mechanism applies at the root and at later calls.",
+    "case_operation_phase": "after_root_startup",
+    "named_operation_is_startup": false,
+    "case_actuals": "invoke/inputs/args describe ordinary later case operations, not startup arguments for the root.",
+    "argument_fixture": "A parent stub may have its own arguments and send a message to the root; this does not give DATA or user arguments to the root.",
+    "source_dependencies": "Required source definitions and load_before dependencies belong to the fixture. They do not introduce a DATA-load startup or a named alternative entry."
+  },
+  "lmx_runner_contract": "Always start the root as an L3 Thread without DATA or user arguments. Local declarations and calls use the ordinary common language mechanism. An invoke path or named case operation is performed by the root or an ordinary handler after startup; Main and Example\\run are not alternative program entries. A parent stub with its own arguments may send a message to the root. load_before lists required fixture definitions; import exposes existing names, not a new file loader. These records specify acceptance observations and do not claim an executed LMX runner.",
+  "publication_note": "Current full-source measurements; current Haskell coverage lives in haskell_comparision/comparison_index.json."
+}

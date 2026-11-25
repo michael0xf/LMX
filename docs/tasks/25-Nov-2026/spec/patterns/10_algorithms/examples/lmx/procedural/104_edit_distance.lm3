@@ -1,0 +1,26 @@
+EditDistance:
+    @: left
+    @: right
+    @: same
+    return: int
+    run:
+        throws: copy(FxSeqAllocate\make\throws) copy(EditCell\value\throws)
+        int: m length(right)
+        @: previous FxSeqAllocate\make(int[]; m + 1)
+        int: j 0
+        while: j <= m
+            previous[j] := j
+            j += 1
+        ---
+        int: i 1
+        while: i <= length(left)
+            @: current FxSeqAllocate\make(int[]; m + 1)
+            current[0] := i
+            j := 1
+            while: j <= m
+                current[j] := EditCell\value(current[j - 1]; j)
+                j += 1
+            previous := current
+            i += 1
+        ---
+        return: previous[m]

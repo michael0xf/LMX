@@ -1,0 +1,46 @@
+Topological:
+    @: graph
+    @: traverse
+    return: FxMaybe@
+    run:
+        throws: copy(AlgorithmArray\make\throws) copy(FxSeqAllocate\make\throws) copy(FxApply\apply\throws) FxRecordArity
+        int: n length(graph)
+        @: degree AlgorithmArray\make(int[]; n; (0 record))
+        @: queue FxSeqAllocate\make(int[]; n)
+        int: head 0
+        int: tail 0
+        FxApply\apply(traverse; ())
+        if: tail != n
+            return: none()
+        return: some(queue)
+
+TopoCount:
+    int: ignored
+    int: vertex
+    return: int
+    run:
+        throws: ReceiverIndex
+        degree[vertex] += 1
+        return: 0
+
+TopoEnqueue:
+    int: vertex
+    return: int
+    run:
+        throws: ReceiverIndex
+        if: degree[vertex] = 0
+            queue[tail] := vertex
+            tail += 1
+        return: vertex
+
+TopoRemove:
+    int: tail
+    int: vertex
+    return: int
+    run:
+        throws: ReceiverIndex
+        degree[vertex] -= 1
+        if: degree[vertex] = 0
+            queue[tail] := vertex
+            tail += 1
+        return: tail

@@ -1,0 +1,521 @@
+{
+  "schema_version": 1,
+  "scope": "Finite admitted inputs; invalid indexing, negative Dijkstra weights and integer overflow are precondition violations, not silently normalised inputs.",
+  "cases": [
+    {
+      "id": "lb_empty",
+      "algorithm": 100,
+      "input": {
+        "items": [],
+        "needle": 2
+      },
+      "expected": 0
+    },
+    {
+      "id": "lb_duplicates",
+      "algorithm": 100,
+      "input": {
+        "items": [
+          1,
+          2,
+          2,
+          2,
+          7
+        ],
+        "needle": 2
+      },
+      "expected": 1
+    },
+    {
+      "id": "lb_after",
+      "algorithm": 100,
+      "input": {
+        "items": [
+          1,
+          2,
+          7
+        ],
+        "needle": 8
+      },
+      "expected": 3
+    },
+    {
+      "id": "lb_before",
+      "algorithm": 100,
+      "input": {
+        "items": [
+          1,
+          2,
+          7
+        ],
+        "needle": -5
+      },
+      "expected": 0
+    },
+    {
+      "id": "lb_between",
+      "algorithm": 100,
+      "input": {
+        "items": [
+          1,
+          4,
+          7
+        ],
+        "needle": 5
+      },
+      "expected": 2
+    },
+    {
+      "id": "bfs_empty",
+      "algorithm": 101,
+      "input": {
+        "graph": [],
+        "start": -1
+      },
+      "expected": []
+    },
+    {
+      "id": "bfs_branch_unreachable",
+      "algorithm": 101,
+      "input": {
+        "graph": [
+          [
+            2,
+            1
+          ],
+          [
+            3
+          ],
+          [
+            3
+          ],
+          [],
+          []
+        ],
+        "start": 0
+      },
+      "expected": [
+        0,
+        1,
+        1,
+        2,
+        -1
+      ]
+    },
+    {
+      "id": "bfs_self_duplicate",
+      "algorithm": 101,
+      "input": {
+        "graph": [
+          [
+            0,
+            1,
+            1
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            2
+          ]
+        ],
+        "start": 0
+      },
+      "expected": [
+        0,
+        1,
+        2
+      ]
+    },
+    {
+      "id": "bfs_other_start",
+      "algorithm": 101,
+      "input": {
+        "graph": [
+          [
+            1
+          ],
+          [
+            2
+          ],
+          [],
+          []
+        ],
+        "start": 1
+      },
+      "expected": [
+        -1,
+        0,
+        1,
+        -1
+      ]
+    },
+    {
+      "id": "topo_empty",
+      "algorithm": 102,
+      "input": {
+        "graph": []
+      },
+      "expected": []
+    },
+    {
+      "id": "topo_fifo",
+      "algorithm": 102,
+      "input": {
+        "graph": [
+          [
+            2
+          ],
+          [
+            2
+          ],
+          [
+            3
+          ],
+          [],
+          []
+        ]
+      },
+      "expected": [
+        0,
+        1,
+        4,
+        2,
+        3
+      ]
+    },
+    {
+      "id": "topo_duplicate",
+      "algorithm": 102,
+      "input": {
+        "graph": [
+          [
+            1,
+            1
+          ],
+          [
+            2
+          ],
+          []
+        ]
+      },
+      "expected": [
+        0,
+        1,
+        2
+      ]
+    },
+    {
+      "id": "topo_cycle",
+      "algorithm": 102,
+      "input": {
+        "graph": [
+          [
+            1
+          ],
+          [
+            0
+          ],
+          []
+        ]
+      },
+      "expected": null
+    },
+    {
+      "id": "topo_self",
+      "algorithm": 102,
+      "input": {
+        "graph": [
+          [
+            0
+          ]
+        ]
+      },
+      "expected": null
+    },
+    {
+      "id": "dsu_empty",
+      "algorithm": 103,
+      "input": {
+        "n": 0,
+        "pairs": []
+      },
+      "expected": []
+    },
+    {
+      "id": "dsu_tie_and_repeat",
+      "algorithm": 103,
+      "input": {
+        "n": 6,
+        "pairs": [
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            1,
+            3
+          ],
+          [
+            4,
+            4
+          ],
+          [
+            0,
+            2
+          ]
+        ]
+      },
+      "expected": [
+        0,
+        0,
+        0,
+        0,
+        4,
+        5
+      ]
+    },
+    {
+      "id": "dsu_size_wins",
+      "algorithm": 103,
+      "input": {
+        "n": 5,
+        "pairs": [
+          [
+            1,
+            2
+          ],
+          [
+            1,
+            3
+          ],
+          [
+            0,
+            3
+          ]
+        ]
+      },
+      "expected": [
+        1,
+        1,
+        1,
+        1,
+        4
+      ]
+    },
+    {
+      "id": "edit_empty",
+      "algorithm": 104,
+      "input": {
+        "left": [],
+        "right": []
+      },
+      "expected": 0
+    },
+    {
+      "id": "edit_insert",
+      "algorithm": 104,
+      "input": {
+        "left": [],
+        "right": [
+          "a",
+          "b"
+        ]
+      },
+      "expected": 2
+    },
+    {
+      "id": "edit_kitten",
+      "algorithm": 104,
+      "input": {
+        "left": [
+          "k",
+          "i",
+          "t",
+          "t",
+          "e",
+          "n"
+        ],
+        "right": [
+          "s",
+          "i",
+          "t",
+          "t",
+          "i",
+          "n",
+          "g"
+        ]
+      },
+      "expected": 3
+    },
+    {
+      "id": "edit_unicode_tokens",
+      "algorithm": 104,
+      "input": {
+        "left": [
+          "я",
+          "🙂",
+          "好"
+        ],
+        "right": [
+          "я",
+          "好"
+        ]
+      },
+      "expected": 1
+    },
+    {
+      "id": "edit_records",
+      "algorithm": 104,
+      "input": {
+        "left": [
+          {
+            "key": 1,
+            "label": "a"
+          },
+          {
+            "key": 2,
+            "label": "b"
+          }
+        ],
+        "right": [
+          {
+            "key": 1,
+            "label": "different"
+          },
+          {
+            "key": 3,
+            "label": "c"
+          }
+        ],
+        "comparator": "key"
+      },
+      "expected": 1
+    },
+    {
+      "id": "dijkstra_empty",
+      "algorithm": 105,
+      "input": {
+        "graph": [],
+        "start": -1
+      },
+      "expected": []
+    },
+    {
+      "id": "dijkstra_relaxation",
+      "algorithm": 105,
+      "input": {
+        "graph": [
+          [
+            [
+              1,
+              9
+            ],
+            [
+              2,
+              2
+            ]
+          ],
+          [
+            [
+              3,
+              1
+            ]
+          ],
+          [
+            [
+              1,
+              1
+            ],
+            [
+              3,
+              8
+            ]
+          ],
+          [],
+          []
+        ],
+        "start": 0
+      },
+      "expected": [
+        0,
+        3,
+        2,
+        4,
+        -1
+      ]
+    },
+    {
+      "id": "dijkstra_zero_parallel",
+      "algorithm": 105,
+      "input": {
+        "graph": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              7
+            ],
+            [
+              1,
+              0
+            ]
+          ],
+          [
+            [
+              2,
+              0
+            ]
+          ],
+          [
+            [
+              1,
+              0
+            ]
+          ]
+        ],
+        "start": 0
+      },
+      "expected": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "dijkstra_large",
+      "algorithm": 105,
+      "input": {
+        "graph": [
+          [
+            [
+              1,
+              1000000000000
+            ]
+          ],
+          [
+            [
+              2,
+              1000000000000
+            ]
+          ],
+          []
+        ],
+        "start": 0
+      },
+      "expected": [
+        0,
+        1000000000000,
+        2000000000000
+      ]
+    }
+  ]
+}

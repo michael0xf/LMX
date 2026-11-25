@@ -1,0 +1,18 @@
+EditCell:
+    int: west
+    int: j
+    return: int
+    value:
+        throws: copy(FxSeqRead\read\throws) copy(FxApply\apply\throws) copy(FxSeqPredicate\truth\throws) ReceiverIndex
+        @: first FxSeqRead\read(left; i - 1)
+        @: second FxSeqRead\read(right; j - 1)
+        @: flag FxApply\apply(same; FxTwo\make(first; second))
+        int: cost 1
+        if: FxSeqPredicate\truth(flag) != 0
+            cost := 0
+        int: best previous[j] + 1
+        if: west + 1 < best
+            best := west + 1
+        if: previous[j - 1] + cost < best
+            best := previous[j - 1] + cost
+        return: best

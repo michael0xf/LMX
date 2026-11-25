@@ -1,0 +1,12 @@
+Example:
+    @: target
+    @: values
+    int: capacity
+    return: @
+    run:
+        throws: copy(append\throws) copy(splice\throws)
+        append(target; values)
+        int: drop length(target) - capacity
+        if: drop > 0
+            splice(target; 0; drop; ())
+        return: target

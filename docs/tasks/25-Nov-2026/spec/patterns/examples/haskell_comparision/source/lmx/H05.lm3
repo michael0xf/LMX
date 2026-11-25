@@ -1,0 +1,17 @@
+Source:
+    int: y 5
+    methods:
+        int: x
+        return: int
+        dynamic:
+            return: x + y
+        lexical:
+            return: x + node\y
+
+BindingProbe:
+    return: int
+    run:
+        @: copied (copy(Source))
+        Source\y := 8
+        int: y 25
+        return: copied\methods\dynamic(1) * 100 + copied\methods\lexical(1)

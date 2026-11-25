@@ -1,0 +1,2426 @@
+{
+  "format": "LMX example expectations, operand/library edition 2026-11-21",
+  "status": "expected outcomes; LMX and GHC were not executed in this documentation review",
+  "runner_contract": "Always start the root as an L3 Thread without DATA or user arguments. Local declarations and calls use the ordinary common language mechanism. An invoke path or named case operation is performed by the root or an ordinary handler after startup; Main and Example\\run are not alternative program entries. A parent stub with its own arguments may send a message to the root. load_before lists required fixture definitions; import exposes existing names, not a new file loader. These records specify acceptance observations and do not claim an executed LMX runner.",
+  "source_examples": [
+    {
+      "id": "H01",
+      "file": "haskell_comparision/source/lmx/H01.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#h01",
+      "cases": [
+        {
+          "invoke": "ApplyProbe\\run()",
+          "expected": 1408
+        }
+      ],
+      "load_before": [],
+      "required_profile": [
+        "One current core; any procedural helper is explicitly present in this source."
+      ],
+      "selected_variant": "functional",
+      "variant_cases": {
+        "original": [
+          {
+            "invoke": "ApplyProbe\\run()",
+            "expected": 1408
+          }
+        ],
+        "receivers": [
+          {
+            "invoke": "ApplyProbe\\run()",
+            "expected": 1408
+          }
+        ]
+      },
+      "variant_load_before": {
+        "original": [],
+        "receivers": []
+      },
+      "source_regions": {
+        "functional": "whole functional file",
+        "procedural": "whole procedural file"
+      },
+      "core_versions": 1,
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "lmx_sources": {
+        "procedural": "haskell_comparision/source/lmx/H01.lm3",
+        "functional": "haskell_comparision/source/lmx/H01.lm3"
+      },
+      "compared_styles": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_cases": {
+        "procedural": [
+          {
+            "invoke": "ApplyProbe\\run()",
+            "expected": 1408
+          }
+        ],
+        "functional": [
+          {
+            "invoke": "ApplyProbe\\run()",
+            "expected": 1408
+          }
+        ]
+      },
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "H02",
+      "file": "haskell_comparision/source/lmx/H02.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#h02",
+      "cases": [
+        {
+          "invoke": "SignatureProbe\\run()",
+          "expected": 2772
+        }
+      ],
+      "load_before": [],
+      "required_profile": [
+        "One current core; any procedural helper is explicitly present in this source."
+      ],
+      "selected_variant": "functional",
+      "variant_cases": {
+        "original": [
+          {
+            "invoke": "SignatureProbe\\run()",
+            "expected": 2772
+          }
+        ],
+        "receivers": [
+          {
+            "invoke": "SignatureProbe\\run()",
+            "expected": 2772
+          }
+        ]
+      },
+      "variant_load_before": {
+        "original": [],
+        "receivers": []
+      },
+      "source_regions": {
+        "functional": "whole functional file",
+        "procedural": "whole procedural file"
+      },
+      "core_versions": 1,
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "lmx_sources": {
+        "procedural": "haskell_comparision/source/lmx/procedural/H02.lm3",
+        "functional": "haskell_comparision/source/lmx/H02.lm3"
+      },
+      "compared_styles": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_cases": {
+        "procedural": [
+          {
+            "invoke": "SignatureProbe\\run()",
+            "expected": 2772
+          }
+        ],
+        "functional": [
+          {
+            "invoke": "SignatureProbe\\run()",
+            "expected": 2772
+          }
+        ]
+      },
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "H03",
+      "file": "haskell_comparision/source/lmx/H03.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#h03",
+      "cases": [
+        {
+          "invoke": "ClosureProbe\\run()",
+          "expected": 6101006,
+          "components": [
+            6,
+            101,
+            6
+          ],
+          "original_callable_unchanged": true,
+          "independent_prefixes": [
+            5,
+            100
+          ]
+        },
+        {
+          "variant": "Explicit saved actual through returned method",
+          "invoke": "add5(1; saved := 25)",
+          "expected_rejection": "unknown explicit formal; the returned callable only exposes p0, saved is not a formal",
+          "setup": "Obtain add5 with partial(Addition\\add; prefix := (5)), then attempt the explicit saved actual."
+        }
+      ],
+      "load_before": [],
+      "required_profile": [
+        "One current core: direct generic receivers are present, no import or alternate library version.",
+        "Declared outcomes are the actual current receiver contract; no native/static-language assumption is used."
+      ],
+      "selected_variant": "functional",
+      "variant_cases": {
+        "original": [
+          {
+            "invoke": "ClosureProbe\\run()",
+            "expected": 6101006,
+            "components": [
+              6,
+              101,
+              6
+            ],
+            "original_saved_after": 0,
+            "original_saved_path": "CapturePrototype\\saved"
+          },
+          {
+            "variant": "Explicit saved actual through returned method",
+            "invoke": "add5(1; saved := 25)",
+            "expected_rejection": "unknown explicit formal; saved is lexical state outside inputs",
+            "setup": "Obtain add5 with Curry\\capture(Addition\\add; 5), then attempt the explicit saved actual."
+          }
+        ],
+        "receivers": [
+          {
+            "invoke": "ClosureProbe\\run()",
+            "expected": 6101006,
+            "components": [
+              6,
+              101,
+              6
+            ],
+            "original_callable_unchanged": true,
+            "independent_prefixes": [
+              5,
+              100
+            ]
+          },
+          {
+            "variant": "Explicit saved actual through returned method",
+            "invoke": "add5(1; saved := 25)",
+            "expected_rejection": "unknown explicit formal; the returned callable only exposes p0, saved is not a formal",
+            "setup": "Obtain add5 with partial(Addition\\add; prefix := (5)), then attempt the explicit saved actual."
+          }
+        ]
+      },
+      "variant_load_before": {
+        "original": [],
+        "receivers": []
+      },
+      "source_regions": {
+        "functional": "whole functional file",
+        "procedural": "whole procedural file"
+      },
+      "core_versions": 1,
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "lmx_sources": {
+        "procedural": "haskell_comparision/source/lmx/procedural/H03.lm3",
+        "functional": "haskell_comparision/source/lmx/H03.lm3"
+      },
+      "compared_styles": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_cases": {
+        "procedural": [
+          {
+            "invoke": "ClosureProbe\\run()",
+            "expected": 6101006,
+            "components": [
+              6,
+              101,
+              6
+            ],
+            "original_callable_unchanged": true,
+            "independent_prefixes": [
+              5,
+              100
+            ]
+          },
+          {
+            "variant": "Explicit saved actual through returned method",
+            "invoke": "add5(1; saved := 25)",
+            "expected_rejection": "unknown explicit formal; the returned callable only exposes p0, saved is not a formal",
+            "setup": "Obtain add5 with partial(Addition\\add; prefix := (5)), then attempt the explicit saved actual."
+          }
+        ],
+        "functional": [
+          {
+            "invoke": "ClosureProbe\\run()",
+            "expected": 6101006,
+            "components": [
+              6,
+              101,
+              6
+            ],
+            "original_callable_unchanged": true,
+            "independent_prefixes": [
+              5,
+              100
+            ]
+          },
+          {
+            "variant": "Explicit saved actual through returned method",
+            "invoke": "add5(1; saved := 25)",
+            "expected_rejection": "unknown explicit formal; the returned callable only exposes p0, saved is not a formal",
+            "setup": "Obtain add5 with partial(Addition\\add; prefix := (5)), then attempt the explicit saved actual."
+          }
+        ]
+      },
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "H04",
+      "file": "haskell_comparision/source/lmx/H04.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#h04",
+      "cases": [
+        {
+          "invoke": "DefaultProbe\\run()",
+          "expected": 6260106,
+          "components": [
+            6,
+            26,
+            1,
+            6
+          ],
+          "copied_default_after": 5
+        }
+      ],
+      "load_before": [],
+      "required_profile": [
+        "One current core; any procedural helper is explicitly present in this source."
+      ],
+      "selected_variant": "functional",
+      "variant_cases": {
+        "original": [
+          {
+            "invoke": "DefaultProbe\\run()",
+            "expected": 6260106,
+            "components": [
+              6,
+              26,
+              1,
+              6
+            ],
+            "copied_default_after": 5
+          }
+        ]
+      },
+      "variant_load_before": {
+        "original": []
+      },
+      "source_regions": {
+        "functional": "whole functional file",
+        "procedural": "whole procedural file"
+      },
+      "core_versions": 1,
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "lmx_sources": {
+        "procedural": "haskell_comparision/source/lmx/procedural/H04.lm3",
+        "functional": "haskell_comparision/source/lmx/H04.lm3"
+      },
+      "compared_styles": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_cases": {
+        "procedural": [
+          {
+            "invoke": "DefaultProbe\\run()",
+            "expected": 6260106,
+            "components": [
+              6,
+              26,
+              1,
+              6
+            ],
+            "copied_default_after": 5
+          }
+        ],
+        "functional": [
+          {
+            "invoke": "DefaultProbe\\run()",
+            "expected": 6260106,
+            "components": [
+              6,
+              26,
+              1,
+              6
+            ],
+            "copied_default_after": 5
+          }
+        ]
+      },
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "H05",
+      "file": "haskell_comparision/source/lmx/H05.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#h05",
+      "cases": [
+        {
+          "invoke": "BindingProbe\\run()",
+          "expected": 2606,
+          "original_y_after": 8,
+          "copied_y_after": 5
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "haskell_comparision/source/lmx/procedural/H05.lm3",
+        "functional": "haskell_comparision/source/lmx/H05.lm3"
+      },
+      "compared_styles": [
+        "procedural",
+        "functional"
+      ],
+      "selected_variant": "functional",
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "source_regions": {
+        "functional": "whole functional file",
+        "procedural": "whole procedural file"
+      },
+      "style_cases": {
+        "procedural": [
+          {
+            "invoke": "BindingProbe\\run()",
+            "expected": 2606,
+            "original_y_after": 8,
+            "copied_y_after": 5
+          }
+        ],
+        "functional": [
+          {
+            "invoke": "BindingProbe\\run()",
+            "expected": 2606,
+            "original_y_after": 8,
+            "copied_y_after": 5
+          }
+        ]
+      },
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "H06",
+      "file": "haskell_comparision/source/lmx/H06.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#h06",
+      "cases": [
+        {
+          "invoke": "CompositionProbe\\run()",
+          "expected": 910,
+          "components": [
+            9,
+            10
+          ]
+        }
+      ],
+      "load_before": [],
+      "required_profile": [
+        "One current core; any procedural helper is explicitly present in this source."
+      ],
+      "selected_variant": "functional",
+      "variant_cases": {
+        "original": [
+          {
+            "invoke": "CompositionProbe\\run()",
+            "expected": 910,
+            "components": [
+              9,
+              10
+            ]
+          }
+        ],
+        "receivers": [
+          {
+            "invoke": "CompositionProbe\\run()",
+            "expected": 910,
+            "components": [
+              9,
+              10
+            ]
+          }
+        ]
+      },
+      "variant_load_before": {
+        "original": [],
+        "receivers": []
+      },
+      "source_regions": {
+        "functional": "whole functional file",
+        "procedural": "whole procedural file"
+      },
+      "core_versions": 1,
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "lmx_sources": {
+        "procedural": "haskell_comparision/source/lmx/procedural/H06.lm3",
+        "functional": "haskell_comparision/source/lmx/H06.lm3"
+      },
+      "compared_styles": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_cases": {
+        "procedural": [
+          {
+            "invoke": "CompositionProbe\\run()",
+            "expected": 910,
+            "components": [
+              9,
+              10
+            ]
+          }
+        ],
+        "functional": [
+          {
+            "invoke": "CompositionProbe\\run()",
+            "expected": 910,
+            "components": [
+              9,
+              10
+            ]
+          }
+        ]
+      },
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "H07",
+      "file": "haskell_comparision/source/lmx/H07.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#h07",
+      "cases": [
+        {
+          "setup": "Meter\\calls := 0",
+          "sequence": [
+            "Evaluation\\prepared()",
+            "Evaluation\\prepared()"
+          ],
+          "expected": [
+            2,
+            4
+          ],
+          "calls_after": 2
+        },
+        {
+          "setup": "Meter\\calls := 0",
+          "sequence": [
+            "Evaluation\\raw()",
+            "Evaluation\\raw()"
+          ],
+          "expected": [
+            3,
+            7
+          ],
+          "calls_after": 4
+        }
+      ],
+      "load_before": [],
+      "required_profile": [
+        "One current core; any procedural helper is explicitly present in this source."
+      ],
+      "semantic_scope": "Both same-core algorithms are retained: original tests prepared/raw occurrences, receivers tests lazy caching plus two ordinary calls. They share output/count fixtures; the stronger raw-graph test belongs to original only.",
+      "selected_variant": "functional",
+      "variant_cases": {
+        "original": [
+          {
+            "setup": "Meter\\calls := 0",
+            "sequence": [
+              "Evaluation\\prepared()",
+              "Evaluation\\prepared()"
+            ],
+            "expected": [
+              2,
+              4
+            ],
+            "calls_after": 2
+          },
+          {
+            "setup": "Meter\\calls := 0",
+            "sequence": [
+              "Evaluation\\raw()",
+              "Evaluation\\raw()"
+            ],
+            "expected": [
+              3,
+              7
+            ],
+            "calls_after": 4
+          }
+        ],
+        "receivers": [
+          {
+            "setup": "Meter\\calls := 0",
+            "sequence": [
+              "Evaluation\\prepared()",
+              "Evaluation\\prepared()"
+            ],
+            "expected": [
+              2,
+              4
+            ],
+            "calls_after": 2
+          },
+          {
+            "setup": "Meter\\calls := 0",
+            "sequence": [
+              "Evaluation\\raw()",
+              "Evaluation\\raw()"
+            ],
+            "expected": [
+              3,
+              7
+            ],
+            "calls_after": 4
+          }
+        ]
+      },
+      "variant_load_before": {
+        "original": [],
+        "receivers": []
+      },
+      "source_regions": {
+        "functional": "whole functional file",
+        "procedural": "whole procedural file"
+      },
+      "core_versions": 1,
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "lmx_sources": {
+        "procedural": "haskell_comparision/source/lmx/H07.lm3",
+        "functional": "haskell_comparision/source/lmx/H07.lm3"
+      },
+      "compared_styles": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_cases": {
+        "procedural": [
+          {
+            "setup": "Meter\\calls := 0",
+            "sequence": [
+              "Evaluation\\prepared()",
+              "Evaluation\\prepared()"
+            ],
+            "expected": [
+              2,
+              4
+            ],
+            "calls_after": 2
+          },
+          {
+            "setup": "Meter\\calls := 0",
+            "sequence": [
+              "Evaluation\\raw()",
+              "Evaluation\\raw()"
+            ],
+            "expected": [
+              3,
+              7
+            ],
+            "calls_after": 4
+          }
+        ],
+        "functional": [
+          {
+            "setup": "Meter\\calls := 0",
+            "sequence": [
+              "Evaluation\\prepared()",
+              "Evaluation\\prepared()"
+            ],
+            "expected": [
+              2,
+              4
+            ],
+            "calls_after": 2
+          },
+          {
+            "setup": "Meter\\calls := 0",
+            "sequence": [
+              "Evaluation\\raw()",
+              "Evaluation\\raw()"
+            ],
+            "expected": [
+              3,
+              7
+            ],
+            "calls_after": 4
+          }
+        ]
+      },
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "H08",
+      "file": "haskell_comparision/source/lmx/H08.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#h08",
+      "cases": [
+        {
+          "invoke": "StateProbe\\run(Own\\step)",
+          "expected": 0
+        },
+        {
+          "invoke": "StateProbe\\run(Free\\step)",
+          "expected": 3
+        }
+      ],
+      "reuse_note": "One runner and one y += 3 body. Own\\step calls Free\\step with its own autofilled y; direct Free\\step writes the runner caller place.",
+      "lmx_sources": {
+        "procedural": "haskell_comparision/source/lmx/H08.lm3",
+        "functional": "haskell_comparision/source/lmx/H08.lm3"
+      },
+      "compared_styles": [
+        "procedural",
+        "functional"
+      ],
+      "selected_variant": "functional",
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "source_regions": {
+        "functional": "whole functional file",
+        "procedural": "whole procedural file"
+      },
+      "style_cases": {
+        "procedural": [
+          {
+            "invoke": "StateProbe\\run(Own\\step)",
+            "expected": 0
+          },
+          {
+            "invoke": "StateProbe\\run(Free\\step)",
+            "expected": 3
+          }
+        ],
+        "functional": [
+          {
+            "invoke": "StateProbe\\run(Own\\step)",
+            "expected": 0
+          },
+          {
+            "invoke": "StateProbe\\run(Free\\step)",
+            "expected": 3
+          }
+        ]
+      },
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "H09",
+      "file": "haskell_comparision/source/lmx/H09.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#h09",
+      "cases": [
+        {
+          "invoke": "Numbers\\demo()",
+          "expected": 12,
+          "next_invocations": 4,
+          "body_invocations": 3
+        }
+      ],
+      "load_before": [],
+      "source_boundary": "Complete local Cycles plus unchanged Numbers scenario; the helper body is included in the primary source and its metric.",
+      "core_functions": [],
+      "required_profile": [
+        "Ordinary declaration-as-DATA and associated-body execution from LMX_semantics.en.md#declaration-arguments.",
+        "Ordinary catch handles source Stop only; body Stop and other failures propagate by their original names."
+      ],
+      "declared_exits": [],
+      "restored_from": "22-Nov-2026-3.tar.gz",
+      "lmx_sources": {
+        "procedural": "haskell_comparision/source/lmx/H09.lm3",
+        "functional": "haskell_comparision/source/lmx/H09.lm3"
+      },
+      "compared_styles": [
+        "procedural",
+        "functional"
+      ],
+      "selected_variant": "functional",
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "source_regions": {
+        "functional": "whole functional file",
+        "procedural": "whole procedural file"
+      },
+      "style_cases": {
+        "procedural": [
+          {
+            "invoke": "Numbers\\demo()",
+            "expected": 12,
+            "next_invocations": 4,
+            "body_invocations": 3
+          }
+        ],
+        "functional": [
+          {
+            "invoke": "Numbers\\demo()",
+            "expected": 12,
+            "next_invocations": 4,
+            "body_invocations": 3
+          }
+        ]
+      },
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "R01",
+      "file": "haskell_comparision/source/lmx/R01.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#r01",
+      "cases": [
+        {
+          "invoke": "MergeProbe\\run()",
+          "expected": 257,
+          "components": [
+            2,
+            5,
+            7
+          ],
+          "source_values_unchanged": true
+        }
+      ],
+      "load_before": [],
+      "required_profile": [
+        "One current kernel; derive delegates to ordinary merge with one copy map."
+      ],
+      "selected_variant": "functional",
+      "variant_cases": {
+        "receivers": [
+          {
+            "invoke": "MergeProbe\\run()",
+            "expected": 257,
+            "components": [
+              2,
+              5,
+              7
+            ],
+            "source_values_unchanged": true
+          }
+        ]
+      },
+      "variant_load_before": {
+        "receivers": []
+      },
+      "source_regions": {
+        "functional": "whole functional file",
+        "procedural": "whole procedural file"
+      },
+      "core_versions": 1,
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "lmx_sources": {
+        "procedural": "haskell_comparision/source/lmx/procedural/R01.lm3",
+        "functional": "haskell_comparision/source/lmx/R01.lm3"
+      },
+      "compared_styles": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_cases": {
+        "procedural": [
+          {
+            "invoke": "MergeProbe\\run()",
+            "expected": 257,
+            "components": [
+              2,
+              5,
+              7
+            ],
+            "source_values_unchanged": true
+          }
+        ],
+        "functional": [
+          {
+            "invoke": "MergeProbe\\run()",
+            "expected": 257,
+            "components": [
+              2,
+              5,
+              7
+            ],
+            "source_values_unchanged": true
+          }
+        ]
+      },
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "R02",
+      "file": "haskell_comparision/source/lmx/R02.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#r02",
+      "cases": [
+        {
+          "invoke": "StreamProbe\\run()",
+          "expected": 27,
+          "components": [
+            2,
+            7
+          ]
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "haskell_comparision/source/lmx/R02.lm3",
+        "functional": "haskell_comparision/source/lmx/R02.lm3"
+      },
+      "compared_styles": [
+        "procedural",
+        "functional"
+      ],
+      "selected_variant": "functional",
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "source_regions": {
+        "functional": "whole functional file",
+        "procedural": "whole procedural file"
+      },
+      "style_cases": {
+        "procedural": [
+          {
+            "invoke": "StreamProbe\\run()",
+            "expected": 27,
+            "components": [
+              2,
+              7
+            ]
+          }
+        ],
+        "functional": [
+          {
+            "invoke": "StreamProbe\\run()",
+            "expected": 27,
+            "components": [
+              2,
+              7
+            ]
+          }
+        ]
+      },
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "R03",
+      "file": "haskell_comparision/source/lmx/R03.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#r03",
+      "cases": [
+        {
+          "invoke": "ImportProbe\\run()",
+          "expected": 712,
+          "provider_value_after": 7,
+          "copied_owner_value_after": 12,
+          "grouping_container_value_after": 7
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "haskell_comparision/source/lmx/R03.lm3",
+        "functional": "haskell_comparision/source/lmx/R03.lm3"
+      },
+      "compared_styles": [
+        "procedural",
+        "functional"
+      ],
+      "selected_variant": "functional",
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "source_regions": {
+        "functional": "whole functional file",
+        "procedural": "whole procedural file"
+      },
+      "style_cases": {
+        "procedural": [
+          {
+            "invoke": "ImportProbe\\run()",
+            "expected": 712,
+            "provider_value_after": 7,
+            "copied_owner_value_after": 12,
+            "grouping_container_value_after": 7
+          }
+        ],
+        "functional": [
+          {
+            "invoke": "ImportProbe\\run()",
+            "expected": 712,
+            "provider_value_after": 7,
+            "copied_owner_value_after": 12,
+            "grouping_container_value_after": 7
+          }
+        ]
+      },
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "R04",
+      "file": "haskell_comparision/source/lmx/R04.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#r04",
+      "cases": [
+        {
+          "invoke": "LocalProbe\\run()",
+          "expected": 4142,
+          "producer_calls": 2
+        },
+        {
+          "invoke": "LocalProbe\\explicitInitialization()",
+          "expected": 44,
+          "producer_calls": 1
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "haskell_comparision/source/lmx/R04.lm3",
+        "functional": "haskell_comparision/source/lmx/R04.lm3"
+      },
+      "compared_styles": [
+        "procedural",
+        "functional"
+      ],
+      "selected_variant": "functional",
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "source_regions": {
+        "functional": "whole functional file",
+        "procedural": "whole procedural file"
+      },
+      "style_cases": {
+        "procedural": [
+          {
+            "invoke": "LocalProbe\\run()",
+            "expected": 4142,
+            "producer_calls": 2
+          },
+          {
+            "invoke": "LocalProbe\\explicitInitialization()",
+            "expected": 44,
+            "producer_calls": 1
+          }
+        ],
+        "functional": [
+          {
+            "invoke": "LocalProbe\\run()",
+            "expected": 4142,
+            "producer_calls": 2
+          },
+          {
+            "invoke": "LocalProbe\\explicitInitialization()",
+            "expected": 44,
+            "producer_calls": 1
+          }
+        ]
+      },
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "R06a",
+      "file": "haskell_comparision/source/lmx/R06a.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#r06",
+      "cases": [
+        {
+          "invoke": "SharingProbe\\run()",
+          "expected": 2107,
+          "identity": "copied left and right share one copied target; original is distinct"
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "haskell_comparision/source/lmx/R06a.lm3",
+        "functional": "haskell_comparision/source/lmx/R06a.lm3"
+      },
+      "compared_styles": [
+        "procedural",
+        "functional"
+      ],
+      "selected_variant": "functional",
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "source_regions": {
+        "functional": "whole functional file",
+        "procedural": "whole procedural file"
+      },
+      "style_cases": {
+        "procedural": [
+          {
+            "invoke": "SharingProbe\\run()",
+            "expected": 2107,
+            "identity": "copied left and right share one copied target; original is distinct"
+          }
+        ],
+        "functional": [
+          {
+            "invoke": "SharingProbe\\run()",
+            "expected": 2107,
+            "identity": "copied left and right share one copied target; original is distinct"
+          }
+        ]
+      },
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "R06b",
+      "file": "haskell_comparision/source/lmx/R06b.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#r06",
+      "cases": [
+        {
+          "invoke": "CycleProbe\\run()",
+          "expected": 83,
+          "identity": "self-cycle remains inside the copy; grouping wrapper is a distinct Structure with its own cells",
+          "copied_ring_value_after": 8,
+          "grouping_container_value_after": 3
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "haskell_comparision/source/lmx/R06b.lm3",
+        "functional": "haskell_comparision/source/lmx/R06b.lm3"
+      },
+      "compared_styles": [
+        "procedural",
+        "functional"
+      ],
+      "selected_variant": "functional",
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "source_regions": {
+        "functional": "whole functional file",
+        "procedural": "whole procedural file"
+      },
+      "style_cases": {
+        "procedural": [
+          {
+            "invoke": "CycleProbe\\run()",
+            "expected": 83,
+            "identity": "self-cycle remains inside the copy; grouping wrapper is a distinct Structure with its own cells",
+            "copied_ring_value_after": 8,
+            "grouping_container_value_after": 3
+          }
+        ],
+        "functional": [
+          {
+            "invoke": "CycleProbe\\run()",
+            "expected": 83,
+            "identity": "self-cycle remains inside the copy; grouping wrapper is a distinct Structure with its own cells",
+            "copied_ring_value_after": 8,
+            "grouping_container_value_after": 3
+          }
+        ]
+      },
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "R07",
+      "file": "haskell_comparision/source/lmx/R07.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#r07",
+      "cases": [
+        {
+          "invoke": "Operands\\Example\\demo()",
+          "expected": 20,
+          "components": [
+            7,
+            13
+          ]
+        }
+      ],
+      "required_profile": [
+        "The supplied sys\\OPERANDS_TEMPLATE (prepared-value mode 0, addition priority), placed first in the operand DATA."
+      ],
+      "lmx_sources": {
+        "procedural": "haskell_comparision/source/lmx/R07.lm3",
+        "functional": "haskell_comparision/source/lmx/R07.lm3"
+      },
+      "compared_styles": [
+        "procedural",
+        "functional"
+      ],
+      "selected_variant": "functional",
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "source_regions": {
+        "functional": "whole functional file",
+        "procedural": "whole procedural file"
+      },
+      "style_cases": {
+        "procedural": [
+          {
+            "invoke": "Operands\\Example\\demo()",
+            "expected": 20,
+            "components": [
+              7,
+              13
+            ]
+          }
+        ],
+        "functional": [
+          {
+            "invoke": "Operands\\Example\\demo()",
+            "expected": 20,
+            "components": [
+              7,
+              13
+            ]
+          }
+        ]
+      },
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "R09",
+      "file": "haskell_comparision/source/lmx/R09.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#r09",
+      "cases": [
+        {
+          "invoke": "UninitializedGraph\\localWrite()",
+          "expected": 5,
+          "source_record_after": "uninit:int",
+          "source_value_size_after": 0
+        },
+        {
+          "invoke": "UninitializedGraph\\graphWrite()",
+          "expected": 5,
+          "source_record_after": "int",
+          "source_value_after": 5,
+          "require_old_new_raw_address_equality": false
+        },
+        {
+          "inspection": "Fresh source before either ordinary case operation",
+          "uninitialized_value_size": 0,
+          "ready_controls": [
+            "numeric 0",
+            "null reference 0"
+          ],
+          "nil_means": "typed absence"
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "haskell_comparision/source/lmx/R09.lm3",
+        "functional": "haskell_comparision/source/lmx/R09.lm3"
+      },
+      "compared_styles": [
+        "procedural",
+        "functional"
+      ],
+      "selected_variant": "functional",
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "source_regions": {
+        "functional": "whole functional file",
+        "procedural": "whole procedural file"
+      },
+      "style_cases": {
+        "procedural": [
+          {
+            "invoke": "UninitializedGraph\\localWrite()",
+            "expected": 5,
+            "source_record_after": "uninit:int",
+            "source_value_size_after": 0
+          },
+          {
+            "invoke": "UninitializedGraph\\graphWrite()",
+            "expected": 5,
+            "source_record_after": "int",
+            "source_value_after": 5,
+            "require_old_new_raw_address_equality": false
+          },
+          {
+            "inspection": "Fresh source before either ordinary case operation",
+            "uninitialized_value_size": 0,
+            "ready_controls": [
+              "numeric 0",
+              "null reference 0"
+            ],
+            "nil_means": "typed absence"
+          }
+        ],
+        "functional": [
+          {
+            "invoke": "UninitializedGraph\\localWrite()",
+            "expected": 5,
+            "source_record_after": "uninit:int",
+            "source_value_size_after": 0
+          },
+          {
+            "invoke": "UninitializedGraph\\graphWrite()",
+            "expected": 5,
+            "source_record_after": "int",
+            "source_value_after": 5,
+            "require_old_new_raw_address_equality": false
+          },
+          {
+            "inspection": "Fresh source before either ordinary case operation",
+            "uninitialized_value_size": 0,
+            "ready_controls": [
+              "numeric 0",
+              "null reference 0"
+            ],
+            "nil_means": "typed absence"
+          }
+        ]
+      },
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "A01",
+      "file": "haskell_comparision/source/lmx/A01.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#a01",
+      "cases": [
+        {
+          "invoke": "SlotProbe\\run()",
+          "expected": 209,
+          "length_after": 2,
+          "new_field_name": "z"
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "haskell_comparision/source/lmx/A01.lm3",
+        "functional": "haskell_comparision/source/lmx/A01.lm3"
+      },
+      "compared_styles": [
+        "procedural",
+        "functional"
+      ],
+      "selected_variant": "functional",
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "source_regions": {
+        "functional": "whole functional file",
+        "procedural": "whole procedural file"
+      },
+      "style_cases": {
+        "procedural": [
+          {
+            "invoke": "SlotProbe\\run()",
+            "expected": 209,
+            "length_after": 2,
+            "new_field_name": "z"
+          }
+        ],
+        "functional": [
+          {
+            "invoke": "SlotProbe\\run()",
+            "expected": 209,
+            "length_after": 2,
+            "new_field_name": "z"
+          }
+        ]
+      },
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "V02",
+      "file": "haskell_comparision/source/lmx/V02.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#v02",
+      "cases": [
+        {
+          "invoke": "TicketCode\\accepts(\"AB-09\")",
+          "expected": 1
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"QZ-70\")",
+          "expected": 1
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"AB-9\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"AB-090\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"ab-09\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"AB-0X\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"XAB-09Y\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(candidate := fixture)",
+          "fixture_codepoints": [
+            65,
+            66,
+            0,
+            48,
+            57
+          ],
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"ÄB-09\")",
+          "expected": 0,
+          "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"AB-٠9\")",
+          "expected": 0,
+          "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+        }
+      ],
+      "load_before": [],
+      "required_profile": [
+        "The supplied sys\\OPERANDS_TEMPLATE (prepared-value mode 0, addition priority), placed first in the operand DATA."
+      ],
+      "declared_exits": [
+        "RangeArity"
+      ],
+      "exit_contract": "The client propagates the helper exit; every written application supplies exactly two bounds.",
+      "selected_variant": "functional",
+      "variant_cases": {
+        "original": [
+          {
+            "invoke": "TicketCode\\accepts(\"AB-09\")",
+            "expected": 1
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"QZ-70\")",
+            "expected": 1
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-9\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-090\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"ab-09\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-0X\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"XAB-09Y\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(candidate := fixture)",
+            "fixture_codepoints": [
+              65,
+              66,
+              0,
+              48,
+              57
+            ],
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"ÄB-09\")",
+            "expected": 0,
+            "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-٠9\")",
+            "expected": 0,
+            "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+          }
+        ],
+        "regex": [
+          {
+            "invoke": "TicketCode\\accepts(\"AB-09\")",
+            "expected": 1
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"QZ-70\")",
+            "expected": 1
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-9\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-090\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"ab-09\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-0X\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"XAB-09Y\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(candidate := fixture)",
+            "fixture_codepoints": [
+              65,
+              66,
+              0,
+              48,
+              57
+            ],
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"ÄB-09\")",
+            "expected": 0,
+            "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-٠9\")",
+            "expected": 0,
+            "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+          }
+        ]
+      },
+      "variant_load_before": {
+        "original": [],
+        "regex": []
+      },
+      "source_regions": {
+        "functional": "whole functional file",
+        "procedural": "whole procedural file"
+      },
+      "core_versions": 1,
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "lmx_sources": {
+        "procedural": "haskell_comparision/source/lmx/procedural/V02.lm3",
+        "functional": "haskell_comparision/source/lmx/V02.lm3"
+      },
+      "compared_styles": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_cases": {
+        "procedural": [
+          {
+            "invoke": "TicketCode\\accepts(\"AB-09\")",
+            "expected": 1
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"QZ-70\")",
+            "expected": 1
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-9\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-090\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"ab-09\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-0X\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"XAB-09Y\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(candidate := fixture)",
+            "fixture_codepoints": [
+              65,
+              66,
+              0,
+              48,
+              57
+            ],
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"ÄB-09\")",
+            "expected": 0,
+            "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-٠9\")",
+            "expected": 0,
+            "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+          }
+        ],
+        "functional": [
+          {
+            "invoke": "TicketCode\\accepts(\"AB-09\")",
+            "expected": 1
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"QZ-70\")",
+            "expected": 1
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-9\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-090\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"ab-09\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-0X\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"XAB-09Y\")",
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(candidate := fixture)",
+            "fixture_codepoints": [
+              65,
+              66,
+              0,
+              48,
+              57
+            ],
+            "expected": 0
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"ÄB-09\")",
+            "expected": 0,
+            "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+          },
+          {
+            "invoke": "TicketCode\\accepts(\"AB-٠9\")",
+            "expected": 0,
+            "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+          }
+        ]
+      },
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "V03",
+      "file": "haskell_comparision/source/lmx/V03.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#v03",
+      "cases": [
+        {
+          "invoke": "SamplingCheck\\check(candidate := Measurement\\sample)",
+          "expected": 1,
+          "calls_after": 1
+        },
+        {
+          "invoke": "SamplingCheck\\check(candidate := Measurement\\biased)",
+          "expected": 0,
+          "calls_after": 1
+        },
+        {
+          "invoke": "SamplingCheck\\check(candidate := Measurement\\readsTwice)",
+          "expected": 0,
+          "calls_after": 2
+        }
+      ],
+      "load_before": [],
+      "required_profile": [
+        "One current core; ordinary calls autofill gain and read from the active candidate."
+      ],
+      "selected_variant": "functional",
+      "variant_cases": {
+        "reuse": [
+          {
+            "invoke": "SamplingCheck\\check(candidate := Measurement\\sample)",
+            "expected": 1,
+            "calls_after": 1
+          },
+          {
+            "invoke": "SamplingCheck\\check(candidate := Measurement\\biased)",
+            "expected": 0,
+            "calls_after": 1
+          },
+          {
+            "invoke": "SamplingCheck\\check(candidate := Measurement\\readsTwice)",
+            "expected": 0,
+            "calls_after": 2
+          }
+        ]
+      },
+      "variant_load_before": {
+        "reuse": []
+      },
+      "source_regions": {
+        "functional": "whole functional file",
+        "procedural": "whole procedural file"
+      },
+      "core_versions": 1,
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "lmx_sources": {
+        "procedural": "haskell_comparision/source/lmx/procedural/V03.lm3",
+        "functional": "haskell_comparision/source/lmx/V03.lm3"
+      },
+      "compared_styles": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_cases": {
+        "procedural": [
+          {
+            "invoke": "SamplingCheck\\check(candidate := Measurement\\sample)",
+            "expected": 1,
+            "calls_after": 1
+          },
+          {
+            "invoke": "SamplingCheck\\check(candidate := Measurement\\biased)",
+            "expected": 0,
+            "calls_after": 1
+          },
+          {
+            "invoke": "SamplingCheck\\check(candidate := Measurement\\readsTwice)",
+            "expected": 0,
+            "calls_after": 2
+          }
+        ],
+        "functional": [
+          {
+            "invoke": "SamplingCheck\\check(candidate := Measurement\\sample)",
+            "expected": 1,
+            "calls_after": 1
+          },
+          {
+            "invoke": "SamplingCheck\\check(candidate := Measurement\\biased)",
+            "expected": 0,
+            "calls_after": 1
+          },
+          {
+            "invoke": "SamplingCheck\\check(candidate := Measurement\\readsTwice)",
+            "expected": 0,
+            "calls_after": 2
+          }
+        ]
+      },
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "V04",
+      "file": "haskell_comparision/source/lmx/V04.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#v04",
+      "cases": [
+        {
+          "invoke": "FailureCheck\\check(candidate := UnavailableSensor\\read)",
+          "expected": 1
+        },
+        {
+          "invoke": "FailureCheck\\check(candidate := UnavailableSensor\\zero)",
+          "expected": 0
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "haskell_comparision/source/lmx/V04.lm3",
+        "functional": "haskell_comparision/source/lmx/V04.lm3"
+      },
+      "compared_styles": [
+        "procedural",
+        "functional"
+      ],
+      "selected_variant": "functional",
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "source_regions": {
+        "functional": "whole functional file",
+        "procedural": "whole procedural file"
+      },
+      "style_cases": {
+        "procedural": [
+          {
+            "invoke": "FailureCheck\\check(candidate := UnavailableSensor\\read)",
+            "expected": 1
+          },
+          {
+            "invoke": "FailureCheck\\check(candidate := UnavailableSensor\\zero)",
+            "expected": 0
+          }
+        ],
+        "functional": [
+          {
+            "invoke": "FailureCheck\\check(candidate := UnavailableSensor\\read)",
+            "expected": 1
+          },
+          {
+            "invoke": "FailureCheck\\check(candidate := UnavailableSensor\\zero)",
+            "expected": 0
+          }
+        ]
+      },
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "V05",
+      "file": "haskell_comparision/source/lmx/V05.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#v05",
+      "cases": [
+        {
+          "setup": "Fresh (merge(Indicator; (int: fault 0))) supplied as candidate",
+          "invoke": "Commissioning\\check(candidate := device)",
+          "expected": 1,
+          "writes": 2,
+          "reads": 2,
+          "trace": 1202,
+          "commanded_after": 0,
+          "sensed_after": 0,
+          "observe_from": "The actual copied owner parent(device\\set), not the grouping container."
+        },
+        {
+          "setup": "Fresh (merge(Indicator; (int: fault 1))) supplied as candidate",
+          "invoke": "Commissioning\\check(candidate := device)",
+          "expected": 0,
+          "writes": 2,
+          "reads": 2,
+          "trace": 1202,
+          "commanded_after": 0,
+          "sensed_after": 0,
+          "observe_from": "The actual copied owner parent(device\\set), not the grouping container."
+        },
+        {
+          "setup": "Fresh (merge(Indicator; (int: fault 2))) supplied as candidate",
+          "invoke": "Commissioning\\check(candidate := device)",
+          "expected": 0,
+          "writes": 2,
+          "reads": 2,
+          "trace": 1202,
+          "commanded_after": 0,
+          "sensed_after": 1,
+          "observe_from": "The actual copied owner parent(device\\set), not the grouping container."
+        }
+      ],
+      "observation_owner": "parent(device\\set), equal to parent(device\\observe)",
+      "observed_owner_fields": [
+        "writes",
+        "reads",
+        "trace",
+        "commanded",
+        "sensed"
+      ],
+      "reuse_note": "Indicator\\mark owns one trace update; Commissioning\\cycle owns one set/observe pair. Two unconditional calls preserve set(1), observe, set(0), observe even after the first mismatch.",
+      "lmx_sources": {
+        "procedural": "haskell_comparision/source/lmx/V05.lm3",
+        "functional": "haskell_comparision/source/lmx/V05.lm3"
+      },
+      "compared_styles": [
+        "procedural",
+        "functional"
+      ],
+      "selected_variant": "functional",
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "source_regions": {
+        "functional": "whole functional file",
+        "procedural": "whole procedural file"
+      },
+      "style_cases": {
+        "procedural": [
+          {
+            "setup": "Fresh (merge(Indicator; (int: fault 0))) supplied as candidate",
+            "invoke": "Commissioning\\check(candidate := device)",
+            "expected": 1,
+            "writes": 2,
+            "reads": 2,
+            "trace": 1202,
+            "commanded_after": 0,
+            "sensed_after": 0,
+            "observe_from": "The actual copied owner parent(device\\set), not the grouping container."
+          },
+          {
+            "setup": "Fresh (merge(Indicator; (int: fault 1))) supplied as candidate",
+            "invoke": "Commissioning\\check(candidate := device)",
+            "expected": 0,
+            "writes": 2,
+            "reads": 2,
+            "trace": 1202,
+            "commanded_after": 0,
+            "sensed_after": 0,
+            "observe_from": "The actual copied owner parent(device\\set), not the grouping container."
+          },
+          {
+            "setup": "Fresh (merge(Indicator; (int: fault 2))) supplied as candidate",
+            "invoke": "Commissioning\\check(candidate := device)",
+            "expected": 0,
+            "writes": 2,
+            "reads": 2,
+            "trace": 1202,
+            "commanded_after": 0,
+            "sensed_after": 1,
+            "observe_from": "The actual copied owner parent(device\\set), not the grouping container."
+          }
+        ],
+        "functional": [
+          {
+            "setup": "Fresh (merge(Indicator; (int: fault 0))) supplied as candidate",
+            "invoke": "Commissioning\\check(candidate := device)",
+            "expected": 1,
+            "writes": 2,
+            "reads": 2,
+            "trace": 1202,
+            "commanded_after": 0,
+            "sensed_after": 0,
+            "observe_from": "The actual copied owner parent(device\\set), not the grouping container."
+          },
+          {
+            "setup": "Fresh (merge(Indicator; (int: fault 1))) supplied as candidate",
+            "invoke": "Commissioning\\check(candidate := device)",
+            "expected": 0,
+            "writes": 2,
+            "reads": 2,
+            "trace": 1202,
+            "commanded_after": 0,
+            "sensed_after": 0,
+            "observe_from": "The actual copied owner parent(device\\set), not the grouping container."
+          },
+          {
+            "setup": "Fresh (merge(Indicator; (int: fault 2))) supplied as candidate",
+            "invoke": "Commissioning\\check(candidate := device)",
+            "expected": 0,
+            "writes": 2,
+            "reads": 2,
+            "trace": 1202,
+            "commanded_after": 0,
+            "sensed_after": 1,
+            "observe_from": "The actual copied owner parent(device\\set), not the grouping container."
+          }
+        ]
+      },
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "M01",
+      "file": "haskell_comparision/source/lmx/M01.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#m01",
+      "cases": [
+        {
+          "kind": "transport fixture",
+          "setup": "One owner; fresh Counter; value=0",
+          "calls": [
+            "Counter\\add(delta := 4)",
+            "Counter\\add(delta := 9)"
+          ],
+          "observe": "Counter\\read()",
+          "expected": 13,
+          "constraint": "one serial turn per admitted input; either arrival order"
+        }
+      ],
+      "completion_barrier": "Read after both add executions complete; an HTTP admission acknowledgement alone is insufficient.",
+      "lmx_sources": {
+        "procedural": "haskell_comparision/source/lmx/M01.lm3",
+        "functional": "haskell_comparision/source/lmx/M01.lm3"
+      },
+      "compared_styles": [
+        "procedural",
+        "functional"
+      ],
+      "selected_variant": "functional",
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "source_regions": {
+        "functional": "whole functional file",
+        "procedural": "whole procedural file"
+      },
+      "style_cases": {
+        "procedural": [
+          {
+            "kind": "transport fixture",
+            "setup": "One owner; fresh Counter; value=0",
+            "calls": [
+              "Counter\\add(delta := 4)",
+              "Counter\\add(delta := 9)"
+            ],
+            "observe": "Counter\\read()",
+            "expected": 13,
+            "constraint": "one serial turn per admitted input; either arrival order"
+          }
+        ],
+        "functional": [
+          {
+            "kind": "transport fixture",
+            "setup": "One owner; fresh Counter; value=0",
+            "calls": [
+              "Counter\\add(delta := 4)",
+              "Counter\\add(delta := 9)"
+            ],
+            "observe": "Counter\\read()",
+            "expected": 13,
+            "constraint": "one serial turn per admitted input; either arrival order"
+          }
+        ]
+      },
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "M05",
+      "file": "haskell_comparision/source/lmx/M05.lm3",
+      "fresh_source_context": true,
+      "guide": "../LMX_examples_and_analogies.ru.md#m05",
+      "cases": [
+        {
+          "kind": "transport fixture",
+          "invoke": "Lamp\\set(command := 1)",
+          "expected_stored_state": 1,
+          "expected_application_replies": 0,
+          "constraint": "No synthetic ACK or unanswered event merely for having no result contract"
+        }
+      ],
+      "http_boundary": "A transport/admission response is not an application reply from resultless Lamp\\set.",
+      "lmx_sources": {
+        "procedural": "haskell_comparision/source/lmx/M05.lm3",
+        "functional": "haskell_comparision/source/lmx/M05.lm3"
+      },
+      "compared_styles": [
+        "procedural",
+        "functional"
+      ],
+      "selected_variant": "functional",
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "source_regions": {
+        "functional": "whole functional file",
+        "procedural": "whole procedural file"
+      },
+      "style_cases": {
+        "procedural": [
+          {
+            "kind": "transport fixture",
+            "invoke": "Lamp\\set(command := 1)",
+            "expected_stored_state": 1,
+            "expected_application_replies": 0,
+            "constraint": "No synthetic ACK or unanswered event merely for having no result contract"
+          }
+        ],
+        "functional": [
+          {
+            "kind": "transport fixture",
+            "invoke": "Lamp\\set(command := 1)",
+            "expected_stored_state": 1,
+            "expected_application_replies": 0,
+            "constraint": "No synthetic ACK or unanswered event merely for having no result contract"
+          }
+        ]
+      },
+      "fairness_note": "Both complete LMX styles preserve the observable contract. All declarations and Throws count; the same existing foreign control/status is used for each.",
+      "lmx_operation_phase": "after_root_startup"
+    }
+  ],
+  "additional_fixtures": [
+    {
+      "id": "H10",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#h10",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "H11",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#h11",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "H12",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#h12",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "R05",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#r05",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "R08",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#r08",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "R10",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#r10",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "A02",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#a02",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "A03",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#a03",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "A04",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#a04",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "A05",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#a05",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "A06",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#a06",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "V01",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#v01",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "M02",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#m02",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "M03",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#m03",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "M04",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#m04",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "M06",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#m06",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "M07",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#m07",
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "M08",
+      "kind": "specified fixture",
+      "guide": "../LMX_examples_and_analogies.ru.md#m08",
+      "lmx_operation_phase": "after_root_startup"
+    }
+  ],
+  "comparison_programs": [
+    {
+      "id": "DP01",
+      "source_markdown": "../01_iterator_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "numbers\\demo()",
+      "expected": 12,
+      "fresh_source_context": true,
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "DP02",
+      "source_markdown": "../02_strategy_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "strategy\\demo()",
+      "expected": 25,
+      "fresh_source_context": true,
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "DP03",
+      "source_markdown": "../03_factory_method_node_prototype_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "add1\\demo()",
+      "expected": 32,
+      "fresh_source_context": true,
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "DP04",
+      "source_markdown": "../04_adapter_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "adapter\\demo()",
+      "expected": 5,
+      "fresh_source_context": true,
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "DP05",
+      "source_markdown": "../05_observer_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "observer\\demo()",
+      "expected": 11,
+      "fresh_source_context": true,
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "DP06",
+      "source_markdown": "../06_decorator_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "transform\\demo()",
+      "expected": 63,
+      "fresh_source_context": true,
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "DP07",
+      "source_markdown": "../07_command_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "commands\\demo()",
+      "expected": 4,
+      "fresh_source_context": true,
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "DP08",
+      "source_markdown": "../08_template_method_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "pipeline\\demo()",
+      "expected": 35,
+      "fresh_source_context": true,
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "DP09",
+      "source_markdown": "../09_visitor_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "Actions\\demo()",
+      "expected": 12,
+      "fresh_source_context": true,
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "DP10",
+      "source_markdown": "../10_state_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "machine\\demo()",
+      "expected": 1,
+      "fresh_source_context": true,
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "DP11",
+      "source_markdown": "../11_chain_of_responsibility_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "chain\\demo()",
+      "expected": 5,
+      "fresh_source_context": true,
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "DP12",
+      "source_markdown": "../12_composite_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "Pair\\demo()",
+      "expected": 10,
+      "fresh_source_context": true,
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "DP13",
+      "source_markdown": "../13_proxy_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "requests\\demo()",
+      "expected": 8,
+      "fresh_source_context": true,
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "DP14",
+      "source_markdown": "../14_facade_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "checkout\\demo()",
+      "expected": 39,
+      "fresh_source_context": true,
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "DP15",
+      "source_markdown": "../15_builder_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "Rectangle\\demo()",
+      "expected": 22,
+      "fresh_source_context": true,
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "DP16",
+      "source_markdown": "../16_prototype_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "Point\\demo()",
+      "expected": 153,
+      "fresh_source_context": true,
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "DP17",
+      "source_markdown": "../17_memento_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "Editor\\demo()",
+      "expected": 59,
+      "fresh_source_context": true,
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "DP18",
+      "source_markdown": "../18_bridge_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "bridge\\demo()",
+      "expected": 45,
+      "fresh_source_context": true,
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "DP19",
+      "source_markdown": "../19_singleton_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "Demo\\run()",
+      "expected": 7,
+      "fresh_source_context": true,
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "DP20",
+      "source_markdown": "../20_abstract_factory_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "Client\\demo()",
+      "expected": 33,
+      "fresh_source_context": true,
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "DP21",
+      "source_markdown": "../21_flyweight_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "glyphs\\drawing\\demo()",
+      "expected": 81,
+      "fresh_source_context": true,
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "DP22",
+      "source_markdown": "../22_mediator_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "Demo\\run()",
+      "expected": 10,
+      "fresh_source_context": true,
+      "lmx_operation_phase": "after_root_startup"
+    },
+    {
+      "id": "DP23",
+      "source_markdown": "../23_interpreter_comparison.md",
+      "code_block": "first lmx block (counted application program)",
+      "invoke": "operands\\example\\demo()",
+      "expected": 20,
+      "fresh_source_context": true,
+      "lmx_operation_phase": "after_root_startup"
+    }
+  ],
+  "author_clarification": {
+    "source": "../../LMX_semantics.en.md#uninit-zero-payload",
+    "uninit_value_size": 0,
+    "frame_assignment": "changes runtime place; source graph remains unchanged",
+    "graph_assignment": "replaces the fragment referenced by the selected Lmx cell",
+    "source_graph": "complete written program including typed primitive leaves and all receivers",
+    "binary": "native methods only; binary R0 has a local pointer to the R0 graph, also under interpretation",
+    "native_update": "existing explicit compilation and endturn mechanism"
+  },
+  "haskell_run_command": "cd examples/haskell && cabal run lmx-analogy-clients",
+  "receiver_revision": {
+    "date": "2026-11-23",
+    "variant_ids": [
+      "H01",
+      "H02",
+      "H03",
+      "H04",
+      "H05",
+      "H06",
+      "H07",
+      "H08",
+      "H09",
+      "R01",
+      "R02",
+      "R03",
+      "R04",
+      "R06a",
+      "R06b",
+      "R07",
+      "R09",
+      "A01",
+      "V02",
+      "V03",
+      "V04",
+      "V05",
+      "M01",
+      "M05"
+    ],
+    "rule": "Compare both complete procedural and functional LMX forms for every observable contract. Reuse common implementations and templates; retain all declarations, local helpers and Throws in each full metric. Identical minimal forms share one physical source and one displayed body.",
+    "metric_boundary": "Whole source file for each of the two compared styles; no excluded error declarations.",
+    "compared_styles": [
+      "procedural",
+      "functional"
+    ],
+    "compatibility_mirror": "functional; not an additional compared listing",
+    "scenario_cases_preserved": true,
+    "runtime_executed": false
+  },
+  "implementation_modules_used_by_haskell_clients": false,
+  "lmx_execution_contract": {
+    "startup_target": "root",
+    "startup_level": "L3 Thread",
+    "root_has_data": false,
+    "root_accepts_user_arguments": false,
+    "local_declarations_and_calls": "The ordinary common language mechanism applies at the root and at later calls.",
+    "case_operation_phase": "after_root_startup",
+    "named_operation_is_startup": false,
+    "case_actuals": "invoke/inputs/args describe ordinary later case operations, not startup arguments for the root.",
+    "argument_fixture": "A parent stub may have its own arguments and send a message to the root; this does not give DATA or user arguments to the root.",
+    "source_dependencies": "Required source definitions and load_before dependencies belong to the fixture. They do not introduce a DATA-load startup or a named alternative entry."
+  },
+  "lmx_runner_contract": "Always start the root as an L3 Thread without DATA or user arguments. Local declarations and calls use the ordinary common language mechanism. An invoke path or named case operation is performed by the root or an ordinary handler after startup; Main and Example\\run are not alternative program entries. A parent stub with its own arguments may send a message to the root. load_before lists required fixture definitions; import exposes existing names, not a new file loader. These records specify acceptance observations and do not claim an executed LMX runner."
+}

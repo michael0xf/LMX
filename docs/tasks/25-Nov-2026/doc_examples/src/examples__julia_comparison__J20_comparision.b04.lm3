@@ -1,0 +1,18 @@
+Order:
+    @: first
+    @: second
+    return: int
+    compare:
+        return: (first\key > second\key) - (first\key < second\key)
+
+Example:
+    @: items
+    int: capacity
+    return: @
+    run:
+        throws: copy(sort\throws) copy(slice\throws)
+        @: ordered sort(items; Order\compare)
+        int: count length(ordered)
+        if: capacity < count
+            count := capacity
+        return: slice(ordered; 0; count)

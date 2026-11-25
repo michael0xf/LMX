@@ -366,8 +366,9 @@ fn: nd_qualified_preflight () int
 # The same copy with an explicit edge to the descriptor. The ordinary graph is copied first: the copied field and
 # the native descriptor of the copied code are one address, and the descriptor is part of the value: its cell is a
 # cell of the profile. The whole selected tree is examined before an immutable value is published (the book,
-# #qualification): a Structure stored in the tree is a branch only when its parent is in the tree, so the full
-# preflight refuses this value. The copy itself is as it was made, and the entry stays live.
+# #qualification): the stored descriptor is a Structure with parent 0, no branch of the tree, and no sealed profile
+# holds it, so it is an outside data reference and the full preflight refuses this value. A reference to an already
+# sealed target and a branch of the tree itself are other cases. The copy is as it was made, and the entry stays live.
 fn: nd_qualified_alias () int
     c.LmxArena: arena
     c.LmxCopyMap: pending
@@ -401,7 +402,7 @@ fn: nd_qualified_alias () int
     # One descriptor for the field and the binding: its cell is a cell of the profile.
     if: c.lmx_range_profile(@ arena, (cast: (@: void) qualified_description)) != qprofile
         return: 208
-    # The stored descriptor is no branch of the tree: the proof refuses the value.
+    # The stored descriptor is no branch of the tree and no sealed profile holds it: the proof refuses the value.
     if: c.lmx_qualify_tree_preflight_full(@ arena, qualified, 0, 0U, 0, 0U, 0, 0U) != c.LMX_QUALIFY_INVALID
         return: 209
     c.lmx_copy_names_finish(@ pending, 0)

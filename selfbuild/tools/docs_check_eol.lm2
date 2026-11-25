@@ -17,6 +17,22 @@ fn: ce_word (char@: data; size_t: first; size_t: last; char@: word) int
     return: 0
 end: ce_word
 
+# Is the record's path one of the five .cmd of the author's C99 bundle, by the exact path? They are LF in the index and
+# CRLF at checkout by their own attribute (vendor/civetweb/.gitattributes: *.cmd text eol=crlf).
+fn: ce_five (char@: data; size_t: first; size_t: last) int
+    if: ce_word(data, first, last, "third_party/lmx_c99_bundle/vendor/civetweb/build.cmd") != 0
+        return: 1
+    if: ce_word(data, first, last, "third_party/lmx_c99_bundle/vendor/civetweb/mingw.cmd") != 0
+        return: 1
+    if: ce_word(data, first, last, "third_party/lmx_c99_bundle/vendor/civetweb/test/windows.cgi.cmd") != 0
+        return: 1
+    if: ce_word(data, first, last, "third_party/lmx_c99_bundle/vendor/civetweb/test/windows_fail.cgi.cmd") != 0
+        return: 1
+    if: ce_word(data, first, last, "third_party/lmx_c99_bundle/vendor/civetweb/test/windows_fail_silent.cgi.cmd") != 0
+        return: 1
+    return: 0
+end: ce_five
+
 os:
     win:
         fn: ce_path_separator (unsigned: byte) int
@@ -180,6 +196,22 @@ fn: ce_endings (char@: data; size_t: count; size_t@: tracked; size_t@: offsets) 
         tracked[0] := tracked[0] + 1U
         if: ce_record(data, first, after, offsets) != 0
             return: 1
+        if: ce_five(data, offsets[4U], offsets[5U]) != 0
+            # One CRLF working copy is by design, and only here: the five .cmd of the author's C99 bundle are i/lf
+            # and w/crlf by their own attribute text eol=crlf. The three facts are required of each of them before
+            # any skip (Sol, 2026-11-25): another state is a finding, and ce_controls still reads the file. No other
+            # path is exempt by an attribute.
+            path := txt_ndup(data + offsets[4U], offsets[5U] - offsets[4U])
+            if: path = 0
+                return: 1
+            if: offsets[6U] != 0U || offsets[8U] != 0U || offsets[7U] = 0U || ce_word(data, offsets[0U], offsets[1U], "i/lf") = 0 || ce_word(data, offsets[2U], offsets[3U], "w/crlf") = 0
+                failed := ce_diagnostic(data, offsets[0U], offsets[3U], path, " (a .cmd of the C99 bundle must be i/lf + w/crlf + text eol=crlf)", @ bad)
+            ---
+            c.free(path)
+            path := 0
+            first := after + 1U
+            continue
+        ---
         if: offsets[6U] = 0U && ce_word(data, offsets[0U], offsets[1U], "i/none") = 0
             path := txt_ndup(data + offsets[4U], offsets[5U] - offsets[4U])
             if: path = 0
@@ -189,13 +221,8 @@ fn: ce_endings (char@: data; size_t: count; size_t@: tracked; size_t@: offsets) 
             else:
                 if: ce_word(data, offsets[0U], offsets[1U], "i/lf") = 0
                     failed := ce_diagnostic(data, offsets[0U], offsets[1U], path, "", @ bad)
-                # One CRLF working copy is by design: a file whose own attribute converts line ends at checkout
-                # (text eol=crlf) is i/lf here and w/crlf in the tree -- the five .cmd of the author's C99 bundle
-                # (Sol, 2026-11-25). The index is still required to be LF; ce_controls still reads the file.
                 if: failed = 0 && (ce_word(data, offsets[2U], offsets[3U], "w/crlf") != 0 || ce_word(data, offsets[2U], offsets[3U], "w/mixed") != 0)
-                    if: offsets[7U] = 0U || offsets[8U] != 0U || ce_word(data, offsets[2U], offsets[3U], "w/crlf") = 0
-                        failed := ce_diagnostic(data, offsets[2U], offsets[3U], path, " (working copy is not LF)", @ bad)
-                    ---
+                    failed := ce_diagnostic(data, offsets[2U], offsets[3U], path, " (working copy is not LF)", @ bad)
                 ---
                 if: failed = 0 && ce_word(data, offsets[2U], offsets[3U], "w/-text") != 0
                     failed := ce_diagnostic(data, offsets[2U], offsets[3U], path, " (git reads the working copy as binary)", @ bad)

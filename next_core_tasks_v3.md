@@ -584,7 +584,10 @@ Full-suite нужен при широком влиянии, общей регр�
   civetweb держат схему `text eol=crlf` (`vendor/civetweb/.gitattributes` побайтно). В `tools/check_docs.py`
   `check_eol` и `docs_check_eol.lm2` `ce_endings`: `w/crlf` не находка при `i/lf` и действующем `text eol=crlf`;
   проверка control-байтов не менялась. Приёмка: в индексе и в чистом checkout итогового коммита все 10 955 строк
-  `SHA256SUMS` автора совпадают (пять `.cmd` — как checkout).
+  `SHA256SUMS` автора совпадают (пять `.cmd` — как checkout). Уточнение по аудиту Sol
+  (`CODER-C99-DONE-20261125-01-EOL-AUDIT`): исключение `i/lf` + `w/crlf` + `text eol=crlf` ограничено пятью точными
+  путями `.cmd` и требуется от каждого из них до всякого пропуска (иначе находка); для прочих путей исключения по
+  атрибуту нет; controls сохранены; два отрицательных контроля на настоящем tool проходят.
 - **29.6. Широкая проверка границы этапа — процедура** (решение Sol и Astra `CODER-G1G2-PROCEDURE-20261125-01-PRELIM`,
   `SOL-ASTRA-G1G2-WIDE-20261125-01`). Штатный `bootstrap quick` на зафиксированных входах и свежей стадии: G0
   (принятый tool с принятым frontend) строит G1, tool G1 со своим frontend строит G2, smoke исполняют оба;

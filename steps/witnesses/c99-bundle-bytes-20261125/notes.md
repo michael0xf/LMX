@@ -51,7 +51,8 @@ libsodium — `aclocal.m4`, `compile`, `config.*`, `configure`, `depcomp`, `inst
 - 268 путей пакета: 41 добавлен, 227 изменён (226 к CRLF, `resource.rc`).
 - `tools/check_docs.py` `check_eol`: `w/crlf` не находка, когда индекс `i/lf` и в атрибутах есть `eol=crlf` без
   `text=false`; `selfbuild/tools/docs_check_eol.lm2` `ce_record` (`offsets[7]` — слово `eol=crlf`, `offsets[8]` —
-  `text=false`; массив 9) и `ce_endings` — то же правило. Проверка control-байтов не менялась.
+  `text=false`; массив 9) и `ce_endings` — то же правило. Проверка control-байтов не менялась. (Это правило было шире
+  решения — оно допускало тройку для любого пути; сужено, см. «Уточнение gate» ниже.)
 - `selfbuild/inputs.sha256`: одна строка (`tools/docs_check_eol.lm2`), манифест `eb9ec0a5…`.
 
 ## Свидетельства
@@ -76,6 +77,28 @@ files (verbatim imports exempt)`; 82 из 82 проверок водителя. 
 автора, пять `.cmd` — как checkout, плохих 0 (`verify-checkout-40f473d1a.txt`). Поддерево пакета в этом дереве —
 `29a740d5079b…`; оно же в коммите. Самый длинный путь пакета от корня репозитория — 151 знак: обычный clone
 укладывается в предел Windows без `core.longpaths`.
+
+## Уточнение gate по аудиту Sol
+
+Аудит Sol (`CODER-C99-DONE-20261125-01-EOL-AUDIT`): принятое в первом коммите правило допускало `i/lf` + `w/crlf` +
+`text eol=crlf` для любого пути и не требовало этой тройки от самих пяти `.cmd`, если те стали `w/lf` или попали в
+общий пропуск (`-text`, `i/none`). По аудиту сделано:
+
+- исключение ограничено пятью точными путями (`C99_CMD` в `tools/check_docs.py`; `ce_five` в
+  `docs_check_eol.lm2`); для всякого прочего пути исключения по атрибуту нет;
+- тройка требуется от каждого из пяти до всякого пропуска: `-text`, `text=false`, `i/none`, `w/lf` или пропавший
+  `eol=crlf` — находка (`a .cmd of the C99 bundle must be i/lf + w/crlf + text eol=crlf`);
+- проверка control-байтов (`check_ctrl`, `ce_controls`) не менялась и по-прежнему читает эти пять файлов.
+
+Свидетельства. Правило Python на девяти синтетических записях: пять как сейчас — 0; одна из пяти с `w/lf`, без
+атрибута, под `-text`, с `i/none`, с `text=false` — по находке; обычный путь с `eol=crlf` и `w/crlf` — находка; обычный
+LF — 0; обычная CRLF-копия — находка. На настоящем дереве и настоящем tool (стадия `CF/coder-gate-build-01`, tool
+`coder-gate-tool01` `694a130e`, frontend `7dedade3`, runtime `fe093e74`, graph `88668fd2`; манифест 1788 `963bf8e7…`;
+P0 модуля `20261125-075810-6ce9269ed0a5`): индекс 287 — зелёный целиком (50 944 отслеженных файла); контроль 1
+(индекс 288) — обычный отслеженный путь с явно приписанным `text eol=crlf` и CRLF-копией снова находка (`working copy is
+not LF`), правило Python — находка; контроль 2 (индекс 289) — `build.cmd` с LF-копией (`i/lf w/lf attr/text
+eol=crlf`) — находка (`a .cmd of the C99 bundle must be i/lf + w/crlf + text eol=crlf`), правило Python — находка. Оба
+файла возвращены (`build.cmd` — SHA автора `e144e63b6be0…`). Цепочка из рабочего дерева: 07:58–08:22.
 
 ## Границы
 

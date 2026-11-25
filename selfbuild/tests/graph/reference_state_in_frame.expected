@@ -1,0 +1,34 @@
+Observed:
+    @: typed int 0
+    @: untouched
+    @: untouched_int int
+    @: zero Box
+    int: seen_first 5
+    int: seen_after 6
+    int: type_untouched 1001029
+    int: type_untouched_int 1001028
+    int: type_set 1001025
+    int: seen_zero 1
+end: Observed
+int: n 5
+sub: build () (
+    Box:
+        int: value 1
+    end: Box
+    @: h Box
+)
+end: build
+build:
+sub: main ()
+    :=: (Observed \ typed) (@ n)
+    :=: (Observed \ seen_first) (\ (Observed \ typed))
+    :=: n 6
+    :=: (Observed \ seen_after) (\ (Observed \ typed))
+    :=: (Observed \ type_untouched) (typeof (Observed [] 1))
+    :=: (Observed \ type_untouched_int) (typeof (Observed [] 2))
+    :=: (Observed \ type_set) (typeof (Observed [] 0))
+    :=: (Observed \ zero) ((build \ data) \ h)
+    :=: (Observed \ seen_zero) ((Observed \ zero) \ value)
+    :=: (Observed \ typed) 0
+end: main
+main:

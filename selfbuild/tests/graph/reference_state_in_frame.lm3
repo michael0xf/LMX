@@ -1,0 +1,33 @@
+# A reference written inside a live frame holds the address of the selected place: the read through it gives the
+# current value after that place changed; an untouched reference stays uninit; a named addressee reads its fields.
+@: Observed (
+    @: typed int
+    @: untouched
+    @: untouched_int int
+    @: zero 0
+    int: seen_first 0
+    int: seen_after 0
+    int: type_untouched 0
+    int: type_untouched_int 0
+    int: type_set 0
+    int: seen_zero 0
+)
+int: n 5
+sub: build () (
+    Box:
+        int: value 1
+    @: h Box
+) ()
+build()
+sub: main ()
+    Observed\typed := @n
+    Observed\seen_first := \(Observed\typed)
+    n := 6
+    Observed\seen_after := \(Observed\typed)
+    Observed\type_untouched := typeof(Observed[1])
+    Observed\type_untouched_int := typeof(Observed[2])
+    Observed\type_set := typeof(Observed[0])
+    Observed\zero := build\data\h
+    Observed\seen_zero := Observed\zero\value
+    Observed\typed := 0
+main()

@@ -1,0 +1,29 @@
+# A supplied actual reaches its input of a structural launch when a Structure stands before that input in the data: the
+# frame reads the supplied Value by the number the formals of the data give the input (step 21.7 K2, the seam).
+# Norm: the book #structural-call (a supplied actual fills the selected place); #call-frame-20261115.
+(
+    Observed:
+        int: seen 0
+)
+sub: main () (
+    D:
+        Box:
+            int: q 1
+        end: Box
+        int: seen 0
+        int: x 0
+    end: D
+    Change:
+        data\seen := x
+    end: Change
+    int: result 0
+)
+    call(args := (int: x 7); data := D; code := Change)
+    data\result := D\seen
+main()
+int: result main\data\result
+
+sub: observe ()
+    @: shared node[0]
+    shared\Observed\seen := result
+observe()

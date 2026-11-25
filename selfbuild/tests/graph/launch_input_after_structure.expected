@@ -1,0 +1,26 @@
+---
+    Observed:
+        int: seen 7
+    end: Observed
+---
+sub: main () (
+    D:
+        Box:
+            int: q 1
+        end: Box
+        int: seen 0
+        int: x 0
+    end: D
+    Change: (:= (data \ seen) x)
+    int: result 0
+)
+    call: (:= args ((int x 7))) (:= data D) (:= code Change)
+    :=: (data \ result) (D \ seen)
+end: main
+main:
+int: result ((main \ data) \ result)
+sub: observe ()
+    @: shared (node [] 0)
+    :=: ((shared \ Observed) \ seen) result
+end: observe
+observe:

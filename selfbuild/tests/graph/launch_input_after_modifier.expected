@@ -1,0 +1,28 @@
+---
+    Observed:
+        int: seen 13
+    end: Observed
+---
+sub: main () (
+    D:
+        required:
+            int: y 1
+            int: z 2
+            int: w 3
+        end: required
+        int: seen 0
+        int: x 0
+    end: D
+    Change: (:= (data \ seen) (((y + z) + w) + x))
+    int: result 0
+)
+    call: (:= args ((int x 7))) (:= data D) (:= code Change)
+    :=: (data \ result) (D \ seen)
+end: main
+main:
+int: result ((main \ data) \ result)
+sub: observe ()
+    @: shared (node [] 0)
+    :=: ((shared \ Observed) \ seen) result
+end: observe
+observe:

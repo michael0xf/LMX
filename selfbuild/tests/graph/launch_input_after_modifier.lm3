@@ -1,0 +1,28 @@
+# A supplied actual reaches an input that stands after three declarations given to one modifier of the data: the number
+# the formals give it lies beyond the count of the fields, and the binder's map must hold it (step 21.7 K2, the seam).
+# Norm: the book #structural-call (a supplied actual fills the selected place); the author 2026-11-18
+# #marking-receivers-execute.
+(
+    Observed:
+        int: seen 0
+)
+sub: main () (
+    D:
+        required(int: y 1; int: z 2; int: w 3)
+        int: seen 0
+        int: x 0
+    end: D
+    Change:
+        data\seen := y + z + w + x
+    end: Change
+    int: result 0
+)
+    call(args := (int: x 7); data := D; code := Change)
+    data\result := D\seen
+main()
+int: result main\data\result
+
+sub: observe ()
+    @: shared node[0]
+    shared\Observed\seen := result
+observe()

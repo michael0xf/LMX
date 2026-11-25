@@ -1,0 +1,129 @@
+# The one pass over the inputs of a data block (step 21.7 K2, the seam; lmx_graph_input_next). The pass keeps three
+# numbers apart for each input: its ordinal among the inputs, the physical slot of the data it stands in and the
+# position of its declaration there. A Structure and `return` are no input and take no number; the declarations given
+# to the modifiers of one field are inputs of their own under the common field. The frame of a structural launch reads
+# the Value a launch supplies by the number the formals of the data give the input (lmx_graph_formal_width), which
+# differs from its ordinal when a Structure, `return` or a callable stands before it. This assertion owner uses the C
+# door only to build a text and to read the graph. Answer 7; another number names the check that failed.
+predef: "l2src/l2_graph_build.lm1"
+predef: "l2src/lmx_graph.h.lm1"
+predef: "l2src/lmx_graph_run.h.lm1"
+predef: "l2src/lmx_call.h.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+fn: gi_named (@: g c.LmxGraph; @: root c.Lmx; @: name char) @: c.Lmx
+    return: (cast: (@: c.Lmx) c.lmx_graph_resolve(g, root, c.lmx_graph_intern(name, c.strlen(name))))
+
+fn: gi_field (@: g c.LmxGraph; @: root c.Lmx; @: name char) @: void
+    return: c.lmx_graph_get_in(g, root, c.lmx_graph_named(g, root, c.lmx_graph_intern(name, c.strlen(name))))
+
+fn: gi_number (@: g c.LmxGraph; @: root c.Lmx; @: name char) int
+    int: number -1000
+    if: c.lmx_graph_value_int(g, gi_field(g, root, name), @ number) != 0
+        return: -1000
+    return: number
+
+fn: gi_expect (@: g c.LmxGraph; int: status; @: value c.LmxWalkValue; int: number; int: case_number) int
+    int: actual -1000
+    if: status != 0 || c.lmx_graph_result_int(g, value, @ actual) != 0 || actual != number
+        c.fprintf(c.stderr, "input pass %d: status=%d value=%d expected=%d\n", case_number, status, actual, number)
+        return: case_number
+    return: 0
+
+# Does the input of the pass carry the numbers it must: its ordinal among the inputs, the physical slot of the data,
+# whether its declaration stands in the data itself (nested 0) or in the arguments of the modifiers of a field
+# (nested 1), its position there, its name, the number the formals of the data give it and the value its declaration
+# holds? 0; another number names the mismatch.
+fn: gi_input (@: g c.LmxGraph; c.LmxGraphInput@: input; @: data c.Lmx; size_t: ordinal; size_t: slot; int: nested; size_t: at; @: name char; size_t: formal; int: value) int
+    char@: text 0
+    int: number -1000
+    if: input\holder = 0 || input\declared = 0 || input\name = 0
+        return: 1
+    if: nested = 0
+        if: input\holder != data
+            return: 2
+        ---
+    else:
+        if: input\holder = data
+            return: 3
+        ---
+    ---
+    text := input\name
+    if: input\ordinal != ordinal || input\slot != slot || input\at != at || input\formal != formal
+        c.fprintf(c.stderr, "input %s: ordinal %d slot %d at %d formal %d\n", text, (cast: (int) input\ordinal), (cast: (int) input\slot), (cast: (int) input\at), (cast: (int) input\formal))
+        return: 4
+    if: c.strcmp(text, name) != 0
+        return: 5
+    if: c.lmx_graph_value_int(g, c.lmx_graph_get_in(g, input\holder, input\at), @ number) != 0 || number != value
+        return: 6
+    if: input\declared != c.lmx_graph_get_in(g, input\holder, input\at)
+        return: 7
+    return: 0
+end: gi_input
+
+fn: gi_check () int
+    c.LmxArena: arena
+    @: g c.LmxGraph 0
+    @: root c.Lmx 0
+    @: d c.Lmx 0
+    @: sum c.Lmx 0
+    @: all c.Lmx 0
+    @: tail c.Lmx 0
+    @: file c.FILE 0
+    c.LmxGraphInputCursor: cursor
+    c.LmxGraphInput: input
+    c.LmxWalkValue: result
+    @: int_word char c.lmx_graph_intern("int", 3U)
+    int: opened 0
+    int: status 0
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ arena) != 0
+        return: 101
+    g := c.lmx_graph_open(@ arena)
+    file := c.fopen("graph_input_pass_code.lm3", "wb")
+    if: g = 0 || file = 0
+        return: 102
+    # D: a Structure and `return` stand before the inputs; two declarations share the field `required`.
+    if: c.fputs("D:\n    Box:\n        int: q 1\n    end: Box\n    return: int\n    int: x 0\n    required:\n        int: y 2\n        int: z 3\n    end: required\n    int: w 4\nend: D\n\nSum:\n    return: x + y + z + w\nend: Sum\n\nAll:\n    int: x 10\n    int: y 20\n    int: z 30\n    int: w 40\nend: All\n\nTail:\n    int: w 40\nend: Tail\n", file) < 0 || c.fclose(file) != 0
+        return: 103
+    status := c.lm_graph_build_file(g, "graph_input_pass_code.lm3", @ root)
+    c.remove("graph_input_pass_code.lm3")
+    if: status != 0 || root = 0 || c.lmx_graph_space_open(g, root, @ opened) != 0
+        return: 104
+    d := gi_named(g, root, "D")
+    sum := gi_named(g, root, "Sum")
+    all := gi_named(g, root, "All")
+    tail := gi_named(g, root, "Tail")
+    if: d = 0 || sum = 0 || all = 0 || tail = 0
+        return: 105
+    # Five fields give six formals: the field `required` holds two declarations.
+    if: c.lmx_graph_count(d) != 5U || c.lmx_graph_formal_width(g, d) != 6U
+        return: 106
+    # Every input supplied by name: 10 + 20 + 30 + 40. The data of the launch keeps its own values.
+    status := c.lmx_graph_launch_value(g, all, d, int_word, sum, @ result)
+    if: gi_expect(g, status, @ result, 100, 107) != 0 || gi_number(g, d, "w") != 4
+        return: 107
+    # The pass: x, y, z, w take the ordinals 0 to 3; the formals give them the numbers 2 to 5.
+    c.memset((cast: (@: void) (@ cursor)), 0, c.sizeof(c.LmxGraphInputCursor))
+    if: c.lmx_graph_input_next(g, d, @ cursor, @ input) != 1 || gi_input(g, @ input, d, 0U, 2U, 0, 2U, "x", 2U, 0) != 0
+        return: 108
+    if: c.lmx_graph_input_next(g, d, @ cursor, @ input) != 1 || gi_input(g, @ input, d, 1U, 3U, 1, 0U, "y", 3U, 2) != 0
+        return: 109
+    if: c.lmx_graph_input_next(g, d, @ cursor, @ input) != 1 || gi_input(g, @ input, d, 2U, 3U, 1, 1U, "z", 4U, 3) != 0
+        return: 110
+    if: c.lmx_graph_input_next(g, d, @ cursor, @ input) != 1 || gi_input(g, @ input, d, 3U, 4U, 0, 4U, "w", 5U, 4) != 0
+        return: 111
+    if: c.lmx_graph_input_next(g, d, @ cursor, @ input) != 0
+        return: 112
+    # A zeroed cursor starts the pass again at the first input: the pass keeps no state of its own.
+    c.memset((cast: (@: void) (@ cursor)), 0, c.sizeof(c.LmxGraphInputCursor))
+    if: c.lmx_graph_input_next(g, d, @ cursor, @ input) != 1 || gi_input(g, @ input, d, 0U, 2U, 0, 2U, "x", 2U, 0) != 0
+        return: 113
+    # Only the last input supplied: 0 + 2 + 3 + 40. The supplied Value is found by the number of its own input.
+    status := c.lmx_graph_launch_value(g, tail, d, int_word, sum, @ result)
+    if: gi_expect(g, status, @ result, 45, 114) != 0 || gi_number(g, d, "w") != 4
+        return: 114
+    c.lmx_graph_space_close(g, opened)
+    c.lmx_graph_close(g)
+    c.lmx_arena_release(@ arena)
+    return: 7

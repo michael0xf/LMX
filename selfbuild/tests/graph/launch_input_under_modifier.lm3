@@ -1,0 +1,33 @@
+# Two declarations given to one modifier of the data are two inputs: each supplied actual reaches its own declaration,
+# by the position of that declaration under the modifier (step 21.7 K2, the seam).
+# Norm: the book #data-root-declaration-execution; the author 2026-11-18 #marking-receivers-execute.
+(
+    Observed:
+        int: seen_y 0
+        int: seen_z 0
+)
+sub: main () (
+    D:
+        required(int: y; int: z)
+        int: seen_y 0
+        int: seen_z 0
+    end: D
+    Change:
+        data\seen_y := y
+        data\seen_z := z
+    end: Change
+    int: result_y 0
+    int: result_z 0
+)
+    call(args := (int: y 9; int: z 5); data := D; code := Change)
+    data\result_y := D\seen_y
+    data\result_z := D\seen_z
+main()
+int: result_y main\data\result_y
+int: result_z main\data\result_z
+
+sub: observe ()
+    @: shared node[0]
+    shared\Observed\seen_y := result_y
+    shared\Observed\seen_z := result_z
+observe()

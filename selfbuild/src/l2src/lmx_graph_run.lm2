@@ -1387,18 +1387,65 @@ fn: lmx_graph_callee_data (c.LmxGraph@: g; c.Lmx@: code) c.Lmx@
         return: code
     return: owner
 
-# Is the unmarked field index of data an input of a structural call (the book #fn-signature: `return` describes a
-# result and is no input, a nested user Structure is not automatically a formal; #binding-places, Р146)? A place
-# declaration -- the notion of a place the rows use (lmx_graph_binding_name). Structures, callables and executable
-# records stay visible by name (lmx_graph_space_declarations) and open no row. 1 or 0.
-fn: lmx_graph_input_field (c.LmxGraph@: g; c.Lmx@: data; size_t: index) int
+# The one pass over the inputs of a data block (step 21.7 K2): each call answers the next input and moves the cursor; 0
+# ends the pass. The fields are taken in written order. A field whose modifiers take declarations (lmx_graph_marked_count)
+# gives each of them as an input of its own (lmx_graph_declared_at): its position is the arguments of the modifiers and
+# its index there; any other field is one place, an input when it declares a place whose name is not `return` (the book
+# #fn-signature: `return` describes a result and is no input; #binding-places, Р146; lmx_graph_binding_name names the
+# place once). Structures, callables and executable records declare no place, stay visible by name
+# (lmx_graph_space_declarations) and are no input. Three numbers are kept apart in input: the ordinal among the inputs,
+# the physical slot of the data the input stands in, and the position of its declaration. formal is the number the
+# formals of the data give the same input (lmx_graph_formal_width), apart from the ordinal: the Values of a legacy
+# launch are indexed by it. The cursor starts zeroed. 1 and the next input in input; 0 at the end; 2 for a field whose
+# declarations cannot be read.
+fn: lmx_graph_input_next (c.LmxGraph@: g; c.Lmx@: data; c.LmxGraphInputCursor@: cursor; c.LmxGraphInput@: input) int
     c.LmxGraphState@: state (cast: (c.LmxGraphState@) c.lmx_graph_state())
     char@: name 0
+    @: raw void 0
+    size_t: marked 0U
+    size_t: count c.lmx_graph_count(data)
     int: place 0
-    name := lmx_graph_binding_name(g, data, c.lmx_graph_binding_leaf(g, c.lmx_graph_get_in(g, data, index)), 1, @ place)
-    if: name = 0 || state = 0 || name = state\w_return
-        return: 0
-    return: place
+    if: cursor = 0 || input = 0
+        return: 2
+    while: cursor\field < count
+        marked := lmx_graph_marked_count(g, data, cursor\field)
+        if: marked != 0U
+            if: c.lmx_graph_declared_at(g, data, cursor\field, cursor\declared, @ input\holder, @ input\at) != 0
+                return: 2
+            ---
+            raw := c.lmx_graph_get_in(g, input\holder, input\at)
+            input\declared := raw
+            input\slot := cursor\field
+            input\ordinal := cursor\ordinal
+            input\formal := cursor\formal
+            input\name := lmx_graph_binding_name(g, data, raw, 1, @ place)
+            cursor\ordinal := cursor\ordinal + 1U
+            cursor\formal := cursor\formal + 1U
+            cursor\declared := cursor\declared + 1U
+            if: cursor\declared = marked
+                cursor\declared := 0U
+                cursor\field := cursor\field + 1U
+            ---
+            return: 1
+        ---
+        raw := c.lmx_graph_binding_leaf(g, c.lmx_graph_get_in(g, data, cursor\field))
+        name := lmx_graph_binding_name(g, data, raw, 1, @ place)
+        input\formal := cursor\formal
+        cursor\formal := cursor\formal + 1U
+        input\slot := cursor\field
+        cursor\field := cursor\field + 1U
+        if: state != 0 && name != 0 && name != state\w_return && place != 0
+            input\holder := data
+            input\at := input\slot
+            input\declared := raw
+            input\name := name
+            input\ordinal := cursor\ordinal
+            cursor\ordinal := cursor\ordinal + 1U
+            return: 1
+        ---
+    ---
+    return: 0
+end: lmx_graph_input_next
 
 # One invocation owns its namespace. Only DATA root fields are installed at
 # entry; CODE declarations create their local rows when reached. No default
@@ -1409,6 +1456,9 @@ fn: lmx_graph_work_open_parts (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: data; c.Lmx
     size_t: i 0U
     size_t: marked 0U
     size_t: ordinal 0U
+    c.LmxGraphInputCursor: cursor
+    c.LmxGraphInput: input
+    int: next 1
     int: status 0
     int: view 0
     if: frame = 0 || active = 0 || active\code != code || body = 0
@@ -1433,21 +1483,41 @@ fn: lmx_graph_work_open_parts (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: data; c.Lmx
     if: status = 0 && body != data
         status := lmx_graph_space_declarations(g, body)
     # A structural launch (body = C, data not C: its parent, lmx_graph_callee_data, or the data given by `S(D)` or
-    # `call(D; C)`) opens a row for each input of its data only (lmx_graph_input_field; the book #fn-signature: the
-    # input positions are the declared input places of the data): a field that is no input opens no row and takes no
-    # ordinal. A callable's data part (its body is its code part, not the callable) and a Structure over itself keep a
-    # row per field, as before: the data of an fn may hold Structures, and they keep their positions there. The test
-    # costs an FN call one comparison.
+    # `call(D; C)`) opens a row for each input of its data only (the one pass, lmx_graph_input_next; the book
+    # #fn-signature: the input positions are the declared input places of the data): a field that is no input opens no
+    # row and takes no ordinal. A callable's data part (its body is its code part, not the callable) and a Structure
+    # over itself keep a row per field, as before: the data of an fn may hold Structures, and they keep their positions
+    # there. The test costs an FN call one comparison.
     view := (cast: (int) (body = code && data != code))
-    while: i < c.lmx_graph_count(data) && status = 0
-        marked := lmx_graph_marked_count(g, data, i)
-        if: marked != 0U
-            status := lmx_graph_work_open_marked(g, frame, data, body, i, marked, ordinal)
-            ordinal := ordinal + marked
-        if: marked = 0U && (view = 0 || lmx_graph_input_field(g, data, i) != 0)
-            status := lmx_graph_work_open_row(g, frame, data, body, i, c.lmx_graph_binding_leaf(g, c.lmx_graph_get_in(g, data, i)), 1, ordinal)
-            ordinal := ordinal + 1U
-        i := i + 1U
+    if: view != 0
+        # A structural launch opens its rows by the one pass over the inputs (lmx_graph_input_next): a field that is no
+        # input takes no number. The Values a launch supplies are indexed by the number the formals of the data give
+        # the input (lmx_graph_bind_fields_mode, lmx_graph_invoke_data_value). The two numbers differ when a Structure,
+        # `return` or a callable stands before an input: the supplied Value is read by the formal number.
+        cursor\field := 0U
+        cursor\declared := 0U
+        cursor\ordinal := 0U
+        cursor\formal := 0U
+        while: status = 0 && next = 1
+            next := lmx_graph_input_next(g, data, @ cursor, @ input)
+            if: next = 1
+                status := lmx_graph_work_open_row(g, frame, data, body, input\slot, (cast: (@) input\declared), 1, input\formal)
+            ---
+            if: next = 2
+                status := 2
+            ---
+        ---
+    else:
+        while: i < c.lmx_graph_count(data) && status = 0
+            marked := lmx_graph_marked_count(g, data, i)
+            if: marked != 0U
+                status := lmx_graph_work_open_marked(g, frame, data, body, i, marked, ordinal)
+                ordinal := ordinal + marked
+            if: marked = 0U
+                status := lmx_graph_work_open_row(g, frame, data, body, i, c.lmx_graph_binding_leaf(g, c.lmx_graph_get_in(g, data, i)), 1, ordinal)
+                ordinal := ordinal + 1U
+            i := i + 1U
+        ---
     ---
     # No pass over the body here (the author 2026-11-18, journal section 19): a free name is resolved when a consumer needs it as a place (lmx_graph_input_take) or reads it.
     if: status != 0
@@ -7069,7 +7139,10 @@ fn: lmx_graph_launch_value (c.LmxGraph@: g; c.Lmx@: given_args; c.Lmx@: given_da
     if: given_args != 0 && c.lmx_graph_kind(g, (cast: (@) args)) != 4
         return: 5
     count := c.lmx_graph_count(args)
-    width := c.lmx_graph_count(data)
+    # The width the binder gives the formals of the data (lmx_graph_bind_fields_mode): from is indexed by it, and the
+    # search for the slot of an actual runs to it -- a declaration given to the modifiers of a field has a number of its
+    # own, beyond the count of the fields.
+    width := lmx_graph_formal_width(g, data)
     values := (cast: (c.LmxWalkValue@) c.calloc(count + 1U, c.sizeof(c.LmxWalkValue)))
     bindings := (cast: (size_t@) c.calloc(count + 1U, sizeof(size_t)))
     from := (cast: (size_t@) c.calloc(width + 1U, sizeof(size_t)))

@@ -1,0 +1,17 @@
+#include "sokol_gfx.h"
+#define SOKOL_GL_IMPL
+#include "sokol_gl.h"
+#define SOKOL_SHAPE_IMPL
+#include "sokol_shape.h"
+#define SOKOL_COLOR_IMPL
+#include "sokol_color.h"
+#define SOKOL_DEBUGTEXT_IMPL
+#include "sokol_debugtext.h"
+#define SOKOL_MEMTRACK_IMPL
+#include "sokol_memtrack.h"
+#define SOKOL_LETTERBOX_IMPL
+#include "sokol_letterbox.h"
+#define SOKOL_FRAMEBUFFER_IMPL
+#include "sokol_framebuffer.h"
+#define SOKOL_CMDBUF_IMPL
+#include "sokol_cmdbuf.h"

@@ -1,0 +1,27 @@
+# Scope normal options so the parent collection's cache policy is preserved.
+function(_lmx_add_webp)
+  set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
+  set(BUILD_SHARED_LIBS OFF)
+  set(WEBP_LINK_STATIC ON)
+  set(WEBP_ENABLE_SIMD OFF)
+  set(WEBP_USE_THREAD ON)
+  set(WEBP_BUILD_LIBWEBPMUX ON)
+  set(WEBP_ENABLE_WUNUSED_RESULT OFF)
+  foreach(_option WEBP_BUILD_ANIM_UTILS WEBP_BUILD_CWEBP WEBP_BUILD_DWEBP
+      WEBP_BUILD_GIF2WEBP WEBP_BUILD_IMG2WEBP WEBP_BUILD_VWEBP WEBP_BUILD_WEBPINFO
+      WEBP_BUILD_WEBPMUX WEBP_BUILD_EXTRAS WEBP_BUILD_WEBP_JS WEBP_BUILD_FUZZTEST)
+    set(${_option} OFF)
+  endforeach()
+  add_subdirectory("${_media_generated}/webp" "${CMAKE_CURRENT_BINARY_DIR}/webp")
+  foreach(_target sharpyuv webpdecode webpdspdecode webputilsdecode webpdecoder
+      webpencode webpdsp webputils webp webpdemux libwebpmux)
+    if(TARGET ${_target})
+      lmx_c99_target(${_target})
+      set_target_properties(${_target} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    endif()
+  endforeach()
+endfunction()
+_lmx_add_webp()
+add_library(LMX::webp ALIAS webp)
+add_library(LMX::webpdemux ALIAS webpdemux)
+add_library(LMX::webpmux ALIAS libwebpmux)

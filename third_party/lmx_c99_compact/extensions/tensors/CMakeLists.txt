@@ -1,0 +1,81 @@
+cmake_minimum_required(VERSION 3.20)
+if(NOT COMMAND lmx_c99_target)
+    message(FATAL_ERROR "The tensors group requires the collection lmx_c99_target helper")
+endif()
+
+set(_ut_vendor "${LMX_VENDOR_DIR}/utensil")
+set(_ut_generated "${CMAKE_CURRENT_BINARY_DIR}/generated/utensil")
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/UtensilView.cmake")
+lmx_utensil_view("${_ut_vendor}" "${_ut_generated}")
+
+# Upstream defines its externally linked functions in the header itself.
+# This INTERFACE target deliberately does not pretend to be an empty .a.
+# A program must include <utensil.h> in exactly one translation unit, or put
+# it behind its own declaration facade. See REPORT_RU.md for that contract.
+add_library(lmx_utensil INTERFACE)
+add_library(LMX::utensil ALIAS lmx_utensil)
+target_include_directories(lmx_utensil INTERFACE "${_ut_generated}")
+target_compile_definitions(lmx_utensil INTERFACE LMX_UTENSIL_CPU_ONLY=1)
+lmx_c99_target(lmx_utensil)
+if(UNIX)
+    target_link_libraries(lmx_utensil INTERFACE m)
+endif()
+
+add_library(lmx_tensors INTERFACE)
+add_library(LMX::tensors ALIAS lmx_tensors)
+target_link_libraries(lmx_tensors INTERFACE LMX::utensil)
+
+# A small reviewed CPU tensor subset. Original source has no stated license;
+# it is included under the user's explicit no-license-is-not-an-exclusion rule.
+find_package(Python3 3.8 REQUIRED COMPONENTS Interpreter)
+set(_mint_generated "${CMAKE_CURRENT_BINARY_DIR}/generated/mint")
+set(_mint_test_args)
+if(BUILD_TESTING)
+    list(APPEND _mint_test_args --with-tests)
+endif()
+execute_process(COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/scripts/mint_view.py"
+    "${LMX_VENDOR_DIR}/mint" "${_mint_generated}" ${_mint_test_args}
+    RESULT_VARIABLE _mint_result)
+if(NOT _mint_result EQUAL 0)
+    message(FATAL_ERROR "Could not prepare the reviewed Mint view")
+endif()
+add_library(lmx_mint INTERFACE)
+add_library(LMX::mint ALIAS lmx_mint)
+target_include_directories(lmx_mint INTERFACE "${_mint_generated}")
+target_compile_definitions(lmx_mint INTERFACE LMX_MINT_TENSORS_ONLY=1)
+lmx_c99_target(lmx_mint)
+if(UNIX)
+    target_link_libraries(lmx_mint INTERFACE m)
+endif()
+target_link_libraries(lmx_tensors INTERFACE LMX::mint)
+
+if(BUILD_TESTING)
+    add_executable(lmx_utensil_upstream "${_ut_generated}/test.c")
+    lmx_c99_target(lmx_utensil_upstream)
+    target_link_libraries(lmx_utensil_upstream PRIVATE LMX::utensil)
+    add_test(NAME tensors.utensil_upstream COMMAND lmx_utensil_upstream)
+    set_tests_properties(tensors.utensil_upstream PROPERTIES TIMEOUT 30)
+    add_executable(lmx_mint_upstream "${_mint_generated}/tensor.c")
+    lmx_c99_target(lmx_mint_upstream)
+    target_link_libraries(lmx_mint_upstream PRIVATE LMX::mint)
+    add_test(NAME tensors.mint_upstream COMMAND lmx_mint_upstream)
+    set_tests_properties(tensors.mint_upstream PROPERTIES TIMEOUT 30)
+endif()
+
+if(BUILD_TESTING OR LMX_BUILD_EXAMPLES)
+    add_executable(lmx_utensil_example "${CMAKE_CURRENT_SOURCE_DIR}/examples/cpu_tensor.c")
+    lmx_c99_target(lmx_utensil_example)
+    target_link_libraries(lmx_utensil_example PRIVATE LMX::utensil)
+    if(BUILD_TESTING)
+        add_test(NAME tensors.utensil_sample COMMAND lmx_utensil_example)
+        set_tests_properties(tensors.utensil_sample PROPERTIES TIMEOUT 15)
+    endif()
+    add_executable(lmx_mint_example "${CMAKE_CURRENT_SOURCE_DIR}/examples/mint_tensor.c")
+    lmx_c99_target(lmx_mint_example)
+    target_link_libraries(lmx_mint_example PRIVATE LMX::mint)
+    if(BUILD_TESTING)
+        add_test(NAME tensors.mint_sample COMMAND lmx_mint_example)
+        set_tests_properties(tensors.mint_sample PROPERTIES TIMEOUT 15)
+    endif()
+endif()

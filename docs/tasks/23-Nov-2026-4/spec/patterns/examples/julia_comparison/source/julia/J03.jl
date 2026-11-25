@@ -1,1 +1,0 @@
-example(xs) = reverse(xs)

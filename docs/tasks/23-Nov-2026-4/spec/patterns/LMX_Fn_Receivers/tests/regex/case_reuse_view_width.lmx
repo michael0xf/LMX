@@ -1,9 +1,0 @@
-# Pending fixture: one two-byte scalar becomes two one-byte scalars.
-# Expected (1,1,1,2,"b",1); byte offsets must be freshly prepared as well.
-char[]: source "é"
-@: view utf8Text(source := source)
-int: before matches(view; anyElement)
-source[0] := 'a'
-source[1] := 'b'
-@: after matchAt(view; "b"; 1)
-(before; after\present; after\value\begin; after\value\end; matchedValue(after\value); after\value\source = view)

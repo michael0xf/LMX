@@ -100,31 +100,22 @@ def check_eol():
     Only the explicit -text attribute of .gitattributes exempts a path -- verbatim imports and the binaries named
     there by extension.  Git's own guess (i/-text) is not an exemption: a lone CR, a NUL or too many control bytes
     make git read a text file as binary, and steps/review-log.md passed both checks that way with one eaten `\r`
-    (REVIEW 0b60c45).  i/none -- no line break at all -- has no ending to check.  The only CRLF working copy by
-    design is one of the five .cmd of the author's C99 bundle (C99_CMD): LF in the index, CRLF at checkout by its own
-    attribute text eol=crlf.  The three facts are required of each of them before any skip (Sol, 2026-11-25): another
-    state is a finding, and check_ctrl still reads them.  No other path is exempt by an attribute.'''
+    (REVIEW 0b60c45).  i/none -- no line break at all -- has no ending to check.'''
     import subprocess
-    # The five .cmd of the author's C99 bundle, by their exact paths (vendor/civetweb/.gitattributes: *.cmd text eol=crlf).
-    C99_CMD={'third_party/lmx_c99_bundle/vendor/civetweb/build.cmd','third_party/lmx_c99_bundle/vendor/civetweb/mingw.cmd','third_party/lmx_c99_bundle/vendor/civetweb/test/windows.cgi.cmd','third_party/lmx_c99_bundle/vendor/civetweb/test/windows_fail.cgi.cmd','third_party/lmx_c99_bundle/vendor/civetweb/test/windows_fail_silent.cgi.cmd'}
     out=subprocess.run(['git','-C',str(ROOT),'ls-files','--eol','-z'],capture_output=True,check=True).stdout
     NUL=bytes([0]);TAB=bytes([9]);bad=[];seen=0
     for rec in out.split(NUL):
         if not rec:continue
         seen+=1
         head,path=rec.split(TAB,1)
-        fields=head.split();name=path.decode()
-        index=fields[0].decode();attrs=b' '.join(fields[2:]).decode();work=fields[1].decode()
-        if name in C99_CMD:
-            # Before the general skip: -text, text=false or a missing eol=crlf does not make it an ordinary file.
-            if not (index=='i/lf' and work=='w/crlf' and 'eol=crlf' in attrs.split() and '-text' not in attrs and 'attr/text=false' not in attrs):
-                bad.append(index+' '+work+' '+name+' (a .cmd of the C99 bundle must be i/lf + w/crlf + text eol=crlf)')
-            continue
+        fields=head.split()
+        index=fields[0].decode();attrs=b' '.join(fields[2:]).decode()
         if '-text' in attrs or index=='i/none':continue
-        if index=='i/-text':bad.append(index+' '+name+' (git reads it as binary: a lone CR, a NUL or control bytes? a real binary needs -text in .gitattributes)');continue
-        if index!='i/lf':bad.append(index+' '+name)
-        if work in ('w/crlf','w/mixed'):bad.append(work+' '+name+' (a tool or editor wrote CRLF into the working tree)')
-        if work=='w/-text':bad.append(work+' '+name+' (git reads the working copy as binary: a lone CR, a NUL or control bytes?)')
+        if index=='i/-text':bad.append(index+' '+path.decode()+' (git reads it as binary: a lone CR, a NUL or control bytes? a real binary needs -text in .gitattributes)');continue
+        if index!='i/lf':bad.append(index+' '+path.decode())
+        work=fields[1].decode()
+        if work in ('w/crlf','w/mixed'):bad.append(work+' '+path.decode()+' (a tool or editor wrote CRLF into the working tree)')
+        if work=='w/-text':bad.append(work+' '+path.decode()+' (git reads the working copy as binary: a lone CR, a NUL or control bytes?)')
     assert not bad,'CRLF or mixed line endings (LF everywhere; index and working tree): '+', '.join(bad[:12])+(' ... %d files'%len(bad) if len(bad)>12 else '')
     check_ctrl(out)
     return seen

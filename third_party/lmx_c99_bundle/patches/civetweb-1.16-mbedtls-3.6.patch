@@ -1,0 +1,58 @@
+--- a/src/mod_mbedtls.inl
++++ b/src/mod_mbedtls.inl
+@@ -1,6 +1,10 @@
+ #if defined(USE_MBEDTLS) // USE_MBEDTLS used with NO_SSL
+ 
++#include "mbedtls/version.h"
+ #include "mbedtls/ctr_drbg.h"
++#if defined(MBEDTLS_PSA_CRYPTO_C)
++#include "psa/crypto.h"
++#endif
+ #include "mbedtls/debug.h"
+ #include "mbedtls/entropy.h"
+ #include "mbedtls/error.h"
+@@ -62,6 +66,11 @@
+ 	}
+ 
+ 	DEBUG_TRACE("%s", "Initializing MbedTLS SSL");
++#if defined(MBEDTLS_PSA_CRYPTO_C)
++	if (psa_crypto_init() != PSA_SUCCESS) {
++		return -1;
++	}
++#endif
+ 	mbedtls_entropy_init(&ctx->entropy);
+ 
+ 	conf = &ctx->conf;
+@@ -177,7 +186,13 @@
+ 	}
+ 
+ 	mbedtls_ssl_init(*ssl);
+-	mbedtls_ssl_setup(*ssl, &ssl_ctx->conf);
++	rc = mbedtls_ssl_setup(*ssl, &ssl_ctx->conf);
++	if (rc != 0) {
++		mbedtls_ssl_free(*ssl);
++		mg_free(*ssl);
++		*ssl = NULL;
++		return -1;
++	}
+ 	mbedtls_ssl_set_bio(*ssl, sock, mbedtls_net_send, mbedtls_net_recv, NULL);
+ 	rc = mbed_ssl_handshake(*ssl);
+ 	if (rc != 0) {
+@@ -188,7 +203,7 @@
+ 		return -1;
+ 	}
+ 
+-	DEBUG_TRACE("TLS connection %p accepted, state: %d", ssl, (*ssl)->state);
++	DEBUG_TRACE("TLS connection %p accepted", ssl);
+ 	return 0;
+ }
+ 
+@@ -214,7 +229,7 @@
+ 		}
+ 	}
+ 
+-	DEBUG_TRACE("TLS handshake rc: %d, state: %d", rc, ssl->state);
++	DEBUG_TRACE("TLS handshake rc: %d", rc);
+ 	return rc;
+ }
+ 

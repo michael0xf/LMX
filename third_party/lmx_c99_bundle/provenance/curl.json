@@ -1,0 +1,89 @@
+{
+  "name": "curl",
+  "version": "8.23.0",
+  "archive": "curl-8.23.0.tar.xz",
+  "url": "https://curl.se/download/curl-8.23.0.tar.xz",
+  "sha256": "8dadd7d2536a314f982ad05a651b713f426bf7d02cc2c76cffb9796f2218e6c5",
+  "bytes": 2990916,
+  "hash_verified_against_upstream": true,
+  "release_date": "2026-10-14",
+  "retrieved_utc": "2026-11-25",
+  "release_kind": "latest official stable release as of retrieval date",
+  "hash_reference": "https://api.github.com/repos/curl/curl/releases/tags/curl-8_23_0 (asset digest)",
+  "version_reference": "https://curl.se/docs/versions.html",
+  "selection": "Complete original release source tree; no upstream files modified",
+  "license": "curl; COPYING retained",
+  "original_file_verification": {
+    "regular_files_compared": 4515,
+    "missing": [],
+    "changed": [],
+    "extra": []
+  },
+  "cmake_adapter": "cmake/CURL_ZLIB.cmake",
+  "configuration_downloads": false,
+  "validation": {
+    "build_status": "passed",
+    "date_utc": "2026-11-25",
+    "platform": "Linux x86_64",
+    "compiler": "GCC 14.2.0",
+    "cmake": "4.4.5",
+    "configuration": "Release",
+    "c_standard": "-std=c99",
+    "diagnostics": "-pedantic-errors",
+    "clean_cache_rebuild": true,
+    "compile_commands_standard_and_diagnostics_verified": true,
+    "detailed_report": "docs/validation/network_mbedtls_report.json",
+    "limitations": [
+      "Only Linux x86-64 tested; macOS, ARM64, 32-bit and native Windows not tested",
+      "Current Mbed TLS CMake adapter requires POSIX pthreads; native Windows unsupported",
+      "Complete upstream test suites not run",
+      "WS/WSS data exchange and IPv6 connections not tested",
+      "CivetWeb 1.16 Mbed TLS backend does not implement TLS client API or server mTLS",
+      "curl_global_cleanup must follow shutdown of all other users of shared Mbed TLS/PSA"
+    ],
+    "compiled_upstream_c_translation_units": 195,
+    "tests_passed": [
+      "curl_version_and_url",
+      "curl_local_http_gzip",
+      "network_https_verified_and_rejected"
+    ],
+    "runtime_version": "libcurl/8.23.0 mbedTLS/3.6.7 zlib/1.4",
+    "dynamic_libraries_in_smoke_executable": [
+      "libc.so.6",
+      "Linux loader"
+    ]
+  },
+  "targets": [
+    "LMX::curl",
+    "CURL::libcurl",
+    "libcurl_static"
+  ],
+  "required_dependencies": [
+    "Bundled Mbed TLS 3.6.7 (mbedtls, mbedx509, mbedcrypto)",
+    "Bundled zlib 1.4",
+    "POSIX C runtime, sockets/resolver and pthreads"
+  ],
+  "external_dependencies_used": [
+    "System POSIX C runtime, sockets/resolver and pthreads; no separately installed third-party TLS or compression library"
+  ],
+  "disabled_external_features": [
+    "c-ares",
+    "Brotli",
+    "curl Zstandard decoder",
+    "libpsl",
+    "libidn2",
+    "LDAP",
+    "libssh/libssh2",
+    "HTTP/2 nghttp2",
+    "HTTP/3 ngtcp2/nghttp3/quiche/OpenSSL-QUIC",
+    "GSSAPI/GSASL",
+    "libuv",
+    "alternative TLS backends"
+  ],
+  "bundled_zlib_integration": "CURL_ZLIB discovery disabled; HAVE_LIBZ=1 compile definition; libcurl_static links ZLIB::ZLIB -> zlibstatic; runtime gzip test passed",
+  "archive_url": "https://curl.se/download/curl-8.23.0.tar.xz",
+  "archive_file": "curl-8.23.0.tar.xz",
+  "archive_sha256": "8dadd7d2536a314f982ad05a651b713f426bf7d02cc2c76cffb9796f2218e6c5",
+  "archive_bytes": 2990916,
+  "tls_backend": "Mbed TLS 3.6.7; shared static targets with CivetWeb"
+}

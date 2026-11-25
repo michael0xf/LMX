@@ -1,0 +1,58 @@
+{
+  "commands": [
+    {
+      "stage": "configure",
+      "argv": [
+        "cmake",
+        "-S",
+        "/workspace/scratch/05cde3c7227a/lmx_c99_bundle",
+        "-B",
+        "/workspace/scratch/05cde3c7227a/final_collection_check/build",
+        "-G",
+        "Ninja",
+        "-DCMAKE_BUILD_TYPE=Release",
+        "-DBUILD_TESTING=ON",
+        "-DLMX_BUILD_EXAMPLES=ON",
+        "-DLMX_STRICT_C99=ON",
+        "-DLMX_WITH_SQLITE3=ON"
+      ],
+      "exit_code": 0,
+      "seconds": 0.378
+    },
+    {
+      "stage": "build",
+      "argv": [
+        "cmake",
+        "--build",
+        "/workspace/scratch/05cde3c7227a/final_collection_check/build",
+        "--parallel",
+        "8"
+      ],
+      "exit_code": 0,
+      "seconds": 21.706
+    },
+    {
+      "stage": "ctest",
+      "argv": [
+        "ctest",
+        "--test-dir",
+        "/workspace/scratch/05cde3c7227a/final_collection_check/build",
+        "--output-on-failure",
+        "--parallel",
+        "4",
+        "--output-junit",
+        "/workspace/scratch/05cde3c7227a/final_collection_check/ctest-results.xml"
+      ],
+      "exit_code": 0,
+      "seconds": 2.714
+    },
+    {
+      "stage": "sqlite_example",
+      "argv": [
+        "/workspace/scratch/05cde3c7227a/final_collection_check/build/lmx_sqlite3_example"
+      ],
+      "exit_code": 0,
+      "seconds": 0.003
+    }
+  ]
+}

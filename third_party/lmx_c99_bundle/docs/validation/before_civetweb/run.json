@@ -1,0 +1,52 @@
+{
+  "commands": [
+    {
+      "stage": "configure",
+      "argv": [
+        "cmake",
+        "-S",
+        "/workspace/scratch/05cde3c7227a/release12_check/lmx_c99_bundle",
+        "-B",
+        "/workspace/scratch/05cde3c7227a/release12_check/build",
+        "-G",
+        "Ninja",
+        "-DCMAKE_BUILD_TYPE=Release",
+        "-DLMX_GSL_UPSTREAM_TESTS=ON",
+        "-DLMX_GMP_MPFR_UPSTREAM_TESTS=ON",
+        "-DLMX_SODIUM_UPSTREAM_TESTS=ON",
+        "-DLMX_KLIB_POSIX=ON",
+        "-DLMX_KLIB_THREADS=ON"
+      ],
+      "exit_code": 0,
+      "seconds": 0.356
+    },
+    {
+      "stage": "build",
+      "argv": [
+        "cmake",
+        "--build",
+        "/workspace/scratch/05cde3c7227a/release12_check/build",
+        "--parallel",
+        "8"
+      ],
+      "exit_code": 0,
+      "seconds": 21.629
+    },
+    {
+      "stage": "ctest",
+      "argv": [
+        "ctest",
+        "--test-dir",
+        "/workspace/scratch/05cde3c7227a/release12_check/build",
+        "--output-on-failure",
+        "--parallel",
+        "4",
+        "--output-junit",
+        "/workspace/scratch/05cde3c7227a/release12_check/ctest-results.xml"
+      ],
+      "exit_code": 0,
+      "seconds": 41.776
+    }
+  ],
+  "note": "Library sources extracted from ZIP; adapters corrected after discovering optional-demo regeneration and script executable-bit assumptions. Vendor files remain unchanged."
+}

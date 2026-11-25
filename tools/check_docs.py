@@ -126,7 +126,15 @@ def check_ctrl(listing):
     L1 text through a non-raw Python string turned `\\b`, `\\f`, `\\a`, `\\v` into bytes 8, 12, 7, 11
     (REVIEW b307a0f; 10 such bytes found 2026-09-27).  -text imports and git's binaries are exempt, as
     in check_eol (only the explicit attribute, never git's guess); dev/mixa_sandbox is not touched until the
-    kernel is finished (author, q34), its one byte is a debt in next_core_tasks.md §9.'''
+    kernel is finished (author, q34), its one byte is a debt in next_core_tasks.md §9.
+    The vendored sources of the author's compact C99 bundle keep three control bytes as their authors issued
+    them, by path and byte only (Sol, 2026-11-25): a form feed (0x0C, the pagination of Cephes) in the .c and .h
+    files under third_party/lmx_c99_compact/vendor/cephes/, an escape (0x1B, ANSI decoration) in two scripts of
+    libsodium and a bell (0x07, a literal FS in awk) in two configure scripts.  Only that byte is skipped on that
+    path: any other control byte of the same line is a finding, and the line endings of these files stay under
+    check_eol.'''
+    CTRL_C99='third_party/lmx_c99_compact/'
+    CTRL_BYTES={CTRL_C99+'vendor/libsodium/build-aux/ltmain.sh':{0x1B},CTRL_C99+'vendor/libsodium/test/default/Makefile.in':{0x1B},CTRL_C99+'vendor/libsodium/configure':{0x07},CTRL_C99+'vendor/postgresql/configure':{0x07}}
     NUL=bytes([0]);TAB=bytes([9]);bad=[]
     for rec in listing.split(NUL):
         if not rec:continue
@@ -136,8 +144,10 @@ def check_ctrl(listing):
         name=path.decode()
         if '-text' in attrs or name.startswith('dev/mixa_sandbox/'):continue
         data=(ROOT/name).read_bytes()
+        allowed=CTRL_BYTES.get(name,set())
+        if name.startswith(CTRL_C99+'vendor/cephes/') and name.endswith(('.c','.h')):allowed=allowed|{0x0C}
         for n,line in enumerate(data.split(b'\n'),1):
-            hit=[b for b in line if b<32 and b not in (9,13)]
+            hit=[b for b in line if b<32 and b not in (9,13) and b not in allowed]
             if hit:bad.append('%s:%d byte %d'%(name,n,hit[0]))
     assert not bad,'control bytes in tracked text (a non-raw string ate a backslash escape?): '+', '.join(bad[:12])+(' ... %d'%len(bad) if len(bad)>12 else '')
 

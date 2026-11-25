@@ -1,0 +1,20 @@
+# Two calls of the written name in one live scope are served by the declaration applied at the first one.
+@: D (
+    int: first 0
+    int: second 0
+)
+fn: outer () int (
+    prepared:
+        args: (int: a)
+        return: int
+        code: (return: a * 3)
+    fn: local prepared
+    int: first 0
+    int: second 0
+)
+    first := local(a := 3)
+    second := local(4)
+    node\D\first := first
+    node\D\second := second
+    return: first + second
+outer()

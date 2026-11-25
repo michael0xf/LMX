@@ -1,0 +1,21 @@
+D:
+    int: first 9
+    int: second 12
+end: D
+fn: outer () int (
+    prepared:
+        args: ((int a))
+        return: int
+        code: ((return (a * 3)))
+    end: prepared
+    fn: local prepared
+    int: first 0
+    int: second 0
+)
+    :=: first (local (:= a 3))
+    :=: second (local 4)
+    :=: ((node \ D) \ first) first
+    :=: ((node \ D) \ second) second
+    return: (first + second)
+end: outer
+outer:

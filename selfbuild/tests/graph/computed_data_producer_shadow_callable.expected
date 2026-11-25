@@ -1,0 +1,28 @@
+int: ticks 1
+D:
+    int: here 3
+    int: there 1
+end: D
+fn: tick () int
+    :=: (node \ ticks) ((node \ ticks) + 1)
+    return: 1
+end: tick
+fn: local (int: a) int
+    :=: ((node \ D) \ there) (((node \ D) \ there) + 1)
+    return: 100
+end: local
+fn: outer () int (
+    prepared:
+        args: ((int a))
+        return: int
+        code: ((return (a * 3)))
+    end: prepared
+    fn: local prepared
+    int: r 0
+)
+    :=: r (local (:= a (tick)))
+    :=: ((node \ D) \ here) r
+    return: r
+end: outer
+outer:
+local: 7

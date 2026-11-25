@@ -1,0 +1,25 @@
+# A prepared declaration of a written name in own data shadows an outer callable of that name, before any actual runs.
+int: ticks 0
+@: D (
+    int: here 0
+    int: there 0
+)
+fn: tick () int
+    node\ticks := node\ticks + 1
+    return: 1
+fn: local (int: a) int
+    node\D\there := node\D\there + 1
+    return: 100
+fn: outer () int (
+    prepared:
+        args: (int: a)
+        return: int
+        code: (return: a * 3)
+    fn: local prepared
+    int: r 0
+)
+    r := local(a := tick())
+    node\D\here := r
+    return: r
+outer()
+local(7)

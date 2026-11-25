@@ -1,0 +1,17 @@
+# A ready place of that name at the outer lexical level does not shadow the prepared declaration of own data.
+@: D (
+    int: here 0
+)
+int: local 5
+fn: outer () int (
+    prepared:
+        args: (int: a)
+        return: int
+        code: (return: a * 3)
+    fn: local prepared
+    int: r 0
+)
+    r := local(a := 3)
+    node\D\here := r
+    return: r
+outer()

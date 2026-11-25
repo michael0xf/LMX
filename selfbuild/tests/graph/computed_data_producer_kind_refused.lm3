@@ -1,0 +1,17 @@
+# A prepared declaration whose argument is an int place: the part of the receiver receives no such value.
+@: D (
+    int: here 0
+)
+fn: outer () int (
+    prepared:
+        args: (int: a)
+        return: int
+        code: (return: a * 3)
+    int: p 7
+    fn: local p
+    int: r 0
+)
+    r := local(a := 3)
+    node\D\here := r
+    return: r
+outer()

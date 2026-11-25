@@ -1,0 +1,21 @@
+D:
+    int: here 9
+end: D
+fn: caller () int
+    int: local 77
+    return: (outer)
+end: caller
+fn: outer () int (
+    prepared:
+        args: ((int a))
+        return: int
+        code: ((return (a * 3)))
+    end: prepared
+    fn: local prepared
+    int: r 0
+)
+    :=: r (local (:= a 3))
+    :=: ((node \ D) \ here) r
+    return: r
+end: outer
+caller:

@@ -2615,6 +2615,7 @@ fn: lmx_graph_select_binding (c.LmxGraph@: g; c.Lmx@: scope; char@: name; c.LmxG
     c.Lmx@: args 0
     c.LmxGraphWork@: row 0
     @: value void 0
+    @: raw void 0
     c.LmxWalkValue@: input 0
     char@: head 0
     size_t: slot 0U
@@ -2698,6 +2699,20 @@ fn: lmx_graph_select_binding (c.LmxGraph@: g; c.Lmx@: scope; char@: name; c.LmxG
                 status[0] := lmx_graph_binding_read(g, (cast: (c.Lmx@) active_frame\data), at, prepare, @ value)
                 if: status[0] != 0
                     return: 0
+                # A required name nothing bound yet, which the own data of this launch declares by a receiver not
+                # applied yet -- a declaration of fn or sub of this written name whose argument the traversal
+                # computes: only a read reaches it (#declaration-visibility). It is applied now, by the one apply,
+                # at the selected record, and the name answers; a refusal of the apply is the answer of the read.
+                if: value = 0 && prepare != 0 && dynamic = 0 && active_frame\data = c.lmx_graph_method_data(g, active_frame\code)
+                    raw := c.lmx_graph_get_in(g, (cast: (c.Lmx@) active_frame\data), at)
+                    head := c.lmx_graph_name_of(g, raw)
+                    if: c.lmx_graph_kind(g, raw) = 4 && (head = state\w_fn || head = state\w_sub) && lmx_graph_fn_decl_name(g, (cast: (c.Lmx@) raw)) = name
+                        status[0] := lmx_graph_fn_apply(g, (cast: (c.Lmx@) active_frame\data), at)
+                        if: status[0] != 0
+                            return: 0
+                        value := (cast: (@) lmx_graph_binding_method(g, (cast: (c.Lmx@) active_frame\data), raw))
+                    ---
+                ---
                 if: lmx_graph_binding_unlowered(g, value, prepare, status) != 0
                     return: 0
                 head := c.lmx_graph_name_of(g, value)
@@ -6256,6 +6271,29 @@ fn: lmx_graph_application_head (c.LmxGraph@: g; c.Lmx@: scope; char@: head_name;
     return: 0
 end: lmx_graph_application_head
 
+# Is a declaration of fn or sub of the written name among the fields of block, not applied yet -- a receiver given an
+# argument the traversal computes (lmx_graph_fn_apply)? The written name is read without evaluation
+# (lmx_graph_fn_decl_name); the construction is asked by the source record (lmx_graph_binding_method). The query
+# applies nothing. 1 or 0.
+fn: lmx_graph_fn_pending (c.LmxGraph@: g; c.Lmx@: block; char@: name) int
+    c.LmxGraphState@: state (cast: (c.LmxGraphState@) c.lmx_graph_state())
+    @: raw void 0
+    char@: head 0
+    size_t: i 0U
+    if: state = 0 || block = 0 || name = 0
+        return: 0
+    while: i < c.lmx_graph_count(block)
+        raw := c.lmx_graph_get_in(g, block, i)
+        head := c.lmx_graph_name_of(g, raw)
+        # The written name first: the query of the construction walks the rows of the space; it is asked
+        # for this name only.
+        if: c.lmx_graph_kind(g, raw) = 4 && (head = state\w_fn || head = state\w_sub) && lmx_graph_fn_decl_name(g, (cast: (c.Lmx@) raw)) = name && lmx_graph_binding_method(g, block, raw) = 0
+            return: 1
+        i := i + 1U
+    ---
+    return: 0
+end: lmx_graph_fn_pending
+
 # The declarations a call of name can select (the book #declaration-selection, «how a declaration is selected», 1):
 # every declaration of fn or sub of name in the nearest lexical block from scope outward that declares one -- the blocks
 # that hold scope, across the bodies of callables up to the root (the parents in the graph); a nested declaration shadows
@@ -6267,9 +6305,10 @@ fn: lmx_graph_call_candidates (c.LmxGraph@: g; c.Lmx@: scope; char@: name; c.Lmx
     c.Lmx@@: list 0
     size_t: n 0U
     size_t: k 0U
+    int: pending 0
     out[0] := 0
     count[0] := 0U
-    while: level != 0 && n = 0U
+    while: level != 0 && n = 0U && pending = 0
         n := c.lmx_graph_space_count(g, level, name)
         # A callable holds its blocks: the names its code and its data declare are rows of those blocks.
         if: n = 0U && c.lmx_graph_method(g, level) != 0
@@ -6278,10 +6317,18 @@ fn: lmx_graph_call_candidates (c.LmxGraph@: g; c.Lmx@: scope; char@: name; c.Lmx
             if: n = 0U
                 found := c.lmx_graph_method_data(g, level)
                 n := c.lmx_graph_space_count(g, found, name)
+            ---
+            # A declaration of this written name in the data that is not applied yet makes the callable the nearest
+            # level that declares the name: the levels around it are shadowed. The query applies nothing; the call
+            # reads its head as today (lmx_graph_application_head), and that read reaches the declaration
+            # (lmx_graph_select_binding).
+            if: n = 0U
+                pending := lmx_graph_fn_pending(g, found, name)
+            ---
             if: n != 0U
                 level := found
             ---
-        if: n = 0U
+        if: n = 0U && pending = 0
             level := (cast: (c.Lmx@) level\parent)
         ---
     if: n = 0U

@@ -20,7 +20,7 @@
 
 ## Дополнение 24 ноября
 
-[Полный обзор новых сравнений и проверок](EXPANSION_2026-11-24.md) · [Алгоритмы 100–105](10_algorithms/README.md) · [Паттерны 106–108](11_state_and_simulation_patterns/README.md) · [Haskell](examples/haskell_comparision/README.md) · [28 профилей со стрелкой](../ARROW_EXAMPLES.md). Новые и изменённые LMX-тексты включены в общий [doc_examples](../../doc_examples/README.md).
+[Полный обзор новых сравнений и проверок](EXPANSION_2026-11-24.md) · [Алгоритмы 100–105](10_algorithms/README.md) · [Паттерны 106–108](11_state_and_simulation_patterns/README.md) · [Haskell](examples/haskell_comparision/README.md) · [28 профилей со стрелкой](../ARROW_EXAMPLES.md). Новые и изменённые LMX-тексты включены в общий [doc_examples](../../../tests/doc_examples/README.md).
 
 ## Единое ядро и сигнатуры
 

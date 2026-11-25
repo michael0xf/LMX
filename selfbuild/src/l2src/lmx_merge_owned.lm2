@@ -599,7 +599,7 @@ fn: lmx_merge_construct (c.Lmx@@: operands; size_t: count; c.Lmx@: body; c.LmxAr
             map_status := lmx_merge_carry_model_exec(src_arena, operands[0], dst_arena, result, copies[0], @ map_answer)
         ---
         if: map_status = c.LMX_WALK_OK && map_answer != c.LMX_IMPLEMENTS_NO
-            cst := c.lmx_graph_copy_native_mapped(src_arena, dst_arena, retain_profiles, retain_count, @ relocated, @ pending, dst_profile, 0, c.LMX_TYPE_STRUCT, operands[0], result, 0)
+            cst := c.lmx_graph_copy_native_mapped(src_arena, dst_arena, retain_profiles, retain_count, @ relocated, @ pending, 0, c.LMX_TYPE_STRUCT, operands[0], result, 0)
             if: cst != c.LMX_GRAPH_COPY_OK
                 map_status := c.LMX_WALK_INVALID
                 if: cst = c.LMX_GRAPH_COPY_NOMEM
@@ -910,7 +910,7 @@ fn: lmx_merge_construct (c.Lmx@@: operands; size_t: count; c.Lmx@: body; c.LmxAr
     if: status = c.LMX_MERGE_OK && selected_map = 0 && keep_model_native != 0
         native_source := operands[0]
     if: status = c.LMX_MERGE_OK && native_source != 0
-        cst := c.lmx_graph_copy_native_mapped(src_arena, dst_arena, retain_profiles, retain_count, @ relocated, @ pending, dst_profile, 0, c.LMX_TYPE_STRUCT, native_source, result, 1)
+        cst := c.lmx_graph_copy_native_mapped(src_arena, dst_arena, retain_profiles, retain_count, @ relocated, @ pending, 0, c.LMX_TYPE_STRUCT, native_source, result, 1)
         if: cst = c.LMX_GRAPH_COPY_NOMEM
             status := c.LMX_MERGE_NOMEM
         if: cst != c.LMX_GRAPH_COPY_OK && cst != c.LMX_GRAPH_COPY_NOMEM

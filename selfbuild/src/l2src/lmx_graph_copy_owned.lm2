@@ -3086,7 +3086,7 @@ fn: lmx_graph_copy_drain_mapped (c.LmxArena@: arena; c.LmxCopyMap@: map; c.LmxCo
     map\value_policy := map\value_policy & ~2
     lmx_copy_drain(arena, arena, 0, 0U, map, 0, todo, @ links, @ status, 0, chain, 0, 0U, 0, c.LMX_TYPE_NONE, @ native_pending, @ native_work)
     if: status = c.LMX_GRAPH_COPY_OK
-        status := lmx_copy_native_finish(arena, arena, 0, 0U, map, @ pending, @ native_pending, @ native_work, 0, 0, c.LMX_TYPE_NONE, 0, 0, 1)
+        status := lmx_copy_native_finish(arena, arena, 0, 0U, map, @ pending, @ native_pending, @ native_work, 0, c.LMX_TYPE_NONE, 0, 0, 1)
     if: status = c.LMX_GRAPH_COPY_OK && c.lmx_native_publish(arena, @ native_pending) != 0
         status := c.LMX_GRAPH_COPY_NOMEM
     lmx_copy_names_finish(@ pending, (cast: (int) (status = c.LMX_GRAPH_COPY_OK)))
@@ -4142,7 +4142,13 @@ end: lmx_copy_finish_headers
 
 # Extend one authoritative identity map. Only newly allocated subjects receive finalization;
 # existing receiving parents, fields, names and execution facts are already complete.
-fn: lmx_copy_native_finish (c.LmxArena@: src_arena; c.LmxArena@: dst_arena; c.Lmx@@: retain_profiles; size_t: retain_count; c.LmxCopyMap@: map; c.LmxCopyMap@: pending; c.LmxNativeTable@: native_pending; c.LmxCopyStack@: native_work; c.Lmx@: dst_profile; c.LmxCopyMap@: profile_map; int: requested_type; int: absorbed; c.LmxCopyMap@: wholes; int: fresh_records) int
+# A cell reached through the native table is fresh unless the ordinary graph reached it first: a
+# descriptor already copied through an ordinary field is taken from the map, with the final addresses
+# of its own edges. A fresh one is made without the inherited destination profile: its place is decided
+# by its own source profile and the profile map, as an ordinary cell outside the value is. A copy made
+# under a profile (an immutable value, RR2a) keeps that profile to the value's own storage, and the
+# profile coverage stays exact.
+fn: lmx_copy_native_finish (c.LmxArena@: src_arena; c.LmxArena@: dst_arena; c.Lmx@@: retain_profiles; size_t: retain_count; c.LmxCopyMap@: map; c.LmxCopyMap@: pending; c.LmxNativeTable@: native_pending; c.LmxCopyStack@: native_work; c.LmxCopyMap@: profile_map; int: requested_type; int: absorbed; c.LmxCopyMap@: wholes; int: fresh_records) int
     c.LmxCopyMap: fresh
     c.LmxCopyStack: todo
     c.LmxCopyStack: links
@@ -4164,7 +4170,7 @@ fn: lmx_copy_native_finish (c.LmxArena@: src_arena; c.LmxArena@: dst_arena; c.Lm
     map\fresh := @ fresh
     while: status = c.LMX_GRAPH_COPY_OK && lmx_copy_stack_items_len(native_work) != 0U
         source := lmx_copy_stack_pop(native_work)
-        copied := lmx_copy_value((cast: (@) source), src_arena, dst_arena, retain_profiles, retain_count, map, 0, @ todo, @ status, dst_profile, 0, 0U, profile_map, requested_type)
+        copied := lmx_copy_value((cast: (@) source), src_arena, dst_arena, retain_profiles, retain_count, map, 0, @ todo, @ status, 0, 0, 0U, profile_map, requested_type)
         # Retained profile values are identity terminals and need no fresh finalization.
         if: status = c.LMX_GRAPH_COPY_OK && lmx_copy_map_get(map, (cast: (@) source)) = 0
             if: copied = 0
@@ -4176,7 +4182,7 @@ fn: lmx_copy_native_finish (c.LmxArena@: src_arena; c.LmxArena@: dst_arena; c.Lm
             ---
         ---
         if: status = c.LMX_GRAPH_COPY_OK
-            lmx_copy_drain(src_arena, dst_arena, retain_profiles, retain_count, map, 0, @ todo, @ links, @ status, dst_profile, 1, 0, 0U, profile_map, requested_type, native_pending, native_work)
+            lmx_copy_drain(src_arena, dst_arena, retain_profiles, retain_count, map, 0, @ todo, @ links, @ status, 0, 1, 0, 0U, profile_map, requested_type, native_pending, native_work)
         ---
     ---
     map\fresh := 0
@@ -4216,7 +4222,7 @@ end: lmx_copy_native_finish
 
 # A merge has already composed source addresses with final receiving places.
 # Its selected executable supplies exactly this binding, including an absent binding.
-fn: lmx_graph_copy_native_mapped (c.LmxArena@: src_arena; c.LmxArena@: dst_arena; c.Lmx@@: retain_profiles; size_t: retain_count; c.LmxCopyMap@: map; c.LmxCopyMap@: pending; c.Lmx@: dst_profile; c.LmxCopyMap@: profile_map; int: requested_type; c.Lmx@: source; c.Lmx@: copied_code; int: absorbed) int
+fn: lmx_graph_copy_native_mapped (c.LmxArena@: src_arena; c.LmxArena@: dst_arena; c.Lmx@@: retain_profiles; size_t: retain_count; c.LmxCopyMap@: map; c.LmxCopyMap@: pending; c.LmxCopyMap@: profile_map; int: requested_type; c.Lmx@: source; c.Lmx@: copied_code; int: absorbed) int
     c.LmxNativeTable: native_pending
     c.LmxCopyStack: native_work
     c.Lmx@: description 0
@@ -4244,7 +4250,7 @@ fn: lmx_graph_copy_native_mapped (c.LmxArena@: src_arena; c.LmxArena@: dst_arena
     if: status = c.LMX_GRAPH_COPY_OK && description != 0 && lmx_copy_stack_push(@ native_work, description) != 0
         status := c.LMX_GRAPH_COPY_NOMEM
     if: status = c.LMX_GRAPH_COPY_OK
-        status := lmx_copy_native_finish(src_arena, dst_arena, retain_profiles, retain_count, map, pending, @ native_pending, @ native_work, dst_profile, profile_map, requested_type, absorbed, 0, 1)
+        status := lmx_copy_native_finish(src_arena, dst_arena, retain_profiles, retain_count, map, pending, @ native_pending, @ native_work, profile_map, requested_type, absorbed, 0, 1)
     if: status = c.LMX_GRAPH_COPY_OK && c.lmx_native_publish(dst_arena, @ native_pending) != 0
         status := c.LMX_GRAPH_COPY_NOMEM
     lmx_copy_stack_dispose(@ native_work)
@@ -4406,7 +4412,7 @@ fn: lmx_copy_run (c.Lmx@@: sources; size_t: count; c.LmxArena@: src_arena; c.Lmx
         status := lmx_copy_names(src_arena, dst_arena, map, pending)
     ---
     if: status = c.LMX_GRAPH_COPY_OK
-        status := lmx_copy_native_finish(src_arena, dst_arena, retain_profiles, retain_count, map, pending, @ native_pending, @ native_work, dst_profile, profile_map, requested_type, (cast: (int) (absorb != 0)), wholes, 0)
+        status := lmx_copy_native_finish(src_arena, dst_arena, retain_profiles, retain_count, map, pending, @ native_pending, @ native_work, profile_map, requested_type, (cast: (int) (absorb != 0)), wholes, 0)
     ---
     # Correspondences: the copy's records, decided by the copy map (lmx_copy_carry_records).
     if: status = c.LMX_GRAPH_COPY_OK

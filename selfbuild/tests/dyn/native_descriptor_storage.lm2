@@ -303,6 +303,114 @@ fn: nd_changed_leaf () int
         return: 179
     return: 0
 
+# The profile of the cells a Structure's children range is made of; 0 for an unprofiled range or no range.
+fn: nd_children_profile (@: arena c.LmxArena; @: value c.Lmx) @: c.Lmx
+    @: base c.VoidArray 0
+    if: value = 0 || c.lmx_range_classify(arena, (cast: (@: void) value)) != c.LMX_KIND_STRUCT
+        return: (cast: (@: c.Lmx) 0)
+    base := (cast: (@: c.VoidArray) (@ value\array))
+    if: base\size = 0U || base\data = 0
+        return: (cast: (@: c.Lmx) 0)
+    return: c.lmx_range_profile(arena, (cast: (@: void) base\data))
+
+# A value qualified at run time (RR2a): the copy under a fresh profile of a value whose code has a native entry.
+# The descriptor is reached through the native table only. It is fresh storage outside the profile while the code's
+# copy is in it; the full preflight of the copy holds; the entry stays live after the seal.
+fn: nd_qualified_preflight () int
+    c.LmxArena: arena
+    c.LmxCopyMap: pending
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ arena) != 0
+        return: 181
+    @: g c.LmxGraph c.lmx_graph_open(@ arena)
+    @: root c.Lmx c.lmx_graph_lmx(g, 0, 2U)
+    @: code c.Lmx c.lmx_graph_lmx(g, root, 1U)
+    @: qualified c.Lmx 0
+    @: qhold c.Lmx c.lmx_node_new_owned(@ arena)
+    @: qprofile c.Lmx 0
+    int: status 0
+    if: g = 0 || root = 0 || code = 0 || qhold = 0
+        return: 182
+    qprofile := c.lmx_node_new_profiled(@ arena, qhold)
+    if: qprofile = 0 || c.lmx_graph_put_in(g, code, 0U, c.lmx_graph_int(g, 19)) != 0 || c.lmx_graph_put_in(g, root, 0U, c.lmx_graph_int(g, 23)) != 0 || c.lmx_graph_put_in(g, root, 1U, (cast: (@: void) code)) != 0
+        return: 183
+    if: c.lmx_native_install(@ arena, code, (cast: (c.LmxPrimitiveEntry) c.nd_entry), code, "linked-test", "nd_entry", "native_descriptor_storage.lm1", 0) != 0
+        return: 184
+    @: description c.Lmx c.lmx_native_descriptor(@ arena, code)
+    if: description = 0 || c.lmx_range_profile(@ arena, (cast: (@: void) description)) != 0
+        return: 185
+    status := c.lmx_graph_copy_qualified_leaves_staged(root, @ arena, @ arena, 0, 0U, qprofile, 0, 0U, @ qualified, @ pending)
+    if: status != c.LMX_GRAPH_COPY_OK || qualified = 0
+        return: 186
+    @: qualified_code c.Lmx (cast: (@: c.Lmx) c.lmx_graph_get_in(g, qualified, 1U))
+    @: qualified_description c.Lmx c.lmx_native_descriptor(@ arena, qualified_code)
+    if: qualified_code = 0 || qualified_code = code || qualified_description = 0 || qualified_description = description
+        return: 187
+    # The copy's root and code are cells of the profile.
+    if: c.lmx_range_profile(@ arena, (cast: (@: void) qualified)) != qprofile || c.lmx_range_profile(@ arena, (cast: (@: void) qualified_code)) != qprofile
+        return: 188
+    # The fresh descriptor and its children are cells of no profile.
+    if: c.lmx_range_profile(@ arena, (cast: (@: void) qualified_description)) != 0 || nd_children_profile(@ arena, qualified_description) != 0
+        return: 189
+    if: c.lmx_qualify_tree_preflight_full(@ arena, qualified, 0, 0U, 0, 0U, 0, 0U) != c.LMX_QUALIFY_OK
+        return: 190
+    if: c.lmx_arena_seal_profile(@ arena, qprofile) != 0 || c.lmx_arena_seal_profile(@ arena, qhold) != 0
+        return: 191
+    c.lmx_copy_names_finish(@ pending, 1)
+    if: c.lmx_native_entry(@ arena, qualified_code) != (cast: (c.LmxPrimitiveEntry) c.nd_entry) || c.lmx_native_descriptor(@ arena, qualified_code) != qualified_description || c.lmx_graph_call(g, qualified_code) != 77
+        return: 192
+    if: c.lmx_arena_release(@ arena) != 0
+        return: 193
+    return: 0
+
+# The same copy with an explicit edge to the descriptor. The ordinary graph is copied first: the copied field and
+# the native descriptor of the copied code are one address, and the descriptor is part of the value: its cell is a
+# cell of the profile. The whole selected tree is examined before an immutable value is published (the book,
+# #qualification): a Structure stored in the tree is a branch only when its parent is in the tree, so the full
+# preflight refuses this value. The copy itself is as it was made, and the entry stays live.
+fn: nd_qualified_alias () int
+    c.LmxArena: arena
+    c.LmxCopyMap: pending
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ arena) != 0
+        return: 201
+    @: g c.LmxGraph c.lmx_graph_open(@ arena)
+    @: root c.Lmx c.lmx_graph_lmx(g, 0, 3U)
+    @: code c.Lmx c.lmx_graph_lmx(g, root, 1U)
+    @: qualified c.Lmx 0
+    @: qhold c.Lmx c.lmx_node_new_owned(@ arena)
+    @: qprofile c.Lmx 0
+    int: status 0
+    if: g = 0 || root = 0 || code = 0 || qhold = 0
+        return: 202
+    qprofile := c.lmx_node_new_profiled(@ arena, qhold)
+    if: qprofile = 0 || c.lmx_graph_put_in(g, code, 0U, c.lmx_graph_int(g, 19)) != 0 || c.lmx_graph_put_in(g, root, 0U, c.lmx_graph_int(g, 23)) != 0 || c.lmx_graph_put_in(g, root, 1U, (cast: (@: void) code)) != 0
+        return: 203
+    if: c.lmx_native_install(@ arena, code, (cast: (c.LmxPrimitiveEntry) c.nd_entry), code, "linked-test", "nd_entry", "native_descriptor_storage.lm1", 0) != 0
+        return: 204
+    @: description c.Lmx c.lmx_native_descriptor(@ arena, code)
+    if: description = 0 || c.lmx_graph_put_in(g, root, 2U, (cast: (@: void) description)) != 0
+        return: 205
+    status := c.lmx_graph_copy_qualified_leaves_staged(root, @ arena, @ arena, 0, 0U, qprofile, 0, 0U, @ qualified, @ pending)
+    if: status != c.LMX_GRAPH_COPY_OK || qualified = 0
+        return: 206
+    @: qualified_code c.Lmx (cast: (@: c.Lmx) c.lmx_graph_get_in(g, qualified, 1U))
+    @: qualified_description c.Lmx (cast: (@: c.Lmx) c.lmx_graph_get_in(g, qualified, 2U))
+    if: qualified_code = 0 || qualified_description = 0 || qualified_description = description || c.lmx_native_descriptor(@ arena, qualified_code) != qualified_description
+        return: 207
+    # One descriptor for the field and the binding: its cell is a cell of the profile.
+    if: c.lmx_range_profile(@ arena, (cast: (@: void) qualified_description)) != qprofile
+        return: 208
+    # The stored descriptor is no branch of the tree: the proof refuses the value.
+    if: c.lmx_qualify_tree_preflight_full(@ arena, qualified, 0, 0U, 0, 0U, 0, 0U) != c.LMX_QUALIFY_INVALID
+        return: 209
+    c.lmx_copy_names_finish(@ pending, 0)
+    if: c.lmx_native_entry(@ arena, qualified_code) != (cast: (c.LmxPrimitiveEntry) c.nd_entry) || c.lmx_graph_call(g, qualified_code) != 77
+        return: 210
+    if: c.lmx_arena_release(@ arena) != 0
+        return: 211
+    return: 0
+
 fn: nd_storage_check () int
     int: status nd_copy()
     if: status != 0
@@ -317,6 +425,12 @@ fn: nd_storage_check () int
     if: status != 0
         return: status
     status := nd_selected_merge()
+    if: status != 0
+        return: status
+    status := nd_qualified_preflight()
+    if: status != 0
+        return: status
+    status := nd_qualified_alias()
     if: status != 0
         return: status
     status := nd_changed_leaf()

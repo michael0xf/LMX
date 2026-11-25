@@ -1,36 +1,42 @@
-# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
-# Admission constructs all physical places before the ordered data traversal.
-# The initializer can inspect the index/header of a later declaration.
+# typeof of the declared reference `@: p int` of D is read in the executed body of build at three states, each read
+# written to a data place by its path: before any write (the uninit record: its type code alone), after a non-null
+# reference is set (a ready int reference), and after a typed null (the same ready form). The target's value (7) is
+# read before the null. Norm: P01 (docs/spec/kernel-implementation.en.md, #primitive-storage): uninit:T is its type
+# code alone; an explicit assignment replaces the graph material at the addressed structural place
+# (#frame-and-graph-assignment).
 (
     Observed:
-        int: early 0
-        int: late 0
+        int: before_write 0
+        int: after_set 0
+        int: after_null 0
         int: seen 0
 )
 sub: build () (
-    int: early typeof(D[0])
     D:
         @: p int
     end: D
-    C:
-        @: p int
-    end: C
     int: i 7
-    int: late 0
+    int: before_write 0
+    int: after_set 0
+    int: after_null 0
     int: seen 0
 )
+    data\before_write := typeof(D[0])
     D\p := @(data\i)
-    call(D; C)
-    data\late := typeof(D[0])
+    data\after_set := typeof(D[0])
     data\seen := \(D\p)
+    D\p := 0
+    data\after_null := typeof(D[0])
 build()
-int: early build\data\early
-int: late build\data\late
+int: before_write build\data\before_write
+int: after_set build\data\after_set
+int: after_null build\data\after_null
 int: seen build\data\seen
 
 sub: main ()
     @: sink node[0]
-    sink\Observed\early := node\early
-    sink\Observed\late := node\late
+    sink\Observed\before_write := node\before_write
+    sink\Observed\after_set := node\after_set
+    sink\Observed\after_null := node\after_null
     sink\Observed\seen := node\seen
 main()

@@ -1,14 +1,20 @@
 Example:
     int[]: items
+    int: limit
     return: @
     run:
-        int[]: result []
+        throws: copy(sys\resize\throws)
+        int[]: accepted []
+        sys\resize(accepted; length(items))
         int: used 0
+        int: total 0
         int: i 0
         while: i < length(items)
-            if: items[i] > 0
-                sys\resize(result; used + 1)
-                result[used] := items[i]
+            int: value items[i]
+            if: value > 0 && value <= limit
+                accepted[used] := value
                 used += 1
+                total += value
             i += 1
-        return: result
+        sys\resize(accepted; used)
+        return: (accepted; total; length(items) - used)

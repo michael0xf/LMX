@@ -184,19 +184,19 @@ def publish_markdown(result):
               'Обе клиентские записи включают все объявления, локальные helpers, комментарии внутри границы, Throws и ссылки copy. Убираются только пробельные Unicode-символы. Дополнительно сохраняются все символы, непустые строки, UTF-8-байты и SHA-256. Исходные строки нормализуются в LF с одним завершающим переводом строки.', '',
               'По авторской оценке, явные конечные Throws и общий throws: copy(Throws) — преимущество LMX: точно видны возможные ошибки метода. Они полностью входят в каждое измерение. Процедурная запись использует прямые операции и явный поток управления; функциональная — композицию, Expression и общие операции.', '',
               'Поле lmx и прежние однозначные totals/ratio оставлены в JSON только как явно помеченные функциональные совместимые зеркала. Сравниваемые значения находятся в lmx_variants/ratios; в пользовательских таблицах обе формы представлены отдельными столбцами.', '',
-              'Источники: [Haskell coverage](haskell/comparison_index.json), [Julia](julia_comparison/examples.json), [Perl](perl_comparison/examples.json), [SBCL](SBCL_comparison/examples.json). [JSON](STATISTICS.json), [CSV клиентов](STATISTICS.csv), [CSV реализаций](IMPLEMENTATIONS.csv), [реестр физических исходников](SOURCE_INVENTORY.json).', '',
-              'Из корня spec: python3 patterns/examples/tools/refresh_examples_statistics.py. Затем python3 patterns/tools/build_publication_data.py --text создаёт единую модель всех100 контрактов, включая четыре клиента группы09. PDF и XLSX строятся через patterns/tools/publish_pdfs.py и patterns/tools/publish_workbooks.mjs из этой общей модели.', '',
+              'Источники: [Haskell coverage](haskell_comparision/comparison_index.json), [Julia](julia_comparison/examples.json), [Perl](perl_comparison/examples.json), [SBCL](SBCL_comparison/examples.json). [JSON](STATISTICS.json), [CSV клиентов](STATISTICS.csv), [CSV реализаций](IMPLEMENTATIONS.csv), [реестр физических исходников](SOURCE_INVENTORY.json).', '',
+              'Из корня spec: python3 patterns/examples/tools/refresh_examples_statistics.py. Затем python3 patterns/tools/build_publication_data.py --text создаёт единую модель всех 109 контрактов, включая четыре клиента группы 09 и девять сценариев групп 10–11. PDF и XLSX строятся через patterns/tools/publish_pdfs.py и patterns/tools/publish_workbooks.mjs из этой общей модели.', '',
               result['runtime_note'], '']
     (ROOT/'STATISTICS.md').write_text('\n'.join(lines))
 
 
 def main():
     expected = read(ROOT/'expected_results.json')
-    index = read(ROOT/'haskell/comparison_index.json')
+    index = read(ROOT/'haskell_comparision/comparison_index.json')
     by_haskell = {item['id']: item for item in index['entries']}
     require(len(index['entries']) == len(by_haskell) == 24, 'Haskell: exactly24 unique scenarios required')
     require({item['id'] for item in expected['source_examples']} == set(by_haskell), 'Haskell acceptance/index identities differ')
-    require(hashlib.sha256((ROOT/'haskell/Analogies.hs').read_bytes()).hexdigest() == index['source_module_sha256'],
+    require(hashlib.sha256((ROOT/'haskell_comparision/Analogies.hs').read_bytes()).hexdigest() == index['source_module_sha256'],
             'Haskell module fingerprint is stale')
     examples = []; implementations = []
     for expectation in expected['source_examples']:
@@ -206,8 +206,12 @@ def main():
         foreign = item.get('foreign_code', '')
         if foreign:
             require(hashlib.sha256(foreign.encode()).hexdigest() == item['foreign_listing_sha256'], f"{item['id']}: Haskell listing fingerprint is stale")
-        examples.append(client_record('haskell', item, ROOT, 'Haskell', item['status'], foreign,
-                        'haskell/Analogies.hs', item.get('title', item['id']), item.get('contract_notes', ''),
+        complete_foreign = item.get('foreign_measurement_code', foreign)
+        if item.get('foreign_measurement_sources'):
+            bodies = [(ROOT/name).read_text().rstrip() for name in dict.fromkeys(item['foreign_measurement_sources'])]
+            require('\n\n'.join(bodies)+'\n' == complete_foreign, f"{item['id']}: Haskell complete source boundary mismatch")
+        examples.append(client_record('haskell', item, ROOT, 'Haskell', item['status'], complete_foreign,
+                        item.get('foreign_source','haskell_comparision/Analogies.hs'), item.get('title', item['id']), item.get('contract_notes', ''),
                         source_symbols=item.get('source_symbols', []), runtime={'LMX': 'NOT_RUN', 'Haskell': 'NOT_RUN'}))
     for suite, dirname in SUITES.items():
         directory = ROOT/dirname; data = read(directory/'examples.json')
@@ -215,7 +219,10 @@ def main():
                 f'{suite}: exactly24 unique clients required')
         for item in data['examples']:
             paths = listing_paths(item)
-            check_source(directory, paths['lmx'], item['lmx'])
+            # The complete LMX body can have one shared source and one client.
+            # validate_variants checks their ordered, deduplicated concatenation.
+            if not item.get('lmx_variants'):
+                check_source(directory, paths['lmx'], item['lmx'])
             foreign_source = check_source(directory, paths['foreign'], item['foreign'])
             require(item['lmx'] == item['lmx_variants']['functional']['code'], f"{suite}/{item['id']}: functional compatibility mirror differs")
             alternatives = []
@@ -301,11 +308,26 @@ def main():
                    'unique_lmx_client_sources': len(source_styles), 'complete_pairs': sum(row['complete_pairs'] for row in summaries),
                    'implementation_comparisons': len(implementations), 'source_files': len(inventory)},
         'summaries': summaries, 'examples': examples, 'implementations': implementations,
-        'haskell_module': {'file': 'haskell/Analogies.hs', 'metric': metric((ROOT/'haskell/Analogies.hs').read_text()),
+        'haskell_module': {'file': 'haskell_comparision/Analogies.hs', 'metric': metric((ROOT/'haskell_comparision/Analogies.hs').read_text()),
                            'scope': 'Whole source with assertions/shared declarations; not added to per-case totals'},
         'lmx_parser_execution': 'NOT_RUN', 'lmx_runtime_execution': 'NOT_RUN',
         'runtime_note': 'Source/JSON/publication checks only. No language is executed by this generator. Revised LMX parsing and runtime execution are NOT_RUN. Existing foreign execution receipts remain separate in suite validation.'}
     write_json(ROOT/'STATISTICS.json', result)
+    haskell_result={**result,'summaries':[row for row in summaries if row['suite']=='haskell'],
+                    'examples':[row for row in examples if row['suite']=='haskell'],
+                    'implementations':[row for row in implementations if row['suite']=='haskell']}
+    haskell_result['counts']={'lmx_examples':24,'lmx_style_listings':48,
+                              'complete_pairs':sum(row['comparison_status']=='complete_pair' for row in haskell_result['examples']),
+                              'related_analogies':sum(row['comparison_status']=='related_analogy' for row in haskell_result['examples']),
+                              'implementation_comparisons':len(haskell_result['implementations'])}
+    write_json(ROOT/'haskell_comparision/statistics.json',haskell_result)
+    with (ROOT/'haskell_comparision/statistics.csv').open('w',encoding='utf-8-sig',newline='') as stream:
+        writer=csv.writer(stream)
+        writer.writerow(['id','title','comparison_status','LMX_procedural_characters','LMX_functional_characters','Haskell_characters','LMX_procedural_nonblank_lines','LMX_functional_nonblank_lines','Haskell_nonblank_lines'])
+        for row in haskell_result['examples']:
+            writer.writerow([row['id'],row['title'],row['comparison_status'],
+                             *[row['lmx_variants'][s]['characters'] for s in STYLES],row['foreign']['characters'],
+                             *[row['lmx_variants'][s]['nonblank_lines'] for s in STYLES],row['foreign']['nonblank_lines']])
     write_json(ROOT/'SOURCE_INVENTORY.json', {'edition': EDITION, 'files': inventory, 'sum_is_not_application_size': True})
     publish_csv(examples, implementations)
     publish_markdown(result)

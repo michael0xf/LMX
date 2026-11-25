@@ -9,7 +9,9 @@ Order:
 
 Example:
     @: items
+    int: limit
     return: @
     run:
-        throws: copy(sort\throws)
-        return: (sort items Order\compare)
+        throws: copy(sort\throws) copy(take\throws)
+        @: selected (take (sort items Order\compare) limit)
+        return: (selected; length(items) - length(selected))

@@ -121,6 +121,19 @@ FxSeqInteger:
             throw: SequenceElement()
         return: \value
 
+FxSeqLast:
+    private:
+        @: items
+        int: count
+    required: items count
+    return: @
+    last:
+        throws: copy(FxStdCut\drop\throws)
+        FxSeqInfo\get(items)
+        if: count < 0
+            throw: SequenceSize()
+        return: FxStdCut\drop(items; length(items) - count)
+
 FxSeqPredicate:
     private: @: value
     required: value
@@ -215,6 +228,58 @@ FxSequenceDifference:
                 return: i
             i += 1
         return: -1
+
+FxStdCut:
+    private:
+        @: items
+        int: count
+    required: items count
+    return: @
+    take:
+        throws: copy(FxThrows\sequence)
+        return: FxSeqSlice\slice(items; 0; FxStdCutIndex\get(items; count))
+    drop:
+        throws: copy(FxThrows\sequence)
+        return: FxSeqSlice\slice(items; FxStdCutIndex\get(items; count); length(items))
+    splitAt:
+        throws: copy(FxThrows\sequence)
+        return: FxStdPair\make(take(items; count); drop(items; count))
+
+FxStdCutIndex:
+    private:
+        @: items
+        int: count
+    required: items count
+    return: int
+    get:
+        throws: copy(FxThrows\kernel)
+        FxSeqInfo\get(items)
+        if: count < 0
+            return: 0
+        if: count > length(items)
+            return: length(items)
+        return: count
+
+FxStdPair:
+    private:
+        @: first
+        @: second
+    required: first second
+    return: @
+    make:
+        private: @: pair (copy(FxPair))
+        pair\first := first
+        pair\second := second
+        return: pair
+
+FxSum:
+    private:
+        @: items
+        @: initial (0 record)
+    return: @
+    sum:
+        throws: FxRecordArity
+        return: ((+ \initial copy(items)) record)
 
 FxThrows:
     adapter:

@@ -1,0 +1,803 @@
+{
+  "schema": "haskell-comparision-fixtures-v1",
+  "interpretation": "Expected outcomes, not executed receipts. Graph analogies retain explicit non-equivalence boundaries.",
+  "cases": [
+    {
+      "id": "H01",
+      "status": "complete_pair",
+      "foreign_source": "source/haskell/H01.hs",
+      "haskell_operation": "example",
+      "haskell_expected": 1408,
+      "lmx_cases": [
+        {
+          "invoke": "ApplyProbe\\run()",
+          "expected": 1408
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "source/lmx/H01.lm3",
+        "functional": "source/lmx/H01.lm3"
+      },
+      "scope": "Обе записи содержат настоящую изменяемую ячейку с функцией. В Haskell это IORef из base; первая функция удваивает, вторая прибавляет единицу. Конкретный ABI callable LMX в предмет сравнения не входит.",
+      "haskell_execution": "NOT_RUN",
+      "lmx_execution": "NOT_RUN"
+    },
+    {
+      "id": "H02",
+      "status": "related_analogy",
+      "foreign_source": "source/haskell/H02.hs",
+      "haskell_operation": "example",
+      "haskell_expected": 2772,
+      "lmx_cases": [
+        {
+          "invoke": "SignatureProbe\\run()",
+          "expected": 2772
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "source/lmx/procedural/H02.lm3",
+        "functional": "source/lmx/H02.lm3"
+      },
+      "scope": "Haskell-код действительно вычисляет 27 и 72: два адаптера берут поля Arguments в разном порядке. Именованное связывание и проверка допуска LMX здесь представлены явно написанными адаптерами; это не встроенный Haskell-механизм именованных фактических аргументов. Поэтому числового рейтинга этой строки нет.",
+      "haskell_execution": "NOT_RUN",
+      "lmx_execution": "NOT_RUN"
+    },
+    {
+      "id": "H03",
+      "status": "complete_pair",
+      "foreign_source": "source/haskell/H03.hs",
+      "haskell_operation": "example",
+      "haskell_expected": [
+        6,
+        101,
+        6
+      ],
+      "lmx_cases": [
+        {
+          "invoke": "ClosureProbe\\run()",
+          "expected": 6101006,
+          "components": [
+            6,
+            101,
+            6
+          ],
+          "original_callable_unchanged": true,
+          "independent_prefixes": [
+            5,
+            100
+          ]
+        },
+        {
+          "variant": "Explicit saved actual through returned method",
+          "invoke": "add5(1; saved := 25)",
+          "expected_rejection": "unknown explicit formal; the returned callable only exposes p0, saved is not a formal",
+          "setup": "Obtain add5 with partial(Addition\\add; prefix := (5)), then attempt the explicit saved actual."
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "source/lmx/procedural/H03.lm3",
+        "functional": "source/lmx/H03.lm3"
+      },
+      "scope": "Haskell использует обычное частичное применение. Для сравнения результата тройка (a,b,c) упаковывается как a*1000000+b*1000+c, то есть 6101006. В LMX сохранённый actual не становится свободным остаточным параметром; Haskell не предоставляет одноимённого фактического аргумента для его переопределения. Отдельная диагностика допуска не объявлена одинаковой.",
+      "haskell_execution": "NOT_RUN",
+      "lmx_execution": "NOT_RUN"
+    },
+    {
+      "id": "H04",
+      "status": "complete_pair",
+      "foreign_source": "source/haskell/H04.hs",
+      "haskell_operation": "example",
+      "haskell_expected": [
+        6,
+        26,
+        1,
+        6
+      ],
+      "lmx_cases": [
+        {
+          "invoke": "DefaultProbe\\run()",
+          "expected": 6260106,
+          "components": [
+            6,
+            26,
+            1,
+            6
+          ],
+          "copied_default_after": 5
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "source/lmx/procedural/H04.lm3",
+        "functional": "source/lmx/H04.lm3"
+      },
+      "scope": "Maybe отличает отсутствие переопределения от значения 0. Четыре вызова включены в обе реализации. Список упаковывается как a*1000000+b*10000+c*100+d, результат 6260106. В отличие от прежнего обрывка после объявления функции, показанный Haskell-модуль самодостаточен.",
+      "haskell_execution": "NOT_RUN",
+      "lmx_execution": "NOT_RUN"
+    },
+    {
+      "id": "H05",
+      "status": "related_analogy",
+      "foreign_source": "source/haskell/H05.hs",
+      "haskell_operation": "example",
+      "haskell_expected": [
+        26,
+        6,
+        8
+      ],
+      "lmx_cases": [
+        {
+          "invoke": "BindingProbe\\run()",
+          "expected": 2606,
+          "original_y_after": 8,
+          "copied_y_after": 5
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "source/lmx/procedural/H05.lm3",
+        "functional": "source/lmx/H05.lm3"
+      },
+      "scope": "Haskell создаёт две разные ячейки, действительно меняет источник и передаёт окружение явно. Третий результат проверяет источник после изменения: 8. Это модель выбора окружения, а не копирование исполняемого графа или native dynamic lookup LMX; parent и граф методов Haskell-код не воспроизводит.",
+      "haskell_execution": "NOT_RUN",
+      "lmx_execution": "NOT_RUN"
+    },
+    {
+      "id": "H06",
+      "status": "complete_pair",
+      "foreign_source": "source/haskell/H06.hs",
+      "haskell_operation": "example",
+      "haskell_expected": [
+        9,
+        10
+      ],
+      "lmx_cases": [
+        {
+          "invoke": "CompositionProbe\\run()",
+          "expected": 910,
+          "components": [
+            9,
+            10
+          ]
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "source/lmx/procedural/H06.lm3",
+        "functional": "source/lmx/H06.lm3"
+      },
+      "scope": "Оператор композиции Haskell задаёт те же две арифметические цепочки. Пара (a,b) нормализуется в LMX-упаковку a*100+b=910. Отдельный эффектный сценарий со счётчиками из старого Analogies.hs не подставляется вместо этого чистого договора.",
+      "haskell_execution": "NOT_RUN",
+      "lmx_execution": "NOT_RUN"
+    },
+    {
+      "id": "H07",
+      "status": "related_analogy",
+      "foreign_source": "source/haskell/H07.hs",
+      "haskell_operation": "example",
+      "haskell_expected": [
+        [
+          2,
+          4,
+          2
+        ],
+        [
+          3,
+          7,
+          4
+        ]
+      ],
+      "lmx_cases": [
+        {
+          "setup": "Meter\\calls := 0",
+          "sequence": [
+            "Evaluation\\prepared()",
+            "Evaluation\\prepared()"
+          ],
+          "expected": [
+            2,
+            4
+          ],
+          "calls_after": 2
+        },
+        {
+          "setup": "Meter\\calls := 0",
+          "sequence": [
+            "Evaluation\\raw()",
+            "Evaluation\\raw()"
+          ],
+          "expected": [
+            3,
+            7
+          ],
+          "calls_after": 4
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "source/lmx/H07.lm3",
+        "functional": "source/lmx/H07.lm3"
+      },
+      "scope": "Реальная Haskell-реализация отдельно разделяет полученное значение и повторяет IO-действие. Она не принимает произвольное исходное вхождение программы и не исполняет сохранённый граф через sys\\eval. Ленивость Haskell сама по себе не объявляется заменой PASS_ARGS_AS_IS.",
+      "haskell_execution": "NOT_RUN",
+      "lmx_execution": "NOT_RUN"
+    },
+    {
+      "id": "H08",
+      "status": "related_analogy",
+      "foreign_source": "source/haskell/H08.hs",
+      "haskell_operation": "stateProbe ownStep; stateProbe freeStep",
+      "haskell_expected": [
+        0,
+        3
+      ],
+      "lmx_cases": [
+        {
+          "invoke": "StateProbe\\run(Own\\step)",
+          "expected": 0
+        },
+        {
+          "invoke": "StateProbe\\run(Free\\step)",
+          "expected": 3
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "source/lmx/H08.lm3",
+        "functional": "source/lmx/H08.lm3"
+      },
+      "scope": "freeStep содержит единственную реализацию изменения. ownStep создаёт отдельную ячейку и вызывает тот же шаг; stateProbe принимает произвольную операцию. Разница владения проверяется настоящими IORef, но передача ссылки в Haskell явная и не воспроизводит автоматическое динамическое связывание LMX.",
+      "haskell_execution": "NOT_RUN",
+      "lmx_execution": "NOT_RUN"
+    },
+    {
+      "id": "H09",
+      "status": "related_analogy",
+      "foreign_source": "source/haskell/H09.hs",
+      "haskell_operation": "example; validation.iteratorFixture",
+      "haskell_expected": {
+        "total": 12,
+        "next_calls": 4,
+        "body_calls": 3
+      },
+      "lmx_cases": [
+        {
+          "invoke": "Numbers\\demo()",
+          "expected": 12,
+          "next_invocations": 4,
+          "body_invocations": 3
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "source/lmx/H09.lm3",
+        "functional": "source/lmx/H09.lm3"
+      },
+      "scope": "Общий iterateUntil ловит Stop только при получении следующего элемента; Stop из тела и другие исключения проходят наружу. Объявление item и живое присоединённое тело LMX представлены callback-функцией. Счётчики находятся во внешней фикстуре, а не искусственно утяжеляют сравниваемый алгоритм. Графовый механизм declaration-as-DATA остаётся различием.",
+      "haskell_execution": "NOT_RUN",
+      "lmx_execution": "NOT_RUN"
+    },
+    {
+      "id": "R01",
+      "status": "related_analogy",
+      "foreign_source": "source/haskell/R01.hs",
+      "haskell_operation": "example",
+      "haskell_expected": 257,
+      "lmx_cases": [
+        {
+          "invoke": "MergeProbe\\run()",
+          "expected": 257,
+          "components": [
+            2,
+            5,
+            7
+          ],
+          "source_values_unchanged": true
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "source/lmx/procedural/R01.lm3",
+        "functional": "source/lmx/R01.lm3"
+      },
+      "scope": "Использован Map, а не запись с заранее объявленным depth. Map.union patch model сохраняет значение patch при совпадении ключа, добавляет новый ключ и не меняет исходные карты. Карта однородных значений не реализует типизированный исполняемый граф, DATA и parent структуры LMX; этот предел отмечен явно.",
+      "haskell_execution": "NOT_RUN",
+      "lmx_execution": "NOT_RUN"
+    },
+    {
+      "id": "R02",
+      "status": "related_analogy",
+      "foreign_source": "source/haskell/R02.hs",
+      "haskell_operation": "example",
+      "haskell_expected": {
+        "Just": 27
+      },
+      "lmx_cases": [
+        {
+          "invoke": "StreamProbe\\run()",
+          "expected": 27,
+          "components": [
+            2,
+            7
+          ]
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "source/lmx/R02.lm3",
+        "functional": "source/lmx/R02.lm3"
+      },
+      "scope": "fieldStream действительно извлекает поля, а pattern match распределяет их по двум переменным. В Haskell это специально определённое представление потока и проверка длины, не общий copy структур LMX и не группировщик Expression. Just 27 нормализуется в успешный результат 27; Nothing обозначает неподходящую длину.",
+      "haskell_execution": "NOT_RUN",
+      "lmx_execution": "NOT_RUN"
+    },
+    {
+      "id": "R03",
+      "status": "related_analogy",
+      "foreign_source": "source/haskell/R03.hs",
+      "haskell_operation": "example",
+      "haskell_expected": [
+        712,
+        7,
+        12
+      ],
+      "lmx_cases": [
+        {
+          "invoke": "ImportProbe\\run()",
+          "expected": 712,
+          "provider_value_after": 7,
+          "copied_owner_value_after": 12,
+          "grouping_container_value_after": 7
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "source/lmx/R03.lm3",
+        "functional": "source/lmx/R03.lm3"
+      },
+      "scope": "Provider хранит реальную ячейку владельца и closure для чтения. Импорт моделируется сохранением этого closure, copyProvider создаёт новую ячейку и новый closure; исходная ячейка остаётся 7. Это явно написанная модель owner/copy, а не реализация общего import, parent или группирующего контейнера LMX.",
+      "haskell_execution": "NOT_RUN",
+      "lmx_execution": "NOT_RUN"
+    },
+    {
+      "id": "R04",
+      "status": "related_analogy",
+      "foreign_source": "source/haskell/R04.hs",
+      "haskell_operation": "example",
+      "haskell_expected": [
+        [
+          4142,
+          2
+        ],
+        [
+          44,
+          1
+        ]
+      ],
+      "lmx_cases": [
+        {
+          "invoke": "LocalProbe\\run()",
+          "expected": 4142,
+          "producer_calls": 2
+        },
+        {
+          "invoke": "LocalProbe\\explicitInitialization()",
+          "expected": 44,
+          "producer_calls": 1
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "source/lmx/R04.lm3",
+        "functional": "source/lmx/R04.lm3"
+      },
+      "scope": "initializer здесь настоящий IO action; каждая активация вызывает его заново и меняет только отдельный local IORef. Счётчик источника общий. Haskell-модель не хранит само вычисляемое объявление в исходном графе программы, поэтому сравнение остаётся семантической аналогией.",
+      "haskell_execution": "NOT_RUN",
+      "lmx_execution": "NOT_RUN"
+    },
+    {
+      "id": "R06a",
+      "status": "related_analogy",
+      "foreign_source": "source/haskell/R06a.hs",
+      "haskell_operation": "example",
+      "haskell_expected": [
+        2107,
+        true,
+        true
+      ],
+      "lmx_cases": [
+        {
+          "invoke": "SharingProbe\\run()",
+          "expected": 2107,
+          "identity": "copied left and right share one copied target; original is distinct"
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "source/lmx/R06a.lm3",
+        "functional": "source/lmx/R06a.lm3"
+      },
+      "scope": "Используется общий алгоритм GraphCopy с таблицей посещённых IORef, а не заранее изготовленная правильная пара. Фикстура проверяет равенство copied left/right и отличие от оригинала. Модель копирует узлы и рёбра явно заданного графа; правила DATA, parent и исполняемых узлов LMX в неё не включены.",
+      "haskell_execution": "NOT_RUN",
+      "lmx_execution": "NOT_RUN"
+    },
+    {
+      "id": "R06b",
+      "status": "related_analogy",
+      "foreign_source": "source/haskell/R06b.hs",
+      "haskell_operation": "example",
+      "haskell_expected": [
+        83,
+        true,
+        true,
+        3
+      ],
+      "lmx_cases": [
+        {
+          "invoke": "CycleProbe\\run()",
+          "expected": 83,
+          "identity": "self-cycle remains inside the copy; grouping wrapper is a distinct Structure with its own cells",
+          "copied_ring_value_after": 8,
+          "grouping_container_value_after": 3
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "source/lmx/R06b.lm3",
+        "functional": "source/lmx/R06b.lm3"
+      },
+      "scope": "Тот же GraphCopy заносит новый узел в memo до обхода его рёбер, поэтому цикл завершается и сохраняется. Проверяются self==copy, copy/=original и прежнее значение отдельного снимка 3. Снимок не объявляется реализацией LMX-группирующей структуры с собственными ячейками; этот графовый аспект остаётся за пределом модели.",
+      "haskell_execution": "NOT_RUN",
+      "lmx_execution": "NOT_RUN"
+    },
+    {
+      "id": "R07",
+      "status": "related_analogy",
+      "foreign_source": "source/haskell/R07.hs",
+      "haskell_operation": "example",
+      "haskell_expected": 20,
+      "lmx_cases": [
+        {
+          "invoke": "Operands\\Example\\demo()",
+          "expected": 20,
+          "components": [
+            7,
+            13
+          ]
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "source/lmx/R07.lm3",
+        "functional": "source/lmx/R07.lm3"
+      },
+      "scope": "Haskell строит один явный AST и исполняет его общим eval с разными значениями переменной. Это не пользовательский операнд, встроенный в обычный парсер Haskell, и не гомоиконный граф LMX. Арифметика и повторное использование формы воспроизводятся, синтаксическая инфраструктура различается.",
+      "haskell_execution": "NOT_RUN",
+      "lmx_execution": "NOT_RUN"
+    },
+    {
+      "id": "R09",
+      "status": "related_analogy",
+      "foreign_source": "source/haskell/R09.hs",
+      "haskell_operation": "localWrite; graphWrite",
+      "haskell_expected": {
+        "local": 5,
+        "source_after_local": "Uninitialized",
+        "graph": 5,
+        "source_after_graph": "Ready 5"
+      },
+      "lmx_cases": [
+        {
+          "invoke": "UninitializedGraph\\localWrite()",
+          "expected": 5,
+          "source_record_after": "uninit:int",
+          "source_value_size_after": 0
+        },
+        {
+          "invoke": "UninitializedGraph\\graphWrite()",
+          "expected": 5,
+          "source_record_after": "int",
+          "source_value_after": 5,
+          "require_old_new_raw_address_equality": false
+        },
+        {
+          "inspection": "Fresh source before either ordinary case operation",
+          "uninitialized_value_size": 0,
+          "ready_controls": [
+            "numeric 0",
+            "null reference 0"
+          ],
+          "nil_means": "typed absence"
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "source/lmx/R09.lm3",
+        "functional": "source/lmx/R09.lm3"
+      },
+      "scope": "Payload моделирует тег состояния: Uninitialized отличается от Ready 0 и Ready Nothing. Копия IORef используется для локальной записи, исходный IORef — для graphWrite. Конструктор Uninitialized не означает физический нулевой payload LMX; ни размер памяти, ни адресная идентичность представлены этим сравнением не полностью.",
+      "haskell_execution": "NOT_RUN",
+      "lmx_execution": "NOT_RUN"
+    },
+    {
+      "id": "A01",
+      "status": "related_analogy",
+      "foreign_source": "source/haskell/A01.hs",
+      "haskell_operation": "example",
+      "haskell_expected": [
+        209,
+        [
+          "x",
+          "z"
+        ]
+      ],
+      "lmx_cases": [
+        {
+          "invoke": "SlotProbe\\run()",
+          "expected": 209,
+          "length_after": 2,
+          "new_field_name": "z"
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "source/lmx/A01.lm3",
+        "functional": "source/lmx/A01.lm3"
+      },
+      "scope": "Общий IORef списка Field передаёт изменение через обе ссылки. Заменяется целый Field, включая имя, а не только число. Это явная модель дескриптора с именами; она не приписывает обычным Haskell-record полям возможность менять их имена и не моделирует все правила идентичности примитивов LMX.",
+      "haskell_execution": "NOT_RUN",
+      "lmx_execution": "NOT_RUN"
+    },
+    {
+      "id": "V02",
+      "status": "complete_pair",
+      "foreign_source": "source/haskell/V02.hs",
+      "haskell_operation": "accepts",
+      "haskell_expected": [
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "lmx_cases": [
+        {
+          "invoke": "TicketCode\\accepts(\"AB-09\")",
+          "expected": 1
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"QZ-70\")",
+          "expected": 1
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"AB-9\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"AB-090\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"ab-09\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"AB-0X\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"XAB-09Y\")",
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(candidate := fixture)",
+          "fixture_codepoints": [
+            65,
+            66,
+            0,
+            48,
+            57
+          ],
+          "expected": 0
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"ÄB-09\")",
+          "expected": 0,
+          "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+        },
+        {
+          "invoke": "TicketCode\\accepts(\"AB-٠9\")",
+          "expected": 0,
+          "added_case": "Reject non-ASCII letter/digit; matches Analogies.hs."
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "source/lmx/procedural/V02.lm3",
+        "functional": "source/lmx/V02.lm3"
+      },
+      "scope": "Пятиэлементный pattern match задаёт точную длину; inRange проверяет ASCII-границы. Нет поиска подстроки, locale-зависимых классов или предварительной очистки входа. Bool нормализуется как False→0, True→1. Исходный процедурный LMX с проверенным разделителем --- сохранён без изменения.",
+      "haskell_execution": "NOT_RUN",
+      "lmx_execution": "NOT_RUN"
+    },
+    {
+      "id": "V03",
+      "status": "complete_pair",
+      "foreign_source": "source/haskell/V03.hs",
+      "haskell_operation": "check sample; check biased; check readsTwice",
+      "haskell_expected": [
+        [
+          true,
+          1
+        ],
+        [
+          false,
+          1
+        ],
+        [
+          false,
+          2
+        ]
+      ],
+      "lmx_cases": [
+        {
+          "invoke": "SamplingCheck\\check(candidate := Measurement\\sample)",
+          "expected": 1,
+          "calls_after": 1
+        },
+        {
+          "invoke": "SamplingCheck\\check(candidate := Measurement\\biased)",
+          "expected": 0,
+          "calls_after": 1
+        },
+        {
+          "invoke": "SamplingCheck\\check(candidate := Measurement\\readsTwice)",
+          "expected": 0,
+          "calls_after": 2
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "source/lmx/procedural/V03.lm3",
+        "functional": "source/lmx/V03.lm3"
+      },
+      "scope": "В отличие от прежнего закрытого SampleVariant, checker получает функцию Candidate. Общая sample используется вариантами biased и readsTwice, повторный read действительно выполняется. Haskell передаёт gain и read явно; LMX связывает их через текущий контекст. Наблюдаемый договор checker и три отрицательных/положительных случая совпадают.",
+      "haskell_execution": "NOT_RUN",
+      "lmx_execution": "NOT_RUN"
+    },
+    {
+      "id": "V04",
+      "status": "complete_pair",
+      "foreign_source": "source/haskell/V04.hs",
+      "haskell_operation": "check unavailable; check zero",
+      "haskell_expected": [
+        1,
+        0
+      ],
+      "lmx_cases": [
+        {
+          "invoke": "FailureCheck\\check(candidate := UnavailableSensor\\read)",
+          "expected": 1
+        },
+        {
+          "invoke": "FailureCheck\\check(candidate := UnavailableSensor\\zero)",
+          "expected": 0
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "source/lmx/V04.lm3",
+        "functional": "source/lmx/V04.lm3"
+      },
+      "scope": "NoSample — отдельный тип Exception. catch обрабатывает только этот тип; zero успешно возвращает 0 и checker возвращает 0. Другая ошибка не поглощается. В сравнении показаны объявления исключения, throwIO и весь обработчик, без ручного сравнения строк имени ошибки.",
+      "haskell_execution": "NOT_RUN",
+      "lmx_execution": "NOT_RUN"
+    },
+    {
+      "id": "V05",
+      "status": "complete_pair",
+      "foreign_source": "source/haskell/V05.hs",
+      "haskell_operation": "check =<< fst <$> makeDevice fault",
+      "haskell_expected": {
+        "results": [
+          true,
+          false,
+          false
+        ],
+        "writes": 2,
+        "reads": 2,
+        "trace": 1202,
+        "commanded": 0,
+        "sensed": [
+          0,
+          0,
+          1
+        ]
+      },
+      "lmx_cases": [
+        {
+          "setup": "Fresh (merge(Indicator; (int: fault 0))) supplied as candidate",
+          "invoke": "Commissioning\\check(candidate := device)",
+          "expected": 1,
+          "writes": 2,
+          "reads": 2,
+          "trace": 1202,
+          "commanded_after": 0,
+          "sensed_after": 0,
+          "observe_from": "The actual copied owner parent(device\\set), not the grouping container."
+        },
+        {
+          "setup": "Fresh (merge(Indicator; (int: fault 1))) supplied as candidate",
+          "invoke": "Commissioning\\check(candidate := device)",
+          "expected": 0,
+          "writes": 2,
+          "reads": 2,
+          "trace": 1202,
+          "commanded_after": 0,
+          "sensed_after": 0,
+          "observe_from": "The actual copied owner parent(device\\set), not the grouping container."
+        },
+        {
+          "setup": "Fresh (merge(Indicator; (int: fault 2))) supplied as candidate",
+          "invoke": "Commissioning\\check(candidate := device)",
+          "expected": 0,
+          "writes": 2,
+          "reads": 2,
+          "trace": 1202,
+          "commanded_after": 0,
+          "sensed_after": 1,
+          "observe_from": "The actual copied owner parent(device\\set), not the grouping container."
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "source/lmx/V05.lm3",
+        "functional": "source/lmx/V05.lm3"
+      },
+      "scope": "Device хранит две произвольные операции. Общая cycleDevice выполняет set и observe; check сначала исполняет оба IO-цикла, затем применяет && к полученным Bool. Поэтому ошибка первого сравнения не отменяет выключение. State позволяет проверить commanded=0 и sensed=0/0/1. Сравнивается этот локальный контракт устройства; внутренние parent-адреса LMX не объявлены Haskell-адресами.",
+      "haskell_execution": "NOT_RUN",
+      "lmx_execution": "NOT_RUN"
+    },
+    {
+      "id": "M01",
+      "status": "complete_pair",
+      "foreign_source": "source/haskell/M01.hs",
+      "haskell_operation": "validation.counterFixture",
+      "haskell_expected": 13,
+      "lmx_cases": [
+        {
+          "kind": "transport fixture",
+          "setup": "One owner; fresh Counter; value=0",
+          "calls": [
+            "Counter\\add(delta := 4)",
+            "Counter\\add(delta := 9)"
+          ],
+          "observe": "Counter\\read()",
+          "expected": 13,
+          "constraint": "one serial turn per admitted input; either arrival order"
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "source/lmx/M01.lm3",
+        "functional": "source/lmx/M01.lm3"
+      },
+      "scope": "Chan и MVar — реальные средства base. В сравниваемом модуле целиком показан service loop, включая завершение; запуск потоков и проверка ответов находятся в одинаково исключённом из размера внешнем harness. Проверяются оба допустимых набора промежуточных ответов. HTTP и распределённая доставка не входят в эту локальную пару.",
+      "haskell_execution": "NOT_RUN",
+      "lmx_execution": "NOT_RUN"
+    },
+    {
+      "id": "M05",
+      "status": "related_analogy",
+      "foreign_source": "source/haskell/M05.hs",
+      "haskell_operation": "validation.lampFixture",
+      "haskell_expected": 1,
+      "lmx_cases": [
+        {
+          "kind": "transport fixture",
+          "invoke": "Lamp\\set(command := 1)",
+          "expected_stored_state": 1,
+          "expected_application_replies": 0,
+          "constraint": "No synthetic ACK or unanswered event merely for having no result contract"
+        }
+      ],
+      "lmx_sources": {
+        "procedural": "source/lmx/M05.lm3",
+        "functional": "source/lmx/M05.lm3"
+      },
+      "scope": "lampLoop читает команды без поля для reply и вызывает IO () setter. Nothing завершает внешний тестовый worker. Harness ожидает завершение потока отдельно; эта синхронизация не является ответом на set. Фикстура действительно наблюдает state=1. Отсутствие прикладного reply выражено типом и телом worker; HTTP/Message-доставку LMX и её счётчики этот локальный Haskell-код не исполняет.",
+      "haskell_execution": "NOT_RUN",
+      "lmx_execution": "NOT_RUN"
+    }
+  ]
+}

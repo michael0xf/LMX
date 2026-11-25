@@ -1,7 +1,9 @@
 Example:
-    int[]: first
-    int[]: second
+    int[]: quantities
+    int[]: prices
     return: @
     run:
-        throws: copy(zipWith\throws)
-        return: (zipWith first second `*`)
+        throws: copy(zipWith\throws) copy(sum\throws)
+        @: totals (zipWith quantities prices `*`)
+        int: count length(totals)
+        return: (totals; \(sum totals); length(quantities) - count; length(prices) - count)

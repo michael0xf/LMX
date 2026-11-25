@@ -1006,7 +1006,7 @@ The following group-assignment snapshots distinguish the stream plan from the op
 | `(a b) := copy(Pair)`, with Pair fields 2 and 7 | Places a, b | The two fields emitted by copy | One whole left place bundle; references to 2 and 7 |
 | `(a b) := (copy(Pair))`, with the same Pair | Places a, b | The same two copied fields | The same two-value assignment as the preceding row |
 
-The last two rows are valid equivalent group-assignment cases. The current [R02 source](examples/lmx/R02.lm3) uses the shorter direct stream; its expected `StreamProbe\run()` result remains **27**. All right values are read before the first target write. These are normative expected snapshots, not a parser or runtime execution receipt. Removing parentheses from a scalar container assignment such as `ptr := (copy(Model))` is outside this equivalence.
+The last two rows are valid equivalent group-assignment cases. The current [R02 source](examples/haskell_comparision/source/lmx/R02.lm3) uses the shorter direct stream; its expected `StreamProbe\run()` result remains **27**. All right values are read before the first target write. These are normative expected snapshots, not a parser or runtime execution receipt. Removing parentheses from a scalar container assignment such as `ptr := (copy(Model))` is outside this equivalence.
 
 Source: [operand header](../LMX_semantics.en.md#operand-receiver); [prepared values](../LMX_semantics.en.md#prepared-operands); [references and storage](../LMX_semantics.en.md#operand-storage).
 

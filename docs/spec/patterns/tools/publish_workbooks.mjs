@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
-import {FileBlob, SpreadsheetFile} from '@oai/artifact-tool';
+import {FileBlob, SpreadsheetFile, Workbook} from '@oai/artifact-tool';
 
 // One model for all publication formats. Imported workbooks retain their sheet
 // identities and drawings; only the requested comparison ranges are rebuilt.
@@ -28,7 +28,13 @@ function numbers(values){return values.filter(value=>typeof value==='number'&&Nu
 for(const source of model.documents){
   if(!selected(source.stem))continue;
   const target=path.join(root,source.stem+'.xlsx');
-  const wb=await SpreadsheetFile.importXlsx(await FileBlob.load(target));
+  let wb;
+  try { wb=await SpreadsheetFile.importXlsx(await FileBlob.load(target)); }
+  catch(error) {
+    if(error.code!=='ENOENT' && !String(error.message).includes('ENOENT'))throw error;
+    wb=Workbook.create();
+    for(const view of source.sheets)wb.worksheets.add(view.name);
+  }
   const checks=[];const totals=[];const comparisonGroups=[];const renders=[];
   for(const view of source.sheets){
     const sh=wb.worksheets.getItem(view.name);

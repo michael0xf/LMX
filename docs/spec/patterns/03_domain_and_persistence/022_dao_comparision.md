@@ -87,7 +87,7 @@ public static class Service {
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 198 | 17 |
+| LMX | <span style="color:#176233"><u>198</u></span> | 17 |
 | Python | 214 | 8 |
 | C# | 349 | 11 |
 

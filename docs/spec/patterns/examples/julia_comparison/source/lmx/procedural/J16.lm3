@@ -1,11 +1,17 @@
 Example:
     int[]: xs
+    int: lo
+    int: hi
     return: int
     run:
-        int: count 0
+        int: n length(xs)
+        if: n = 0
+            return: 0
+        int: accepted 0
         int: i 0
-        while: i < length(xs)
-            if: xs[i] % 2 = 0
-                count += 1
+        while: i < n
+            if: xs[i] >= lo && xs[i] <= hi
+                accepted += 1
             i += 1
-        return: count
+        int: scaled 1000 * accepted
+        return: (scaled - scaled % n) / n

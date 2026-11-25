@@ -1,0 +1,14 @@
+Eligible:
+    int: value
+    return: int
+    accepts:
+        return: value > 0 && value <= limit
+
+Example:
+    int[]: items
+    int: limit
+    return: @
+    run:
+        throws: copy(filter\throws) copy(sum\throws)
+        @: accepted (filter items Eligible\accepts)
+        return: (accepted; \(sum accepted); length(items) - length(accepted))

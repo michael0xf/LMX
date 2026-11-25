@@ -1,17 +1,13 @@
 Example:
-    @: left
-    @: right
-    return: @
+    int[]: left
+    int[]: right
+    return: int
     run:
-        throws: copy(FxSeqInfo\get\throws) copy(FxSeqRead\read\throws) copy(FxSeqPush\append\throws)
-        FxSeqInfo\get(left)
-        FxSeqInfo\get(right)
-        @[]: out []
+        int: total 0
         int: i 0
         while: i < length(left) && i < length(right)
-            @: pair (copy(FxPair))
-            pair\first := FxSeqRead\read(left; i)
-            pair\second := FxSeqRead\read(right; i)
-            FxSeqPush\append(out; pair)
+            int: gap left[i] - right[i]
+            if: gap > 0
+                total += gap
             i += 1
-        return: out
+        return: total

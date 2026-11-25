@@ -78,7 +78,7 @@ Page Controller отличается от Front Controller принадлежн�
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 99 | 9 |
+| LMX | <span style="color:#176233"><u>99</u></span> | 9 |
 | TypeScript | 128 | 7 |
 | C# | 160 | 9 |
 

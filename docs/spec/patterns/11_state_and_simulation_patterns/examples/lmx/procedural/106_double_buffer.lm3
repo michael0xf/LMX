@@ -1,0 +1,16 @@
+Evolve:
+    int[]: cells
+    int: steps
+    return: @
+    run:
+        throws: copy(BufferMake\make\throws)
+        @: state BufferMake\make(cells; steps)
+        int: tick 0
+        while: tick < steps
+            int: i 0
+            while: i < length(cells)
+                state\next[i] := Ring\value(state; i)
+                i += 1
+            Publish\swap(state)
+            tick += 1
+        return: state\current

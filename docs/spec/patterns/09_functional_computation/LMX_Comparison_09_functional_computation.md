@@ -8,20 +8,20 @@
 
 | ID | Сценарий | LMX процедурный | LMX функциональный | Haskell | Scala |
 | --- | --- | --- | --- | --- | --- |
-| 082 | Monad | 191 | 180 | 125 | 135 |
-| 083 | Trampoline | 82 | 344 | 307 | 265 |
-| 084 | Execute Around | 709 | 586 | 642 | 521 |
-| 085 | Currying | 493 | 205 | 131 | 169 |
-| Итого | — | 1475 | 1315 | 1205 | 1090 |
+| 082 | Monad | 191 | 180 | <span style="color:#176233"><u>125</u></span> | 135 |
+| 083 | Trampoline | <span style="color:#176233"><u>82</u></span> | 344 | 307 | 265 |
+| 084 | Execute Around | 709 | 586 | 642 | <span style="color:#176233"><u>521</u></span> |
+| 085 | Currying | 493 | 205 | <span style="color:#176233"><u>131</u></span> | 169 |
+| Итого | — | 1475 | 1315 | 1205 | <span style="color:#176233"><u>1090</u></span> |
 
 ### Общие реализации библиотеки
 
 | ID | Компонент | LMX — реализация | Haskell | Scala |
 | --- | --- | --- | --- | --- |
-| 091 | Maybe container and bind implementation | 444 | 271 | 265 |
-| 092 | Trampoline container and runner implementation | 613 | 198 | 303 |
-| 098 | Execute Around implementation | 316 | 390 | 836 |
-| 099 | General partial-application implementation | 533 | 699 | 263 |
+| 091 | Maybe container and bind implementation | 444 | 271 | <span style="color:#176233"><u>265</u></span> |
+| 092 | Trampoline container and runner implementation | 613 | <span style="color:#176233"><u>198</u></span> | 303 |
+| 098 | Execute Around implementation | <span style="color:#176233"><u>316</u></span> | 390 | 836 |
+| 099 | General partial-application implementation | 533 | 699 | <span style="color:#176233"><u>263</u></span> |
 
 Haskell даёт естественный контроль для Maybe/Monad и каррирования. Scala сочетает функциональные приёмы с JVM, явным батутом и обычным управлением ресурсами. Эти языки выбраны за подходящие механизмы, а не для универсального рейтинга краткости.
 

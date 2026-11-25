@@ -1,0 +1,26 @@
+TopoRow:
+    @: row
+    return: int
+    count:
+        throws: copy(foldl\throws)
+        return: \foldl(row; (0 record); TopoCount\run)
+
+TopoVisit:
+    return: int
+    next:
+        throws: copy(foldl\throws) Stop ReceiverIndex
+        if: head = tail
+            throw: Stop()
+        int: vertex queue[head]
+        head += 1
+        tail := \foldl(graph[vertex]; (tail record); TopoRemove\run)
+        return: vertex
+
+TopoFunctional:
+    return: int
+    run:
+        throws: copy(map\throws) copy(range\throws) copy(collect\throws)
+        map(graph; TopoRow\count)
+        map(range(0; n); TopoEnqueue\run)
+        collect(TopoVisit\next)
+        return: 0

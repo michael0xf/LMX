@@ -1,0 +1,17 @@
+Frames:
+    int: step
+    int[]: deltas
+    return: @
+    run:
+        throws: copy(SimulationMake\make\throws) copy(sys\resize\throws)
+        @: state SimulationMake\make(step; deltas)
+        @[]: output []
+        sys\resize(output; length(deltas))
+        int: frame 0
+        while: frame < length(deltas)
+            state\lag += deltas[frame]
+            while: state\lag >= step
+                Tick\update(state)
+            output[frame] := (copy(state))
+            frame += 1
+        return: output

@@ -1,0 +1,14 @@
+ChannelTotal:
+    @: column
+    return: int
+    value:
+        throws: copy(sum\throws)
+        return: \sum(column) - baseline * length(column)
+
+Example:
+    @: rows
+    int: baseline
+    return: @
+    run:
+        throws: copy(transpose\throws) copy(map\throws) copy(ChannelTotal\value\throws)
+        return: map(transpose(rows); ChannelTotal\value)

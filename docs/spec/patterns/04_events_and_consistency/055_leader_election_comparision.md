@@ -89,7 +89,7 @@ CandidateMessage — участник. coordinator.acquire(id) и resource.write
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 199 | 12 |
+| LMX | <span style="color:#176233"><u>199</u></span> | 12 |
 | Java | 319 | 14 |
 | Go | 278 | 10 |
 

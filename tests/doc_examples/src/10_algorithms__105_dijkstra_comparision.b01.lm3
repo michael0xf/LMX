@@ -1,0 +1,42 @@
+Dijkstra:
+    @: graph
+    int: start
+    @: traverse
+    return: @
+    run:
+        throws: copy(AlgorithmArray\make\throws) copy(FxApply\apply\throws) ReceiverIndex
+        int: n length(graph)
+        @: distance AlgorithmArray\make(bigint[]; n; (-1 record))
+        @: settled AlgorithmArray\make(int[]; n; (0 record))
+        if: n = 0
+            return: distance
+        distance[start] := 0
+        int: best -1
+        FxApply\apply(traverse; ())
+        return: distance
+
+DijkstraPick:
+    int: chosen
+    int: vertex
+    return: int
+    run:
+        throws: ReceiverIndex
+        if: settled[vertex] = 0 && distance[vertex] >= 0
+            if: chosen = -1
+                return: vertex
+            if: distance[vertex] < distance[chosen]
+                return: vertex
+        ---
+        return: chosen
+
+DijkstraRelax:
+    int: ignored
+    @: edge
+    return: int
+    run:
+        throws: ReceiverIndex
+        int: vertex edge[0]
+        bigint: candidate distance[best] + edge[1]
+        if: distance[vertex] = -1 || candidate < distance[vertex]
+            distance[vertex] := candidate
+        return: 0

@@ -1,0 +1,36 @@
+WordPair:
+    char[]: text
+    return: int
+    test:
+        int: at 0
+        while: at < length(text) && Ascii\letter(text[at]) != 0
+            at += 1
+        if: at = 0 || at = length(text) || text[at] != ' ' || length(text) - at - 1 != at
+            return: 0
+        int: i 0
+        while: i < at
+            if: text[i] != text[at + 1 + i]
+                return: 0
+            i += 1
+        return: 1
+
+Example:
+    @: lines
+    return: @
+    run:
+        throws: copy(FxSeqRead\read\throws) copy(sys\resize\throws) copy(FxSeqPush\append\throws) copy(record\throws)
+        @[]: out []
+        int: i 0
+        while: i < length(lines)
+            @: value FxSeqRead\read(lines; i)
+            char[]: text \value
+            if: WordPair\test(text) != 0
+                char[]: word []
+                sys\resize(word; (length(text) - 1) / 2)
+                int: j 0
+                while: j < length(word)
+                    word[j] := text[j]
+                    j += 1
+                FxSeqPush\append(out; (word record))
+            i += 1
+        return: (out; length(lines) - length(out))

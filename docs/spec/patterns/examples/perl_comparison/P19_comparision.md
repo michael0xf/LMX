@@ -117,3 +117,13 @@ Perl-клиенты проверяет [действительный harness](va
 
 - <https://perldoc.perl.org/5.40.1/perlop#s/PATTERN/REPLACEMENT/msixpodualngcer>
 - <https://perldoc.perl.org/5.40.1/perlop#Multiplicative-Operators>
+
+## Все проверочные входы
+
+Каждый случай проверяет полный результат и отсутствие изменения входов. prime_empty_pattern дополнительно создаёт ранее успешное regex-состояние Perl.
+
+| Случай | Аргументы | Результат | Дополнительное условие |
+| --- | --- | --- | --- |
+| 1 | `["card 1234 / 09"]` | `"card **** / **"` | — |
+| 2 | `["a0b"]` | `"a*b"` | — |
+| 3 | `["abc"]` | `"abc"` | — |

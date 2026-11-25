@@ -16,9 +16,11 @@ sys/native, весь W4, W5 и весь 27.10 открыты. Полный на�
 (GLM 5.4 max) с helper; Sol (`codex`) — его консультант, Astra — консультант Sol ([порядок](to_sol.md)). Приняты
 как компоненты 21.7: K1a, K3 ([свидетельство](steps/witnesses/structural-result-20261124/notes.md)), K4 —
 [нативный вызывающий Graph](steps/witnesses/graph-native-caller-20261124/notes.md) и K3n, часть 1, —
-[результат-Structure по описанию блоком](steps/witnesses/graph-structure-result-20261124/notes.md). Открыты:
+[результат-Structure по описанию блоком](steps/witnesses/graph-structure-result-20261124/notes.md), и дополнение
+документации автора 2026-11-25 слито (28.7). Открыты:
 K3n, часть 2 (хвост `return: 1 2 3`, затем одна широкая проверка G1/G2 на границе связанного изменения), K2 (actuals),
-долг 21.9 (а), kernel sys export, current DATA, sys/native, весь W4, W5 и весь 27.10. Редакция документации автора
+долг 21.9 (а), kernel sys export, current DATA, sys/native, весь W4, W5 и весь 27.10, операции ядра `fill`,
+`lowerBound`, `last` (28.8: приёмка вместе с пакетом ресиверов). Редакция документации автора
 2026-11-24 (`->`, `::` потребляет DATA, группировщик Expression) слита в
 рабочие документы; её задачи — [шаг 28](next_core_tasks_v3.md#docs-20261124): 28.1 документы — сделано; 28.2
 конструктор `->`, 28.3 `::` и DATA, 28.4 группировщик — норма записана, код ждёт шагов 21.12–21.14, 22.5 и 22.7;

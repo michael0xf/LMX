@@ -8,18 +8,18 @@
 
 | ID | Сценарий | LMX | Java | Go | Слой |
 | --- | --- | --- | --- | --- | --- |
-| 005 | Layered Architecture | 187 | 274 | 217 | Сценарий |
-| 006 | Hexagonal Architecture (Ports and Adapters) | 181 | 264 | 183 | Сценарий |
-| 007 | Clean Architecture | 286 | 341 | 268 | Сценарий |
-| 008 | Onion Architecture | 222 | 363 | 308 | Сценарий |
-| 009 | Microservices | 186 | 241 | 211 | Сценарий |
-| 010 | Event-Driven Architecture | 215 | 263 | 241 | Сценарий |
-| 013 | Pipe and Filter | 302 | 374 | 246 | Клиент |
-| 093 | Pipe — implementation | 399 | 215 | 111 | Реализация |
-| 014 | Blackboard | 354 | 351 | 325 | Сценарий |
-| 015 | Microkernel / Plug-in | 355 | 356 | 326 | Сценарий |
-| 046 | Anti-Corruption Layer (ACL) | 165 | 177 | 162 | Сценарий |
-| 047 | Strangler Fig | 310 | 309 | 227 | Сценарий |
+| 005 | Layered Architecture | <span style="color:#176233"><u>187</u></span> | 274 | 217 | Сценарий |
+| 006 | Hexagonal Architecture (Ports and Adapters) | <span style="color:#176233"><u>181</u></span> | 264 | 183 | Сценарий |
+| 007 | Clean Architecture | 286 | 341 | <span style="color:#176233"><u>268</u></span> | Сценарий |
+| 008 | Onion Architecture | <span style="color:#176233"><u>222</u></span> | 363 | 308 | Сценарий |
+| 009 | Microservices | <span style="color:#176233"><u>186</u></span> | 241 | 211 | Сценарий |
+| 010 | Event-Driven Architecture | <span style="color:#176233"><u>215</u></span> | 263 | 241 | Сценарий |
+| 013 | Pipe and Filter | 302 | 374 | <span style="color:#176233"><u>246</u></span> | Клиент |
+| 093 | Pipe — implementation | 399 | 215 | <span style="color:#176233"><u>111</u></span> | Реализация |
+| 014 | Blackboard | 354 | 351 | <span style="color:#176233"><u>325</u></span> | Сценарий |
+| 015 | Microkernel / Plug-in | 355 | 356 | <span style="color:#176233"><u>326</u></span> | Сценарий |
+| 046 | Anti-Corruption Layer (ACL) | 165 | 177 | <span style="color:#176233"><u>162</u></span> | Сценарий |
+| 047 | Strangler Fig | 310 | 309 | <span style="color:#176233"><u>227</u></span> | Сценарий |
 
 Java представляет явные интерфейсы, классы и модульную серверную разработку; Go — композицию функций и небольшие сервисные контракты. Пара позволяет проверить, требует ли паттерн иерархии классов или достаточно одинаковых границ и эффектов.
 

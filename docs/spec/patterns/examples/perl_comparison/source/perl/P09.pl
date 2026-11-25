@@ -1,7 +1,8 @@
 use strict;
 use warnings;
-use List::Util qw(uniq);
+use List::Util qw(uniqnum);
 sub example {
     my ($items) = @_;
-    return [uniq @$items];
+    my @selected = uniqnum(@$items);
+    return [\@selected, scalar(@$items) - scalar(@selected)];
 }

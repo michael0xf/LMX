@@ -1,0 +1,12 @@
+FxSeqLast:
+    private:
+        @: items
+        int: count
+    required: items count
+    return: @
+    last:
+        throws: copy(FxStdCut\drop\throws)
+        FxSeqInfo\get(items)
+        if: count < 0
+            throw: SequenceSize()
+        return: FxStdCut\drop(items; length(items) - count)

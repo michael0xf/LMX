@@ -1,13 +1,17 @@
 Example:
     char[]: text
+    int: columns
     return: @
     run:
         throws: copy(sys\resize\throws) copy(FxSeqPush\append\throws) copy(record\throws)
         @[]: out []
+        int: empty 0
         int: begin 0
         int: i 0
         while: 1
             if: i = length(text) || text[i] = ','
+                if: i = begin
+                    empty += 1
                 char[]: part []
                 sys\resize(part; i - begin)
                 int: j 0
@@ -16,6 +20,6 @@ Example:
                     j += 1
                 FxSeqPush\append(out; (part record))
                 if: i = length(text)
-                    return: out
+                    return: (out; length(out) = columns; empty)
                 begin := i + 1
             i += 1

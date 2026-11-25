@@ -1,14 +1,13 @@
 Example:
     @: rows
+    int: baseline
     return: @
     run:
-        throws: copy(FxSeqInfo\get\throws) copy(FxSeqAllocate\make\throws) copy(FxSeqRead\read\throws) copy(sys\resize\throws) FxShape
-        FxSeqInfo\get(rows)
+        throws: copy(FxSeqRead\read\throws) copy(FxSeqInfo\get\throws) copy(sys\resize\throws) copy(record\throws) FxShape
         @[]: out []
         if: length(rows) = 0
             return: out
         @: first FxSeqRead\read(rows; 0)
-        FxSeqInfo\get(first)
         int: width length(first)
         int: i 0
         while: i < length(rows)
@@ -20,12 +19,12 @@ Example:
         sys\resize(out; width)
         int: j 0
         while: j < width
-            @: column FxSeqAllocate\make(@[]; length(rows))
+            int: total 0
             i := 0
             while: i < length(rows)
                 @: row FxSeqRead\read(rows; i)
-                column[i] := FxSeqRead\read(row; j)
+                total += \FxSeqRead\read(row; j) - baseline
                 i += 1
-            out[j] := column
+            out[j] := (total record)
             j += 1
         return: out

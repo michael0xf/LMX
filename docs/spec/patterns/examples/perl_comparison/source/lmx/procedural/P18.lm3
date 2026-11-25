@@ -2,10 +2,11 @@ Example:
     char[]: text
     char[]: needle
     char[]: replacement
-    return: char[]
+    return: @
     run:
         throws: copy(FxSeqPush\append\throws) copy(record\throws)
         char[]: out []
+        int: changed 0
         int: i 0
         while: 1
             int: same length(needle) <= length(text) - i
@@ -15,6 +16,7 @@ Example:
                     same := 0
                 j += 1
             if: same != 0
+                changed += 1
                 j := 0
                 while: j < length(replacement)
                     FxSeqPush\append(out; (replacement[j] record))
@@ -24,6 +26,6 @@ Example:
                     continue
             ---
             if: i = length(text)
-                return: out
+                return: (out; changed)
             FxSeqPush\append(out; (text[i] record))
             i += 1

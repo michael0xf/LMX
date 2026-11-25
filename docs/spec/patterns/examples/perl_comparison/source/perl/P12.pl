@@ -2,5 +2,6 @@ use strict;
 use warnings;
 sub example {
     my ($base, $patch) = @_;
-    return {%$base, %$patch};
+    my $settings = {%$base, %$patch};
+    return [$settings, $settings->{width} * $settings->{height}];
 }

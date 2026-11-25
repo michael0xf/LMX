@@ -1,6 +1,7 @@
 Example:
     int[]: left
     int[]: right
+    int: budget
     return: @
     Row:
         int: x
@@ -12,8 +13,8 @@ Example:
                 return: (x; y)
         ---
         expand:
-            throws: copy(map\throws)
-            return: map(right; Pair\make)
+            throws: copy(map\throws) copy(compress\throws)
+            return: map(compress(right; x + right <= budget); Pair\make)
     ---
     run:
         throws: copy(FxListBind\bind\throws) copy(Example\Row\expand\throws)

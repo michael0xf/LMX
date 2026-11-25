@@ -1,10 +1,10 @@
-# S11. APPLY: сумма аргументов из списка
+# S11. APPLY: обороты и итоговый баланс
 
 Полное сравнение на указанном домене.
 
 ## Общий договор
 
-Просуммировать конечный список целых; пустой список даёт 0. Размер входа ниже CALL-ARGUMENTS-LIMIT установленной реализации; сумма помещается в LMX int.
+Даны начальный целый баланс opening и конечные списки неотрицательных целых charges и credits. Вернуть [chargeTotal, creditTotal, closing], где closing = opening + chargeTotal - creditTotal. Пустой список имеет сумму 0, входы не меняются. Все суммы и промежуточные значения помещаются в LMX int.
 
 ## Входы и ожидаемые наблюдения
 
@@ -12,29 +12,64 @@
 [
   {
     "args": [
+      100,
       [
-        1,
-        2,
-        3
+        20,
+        5
+      ],
+      [
+        10,
+        7
       ]
     ],
-    "expected": 6
+    "expected": [
+      25,
+      17,
+      108
+    ]
   },
   {
     "args": [
+      0,
+      [],
       []
     ],
-    "expected": 0
+    "expected": [
+      0,
+      0,
+      0
+    ]
   },
   {
     "args": [
+      -5,
+      [],
       [
-        -2,
-        0,
-        5
+        2
       ]
     ],
-    "expected": 3
+    "expected": [
+      0,
+      2,
+      -7
+    ]
+  },
+  {
+    "args": [
+      0,
+      [
+        2,
+        2
+      ],
+      [
+        1
+      ]
+    ],
+    "expected": [
+      4,
+      1,
+      3
+    ]
   }
 ]
 ```
@@ -43,55 +78,71 @@
 
 | Источник | Без пробельных | Все символы | Непустые строки |
 | --- | ---: | ---: | ---: |
-| LMX — процедурный | 101 | 193 | 10 |
-| LMX — функциональный | 55 | 85 | 5 |
-| Common Lisp / SBCL | 36 | 44 | 2 |
+| LMX — процедурный | 268 | 429 | 19 |
+| LMX — функциональный | 164 | 236 | 9 |
+| Common Lisp / SBCL | 146 | 182 | 4 |
 
 Оба стиля LMX сравниваются независимо по одному договору. Все объявления, вспомогательные определения и Throws входят в размер. Реализация общих библиотечных операций учитывается отдельно один раз.
 
 ## LMX — процедурный
 
 ```lmx
-Example:
+Total:
     int[]: items
     return: int
-    run:
-        int: total 0
+    sum:
+        int: result 0
         int: i 0
         while: i < length(items)
-            total += items[i]
+            result += items[i]
             i += 1
-        return: total
+        return: result
+
+Example:
+    int: opening
+    int[]: charges
+    int[]: credits
+    return: @
+    run:
+        int: charged Total\sum(charges)
+        int: credited Total\sum(credits)
+        return: (charged; credited; opening + charged - credited)
 ```
 
-[Полный исходник](source/lmx/procedural/S11.lm3). 101 непробельных символов; 10 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/procedural/S11.lm3). 268 непробельных символов; 19 непустых строк. Все объявления и Throws включены.
 
 ## LMX — функциональный
 
 ```lmx
 Example:
-    int[]: items
-    return: int
+    int: opening
+    int[]: charges
+    int[]: credits
+    return: @
     run:
-        return: (+ 0 copy(items))
+        int: charged (+ 0 copy(charges))
+        int: credited (+ 0 copy(credits))
+        return: (charged; credited; opening + charged - credited)
 ```
 
-[Полный исходник](source/lmx/S11.lm3). 55 непробельных символов; 5 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/S11.lm3). 164 непробельных символов; 9 непустых строк. Все объявления и Throws включены.
 
 ## Common Lisp / SBCL
 
 [Полный исходник](source/common-lisp/S11.lisp).
 
 ```common-lisp
-(defun example (items)
-  (apply #'+ items))
+(defun example (opening charges credits)
+  (let ((charged (apply #'+ charges))
+        (credited (apply #'+ credits)))
+    (list charged credited (- (+ opening charged) credited))))
 ```
 
 ## Соответствие стилей договору
 
-Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма.
+Процедурный стиль использует один локальный цикл суммирования повторно. Функциональный записывает обе вариадические суммы через общий Expression, затем строит финансовую сводку без повторного вычисления сумм.
 
-copy(items) явно выдаёт поля в потребитель Expression; это не неявное раскрытие Array. Непустые и пустые плотные массивы требуют отдельной LMX runtime-приёмки, NOT_RUN.
+Две независимые последовательности превращаются в аргументы обычного +; готовые числовые итоги затем используются в балансе. Процедурный helper Total\sum определён один раз для обоих входов. Copy открывает значения явно и не вводит неявное рекурсивное раскрытие произвольных записей.
 
 ## Общие операции и реализации
 
@@ -99,31 +150,9 @@ copy(items) явно выдаёт поля в потребитель Expression;
 
 Common Lisp-клиент использует указанные native/standard средства и не импортирует сравнительные реализации.
 
-## Дополнительный способ: LMX с общими ресиверами ядра
-
-Исходный полный вариант; нормы и конечные эффекты проверены. Полные текущие размеры приведены в статистике.
-
-[Исходник](alternatives/lmx/S11_core.lm3); вне двух основных сравнений.
-
-```lmx
-Add:
-    int: total
-    int: value
-    return: int
-    run:
-        return: total + value
-
-Example:
-    int[]: items
-    return: int
-    run:
-        throws: copy(FxThrows\recordcall) ReceiverIndex
-        return: \foldl(items; (0 record); Add\run)
-```
-
 ## Проверка
 
-SBCL: [фактический отчёт](validation/common_lisp.json). Оба LMX-варианта: **NOT_RUN**; проверки текста не доказывают исполнение.
+Для обновлённого кода **SBCL: NOT_RUN; LMX parser/runtime: NOT_RUN**. Статистика пересчитана по полным исходникам; это не выполнение программ. [Статус и прежний receipt](validation/common_lisp.json).
 
 ## Первичные источники
 

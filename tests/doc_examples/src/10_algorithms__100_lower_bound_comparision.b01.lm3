@@ -1,0 +1,22 @@
+FxLowerBound:
+    private:
+        @: items
+        @: needle
+        @: less
+    required: items needle less
+    return: int
+    lowerBound:
+        throws: copy(FxSeqInfo\get\throws) copy(FxSeqRead\read\throws) copy(FxApply\apply\throws) copy(FxSeqPredicate\truth\throws)
+        FxSeqInfo\get(items)
+        int: low 0
+        int: high length(items)
+        while: low < high
+            int: middle low + (high - low) / 2
+            @: item FxSeqRead\read(items; middle)
+            @: flag FxApply\apply(less; FxTwo\make(item; needle))
+            if: FxSeqPredicate\truth(flag) != 0
+                low := middle + 1
+            else:
+                high := middle
+        ---
+        return: low

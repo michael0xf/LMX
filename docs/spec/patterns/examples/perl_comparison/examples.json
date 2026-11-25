@@ -1,14 +1,14 @@
 {
   "suite": "perl",
   "foreign_language": "Perl",
-  "edition": "2026-11-23",
+  "edition": "2026-11-25-useful-scenarios",
   "runtime_profile": "Perl 5.40.1; List::Util 1.63; defer is experimental",
   "examples": [
     {
       "id": "P01",
-      "title": "Преобразование целого списка",
+      "title": "Калибровка измерений и итог пакета",
       "category": "Списки",
-      "contract": "Вернуть новый список, умножив каждое целое число на 3; порядок и нули сохраняются. Вход не меняется.",
+      "contract": "Калибровать целочисленные измерения множителем 3; вернуть пару (новый список измерений, их сумма). Порядок, нули и знак сохраняются, пустой пакет даёт ([],0). Вход не меняется. Все промежуточные значения и сумма входят в общий точный диапазон int LMX и Perl.",
       "inputs": [
         [
           -2,
@@ -17,9 +17,12 @@
         ]
       ],
       "expected": [
-        -6,
-        0,
-        9
+        [
+          -6,
+          0,
+          9
+        ],
+        3
       ],
       "test_cases": [
         {
@@ -31,16 +34,22 @@
             ]
           ],
           "expected": [
-            -6,
-            0,
-            9
+            [
+              -6,
+              0,
+              9
+            ],
+            3
           ]
         },
         {
           "args": [
             []
           ],
-          "expected": []
+          "expected": [
+            [],
+            0
+          ]
         },
         {
           "args": [
@@ -49,20 +58,40 @@
             ]
           ],
           "expected": [
+            [
+              21
+            ],
             21
+          ]
+        },
+        {
+          "args": [
+            [
+              -1,
+              1
+            ]
+          ],
+          "expected": [
+            [
+              -3,
+              3
+            ],
+            0
           ]
         }
       ],
-      "lmx": "Example:\n    int[]: items\n    return: @\n    run:\n        return: items * 3\n",
-      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($items) = @_;\n    return [map { $_ * 3 } @$items];\n}\n",
+      "lmx": "Example:\n    int[]: items\n    return: @\n    run:\n        @: calibrated items * 3\n        return: (calibrated; (+ 0 copy(calibrated)))\n",
+      "foreign": "use strict;\nuse warnings;\nuse List::Util qw(sum0);\nsub example {\n    my ($items) = @_;\n    my @calibrated = map { $_ * 3 } @$items;\n    return [\\@calibrated, sum0(@calibrated)];\n}\n",
       "core_functions": [],
       "foreign_dependencies": [
-        "CORE::map"
+        "CORE::map",
+        "List::Util::sum0"
       ],
       "sources": [
-        "https://perldoc.perl.org/5.40.1/functions/map"
+        "https://perldoc.perl.org/5.40.1/functions/map",
+        "https://perldoc.perl.org/5.40.1/List::Util#sum0"
       ],
-      "notes": "Чистая поэлементная арифметика существующего Expression даёт новый плотный int[]; сравниваются значения и порядок. Для callback с эффектами применялся бы map.",
+      "notes": "Сценарий возвращает и откалиброванные измерения, и итог для передачи следующему этапу. Процедурный проход одновременно заполняет массив и копит сумму; функциональная форма использует арифметику массивов и общую свёртку Expression.",
       "syntax_dependencies": [],
       "alternatives": [],
       "input_mutation": false,
@@ -71,51 +100,53 @@
       "implementation_pairs": {},
       "counts": {
         "lmx": {
-          "characters": 75,
-          "nonwhitespace": 45,
-          "nonblank_lines": 5
+          "characters": 134,
+          "nonwhitespace": 90,
+          "nonblank_lines": 6
         },
         "foreign": {
-          "characters": 101,
-          "nonwhitespace": 73,
-          "nonblank_lines": 6
+          "characters": 180,
+          "nonwhitespace": 140,
+          "nonblank_lines": 8
         }
       },
       "core_sources": {},
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        int[]: out []\n        sys\\resize(out; length(items))\n        int: i 0\n        while: i < length(items)\n            out[i] := items[i] * 3\n            i += 1\n        return: out\n",
+          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        int[]: out []\n        sys\\resize(out; length(items))\n        int: total 0\n        int: i 0\n        while: i < length(items)\n            out[i] := items[i] * 3\n            total += out[i]\n            i += 1\n        return: (out; total)\n",
           "source_file": "source/lmx/procedural/P01.lm3",
           "contract_id": "P01",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 160,
-            "characters_with_whitespace": 274,
-            "nonblank_lines": 12,
-            "utf8_bytes": 274,
-            "sha256": "99566bf8fcc0c07878d0ab18921839b321a89005488fc1b94c5cdb0688b980cd"
+            "characters": 191,
+            "characters_with_whitespace": 332,
+            "nonblank_lines": 14,
+            "utf8_bytes": 332,
+            "sha256": "a050a0d633ca91c0c97ae67ba6ccebb7898c26a15773c4671f3eb65909596d99"
           },
           "core_functions": [
             "copy"
           ],
           "low_level_operations": [
             "sys\\resize"
-          ]
+          ],
+          "metrics_status": "current"
         },
         "functional": {
-          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        return: items * 3\n",
+          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        @: calibrated items * 3\n        return: (calibrated; (+ 0 copy(calibrated)))\n",
           "source_file": "source/lmx/P01.lm3",
           "contract_id": "P01",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 45,
-            "characters_with_whitespace": 75,
-            "nonblank_lines": 5,
-            "utf8_bytes": 75,
-            "sha256": "f8001812b9604f23e2302b9087e535f0bcbf60e3faa39864b3568e110c0d0110"
+            "characters": 90,
+            "characters_with_whitespace": 134,
+            "nonblank_lines": 6,
+            "utf8_bytes": 134,
+            "sha256": "4aa14ef15dffab94285e22d14b33cf6925ece39ee6255defe10ec354cb8a5f2a"
           },
           "core_functions": [],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "metrics_status": "current"
         }
       },
       "lmx_comparison_variants": [
@@ -124,14 +155,16 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
-      "lmx_operation_phase": "after_root_startup"
+      "style_note": "Обе формы решают полный прикладной сценарий. Процедурная показывает алгоритм циклами и ветвлениями, функциональная использует общие операции; все поля, порядок, ошибки и полезный результат сохраняются.",
+      "lmx_operation_phase": "after_root_startup",
+      "scenario_revision": "2026-11-25-useful-processing",
+      "metrics_status": "current"
     },
     {
       "id": "P02",
-      "title": "Отбор элементов через grep",
+      "title": "Отбор допустимых размеров и суммарная нагрузка",
       "category": "Списки",
-      "contract": "Сохранить только чётные целые числа, включая ноль и отрицательные; сохранить исходный порядок и повторы.",
+      "contract": "Из списка целых размеров отобрать неотрицательные чётные значения, сохранив порядок и повторы; вернуть (принятые размеры, сумма принятой нагрузки). Ноль допустим, отрицательные и нечётные значения отбрасываются. Пустой результат имеет сумму 0. Вход не меняется; арифметика остаётся в общем точном диапазоне.",
       "inputs": [
         [
           -3,
@@ -143,10 +176,12 @@
         ]
       ],
       "expected": [
-        -2,
-        0,
-        2,
-        2
+        [
+          0,
+          2,
+          2
+        ],
+        4
       ],
       "test_cases": [
         {
@@ -161,17 +196,22 @@
             ]
           ],
           "expected": [
-            -2,
-            0,
-            2,
-            2
+            [
+              0,
+              2,
+              2
+            ],
+            4
           ]
         },
         {
           "args": [
             []
           ],
-          "expected": []
+          "expected": [
+            [],
+            0
+          ]
         },
         {
           "args": [
@@ -180,21 +220,45 @@
               3
             ]
           ],
-          "expected": []
+          "expected": [
+            [],
+            0
+          ]
+        },
+        {
+          "args": [
+            [
+              -4,
+              0,
+              2,
+              3,
+              6
+            ]
+          ],
+          "expected": [
+            [
+              0,
+              2,
+              6
+            ],
+            8
+          ]
         }
       ],
-      "lmx": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(compress\\throws)\n        return: compress(items; items % 2 = 0)\n",
-      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($items) = @_;\n    return [grep { $_ % 2 == 0 } @$items];\n}\n",
+      "lmx": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(compress\\throws)\n        @: accepted compress(items; (items >= 0) * (items % 2 = 0))\n        return: (accepted; (+ 0 copy(accepted)))\n",
+      "foreign": "use strict;\nuse warnings;\nuse List::Util qw(sum0);\nsub example {\n    my ($items) = @_;\n    my @accepted = grep { $_ >= 0 && $_ % 2 == 0 } @$items;\n    return [\\@accepted, sum0(@accepted)];\n}\n",
       "core_functions": [
         "compress"
       ],
       "foreign_dependencies": [
-        "CORE::grep"
+        "CORE::grep",
+        "List::Util::sum0"
       ],
       "sources": [
-        "https://perldoc.perl.org/5.40.1/functions/grep"
+        "https://perldoc.perl.org/5.40.1/functions/grep",
+        "https://perldoc.perl.org/5.40.1/List::Util#sum0"
       ],
-      "notes": "Готовая поэлементная маска заменяет отдельное тело чистого предиката; compress сохраняет профиль, порядок и повторы исходного массива.",
+      "notes": "Проверка знака и чётности задаёт прикладной допуск. В функциональной маске используется поэлементное умножение двух int-масок, без предположения о short-circuit операторах над Array. Итог считается только по принятым значениям.",
       "syntax_dependencies": [],
       "alternatives": [],
       "input_mutation": false,
@@ -205,14 +269,14 @@
       },
       "counts": {
         "lmx": {
-          "characters": 134,
-          "nonwhitespace": 91,
-          "nonblank_lines": 6
+          "characters": 204,
+          "nonwhitespace": 143,
+          "nonblank_lines": 7
         },
         "foreign": {
-          "characters": 107,
-          "nonwhitespace": 77,
-          "nonblank_lines": 6
+          "characters": 191,
+          "nonwhitespace": 145,
+          "nonblank_lines": 8
         }
       },
       "core_sources": {
@@ -236,16 +300,16 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        int[]: out []\n        int: i 0\n        while: i < length(items)\n            if: items[i] % 2 = 0\n                FxSeqPush\\append(out; (items[i] record))\n            i += 1\n        return: out\n",
+          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        int[]: out []\n        int: total 0\n        int: i 0\n        while: i < length(items)\n            if: items[i] >= 0 && items[i] % 2 = 0\n                FxSeqPush\\append(out; (items[i] record))\n                total += items[i]\n            i += 1\n        return: (out; total)\n",
           "source_file": "source/lmx/procedural/P02.lm3",
           "contract_id": "P02",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 191,
-            "characters_with_whitespace": 316,
-            "nonblank_lines": 12,
-            "utf8_bytes": 316,
-            "sha256": "c90a163d7121b9f7dc35a665a18f25f9b3024e818321aa7144a15f03611def92"
+            "characters": 237,
+            "characters_with_whitespace": 397,
+            "nonblank_lines": 14,
+            "utf8_bytes": 397,
+            "sha256": "949e78b8832ef7e3b4a0e58fc32a1f5ceeb8d3f8e5a08448df476c881dd58099"
           },
           "core_functions": [
             "copy",
@@ -253,24 +317,26 @@
           ],
           "low_level_operations": [
             "FxSeqPush\\append"
-          ]
+          ],
+          "metrics_status": "current"
         },
         "functional": {
-          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(compress\\throws)\n        return: compress(items; items % 2 = 0)\n",
+          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(compress\\throws)\n        @: accepted compress(items; (items >= 0) * (items % 2 = 0))\n        return: (accepted; (+ 0 copy(accepted)))\n",
           "source_file": "source/lmx/P02.lm3",
           "contract_id": "P02",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 91,
-            "characters_with_whitespace": 134,
-            "nonblank_lines": 6,
-            "utf8_bytes": 134,
-            "sha256": "3ea18546902b1da243ac5f1f776013c095c8cd6309b9951c06363be151acab8b"
+            "characters": 143,
+            "characters_with_whitespace": 204,
+            "nonblank_lines": 7,
+            "utf8_bytes": 204,
+            "sha256": "f964b85545af2fe5303333aa53a59dca6b9f68f4a3df21b11c029e54b56ca529"
           },
           "core_functions": [
             "compress"
           ],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "metrics_status": "current"
         }
       },
       "lmx_comparison_variants": [
@@ -279,23 +345,29 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
-      "lmx_operation_phase": "after_root_startup"
+      "style_note": "Обе формы решают полный прикладной сценарий. Процедурная показывает алгоритм циклами и ветвлениями, функциональная использует общие операции; все поля, порядок, ошибки и полезный результат сохраняются.",
+      "lmx_operation_phase": "after_root_startup",
+      "scenario_revision": "2026-11-25-useful-processing",
+      "metrics_status": "current"
     },
     {
       "id": "P03",
-      "title": "Сумма с нейтральным значением",
+      "title": "Итоговый баланс и сигнал дефицита",
       "category": "Списки",
-      "contract": "Сумма конечного списка целых чисел; пустой список даёт 0. Примеры не выходят за диапазон машинного int LMX.",
+      "contract": "Применить последовательность целочисленных изменений к initial и вернуть (конечный баланс, флаг balance<0). Пустой список оставляет initial, нулевой баланс не является дефицитом. История промежуточных балансов не требуется; вход не меняется. Все суммы входят в общий точный диапазон int LMX и Perl.",
       "inputs": [
         [
           7,
           -2,
           0,
           4
-        ]
+        ],
+        10
       ],
-      "expected": 9,
+      "expected": [
+        19,
+        0
+      ],
       "test_cases": [
         {
           "args": [
@@ -304,27 +376,63 @@
               -2,
               0,
               4
-            ]
+            ],
+            10
           ],
-          "expected": 9
+          "expected": [
+            19,
+            0
+          ]
         },
         {
           "args": [
-            []
+            [],
+            0
           ],
-          "expected": 0
+          "expected": [
+            0,
+            0
+          ]
         },
         {
           "args": [
             [
               -5
-            ]
+            ],
+            10
           ],
-          "expected": -5
+          "expected": [
+            5,
+            0
+          ]
+        },
+        {
+          "args": [
+            [
+              -5
+            ],
+            2
+          ],
+          "expected": [
+            -3,
+            1
+          ]
+        },
+        {
+          "args": [
+            [
+              -5
+            ],
+            5
+          ],
+          "expected": [
+            0,
+            0
+          ]
         }
       ],
-      "lmx": "Example:\n    int[]: items\n    return: int\n    run:\n        return: (+ 0 copy(items))\n",
-      "foreign": "use strict;\nuse warnings;\nuse List::Util qw(sum0);\nsub example {\n    my ($items) = @_;\n    return sum0(@$items);\n}\n",
+      "lmx": "Example:\n    int[]: items\n    int: initial\n    return: @\n    run:\n        int: balance (+ initial copy(items))\n        return: (balance; balance < 0)\n",
+      "foreign": "use strict;\nuse warnings;\nuse List::Util qw(sum0);\nsub example {\n    my ($items, $initial) = @_;\n    my $balance = $initial + sum0(@$items);\n    return [$balance, 0 + ($balance < 0)];\n}\n",
       "core_functions": [],
       "foreign_dependencies": [
         "List::Util::sum0"
@@ -332,7 +440,7 @@
       "sources": [
         "https://perldoc.perl.org/5.40.1/List::Util#sum0"
       ],
-      "notes": "Общий Expression принимает поток полей copy(items); начальный 0 сохраняет результат пустого входа. Отдельные Add/foldl и новая фасадная функция для этого сценария не нужны.",
+      "notes": "Флаг дефицита — отдельный полезный результат, в том числе для пустого списка и ровно нулевого остатка. Другой договор с полной историей остаётся в P04.",
       "syntax_dependencies": [],
       "alternatives": [],
       "input_mutation": false,
@@ -341,47 +449,49 @@
       "implementation_pairs": {},
       "counts": {
         "lmx": {
-          "characters": 85,
-          "nonwhitespace": 55,
-          "nonblank_lines": 5
+          "characters": 150,
+          "nonwhitespace": 100,
+          "nonblank_lines": 7
         },
         "foreign": {
-          "characters": 115,
-          "nonwhitespace": 90,
-          "nonblank_lines": 7
+          "characters": 186,
+          "nonwhitespace": 145,
+          "nonblank_lines": 8
         }
       },
       "core_sources": {},
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: items\n    return: int\n    run:\n        int: total 0\n        int: i 0\n        while: i < length(items)\n            total += items[i]\n            i += 1\n        return: total\n",
+          "code": "Example:\n    int[]: items\n    int: initial\n    return: @\n    run:\n        int: total initial\n        int: i 0\n        while: i < length(items)\n            total += items[i]\n            i += 1\n        return: (total; total < 0)\n",
           "source_file": "source/lmx/procedural/P03.lm3",
           "contract_id": "P03",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 101,
-            "characters_with_whitespace": 193,
-            "nonblank_lines": 10,
-            "utf8_bytes": 193,
-            "sha256": "aa9d5bd0164969e384bf09f9e28b004e8ac9ae9d710cd1bab2310bd28e7786c2"
+            "characters": 126,
+            "characters_with_whitespace": 227,
+            "nonblank_lines": 11,
+            "utf8_bytes": 227,
+            "sha256": "f47a915738b7f38d3024bd751bfa29ea7ea3d47d7c848b4e9f7963430432d4ba"
           },
           "core_functions": [],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "metrics_status": "current"
         },
         "functional": {
-          "code": "Example:\n    int[]: items\n    return: int\n    run:\n        return: (+ 0 copy(items))\n",
+          "code": "Example:\n    int[]: items\n    int: initial\n    return: @\n    run:\n        int: balance (+ initial copy(items))\n        return: (balance; balance < 0)\n",
           "source_file": "source/lmx/P03.lm3",
           "contract_id": "P03",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 55,
-            "characters_with_whitespace": 85,
-            "nonblank_lines": 5,
-            "utf8_bytes": 85,
-            "sha256": "888f133d28df786bf1b1f7860965295ea3a62ad53daebe62e0b38b1bae3d1c1a"
+            "characters": 100,
+            "characters_with_whitespace": 150,
+            "nonblank_lines": 7,
+            "utf8_bytes": 150,
+            "sha256": "3cb6436a399b9bb07b5da9358c2323f58f2ff6caf7df10c3479c925ab1957e42"
           },
           "core_functions": [],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "metrics_status": "current"
         }
       },
       "lmx_comparison_variants": [
@@ -390,8 +500,10 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
-      "lmx_operation_phase": "after_root_startup"
+      "style_note": "Обе формы решают полный прикладной сценарий. Процедурная показывает алгоритм циклами и ветвлениями, функциональная использует общие операции; все поля, порядок, ошибки и полезный результат сохраняются.",
+      "lmx_operation_phase": "after_root_startup",
+      "scenario_revision": "2026-11-25-useful-processing",
+      "metrics_status": "current"
     },
     {
       "id": "P04",
@@ -737,14 +849,19 @@
     },
     {
       "id": "P06",
-      "title": "Срез с перестановкой и повторением",
+      "title": "Перестановка экспортируемых полей вместе с метками",
       "category": "Массивы",
-      "contract": "Выбрать элементы по списку допустимых нулевых индексов; порядок индексов и повторы существенны. Результат — новый внешний массив, вложенные ссылки сохраняются.",
+      "contract": "items и labels — две последовательности одинаковой длины: значения экспортируемых полей и их метки. Выбрать обе по одному списку допустимых индексов positions; вернуть пару новых внешних массивов. Порядок и повторы индексов существенны; повторная ссылка указывает на тот же исходный объект, вложенные поля не теряются. Пустые positions дают два пустых массива. Индексы 0..n-1 являются общим предусловием, входы не меняются.",
       "inputs": [
         [
           "a",
           "b",
           "c"
+        ],
+        [
+          "field0",
+          "field1",
+          "field2"
         ],
         [
           2,
@@ -753,9 +870,16 @@
         ]
       ],
       "expected": [
-        "c",
-        "a",
-        "c"
+        [
+          "c",
+          "a",
+          "c"
+        ],
+        [
+          "field2",
+          "field0",
+          "field2"
+        ]
       ],
       "test_cases": [
         {
@@ -766,15 +890,27 @@
               "c"
             ],
             [
+              "field0",
+              "field1",
+              "field2"
+            ],
+            [
               2,
               0,
               2
             ]
           ],
           "expected": [
-            "c",
-            "a",
-            "c"
+            [
+              "c",
+              "a",
+              "c"
+            ],
+            [
+              "field2",
+              "field0",
+              "field2"
+            ]
           ]
         },
         {
@@ -783,20 +919,75 @@
               1,
               2
             ],
+            [
+              "field0",
+              "field1"
+            ],
             []
           ],
-          "expected": []
+          "expected": [
+            [],
+            []
+          ]
         },
         {
           "args": [
             [],
+            [],
             []
           ],
-          "expected": []
+          "expected": [
+            [],
+            []
+          ]
+        },
+        {
+          "args": [
+            [
+              {
+                "id": "a",
+                "width": 2
+              },
+              {
+                "id": "b",
+                "width": 4
+              }
+            ],
+            [
+              "left",
+              "right"
+            ],
+            [
+              1,
+              0,
+              1
+            ]
+          ],
+          "expected": [
+            [
+              {
+                "id": "b",
+                "width": 4
+              },
+              {
+                "id": "a",
+                "width": 2
+              },
+              {
+                "id": "b",
+                "width": 4
+              }
+            ],
+            [
+              "right",
+              "left",
+              "right"
+            ]
+          ]
         }
       ],
-      "lmx": "Example:\n    @: items\n    int[]: positions\n    return: @\n    run:\n        throws: copy(select\\throws)\n        return: select(items; positions)\n",
-      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($items, $positions) = @_;\n    return [@$items[@$positions]];\n}\n",
+      "lmx": "Example:\n    @: items\n    @: labels\n    int[]: positions\n    return: @\n    run:\n        throws: copy(select\\throws)\n        return: (select(items; positions); select(labels; positions))\n",
+      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($items, $labels, $positions) = @_;\n    return [[@$items[@$positions]], [@$labels[@$positions]]];\n}\n",
       "core_functions": [
         "select"
       ],
@@ -806,7 +997,7 @@
       "sources": [
         "https://perldoc.perl.org/5.40.1/perldata#Slices"
       ],
-      "notes": "Контракт клиента ограничивает индексы диапазоном 0..n-1. Отрицательные и выходящие за массив индексы Perl имеют другую семантику; отдельно проверяемая общая реализация отвергает их явно.",
+      "notes": "Метки выбираются той же перестановкой, поэтому экспорт сохраняет связь названий со значениями. Процедурный SelectFields определён один раз и используется для обеих последовательностей; positions динамически видим в вызываемом методе.",
       "syntax_dependencies": [],
       "alternatives": [],
       "input_mutation": false,
@@ -819,13 +1010,13 @@
       },
       "counts": {
         "lmx": {
-          "characters": 143,
-          "nonwhitespace": 98,
-          "nonblank_lines": 7
+          "characters": 186,
+          "nonwhitespace": 133,
+          "nonblank_lines": 8
         },
         "foreign": {
-          "characters": 111,
-          "nonwhitespace": 88,
+          "characters": 147,
+          "nonwhitespace": 122,
           "nonblank_lines": 6
         }
       },
@@ -854,16 +1045,16 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    @: items\n    int[]: positions\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxSeqRead\\read\\throws) copy(FxSeqStore\\write\\throws)\n        @: info FxSeqInfo\\get(items)\n        @: out FxSeqAllocate\\make(info\\arrayType; length(positions))\n        int: i 0\n        while: i < length(positions)\n            FxSeqStore\\write(out; i; FxSeqRead\\read(items; positions[i]))\n            i += 1\n        return: out\n",
+          "code": "SelectFields:\n    @: items\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxSeqRead\\read\\throws) copy(FxSeqStore\\write\\throws)\n        @: info FxSeqInfo\\get(items)\n        @: out FxSeqAllocate\\make(info\\arrayType; length(positions))\n        int: i 0\n        while: i < length(positions)\n            FxSeqStore\\write(out; i; FxSeqRead\\read(items; positions[i]))\n            i += 1\n        return: out\n\nExample:\n    @: items\n    @: labels\n    int[]: positions\n    return: @\n    run:\n        throws: copy(SelectFields\\run\\throws)\n        return: (SelectFields\\run(items); SelectFields\\run(labels))\n",
           "source_file": "source/lmx/procedural/P06.lm3",
           "contract_id": "P06",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 348,
-            "characters_with_whitespace": 472,
-            "nonblank_lines": 13,
-            "utf8_bytes": 472,
-            "sha256": "fd4eeed43a3824005ccb7e7cb2bcc7a54c84e480eb7bff995adb8ad1d78c5cb6"
+            "characters": 481,
+            "characters_with_whitespace": 651,
+            "nonblank_lines": 20,
+            "utf8_bytes": 651,
+            "sha256": "138bf0297a7113e59b0bba97920ccfa6b93ff80ba48a0209ec157d5803672201"
           },
           "core_functions": [
             "copy"
@@ -873,24 +1064,26 @@
             "FxSeqInfo\\get",
             "FxSeqRead\\read",
             "FxSeqStore\\write"
-          ]
+          ],
+          "metrics_status": "current"
         },
         "functional": {
-          "code": "Example:\n    @: items\n    int[]: positions\n    return: @\n    run:\n        throws: copy(select\\throws)\n        return: select(items; positions)\n",
+          "code": "Example:\n    @: items\n    @: labels\n    int[]: positions\n    return: @\n    run:\n        throws: copy(select\\throws)\n        return: (select(items; positions); select(labels; positions))\n",
           "source_file": "source/lmx/P06.lm3",
           "contract_id": "P06",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 98,
-            "characters_with_whitespace": 143,
-            "nonblank_lines": 7,
-            "utf8_bytes": 143,
-            "sha256": "47bdb3ef9623e8d72dc2f80db3b8b1ac5f7671b917ad942908c8831b2925ec45"
+            "characters": 133,
+            "characters_with_whitespace": 186,
+            "nonblank_lines": 8,
+            "utf8_bytes": 186,
+            "sha256": "4c48b147a5b2074688de24511617450899f71a6d5f758aafdd6562243116b327"
           },
           "core_functions": [
             "select"
           ],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "metrics_status": "current"
         }
       },
       "lmx_comparison_variants": [
@@ -899,8 +1092,10 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
-      "lmx_operation_phase": "after_root_startup"
+      "style_note": "Обе формы решают полный прикладной сценарий. Процедурная показывает алгоритм циклами и ветвлениями, функциональная использует общие операции; все поля, порядок, ошибки и полезный результат сохраняются.",
+      "lmx_operation_phase": "after_root_startup",
+      "scenario_revision": "2026-11-25-useful-processing",
+      "metrics_status": "current"
     },
     {
       "id": "P07",
@@ -1119,9 +1314,9 @@
     },
     {
       "id": "P08",
-      "title": "Стабильная сортировка записей",
+      "title": "Ограниченный приоритетный пакет и суммарная ширина",
       "category": "Массивы",
-      "contract": "Новый список записей по возрастанию priority; для равного priority сохранить прежний порядок. Все остальные поля, включая width, и идентичность записей сохраняются.",
+      "contract": "Отсортировать ссылки на записи по возрастанию priority, сохранить исходный порядок равных ключей, взять первые min(limit,n) записей и вернуть (выбранные записи, сумма их width). limit — неотрицательное целое; каждый width — неотрицательное целое, сумма представима. Все поля и идентичность исходных записей сохраняются, вход не меняется. limit=0 и пустой вход дают ([],0). Общий домен priority имеет полный согласованный порядок без NaN.",
       "inputs": [
         [
           {
@@ -1139,24 +1334,23 @@
             "id": "c",
             "width": 12
           }
-        ]
+        ],
+        2
       ],
       "expected": [
-        {
-          "priority": 1,
-          "id": "b",
-          "width": 4
-        },
-        {
-          "priority": 2,
-          "id": "a",
-          "width": 8
-        },
-        {
-          "priority": 2,
-          "id": "c",
-          "width": 12
-        }
+        [
+          {
+            "priority": 1,
+            "id": "b",
+            "width": 4
+          },
+          {
+            "priority": 2,
+            "id": "a",
+            "width": 8
+          }
+        ],
+        12
       ],
       "test_cases": [
         {
@@ -1177,31 +1371,34 @@
                 "id": "c",
                 "width": 12
               }
-            ]
+            ],
+            2
           ],
           "expected": [
-            {
-              "priority": 1,
-              "id": "b",
-              "width": 4
-            },
-            {
-              "priority": 2,
-              "id": "a",
-              "width": 8
-            },
-            {
-              "priority": 2,
-              "id": "c",
-              "width": 12
-            }
+            [
+              {
+                "priority": 1,
+                "id": "b",
+                "width": 4
+              },
+              {
+                "priority": 2,
+                "id": "a",
+                "width": 8
+              }
+            ],
+            12
           ]
         },
         {
           "args": [
-            []
+            [],
+            2
           ],
-          "expected": []
+          "expected": [
+            [],
+            0
+          ]
         },
         {
           "args": [
@@ -1211,31 +1408,93 @@
                 "id": "a",
                 "width": 8
               }
-            ]
+            ],
+            2
           ],
           "expected": [
-            {
-              "priority": 2,
-              "id": "a",
-              "width": 8
-            }
+            [
+              {
+                "priority": 2,
+                "id": "a",
+                "width": 8
+              }
+            ],
+            8
+          ]
+        },
+        {
+          "args": [
+            [
+              {
+                "priority": 2,
+                "id": "a",
+                "width": 8
+              },
+              {
+                "priority": 2,
+                "id": "b",
+                "width": 4
+              }
+            ],
+            0
+          ],
+          "expected": [
+            [],
+            0
+          ]
+        },
+        {
+          "args": [
+            [
+              {
+                "priority": 2,
+                "id": "a",
+                "width": 8
+              },
+              {
+                "priority": 2,
+                "id": "b",
+                "width": 4
+              }
+            ],
+            8
+          ],
+          "expected": [
+            [
+              {
+                "priority": 2,
+                "id": "a",
+                "width": 8
+              },
+              {
+                "priority": 2,
+                "id": "b",
+                "width": 4
+              }
+            ],
+            12
           ]
         }
       ],
-      "lmx": "Order:\n    @: first\n    @: second\n    return: int\n    compare:\n        return: (first\\priority > second\\priority) - (first\\priority < second\\priority)\n\nExample:\n    @: items\n    return: @\n    run:\n        throws: copy(sort\\throws)\n        return: sort(items; Order\\compare)\n",
-      "foreign": "use strict;\nuse warnings;\nuse sort 'stable';\nsub example {\n    my ($items) = @_;\n    return [sort { $a->{priority} <=> $b->{priority} } @$items];\n}\n",
+      "lmx": "Order:\n    @: first\n    @: second\n    return: int\n    compare:\n        return: (first\\priority > second\\priority) - (first\\priority < second\\priority)\n\nWidth:\n    @: item\n    return: int\n    get:\n        return: item\\width\n\nExample:\n    @: items\n    int: limit\n    return: @\n    run:\n        throws: copy(sort\\throws) copy(take\\throws) copy(map\\throws) copy(sum\\throws)\n        @: selected take(sort(items; Order\\compare); limit)\n        return: (selected; \\sum(map(selected; Width\\get)))\n",
+      "foreign": "use strict;\nuse warnings;\nuse sort 'stable';\nuse List::Util qw(sum0);\nsub example {\n    my ($items, $limit) = @_;\n    my @selected = sort { $a->{priority} <=> $b->{priority} } @$items;\n    splice @selected, $limit if @selected > $limit;\n    return [\\@selected, sum0(map { $_->{width} } @selected)];\n}\n",
       "core_functions": [
-        "sort"
+        "sort",
+        "take",
+        "map",
+        "sum"
       ],
       "foreign_dependencies": [
         "CORE::sort",
-        "sort pragma"
+        "sort pragma",
+        "List::Util::sum0"
       ],
       "sources": [
         "https://perldoc.perl.org/5.40.1/functions/sort",
-        "https://perldoc.perl.org/5.40.1/sort"
+        "https://perldoc.perl.org/5.40.1/sort",
+        "https://perldoc.perl.org/5.40.1/List::Util#sum0"
       ],
-      "notes": "Компаратор LMX сравнивает, а не вычитает пользовательские ключи: сортировка не вводит переполнение разности. Общий домен ключей — согласованный полный порядок для сравниваемых >/< и иностранного порядка; специальные NaN/частичные порядки не приписываются этому компаратору. Тип записей и набор их полей не ограничиваются int.",
+      "notes": "Фильтрация по limit выполняется после стабильной сортировки. Дополнительная сумма использует настоящее поле width каждой выбранной записи; поле не удалено ради краткости. Функциональная форма берёт sort/take/map/sum из одного общего ядра; процедурная показывает вставки и явный проход выбранного префикса.",
       "syntax_dependencies": [],
       "alternatives": [],
       "input_mutation": false,
@@ -1244,18 +1503,23 @@
       "implementation_pairs": {
         "sort": [
           "PI03"
-        ]
+        ],
+        "take": [],
+        "map": [
+          "PI01"
+        ],
+        "sum": []
       },
       "counts": {
         "lmx": {
-          "characters": 274,
-          "nonwhitespace": 194,
-          "nonblank_lines": 12
+          "characters": 489,
+          "nonwhitespace": 357,
+          "nonblank_lines": 19
         },
         "foreign": {
-          "characters": 148,
-          "nonwhitespace": 117,
-          "nonblank_lines": 7
+          "characters": 301,
+          "nonwhitespace": 242,
+          "nonblank_lines": 10
         }
       },
       "core_sources": {
@@ -1284,20 +1548,72 @@
           "comparison_pairs": [
             "PI03"
           ]
+        },
+        "take": {
+          "root": "FxStdCut",
+          "source": "../../LMX_Fn_Receivers/src/coreStandardFunctional.lmx",
+          "sha256": "714a6a1e768cc7cdc279d0d83775ed44d8b2f195352c17dbb27a7d471267865e",
+          "all_definitions": [
+            "FxPair",
+            "FxSeqAllocate",
+            "FxSeqBounds",
+            "FxSeqInfo",
+            "FxSeqRead",
+            "FxSeqSlice",
+            "FxStdCut",
+            "FxStdCutIndex",
+            "FxStdPair",
+            "FxThrows"
+          ],
+          "external_boundaries": [
+            "FxKernel"
+          ],
+          "comparison_pairs": []
+        },
+        "map": {
+          "root": "FxMap",
+          "source": "../../LMX_Fn_Receivers/src/collections.lmx",
+          "sha256": "49c1cb3d1577c37469adf35e404ca945dc8e331a87312695951bf35f4e935dbb",
+          "all_definitions": [
+            "FxApply",
+            "FxMap",
+            "FxOne",
+            "FxSeqAllocate",
+            "FxSeqInfo",
+            "FxSeqRead",
+            "FxThrows",
+            "FxTry"
+          ],
+          "external_boundaries": [
+            "FxKernel"
+          ],
+          "comparison_pairs": [
+            "PI01"
+          ]
+        },
+        "sum": {
+          "root": "FxSum",
+          "source": "../../LMX_Fn_Receivers/src/coreStandardNumeric.lmx",
+          "sha256": "9550eab0268d26f5578d57d659ab89d6cea7d1facfeea12858b636c691c2b7cd",
+          "all_definitions": [
+            "FxSum"
+          ],
+          "external_boundaries": [],
+          "comparison_pairs": []
         }
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    @: items\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxSeqRead\\read\\throws) copy(FxSeqStore\\write\\throws)\n        @: info FxSeqInfo\\get(items)\n        @: out FxSeqAllocate\\make(info\\arrayType; length(items))\n        int: i 0\n        while: i < length(items)\n            @: held FxSeqRead\\read(items; i)\n            @: value \\held\n            int: j i\n            while: j > 0\n                @: previous FxSeqRead\\read(out; j - 1)\n                @: item \\previous\n                if: (item\\priority > value\\priority) - (item\\priority < value\\priority) <= 0\n                    break\n                FxSeqStore\\write(out; j; previous)\n                j -= 1\n            FxSeqStore\\write(out; j; held)\n            i += 1\n        return: out\n",
+          "code": "Example:\n    @: items\n    int: limit\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws) copy(FxSeqInfo\\get\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxSeqRead\\read\\throws) copy(FxSeqStore\\write\\throws)\n        @: info FxSeqInfo\\get(items)\n        @: out FxSeqAllocate\\make(info\\arrayType; length(items))\n        int: i 0\n        while: i < length(items)\n            @: held FxSeqRead\\read(items; i)\n            @: value \\held\n            int: j i\n            while: j > 0\n                @: previous FxSeqRead\\read(out; j - 1)\n                @: item \\previous\n                if: (item\\priority > value\\priority) - (item\\priority < value\\priority) <= 0\n                    break\n                FxSeqStore\\write(out; j; previous)\n                j -= 1\n            FxSeqStore\\write(out; j; held)\n            i += 1\n        int: count length(out)\n        if: limit < count\n            count := limit\n        int: total 0\n        i := 0\n        while: i < count\n            @: record FxSeqRead\\read(out; i)\n            @: item \\record\n            total += item\\width\n            i += 1\n        sys\\resize(out; count)\n        return: (out; total)\n",
           "source_file": "source/lmx/procedural/P08.lm3",
           "contract_id": "P08",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 507,
-            "characters_with_whitespace": 812,
-            "nonblank_lines": 22,
-            "utf8_bytes": 812,
-            "sha256": "4c98b4fc6a20e5b83307d88eda2859911fe8c5611ca379f9157d1924e5ddefd6"
+            "characters": 704,
+            "characters_with_whitespace": 1160,
+            "nonblank_lines": 34,
+            "utf8_bytes": 1160,
+            "sha256": "382463fd03d51428a05ed6af87ddf81f4bfd95c3c0d8872c0741c699f14807ce"
           },
           "core_functions": [
             "copy"
@@ -1307,24 +1623,29 @@
             "FxSeqInfo\\get",
             "FxSeqRead\\read",
             "FxSeqStore\\write"
-          ]
+          ],
+          "metrics_status": "current"
         },
         "functional": {
-          "code": "Order:\n    @: first\n    @: second\n    return: int\n    compare:\n        return: (first\\priority > second\\priority) - (first\\priority < second\\priority)\n\nExample:\n    @: items\n    return: @\n    run:\n        throws: copy(sort\\throws)\n        return: sort(items; Order\\compare)\n",
+          "code": "Order:\n    @: first\n    @: second\n    return: int\n    compare:\n        return: (first\\priority > second\\priority) - (first\\priority < second\\priority)\n\nWidth:\n    @: item\n    return: int\n    get:\n        return: item\\width\n\nExample:\n    @: items\n    int: limit\n    return: @\n    run:\n        throws: copy(sort\\throws) copy(take\\throws) copy(map\\throws) copy(sum\\throws)\n        @: selected take(sort(items; Order\\compare); limit)\n        return: (selected; \\sum(map(selected; Width\\get)))\n",
           "source_file": "source/lmx/P08.lm3",
           "contract_id": "P08",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 194,
-            "characters_with_whitespace": 274,
-            "nonblank_lines": 12,
-            "utf8_bytes": 274,
-            "sha256": "922d69a663f32ac1b339b759cc65f35e3a1871ece5c0195ac64c86d4a1e70db8"
+            "characters": 357,
+            "characters_with_whitespace": 489,
+            "nonblank_lines": 19,
+            "utf8_bytes": 489,
+            "sha256": "eca371a8e5b269586d6a8d14a2cd33b9ddc1c7ccc016b5db29f984a2abd338e1"
           },
           "core_functions": [
-            "sort"
+            "sort",
+            "take",
+            "map",
+            "sum"
           ],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "metrics_status": "current"
         }
       },
       "lmx_comparison_variants": [
@@ -1333,14 +1654,16 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
-      "lmx_operation_phase": "after_root_startup"
+      "style_note": "Обе формы решают полный прикладной сценарий. Процедурная показывает алгоритм циклами и ветвлениями, функциональная использует общие операции; все поля, порядок, ошибки и полезный результат сохраняются.",
+      "lmx_operation_phase": "after_root_startup",
+      "scenario_revision": "2026-11-25-useful-processing",
+      "metrics_status": "current"
     },
     {
       "id": "P09",
-      "title": "Уникальные значения в порядке появления",
+      "title": "Уникальные идентификаторы и число повторных поступлений",
       "category": "Массивы",
-      "contract": "Удалить последующие повторы канонических целых чисел; сохранить первое вхождение и порядок. Вход не меняется.",
+      "contract": "Из потока канонических целых идентификаторов оставить первые вхождения в исходном порядке и вернуть (уникальные идентификаторы, число удалённых повторных поступлений). Ноль и отрицательные идентификаторы остаются значениями. Пустой вход даёт ([],0), вход не меняется. Обобщённая операция unique ядра этим прикладным целочисленным доменом не ограничена.",
       "inputs": [
         [
           0,
@@ -1351,9 +1674,12 @@
         ]
       ],
       "expected": [
-        0,
-        1,
-        -1
+        [
+          0,
+          1,
+          -1
+        ],
+        2
       ],
       "test_cases": [
         {
@@ -1367,16 +1693,22 @@
             ]
           ],
           "expected": [
-            0,
-            1,
-            -1
+            [
+              0,
+              1,
+              -1
+            ],
+            2
           ]
         },
         {
           "args": [
             []
           ],
-          "expected": []
+          "expected": [
+            [],
+            0
+          ]
         },
         {
           "args": [
@@ -1387,12 +1719,35 @@
             ]
           ],
           "expected": [
-            5
+            [
+              5
+            ],
+            2
+          ]
+        },
+        {
+          "args": [
+            [
+              2,
+              2,
+              1,
+              2,
+              1,
+              0
+            ]
+          ],
+          "expected": [
+            [
+              2,
+              1,
+              0
+            ],
+            3
           ]
         }
       ],
-      "lmx": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(unique\\throws)\n        return: unique(items)\n",
-      "foreign": "use strict;\nuse warnings;\nuse List::Util qw(uniq);\nsub example {\n    my ($items) = @_;\n    return [uniq @$items];\n}\n",
+      "lmx": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(unique\\throws)\n        @: selected unique(items)\n        return: (selected; length(items) - length(selected))\n",
+      "foreign": "use strict;\nuse warnings;\nuse List::Util qw(uniqnum);\nsub example {\n    my ($items) = @_;\n    my @selected = uniqnum(@$items);\n    return [\\@selected, scalar(@$items) - scalar(@selected)];\n}\n",
       "core_functions": [
         "unique"
       ],
@@ -1402,7 +1757,7 @@
       "sources": [
         "https://perldoc.perl.org/5.40.1/List::Util#uniq"
       ],
-      "notes": "Клиент использует unique(items) без локального Same. Сравнение с uniq Perl ограничено каноническими целыми: Perl сравнивает строковые представления и отдельно обрабатывает undef. Общая LMX-функция допускает обычное равенство и явный same; дополнительная реализационная пара показывает выбранный пользовательский comparator, не сужая публичный контракт unique.",
+      "notes": "Счётчик повторов нужен для отчёта о повторной доставке идентификаторов. Он не меняет порядок первых вхождений и не сводит результат к демонстрационной сумме.",
       "syntax_dependencies": [],
       "alternatives": [],
       "input_mutation": false,
@@ -1415,14 +1770,14 @@
       },
       "counts": {
         "lmx": {
-          "characters": 115,
-          "nonwhitespace": 77,
-          "nonblank_lines": 6
+          "characters": 180,
+          "nonwhitespace": 128,
+          "nonblank_lines": 7
         },
         "foreign": {
-          "characters": 116,
-          "nonwhitespace": 90,
-          "nonblank_lines": 7
+          "characters": 191,
+          "nonwhitespace": 155,
+          "nonblank_lines": 8
         }
       },
       "core_sources": {
@@ -1458,16 +1813,16 @@
       "lmx_runtime_execution": "NOT_RUN",
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        int[]: out []\n        int: i 0\n        while: i < length(items)\n            int: j 0\n            while: j < length(out) && out[j] != items[i]\n                j += 1\n            if: j = length(out)\n                FxSeqPush\\append(out; (items[i] record))\n            i += 1\n        return: out\n",
+          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        int[]: out []\n        int: i 0\n        while: i < length(items)\n            int: j 0\n            while: j < length(out) && out[j] != items[i]\n                j += 1\n            if: j = length(out)\n                FxSeqPush\\append(out; (items[i] record))\n            i += 1\n        return: (out; length(items) - length(out))\n",
           "source_file": "source/lmx/procedural/P09.lm3",
           "contract_id": "P09",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 239,
-            "characters_with_whitespace": 416,
+            "characters": 267,
+            "characters_with_whitespace": 447,
             "nonblank_lines": 15,
-            "utf8_bytes": 416,
-            "sha256": "04fe508141b041d3ff4cc830926260c7822f9b84e046dc425f8ee3cb68ceff68"
+            "utf8_bytes": 447,
+            "sha256": "c17663c5dfdf6c6e59434b6a6e88da582fffbc6a3ffe520aaa6438dd619c5c9b"
           },
           "core_functions": [
             "copy",
@@ -1475,24 +1830,26 @@
           ],
           "low_level_operations": [
             "FxSeqPush\\append"
-          ]
+          ],
+          "metrics_status": "current"
         },
         "functional": {
-          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(unique\\throws)\n        return: unique(items)\n",
+          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(unique\\throws)\n        @: selected unique(items)\n        return: (selected; length(items) - length(selected))\n",
           "source_file": "source/lmx/P09.lm3",
           "contract_id": "P09",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 77,
-            "characters_with_whitespace": 115,
-            "nonblank_lines": 6,
-            "utf8_bytes": 115,
-            "sha256": "4bb96a8694223476e368c2e0d9967627a18143a784afc994591a454536e4907f"
+            "characters": 128,
+            "characters_with_whitespace": 180,
+            "nonblank_lines": 7,
+            "utf8_bytes": 180,
+            "sha256": "2754ac304f12861c8cdbdec70effeed2e51b19a8d2fb7dad20104ada52bb64c6"
           },
           "core_functions": [
             "unique"
           ],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "metrics_status": "current"
         }
       },
       "lmx_comparison_variants": [
@@ -1501,8 +1858,10 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
-      "lmx_operation_phase": "after_root_startup"
+      "style_note": "Обе формы решают полный прикладной сценарий. Процедурная показывает алгоритм циклами и ветвлениями, функциональная использует общие операции; все поля, порядок, ошибки и полезный результат сохраняются.",
+      "lmx_operation_phase": "after_root_startup",
+      "scenario_revision": "2026-11-25-useful-processing",
+      "metrics_status": "current"
     },
     {
       "id": "P10",
@@ -2006,9 +2365,9 @@
     },
     {
       "id": "P12",
-      "title": "Наложение настроек с сохранением полей",
+      "title": "Настройки окна после наложения и рабочая площадь",
       "category": "Хеши",
-      "contract": "Объединить плоские настройки со скалярными и строковыми значениями: patch заменяет одноимённые совместимые поля base, новые добавляются. Ноль — значение, остальные поля, включая width/height/theme, сохраняются. Входы не меняются.",
+      "contract": "Наложить плоские совместимые настройки patch на base и вернуть (новые настройки, width*height). После наложения width и height обязательно присутствуют и являются неотрицательными целыми с представимым произведением. Ноль — полноценное значение, все другие поля сохраняются, входы не меняются. Вложенные изменяемые графы не входят в общий профиль сравнения.",
       "inputs": [
         {
           "width": 80,
@@ -2020,12 +2379,15 @@
           "border": 0
         }
       ],
-      "expected": {
-        "width": 120,
-        "height": 24,
-        "theme": "dark",
-        "border": 0
-      },
+      "expected": [
+        {
+          "width": 120,
+          "height": 24,
+          "theme": "dark",
+          "border": 0
+        },
+        2880
+      ],
       "test_cases": [
         {
           "args": [
@@ -2039,12 +2401,15 @@
               "border": 0
             }
           ],
-          "expected": {
-            "width": 120,
-            "height": 24,
-            "theme": "dark",
-            "border": 0
-          }
+          "expected": [
+            {
+              "width": 120,
+              "height": 24,
+              "theme": "dark",
+              "border": 0
+            },
+            2880
+          ]
         },
         {
           "args": [
@@ -2056,25 +2421,55 @@
               "width": 0
             }
           ],
-          "expected": {
-            "width": 0,
-            "height": 24
-          }
+          "expected": [
+            {
+              "width": 0,
+              "height": 24
+            },
+            0
+          ]
         },
         {
           "args": [
             {
-              "width": 80
+              "width": 80,
+              "height": 24
             },
             {}
           ],
-          "expected": {
-            "width": 80
-          }
+          "expected": [
+            {
+              "width": 80,
+              "height": 24
+            },
+            1920
+          ]
+        },
+        {
+          "args": [
+            {
+              "width": 5,
+              "height": 4,
+              "theme": "dark"
+            },
+            {
+              "height": 0,
+              "border": 0
+            }
+          ],
+          "expected": [
+            {
+              "width": 5,
+              "height": 0,
+              "theme": "dark",
+              "border": 0
+            },
+            0
+          ]
         }
       ],
-      "lmx": "Example:\n    @: base\n    @: patch\n    return: @\n    run:\n        return: (merge(base; patch))\n",
-      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($base, $patch) = @_;\n    return {%$base, %$patch};\n}\n",
+      "lmx": "Example:\n    @: base\n    @: patch\n    return: @\n    run:\n        @: settings (merge(base; patch))\n        return: (settings; settings\\width * settings\\height)\n",
+      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($base, $patch) = @_;\n    my $settings = {%$base, %$patch};\n    return [$settings, $settings->{width} * $settings->{height}];\n}\n",
       "core_functions": [],
       "foreign_dependencies": [
         "hash construction"
@@ -2083,7 +2478,7 @@
         "https://perldoc.perl.org/5.40.1/perldata#List-value-constructors",
         "https://perldoc.perl.org/5.40.1/perldsc"
       ],
-      "notes": "Общий профиль — плоские совместимые data-поля. merge LMX копирует использованный граф общим отображением; Perl создаёт новый хеш. Для этого сценария сравниваются значения полей; идентичность вложенных изменяемых графов и композиция кода не объявлены одинаковыми.",
+      "notes": "Площадь вычисляется после наложения, так что patch с width=0 влияет и на настройки, и на результат. Обе LMX-формы остаются общей минимальной формой: структурный merge с общей картой копирования не заменён несоответствующим по договору обходом полей.",
       "syntax_dependencies": [],
       "alternatives": [],
       "input_mutation": false,
@@ -2092,49 +2487,51 @@
       "implementation_pairs": {},
       "counts": {
         "lmx": {
-          "characters": 94,
-          "nonwhitespace": 59,
-          "nonblank_lines": 6
+          "characters": 159,
+          "nonwhitespace": 110,
+          "nonblank_lines": 7
         },
         "foreign": {
-          "characters": 101,
-          "nonwhitespace": 77,
-          "nonblank_lines": 6
+          "characters": 175,
+          "nonwhitespace": 140,
+          "nonblank_lines": 7
         }
       },
       "core_sources": {},
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    @: base\n    @: patch\n    return: @\n    run:\n        return: (merge(base; patch))\n",
+          "code": "Example:\n    @: base\n    @: patch\n    return: @\n    run:\n        @: settings (merge(base; patch))\n        return: (settings; settings\\width * settings\\height)\n",
           "source_file": "source/lmx/P12.lm3",
           "contract_id": "P12",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 59,
-            "characters_with_whitespace": 94,
-            "nonblank_lines": 6,
-            "utf8_bytes": 94,
-            "sha256": "36079caf755bfd8d1c0f8d3ab637c868c68e747e62b69aaf2182ccbfacc27a95"
+            "characters": 110,
+            "characters_with_whitespace": 159,
+            "nonblank_lines": 7,
+            "utf8_bytes": 159,
+            "sha256": "1c2c1b40a9ce29bc1bb127e83855aebdf07125d67f10cf9c3364b2489577f6f8"
           },
           "core_functions": [
             "merge"
           ],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "metrics_status": "current"
         },
         "functional": {
-          "code": "Example:\n    @: base\n    @: patch\n    return: @\n    run:\n        return: (merge(base; patch))\n",
+          "code": "Example:\n    @: base\n    @: patch\n    return: @\n    run:\n        @: settings (merge(base; patch))\n        return: (settings; settings\\width * settings\\height)\n",
           "source_file": "source/lmx/P12.lm3",
           "contract_id": "P12",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 59,
-            "characters_with_whitespace": 94,
-            "nonblank_lines": 6,
-            "utf8_bytes": 94,
-            "sha256": "36079caf755bfd8d1c0f8d3ab637c868c68e747e62b69aaf2182ccbfacc27a95"
+            "characters": 110,
+            "characters_with_whitespace": 159,
+            "nonblank_lines": 7,
+            "utf8_bytes": 159,
+            "sha256": "1c2c1b40a9ce29bc1bb127e83855aebdf07125d67f10cf9c3364b2489577f6f8"
           },
           "core_functions": [],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "metrics_status": "current"
         }
       },
       "lmx_comparison_variants": [
@@ -2143,14 +2540,16 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "same_minimal_form",
-      "style_note": "Это одна неизменяемая структурная операция merge с единой картой копирования; разворачивание по полям изменило бы её базовый договор. Высокоуровневого обхода или цепочки callback здесь нет.",
-      "lmx_operation_phase": "after_root_startup"
+      "style_note": "Общий минимальный стиль: структурное наложение настроек и вычисление площади; явные обходы не нужны и не меняют меру функционального сахара.",
+      "lmx_operation_phase": "after_root_startup",
+      "scenario_revision": "2026-11-25-useful-processing",
+      "metrics_status": "current"
     },
     {
       "id": "P13",
-      "title": "Map с выдачей нескольких элементов",
+      "title": "Пакетная загрузка с сохранением размеров пакетов",
       "category": "Списки",
-      "contract": "Сплющить ровно один уровень списка списков, сохранив порядок. Пустые внутренние списки ничего не добавляют; более глубокие массивы остаются отдельными элементами.",
+      "contract": "Объединить один уровень конечной последовательности пакетов rows и вернуть (плоская последовательность элементов, последовательность исходных размеров пакетов). Пустые пакеты сохраняются в отчёте размеров как 0; пустой внешний список даёт ([],[]). Глубже одного уровня ничего не раскрывается: вложенный массив остаётся отдельным элементом и сохраняет ссылку. Входы не меняются. Размеры во второй последовательности — обычные целые значения в общем протоколе результатов.",
       "inputs": [
         [
           [
@@ -2164,9 +2563,16 @@
         ]
       ],
       "expected": [
-        1,
-        2,
-        3
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          2,
+          0,
+          1
+        ]
       ],
       "test_cases": [
         {
@@ -2183,16 +2589,26 @@
             ]
           ],
           "expected": [
-            1,
-            2,
-            3
+            [
+              1,
+              2,
+              3
+            ],
+            [
+              2,
+              0,
+              1
+            ]
           ]
         },
         {
           "args": [
             []
           ],
-          "expected": []
+          "expected": [
+            [],
+            []
+          ]
         },
         {
           "args": [
@@ -2211,20 +2627,48 @@
             ]
           ],
           "expected": [
-            1,
             [
-              2
+              1,
+              [
+                2
+              ],
+              [
+                3
+              ]
             ],
             [
-              3
+              2,
+              1
+            ]
+          ]
+        },
+        {
+          "args": [
+            [
+              [],
+              [
+                0
+              ],
+              []
+            ]
+          ],
+          "expected": [
+            [
+              0
+            ],
+            [
+              0,
+              1,
+              0
             ]
           ]
         }
       ],
-      "lmx": "Example:\n    @: rows\n    return: @\n    run:\n        throws: copy(concat\\throws)\n        return: concat(rows)\n",
-      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($rows) = @_;\n    return [map { @$_ } @$rows];\n}\n",
+      "lmx": "Example:\n    @: rows\n    return: @\n    run:\n        throws: copy(concat\\throws) copy(map\\throws)\n        return: (concat(rows); map(rows; length))\n",
+      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($rows) = @_;\n    my @items = map { @$_ } @$rows;\n    my @sizes = map { scalar @$_ } @$rows;\n    return [\\@items, \\@sizes];\n}\n",
       "core_functions": [
-        "concat"
+        "concat",
+        "map"
       ],
       "foreign_dependencies": [
         "CORE::map"
@@ -2233,25 +2677,28 @@
         "https://perldoc.perl.org/5.40.1/functions/map",
         "https://perldoc.perl.org/5.40.1/perllol"
       ],
-      "notes": "Задача требует только одного разворачивания готовых частей. Общий concat заменяет identity-callback и bind, сохраняя вложенные элементы.",
+      "notes": "Вторая последовательность позволяет восстановить границы исходных пакетов, включая пустые. Она не является длиной единственного готового результата: пример сохраняет распределение элементов по всем входным пакетам.",
       "syntax_dependencies": [],
       "alternatives": [],
       "input_mutation": false,
       "lmx_file": "source/lmx/P13.lm3",
       "foreign_file": "source/perl/P13.pl",
       "implementation_pairs": {
-        "concat": []
+        "concat": [],
+        "map": [
+          "PI01"
+        ]
       },
       "counts": {
         "lmx": {
-          "characters": 109,
-          "nonwhitespace": 71,
+          "characters": 147,
+          "nonwhitespace": 106,
           "nonblank_lines": 6
         },
         "foreign": {
-          "characters": 96,
-          "nonwhitespace": 70,
-          "nonblank_lines": 6
+          "characters": 173,
+          "nonwhitespace": 125,
+          "nonblank_lines": 8
         }
       },
       "core_sources": {
@@ -2271,20 +2718,41 @@
             "FxKernel"
           ],
           "comparison_pairs": []
+        },
+        "map": {
+          "root": "FxMap",
+          "source": "../../LMX_Fn_Receivers/src/collections.lmx",
+          "sha256": "49c1cb3d1577c37469adf35e404ca945dc8e331a87312695951bf35f4e935dbb",
+          "all_definitions": [
+            "FxApply",
+            "FxMap",
+            "FxOne",
+            "FxSeqAllocate",
+            "FxSeqInfo",
+            "FxSeqRead",
+            "FxThrows",
+            "FxTry"
+          ],
+          "external_boundaries": [
+            "FxKernel"
+          ],
+          "comparison_pairs": [
+            "PI01"
+          ]
         }
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    @: rows\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxSeqRead\\read\\throws) copy(FxSeqStore\\write\\throws) copy(sys\\resize\\throws) SequenceSize\n        FxSeqInfo\\get(rows)\n        int: kind @[]\n        int: uniform 1\n        bigint: count 0\n        int: i 0\n        while: i < length(rows)\n            @: part FxSeqRead\\read(rows; i)\n            @: info FxSeqInfo\\get(part)\n            if: i = 0\n                kind := info\\arrayType\n            if: info\\dense = 0 || info\\arrayType != kind\n                uniform := 0\n            count += length(part)\n            i += 1\n        if: uniform = 0\n            kind := @[]\n        @: out FxSeqAllocate\\make(kind; 0)\n        @: info FxSeqInfo\\get(out)\n        if: count > info\\maxLength\n            throw: SequenceSize()\n        int: size count\n        sys\\resize(out; size)\n        int: at 0\n        i := 0\n        while: i < length(rows)\n            @: part FxSeqRead\\read(rows; i)\n            int: j 0\n            while: j < length(part)\n                FxSeqStore\\write(out; at; FxSeqRead\\read(part; j))\n                at += 1\n                j += 1\n            i += 1\n        return: out\n",
+          "code": "Example:\n    @: rows\n    return: @\n    run:\n        throws: copy(record\\throws) copy(FxSeqInfo\\get\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxSeqRead\\read\\throws) copy(FxSeqStore\\write\\throws) copy(sys\\resize\\throws) SequenceSize\n        FxSeqInfo\\get(rows)\n        int: kind @[]\n        int: uniform 1\n        bigint: count 0\n        @: sizes FxSeqAllocate\\make(@[]; length(rows))\n        int: i 0\n        while: i < length(rows)\n            @: part FxSeqRead\\read(rows; i)\n            @: info FxSeqInfo\\get(part)\n            if: i = 0\n                kind := info\\arrayType\n            if: info\\dense = 0 || info\\arrayType != kind\n                uniform := 0\n            int: partSize length(part)\n            sizes[i] := (partSize record)\n            count += partSize\n            i += 1\n        if: uniform = 0\n            kind := @[]\n        @: out FxSeqAllocate\\make(kind; 0)\n        @: info FxSeqInfo\\get(out)\n        if: count > info\\maxLength\n            throw: SequenceSize()\n        int: size count\n        sys\\resize(out; size)\n        int: at 0\n        i := 0\n        while: i < length(rows)\n            @: part FxSeqRead\\read(rows; i)\n            int: j 0\n            while: j < length(part)\n                FxSeqStore\\write(out; at; FxSeqRead\\read(part; j))\n                at += 1\n                j += 1\n            i += 1\n        return: (out; sizes)\n",
           "source_file": "source/lmx/procedural/P13.lm3",
           "contract_id": "P13",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 718,
-            "characters_with_whitespace": 1212,
-            "nonblank_lines": 38,
-            "utf8_bytes": 1212,
-            "sha256": "42b9fec76936d5b651102cd597ff7e8861abe030001829f958593549145036dd"
+            "characters": 834,
+            "characters_with_whitespace": 1373,
+            "nonblank_lines": 41,
+            "utf8_bytes": 1373,
+            "sha256": "5498d76f8b9885340c29ad35cb5db3d0a17de45e87f41ebba3bbd41644fd0f6b"
           },
           "core_functions": [
             "copy"
@@ -2295,24 +2763,27 @@
             "FxSeqRead\\read",
             "FxSeqStore\\write",
             "sys\\resize"
-          ]
+          ],
+          "metrics_status": "current"
         },
         "functional": {
-          "code": "Example:\n    @: rows\n    return: @\n    run:\n        throws: copy(concat\\throws)\n        return: concat(rows)\n",
+          "code": "Example:\n    @: rows\n    return: @\n    run:\n        throws: copy(concat\\throws) copy(map\\throws)\n        return: (concat(rows); map(rows; length))\n",
           "source_file": "source/lmx/P13.lm3",
           "contract_id": "P13",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 71,
-            "characters_with_whitespace": 109,
+            "characters": 106,
+            "characters_with_whitespace": 147,
             "nonblank_lines": 6,
-            "utf8_bytes": 109,
-            "sha256": "ae176cdcce4a956db3503891300a16d29040e1b745f4e36d855618e8b8b8bc4e"
+            "utf8_bytes": 147,
+            "sha256": "8542bf3ac20c7a0ebeb5b29baa0647baf0dd14024e599fc4bf1f75ae74d91a9d"
           },
           "core_functions": [
-            "concat"
+            "concat",
+            "map"
           ],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "metrics_status": "current"
         }
       },
       "lmx_comparison_variants": [
@@ -2321,57 +2792,107 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
-      "lmx_operation_phase": "after_root_startup"
+      "style_note": "Обе формы решают полный прикладной сценарий. Процедурная показывает алгоритм циклами и ветвлениями, функциональная использует общие операции; все поля, порядок, ошибки и полезный результат сохраняются.",
+      "lmx_operation_phase": "after_root_startup",
+      "scenario_revision": "2026-11-25-useful-processing",
+      "metrics_status": "current"
     },
     {
       "id": "P14",
-      "title": "Разделение строки без потери пустых полей",
+      "title": "Проверка строки импорта и пустых полей",
       "category": "Строки и regex",
-      "contract": "Разделить ASCII-строку по запятым; сохранить начальные, промежуточные и конечные пустые поля. Пустая строка означает одно пустое поле.",
+      "contract": "Разделить ASCII-строку простого импорта по запятым и вернуть (поля, флаг числа полей=columns, число пустых полей). columns — положительное ожидаемое число колонок. Начальные, промежуточные и конечные пустые поля сохраняются; пустая строка означает одно пустое поле. Это явно простой формат без CSV-кавычек/экранирования; ввод не исправляется автоматически и не меняется.",
       "inputs": [
-        "a,,b,"
+        "a,,b,",
+        4
       ],
       "expected": [
-        "a",
-        "",
-        "b",
-        ""
+        [
+          "a",
+          "",
+          "b",
+          ""
+        ],
+        1,
+        2
       ],
       "test_cases": [
         {
           "args": [
-            "a,,b,"
+            "a,,b,",
+            4
           ],
           "expected": [
-            "a",
-            "",
-            "b",
-            ""
+            [
+              "a",
+              "",
+              "b",
+              ""
+            ],
+            1,
+            2
           ]
         },
         {
           "args": [
-            ""
+            "",
+            1
           ],
           "expected": [
-            ""
+            [
+              ""
+            ],
+            1,
+            1
           ]
         },
         {
           "args": [
-            ","
+            ",",
+            1
           ],
           "expected": [
+            [
+              "",
+              ""
+            ],
+            0,
+            2
+          ]
+        },
+        {
+          "args": [
+            "a,b",
+            3
+          ],
+          "expected": [
+            [
+              "a",
+              "b"
+            ],
+            0,
+            0
+          ]
+        },
+        {
+          "args": [
             "",
-            ""
+            2
+          ],
+          "expected": [
+            [
+              ""
+            ],
+            0,
+            1
           ]
         }
       ],
-      "lmx": "Example:\n    char[]: text\n    return: @\n    run:\n        throws: copy(byteText\\throws) copy(split\\throws)\n        return: split(byteText(text); \",\")\n",
-      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($text) = @_;\n    return length($text) ? [split /,/, $text, -1] : [''];\n}\n",
+      "lmx": "Empty:\n    char[]: text\n    return: int\n    test:\n        return: length(text) = 0\n\nExample:\n    char[]: text\n    int: columns\n    return: @\n    run:\n        throws: copy(byteText\\throws) copy(split\\throws) copy(count\\throws)\n        @: fields split(byteText(text); \",\")\n        return: (fields; length(fields) = columns; count(fields; Empty\\test))\n",
+      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($text, $columns) = @_;\n    my @fields = length($text) ? split(/,/, $text, -1) : ('');\n    return [\\@fields, 0 + (@fields == $columns), scalar grep { $_ eq '' } @fields];\n}\n",
       "core_functions": [
-        "split"
+        "split",
+        "count"
       ],
       "foreign_dependencies": [
         "CORE::split"
@@ -2379,7 +2900,7 @@
       "sources": [
         "https://perldoc.perl.org/5.40.1/functions/split"
       ],
-      "notes": "Для пустого входа split Perl обычно возвращает пустой список; ветка в клиенте обеспечивает общий договор и входит в измеряемый код.",
+      "notes": "Отчёт разделяет неправильное число колонок и пустые значения. Для пустого входа Perl имеет явную ветвь, обеспечивающую один пустой столбец. Процедурный код считает пустые поля в том же сканировании.",
       "syntax_dependencies": [
         "byteText",
         "literal pattern"
@@ -2391,18 +2912,19 @@
       "implementation_pairs": {
         "split": [
           "PI07"
-        ]
+        ],
+        "count": []
       },
       "counts": {
         "lmx": {
-          "characters": 149,
-          "nonwhitespace": 109,
-          "nonblank_lines": 6
+          "characters": 349,
+          "nonwhitespace": 255,
+          "nonblank_lines": 13
         },
         "foreign": {
-          "characters": 121,
-          "nonwhitespace": 92,
-          "nonblank_lines": 6
+          "characters": 220,
+          "nonwhitespace": 170,
+          "nonblank_lines": 7
         }
       },
       "core_sources": {
@@ -2461,20 +2983,39 @@
           "comparison_pairs": [
             "PI07"
           ]
+        },
+        "count": {
+          "root": "FxSeqCount",
+          "source": "../../LMX_Fn_Receivers/src/sequences.lmx",
+          "sha256": "97114d3c2102ad3a53ff9c012ba57d3706b3eaf0edb68f3c6b08d57255ac7efd",
+          "all_definitions": [
+            "FxApply",
+            "FxOne",
+            "FxSeqCount",
+            "FxSeqInfo",
+            "FxSeqPredicate",
+            "FxSeqRead",
+            "FxThrows",
+            "FxTry"
+          ],
+          "external_boundaries": [
+            "FxKernel"
+          ],
+          "comparison_pairs": []
         }
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    char[]: text\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws) copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        @[]: out []\n        int: begin 0\n        int: i 0\n        while: 1\n            if: i = length(text) || text[i] = ','\n                char[]: part []\n                sys\\resize(part; i - begin)\n                int: j 0\n                while: j < length(part)\n                    part[j] := text[begin + j]\n                    j += 1\n                FxSeqPush\\append(out; (part record))\n                if: i = length(text)\n                    return: out\n                begin := i + 1\n            i += 1\n",
+          "code": "Example:\n    char[]: text\n    int: columns\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws) copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        @[]: out []\n        int: empty 0\n        int: begin 0\n        int: i 0\n        while: 1\n            if: i = length(text) || text[i] = ','\n                if: i = begin\n                    empty += 1\n                char[]: part []\n                sys\\resize(part; i - begin)\n                int: j 0\n                while: j < length(part)\n                    part[j] := text[begin + j]\n                    j += 1\n                FxSeqPush\\append(out; (part record))\n                if: i = length(text)\n                    return: (out; length(out) = columns; empty)\n                begin := i + 1\n            i += 1\n",
           "source_file": "source/lmx/procedural/P14.lm3",
           "contract_id": "P14",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 335,
-            "characters_with_whitespace": 651,
-            "nonblank_lines": 21,
-            "utf8_bytes": 651,
-            "sha256": "6aada5e6db9b2a869c195c24e765bad9cb28e8accdd54f301de506ff0904cee9"
+            "characters": 402,
+            "characters_with_whitespace": 782,
+            "nonblank_lines": 25,
+            "utf8_bytes": 782,
+            "sha256": "9d8866f99e8403b6482b83d35a8fc87149a9bcc4bae44570b09b51280b5cbbb9"
           },
           "core_functions": [
             "copy",
@@ -2483,24 +3024,27 @@
           "low_level_operations": [
             "FxSeqPush\\append",
             "sys\\resize"
-          ]
+          ],
+          "metrics_status": "current"
         },
         "functional": {
-          "code": "Example:\n    char[]: text\n    return: @\n    run:\n        throws: copy(byteText\\throws) copy(split\\throws)\n        return: split(byteText(text); \",\")\n",
+          "code": "Empty:\n    char[]: text\n    return: int\n    test:\n        return: length(text) = 0\n\nExample:\n    char[]: text\n    int: columns\n    return: @\n    run:\n        throws: copy(byteText\\throws) copy(split\\throws) copy(count\\throws)\n        @: fields split(byteText(text); \",\")\n        return: (fields; length(fields) = columns; count(fields; Empty\\test))\n",
           "source_file": "source/lmx/P14.lm3",
           "contract_id": "P14",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 109,
-            "characters_with_whitespace": 149,
-            "nonblank_lines": 6,
-            "utf8_bytes": 149,
-            "sha256": "f427a4d62ee87930d331c8a70783a5b8a6ca2be0f3fe8d82a1800e2a3bd1c7c4"
+            "characters": 255,
+            "characters_with_whitespace": 349,
+            "nonblank_lines": 13,
+            "utf8_bytes": 349,
+            "sha256": "e351c933f94c1c7b80ee5dff2913309eecdd1dfe21331bb6f18a3d784f7851bd"
           },
           "core_functions": [
-            "split"
+            "split",
+            "count"
           ],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "metrics_status": "current"
         }
       },
       "lmx_comparison_variants": [
@@ -2509,48 +3053,116 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
-      "lmx_operation_phase": "after_root_startup"
+      "style_note": "Обе формы решают полный прикладной сценарий. Процедурная показывает алгоритм циклами и ветвлениями, функциональная использует общие операции; все поля, порядок, ошибки и полезный результат сохраняются.",
+      "lmx_operation_phase": "after_root_startup",
+      "scenario_revision": "2026-11-25-useful-processing",
+      "metrics_status": "current"
     },
     {
       "id": "P15",
-      "title": "Проверка полного ASCII-идентификатора",
+      "title": "Отбор допустимых имён и число отклонений",
       "category": "Строки и regex",
-      "contract": "Принять целиком строку вида [A-Za-z][A-Za-z0-9_]* и вернуть 0/1. Пустая строка и конечный перевод строки не допускаются.",
+      "contract": "Обработать список ASCII-строк как предложенные имена: принять только целые строки вида [A-Za-z][A-Za-z0-9_]*; вернуть (принятые имена в исходном порядке, число отклонённых). Повторные корректные имена сохраняются. Пустая строка, ведущая цифра и конечный перевод строки недопустимы. Пустой список даёт ([],0), входные строки не меняются.",
       "inputs": [
-        "user_21"
+        [
+          "user_21",
+          "7user",
+          "name\n",
+          "",
+          "Abc",
+          "user_21"
+        ]
       ],
-      "expected": 1,
+      "expected": [
+        [
+          "user_21",
+          "Abc",
+          "user_21"
+        ],
+        3
+      ],
       "test_cases": [
         {
           "args": [
-            "user_21"
+            [
+              "user_21",
+              "7user",
+              "name\n",
+              "",
+              "Abc",
+              "user_21"
+            ]
           ],
-          "expected": 1
+          "expected": [
+            [
+              "user_21",
+              "Abc",
+              "user_21"
+            ],
+            3
+          ]
         },
         {
           "args": [
-            "7user"
+            [
+              "user_21"
+            ]
           ],
-          "expected": 0
+          "expected": [
+            [
+              "user_21"
+            ],
+            0
+          ]
         },
         {
           "args": [
-            "name\n"
+            [
+              "7user"
+            ]
           ],
-          "expected": 0
+          "expected": [
+            [],
+            1
+          ]
         },
         {
           "args": [
-            ""
+            [
+              "name\n"
+            ]
           ],
-          "expected": 0
+          "expected": [
+            [],
+            1
+          ]
+        },
+        {
+          "args": [
+            [
+              ""
+            ]
+          ],
+          "expected": [
+            [],
+            1
+          ]
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": [
+            [],
+            0
+          ]
         }
       ],
-      "lmx": "Example:\n    char[]: text\n    return: int\n    run:\n        throws: copy(byteText\\throws) copy(atLeast\\throws) copy(RxThenOperand\\then\\throws) copy(matches\\throws)\n        return: matches(byteText(text); (then asciiLetter (asciiWord atLeast 0)))\n",
-      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($text) = @_;\n    return 0 + ($text =~ /\\A[A-Za-z][A-Za-z0-9_]*\\z/);\n}\n",
+      "lmx": "Identifier:\n    char[]: text\n    return: int\n    test:\n        throws: copy(byteText\\throws) copy(atLeast\\throws) copy(RxThenOperand\\then\\throws) copy(matches\\throws)\n        return: matches(byteText(text); (then asciiLetter (asciiWord atLeast 0)))\n\nExample:\n    @: items\n    return: @\n    run:\n        throws: copy(filter\\throws)\n        @: accepted filter(items; Identifier\\test)\n        return: (accepted; length(items) - length(accepted))\n",
+      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($items) = @_;\n    my @accepted = grep { /\\A[A-Za-z][A-Za-z0-9_]*\\z/ } @$items;\n    return [\\@accepted, scalar(@$items) - scalar(@accepted)];\n}\n",
       "core_functions": [
-        "matches"
+        "matches",
+        "filter"
       ],
       "foreign_dependencies": [
         "regex anchors",
@@ -2559,7 +3171,7 @@
       "sources": [
         "https://perldoc.perl.org/5.40.1/perlre"
       ],
-      "notes": "Используются именно \\A и \\z; проверка не ослаблена до поиска подстроки или до конца перед последним переводом строки.",
+      "notes": "Один и тот же предикат применяется к произвольному списку имён, а число отказов позволяет сформировать отчёт импорта. Используются строгие границы \\A и \\z; проверка не ослаблена до поиска подстроки. Общий Ascii\\letter определён один раз в source/lmx/common/ascii.lm3 и включён в полный процедурный листинг и метрику; entry-файл загружается вместе с ним.",
       "syntax_dependencies": [
         "byteText",
         "then",
@@ -2574,18 +3186,21 @@
       "implementation_pairs": {
         "matches": [
           "PI07"
+        ],
+        "filter": [
+          "PI01"
         ]
       },
       "counts": {
         "lmx": {
-          "characters": 245,
-          "nonwhitespace": 199,
-          "nonblank_lines": 6
+          "characters": 443,
+          "nonwhitespace": 343,
+          "nonblank_lines": 13
         },
         "foreign": {
-          "characters": 118,
-          "nonwhitespace": 92,
-          "nonblank_lines": 6
+          "characters": 191,
+          "nonwhitespace": 154,
+          "nonblank_lines": 7
         }
       },
       "core_sources": {
@@ -2638,40 +3253,70 @@
           "comparison_pairs": [
             "PI07"
           ]
+        },
+        "filter": {
+          "root": "FxFilter",
+          "source": "../../LMX_Fn_Receivers/src/collections.lmx",
+          "sha256": "542bdf6db0e61ac6b33c361a2b658db22cf4993b70667052f54fb95e104712d0",
+          "all_definitions": [
+            "FxApply",
+            "FxFilter",
+            "FxOne",
+            "FxSeqAllocate",
+            "FxSeqInfo",
+            "FxSeqRead",
+            "FxThrows",
+            "FxTry"
+          ],
+          "external_boundaries": [
+            "FxKernel"
+          ],
+          "comparison_pairs": [
+            "PI01"
+          ]
         }
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Ascii:\n    char: value\n    return: int\n    letter:\n        return: (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z')\n\n\nExample:\n    char[]: text\n    return: int\n    run:\n        if: length(text) = 0 || Ascii\\letter(text[0]) = 0\n            return: 0\n        int: i 1\n        while: i < length(text)\n            char: value text[i]\n            if: Ascii\\letter(value) = 0 && (value < '0' || value > '9') && value != '_'\n                return: 0\n            i += 1\n        return: 1\n",
+          "code": "Ascii:\n    char: value\n    return: int\n    letter:\n        return: (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z')\n\nIdentifier:\n    char[]: text\n    return: int\n    test:\n        if: length(text) = 0 || Ascii\\letter(text[0]) = 0\n            return: 0\n        int: i 1\n        while: i < length(text)\n            char: value text[i]\n            if: Ascii\\letter(value) = 0 && (value < '0' || value > '9') && value != '_'\n                return: 0\n            i += 1\n        return: 1\n\nExample:\n    @: items\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxSeqRead\\read\\throws) copy(FxSeqPush\\append\\throws)\n        @: info FxSeqInfo\\get(items)\n        @: out FxSeqAllocate\\make(info\\arrayType; 0)\n        int: i 0\n        while: i < length(items)\n            @: value FxSeqRead\\read(items; i)\n            if: Identifier\\test(\\value) != 0\n                FxSeqPush\\append(out; value)\n            i += 1\n        return: (out; length(items) - length(out))\n",
           "source_file": "source/lmx/procedural/P15.lm3",
           "contract_id": "P15",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 296,
-            "characters_with_whitespace": 497,
-            "nonblank_lines": 18,
-            "utf8_bytes": 497,
-            "sha256": "2d4c843ce99eb41be9c1be1f1c0941dfb43e2bbbf52c668359a64d9efb200538"
+            "characters": 669,
+            "characters_with_whitespace": 1025,
+            "nonblank_lines": 32,
+            "utf8_bytes": 1025,
+            "sha256": "78eb252094af2c1c4cd0515a8b2c77abf50fd385f176ce6e11b1e1b61f2d2790"
           },
           "core_functions": [],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "metrics_status": "current",
+          "source_files": [
+            "source/lmx/common/ascii.lm3",
+            "source/lmx/procedural/P15.lm3"
+          ],
+          "source_file_is_fragment": true,
+          "entry_source_file": "source/lmx/procedural/P15.lm3"
         },
         "functional": {
-          "code": "Example:\n    char[]: text\n    return: int\n    run:\n        throws: copy(byteText\\throws) copy(atLeast\\throws) copy(RxThenOperand\\then\\throws) copy(matches\\throws)\n        return: matches(byteText(text); (then asciiLetter (asciiWord atLeast 0)))\n",
+          "code": "Identifier:\n    char[]: text\n    return: int\n    test:\n        throws: copy(byteText\\throws) copy(atLeast\\throws) copy(RxThenOperand\\then\\throws) copy(matches\\throws)\n        return: matches(byteText(text); (then asciiLetter (asciiWord atLeast 0)))\n\nExample:\n    @: items\n    return: @\n    run:\n        throws: copy(filter\\throws)\n        @: accepted filter(items; Identifier\\test)\n        return: (accepted; length(items) - length(accepted))\n",
           "source_file": "source/lmx/P15.lm3",
           "contract_id": "P15",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 199,
-            "characters_with_whitespace": 245,
-            "nonblank_lines": 6,
-            "utf8_bytes": 245,
-            "sha256": "9411e99cc8d611f46282afbe167c243c403bf50acf2f2accd790df421105e2cf"
+            "characters": 343,
+            "characters_with_whitespace": 443,
+            "nonblank_lines": 13,
+            "utf8_bytes": 443,
+            "sha256": "1b074fc4e406a42e90d340a9301d2c1199b18c8ac2abd77209141c5fee49908f"
           },
           "core_functions": [
-            "matches"
+            "matches",
+            "filter"
           ],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "metrics_status": "current"
         }
       },
       "lmx_comparison_variants": [
@@ -2680,8 +3325,10 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
-      "lmx_operation_phase": "after_root_startup"
+      "style_note": "Обе формы решают полный прикладной сценарий. Процедурная показывает алгоритм циклами и ветвлениями, функциональная использует общие операции; все поля, порядок, ошибки и полезный результат сохраняются.",
+      "lmx_operation_phase": "after_root_startup",
+      "scenario_revision": "2026-11-25-useful-processing",
+      "metrics_status": "current"
     },
     {
       "id": "P16",
@@ -2751,7 +3398,7 @@
       "sources": [
         "https://perldoc.perl.org/5.40.1/perlre#Capture-groups"
       ],
-      "notes": "Схема использует уникальные имена групп. История всех повторных захватов LMX не сравнивается с одним значением %+.",
+      "notes": "Схема использует уникальные имена групп. История всех повторных захватов LMX не сравнивается с одним значением %+. Общий Ascii\\letter определён один раз в source/lmx/common/ascii.lm3 и включён в полный процедурный листинг и метрику; entry-файл загружается вместе с ним.",
       "syntax_dependencies": [
         "byteText",
         "then",
@@ -2871,23 +3518,29 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Ascii:\n    char: value\n    return: int\n    letter:\n        return: (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z')\n\n\nExample:\n    char[]: text\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        int: at 0\n        while: at < length(text) && Ascii\\letter(text[at]) != 0\n            at += 1\n        if: at = 0 || at = length(text) || text[at] != '='\n            return: (0; \"\"; \"\")\n        int: begin at + 1\n        if: begin = length(text)\n            return: (0; \"\"; \"\")\n        char[]: key []\n        char[]: value []\n        sys\\resize(key; at)\n        sys\\resize(value; length(text) - begin)\n        int: i 0\n        while: i < at\n            key[i] := text[i]\n            i += 1\n        i := begin\n        while: i < length(text)\n            if: text[i] < '0' || text[i] > '9'\n                return: (0; \"\"; \"\")\n            value[i - begin] := text[i]\n            i += 1\n        return: (1; key; value)\n",
+          "code": "Ascii:\n    char: value\n    return: int\n    letter:\n        return: (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z')\n\nExample:\n    char[]: text\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        int: at 0\n        while: at < length(text) && Ascii\\letter(text[at]) != 0\n            at += 1\n        if: at = 0 || at = length(text) || text[at] != '='\n            return: (0; \"\"; \"\")\n        int: begin at + 1\n        if: begin = length(text)\n            return: (0; \"\"; \"\")\n        char[]: key []\n        char[]: value []\n        sys\\resize(key; at)\n        sys\\resize(value; length(text) - begin)\n        int: i 0\n        while: i < at\n            key[i] := text[i]\n            i += 1\n        i := begin\n        while: i < length(text)\n            if: text[i] < '0' || text[i] > '9'\n                return: (0; \"\"; \"\")\n            value[i - begin] := text[i]\n            i += 1\n        return: (1; key; value)\n",
           "source_file": "source/lmx/procedural/P16.lm3",
           "contract_id": "P16",
           "runtime_execution": "NOT_RUN",
           "metrics": {
             "characters": 549,
-            "characters_with_whitespace": 944,
+            "characters_with_whitespace": 943,
             "nonblank_lines": 33,
-            "utf8_bytes": 944,
-            "sha256": "d5a4000c4cf87d533bd8ab0f06bff2620a2cf693d8b54798cbb93210b6efe5e4"
+            "utf8_bytes": 943,
+            "sha256": "dbc74713d8f9b375a569ef57d032be438075ec3be31e2d25f3711f9881631777"
           },
           "core_functions": [
             "copy"
           ],
           "low_level_operations": [
             "sys\\resize"
-          ]
+          ],
+          "source_files": [
+            "source/lmx/common/ascii.lm3",
+            "source/lmx/procedural/P16.lm3"
+          ],
+          "source_file_is_fragment": true,
+          "entry_source_file": "source/lmx/procedural/P16.lm3"
         },
         "functional": {
           "code": "Example:\n    char[]: text\n    return: @\n    run:\n        throws: copy(byteText\\throws) copy(atLeast\\throws) copy(capture\\throws) copy(RxThenOperand\\then\\throws) copy(wholeMatch\\throws) copy(captureValue\\throws)\n        @: parsed wholeMatch(byteText(text); (then capture(\"key\"; (asciiLetter atLeast 1)) \"=\" capture(\"value\"; (asciiDigit atLeast 1))))\n        if: parsed\\present = 0\n            return: (0; \"\"; \"\")\n        @: key captureValue(parsed\\value; \"key\")\n        @: value captureValue(parsed\\value; \"value\")\n        return: (1; \\key\\value; \\value\\value)\n",
@@ -2919,48 +3572,90 @@
     },
     {
       "id": "P17",
-      "title": "Глобальное извлечение слов",
+      "title": "Слова журнала с порогом длины",
       "category": "Строки и regex",
-      "contract": "Вернуть все максимальные неперекрывающиеся последовательности ASCII-букв слева направо. Цифры и знаки — разделители; отсутствие слов даёт пустой массив.",
+      "contract": "Из ASCII-текста журнала извлечь максимальные последовательности букв [A-Za-z]+, оставить слова длины не меньше неотрицательного minimum и вернуть (принятые слова, число отброшенных коротких слов). Порядок и регистр сохраняются; цифры и знаки — разделители. При отсутствии слов результат ([],0), minimum=0 оставляет все найденные слова. Вход не меняется.",
       "inputs": [
-        "ab12CD, ef"
+        "ab12CODE, useful",
+        3
       ],
       "expected": [
-        "ab",
-        "CD",
-        "ef"
+        [
+          "CODE",
+          "useful"
+        ],
+        1
       ],
       "test_cases": [
         {
           "args": [
-            "ab12CD, ef"
+            "ab12CODE, useful",
+            3
           ],
           "expected": [
-            "ab",
-            "CD",
-            "ef"
+            [
+              "CODE",
+              "useful"
+            ],
+            1
           ]
         },
         {
           "args": [
-            "123"
+            "ab12CD, ef",
+            2
           ],
-          "expected": []
+          "expected": [
+            [
+              "ab",
+              "CD",
+              "ef"
+            ],
+            0
+          ]
         },
         {
           "args": [
-            ""
+            "123",
+            2
           ],
-          "expected": []
+          "expected": [
+            [],
+            0
+          ]
+        },
+        {
+          "args": [
+            "",
+            2
+          ],
+          "expected": [
+            [],
+            0
+          ]
+        },
+        {
+          "args": [
+            "a ab",
+            0
+          ],
+          "expected": [
+            [
+              "a",
+              "ab"
+            ],
+            0
+          ]
         }
       ],
-      "lmx": "Example:\n    char[]: text\n    return: @\n    run:\n        throws: copy(byteText\\throws) copy(atLeast\\throws) copy(eachMatch\\throws) copy(collect\\throws) copy(map\\throws) copy(matchedValue\\throws)\n        return: map(collect(eachMatch(byteText(text); (asciiLetter atLeast 1))); matchedValue)\n",
-      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($text) = @_;\n    return [$text =~ /[A-Za-z]+/g];\n}\n",
+      "lmx": "LongWord:\n    char[]: word\n    return: int\n    test:\n        return: length(word) >= minimum\n\nExample:\n    char[]: text\n    int: minimum\n    return: @\n    run:\n        throws: copy(byteText\\throws) copy(atLeast\\throws) copy(eachMatch\\throws) copy(collect\\throws) copy(map\\throws) copy(matchedValue\\throws) copy(filter\\throws)\n        @: words map(collect(eachMatch(byteText(text); (asciiLetter atLeast 1))); matchedValue)\n        @: selected filter(words; LongWord\\test)\n        return: (selected; length(words) - length(selected))\n",
+      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($text, $minimum) = @_;\n    my @words = $text =~ /[A-Za-z]+/g;\n    my @selected = grep { length($_) >= $minimum } @words;\n    return [\\@selected, scalar(@words) - scalar(@selected)];\n}\n",
       "core_functions": [
         "eachMatch",
-        "matchedValue",
         "collect",
-        "map"
+        "map",
+        "filter",
+        "matchedValue"
       ],
       "foreign_dependencies": [
         "regex /g in list context"
@@ -2968,7 +3663,7 @@
       "sources": [
         "https://perldoc.perl.org/5.40.1/perlop#Regexp-Quote-Like-Operators"
       ],
-      "notes": "Perl собирает список встроенным /g. LMX материализует источник Stop общим collect, затем читает тексты общим map; оба результата конечны и упорядочены. Нулевое/пустое значение не используется как признак завершения. Общий collect сохраняет остальные объявленные отказы источника в FxCallFailure; фактический пример сравнивает успешные ASCII-входы.",
+      "notes": "Порог длины имеет обычное динамическое связывание в LongWord; подготовка фабрики и копирование текстового шаблона не требуются. Цепочка возвращает полезный отобранный материал и статистику пропуска. Общий Ascii\\letter определён один раз в source/lmx/common/ascii.lm3 и включён в полный процедурный листинг и метрику; entry-файл загружается вместе с ним.",
       "syntax_dependencies": [
         "byteText",
         "atLeast",
@@ -2982,24 +3677,27 @@
         "eachMatch": [
           "PI07"
         ],
-        "matchedValue": [
-          "PI07"
-        ],
         "collect": [],
         "map": [
           "PI01"
+        ],
+        "filter": [
+          "PI01"
+        ],
+        "matchedValue": [
+          "PI07"
         ]
       },
       "counts": {
         "lmx": {
-          "characters": 290,
-          "nonwhitespace": 243,
-          "nonblank_lines": 6
+          "characters": 532,
+          "nonwhitespace": 421,
+          "nonblank_lines": 14
         },
         "foreign": {
-          "characters": 99,
-          "nonwhitespace": 75,
-          "nonblank_lines": 6
+          "characters": 232,
+          "nonwhitespace": 182,
+          "nonblank_lines": 8
         }
       },
       "core_sources": {
@@ -3056,22 +3754,6 @@
             "PI07"
           ]
         },
-        "matchedValue": {
-          "root": "RxMatchedValue",
-          "source": "../../LMX_Fn_Receivers/src/regex/operations.lmx",
-          "sha256": "fca2ce9a8b56209ecca0ba1e85b3094fdfc5a8bd5564dfdf240fd28dc08b97e7",
-          "all_definitions": [
-            "FxThrows",
-            "RxMatchedValue",
-            "RxPreparedSource",
-            "RxSourceDomain",
-            "RxSourceSlice"
-          ],
-          "external_boundaries": [],
-          "comparison_pairs": [
-            "PI07"
-          ]
-        },
         "collect": {
           "root": "FxStdCollect",
           "source": "../../LMX_Fn_Receivers/src/coreStandardFunctional.lmx",
@@ -3119,20 +3801,57 @@
           "comparison_pairs": [
             "PI01"
           ]
+        },
+        "filter": {
+          "root": "FxFilter",
+          "source": "../../LMX_Fn_Receivers/src/collections.lmx",
+          "sha256": "542bdf6db0e61ac6b33c361a2b658db22cf4993b70667052f54fb95e104712d0",
+          "all_definitions": [
+            "FxApply",
+            "FxFilter",
+            "FxOne",
+            "FxSeqAllocate",
+            "FxSeqInfo",
+            "FxSeqRead",
+            "FxThrows",
+            "FxTry"
+          ],
+          "external_boundaries": [
+            "FxKernel"
+          ],
+          "comparison_pairs": [
+            "PI01"
+          ]
+        },
+        "matchedValue": {
+          "root": "RxMatchedValue",
+          "source": "../../LMX_Fn_Receivers/src/regex/operations.lmx",
+          "sha256": "fca2ce9a8b56209ecca0ba1e85b3094fdfc5a8bd5564dfdf240fd28dc08b97e7",
+          "all_definitions": [
+            "FxThrows",
+            "RxMatchedValue",
+            "RxPreparedSource",
+            "RxSourceDomain",
+            "RxSourceSlice"
+          ],
+          "external_boundaries": [],
+          "comparison_pairs": [
+            "PI07"
+          ]
         }
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Ascii:\n    char: value\n    return: int\n    letter:\n        return: (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z')\n\n\nExample:\n    char[]: text\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws) copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        @[]: out []\n        int: i 0\n        while: i < length(text)\n            while: i < length(text) && Ascii\\letter(text[i]) = 0\n                i += 1\n            int: begin i\n            while: i < length(text) && Ascii\\letter(text[i]) != 0\n                i += 1\n            if: i > begin\n                char[]: word []\n                sys\\resize(word; i - begin)\n                int: j 0\n                while: j < length(word)\n                    word[j] := text[begin + j]\n                    j += 1\n                FxSeqPush\\append(out; (word record))\n        ---\n        return: out\n",
+          "code": "Ascii:\n    char: value\n    return: int\n    letter:\n        return: (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z')\n\nExample:\n    char[]: text\n    int: minimum\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws) copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        @[]: out []\n        int: skipped 0\n        int: i 0\n        while: i < length(text)\n            while: i < length(text) && Ascii\\letter(text[i]) = 0\n                i += 1\n            int: begin i\n            while: i < length(text) && Ascii\\letter(text[i]) != 0\n                i += 1\n            if: i > begin && i - begin < minimum\n                skipped += 1\n            if: i > begin && i - begin >= minimum\n                char[]: word []\n                sys\\resize(word; i - begin)\n                int: j 0\n                while: j < length(word)\n                    word[j] := text[begin + j]\n                    j += 1\n                FxSeqPush\\append(out; (word record))\n        ---\n        return: (out; skipped)\n",
           "source_file": "source/lmx/procedural/P17.lm3",
           "contract_id": "P17",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 489,
-            "characters_with_whitespace": 870,
-            "nonblank_lines": 28,
-            "utf8_bytes": 870,
-            "sha256": "741c0b118b9bd0d67d8587b373a220ad3b8ceb284063c1f0be2b96bc2d293020"
+            "characters": 577,
+            "characters_with_whitespace": 1022,
+            "nonblank_lines": 32,
+            "utf8_bytes": 1022,
+            "sha256": "1e0922d132263d1d8d3da1ec3d0ac0cef5bb2ff41e50b0eb2e793b56df0329ac"
           },
           "core_functions": [
             "copy",
@@ -3141,27 +3860,36 @@
           "low_level_operations": [
             "FxSeqPush\\append",
             "sys\\resize"
-          ]
+          ],
+          "metrics_status": "current",
+          "source_files": [
+            "source/lmx/common/ascii.lm3",
+            "source/lmx/procedural/P17.lm3"
+          ],
+          "source_file_is_fragment": true,
+          "entry_source_file": "source/lmx/procedural/P17.lm3"
         },
         "functional": {
-          "code": "Example:\n    char[]: text\n    return: @\n    run:\n        throws: copy(byteText\\throws) copy(atLeast\\throws) copy(eachMatch\\throws) copy(collect\\throws) copy(map\\throws) copy(matchedValue\\throws)\n        return: map(collect(eachMatch(byteText(text); (asciiLetter atLeast 1))); matchedValue)\n",
+          "code": "LongWord:\n    char[]: word\n    return: int\n    test:\n        return: length(word) >= minimum\n\nExample:\n    char[]: text\n    int: minimum\n    return: @\n    run:\n        throws: copy(byteText\\throws) copy(atLeast\\throws) copy(eachMatch\\throws) copy(collect\\throws) copy(map\\throws) copy(matchedValue\\throws) copy(filter\\throws)\n        @: words map(collect(eachMatch(byteText(text); (asciiLetter atLeast 1))); matchedValue)\n        @: selected filter(words; LongWord\\test)\n        return: (selected; length(words) - length(selected))\n",
           "source_file": "source/lmx/P17.lm3",
           "contract_id": "P17",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 243,
-            "characters_with_whitespace": 290,
-            "nonblank_lines": 6,
-            "utf8_bytes": 290,
-            "sha256": "189c69ffcbccdbd8c24a2aee0ff21039b3028a44e18d568f8a15555ccbad59dd"
+            "characters": 421,
+            "characters_with_whitespace": 532,
+            "nonblank_lines": 14,
+            "utf8_bytes": 532,
+            "sha256": "3f480b48aaebc97c40aa73474e52de38e27c7ead67a5a9ea1a3717319f8a77ff"
           },
           "core_functions": [
             "eachMatch",
-            "matchedValue",
             "collect",
-            "map"
+            "map",
+            "filter",
+            "matchedValue"
           ],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "metrics_status": "current"
         }
       },
       "lmx_comparison_variants": [
@@ -3170,20 +3898,25 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
-      "lmx_operation_phase": "after_root_startup"
+      "style_note": "Обе формы решают полный прикладной сценарий. Процедурная показывает алгоритм циклами и ветвлениями, функциональная использует общие операции; все поля, порядок, ошибки и полезный результат сохраняются.",
+      "lmx_operation_phase": "after_root_startup",
+      "scenario_revision": "2026-11-25-useful-processing",
+      "metrics_status": "current"
     },
     {
       "id": "P18",
-      "title": "Буквальная замена всех совпадений",
+      "title": "Буквальная замена с отчётом о числе изменений",
       "category": "Строки и regex",
-      "contract": "Заменить все неперекрывающиеся буквальные вхождения needle на replacement в ASCII-строке; исходная строка не меняется. Метасимволы needle не становятся regex. Пустой needle вставляет между символами и на концах.",
+      "contract": "Заменить все неперекрывающиеся буквальные вхождения needle на replacement в ASCII-строке и вернуть (новая строка, число выбранных замен). Исходный текст не меняется; regex-метасимволы needle и доллар/backslash в replacement остаются буквальными. Пустой needle вставляет между символами и на концах, давая length(text)+1 замен; предыдущее regex-состояние Perl не влияет. Вставленный replacement повторно не просматривается.",
       "inputs": [
         "a.b aXb a.b",
         "a.b",
         "$x"
       ],
-      "expected": "$x aXb $x",
+      "expected": [
+        "$x aXb $x",
+        2
+      ],
       "test_cases": [
         {
           "args": [
@@ -3191,7 +3924,10 @@
             "a.b",
             "$x"
           ],
-          "expected": "$x aXb $x"
+          "expected": [
+            "$x aXb $x",
+            2
+          ]
         },
         {
           "args": [
@@ -3199,7 +3935,10 @@
             "",
             "-"
           ],
-          "expected": "-a-b-"
+          "expected": [
+            "-a-b-",
+            3
+          ]
         },
         {
           "args": [
@@ -3207,7 +3946,10 @@
             "z",
             "!"
           ],
-          "expected": "abc"
+          "expected": [
+            "abc",
+            0
+          ]
         },
         {
           "args": [
@@ -3215,12 +3957,26 @@
             "",
             "-"
           ],
-          "expected": "-a-b-",
+          "expected": [
+            "-a-b-",
+            3
+          ],
           "prime_empty_pattern": true
+        },
+        {
+          "args": [
+            "a a a",
+            "a",
+            "aa"
+          ],
+          "expected": [
+            "aa aa aa",
+            3
+          ]
         }
       ],
-      "lmx": "Example:\n    char[]: text\n    char[]: needle\n    char[]: replacement\n    return: char[]\n    run:\n        throws: copy(byteText\\throws) copy(replace\\throws)\n        return: replace(byteText(text); needle; replacement)\n",
-      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($text, $needle, $replacement) = @_;\n    return $text =~ s/(?:\\Q$needle\\E)/$replacement/gr;\n}\n",
+      "lmx": "CountedReplacement:\n    Match@: matched\n    return: char[]\n    make:\n        changed += 1\n        return: replacement\n\nExample:\n    char[]: text\n    char[]: needle\n    char[]: replacement\n    return: @\n    run:\n        throws: copy(byteText\\throws) copy(replace\\throws)\n        int: changed 0\n        char[]: out replace(byteText(text); needle; CountedReplacement\\make)\n        return: (out; changed)\n",
+      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($text, $needle, $replacement) = @_;\n    my $out = $text;\n    my $changed = $out =~ s/(?:\\Q$needle\\E)/$replacement/g;\n    return [$out, 0 + $changed];\n}\n",
       "core_functions": [
         "replace"
       ],
@@ -3231,7 +3987,7 @@
       "sources": [
         "https://perldoc.perl.org/5.40.1/perlop#s/PATTERN/REPLACEMENT/msixpodualngcer"
       ],
-      "notes": "Строка replacement вставляется как значение переменной: содержащиеся в ней $ и обратные ссылки повторно не интерпретируются. Не захватывающая группа делает runtime-pattern непустым даже для пустого needle и исключает зависимость от предыдущего успешного regex вызывающего кода. Строка в позиции Pattern уже означает буквальную последовательность; обёртка literal здесь избыточна.",
+      "notes": "Функциональный replacement-callback увеличивает changed ровно один раз на выбранное Match; текст замены остаётся строковым значением. В Perl непустая оболочка (?:...) сохраняет корректность пустого needle даже после ранее успешного regex.",
       "syntax_dependencies": [
         "byteText",
         "literal"
@@ -3247,14 +4003,14 @@
       },
       "counts": {
         "lmx": {
-          "characters": 217,
-          "nonwhitespace": 164,
-          "nonblank_lines": 8
+          "characters": 401,
+          "nonwhitespace": 285,
+          "nonblank_lines": 16
         },
         "foreign": {
-          "characters": 141,
-          "nonwhitespace": 115,
-          "nonblank_lines": 6
+          "characters": 200,
+          "nonwhitespace": 155,
+          "nonblank_lines": 8
         }
       },
       "core_sources": {
@@ -3325,16 +4081,16 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    char[]: text\n    char[]: needle\n    char[]: replacement\n    return: char[]\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        char[]: out []\n        int: i 0\n        while: 1\n            int: same length(needle) <= length(text) - i\n            int: j 0\n            while: same != 0 && j < length(needle)\n                if: text[i + j] != needle[j]\n                    same := 0\n                j += 1\n            if: same != 0\n                j := 0\n                while: j < length(replacement)\n                    FxSeqPush\\append(out; (replacement[j] record))\n                    j += 1\n                if: length(needle) != 0\n                    i += length(needle)\n                    continue\n            ---\n            if: i = length(text)\n                return: out\n            FxSeqPush\\append(out; (text[i] record))\n            i += 1\n",
+          "code": "Example:\n    char[]: text\n    char[]: needle\n    char[]: replacement\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        char[]: out []\n        int: changed 0\n        int: i 0\n        while: 1\n            int: same length(needle) <= length(text) - i\n            int: j 0\n            while: same != 0 && j < length(needle)\n                if: text[i + j] != needle[j]\n                    same := 0\n                j += 1\n            if: same != 0\n                changed += 1\n                j := 0\n                while: j < length(replacement)\n                    FxSeqPush\\append(out; (replacement[j] record))\n                    j += 1\n                if: length(needle) != 0\n                    i += length(needle)\n                    continue\n            ---\n            if: i = length(text)\n                return: (out; changed)\n            FxSeqPush\\append(out; (text[i] record))\n            i += 1\n",
           "source_file": "source/lmx/procedural/P18.lm3",
           "contract_id": "P18",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 461,
-            "characters_with_whitespace": 894,
-            "nonblank_lines": 29,
-            "utf8_bytes": 894,
-            "sha256": "6c883a008af35c1c1dcabaf1756ab3478e02b375e0669ebafecfdb037fc918f3"
+            "characters": 488,
+            "characters_with_whitespace": 952,
+            "nonblank_lines": 31,
+            "utf8_bytes": 952,
+            "sha256": "cf984d5fd8ef9e1bdb9e7735485281a7c31c41976cbd93f43032cde2a2ffce0d"
           },
           "core_functions": [
             "copy",
@@ -3342,24 +4098,26 @@
           ],
           "low_level_operations": [
             "FxSeqPush\\append"
-          ]
+          ],
+          "metrics_status": "current"
         },
         "functional": {
-          "code": "Example:\n    char[]: text\n    char[]: needle\n    char[]: replacement\n    return: char[]\n    run:\n        throws: copy(byteText\\throws) copy(replace\\throws)\n        return: replace(byteText(text); needle; replacement)\n",
+          "code": "CountedReplacement:\n    Match@: matched\n    return: char[]\n    make:\n        changed += 1\n        return: replacement\n\nExample:\n    char[]: text\n    char[]: needle\n    char[]: replacement\n    return: @\n    run:\n        throws: copy(byteText\\throws) copy(replace\\throws)\n        int: changed 0\n        char[]: out replace(byteText(text); needle; CountedReplacement\\make)\n        return: (out; changed)\n",
           "source_file": "source/lmx/P18.lm3",
           "contract_id": "P18",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 164,
-            "characters_with_whitespace": 217,
-            "nonblank_lines": 8,
-            "utf8_bytes": 217,
-            "sha256": "50d17b032594cc358c7a6ec71e3522c4764fd9897f9c094082043d871b345d30"
+            "characters": 285,
+            "characters_with_whitespace": 401,
+            "nonblank_lines": 16,
+            "utf8_bytes": 401,
+            "sha256": "0fe7d1b6e7e6c1524524659cc3d80e12659ec5dbe5d8c76b7f827713d9d76867"
           },
           "core_functions": [
             "replace"
           ],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "metrics_status": "current"
         }
       },
       "lmx_comparison_variants": [
@@ -3368,8 +4126,10 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
-      "lmx_operation_phase": "after_root_startup"
+      "style_note": "Обе формы решают полный прикладной сценарий. Процедурная показывает алгоритм циклами и ветвлениями, функциональная использует общие операции; все поля, порядок, ошибки и полезный результат сохраняются.",
+      "lmx_operation_phase": "after_root_startup",
+      "scenario_revision": "2026-11-25-useful-processing",
+      "metrics_status": "current"
     },
     {
       "id": "P19",
@@ -3588,57 +4348,128 @@
     },
     {
       "id": "P20",
-      "title": "Обратная ссылка на одинаковое слово",
+      "title": "Исправление повторённого слова в списке строк",
       "category": "Строки и regex",
-      "contract": "Принять ровно два одинаковых непустых ASCII-слова, разделённых одним пробелом; сравнение чувствительно к регистру, вся строка должна совпасть.",
+      "contract": "Из списка ASCII-строк выбрать те, что целиком состоят ровно из двух одинаковых непустых слов [A-Za-z]+ с одним пробелом; заменить каждую принятую строку одним экземпляром слова. Вернуть (исправленные слова в исходном порядке, число отклонённых строк). Сравнение чувствительно к регистру, лишние пробелы и конечный перевод строки запрещены. Пустой список даёт ([],0), вход не меняется.",
       "inputs": [
-        "cat cat"
+        [
+          "cat cat",
+          "cat dog",
+          "Cat cat",
+          "x x",
+          "x x ",
+          ""
+        ]
       ],
-      "expected": 1,
+      "expected": [
+        [
+          "cat",
+          "x"
+        ],
+        4
+      ],
       "test_cases": [
         {
           "args": [
-            "cat cat"
+            [
+              "cat cat",
+              "cat dog",
+              "Cat cat",
+              "x x",
+              "x x ",
+              ""
+            ]
           ],
-          "expected": 1
+          "expected": [
+            [
+              "cat",
+              "x"
+            ],
+            4
+          ]
         },
         {
           "args": [
-            "cat dog"
+            [
+              "cat cat"
+            ]
           ],
-          "expected": 0
+          "expected": [
+            [
+              "cat"
+            ],
+            0
+          ]
         },
         {
           "args": [
-            "Cat cat"
+            [
+              "cat dog"
+            ]
           ],
-          "expected": 0
+          "expected": [
+            [],
+            1
+          ]
         },
         {
           "args": [
-            "x x "
+            [
+              "Cat cat"
+            ]
           ],
-          "expected": 0
+          "expected": [
+            [],
+            1
+          ]
         },
         {
           "args": [
-            ""
+            [
+              "x x "
+            ]
           ],
-          "expected": 0
+          "expected": [
+            [],
+            1
+          ]
+        },
+        {
+          "args": [
+            [
+              ""
+            ]
+          ],
+          "expected": [
+            [],
+            1
+          ]
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": [
+            [],
+            0
+          ]
         }
       ],
-      "lmx": "Example:\n    char[]: text\n    return: int\n    run:\n        throws: copy(byteText\\throws) copy(atLeast\\throws) copy(capture\\throws) copy(sameAs\\throws) copy(RxThenOperand\\then\\throws) copy(matches\\throws)\n        return: matches(byteText(text); (then capture(\"word\"; (asciiLetter atLeast 1)) \" \" sameAs(\"word\")))\n",
-      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($text) = @_;\n    return 0 + ($text =~ /\\A(?<word>[A-Za-z]+) \\k<word>\\z/);\n}\n",
+      "lmx": "RepeatedWord:\n    char[]: text\n    return: FxMaybe@\n    parse:\n        throws: copy(byteText\\throws) copy(atLeast\\throws) copy(capture\\throws) copy(sameAs\\throws) copy(RxThenOperand\\then\\throws) copy(wholeMatch\\throws) copy(captureValue\\throws)\n        @: parsed wholeMatch(byteText(text); (then capture(\"word\"; (asciiLetter atLeast 1)) \" \" sameAs(\"word\")))\n        if: parsed\\present = 0\n            return: none()\n        return: captureValue(parsed\\value; \"word\")\n\nExample:\n    @: lines\n    return: @\n    run:\n        throws: copy(filterMap\\throws)\n        @: repaired filterMap(lines; RepeatedWord\\parse)\n        return: (repaired; length(lines) - length(repaired))\n",
+      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($lines) = @_;\n    my @repaired = map { /\\A([A-Za-z]+) \\1\\z/ ? ($1) : () } @$lines;\n    return [\\@repaired, scalar(@$lines) - scalar(@repaired)];\n}\n",
       "core_functions": [
-        "matches"
+        "wholeMatch",
+        "captureValue",
+        "filterMap"
       ],
       "foreign_dependencies": [
-        "named backreference"
+        "named backreference",
+        "CORE::map"
       ],
       "sources": [
         "https://perldoc.perl.org/5.40.1/perlre#Capture-groups"
       ],
-      "notes": "",
+      "notes": "Результат содержит сами исправленные слова, а не только boolean-проверку регулярного выражения. filterMap использует существующий Maybe-контракт captureValue; процедурный вариант проверяет символы и копирует первую половину строки. Общий Ascii\\letter определён один раз в source/lmx/common/ascii.lm3 и включён в полный процедурный листинг и метрику; entry-файл загружается вместе с ним.",
       "syntax_dependencies": [
         "byteText",
         "then",
@@ -3652,27 +4483,31 @@
       "lmx_file": "source/lmx/P20.lm3",
       "foreign_file": "source/perl/P20.pl",
       "implementation_pairs": {
-        "matches": [
+        "wholeMatch": [
           "PI07"
-        ]
+        ],
+        "captureValue": [
+          "PI07"
+        ],
+        "filterMap": []
       },
       "counts": {
         "lmx": {
-          "characters": 312,
-          "nonwhitespace": 261,
-          "nonblank_lines": 6
+          "characters": 670,
+          "nonwhitespace": 526,
+          "nonblank_lines": 16
         },
         "foreign": {
-          "characters": 124,
-          "nonwhitespace": 97,
-          "nonblank_lines": 6
+          "characters": 195,
+          "nonwhitespace": 153,
+          "nonblank_lines": 7
         }
       },
       "core_sources": {
-        "matches": {
-          "root": "RxMatches",
+        "wholeMatch": {
+          "root": "RxWholeMatch",
           "source": "../../LMX_Fn_Receivers/src/regex/operations.lmx",
-          "sha256": "1ca3c9740aa2bd2004f2b000a483c5bd0b01c12080d5405166cc3ab3297b1c1b",
+          "sha256": "52a2a5ee558bc2ddd3c84063ca538e628ab2008626439a1de53c586823e69889",
           "all_definitions": [
             "FxApply",
             "FxEqualFields",
@@ -3696,7 +4531,6 @@
             "RxLiteral",
             "RxLiteralProbe",
             "RxMatchMake",
-            "RxMatches",
             "RxNormalize",
             "RxOpen",
             "RxPatternFactory",
@@ -3718,40 +4552,109 @@
           "comparison_pairs": [
             "PI07"
           ]
+        },
+        "captureValue": {
+          "root": "RxCaptureValue",
+          "source": "../../LMX_Fn_Receivers/src/regex/operations.lmx",
+          "sha256": "fded92bc820f673199b24e71bc5cc891e9d360d862c8fcb974962d23796c70a1",
+          "all_definitions": [
+            "FxApply",
+            "FxEqualFields",
+            "FxEqualityTypes",
+            "FxMaybe",
+            "FxNone",
+            "FxSeqInfo",
+            "FxSeqPredicate",
+            "FxSeqRead",
+            "FxSequenceDifference",
+            "FxSome",
+            "FxThrows",
+            "FxTry",
+            "FxTwo",
+            "FxValueSame",
+            "RxCaptureLatest",
+            "RxCaptureValue",
+            "RxLastCapture",
+            "RxPreparedSource",
+            "RxSourceDomain",
+            "RxSourceSlice",
+            "RxSpanMake"
+          ],
+          "external_boundaries": [
+            "FxKernel"
+          ],
+          "comparison_pairs": [
+            "PI07"
+          ]
+        },
+        "filterMap": {
+          "root": "FxStdMaybeMap",
+          "source": "../../LMX_Fn_Receivers/src/coreStandardFunctional.lmx",
+          "sha256": "6d0b6fcc60657811c9b6dbdc3d4baa89bb0c6562a9cf4ce26e6b4f318249ffa6",
+          "all_definitions": [
+            "FxApply",
+            "FxMaybe",
+            "FxNone",
+            "FxOne",
+            "FxSeqAdmit",
+            "FxSeqAllocate",
+            "FxSeqInfo",
+            "FxSeqPush",
+            "FxSeqRead",
+            "FxSeqSize",
+            "FxStdMaybeMap",
+            "FxStdMaybeMapEngine",
+            "FxThrows",
+            "FxTry"
+          ],
+          "external_boundaries": [
+            "FxKernel"
+          ],
+          "comparison_pairs": []
         }
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Ascii:\n    char: value\n    return: int\n    letter:\n        return: (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z')\n\n\nExample:\n    char[]: text\n    return: int\n    run:\n        int: at 0\n        while: at < length(text) && Ascii\\letter(text[at]) != 0\n            at += 1\n        if: at = 0 || at = length(text) || text[at] != ' ' || length(text) - at - 1 != at\n            return: 0\n        int: i 0\n        while: i < at\n            if: text[i] != text[at + 1 + i]\n                return: 0\n            i += 1\n        return: 1\n",
+          "code": "Ascii:\n    char: value\n    return: int\n    letter:\n        return: (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z')\n\nWordPair:\n    char[]: text\n    return: int\n    test:\n        int: at 0\n        while: at < length(text) && Ascii\\letter(text[at]) != 0\n            at += 1\n        if: at = 0 || at = length(text) || text[at] != ' ' || length(text) - at - 1 != at\n            return: 0\n        int: i 0\n        while: i < at\n            if: text[i] != text[at + 1 + i]\n                return: 0\n            i += 1\n        return: 1\n\nExample:\n    @: lines\n    return: @\n    run:\n        throws: copy(FxSeqRead\\read\\throws) copy(sys\\resize\\throws) copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        @[]: out []\n        int: i 0\n        while: i < length(lines)\n            @: value FxSeqRead\\read(lines; i)\n            char[]: text \\value\n            if: WordPair\\test(text) != 0\n                char[]: word []\n                sys\\resize(word; (length(text) - 1) / 2)\n                int: j 0\n                while: j < length(word)\n                    word[j] := text[j]\n                    j += 1\n                FxSeqPush\\append(out; (word record))\n            i += 1\n        return: (out; length(lines) - length(out))\n",
           "source_file": "source/lmx/procedural/P20.lm3",
           "contract_id": "P20",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 312,
-            "characters_with_whitespace": 545,
-            "nonblank_lines": 20,
-            "utf8_bytes": 545,
-            "sha256": "1168853b61218098a245f81067916e0f453475d9b16230506137088ec10d3101"
+            "characters": 724,
+            "characters_with_whitespace": 1242,
+            "nonblank_lines": 40,
+            "utf8_bytes": 1242,
+            "sha256": "3e58cc312ae1ec1fb77f850ef22b5d31971ee7d87a2579a1e16a0ed4f0048c17"
           },
           "core_functions": [],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "metrics_status": "current",
+          "source_files": [
+            "source/lmx/common/ascii.lm3",
+            "source/lmx/procedural/P20.lm3"
+          ],
+          "source_file_is_fragment": true,
+          "entry_source_file": "source/lmx/procedural/P20.lm3"
         },
         "functional": {
-          "code": "Example:\n    char[]: text\n    return: int\n    run:\n        throws: copy(byteText\\throws) copy(atLeast\\throws) copy(capture\\throws) copy(sameAs\\throws) copy(RxThenOperand\\then\\throws) copy(matches\\throws)\n        return: matches(byteText(text); (then capture(\"word\"; (asciiLetter atLeast 1)) \" \" sameAs(\"word\")))\n",
+          "code": "RepeatedWord:\n    char[]: text\n    return: FxMaybe@\n    parse:\n        throws: copy(byteText\\throws) copy(atLeast\\throws) copy(capture\\throws) copy(sameAs\\throws) copy(RxThenOperand\\then\\throws) copy(wholeMatch\\throws) copy(captureValue\\throws)\n        @: parsed wholeMatch(byteText(text); (then capture(\"word\"; (asciiLetter atLeast 1)) \" \" sameAs(\"word\")))\n        if: parsed\\present = 0\n            return: none()\n        return: captureValue(parsed\\value; \"word\")\n\nExample:\n    @: lines\n    return: @\n    run:\n        throws: copy(filterMap\\throws)\n        @: repaired filterMap(lines; RepeatedWord\\parse)\n        return: (repaired; length(lines) - length(repaired))\n",
           "source_file": "source/lmx/P20.lm3",
           "contract_id": "P20",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 261,
-            "characters_with_whitespace": 312,
-            "nonblank_lines": 6,
-            "utf8_bytes": 312,
-            "sha256": "1b18a931153ce4df535f8d7e03d4eb4d752ea474cd936c649b027428af2a7777"
+            "characters": 526,
+            "characters_with_whitespace": 670,
+            "nonblank_lines": 16,
+            "utf8_bytes": 670,
+            "sha256": "69960b01c957bc10efca87ea1efb0e25576f69ce04b38830b29730d9ab91d5c0"
           },
           "core_functions": [
-            "matches"
+            "wholeMatch",
+            "captureValue",
+            "filterMap"
           ],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "metrics_status": "current"
         }
       },
       "lmx_comparison_variants": [
@@ -3760,24 +4663,26 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
-      "lmx_operation_phase": "after_root_startup"
+      "style_note": "Обе формы решают полный прикладной сценарий. Процедурная показывает алгоритм циклами и ветвлениями, функциональная использует общие операции; все поля, порядок, ошибки и полезный результат сохраняются.",
+      "lmx_operation_phase": "after_root_startup",
+      "scenario_revision": "2026-11-25-useful-processing",
+      "metrics_status": "current"
     },
     {
       "id": "P21",
-      "title": "Транслитерация алфавита ДНК",
+      "title": "Обратная комплементарная последовательность ДНК",
       "category": "Строки",
-      "contract": "Вернуть новую строку с одновременной заменой A↔T и C↔G. Другие ASCII-символы и длина не меняются; уже заменённые символы повторно не обрабатываются.",
+      "contract": "Вернуть reverse-complement ASCII-последовательности: одновременно заменить A↔T и C↔G, затем развернуть весь результат. Длина сохраняется; N, дефис, строчные буквы и прочие неуказанные символы только меняют позицию, но не транслитерируются. Это явно профиль uppercase ACGT, а не полная таблица IUPAC. Пустая строка остаётся пустой, вход не меняется.",
       "inputs": [
         "ACGTN"
       ],
-      "expected": "TGCAN",
+      "expected": "NACGT",
       "test_cases": [
         {
           "args": [
             "ACGTN"
           ],
-          "expected": "TGCAN"
+          "expected": "NACGT"
         },
         {
           "args": [
@@ -3790,37 +4695,53 @@
             ""
           ],
           "expected": ""
+        },
+        {
+          "args": [
+            "AAGC"
+          ],
+          "expected": "GCTT"
+        },
+        {
+          "args": [
+            "A-N"
+          ],
+          "expected": "N-T"
         }
       ],
-      "lmx": "Example:\n    char[]: text\n    return: char[]\n    run:\n        throws: copy(translate\\throws)\n        return: translate(text; \"ACGT\"; \"TGCA\")\n",
-      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($text) = @_;\n    return $text =~ tr/ACGT/TGCA/r;\n}\n",
+      "lmx": "Example:\n    char[]: text\n    return: char[]\n    run:\n        throws: copy(translate\\throws) copy(reverse\\throws)\n        return: \\reverse(translate(text; \"ACGT\"; \"TGCA\"))\n",
+      "foreign": "use strict;\nuse warnings;\nsub example {\n    my ($text) = @_;\n    return scalar reverse($text =~ tr/ACGT/TGCA/r);\n}\n",
       "core_functions": [
-        "translate"
+        "translate",
+        "reverse"
       ],
       "foreign_dependencies": [
-        "tr///r"
+        "tr///r",
+        "CORE::reverse scalar context"
       ],
       "sources": [
-        "https://perldoc.perl.org/5.40.1/perlop#tr/SEARCHLIST/REPLACEMENTLIST/cdsr"
+        "https://perldoc.perl.org/5.40.1/perlop#tr/SEARCHLIST/REPLACEMENTLIST/cdsr",
+        "https://perldoc.perl.org/5.40.1/functions/reverse"
       ],
-      "notes": "Общий translate реализует буквальное одновременное соответствие алфавитов и сохраняет прочие символы. Его полное тело и зависимости учитываются отдельно; локального повторного цикла нет.",
+      "notes": "Два стандартных действия образуют обычный биоинформатический сценарий. Процедурный код сразу пишет комплементарный символ в зеркальную позицию; функциональный использует translate и generic reverse. Perl reverse принудительно вызывается в scalar context.",
       "syntax_dependencies": [],
       "alternatives": [],
       "input_mutation": false,
       "lmx_file": "source/lmx/P21.lm3",
       "foreign_file": "source/perl/P21.pl",
       "implementation_pairs": {
-        "translate": []
+        "translate": [],
+        "reverse": []
       },
       "counts": {
         "lmx": {
-          "characters": 141,
-          "nonwhitespace": 101,
+          "characters": 172,
+          "nonwhitespace": 131,
           "nonblank_lines": 6
         },
         "foreign": {
-          "characters": 99,
-          "nonwhitespace": 75,
+          "characters": 115,
+          "nonwhitespace": 90,
           "nonblank_lines": 6
         }
       },
@@ -3854,44 +4775,63 @@
             "FxKernel"
           ],
           "comparison_pairs": []
+        },
+        "reverse": {
+          "root": "FxSeqReverse",
+          "source": "../../LMX_Fn_Receivers/src/sequences.lmx",
+          "sha256": "a759a1bd740c64c1ee44586d5d87380ac2809b3035439d5e169645882ef998fb",
+          "all_definitions": [
+            "FxSeqAllocate",
+            "FxSeqInfo",
+            "FxSeqRead",
+            "FxSeqReverse",
+            "FxThrows"
+          ],
+          "external_boundaries": [
+            "FxKernel"
+          ],
+          "comparison_pairs": []
         }
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    char[]: text\n    return: char[]\n    run:\n        throws: copy(sys\\resize\\throws)\n        char[]: from \"ACGT\"\n        char[]: to \"TGCA\"\n        char[]: out []\n        sys\\resize(out; length(text))\n        int: i 0\n        while: i < length(text)\n            char: value text[i]\n            int: j 0\n            while: j < length(from)\n                if: value = from[j]\n                    value := to[j]\n                    break\n                j += 1\n            out[i] := value\n            i += 1\n        return: out\n",
+          "code": "Example:\n    char[]: text\n    return: char[]\n    run:\n        throws: copy(sys\\resize\\throws)\n        char[]: from \"ACGT\"\n        char[]: to \"TGCA\"\n        char[]: out []\n        sys\\resize(out; length(text))\n        int: i 0\n        while: i < length(text)\n            char: value text[i]\n            int: j 0\n            while: j < length(from)\n                if: value = from[j]\n                    value := to[j]\n                    break\n                j += 1\n            out[length(text) - 1 - i] := value\n            i += 1\n        return: out\n",
           "source_file": "source/lmx/procedural/P21.lm3",
           "contract_id": "P21",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 271,
-            "characters_with_whitespace": 534,
+            "characters": 286,
+            "characters_with_whitespace": 553,
             "nonblank_lines": 21,
-            "utf8_bytes": 534,
-            "sha256": "d34de02bc53c98e43c8f19aac0d0f3c0ccc1a7c6a793ef9cf2bb5612181e3737"
+            "utf8_bytes": 553,
+            "sha256": "1dcfe4bec6af3aec3bafe4d31722b3d262b94fb1fe56de5d69d46e11964540d6"
           },
           "core_functions": [
             "copy"
           ],
           "low_level_operations": [
             "sys\\resize"
-          ]
+          ],
+          "metrics_status": "current"
         },
         "functional": {
-          "code": "Example:\n    char[]: text\n    return: char[]\n    run:\n        throws: copy(translate\\throws)\n        return: translate(text; \"ACGT\"; \"TGCA\")\n",
+          "code": "Example:\n    char[]: text\n    return: char[]\n    run:\n        throws: copy(translate\\throws) copy(reverse\\throws)\n        return: \\reverse(translate(text; \"ACGT\"; \"TGCA\"))\n",
           "source_file": "source/lmx/P21.lm3",
           "contract_id": "P21",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 101,
-            "characters_with_whitespace": 141,
+            "characters": 131,
+            "characters_with_whitespace": 172,
             "nonblank_lines": 6,
-            "utf8_bytes": 141,
-            "sha256": "974d97f3c814054e1837212a4e6acdaae7312cee7dc6a1f1ae803200fba2a251"
+            "utf8_bytes": 172,
+            "sha256": "2f39807f840b816240cdbe5a62ee50f21b4589909ca57f0c2a603503af52d933"
           },
           "core_functions": [
-            "translate"
+            "translate",
+            "reverse"
           ],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "metrics_status": "current"
         }
       },
       "lmx_comparison_variants": [
@@ -3900,8 +4840,10 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
-      "lmx_operation_phase": "after_root_startup"
+      "style_note": "Обе формы решают полный прикладной сценарий. Процедурная показывает алгоритм циклами и ветвлениями, функциональная использует общие операции; все поля, порядок, ошибки и полезный результат сохраняются.",
+      "lmx_operation_phase": "after_root_startup",
+      "scenario_revision": "2026-11-25-useful-processing",
+      "metrics_status": "current"
     },
     {
       "id": "P22",
@@ -5017,5 +5959,37 @@
     "argument_fixture": "A parent stub may have its own arguments and send a message to the root; this does not give DATA or user arguments to the root.",
     "source_dependencies": "Required source definitions and load_before dependencies belong to the fixture. They do not introduce a DATA-load startup or a named alternative entry."
   },
-  "lmx_runner_contract": "Always start the root as an L3 Thread without DATA or user arguments. Local declarations and calls use the ordinary common language mechanism. An invoke path or named case operation is performed by the root or an ordinary handler after startup; Main and Example\\run are not alternative program entries. A parent stub with its own arguments may send a message to the root. load_before lists required fixture definitions; import exposes existing names, not a new file loader. These records specify acceptance observations and do not claim an executed LMX runner."
+  "lmx_runner_contract": "Always start the root as an L3 Thread without DATA or user arguments. Local declarations and calls use the ordinary common language mechanism. An invoke path or named case operation is performed by the root or an ordinary handler after startup; Main and Example\\run are not alternative program entries. A parent stub with its own arguments may send a message to the root. load_before lists required fixture definitions; import exposes existing names, not a new file loader. These records specify acceptance observations and do not claim an executed LMX runner.",
+  "scenario_revision": {
+    "date": "2026-11-25",
+    "expanded": [
+      "P01",
+      "P02",
+      "P03",
+      "P06",
+      "P08",
+      "P09",
+      "P12",
+      "P13",
+      "P14",
+      "P15",
+      "P17",
+      "P18",
+      "P20",
+      "P21"
+    ],
+    "retained_meaningful": [
+      "P04",
+      "P05",
+      "P07",
+      "P10",
+      "P11",
+      "P16",
+      "P19",
+      "P22",
+      "P23",
+      "P24"
+    ],
+    "metrics_policy": "Current measurements of all complete sources after scenario expansion."
+  }
 }

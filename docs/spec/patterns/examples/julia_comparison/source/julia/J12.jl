@@ -1,2 +1,5 @@
 using SplitApplyCombine: group
-example(xs) = group(isodd, xs)
+function example(xs)
+    distinct = unique(xs)
+    group(isodd, distinct)
+end

@@ -8,28 +8,28 @@
 
 | ID | Сценарий | LMX | Python | C# | Слой |
 | --- | --- | --- | --- | --- | --- |
-| 016 | Repository | 212 | 189 | 227 | Клиент |
-| 094 | FindById — implementation | 371 | 68 | 266 | Реализация |
-| 017 | Unit of Work | 226 | 233 | 339 | Сценарий |
-| 018 | Data Mapper | 244 | 260 | 302 | Сценарий |
-| 019 | Active Record | 159 | 229 | 300 | Сценарий |
-| 020 | Table Data Gateway | 169 | 214 | 280 | Сценарий |
-| 021 | Row Data Gateway | 121 | 176 | 214 | Сценарий |
-| 022 | DAO — Data Access Object | 198 | 214 | 349 | Сценарий |
-| 023 | DTO — Data Transfer Object | 136 | 145 | 197 | Сценарий |
-| 024 | Domain Model | 144 | 179 | 224 | Сценарий |
-| 025 | Transaction Script | 232 | 222 | 387 | Сценарий |
-| 026 | Table Module | 131 | 142 | 224 | Сценарий |
-| 027 | Service Layer | 179 | 150 | 387 | Сценарий |
-| 028 | Identity Map | 98 | 148 | 245 | Сценарий |
-| 029 | Lazy Load | 133 | 176 | 155 | Сценарий |
-| 030 | Query Object | 178 | 254 | 294 | Сценарий |
-| 031 | Specification | 216 | 140 | 274 | Клиент |
-| 095 | Specification combinator — implementation | 1673 | 83 | 176 | Реализация |
-| 032 | Value Object | 401 | 213 | 203 | Клиент |
-| 096 | Money value equality — implementation | 248 | 268 | 335 | Реализация |
-| 033 | Optimistic Offline Lock | 114 | 100 | 242 | Сценарий |
-| 034 | Pessimistic Offline Lock | 200 | 295 | 438 | Сценарий |
+| 016 | Repository | 215 | <span style="color:#176233"><u>189</u></span> | 227 | Клиент |
+| 094 | FindById — implementation | 371 | <span style="color:#176233"><u>68</u></span> | 266 | Реализация |
+| 017 | Unit of Work | <span style="color:#176233"><u>226</u></span> | 233 | 339 | Сценарий |
+| 018 | Data Mapper | <span style="color:#176233"><u>244</u></span> | 260 | 302 | Сценарий |
+| 019 | Active Record | <span style="color:#176233"><u>159</u></span> | 229 | 300 | Сценарий |
+| 020 | Table Data Gateway | <span style="color:#176233"><u>169</u></span> | 214 | 280 | Сценарий |
+| 021 | Row Data Gateway | <span style="color:#176233"><u>121</u></span> | 176 | 214 | Сценарий |
+| 022 | DAO — Data Access Object | <span style="color:#176233"><u>198</u></span> | 214 | 349 | Сценарий |
+| 023 | DTO — Data Transfer Object | <span style="color:#176233"><u>136</u></span> | 145 | 197 | Сценарий |
+| 024 | Domain Model | <span style="color:#176233"><u>144</u></span> | 179 | 224 | Сценарий |
+| 025 | Transaction Script | 232 | <span style="color:#176233"><u>222</u></span> | 387 | Сценарий |
+| 026 | Table Module | <span style="color:#176233"><u>131</u></span> | 142 | 224 | Сценарий |
+| 027 | Service Layer | 179 | <span style="color:#176233"><u>150</u></span> | 387 | Сценарий |
+| 028 | Identity Map | <span style="color:#176233"><u>98</u></span> | 148 | 245 | Сценарий |
+| 029 | Lazy Load | <span style="color:#176233"><u>133</u></span> | 176 | 155 | Сценарий |
+| 030 | Query Object | <span style="color:#176233"><u>178</u></span> | 254 | 294 | Сценарий |
+| 031 | Specification | 216 | <span style="color:#176233"><u>140</u></span> | 274 | Клиент |
+| 095 | Specification combinator — implementation | 1673 | <span style="color:#176233"><u>83</u></span> | 176 | Реализация |
+| 032 | Value Object | 401 | 213 | <span style="color:#176233"><u>203</u></span> | Клиент |
+| 096 | Money value equality — implementation | <span style="color:#176233"><u>248</u></span> | 268 | 335 | Реализация |
+| 033 | Optimistic Offline Lock | 114 | <span style="color:#176233"><u>100</u></span> | 242 | Сценарий |
+| 034 | Pessimistic Offline Lock | <span style="color:#176233"><u>200</u></span> | 295 | 438 | Сценарий |
 
 Python показывает компактные функции, dataclass и явные адаптеры; C# — records, интерфейсы и привычную организацию прикладного доступа к данным. LMX сопоставляется с обоими без обязательной иерархии классов.
 

@@ -96,7 +96,7 @@ func demo() int { return submit(&Order{3, 10}, &Memory{}) }
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 222 | 20 |
+| LMX | <span style="color:#176233"><u>222</u></span> | 20 |
 | Java | 363 | 13 |
 | Go | 308 | 8 |
 

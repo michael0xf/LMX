@@ -1,12 +1,19 @@
 Example:
-    int[]: first
-    int[]: second
-    return: int[]
+    int[]: quantities
+    int[]: prices
+    return: @
     run:
-        int[]: result []
+        throws: copy(sys\resize\throws)
+        int: count length(quantities)
+        if: length(prices) < count
+            count := length(prices)
+        int[]: totals []
+        sys\resize(totals; count)
+        int: total 0
         int: i 0
-        while: i < length(first) && i < length(second)
-            sys\resize(result; i + 1)
-            result[i] := first[i] * second[i]
+        while: i < count
+            int: value quantities[i] * prices[i]
+            totals[i] := value
+            total += value
             i += 1
-        return: result
+        return: (totals; total; length(quantities) - count; length(prices) - count)

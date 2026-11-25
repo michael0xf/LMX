@@ -86,7 +86,7 @@ func demo() int { return presentationHandle(3) }
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 187 | 16 |
+| LMX | <span style="color:#176233"><u>187</u></span> | 16 |
 | Java | 274 | 10 |
 | Go | 217 | 5 |
 

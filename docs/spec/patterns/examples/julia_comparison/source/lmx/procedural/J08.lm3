@@ -5,11 +5,13 @@ Example:
     run:
         throws: copy(FxSeqPush\append\throws) copy(record\throws)
         @[]: out []
-        int: total seed
-        FxSeqPush\append(out; (total record))
+        int: balance seed
         int: i 0
-        while: i < length(xs)
-            total += xs[i]
-            FxSeqPush\append(out; (total record))
+        while: 1
+            if: balance < 0
+                FxSeqPush\append(out; (balance record))
+            if: i = length(xs)
+                break
+            balance += xs[i]
             i += 1
         return: out

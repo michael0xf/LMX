@@ -1,10 +1,10 @@
-# S01. MAPCAR: преобразование списка
+# S01. MAPCAR: калибровка измерений и итог
 
 Полное сравнение на указанном домене.
 
 ## Общий договор
 
-Умножить каждый элемент конечного списка целых на 3; сохранить порядок, вход не менять. Числа и промежуточные результаты помещаются в LMX int.
+Для конечного списка целых items и целых gain, offset получить calibrated[i] = items[i] * gain + offset; вернуть [calibrated, total], где total — сумма откалиброванных значений. Сохранить порядок и входы. Пустой список даёт [[], 0]. Все произведения, суммы и промежуточные значения помещаются в выбранный LMX int.
 
 ## Входы и ожидаемые наблюдения
 
@@ -16,28 +16,62 @@
         -2,
         0,
         3
-      ]
+      ],
+      3,
+      2
     ],
     "expected": [
-      -6,
-      0,
+      [
+        -4,
+        2,
+        11
+      ],
       9
     ]
   },
   {
     "args": [
-      []
+      [],
+      3,
+      2
     ],
-    "expected": []
+    "expected": [
+      [],
+      0
+    ]
   },
   {
     "args": [
       [
         7
-      ]
+      ],
+      -2,
+      1
     ],
     "expected": [
-      21
+      [
+        -13
+      ],
+      -13
+    ]
+  },
+  {
+    "args": [
+      [
+        1,
+        1,
+        2
+      ],
+      0,
+      5
+    ],
+    "expected": [
+      [
+        5,
+        5,
+        5
+      ],
+      15
     ]
   }
 ]
@@ -47,9 +81,9 @@
 
 | Источник | Без пробельных | Все символы | Непустые строки |
 | --- | ---: | ---: | ---: |
-| LMX — процедурный | 146 | 250 | 11 |
-| LMX — функциональный | 49 | 79 | 5 |
-| Common Lisp / SBCL | 50 | 62 | 2 |
+| LMX — процедурный | 260 | 430 | 17 |
+| LMX — функциональный | 122 | 180 | 8 |
+| Common Lisp / SBCL | 143 | 172 | 3 |
 
 Оба стиля LMX сравниваются независимо по одному договору. Все объявления, вспомогательные определения и Throws входят в размер. Реализация общих библиотечных операций учитывается отдельно один раз.
 
@@ -58,45 +92,55 @@
 ```lmx
 Example:
     int[]: items
-    return: int[]
+    int: gain
+    int: offset
+    return: @
     run:
-        int[]: result []
-        sys\resize(result; length(items))
+        throws: copy(sys\resize\throws)
+        int[]: calibrated []
+        sys\resize(calibrated; length(items))
+        int: total 0
         int: i 0
         while: i < length(items)
-            result[i] := items[i] * 3
+            int: value items[i] * gain + offset
+            calibrated[i] := value
+            total += value
             i += 1
-        return: result
+        return: (calibrated; total)
 ```
 
-[Полный исходник](source/lmx/procedural/S01.lm3). 146 непробельных символов; 11 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/procedural/S01.lm3). 260 непробельных символов; 17 непустых строк. Все объявления и Throws включены.
 
 ## LMX — функциональный
 
 ```lmx
 Example:
     int[]: items
-    return: int[]
+    int: gain
+    int: offset
+    return: @
     run:
-        return: items * 3
+        int[]: calibrated items * gain + offset
+        return: (calibrated; (+ 0 copy(calibrated)))
 ```
 
-[Полный исходник](source/lmx/S01.lm3). 49 непробельных символов; 5 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/S01.lm3). 122 непробельных символов; 8 непустых строк. Все объявления и Throws включены.
 
 ## Common Lisp / SBCL
 
 [Полный исходник](source/common-lisp/S01.lisp).
 
 ```common-lisp
-(defun example (items)
-  (mapcar (lambda (x) (* x 3)) items))
+(defun example (items gain offset)
+  (let ((calibrated (mapcar (lambda (x) (+ (* x gain) offset)) items)))
+    (list calibrated (reduce #'+ calibrated :initial-value 0))))
 ```
 
 ## Соответствие стилей договору
 
-Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма.
+Процедурная форма выполняет один цикл и одновременно накапливает итог. Функциональная строит откалиброванный массив элементным Expression и затем вычисляет сумму общего потока.
 
- Основной вариант выбран по меньшему полному размеру: Элементная Array/scalar арифметика прямо закреплена §18; чистый общий int-профиль, без изменения входа.
+Калибровка имеет два настраиваемых параметра; откалиброванный ряд используется и как результат, и для итогового накопления. Элементная арифметика Array/scalar сохраняется, а copy явно открывает готовые значения для суммирующего Expression.
 
 ## Общие операции и реализации
 
@@ -104,31 +148,11 @@ Example:
 
 Common Lisp-клиент использует указанные native/standard средства и не импортирует сравнительные реализации.
 
-## Дополнительный способ: LMX с общими ресиверами ядра
-
-Исходный полный вариант; нормы и конечные эффекты проверены. Полные текущие размеры приведены в статистике.
-
-[Исходник](alternatives/lmx/S01_core.lm3); вне двух основных сравнений.
-
-```lmx
-Scale:
-    int: value
-    return: int
-    run:
-        return: value * 3
-
-Example:
-    int[]: items
-    return: @
-    run:
-        throws: copy(FxThrows\traversal)
-        return: map(items; Scale\run)
-```
-
 ## Проверка
 
-SBCL: [фактический отчёт](validation/common_lisp.json). Оба LMX-варианта: **NOT_RUN**; проверки текста не доказывают исполнение.
+Для обновлённого кода **SBCL: NOT_RUN; LMX parser/runtime: NOT_RUN**. Статистика пересчитана по полным исходникам; это не выполнение программ. [Статус и прежний receipt](validation/common_lisp.json).
 
 ## Первичные источники
 
 - <https://www.lispworks.com/documentation/HyperSpec/Body/f_mapc_.htm>
+- <https://www.lispworks.com/documentation/HyperSpec/Body/f_reduce.htm>

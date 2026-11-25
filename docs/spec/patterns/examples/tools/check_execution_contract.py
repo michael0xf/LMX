@@ -11,7 +11,7 @@ from lmx_execution_contract import EXECUTION_CONTRACT, RUNNER_CONTRACT
 
 CATALOGS = (
     'examples/expected_results.json',
-    'examples/haskell/comparison_index.json',
+    'examples/haskell_comparision/comparison_index.json',
     'examples/variants.json',
     'examples/julia_comparison/examples.json',
     'examples/perl_comparison/examples.json',

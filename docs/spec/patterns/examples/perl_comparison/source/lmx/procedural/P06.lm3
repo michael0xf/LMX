@@ -1,6 +1,5 @@
-Example:
+SelectFields:
     @: items
-    int[]: positions
     return: @
     run:
         throws: copy(FxSeqInfo\get\throws) copy(FxSeqAllocate\make\throws) copy(FxSeqRead\read\throws) copy(FxSeqStore\write\throws)
@@ -11,3 +10,12 @@ Example:
             FxSeqStore\write(out; i; FxSeqRead\read(items; positions[i]))
             i += 1
         return: out
+
+Example:
+    @: items
+    @: labels
+    int[]: positions
+    return: @
+    run:
+        throws: copy(SelectFields\run\throws)
+        return: (SelectFields\run(items); SelectFields\run(labels))

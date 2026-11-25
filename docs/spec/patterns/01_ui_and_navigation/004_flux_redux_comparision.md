@@ -102,7 +102,7 @@ TypeScript использует объект action, C# — value record, LMX �
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 273 | 19 |
+| LMX | <span style="color:#176233"><u>273</u></span> | 19 |
 | TypeScript | 402 | 14 |
 | C# | 366 | 14 |
 

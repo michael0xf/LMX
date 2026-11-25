@@ -6,10 +6,14 @@ Negative:
 
 Example:
     int[]: items
-    return: int
+    return: @
     run:
-        throws: copy(FxThrows\predicate) FxRecordArity
-        @: found index(items; Negative\accepts)
-        if: found\present = 0
-            return: -1
-        return: \found\value
+        throws: copy(index\throws) copy(take\throws) copy(sum\throws)
+        @: found (index items Negative\accepts)
+        int: bad -1
+        int: count length(items)
+        if: found\present != 0
+            bad := \found\value
+            count := bad
+        @: accepted (take items count)
+        return: (accepted; \(sum accepted); bad)

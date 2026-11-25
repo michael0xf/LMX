@@ -121,3 +121,9 @@ All 85 supplied entries and five additions remain. 9 component-implementation co
 | 090 | [090. MapReduce](06_async_and_messages/090_map_reduce_comparision.md) | Main example |
 
 [Methodology](COMPARISON_METHODOLOGY.en.md) · [Libraries](LIBRARY_COMPONENTS.md) · [Audit](OPERAND_LIBRARY_REVIEW.md) · [Validation](VALIDATION.md)
+
+## Extension: algorithms and patterns 100–108
+
+[Алгоритмы / Algorithms](10_algorithms/README.md) · [Состояние и симуляции / State and simulation](11_state_and_simulation_patterns/README.md) · [Обзор всей текущей редакции](EXPANSION_2026-11-24.md).
+
+Исходные 90 пунктов выше сохранены; 100–105 добавляют распространённые алгоритмы, 106–108 — Double Buffer, Dirty Flag и Fixed Timestep. Для каждого нового сценария указаны два подходящих контрольных языка и обе LMX-формы.

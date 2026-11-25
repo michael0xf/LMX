@@ -78,7 +78,7 @@ LMX уже имеет HTTP transport profile. Java/Go Exchange — тот же �
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 186 | 11 |
+| LMX | <span style="color:#176233"><u>186</u></span> | 11 |
 | Java | 241 | 7 |
 | Go | 211 | 6 |
 

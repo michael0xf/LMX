@@ -1,6 +1,7 @@
 Example:
     int[]: left
     int[]: right
+    int: budget
     return: @
     run:
         throws: copy(FxSeqPush\append\throws) copy(record\throws)
@@ -9,7 +10,8 @@ Example:
         while: i < length(left)
             int: j 0
             while: j < length(right)
-                FxSeqPush\append(out; ((left[i]; right[j]) record))
+                if: left[i] + right[j] <= budget
+                    FxSeqPush\append(out; ((left[i]; right[j]) record))
                 j += 1
             i += 1
         return: out

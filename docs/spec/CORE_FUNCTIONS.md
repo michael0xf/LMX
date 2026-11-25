@@ -351,6 +351,20 @@ materialized as `matchedValue` / `captureValue` / `captureValues`.
 | `lcm(first; second)` | Exact nonnegative bigint LCM through gcd; any zero input yields zero. | [coreStandardNumeric.lmx](patterns/LMX_Fn_Receivers/src/coreStandardNumeric.lmx) |
 | `divMod(dividend; divisor)` | Exact bigint floor quotient and remainder with divisor sign; zero divisor raises NumericDomain. | [coreStandardNumeric.lmx](patterns/LMX_Fn_Receivers/src/coreStandardNumeric.lmx) |
 
+### Array fill and partition boundary search
+
+| Function / operand | Contract | One implementation |
+| --- | --- | --- |
+| `fill(target; valueRecord)` | Overwrite an existing Array, keeping its descriptor, length and element profile. Ordinary admission applies to every reached write; an empty Array performs none. Reference values retain their target. | [`FxArrayFill\fill`](patterns/LMX_Fn_Receivers/src/fill.lmx) |
+| `lowerBound(items; needleRecord; less)` | First index where `less(element, needle)` is false, or the input length. The finite input must have a stable true prefix and false suffix. Generic elements and search values; no equality call, input mutation or callback on empty input. | [`FxLowerBound\lowerBound`](patterns/LMX_Fn_Receivers/src/lowerBound.lmx) |
+| `last(items; count)` | Last min(count, length) Array elements in original order, preserving profile and references; negative count raises SequenceSize. Whole Array semantics; no implicit Unicode decoding. | [`FxSeqLast\last`](patterns/LMX_Fn_Receivers/src/last.lmx) |
+
+The operand forms `target fill valueRecord` and `items lowerBound needleRecord less`
+share those exact bodies through the existing `asOperand` publication path.
+Their complete contracts, provenance and failure boundaries are recorded in
+[the algorithm operations note](patterns/LMX_Fn_Receivers/ALGORITHM_OPERATIONS.md).
+No new provider hook, type specialization or execution model is introduced.
+
 ## Integration and acceptance
 
 The shared publication distinguishes call/operand representations and
@@ -368,3 +382,5 @@ actual LMX execution.
 4. Run the package acceptance cases and the comparison-specific cases on interpreter/native paths. A source-consistency check is not a runtime PASS.
 
 Regeneration: `python3 patterns/LMX_Fn_Receivers/tools/rebuild_catalog.py`, then `python3 patterns/LMX_Fn_Receivers/tools/rebuild_core_inventory.py`. The kernel exports, inventory and examples must use the same public names.
+
+[Расширенная подборка: 28 коротких примеров с `->`](ARROW_EXAMPLES.md) показывает нульарные профили, массивы, ссылки, входные callable и callable-результаты, а также границы групп.

@@ -1,0 +1,17 @@
+DijkstraStep:
+    return: int
+    next:
+        throws: copy(range\throws) copy(foldl\throws) ReceiverIndex Stop
+        best := \foldl(range(0; n); (-1 record); DijkstraPick\run)
+        if: best = -1
+            throw: Stop()
+        settled[best] := 1
+        foldl(graph[best]; (0 record); DijkstraRelax\run)
+        return: best
+
+DijkstraFunctional:
+    return: int
+    run:
+        throws: copy(collect\throws)
+        collect(DijkstraStep\next)
+        return: 0

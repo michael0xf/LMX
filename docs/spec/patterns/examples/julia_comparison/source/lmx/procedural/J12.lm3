@@ -6,15 +6,20 @@ Example:
         @[]: out []
         int: i 0
         while: i < length(xs)
-            int: key xs[i] % 2 != 0
-            int: j 0
-            while: j < length(out) && \out[j]\key != key
-                j += 1
-            if: j = length(out)
-                @: group (copy(FxGroup))
-                group\key := (key record)
-                group\items := (copy(()))
-                FxSeqPush\append(out; group)
-            FxSeqPush\append(out[j]\items; (xs[i] record))
+            int: prior 0
+            while: prior < i && xs[prior] != xs[i]
+                prior += 1
+            if: prior = i
+                int: key xs[i] % 2 != 0
+                int: j 0
+                while: j < length(out) && \out[j]\key != key
+                    j += 1
+                if: j = length(out)
+                    @: group (copy(FxGroup))
+                    group\key := (key record)
+                    group\items := (copy(()))
+                    FxSeqPush\append(out; group)
+                FxSeqPush\append(out[j]\items; (xs[i] record))
+            ---
             i += 1
         return: out

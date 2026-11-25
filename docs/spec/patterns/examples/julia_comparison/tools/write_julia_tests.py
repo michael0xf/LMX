@@ -24,7 +24,7 @@ def main():
  '    getfield(namespace, :example)',
  'end',
  'function observe(id, value, args)',
- '    if id == "J09" || id == "J24"',
+ '    if id == "J24"',
  '        return [collect(pair) for pair in value]',
  '    elseif id == "J12"',
  '        return Dict{String,Any}((key ? "true" : "false") => value[key] for key in keys(value))',
@@ -34,8 +34,6 @@ def main():
  '        return Dict{String,Any}("returned"=>value, "target"=>args[1], "same_target"=>value === args[1])',
  '    elseif id == "J18"',
  '        return Dict{String,Any}("removed"=>value, "target"=>args[1])',
- '    elseif id == "J19"',
- '        return [collect(value[row, :]) for row in axes(value, 1)]',
  '    elseif id == "J20"',
  '        return [Dict{String,Any}("key"=>x.key, "id"=>x.id) for x in value]',
  '    end',
@@ -48,8 +46,9 @@ def main():
   for n,c in enumerate(cases):
    args=c['inputs'];parts=[literal(x,e['id']=='J20') for x in args]
    if e['id']=='J19':
-    rows=args[0];parts=['['+'; '.join(' '.join(str(x) for x in row) for row in rows)+']' if rows else 'Matrix{Int}(undef, 0, 0)']
-    if len(rows)==1 and len(rows[0])==1:parts=['reshape(['+str(rows[0][0])+'], 1, 1)']
+    rows=args[0];matrix='['+'; '.join(' '.join(str(x) for x in row) for row in rows)+']' if rows else 'Matrix{Int}(undef, 0, 0)'
+    if len(rows)==1 and len(rows[0])==1:matrix='reshape(['+str(rows[0][0])+'], 1, 1)'
+    parts=[matrix]+parts[1:]
    argtuple='('+', '.join(parts)+(',' if len(parts)==1 else '')+')'
    lines+=['    # Случай '+str(n)+': подготовка и assertions вне сравниваемого кода.','    args = '+argtuple,'    before = deepcopy(args)']
    if 'error' in c:

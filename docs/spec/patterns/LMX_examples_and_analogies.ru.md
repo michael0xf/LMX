@@ -1,32 +1,25 @@
 # Примеры LMX и аналоги Haskell: две полные стилевые записи
 
-## Запуск корня и дальнейшие операции
+Все 24 исходных сценария имеют отдельные Haskell-реализации и страницы сравнения в [haskell_comparision](examples/haskell_comparision/README.md). Сохранены обе LMX-формы одного договора; одинаковый минимальный текст показан один раз. Граница полной пары или ограниченной аналогии указана у каждого сценария.
 
-Всегда запускается корень R0 как L3 Thread. У корня нет DATA и пользовательских аргументов. Локальные объявления и вызовы обрабатываются общим механизмом языка.
+LMX запускается с корня как L3 Thread без DATA и пользовательских аргументов. Именованные операции примеров выполняются после старта по обычным правилам; Haskell Main относится только к контрольному тестовому harness. [Профили запуска](../LMX_semantics.en.md#source-entry-profiles).
 
-Именованные операции из invoke, inputs и тестовых cases выполняются корнем или обычным обработчиком уже после старта. Main и Example\run не являются альтернативными точками запуска программы. Заглушка-родитель может иметь собственные аргументы и отправить корню сообщение; эти аргументы не становятся DATA корня.
-
-load_before обозначает необходимые определения фикстуры. Отдельного режима запуска через загрузку в DATA он не вводит; import открывает доступные имена. Для короткого фрагмента явно задаётся принимающий контекст последующей обычной операции. Новая команда CLI или API запуска здесь не определяется. LMX runtime: NOT_RUN. [Норма запуска](../LMX_semantics.en.md#source-entry-profiles).
-
-
-Все24 исходных сценария сохранены. Для каждого опубликованы процедурная и функциональная LMX-записи одного observablecontract. Ни одна не исключается из сравнения только потому, что другая короче. Все объявления и Throws входят в полный размер.
-
-Функциональная запись находится по прежнему пути lmx/ID.lm3; отличающийся процедурный вариант — в lmx/procedural/ID.lm3. Одинаковые минимальные формы используют один исходник и один Markdown-листинг. Они используют одно ядро. Если проверяемые copy/raw/place/Message-семантики требуют одной минимальной формы, это прямо объясняется и не выдаётся за два разных алгоритма.
-
-Haskell-код и статус complete_pair/related_analogy/lmx_only не изменяются. Частичная аналогия не превращается в полную пару. Зелёный минимум в PDF/XLSX выбирается по полному тексту сопоставимых записей.
+Размеры пересчитаны по актуальным исходникам. Сравниваются обе полные LMX-формы и сопоставимый иностранный листинг, включая необходимые собственные helpers и Throws. Неполные аналогии не получают числового победителя.
 
 <a id="h01"></a>
 ### H01. Replace and invoke a first-class callable
 
 ## Общий договор
 
-Complete for the current successful fixture: store twice, read and invoke it with 7, replace the same callable cell by plusOne, read and invoke it with 7; packed result 1408. IORef is a real base facility. The Haskell IO wrapper expresses the two writes/reads explicitly; no claim about the full LMX callable ABI is made.
+Сохранить callable, вызвать его с 7, заменить в той же ячейке и снова вызвать с 7. Наблюдение: 1408.
+
+**Сопоставимость: полная пара.** Обе записи содержат настоящую изменяемую ячейку с функцией. В Haskell это IORef из base; первая функция удваивает, вторая прибавляет единицу. Конкретный ABI callable LMX в предмет сравнения не входит.
+
+## LMX — общая минимальная форма обоих стилей
 
 Сценарий наблюдает две записи и два чтения одной callable-ячейки. Эти эффекты обязательны в обоих стилях; прямой вызов выбранной функции уже является минимальной композицией.
 
-Обоим стилям соответствует одна минимальная форма, необходимая для проверяемого низкоуровневого договора. Её исходник и листинг приведены один раз, значения в обоих столбцах равны. Два разных алгоритма не заявляются.
-
-## LMX — общая минимальная форма обоих стилей
+Оба стилевых варианта ссылаются на один полный исходник; повторный листинг не нужен.
 
 ```lmx
 Arithmetic:
@@ -46,45 +39,63 @@ ApplyProbe:
         return: first * 100 + chosen(7)
 ```
 
-[Полный исходник](examples/lmx/H01.lm3)
+[Полный исходник](examples/haskell_comparision/source/lmx/H01.lm3)
 
 ## Haskell
 
 ```haskell
-import Data.IORef (newIORef, readIORef)
-import qualified Data.IORef as Ref
+module H01 where
 
-applicationExample :: IO Int
-applicationExample = do
+import Data.IORef (newIORef, readIORef, writeIORef)
+
+example :: IO Int
+example = do
   chosen <- newIORef ((*2) :: Int -> Int)
   firstOperation <- readIORef chosen
   let first = firstOperation 7
-  Ref.writeIORef chosen (+1)
+  writeIORef chosen (+1)
   secondOperation <- readIORef chosen
-  let second = secondOperation 7
-  pure (first * 100 + second)
+  pure (first * 100 + secondOperation 7)
 ```
 
-## Размер полного текста
+[Полный исходник](examples/haskell_comparision/source/haskell/H01.hs).
+
+## Сравнение
+
+| Аспект | LMX | Haskell |
+| --- | --- | --- |
+| Представленные формы | Полные процедурная и функциональная записи | Полный самостоятельный модуль; custom helpers указаны явно |
+| Договор | Сохранить callable, вызвать его с 7, заменить в той же ячейке и снова вызвать с 7. Наблюдение: 1408. | Наблюдения и пределы соответствия описаны выше |
+| Числовой рейтинг | Полный сопоставимый текст | Тот же полный договор |
+| Метрики этой редакции | Полные актуальные исходники | Полный модуль и необходимые собственные зависимости |
+| Исполнение | NOT_RUN | NOT_RUN |
+
+Все размеры пересчитаны по актуальным исходникам. Обе LMX-формы включают объявления и полные Throws. Пользовательские Haskell-зависимости учитываются в полной границе один раз; несовпадающие механизмы остаются явно отмеченными аналогиями.
+
+## Проверяемые наблюдения
+
+[Контракты и ожидаемые результаты](examples/haskell_comparision/validation/fixtures.json), [исполнимый Haskell harness](examples/haskell_comparision/validation/Main.hs), [команда проверки](examples/haskell_comparision/README.md#проверка). Ожидаемый результат не является протоколом успешного исполнения. GHC в среде подготовки отсутствует; компиляция и выполнение новых модулей не заявлены.
+
+LMX всегда стартует с корня как L3 Thread без DATA и пользовательских аргументов. Именованные операции фикстуры выполняются после старта обычным механизмом вызовов; они не заменяют точку запуска программы.
+
+Источники интерфейсов Haskell: [Haskell 2010 Report: expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html); [base: Data.IORef](https://hackage-content.haskell.org/package/base-4.20.1.0/docs/Data-IORef.html).
+
+## Размер полного исходника
 
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX — процедурный | **191** | 14 |
-| LMX — функциональный | **191** | 14 |
-| Haskell | 303 | 11 |
-
-Обе LMX-записи учитываются целиком, включая объявления, общие локальные helpers и Throws. Ошибки не исключаются из подсчёта. Общая реализация ядра не размножается ради стилей. Существующий статус иностранной пары/аналогии сохранён.
-
-Runtime LMX: NOT_RUN. Это публикация исходников, договоров и полных размеров, не новый parser/runtime receipt.
+| LMX — процедурный | <span style="color:#176233"><u>191</u></span> | 14 |
+| LMX — функциональный | <span style="color:#176233"><u>191</u></span> | 14 |
+| Haskell | 256 | 10 |
 
 <a id="h02"></a>
 ### H02. Named signature positions versus candidate names
 
 ## Общий договор
 
-No current Haskell definition checks differently named positional signatures, explicit candidate names and the resulting 2772 observation.
+Различить порядок позиций сигнатуры a,b и собственные имена кандидата b,a. Упаковка двух вызовов: 2772.
 
-Процедурный вариант сохраняет результаты двух вызовов явно; функциональный объединяет их арифметическим выражением. Позиционное принятие сигнатуры и именованные аргументы проверяются одинаково.
+**Сопоставимость: аналогия.** Haskell-код действительно вычисляет 27 и 72: два адаптера берут поля Arguments в разном порядке. Именованное связывание и проверка допуска LMX здесь представлены явно написанными адаптерами; это не встроенный Haskell-механизм именованных фактических аргументов. Поэтому числового рейтинга этой строки нет.
 
 ## LMX — процедурный
 
@@ -107,8 +118,7 @@ SignatureProbe:
         return: first * 100 + second
 ```
 
-[Полный исходник](examples/lmx/procedural/H02.lm3)
-
+[Полный исходник](examples/haskell_comparision/source/lmx/procedural/H02.lm3)
 ## LMX — функциональный
 
 ```lmx
@@ -128,31 +138,65 @@ SignatureProbe:
         return: selected(a := 2; b := 7) * 100 + Candidate\encode(a := 2; b := 7)
 ```
 
-[Полный исходник](examples/lmx/H02.lm3)
+[Полный исходник](examples/haskell_comparision/source/lmx/H02.lm3)
 
 ## Haskell
 
-Сопоставимого существующего листинга для этого договора нет. Новая иностранная реализация не сочиняется; статус остаётся lmx_only.
+```haskell
+module H02 where
 
-## Размер полного текста
+data Arguments = Arguments { a :: Int, b :: Int }
+
+encode :: Int -> Int -> Int
+encode bValue aValue = bValue * 10 + aValue
+
+bySignatureNames, byCandidateNames :: Arguments -> Int
+bySignatureNames args = encode (a args) (b args)
+byCandidateNames args = encode (b args) (a args)
+
+example :: Int
+example = let args = Arguments { a = 2, b = 7 }
+          in bySignatureNames args * 100 + byCandidateNames args
+```
+
+[Полный исходник](examples/haskell_comparision/source/haskell/H02.hs).
+
+## Сравнение
+
+| Аспект | LMX | Haskell |
+| --- | --- | --- |
+| Представленные формы | Полные процедурная и функциональная записи | Полный самостоятельный модуль; custom helpers указаны явно |
+| Договор | Различить порядок позиций сигнатуры a,b и собственные имена кандидата b,a. Упаковка двух вызовов: 2772. | Наблюдения и пределы соответствия описаны выше |
+| Числовой рейтинг | Не применяется к неполной аналогии | Граница аналогии не маскируется совпадением чисел |
+| Метрики этой редакции | Полные актуальные исходники | Полный модуль и необходимые собственные зависимости |
+| Исполнение | NOT_RUN | NOT_RUN |
+
+Все размеры пересчитаны по актуальным исходникам. Обе LMX-формы включают объявления и полные Throws. Пользовательские Haskell-зависимости учитываются в полной границе один раз; несовпадающие механизмы остаются явно отмеченными аналогиями.
+
+## Проверяемые наблюдения
+
+[Контракты и ожидаемые результаты](examples/haskell_comparision/validation/fixtures.json), [исполнимый Haskell harness](examples/haskell_comparision/validation/Main.hs), [команда проверки](examples/haskell_comparision/README.md#проверка). Ожидаемый результат не является протоколом успешного исполнения. GHC в среде подготовки отсутствует; компиляция и выполнение новых модулей не заявлены.
+
+LMX всегда стартует с корня как L3 Thread без DATA и пользовательских аргументов. Именованные операции фикстуры выполняются после старта обычным механизмом вызовов; они не заменяют точку запуска программы.
+
+Источники интерфейсов Haskell: [Haskell 2010 Report: expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html).
+
+## Размер полного исходника
 
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
 | LMX — процедурный | 245 | 14 |
-| LMX — функциональный | **215** | 12 |
-
-Обе LMX-записи учитываются целиком, включая объявления, общие локальные helpers и Throws. Ошибки не исключаются из подсчёта. Общая реализация ядра не размножается ради стилей. Существующий статус иностранной пары/аналогии сохранён.
-
-Runtime LMX: NOT_RUN. Это публикация исходников, договоров и полных размеров, не новый parser/runtime receipt.
+| LMX — функциональный | 215 | 12 |
+| Haskell | 332 | 10 |
 
 <a id="h03"></a>
 ### H03. Independent bound prefixes and residual callable admission
 
 ## Общий договор
 
-Complete captured-prefix fixture: add5 and add100 are independent, their results are 6,101,6, and the original addition remains unchanged. Haskell values are immutable and native partial application exposes only the remaining argument. The LMX-specific explicit saved actual is rejected by its residual signature; Haskell has no such named formal and rejects that spelling statically. This admission-language difference is recorded separately and does not subtract the matching successful fixture.
+Независимые частичные применения 5 и 100; последовательность результатов 6,101,6.
 
-Процедурный вариант целиком показывает отдельные копии окружения и прямой вызов. Функциональный использует общий partial; сохранённый вход не становится доступным именованным аргументом остаточной функции.
+**Сопоставимость: полная пара.** Haskell использует обычное частичное применение. Для сравнения результата тройка (a,b,c) упаковывается как a*1000000+b*1000+c, то есть 6101006. В LMX сохранённый actual не становится свободным остаточным параметром; Haskell не предоставляет одноимённого фактического аргумента для его переопределения. Отдельная диагностика допуска не объявлена одинаковой.
 
 ## LMX — процедурный
 
@@ -193,8 +237,7 @@ ClosureProbe:
         return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)
 ```
 
-[Полный исходник](examples/lmx/procedural/H03.lm3)
-
+[Полный исходник](examples/haskell_comparision/source/lmx/procedural/H03.lm3)
 ## LMX — функциональный
 
 ```lmx
@@ -215,41 +258,60 @@ ClosureProbe:
         return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)
 ```
 
-[Полный исходник](examples/lmx/H03.lm3)
+[Полный исходник](examples/haskell_comparision/source/lmx/H03.lm3)
 
 ## Haskell
 
 ```haskell
-makeAdder :: Int -> Int -> Int
-makeAdder n = (+) n
+module H03 where
 
-closureExample :: (Int, Int, Int)
-closureExample =
-  let add5 = makeAdder 5
-      add100 = makeAdder 100
-  in (add5 1, add100 1, add5 1)
+add :: Int -> Int -> Int
+add first second = first + second
+
+example :: (Int, Int, Int)
+example = let add5 = add 5
+              add100 = add 100
+          in (add5 1, add100 1, add5 1)
 ```
 
-## Размер полного текста
+[Полный исходник](examples/haskell_comparision/source/haskell/H03.hs).
+
+## Сравнение
+
+| Аспект | LMX | Haskell |
+| --- | --- | --- |
+| Представленные формы | Полные процедурная и функциональная записи | Полный самостоятельный модуль; custom helpers указаны явно |
+| Договор | Независимые частичные применения 5 и 100; последовательность результатов 6,101,6. | Наблюдения и пределы соответствия описаны выше |
+| Числовой рейтинг | Полный сопоставимый текст | Тот же полный договор |
+| Метрики этой редакции | Полные актуальные исходники | Полный модуль и необходимые собственные зависимости |
+| Исполнение | NOT_RUN | NOT_RUN |
+
+Все размеры пересчитаны по актуальным исходникам. Обе LMX-формы включают объявления и полные Throws. Пользовательские Haskell-зависимости учитываются в полной границе один раз; несовпадающие механизмы остаются явно отмеченными аналогиями.
+
+## Проверяемые наблюдения
+
+[Контракты и ожидаемые результаты](examples/haskell_comparision/validation/fixtures.json), [исполнимый Haskell harness](examples/haskell_comparision/validation/Main.hs), [команда проверки](examples/haskell_comparision/README.md#проверка). Ожидаемый результат не является протоколом успешного исполнения. GHC в среде подготовки отсутствует; компиляция и выполнение новых модулей не заявлены.
+
+LMX всегда стартует с корня как L3 Thread без DATA и пользовательских аргументов. Именованные операции фикстуры выполняются после старта обычным механизмом вызовов; они не заменяют точку запуска программы.
+
+Источники интерфейсов Haskell: [Haskell 2010 Report: expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html).
+
+## Размер полного исходника
 
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
 | LMX — процедурный | 495 | 31 |
 | LMX — функциональный | 239 | 14 |
-| Haskell | **143** | 7 |
-
-Обе LMX-записи учитываются целиком, включая объявления, общие локальные helpers и Throws. Ошибки не исключаются из подсчёта. Общая реализация ядра не размножается ради стилей. Существующий статус иностранной пары/аналогии сохранён.
-
-Runtime LMX: NOT_RUN. Это публикация исходников, договоров и полных размеров, не новый parser/runtime receipt.
+| Haskell | <span style="color:#176233"><u>137</u></span> | 7 |
 
 <a id="h04"></a>
 ### H04. Overrideable copied default
 
 ## Общий договор
 
-Complete four-probe fixture: absent default gives 6; explicit 25 gives 26; explicit zero gives 1; the repeated absent default is still 6. Haskell uses explicit Maybe Int; LMX uses copied DATA defaults and named override. These different representations preserve all four observed values and do not mutate the saved default. The listing includes the exact fixture expression from main after the helper; it is a declaration-plus-expression fragment of the unchanged complete module, not a new independently compiled module.
+Отсутствующий default, явные 25 и 0, затем снова отсутствующий default: 6,26,1,6.
 
-Процедурный вариант сохраняет четыре наблюдения по шагам; функциональный непосредственно компонует их. Оба проверяют отсутствующий аргумент, явные25/0 и повторное значение по умолчанию.
+**Сопоставимость: полная пара.** Maybe отличает отсутствие переопределения от значения 0. Четыре вызова включены в обе реализации. Список упаковывается как a*1000000+b*10000+c*100+d, результат 6260106. В отличие от прежнего обрывка после объявления функции, показанный Haskell-модуль самодостаточен.
 
 ## LMX — процедурный
 
@@ -274,8 +336,7 @@ DefaultProbe:
         return: first * 1000000 + second * 10000 + third * 100 + fourth
 ```
 
-[Полный исходник](examples/lmx/procedural/H04.lm3)
-
+[Полный исходник](examples/haskell_comparision/source/lmx/procedural/H04.lm3)
 ## LMX — функциональный
 
 ```lmx
@@ -295,37 +356,58 @@ DefaultProbe:
         return: add5(1) * 1000000 + add5(1; y := 25) * 10000 + add5(1; y := 0) * 100 + add5(1)
 ```
 
-[Полный исходник](examples/lmx/H04.lm3)
+[Полный исходник](examples/haskell_comparision/source/lmx/H04.lm3)
 
 ## Haskell
 
 ```haskell
+module H04 where
+
 addWithDefault :: Int -> Maybe Int -> Int
 addWithDefault x supplied = x + maybe 5 id supplied
 
-    (map (addWithDefault 1) [Nothing, Just 25, Just 0, Nothing])
+example :: [Int]
+example = map (addWithDefault 1) [Nothing, Just 25, Just 0, Nothing]
 ```
 
-## Размер полного текста
+[Полный исходник](examples/haskell_comparision/source/haskell/H04.hs).
+
+## Сравнение
+
+| Аспект | LMX | Haskell |
+| --- | --- | --- |
+| Представленные формы | Полные процедурная и функциональная записи | Полный самостоятельный модуль; custom helpers указаны явно |
+| Договор | Отсутствующий default, явные 25 и 0, затем снова отсутствующий default: 6,26,1,6. | Наблюдения и пределы соответствия описаны выше |
+| Числовой рейтинг | Полный сопоставимый текст | Тот же полный договор |
+| Метрики этой редакции | Полные актуальные исходники | Полный модуль и необходимые собственные зависимости |
+| Исполнение | NOT_RUN | NOT_RUN |
+
+Все размеры пересчитаны по актуальным исходникам. Обе LMX-формы включают объявления и полные Throws. Пользовательские Haskell-зависимости учитываются в полной границе один раз; несовпадающие механизмы остаются явно отмеченными аналогиями.
+
+## Проверяемые наблюдения
+
+[Контракты и ожидаемые результаты](examples/haskell_comparision/validation/fixtures.json), [исполнимый Haskell harness](examples/haskell_comparision/validation/Main.hs), [команда проверки](examples/haskell_comparision/README.md#проверка). Ожидаемый результат не является протоколом успешного исполнения. GHC в среде подготовки отсутствует; компиляция и выполнение новых модулей не заявлены.
+
+LMX всегда стартует с корня как L3 Thread без DATA и пользовательских аргументов. Именованные операции фикстуры выполняются после старта обычным механизмом вызовов; они не заменяют точку запуска программы.
+
+Источники интерфейсов Haskell: [Haskell 2010 Report: expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html).
+
+## Размер полного исходника
 
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
 | LMX — процедурный | 265 | 17 |
 | LMX — функциональный | 205 | 13 |
-| Haskell | **128** | 3 |
-
-Обе LMX-записи учитываются целиком, включая объявления, общие локальные helpers и Throws. Ошибки не исключаются из подсчёта. Общая реализация ядра не размножается ради стилей. Существующий статус иностранной пары/аналогии сохранён.
-
-Runtime LMX: NOT_RUN. Это публикация исходников, договоров и полных размеров, не новый parser/runtime receipt.
+| Haskell | <span style="color:#176233"><u>162</u></span> | 5 |
 
 <a id="h05"></a>
 ### H05. Dynamic and lexical binding after a graph copy
 
 ## Общий договор
 
-The Haskell functions receive explicit environments and reproduce 26/6. They do not copy an executable graph, preserve parent relationships or implement LMX dynamic name lookup after copy.
+Скопировать исходное значение 5, изменить источник на 8, затем прочитать динамическое окружение 25 и лексическую копию 5 с аргументом 1: 26 и 6.
 
-Копирование графа и последующая запись в источник обязательны. Процедурный вариант сохраняет два чтения; функциональный объединяет их выражением, сохраняя динамический и лексический пути.
+**Сопоставимость: аналогия.** Haskell создаёт две разные ячейки, действительно меняет источник и передаёт окружение явно. Третий результат проверяет источник после изменения: 8. Это модель выбора окружения, а не копирование исполняемого графа или native dynamic lookup LMX; parent и граф методов Haskell-код не воспроизводит.
 
 ## LMX — процедурный
 
@@ -351,8 +433,7 @@ BindingProbe:
         return: a * 100 + b
 ```
 
-[Полный исходник](examples/lmx/procedural/H05.lm3)
-
+[Полный исходник](examples/haskell_comparision/source/lmx/procedural/H05.lm3)
 ## LMX — функциональный
 
 ```lmx
@@ -375,31 +456,68 @@ BindingProbe:
         return: copied\methods\dynamic(1) * 100 + copied\methods\lexical(1)
 ```
 
-[Полный исходник](examples/lmx/H05.lm3)
+[Полный исходник](examples/haskell_comparision/source/lmx/H05.lm3)
 
 ## Haskell
 
-Сопоставимого существующего листинга для этого договора нет. Новая иностранная реализация не сочиняется; статус остаётся lmx_only.
+```haskell
+module H05 where
 
-## Размер полного текста
+import Data.IORef (IORef, newIORef, readIORef, writeIORef)
+
+addIn :: IORef Int -> Int -> IO Int
+addIn environment x = (+x) <$> readIORef environment
+
+example :: IO (Int, Int, Int)
+example = do
+  source <- newIORef 5
+  copied <- readIORef source >>= newIORef
+  writeIORef source 8
+  caller <- newIORef 25
+  dynamic <- addIn caller 1
+  lexical <- addIn copied 1
+  sourceAfter <- readIORef source
+  pure (dynamic, lexical, sourceAfter)
+```
+
+[Полный исходник](examples/haskell_comparision/source/haskell/H05.hs).
+
+## Сравнение
+
+| Аспект | LMX | Haskell |
+| --- | --- | --- |
+| Представленные формы | Полные процедурная и функциональная записи | Полный самостоятельный модуль; custom helpers указаны явно |
+| Договор | Скопировать исходное значение 5, изменить источник на 8, затем прочитать динамическое окружение 25 и лексическую копию 5 с аргументом 1: 26 и 6. | Наблюдения и пределы соответствия описаны выше |
+| Числовой рейтинг | Не применяется к неполной аналогии | Граница аналогии не маскируется совпадением чисел |
+| Метрики этой редакции | Полные актуальные исходники | Полный модуль и необходимые собственные зависимости |
+| Исполнение | NOT_RUN | NOT_RUN |
+
+Все размеры пересчитаны по актуальным исходникам. Обе LMX-формы включают объявления и полные Throws. Пользовательские Haskell-зависимости учитываются в полной границе один раз; несовпадающие механизмы остаются явно отмеченными аналогиями.
+
+## Проверяемые наблюдения
+
+[Контракты и ожидаемые результаты](examples/haskell_comparision/validation/fixtures.json), [исполнимый Haskell harness](examples/haskell_comparision/validation/Main.hs), [команда проверки](examples/haskell_comparision/README.md#проверка). Ожидаемый результат не является протоколом успешного исполнения. GHC в среде подготовки отсутствует; компиляция и выполнение новых модулей не заявлены.
+
+LMX всегда стартует с корня как L3 Thread без DATA и пользовательских аргументов. Именованные операции фикстуры выполняются после старта обычным механизмом вызовов; они не заменяют точку запуска программы.
+
+Источники интерфейсов Haskell: [Haskell 2010 Report: expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html); [base: Data.IORef](https://hackage-content.haskell.org/package/base-4.20.1.0/docs/Data-IORef.html).
+
+## Размер полного исходника
 
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
 | LMX — процедурный | 218 | 18 |
-| LMX — функциональный | **206** | 16 |
-
-Обе LMX-записи учитываются целиком, включая объявления, общие локальные helpers и Throws. Ошибки не исключаются из подсчёта. Общая реализация ядра не размножается ради стилей. Существующий статус иностранной пары/аналогии сохранён.
-
-Runtime LMX: NOT_RUN. Это публикация исходников, договоров и полных размеров, не новый parser/runtime receipt.
+| LMX — функциональный | 206 | 16 |
+| Haskell | 362 | 14 |
 
 <a id="h06"></a>
 ### H06. Order of two composed computations
 
 ## Общий договор
 
-Complete for the selected primary LMX listing: next(twice(4)) is 9 and twice(next(4)) is 10. The existing Haskell composition expression preserves both orders. The separate effectful stage-order fixture and the LMX pipe variant are additional material, not silently substituted into this ratio.
+next(twice(4))=9; twice(next(4))=10. Оба порядка обязательны.
 
-Процедурный вариант явно хранит промежуточные стадии; функциональный использует краткие вложенные вызовы. Обе последовательности наблюдаются: next(twice(4))=9 и twice(next(4))=10.
+**Сопоставимость: полная пара.** Оператор композиции Haskell задаёт те же две арифметические цепочки. Пара (a,b) нормализуется в LMX-упаковку a*100+b=910. Отдельный эффектный сценарий со счётчиками из старого Analogies.hs не подставляется вместо этого чистого договора.
 
 ## LMX — процедурный
 
@@ -422,8 +540,7 @@ CompositionProbe:
         return: first * 100 + second
 ```
 
-[Полный исходник](examples/lmx/procedural/H06.lm3)
-
+[Полный исходник](examples/haskell_comparision/source/lmx/procedural/H06.lm3)
 ## LMX — функциональный
 
 ```lmx
@@ -441,39 +558,61 @@ CompositionProbe:
         return: Functions\next(Functions\twice(4)) * 100 + Functions\twice(Functions\next(4))
 ```
 
-[Полный исходник](examples/lmx/H06.lm3)
+[Полный исходник](examples/haskell_comparision/source/lmx/H06.lm3)
 
 ## Haskell
 
 ```haskell
-compositionFactoryExample :: (Int, Int)
-compositionFactoryExample = (((+1) . (*2)) 4, ((*2) . (+1)) 4)
+module H06 where
+
+example :: (Int, Int)
+example = (((+1) . (*2)) 4, ((*2) . (+1)) 4)
 ```
 
-## Размер полного текста
+[Полный исходник](examples/haskell_comparision/source/haskell/H06.hs).
+
+## Сравнение
+
+| Аспект | LMX | Haskell |
+| --- | --- | --- |
+| Представленные формы | Полные процедурная и функциональная записи | Полный самостоятельный модуль; custom helpers указаны явно |
+| Договор | next(twice(4))=9; twice(next(4))=10. Оба порядка обязательны. | Наблюдения и пределы соответствия описаны выше |
+| Числовой рейтинг | Полный сопоставимый текст | Тот же полный договор |
+| Метрики этой редакции | Полные актуальные исходники | Полный модуль и необходимые собственные зависимости |
+| Исполнение | NOT_RUN | NOT_RUN |
+
+Все размеры пересчитаны по актуальным исходникам. Обе LMX-формы включают объявления и полные Throws. Пользовательские Haskell-зависимости учитываются в полной границе один раз; несовпадающие механизмы остаются явно отмеченными аналогиями.
+
+## Проверяемые наблюдения
+
+[Контракты и ожидаемые результаты](examples/haskell_comparision/validation/fixtures.json), [исполнимый Haskell harness](examples/haskell_comparision/validation/Main.hs), [команда проверки](examples/haskell_comparision/README.md#проверка). Ожидаемый результат не является протоколом успешного исполнения. GHC в среде подготовки отсутствует; компиляция и выполнение новых модулей не заявлены.
+
+LMX всегда стартует с корня как L3 Thread без DATA и пользовательских аргументов. Именованные операции фикстуры выполняются после старта обычным механизмом вызовов; они не заменяют точку запуска программы.
+
+Источники интерфейсов Haskell: [Haskell 2010 Report: expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html).
+
+## Размер полного исходника
 
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
 | LMX — процедурный | 223 | 15 |
 | LMX — функциональный | 167 | 11 |
-| Haskell | **89** | 2 |
-
-Обе LMX-записи учитываются целиком, включая объявления, общие локальные helpers и Throws. Ошибки не исключаются из подсчёта. Общая реализация ядра не размножается ради стилей. Существующий статус иностранной пары/аналогии сохранён.
-
-Runtime LMX: NOT_RUN. Это публикация исходников, договоров и полных размеров, не новый parser/runtime receipt.
+| Haskell | <span style="color:#176233"><u>67</u></span> | 3 |
 
 <a id="h07"></a>
 ### H07. Prepared value versus raw source occurrence
 
 ## Общий договор
 
-The complete numeric/call-count series is present, but its raw side explicitly repeats an IO action. It does not accept an arbitrary raw source occurrence or evaluate the retained source graph via sys\eval. The guide expressly keeps the lazy example separate from raw-occurrence semantics.
+Два prepared-вызова дают 2 и 4 при двух вычислениях источника; два raw-вызова дают 3 и 7 при четырёх вычислениях.
+
+**Сопоставимость: аналогия.** Реальная Haskell-реализация отдельно разделяет полученное значение и повторяет IO-действие. Она не принимает произвольное исходное вхождение программы и не исполняет сохранённый граф через sys\eval. Ленивость Haskell сама по себе не объявляется заменой PASS_ARGS_AS_IS.
+
+## LMX — общая минимальная форма обоих стилей
 
 Это проверка prepared/raw ролей и повторного вычисления исходного occurrence. Замена сохраняемого узла на lambda или заранее вычисленное значение изменила бы договор, поэтому минимальная запись общая.
 
-Обоим стилям соответствует одна минимальная форма, необходимая для проверяемого низкоуровневого договора. Её исходник и листинг приведены один раз, значения в обоих столбцах равны. Два разных алгоритма не заявляются.
-
-## LMX — общая минимальная форма обоих стилей
+Оба стилевых варианта ссылаются на один полный исходник; повторный листинг не нужен.
 
 ```lmx
 PreparedOps:
@@ -503,35 +642,75 @@ Evaluation:
         return: (Meter\next() RawOps\twice 0)
 ```
 
-[Полный исходник](examples/lmx/H07.lm3)
+[Полный исходник](examples/haskell_comparision/source/lmx/H07.lm3)
 
 ## Haskell
 
-Сопоставимого существующего листинга для этого договора нет. Новая иностранная реализация не сочиняется; статус остаётся lmx_only.
+```haskell
+module H07 where
 
-## Размер полного текста
+import Control.Monad (replicateM)
+import Data.IORef (newIORef, modifyIORef', readIORef)
+
+example :: IO ((Int, Int, Int), (Int, Int, Int))
+example = do
+  preparedCount <- newIORef 0
+  let preparedNext = modifyIORef' preparedCount (+1) >> readIORef preparedCount
+  first <- (\value -> value + value) <$> preparedNext
+  second <- (\value -> value + value) <$> preparedNext
+  preparedCalls <- readIORef preparedCount
+  rawCount <- newIORef 0
+  let rawNext = modifyIORef' rawCount (+1) >> readIORef rawCount
+  third <- sum <$> replicateM 2 rawNext
+  fourth <- sum <$> replicateM 2 rawNext
+  rawCalls <- readIORef rawCount
+  pure ((first, second, preparedCalls), (third, fourth, rawCalls))
+```
+
+[Полный исходник](examples/haskell_comparision/source/haskell/H07.hs).
+
+## Сравнение
+
+| Аспект | LMX | Haskell |
+| --- | --- | --- |
+| Представленные формы | Полные процедурная и функциональная записи | Полный самостоятельный модуль; custom helpers указаны явно |
+| Договор | Два prepared-вызова дают 2 и 4 при двух вычислениях источника; два raw-вызова дают 3 и 7 при четырёх вычислениях. | Наблюдения и пределы соответствия описаны выше |
+| Числовой рейтинг | Не применяется к неполной аналогии | Граница аналогии не маскируется совпадением чисел |
+| Метрики этой редакции | Полные актуальные исходники | Полный модуль и необходимые собственные зависимости |
+| Исполнение | NOT_RUN | NOT_RUN |
+
+Все размеры пересчитаны по актуальным исходникам. Обе LMX-формы включают объявления и полные Throws. Пользовательские Haskell-зависимости учитываются в полной границе один раз; несовпадающие механизмы остаются явно отмеченными аналогиями.
+
+## Проверяемые наблюдения
+
+[Контракты и ожидаемые результаты](examples/haskell_comparision/validation/fixtures.json), [исполнимый Haskell harness](examples/haskell_comparision/validation/Main.hs), [команда проверки](examples/haskell_comparision/README.md#проверка). Ожидаемый результат не является протоколом успешного исполнения. GHC в среде подготовки отсутствует; компиляция и выполнение новых модулей не заявлены.
+
+LMX всегда стартует с корня как L3 Thread без DATA и пользовательских аргументов. Именованные операции фикстуры выполняются после старта обычным механизмом вызовов; они не заменяют точку запуска программы.
+
+Источники интерфейсов Haskell: [Haskell 2010 Report: expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html); [base: Data.IORef](https://hackage-content.haskell.org/package/base-4.20.1.0/docs/Data-IORef.html).
+
+## Размер полного исходника
 
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX — процедурный | **354** | 22 |
-| LMX — функциональный | **354** | 22 |
-
-Обе LMX-записи учитываются целиком, включая объявления, общие локальные helpers и Throws. Ошибки не исключаются из подсчёта. Общая реализация ядра не размножается ради стилей. Существующий статус иностранной пары/аналогии сохранён.
-
-Runtime LMX: NOT_RUN. Это публикация исходников, договоров и полных размеров, не новый parser/runtime receipt.
+| LMX — процедурный | 354 | 22 |
+| LMX — функциональный | 354 | 22 |
+| Haskell | 582 | 16 |
 
 <a id="h08"></a>
 ### H08. Owned formal copy versus caller place
 
 ## Общий договор
 
-No current Haskell definition compares mutation of an owned formal copy with mutation of a transparent caller place.
+Один шаг +3; через собственную копию формального поля вызывающая ячейка остаётся 0, через общее место становится 3.
+
+**Сопоставимость: аналогия.** freeStep содержит единственную реализацию изменения. ownStep создаёт отдельную ячейку и вызывает тот же шаг; stateProbe принимает произвольную операцию. Разница владения проверяется настоящими IORef, но передача ссылки в Haskell явная и не воспроизводит автоматическое динамическое связывание LMX.
+
+## LMX — общая минимальная форма обоих стилей
 
 Проверяемый эффект — изменение собственной ячейки формального параметра либо живого места вызывающего. Одно тело операции и runner необходимы в обоих стилях; дополнительная обвязка не меняет стиль наблюдаемой операции.
 
-Обоим стилям соответствует одна минимальная форма, необходимая для проверяемого низкоуровневого договора. Её исходник и листинг приведены один раз, значения в обоих столбцах равны. Два разных алгоритма не заявляются.
-
-## LMX — общая минимальная форма обоих стилей
+Оба стилевых варианта ссылаются на один полный исходник; повторный листинг не нужен.
 
 ```lmx
 Free:
@@ -552,35 +731,70 @@ StateProbe:
         return: y
 ```
 
-[Полный исходник](examples/lmx/H08.lm3)
+[Полный исходник](examples/haskell_comparision/source/lmx/H08.lm3)
 
 ## Haskell
 
-Сопоставимого существующего листинга для этого договора нет. Новая иностранная реализация не сочиняется; статус остаётся lmx_only.
+```haskell
+module H08 where
 
-## Размер полного текста
+import Data.IORef (IORef, newIORef, readIORef, modifyIORef')
+
+freeStep, ownStep :: IORef Int -> IO ()
+freeStep place = modifyIORef' place (+3)
+ownStep caller = readIORef caller >>= newIORef >>= freeStep
+
+stateProbe :: (IORef Int -> IO ()) -> IO Int
+stateProbe action = do
+  caller <- newIORef 0
+  action caller
+  readIORef caller
+```
+
+[Полный исходник](examples/haskell_comparision/source/haskell/H08.hs).
+
+## Сравнение
+
+| Аспект | LMX | Haskell |
+| --- | --- | --- |
+| Представленные формы | Полные процедурная и функциональная записи | Полный самостоятельный модуль; custom helpers указаны явно |
+| Договор | Один шаг +3; через собственную копию формального поля вызывающая ячейка остаётся 0, через общее место становится 3. | Наблюдения и пределы соответствия описаны выше |
+| Числовой рейтинг | Не применяется к неполной аналогии | Граница аналогии не маскируется совпадением чисел |
+| Метрики этой редакции | Полные актуальные исходники | Полный модуль и необходимые собственные зависимости |
+| Исполнение | NOT_RUN | NOT_RUN |
+
+Все размеры пересчитаны по актуальным исходникам. Обе LMX-формы включают объявления и полные Throws. Пользовательские Haskell-зависимости учитываются в полной границе один раз; несовпадающие механизмы остаются явно отмеченными аналогиями.
+
+## Проверяемые наблюдения
+
+[Контракты и ожидаемые результаты](examples/haskell_comparision/validation/fixtures.json), [исполнимый Haskell harness](examples/haskell_comparision/validation/Main.hs), [команда проверки](examples/haskell_comparision/README.md#проверка). Ожидаемый результат не является протоколом успешного исполнения. GHC в среде подготовки отсутствует; компиляция и выполнение новых модулей не заявлены.
+
+LMX всегда стартует с корня как L3 Thread без DATA и пользовательских аргументов. Именованные операции фикстуры выполняются после старта обычным механизмом вызовов; они не заменяют точку запуска программы.
+
+Источники интерфейсов Haskell: [Haskell 2010 Report: expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html); [base: Data.IORef](https://hackage-content.haskell.org/package/base-4.20.1.0/docs/Data-IORef.html).
+
+## Размер полного исходника
 
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX — процедурный | **94** | 14 |
-| LMX — функциональный | **94** | 14 |
-
-Обе LMX-записи учитываются целиком, включая объявления, общие локальные helpers и Throws. Ошибки не исключаются из подсчёта. Общая реализация ядра не размножается ради стилей. Существующий статус иностранной пары/аналогии сохранён.
-
-Runtime LMX: NOT_RUN. Это публикация исходников, договоров и полных размеров, не новый parser/runtime receipt.
+| LMX — процедурный | 94 | 14 |
+| LMX — функциональный | 94 | 14 |
+| Haskell | 285 | 10 |
 
 <a id="h09"></a>
 ### H09. Finite iterator with a live declaration and body
 
 ## Общий договор
 
-All observed iterator results agree: total 12, four next calls and three body calls. However, the only existing Haskell listing interleaves extra next/body counters with the algorithm, while the LMX source delegates those observations to its external fixture. A size ratio would charge harness instrumentation only to Haskell. No rewritten or shortened Haskell implementation has been invented; this is related_analogy because the current source counting boundaries cannot be matched exactly.
+Конечный источник 1,2,3, удвоение в теле, сумма 12, четыре обращения к источнику и три исполнения тела.
+
+**Сопоставимость: аналогия.** Общий iterateUntil ловит Stop только при получении следующего элемента; Stop из тела и другие исключения проходят наружу. Объявление item и живое присоединённое тело LMX представлены callback-функцией. Счётчики находятся во внешней фикстуре, а не искусственно утяжеляют сравниваемый алгоритм. Графовый механизм declaration-as-DATA остаётся различием.
+
+## LMX — общая минимальная форма обоих стилей
 
 Принятая декларация и тело работают в живом контексте. Stop источника поглощается, Stop тела распространяется под исходным именем. Существующий общий адаптер имеет иной failure-envelope API, поэтому корректная минимальная форма здесь общая.
 
-Обоим стилям соответствует одна минимальная форма, необходимая для проверяемого низкоуровневого договора. Её исходник и листинг приведены один раз, значения в обоих столбцах равны. Два разных алгоритма не заявляются.
-
-## LMX — общая минимальная форма обоих стилей
+Оба стилевых варианта ссылаются на один полный исходник; повторный листинг не нужен.
 
 ```lmx
 Cycles:
@@ -611,31 +825,77 @@ Numbers:
         return: total
 ```
 
-[Полный исходник](examples/lmx/H09.lm3)
+[Полный исходник](examples/haskell_comparision/source/lmx/H09.lm3)
 
 ## Haskell
 
-Сопоставимого существующего листинга для этого договора нет. Новая иностранная реализация не сочиняется; статус остаётся lmx_only.
+```haskell
+module H09 where
 
-## Размер полного текста
+import Control.Exception (Exception, catch, throwIO)
+import Data.IORef (newIORef, readIORef, writeIORef, modifyIORef')
+
+data Stop = Stop deriving Show
+instance Exception Stop
+
+iterateUntil :: IO a -> (a -> IO ()) -> IO ()
+iterateUntil next body = do
+  item <- (Just <$> next) `catch` (\Stop -> pure Nothing)
+  case item of
+    Nothing -> pure ()
+    Just value -> body value >> iterateUntil next body
+
+example :: IO Int
+example = do
+  position <- newIORef 0
+  total <- newIORef 0
+  let next = do
+        value <- readIORef position
+        if value >= 3 then throwIO Stop else do
+          writeIORef position (value + 1)
+          pure (value + 1)
+  iterateUntil next (\item -> modifyIORef' total (+ (item * 2)))
+  readIORef total
+```
+
+[Полный исходник](examples/haskell_comparision/source/haskell/H09.hs).
+
+## Сравнение
+
+| Аспект | LMX | Haskell |
+| --- | --- | --- |
+| Представленные формы | Полные процедурная и функциональная записи | Полный самостоятельный модуль; custom helpers указаны явно |
+| Договор | Конечный источник 1,2,3, удвоение в теле, сумма 12, четыре обращения к источнику и три исполнения тела. | Наблюдения и пределы соответствия описаны выше |
+| Числовой рейтинг | Не применяется к неполной аналогии | Граница аналогии не маскируется совпадением чисел |
+| Метрики этой редакции | Полные актуальные исходники | Полный модуль и необходимые собственные зависимости |
+| Исполнение | NOT_RUN | NOT_RUN |
+
+Все размеры пересчитаны по актуальным исходникам. Обе LMX-формы включают объявления и полные Throws. Пользовательские Haskell-зависимости учитываются в полной границе один раз; несовпадающие механизмы остаются явно отмеченными аналогиями.
+
+## Проверяемые наблюдения
+
+[Контракты и ожидаемые результаты](examples/haskell_comparision/validation/fixtures.json), [исполнимый Haskell harness](examples/haskell_comparision/validation/Main.hs), [команда проверки](examples/haskell_comparision/README.md#проверка). Ожидаемый результат не является протоколом успешного исполнения. GHC в среде подготовки отсутствует; компиляция и выполнение новых модулей не заявлены.
+
+LMX всегда стартует с корня как L3 Thread без DATA и пользовательских аргументов. Именованные операции фикстуры выполняются после старта обычным механизмом вызовов; они не заменяют точку запуска программы.
+
+Источники интерфейсов Haskell: [Haskell 2010 Report: expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html); [base: Data.IORef](https://hackage-content.haskell.org/package/base-4.20.1.0/docs/Data-IORef.html); [base: Control.Exception](https://hackage-content.haskell.org/package/base-4.20.1.0/docs/Control-Exception.html).
+
+## Размер полного исходника
 
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX — процедурный | **285** | 25 |
-| LMX — функциональный | **285** | 25 |
-
-Обе LMX-записи учитываются целиком, включая объявления, общие локальные helpers и Throws. Ошибки не исключаются из подсчёта. Общая реализация ядра не размножается ради стилей. Существующий статус иностранной пары/аналогии сохранён.
-
-Runtime LMX: NOT_RUN. Это публикация исходников, договоров и полных размеров, не новый parser/runtime receipt.
+| LMX — процедурный | 285 | 25 |
+| LMX — функциональный | 285 | 25 |
+| Haskell | 569 | 22 |
 
 <a id="r01"></a>
 ### R01. Merge an existing record and add a field
 
 ## Общий договор
 
-The Haskell record update preserves width and changes height/depth, but Size declares depth before the update. LMX merge adds a previously absent field and preserves its source structures. The fixed-shape Haskell update cannot be labelled a complete dynamic record-extension pair.
+Объединить width=2,height=3 с height=5,depth=7: получить 257; depth действительно отсутствует в исходной модели.
 
-Процедурный вариант использует прямой merge полей, функциональный — канонический derive. Оба добавляют отсутствовавшее поле depth и сохраняют исходные структуры.
+**Сопоставимость: аналогия.** Использован Map, а не запись с заранее объявленным depth. Map.union patch model сохраняет значение patch при совпадении ключа, добавляет новый ключ и не меняет исходные карты. Карта однородных значений не реализует типизированный исполняемый граф, DATA и parent структуры LMX; этот предел отмечен явно.
 
 ## LMX — процедурный
 
@@ -655,8 +915,7 @@ MergeProbe:
         return: result\width * 100 + result\height * 10 + result\depth
 ```
 
-[Полный исходник](examples/lmx/procedural/R01.lm3)
-
+[Полный исходник](examples/haskell_comparision/source/lmx/procedural/R01.lm3)
 ## LMX — функциональный
 
 ```lmx
@@ -675,35 +934,69 @@ MergeProbe:
         return: result\width * 100 + result\height * 10 + result\depth
 ```
 
-[Полный исходник](examples/lmx/R01.lm3)
+[Полный исходник](examples/haskell_comparision/source/lmx/R01.lm3)
 
 ## Haskell
 
-Сопоставимого существующего листинга для этого договора нет. Новая иностранная реализация не сочиняется; статус остаётся lmx_only.
+```haskell
+module R01 where
 
-## Размер полного текста
+import qualified Data.Map.Strict as Map
+
+model, patch, extended :: Map.Map String Int
+model = Map.fromList [("width",2),("height",3)]
+patch = Map.fromList [("height",5),("depth",7)]
+extended = Map.union patch model
+
+example :: Int
+example = extended Map.! "width" * 100
+        + extended Map.! "height" * 10 + extended Map.! "depth"
+```
+
+[Полный исходник](examples/haskell_comparision/source/haskell/R01.hs).
+
+## Сравнение
+
+| Аспект | LMX | Haskell |
+| --- | --- | --- |
+| Представленные формы | Полные процедурная и функциональная записи | Полный самостоятельный модуль; custom helpers указаны явно |
+| Договор | Объединить width=2,height=3 с height=5,depth=7: получить 257; depth действительно отсутствует в исходной модели. | Наблюдения и пределы соответствия описаны выше |
+| Числовой рейтинг | Не применяется к неполной аналогии | Граница аналогии не маскируется совпадением чисел |
+| Метрики этой редакции | Полные актуальные исходники | Полный модуль и необходимые собственные зависимости |
+| Исполнение | NOT_RUN | NOT_RUN |
+
+Все размеры пересчитаны по актуальным исходникам. Обе LMX-формы включают объявления и полные Throws. Пользовательские Haskell-зависимости учитываются в полной границе один раз; несовпадающие механизмы остаются явно отмеченными аналогиями.
+
+## Проверяемые наблюдения
+
+[Контракты и ожидаемые результаты](examples/haskell_comparision/validation/fixtures.json), [исполнимый Haskell harness](examples/haskell_comparision/validation/Main.hs), [команда проверки](examples/haskell_comparision/README.md#проверка). Ожидаемый результат не является протоколом успешного исполнения. GHC в среде подготовки отсутствует; компиляция и выполнение новых модулей не заявлены.
+
+LMX всегда стартует с корня как L3 Thread без DATA и пользовательских аргументов. Именованные операции фикстуры выполняются после старта обычным механизмом вызовов; они не заменяют точку запуска программы.
+
+Источники интерфейсов Haskell: [Haskell 2010 Report: expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html); [containers: Data.Map.Strict](https://hackage-content.haskell.org/package/containers-0.7/docs/Data-Map-Strict.html).
+
+## Размер полного исходника
 
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
 | LMX — процедурный | 184 | 11 |
-| LMX — функциональный | **183** | 11 |
-
-Обе LMX-записи учитываются целиком, включая объявления, общие локальные helpers и Throws. Ошибки не исключаются из подсчёта. Общая реализация ядра не размножается ради стилей. Существующий статус иностранной пары/аналогии сохранён.
-
-Runtime LMX: NOT_RUN. Это публикация исходников, договоров и полных размеров, не новый parser/runtime receipt.
+| LMX — функциональный | 183 | 11 |
+| Haskell | 293 | 9 |
 
 <a id="r02"></a>
 ### R02. Copy a field stream into group assignment
 
 ## Общий договор
 
-The module contains no implementation of the copied structural field stream and the current group-assignment observation 27. A new tuple-destructuring example has not been invented.
+Получить из двух полей Pair упорядоченный поток 2,7 и разложить его на a,b; результат 27.
+
+**Сопоставимость: аналогия.** fieldStream действительно извлекает поля, а pattern match распределяет их по двум переменным. В Haskell это специально определённое представление потока и проверка длины, не общий copy структур LMX и не группировщик Expression. Just 27 нормализуется в успешный результат 27; Nothing обозначает неподходящую длину.
+
+## LMX — общая минимальная форма обоих стилей
 
 Групповое присваивание принимает поток полей `copy(Pair)` напрямую; внешняя группа вокруг `copy` для этого списка мест не нужна. В обоих стилях сохранены позиционные записи a=2 и b=7, чтение всех правых значений до первой записи и результат 27. Минимальная форма общая.
 
-Обоим стилям соответствует одна минимальная форма, необходимая для проверяемого низкоуровневого договора. Её исходник и листинг приведены один раз, значения в обоих столбцах равны. Два разных алгоритма не заявляются.
-
-## LMX — общая минимальная форма обоих стилей
+Оба стилевых варианта ссылаются на один полный исходник; повторный листинг не нужен.
 
 ```lmx
 Pair:
@@ -719,35 +1012,68 @@ StreamProbe:
         return: a * 10 + b
 ```
 
-[Полный исходник](examples/lmx/R02.lm3)
+[Полный исходник](examples/haskell_comparision/source/lmx/R02.lm3)
 
 ## Haskell
 
-Сопоставимого существующего листинга для этого договора нет. Новая иностранная реализация не сочиняется; статус остаётся lmx_only.
+```haskell
+module R02 where
 
-## Размер полного текста
+data Pair = Pair { first :: Int, second :: Int }
+
+fieldStream :: Pair -> [Int]
+fieldStream pair = [first pair, second pair]
+
+example :: Maybe Int
+example = case fieldStream (Pair 2 7) of
+  [a,b] -> Just (a * 10 + b)
+  _ -> Nothing
+```
+
+[Полный исходник](examples/haskell_comparision/source/haskell/R02.hs).
+
+## Сравнение
+
+| Аспект | LMX | Haskell |
+| --- | --- | --- |
+| Представленные формы | Полные процедурная и функциональная записи | Полный самостоятельный модуль; custom helpers указаны явно |
+| Договор | Получить из двух полей Pair упорядоченный поток 2,7 и разложить его на a,b; результат 27. | Наблюдения и пределы соответствия описаны выше |
+| Числовой рейтинг | Не применяется к неполной аналогии | Граница аналогии не маскируется совпадением чисел |
+| Метрики этой редакции | Полные актуальные исходники | Полный модуль и необходимые собственные зависимости |
+| Исполнение | NOT_RUN | NOT_RUN |
+
+Все размеры пересчитаны по актуальным исходникам. Обе LMX-формы включают объявления и полные Throws. Пользовательские Haskell-зависимости учитываются в полной границе один раз; несовпадающие механизмы остаются явно отмеченными аналогиями.
+
+## Проверяемые наблюдения
+
+[Контракты и ожидаемые результаты](examples/haskell_comparision/validation/fixtures.json), [исполнимый Haskell harness](examples/haskell_comparision/validation/Main.hs), [команда проверки](examples/haskell_comparision/README.md#проверка). Ожидаемый результат не является протоколом успешного исполнения. GHC в среде подготовки отсутствует; компиляция и выполнение новых модулей не заявлены.
+
+LMX всегда стартует с корня как L3 Thread без DATA и пользовательских аргументов. Именованные операции фикстуры выполняются после старта обычным механизмом вызовов; они не заменяют точку запуска программы.
+
+Источники интерфейсов Haskell: [Haskell 2010 Report: expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html).
+
+## Размер полного исходника
 
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX — процедурный | **93** | 10 |
-| LMX — функциональный | **93** | 10 |
-
-Обе LMX-записи учитываются целиком, включая объявления, общие локальные helpers и Throws. Ошибки не исключаются из подсчёта. Общая реализация ядра не размножается ради стилей. Существующий статус иностранной пары/аналогии сохранён.
-
-Runtime LMX: NOT_RUN. Это публикация исходников, договоров и полных размеров, не новый parser/runtime receipt.
+| LMX — процедурный | 93 | 10 |
+| LMX — функциональный | 93 | 10 |
+| Haskell | 192 | 8 |
 
 <a id="r03"></a>
 ### R03. Imported parent identity versus copied parent identity
 
 ## Общий договор
 
-No current Haskell implementation tests import-retained owner identity and copy-recouped parent identity.
+Импортированный read сохраняет владельца со значением 7; копия получает собственного владельца, запись в него даёт 12, результат 712.
+
+**Сопоставимость: аналогия.** Provider хранит реальную ячейку владельца и closure для чтения. Импорт моделируется сохранением этого closure, copyProvider создаёт новую ячейку и новый closure; исходная ячейка остаётся 7. Это явно написанная модель owner/copy, а не реализация общего import, parent или группирующего контейнера LMX.
+
+## LMX — общая минимальная форма обоих стилей
 
 Обязательны import исходного владельца, copy графа и запись в владельца копии. Эти наблюдаемые операции одинаковы; искусственная функциональная обвязка не вводится.
 
-Обоим стилям соответствует одна минимальная форма, необходимая для проверяемого низкоуровневого договора. Её исходник и листинг приведены один раз, значения в обоих столбцах равны. Два разных алгоритма не заявляются.
-
-## LMX — общая минимальная форма обоих стилей
+Оба стилевых варианта ссылаются на один полный исходник; повторный листинг не нужен.
 
 ```lmx
 Provider:
@@ -768,35 +1094,81 @@ ImportProbe:
         return: original * 100 + copied\read()
 ```
 
-[Полный исходник](examples/lmx/R03.lm3)
+[Полный исходник](examples/haskell_comparision/source/lmx/R03.lm3)
 
 ## Haskell
 
-Сопоставимого существующего листинга для этого договора нет. Новая иностранная реализация не сочиняется; статус остаётся lmx_only.
+```haskell
+module R03 where
 
-## Размер полного текста
+import Data.IORef (IORef, newIORef, readIORef, writeIORef)
+
+data Provider = Provider { owner :: IORef Int, readValue :: IO Int }
+
+makeProvider :: Int -> IO Provider
+makeProvider value = do
+  cell <- newIORef value
+  pure (Provider cell (readIORef cell))
+
+copyProvider :: Provider -> IO Provider
+copyProvider provider = readValue provider >>= makeProvider
+
+example :: IO (Int, Int, Int)
+example = do
+  provider <- makeProvider 7
+  let imported = readValue provider
+  original <- imported
+  copied <- copyProvider provider
+  writeIORef (owner copied) 12
+  result <- readValue copied
+  originalAfter <- readValue provider
+  pure (original * 100 + result, originalAfter, result)
+```
+
+[Полный исходник](examples/haskell_comparision/source/haskell/R03.hs).
+
+## Сравнение
+
+| Аспект | LMX | Haskell |
+| --- | --- | --- |
+| Представленные формы | Полные процедурная и функциональная записи | Полный самостоятельный модуль; custom helpers указаны явно |
+| Договор | Импортированный read сохраняет владельца со значением 7; копия получает собственного владельца, запись в него даёт 12, результат 712. | Наблюдения и пределы соответствия описаны выше |
+| Числовой рейтинг | Не применяется к неполной аналогии | Граница аналогии не маскируется совпадением чисел |
+| Метрики этой редакции | Полные актуальные исходники | Полный модуль и необходимые собственные зависимости |
+| Исполнение | NOT_RUN | NOT_RUN |
+
+Все размеры пересчитаны по актуальным исходникам. Обе LMX-формы включают объявления и полные Throws. Пользовательские Haskell-зависимости учитываются в полной границе один раз; несовпадающие механизмы остаются явно отмеченными аналогиями.
+
+## Проверяемые наблюдения
+
+[Контракты и ожидаемые результаты](examples/haskell_comparision/validation/fixtures.json), [исполнимый Haskell harness](examples/haskell_comparision/validation/Main.hs), [команда проверки](examples/haskell_comparision/README.md#проверка). Ожидаемый результат не является протоколом успешного исполнения. GHC в среде подготовки отсутствует; компиляция и выполнение новых модулей не заявлены.
+
+LMX всегда стартует с корня как L3 Thread без DATA и пользовательских аргументов. Именованные операции фикстуры выполняются после старта обычным механизмом вызовов; они не заменяют точку запуска программы.
+
+Источники интерфейсов Haskell: [Haskell 2010 Report: expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html); [base: Data.IORef](https://hackage-content.haskell.org/package/base-4.20.1.0/docs/Data-IORef.html).
+
+## Размер полного исходника
 
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX — процедурный | **226** | 15 |
-| LMX — функциональный | **226** | 15 |
-
-Обе LMX-записи учитываются целиком, включая объявления, общие локальные helpers и Throws. Ошибки не исключаются из подсчёта. Общая реализация ядра не размножается ради стилей. Существующий статус иностранной пары/аналогии сохранён.
-
-Runtime LMX: NOT_RUN. Это публикация исходников, договоров и полных размеров, не новый parser/runtime receipt.
+| LMX — процедурный | 226 | 15 |
+| LMX — функциональный | 226 | 15 |
+| Haskell | 568 | 19 |
 
 <a id="r04"></a>
 ### R04. Computed initializer, local write and repeated activation
 
 ## Общий договор
 
-The module has no counterpart for these computed local initializer and explicit graph/local-write cases. H07 IO actions are not reassigned as coverage for this different contract.
+Повторные активации вычисляемого initializer дают 41 и 42, несмотря на локальную запись 99: 4142 и два вызова. Отдельная явная инициализация даёт 44 и один вызов.
+
+**Сопоставимость: аналогия.** initializer здесь настоящий IO action; каждая активация вызывает его заново и меняет только отдельный local IORef. Счётчик источника общий. Haskell-модель не хранит само вычисляемое объявление в исходном графе программы, поэтому сравнение остаётся семантической аналогией.
+
+## LMX — общая минимальная форма обоих стилей
 
 Инициализатор с побочным эффектом и различие локальной/графовой записи являются предметом проверки. Их порядок, число вызовов и два отдельных entry сохраняются одинаково.
 
-Обоим стилям соответствует одна минимальная форма, необходимая для проверяемого низкоуровневого договора. Её исходник и листинг приведены один раз, значения в обоих столбцах равны. Два разных алгоритма не заявляются.
-
-## LMX — общая минимальная форма обоих стилей
+Оба стилевых варианта ссылаются на один полный исходник; повторный листинг не нужен.
 
 ```lmx
 ReadSource:
@@ -829,35 +1201,81 @@ LocalProbe:
         return: i
 ```
 
-[Полный исходник](examples/lmx/R04.lm3)
+[Полный исходник](examples/haskell_comparision/source/lmx/R04.lm3)
 
 ## Haskell
 
-Сопоставимого существующего листинга для этого договора нет. Новая иностранная реализация не сочиняется; статус остаётся lmx_only.
+```haskell
+module R04 where
 
-## Размер полного текста
+import Data.IORef (newIORef, readIORef, writeIORef, modifyIORef')
+
+changeLocal :: IO Int -> IO Int
+changeLocal initializer = do
+  local <- initializer >>= newIORef
+  seen <- readIORef local
+  writeIORef local 99
+  pure seen
+
+example :: IO ((Int, Int), (Int, Int))
+example = do
+  calls <- newIORef 0
+  let next = modifyIORef' calls (+1) >> ((40+) <$> readIORef calls)
+  first <- changeLocal next
+  second <- changeLocal next
+  twice <- readIORef calls
+  writeIORef calls 0
+  i <- next >>= newIORef
+  modifyIORef' i (+3)
+  explicit <- readIORef i
+  once <- readIORef calls
+  pure ((first * 100 + second, twice), (explicit, once))
+```
+
+[Полный исходник](examples/haskell_comparision/source/haskell/R04.hs).
+
+## Сравнение
+
+| Аспект | LMX | Haskell |
+| --- | --- | --- |
+| Представленные формы | Полные процедурная и функциональная записи | Полный самостоятельный модуль; custom helpers указаны явно |
+| Договор | Повторные активации вычисляемого initializer дают 41 и 42, несмотря на локальную запись 99: 4142 и два вызова. Отдельная явная инициализация даёт 44 и один вызов. | Наблюдения и пределы соответствия описаны выше |
+| Числовой рейтинг | Не применяется к неполной аналогии | Граница аналогии не маскируется совпадением чисел |
+| Метрики этой редакции | Полные актуальные исходники | Полный модуль и необходимые собственные зависимости |
+| Исполнение | NOT_RUN | NOT_RUN |
+
+Все размеры пересчитаны по актуальным исходникам. Обе LMX-формы включают объявления и полные Throws. Пользовательские Haskell-зависимости учитываются в полной границе один раз; несовпадающие механизмы остаются явно отмеченными аналогиями.
+
+## Проверяемые наблюдения
+
+[Контракты и ожидаемые результаты](examples/haskell_comparision/validation/fixtures.json), [исполнимый Haskell harness](examples/haskell_comparision/validation/Main.hs), [команда проверки](examples/haskell_comparision/README.md#проверка). Ожидаемый результат не является протоколом успешного исполнения. GHC в среде подготовки отсутствует; компиляция и выполнение новых модулей не заявлены.
+
+LMX всегда стартует с корня как L3 Thread без DATA и пользовательских аргументов. Именованные операции фикстуры выполняются после старта обычным механизмом вызовов; они не заменяют точку запуска программы.
+
+Источники интерфейсов Haskell: [Haskell 2010 Report: expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html); [base: Data.IORef](https://hackage-content.haskell.org/package/base-4.20.1.0/docs/Data-IORef.html).
+
+## Размер полного исходника
 
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX — процедурный | **383** | 26 |
-| LMX — функциональный | **383** | 26 |
-
-Обе LMX-записи учитываются целиком, включая объявления, общие локальные helpers и Throws. Ошибки не исключаются из подсчёта. Общая реализация ядра не размножается ради стилей. Существующий статус иностранной пары/аналогии сохранён.
-
-Runtime LMX: NOT_RUN. Это публикация исходников, договоров и полных размеров, не новый parser/runtime receipt.
+| LMX — процедурный | 383 | 26 |
+| LMX — функциональный | 383 | 26 |
+| Haskell | 514 | 21 |
 
 <a id="r06a"></a>
 ### R06a. Graph copy preserving shared targets
 
 ## Общий договор
 
-No current Haskell graph-copy implementation preserves and tests shared targets while separating the copy from the original.
+При копировании два ребра на общий узел должны остаться двумя ребрами на один новый узел. Изменение копии на 21 видно через второе ребро; оригинал остаётся 7: 2107.
+
+**Сопоставимость: аналогия.** Используется общий алгоритм GraphCopy с таблицей посещённых IORef, а не заранее изготовленная правильная пара. Фикстура проверяет равенство copied left/right и отличие от оригинала. Модель копирует узлы и рёбра явно заданного графа; правила DATA, parent и исполняемых узлов LMX в неё не включены.
+
+## LMX — общая минимальная форма обоих стилей
 
 Оба стиля должны выполнить настоящий graph copy и проверить сохранённую общую цель после записи. Числовая имитация или сборка новой записи не эквивалентна этому договору.
 
-Обоим стилям соответствует одна минимальная форма, необходимая для проверяемого низкоуровневого договора. Её исходник и листинг приведены один раз, значения в обоих столбцах равны. Два разных алгоритма не заявляются.
-
-## LMX — общая минимальная форма обоих стилей
+Оба стилевых варианта ссылаются на один полный исходник; повторный листинг не нужен.
 
 ```lmx
 SharedValue:
@@ -875,35 +1293,76 @@ SharingProbe:
         return: copied\right\value * 100 + SharedValue\value
 ```
 
-[Полный исходник](examples/lmx/R06a.lm3)
+[Полный исходник](examples/haskell_comparision/source/lmx/R06a.lm3)
 
 ## Haskell
 
-Сопоставимого существующего листинга для этого договора нет. Новая иностранная реализация не сочиняется; статус остаётся lmx_only.
+```haskell
+module R06a where
 
-## Размер полного текста
+import Data.IORef (newIORef, readIORef, modifyIORef')
+import GraphCopy (Node(..), copyGraph)
+
+example :: IO (Int, Bool, Bool)
+example = do
+  shared <- newIORef (Node 7 [])
+  pair <- newIORef (Node 0 [shared,shared])
+  copied <- copyGraph pair
+  Node _ [left,right] <- readIORef copied
+  modifyIORef' left (\(Node _ links) -> Node 21 links)
+  Node rightValue _ <- readIORef right
+  Node originalValue _ <- readIORef shared
+  pure (rightValue * 100 + originalValue, left == right, left /= shared)
+```
+
+[Полный исходник](examples/haskell_comparision/source/haskell/R06a.hs).
+Обязательная пользовательская зависимость: [GraphCopy — полный код](examples/haskell_comparision/library_comparisons/graphCopy.md), [исходник](examples/haskell_comparision/source/haskell/GraphCopy.hs). Она входит в границу реализации; её нельзя считать стандартной библиотекой или скрывать при будущем подсчёте.
+
+
+## Сравнение
+
+| Аспект | LMX | Haskell |
+| --- | --- | --- |
+| Представленные формы | Полные процедурная и функциональная записи | Полный самостоятельный модуль; custom helpers указаны явно |
+| Договор | При копировании два ребра на общий узел должны остаться двумя ребрами на один новый узел. Изменение копии на 21 видно через второе ребро; оригинал остаётся 7: 2107. | Наблюдения и пределы соответствия описаны выше |
+| Числовой рейтинг | Не применяется к неполной аналогии | Граница аналогии не маскируется совпадением чисел |
+| Метрики этой редакции | Полные актуальные исходники | Полный модуль и необходимые собственные зависимости |
+| Исполнение | NOT_RUN | NOT_RUN |
+
+Все размеры пересчитаны по актуальным исходникам. Обе LMX-формы включают объявления и полные Throws. Пользовательские Haskell-зависимости учитываются в полной границе один раз; несовпадающие механизмы остаются явно отмеченными аналогиями.
+
+## Проверяемые наблюдения
+
+[Контракты и ожидаемые результаты](examples/haskell_comparision/validation/fixtures.json), [исполнимый Haskell harness](examples/haskell_comparision/validation/Main.hs), [команда проверки](examples/haskell_comparision/README.md#проверка). Ожидаемый результат не является протоколом успешного исполнения. GHC в среде подготовки отсутствует; компиляция и выполнение новых модулей не заявлены.
+
+LMX всегда стартует с корня как L3 Thread без DATA и пользовательских аргументов. Именованные операции фикстуры выполняются после старта обычным механизмом вызовов; они не заменяют точку запуска программы.
+
+Источники интерфейсов Haskell: [Haskell 2010 Report: expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html); [base: Data.IORef](https://hackage-content.haskell.org/package/base-4.20.1.0/docs/Data-IORef.html).
+
+## Размер полного исходника
 
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX — процедурный | **189** | 11 |
-| LMX — функциональный | **189** | 11 |
+| LMX — процедурный | 189 | 11 |
+| LMX — функциональный | 189 | 11 |
+| Haskell | 909 | 31 |
 
-Обе LMX-записи учитываются целиком, включая объявления, общие локальные helpers и Throws. Ошибки не исключаются из подсчёта. Общая реализация ядра не размножается ради стилей. Существующий статус иностранной пары/аналогии сохранён.
-
-Runtime LMX: NOT_RUN. Это публикация исходников, договоров и полных размеров, не новый parser/runtime receipt.
+Включены зависимости: `haskell_comparision/source/haskell/GraphCopy.hs`.
 
 <a id="r06b"></a>
 ### R06b. Graph copy preserving a cycle
 
 ## Общий договор
 
-No current Haskell graph-copy implementation preserves and tests the self-cycle while separating it from the original.
+Копия self-cycle должна замыкаться на себя, а не на исходный Ring. После записи 8 исходный Ring остаётся 3: 83.
+
+**Сопоставимость: аналогия.** Тот же GraphCopy заносит новый узел в memo до обхода его рёбер, поэтому цикл завершается и сохраняется. Проверяются self==copy, copy/=original и прежнее значение отдельного снимка 3. Снимок не объявляется реализацией LMX-группирующей структуры с собственными ячейками; этот графовый аспект остаётся за пределом модели.
+
+## LMX — общая минимальная форма обоих стилей
 
 Оба стиля обязаны сохранить и проверить цикл графа. copy, запись через self и чтение исходника — минимальные необходимые операции.
 
-Обоим стилям соответствует одна минимальная форма, необходимая для проверяемого низкоуровневого договора. Её исходник и листинг приведены один раз, значения в обоих столбцах равны. Два разных алгоритма не заявляются.
-
-## LMX — общая минимальная форма обоих стилей
+Оба стилевых варианта ссылаются на один полный исходник; повторный листинг не нужен.
 
 ```lmx
 Ring:
@@ -919,35 +1378,76 @@ CycleProbe:
         return: copied\self\value * 10 + Ring\value
 ```
 
-[Полный исходник](examples/lmx/R06b.lm3)
+[Полный исходник](examples/haskell_comparision/source/lmx/R06b.lm3)
 
 ## Haskell
 
-Сопоставимого существующего листинга для этого договора нет. Новая иностранная реализация не сочиняется; статус остаётся lmx_only.
+```haskell
+module R06b where
 
-## Размер полного текста
+import Data.IORef (newIORef, readIORef, writeIORef, modifyIORef')
+import GraphCopy (Node(..), copyGraph)
+
+example :: IO (Int, Bool, Bool, Int)
+example = do
+  ring <- newIORef (Node 3 [])
+  writeIORef ring (Node 3 [ring])
+  copied <- copyGraph ring
+  Node snapshotValue [self] <- readIORef copied
+  modifyIORef' self (\(Node _ links) -> Node 8 links)
+  Node value _ <- readIORef copied
+  Node original _ <- readIORef ring
+  pure (value * 10 + original, self == copied, copied /= ring, snapshotValue)
+```
+
+[Полный исходник](examples/haskell_comparision/source/haskell/R06b.hs).
+Обязательная пользовательская зависимость: [GraphCopy — полный код](examples/haskell_comparision/library_comparisons/graphCopy.md), [исходник](examples/haskell_comparision/source/haskell/GraphCopy.hs). Она входит в границу реализации; её нельзя считать стандартной библиотекой или скрывать при будущем подсчёте.
+
+
+## Сравнение
+
+| Аспект | LMX | Haskell |
+| --- | --- | --- |
+| Представленные формы | Полные процедурная и функциональная записи | Полный самостоятельный модуль; custom helpers указаны явно |
+| Договор | Копия self-cycle должна замыкаться на себя, а не на исходный Ring. После записи 8 исходный Ring остаётся 3: 83. | Наблюдения и пределы соответствия описаны выше |
+| Числовой рейтинг | Не применяется к неполной аналогии | Граница аналогии не маскируется совпадением чисел |
+| Метрики этой редакции | Полные актуальные исходники | Полный модуль и необходимые собственные зависимости |
+| Исполнение | NOT_RUN | NOT_RUN |
+
+Все размеры пересчитаны по актуальным исходникам. Обе LMX-формы включают объявления и полные Throws. Пользовательские Haskell-зависимости учитываются в полной границе один раз; несовпадающие механизмы остаются явно отмеченными аналогиями.
+
+## Проверяемые наблюдения
+
+[Контракты и ожидаемые результаты](examples/haskell_comparision/validation/fixtures.json), [исполнимый Haskell harness](examples/haskell_comparision/validation/Main.hs), [команда проверки](examples/haskell_comparision/README.md#проверка). Ожидаемый результат не является протоколом успешного исполнения. GHC в среде подготовки отсутствует; компиляция и выполнение новых модулей не заявлены.
+
+LMX всегда стартует с корня как L3 Thread без DATA и пользовательских аргументов. Именованные операции фикстуры выполняются после старта обычным механизмом вызовов; они не заменяют точку запуска программы.
+
+Источники интерфейсов Haskell: [Haskell 2010 Report: expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html); [base: Data.IORef](https://hackage-content.haskell.org/package/base-4.20.1.0/docs/Data-IORef.html).
+
+## Размер полного исходника
 
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX — процедурный | **139** | 10 |
-| LMX — функциональный | **139** | 10 |
+| LMX — процедурный | 139 | 10 |
+| LMX — функциональный | 139 | 10 |
+| Haskell | 911 | 31 |
 
-Обе LMX-записи учитываются целиком, включая объявления, общие локальные helpers и Throws. Ошибки не исключаются из подсчёта. Общая реализация ядра не размножается ради стилей. Существующий статус иностранной пары/аналогии сохранён.
-
-Runtime LMX: NOT_RUN. Это публикация исходников, договоров и полных размеров, не новый parser/runtime receipt.
+Включены зависимости: `haskell_comparision/source/haskell/GraphCopy.hs`.
 
 <a id="r07"></a>
 ### R07. User operand and preserved computation
 
 ## Общий договор
 
-The explicit Haskell syntax tree yields the same arithmetic result 20. It is a manually defined AST and interpreter, not a user operand integrated into the ordinary parser and retained LMX graph.
+Одна сохранённая вычислительная форма (n+3)+n выполняется для 2 и 5; сумма 20.
+
+**Сопоставимость: аналогия.** Haskell строит один явный AST и исполняет его общим eval с разными значениями переменной. Это не пользовательский операнд, встроенный в обычный парсер Haskell, и не гомоиконный граф LMX. Арифметика и повторное использование формы воспроизводятся, синтаксическая инфраструктура различается.
+
+## LMX — общая минимальная форма обоих стилей
 
 Это упражнение самого пользовательского операнда в обычном Expression, а не только вычисления числа20. Общий шаблон и форма вызова обязательны в обоих стилях.
 
-Обоим стилям соответствует одна минимальная форма, необходимая для проверяемого низкоуровневого договора. Её исходник и листинг приведены один раз, значения в обоих столбцах равны. Два разных алгоритма не заявляются.
-
-## LMX — общая минимальная форма обоих стилей
+Оба стилевых варианта ссылаются на один полный исходник; повторный листинг не нужен.
 
 ```lmx
 Operands:
@@ -964,35 +1464,71 @@ Operands:
             return: calculate(2) + calculate(5)
 ```
 
-[Полный исходник](examples/lmx/R07.lm3)
+[Полный исходник](examples/haskell_comparision/source/lmx/R07.lm3)
 
 ## Haskell
 
-Сопоставимого существующего листинга для этого договора нет. Новая иностранная реализация не сочиняется; статус остаётся lmx_only.
+```haskell
+module R07 where
 
-## Размер полного текста
+data Expr = Number Int | Variable | Add Expr Expr
+
+eval :: Int -> Expr -> Int
+eval _ (Number n) = n
+eval x Variable = x
+eval x (Add a b) = eval x a + eval x b
+
+tree :: Expr
+tree = Add (Add Variable (Number 3)) Variable
+
+example :: Int
+example = eval 2 tree + eval 5 tree
+```
+
+[Полный исходник](examples/haskell_comparision/source/haskell/R07.hs).
+
+## Сравнение
+
+| Аспект | LMX | Haskell |
+| --- | --- | --- |
+| Представленные формы | Полные процедурная и функциональная записи | Полный самостоятельный модуль; custom helpers указаны явно |
+| Договор | Одна сохранённая вычислительная форма (n+3)+n выполняется для 2 и 5; сумма 20. | Наблюдения и пределы соответствия описаны выше |
+| Числовой рейтинг | Не применяется к неполной аналогии | Граница аналогии не маскируется совпадением чисел |
+| Метрики этой редакции | Полные актуальные исходники | Полный модуль и необходимые собственные зависимости |
+| Исполнение | NOT_RUN | NOT_RUN |
+
+Все размеры пересчитаны по актуальным исходникам. Обе LMX-формы включают объявления и полные Throws. Пользовательские Haskell-зависимости учитываются в полной границе один раз; несовпадающие механизмы остаются явно отмеченными аналогиями.
+
+## Проверяемые наблюдения
+
+[Контракты и ожидаемые результаты](examples/haskell_comparision/validation/fixtures.json), [исполнимый Haskell harness](examples/haskell_comparision/validation/Main.hs), [команда проверки](examples/haskell_comparision/README.md#проверка). Ожидаемый результат не является протоколом успешного исполнения. GHC в среде подготовки отсутствует; компиляция и выполнение новых модулей не заявлены.
+
+LMX всегда стартует с корня как L3 Thread без DATA и пользовательских аргументов. Именованные операции фикстуры выполняются после старта обычным механизмом вызовов; они не заменяют точку запуска программы.
+
+Источники интерфейсов Haskell: [Haskell 2010 Report: expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html).
+
+## Размер полного исходника
 
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX — процедурный | **159** | 12 |
-| LMX — функциональный | **159** | 12 |
-
-Обе LMX-записи учитываются целиком, включая объявления, общие локальные helpers и Throws. Ошибки не исключаются из подсчёта. Общая реализация ядра не размножается ради стилей. Существующий статус иностранной пары/аналогии сохранён.
-
-Runtime LMX: NOT_RUN. Это публикация исходников, договоров и полных размеров, не новый parser/runtime receipt.
+| LMX — процедурный | 159 | 12 |
+| LMX — функциональный | 159 | 12 |
+| Haskell | 217 | 10 |
 
 <a id="r09"></a>
 ### R09. Uninitialized payload and local versus graph write
 
 ## Общий договор
 
-The module contains no counterpart for uninitialized zero-payload primitive/reference records or the distinct local and graph write paths.
+Различить отсутствие инициализации и готовый ноль; локальная запись даёт 5 без изменения источника, графовая запись заменяет исходное состояние на Ready 5.
+
+**Сопоставимость: аналогия.** Payload моделирует тег состояния: Uninitialized отличается от Ready 0 и Ready Nothing. Копия IORef используется для локальной записи, исходный IORef — для graphWrite. Конструктор Uninitialized не означает физический нулевой payload LMX; ни размер памяти, ни адресная идентичность представлены этим сравнением не полностью.
+
+## LMX — общая минимальная форма обоих стилей
 
 Неинициализированные поля и отдельные пути локальной/графовой записи нельзя заменить значениями-константами. Минимальная форма одинакова.
 
-Обоим стилям соответствует одна минимальная форма, необходимая для проверяемого низкоуровневого договора. Её исходник и листинг приведены один раз, значения в обоих столбцах равны. Два разных алгоритма не заявляются.
-
-## LMX — общая минимальная форма обоих стилей
+Оба стилевых варианта ссылаются на один полный исходник; повторный листинг не нужен.
 
 ```lmx
 UninitializedGraph:
@@ -1011,35 +1547,79 @@ ReadyValues:
     @: reference 0
 ```
 
-[Полный исходник](examples/lmx/R09.lm3)
+[Полный исходник](examples/haskell_comparision/source/lmx/R09.lm3)
 
 ## Haskell
 
-Сопоставимого существующего листинга для этого договора нет. Новая иностранная реализация не сочиняется; статус остаётся lmx_only.
+```haskell
+module R09 where
 
-## Размер полного текста
+import Data.IORef (IORef, newIORef, readIORef, writeIORef)
+
+data Payload a = Uninitialized | Ready a deriving (Eq, Show)
+
+localWrite, graphWrite :: IORef (Payload Int) -> IO Int
+localWrite source = do
+  local <- readIORef source >>= newIORef
+  writeIORef local (Ready 5)
+  Ready value <- readIORef local
+  pure value
+graphWrite source = do
+  writeIORef source (Ready 5)
+  Ready value <- readIORef source
+  pure value
+
+readyNumber :: Payload Int
+readyNumber = Ready 0
+
+readyReference :: Payload (Maybe Int)
+readyReference = Ready Nothing
+```
+
+[Полный исходник](examples/haskell_comparision/source/haskell/R09.hs).
+
+## Сравнение
+
+| Аспект | LMX | Haskell |
+| --- | --- | --- |
+| Представленные формы | Полные процедурная и функциональная записи | Полный самостоятельный модуль; custom helpers указаны явно |
+| Договор | Различить отсутствие инициализации и готовый ноль; локальная запись даёт 5 без изменения источника, графовая запись заменяет исходное состояние на Ready 5. | Наблюдения и пределы соответствия описаны выше |
+| Числовой рейтинг | Не применяется к неполной аналогии | Граница аналогии не маскируется совпадением чисел |
+| Метрики этой редакции | Полные актуальные исходники | Полный модуль и необходимые собственные зависимости |
+| Исполнение | NOT_RUN | NOT_RUN |
+
+Все размеры пересчитаны по актуальным исходникам. Обе LMX-формы включают объявления и полные Throws. Пользовательские Haskell-зависимости учитываются в полной границе один раз; несовпадающие механизмы остаются явно отмеченными аналогиями.
+
+## Проверяемые наблюдения
+
+[Контракты и ожидаемые результаты](examples/haskell_comparision/validation/fixtures.json), [исполнимый Haskell harness](examples/haskell_comparision/validation/Main.hs), [команда проверки](examples/haskell_comparision/README.md#проверка). Ожидаемый результат не является протоколом успешного исполнения. GHC в среде подготовки отсутствует; компиляция и выполнение новых модулей не заявлены.
+
+LMX всегда стартует с корня как L3 Thread без DATA и пользовательских аргументов. Именованные операции фикстуры выполняются после старта обычным механизмом вызовов; они не заменяют точку запуска программы.
+
+Источники интерфейсов Haskell: [Haskell 2010 Report: expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html); [base: Data.IORef](https://hackage-content.haskell.org/package/base-4.20.1.0/docs/Data-IORef.html).
+
+## Размер полного исходника
 
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX — процедурный | **189** | 13 |
-| LMX — функциональный | **189** | 13 |
-
-Обе LMX-записи учитываются целиком, включая объявления, общие локальные helpers и Throws. Ошибки не исключаются из подсчёта. Общая реализация ядра не размножается ради стилей. Существующий статус иностранной пары/аналогии сохранён.
-
-Runtime LMX: NOT_RUN. Это публикация исходников, договоров и полных размеров, не новый parser/runtime receipt.
+| LMX — процедурный | 189 | 13 |
+| LMX — функциональный | 189 | 13 |
+| Haskell | 454 | 17 |
 
 <a id="a01"></a>
 ### A01. Shared structural slots and replacement field identity
 
 ## Общий договор
 
-The module has an A02 immutable numeric-array update, but no A01 shared structural descriptor/slot replacement that changes the visible field identity to z. The A02 listing is not relabelled as A01.
+Две ссылки выбирают одну структуру слотов; замена второго поля y на z сохраняет длину 2 и делает z=9 видимым через исходную ссылку: 209.
+
+**Сопоставимость: аналогия.** Общий IORef списка Field передаёт изменение через обе ссылки. Заменяется целый Field, включая имя, а не только число. Это явная модель дескриптора с именами; она не приписывает обычным Haskell-record полям возможность менять их имена и не моделирует все правила идентичности примитивов LMX.
+
+## LMX — общая минимальная форма обоих стилей
 
 Проверяется замена структурной позиции с изменением видимого имени поля и сохранением общего descriptor. Нужна настоящая запись в слот; обе формы минимально совпадают.
 
-Обоим стилям соответствует одна минимальная форма, необходимая для проверяемого низкоуровневого договора. Её исходник и листинг приведены один раз, значения в обоих столбцах равны. Два разных алгоритма не заявляются.
-
-## LMX — общая минимальная форма обоих стилей
+Оба стилевых варианта ссылаются на один полный исходник; повторный листинг не нужен.
 
 ```lmx
 Slots:
@@ -1057,31 +1637,69 @@ SlotProbe:
         return: length(Slots) * 100 + Slots\z
 ```
 
-[Полный исходник](examples/lmx/A01.lm3)
+[Полный исходник](examples/haskell_comparision/source/lmx/A01.lm3)
 
 ## Haskell
 
-Сопоставимого существующего листинга для этого договора нет. Новая иностранная реализация не сочиняется; статус остаётся lmx_only.
+```haskell
+module A01 where
 
-## Размер полного текста
+import Data.IORef (newIORef, readIORef, modifyIORef')
+
+data Field = Field { name :: String, value :: Int } deriving (Eq, Show)
+
+replaceAt :: Int -> a -> [a] -> [a]
+replaceAt index replacement xs = take index xs ++ [replacement] ++ drop (index+1) xs
+
+example :: IO (Int, [String])
+example = do
+  slots <- newIORef [Field "x" 1, Field "y" 2]
+  let same = slots
+      replacement = [Field "z" 9]
+  modifyIORef' same (replaceAt 1 (head replacement))
+  fields <- readIORef slots
+  let Just z = lookup "z" [(name field,value field) | field <- fields]
+  pure (length fields * 100 + z, map name fields)
+```
+
+[Полный исходник](examples/haskell_comparision/source/haskell/A01.hs).
+
+## Сравнение
+
+| Аспект | LMX | Haskell |
+| --- | --- | --- |
+| Представленные формы | Полные процедурная и функциональная записи | Полный самостоятельный модуль; custom helpers указаны явно |
+| Договор | Две ссылки выбирают одну структуру слотов; замена второго поля y на z сохраняет длину 2 и делает z=9 видимым через исходную ссылку: 209. | Наблюдения и пределы соответствия описаны выше |
+| Числовой рейтинг | Не применяется к неполной аналогии | Граница аналогии не маскируется совпадением чисел |
+| Метрики этой редакции | Полные актуальные исходники | Полный модуль и необходимые собственные зависимости |
+| Исполнение | NOT_RUN | NOT_RUN |
+
+Все размеры пересчитаны по актуальным исходникам. Обе LMX-формы включают объявления и полные Throws. Пользовательские Haskell-зависимости учитываются в полной границе один раз; несовпадающие механизмы остаются явно отмеченными аналогиями.
+
+## Проверяемые наблюдения
+
+[Контракты и ожидаемые результаты](examples/haskell_comparision/validation/fixtures.json), [исполнимый Haskell harness](examples/haskell_comparision/validation/Main.hs), [команда проверки](examples/haskell_comparision/README.md#проверка). Ожидаемый результат не является протоколом успешного исполнения. GHC в среде подготовки отсутствует; компиляция и выполнение новых модулей не заявлены.
+
+LMX всегда стартует с корня как L3 Thread без DATA и пользовательских аргументов. Именованные операции фикстуры выполняются после старта обычным механизмом вызовов; они не заменяют точку запуска программы.
+
+Источники интерфейсов Haskell: [Haskell 2010 Report: expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html); [base: Data.IORef](https://hackage-content.haskell.org/package/base-4.20.1.0/docs/Data-IORef.html).
+
+## Размер полного исходника
 
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX — процедурный | **126** | 11 |
-| LMX — функциональный | **126** | 11 |
-
-Обе LMX-записи учитываются целиком, включая объявления, общие локальные helpers и Throws. Ошибки не исключаются из подсчёта. Общая реализация ядра не размножается ради стилей. Существующий статус иностранной пары/аналогии сохранён.
-
-Runtime LMX: NOT_RUN. Это публикация исходников, договоров и полных размеров, не новый parser/runtime receipt.
+| LMX — процедурный | 126 | 11 |
+| LMX — функциональный | 126 | 11 |
+| Haskell | 486 | 14 |
 
 <a id="v02"></a>
 ### V02. Whole ASCII ticket-code predicate
 
 ## Общий договор
 
-Complete whole-string predicate for exactly two ASCII uppercase letters, hyphen, two ASCII digits. The five-element list pattern enforces length; inRange checks ASCII endpoints. All eleven current fixtures agree, including NUL, non-ASCII letter and non-ASCII digit rejection. Haskell String and LMX char[] use their ordinary character-sequence representations; no locale-dependent character class is introduced.
+Принять всю строку ровно из двух ASCII A–Z, дефиса и двух ASCII 0–9. Проверяются одиннадцать входов, включая NUL и не-ASCII символы.
 
-Процедурный вариант перебирает позиции и проверяет ASCII-границы явно. Функциональный строит общий Pattern и применяет matches к полному byteText. Договор — ровно две ASCII-буквы, дефис и две ASCII-цифры.
+**Сопоставимость: полная пара.** Пятиэлементный pattern match задаёт точную длину; inRange проверяет ASCII-границы. Нет поиска подстроки, locale-зависимых классов или предварительной очистки входа. Bool нормализуется как False→0, True→1. Исходный процедурный LMX с проверенным разделителем --- сохранён без изменения.
 
 ## LMX — процедурный
 
@@ -1107,8 +1725,7 @@ TicketCode:
         return: candidate[2] = '-'
 ```
 
-[Полный исходник](examples/lmx/procedural/V02.lm3)
-
+[Полный исходник](examples/haskell_comparision/source/lmx/procedural/V02.lm3)
 ## LMX — функциональный
 
 ```lmx
@@ -1120,11 +1737,13 @@ TicketCode:
         return: matches(byteText(candidate); (within("A"; "Z") times 2) then "-" then (asciiDigit times 2))
 ```
 
-[Полный исходник](examples/lmx/V02.lm3)
+[Полный исходник](examples/haskell_comparision/source/lmx/V02.lm3)
 
 ## Haskell
 
 ```haskell
+module V02 where
+
 import Data.Ix (inRange)
 
 accepts :: String -> Bool
@@ -1134,26 +1753,44 @@ accepts [a,b,'-',c,d] =
 accepts _ = False
 ```
 
-## Размер полного текста
+[Полный исходник](examples/haskell_comparision/source/haskell/V02.hs).
+
+## Сравнение
+
+| Аспект | LMX | Haskell |
+| --- | --- | --- |
+| Представленные формы | Полные процедурная и функциональная записи | Полный самостоятельный модуль; custom helpers указаны явно |
+| Договор | Принять всю строку ровно из двух ASCII A–Z, дефиса и двух ASCII 0–9. Проверяются одиннадцать входов, включая NUL и не-ASCII символы. | Наблюдения и пределы соответствия описаны выше |
+| Числовой рейтинг | Полный сопоставимый текст | Тот же полный договор |
+| Метрики этой редакции | Полные актуальные исходники | Полный модуль и необходимые собственные зависимости |
+| Исполнение | NOT_RUN | NOT_RUN |
+
+Все размеры пересчитаны по актуальным исходникам. Обе LMX-формы включают объявления и полные Throws. Пользовательские Haskell-зависимости учитываются в полной границе один раз; несовпадающие механизмы остаются явно отмеченными аналогиями.
+
+## Проверяемые наблюдения
+
+[Контракты и ожидаемые результаты](examples/haskell_comparision/validation/fixtures.json), [исполнимый Haskell harness](examples/haskell_comparision/validation/Main.hs), [команда проверки](examples/haskell_comparision/README.md#проверка). Ожидаемый результат не является протоколом успешного исполнения. GHC в среде подготовки отсутствует; компиляция и выполнение новых модулей не заявлены.
+
+LMX всегда стартует с корня как L3 Thread без DATA и пользовательских аргументов. Именованные операции фикстуры выполняются после старта обычным механизмом вызовов; они не заменяют точку запуска программы.
+
+Источники интерфейсов Haskell: [Haskell 2010 Report: expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html); [base: Data.Ix](https://hackage-content.haskell.org/package/base-4.20.1.0/docs/Data-Ix.html).
+
+## Размер полного исходника
 
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX — процедурный | 223 | 18 |
+| LMX — процедурный | 226 | 19 |
 | LMX — функциональный | 160 | 6 |
-| Haskell | **132** | 6 |
-
-Обе LMX-записи учитываются целиком, включая объявления, общие локальные helpers и Throws. Ошибки не исключаются из подсчёта. Общая реализация ядра не размножается ради стилей. Существующий статус иностранной пары/аналогии сохранён.
-
-Runtime LMX: NOT_RUN. Это публикация исходников, договоров и полных размеров, не новый parser/runtime receipt.
+| Haskell | <span style="color:#176233"><u>146</u></span> | 7 |
 
 <a id="v03"></a>
 ### V03. Inject a read dependency and check interaction counts
 
 ## Общий договор
 
-The Good/Biased/ReadsTwice fixtures and read counts are represented. However, the Haskell checker takes a closed SampleVariant rather than the arbitrary candidate callable accepted by the LMX checker, and passes its read dependency explicitly. Treating it as a complete generic injection/checker implementation would overstate the existing source.
+Checker принимает произвольный кандидат, внедряет read, проверяет результат 28 и ровно одно чтение. Good: True/1, biased: False/1, readsTwice: False/2.
 
-Процедурный вариант ветвится по результату; функциональный соединяет проверки выражением. Сам candidate вызывается ровно один раз, счётчик чтений сохраняется.
+**Сопоставимость: полная пара.** В отличие от прежнего закрытого SampleVariant, checker получает функцию Candidate. Общая sample используется вариантами biased и readsTwice, повторный read действительно выполняется. Haskell передаёт gain и read явно; LMX связывает их через текущий контекст. Наблюдаемый договор checker и три отрицательных/положительных случая совпадают.
 
 ## LMX — процедурный
 
@@ -1186,8 +1823,7 @@ SamplingCheck:
         return: node\calls = 1
 ```
 
-[Полный исходник](examples/lmx/procedural/V03.lm3)
-
+[Полный исходник](examples/haskell_comparision/source/lmx/procedural/V03.lm3)
 ## LMX — функциональный
 
 ```lmx
@@ -1217,35 +1853,75 @@ SamplingCheck:
         return: result = 28 && node\calls = 1
 ```
 
-[Полный исходник](examples/lmx/V03.lm3)
+[Полный исходник](examples/haskell_comparision/source/lmx/V03.lm3)
 
 ## Haskell
 
-Сопоставимого существующего листинга для этого договора нет. Новая иностранная реализация не сочиняется; статус остаётся lmx_only.
+```haskell
+module V03 where
 
-## Размер полного текста
+import Data.IORef (newIORef, readIORef, modifyIORef')
+
+type Candidate = Int -> IO Int -> IO Int
+
+sample, biased, readsTwice :: Candidate
+sample gain readSample = (*gain) <$> readSample
+biased gain readSample = (+1) <$> sample gain readSample
+readsTwice gain readSample = readSample >> sample gain readSample
+
+check :: Candidate -> IO (Bool, Int)
+check candidate = do
+  calls <- newIORef 0
+  let fixedRead = modifyIORef' calls (+1) >> pure 7
+  result <- candidate 4 fixedRead
+  count <- readIORef calls
+  pure (result == 28 && count == 1, count)
+```
+
+[Полный исходник](examples/haskell_comparision/source/haskell/V03.hs).
+
+## Сравнение
+
+| Аспект | LMX | Haskell |
+| --- | --- | --- |
+| Представленные формы | Полные процедурная и функциональная записи | Полный самостоятельный модуль; custom helpers указаны явно |
+| Договор | Checker принимает произвольный кандидат, внедряет read, проверяет результат 28 и ровно одно чтение. Good: True/1, biased: False/1, readsTwice: False/2. | Наблюдения и пределы соответствия описаны выше |
+| Числовой рейтинг | Полный сопоставимый текст | Тот же полный договор |
+| Метрики этой редакции | Полные актуальные исходники | Полный модуль и необходимые собственные зависимости |
+| Исполнение | NOT_RUN | NOT_RUN |
+
+Все размеры пересчитаны по актуальным исходникам. Обе LMX-формы включают объявления и полные Throws. Пользовательские Haskell-зависимости учитываются в полной границе один раз; несовпадающие механизмы остаются явно отмеченными аналогиями.
+
+## Проверяемые наблюдения
+
+[Контракты и ожидаемые результаты](examples/haskell_comparision/validation/fixtures.json), [исполнимый Haskell harness](examples/haskell_comparision/validation/Main.hs), [команда проверки](examples/haskell_comparision/README.md#проверка). Ожидаемый результат не является протоколом успешного исполнения. GHC в среде подготовки отсутствует; компиляция и выполнение новых модулей не заявлены.
+
+LMX всегда стартует с корня как L3 Thread без DATA и пользовательских аргументов. Именованные операции фикстуры выполняются после старта обычным механизмом вызовов; они не заменяют точку запуска программы.
+
+Источники интерфейсов Haskell: [Haskell 2010 Report: expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html); [base: Data.IORef](https://hackage-content.haskell.org/package/base-4.20.1.0/docs/Data-IORef.html).
+
+## Размер полного исходника
 
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
 | LMX — процедурный | 308 | 25 |
-| LMX — функциональный | **298** | 23 |
-
-Обе LMX-записи учитываются целиком, включая объявления, общие локальные helpers и Throws. Ошибки не исключаются из подсчёта. Общая реализация ядра не размножается ради стилей. Существующий статус иностранной пары/аналогии сохранён.
-
-Runtime LMX: NOT_RUN. Это публикация исходников, договоров и полных размеров, не новый parser/runtime receipt.
+| LMX — функциональный | <span style="color:#176233"><u>298</u></span> | 23 |
+| Haskell | 459 | 14 |
 
 <a id="v04"></a>
 ### V04. Distinguish a named failure from a numeric result
 
 ## Общий договор
 
-No current Haskell definition checks the current named NoSample failure against an ordinary zero return.
+Распознать именно именованную ошибку NoSample; обычный числовой ноль ошибкой не считается.
+
+**Сопоставимость: полная пара.** NoSample — отдельный тип Exception. catch обрабатывает только этот тип; zero успешно возвращает 0 и checker возвращает 0. Другая ошибка не поглощается. В сравнении показаны объявления исключения, throwIO и весь обработчик, без ручного сравнения строк имени ошибки.
+
+## LMX — общая минимальная форма обоих стилей
 
 Именованный catch отличает NoSample от нормального нулевого результата. Его минимальная прямая форма общая; универсальное recover изменило бы границу типов/ошибок.
 
-Обоим стилям соответствует одна минимальная форма, необходимая для проверяемого низкоуровневого договора. Её исходник и листинг приведены один раз, значения в обоих столбцах равны. Два разных алгоритма не заявляются.
-
-## LMX — общая минимальная форма обоих стилей
+Оба стилевых варианта ссылаются на один полный исходник; повторный листинг не нужен.
 
 ```lmx
 UnavailableSensor:
@@ -1266,35 +1942,70 @@ FailureCheck:
             return: 1
 ```
 
-[Полный исходник](examples/lmx/V04.lm3)
+[Полный исходник](examples/haskell_comparision/source/lmx/V04.lm3)
 
 ## Haskell
 
-Сопоставимого существующего листинга для этого договора нет. Новая иностранная реализация не сочиняется; статус остаётся lmx_only.
+```haskell
+module V04 where
 
-## Размер полного текста
+import Control.Exception (Exception, catch, throwIO)
+
+data NoSample = NoSample deriving Show
+instance Exception NoSample
+
+unavailable, zero :: IO Int
+unavailable = throwIO NoSample
+zero = pure 0
+
+check :: IO Int -> IO Int
+check candidate = (candidate >> pure 0) `catch` (\NoSample -> pure 1)
+```
+
+[Полный исходник](examples/haskell_comparision/source/haskell/V04.hs).
+
+## Сравнение
+
+| Аспект | LMX | Haskell |
+| --- | --- | --- |
+| Представленные формы | Полные процедурная и функциональная записи | Полный самостоятельный модуль; custom helpers указаны явно |
+| Договор | Распознать именно именованную ошибку NoSample; обычный числовой ноль ошибкой не считается. | Наблюдения и пределы соответствия описаны выше |
+| Числовой рейтинг | Полный сопоставимый текст | Тот же полный договор |
+| Метрики этой редакции | Полные актуальные исходники | Полный модуль и необходимые собственные зависимости |
+| Исполнение | NOT_RUN | NOT_RUN |
+
+Все размеры пересчитаны по актуальным исходникам. Обе LMX-формы включают объявления и полные Throws. Пользовательские Haskell-зависимости учитываются в полной границе один раз; несовпадающие механизмы остаются явно отмеченными аналогиями.
+
+## Проверяемые наблюдения
+
+[Контракты и ожидаемые результаты](examples/haskell_comparision/validation/fixtures.json), [исполнимый Haskell harness](examples/haskell_comparision/validation/Main.hs), [команда проверки](examples/haskell_comparision/README.md#проверка). Ожидаемый результат не является протоколом успешного исполнения. GHC в среде подготовки отсутствует; компиляция и выполнение новых модулей не заявлены.
+
+LMX всегда стартует с корня как L3 Thread без DATA и пользовательских аргументов. Именованные операции фикстуры выполняются после старта обычным механизмом вызовов; они не заменяют точку запуска программы.
+
+Источники интерфейсов Haskell: [Haskell 2010 Report: expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html); [base: Control.Exception](https://hackage-content.haskell.org/package/base-4.20.1.0/docs/Control-Exception.html).
+
+## Размер полного исходника
 
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX — процедурный | **160** | 15 |
-| LMX — функциональный | **160** | 15 |
-
-Обе LMX-записи учитываются целиком, включая объявления, общие локальные helpers и Throws. Ошибки не исключаются из подсчёта. Общая реализация ядра не размножается ради стилей. Существующий статус иностранной пары/аналогии сохранён.
-
-Runtime LMX: NOT_RUN. Это публикация исходников, договоров и полных размеров, не новый parser/runtime receipt.
+| LMX — процедурный | <span style="color:#176233"><u>160</u></span> | 15 |
+| LMX — функциональный | <span style="color:#176233"><u>160</u></span> | 15 |
+| Haskell | 257 | 9 |
 
 <a id="v05"></a>
 ### V05. Command/read integration check and fault modes
 
 ## Общий договор
 
-No current Haskell definition implements all command/read observations, event counts and fault modes of the current integration fixture.
+Два обязательных цикла set(1),observe,set(0),observe; при fault=0/1/2 ответы True/False/False. Всегда две записи, два чтения, trace=1202.
+
+**Сопоставимость: полная пара.** Device хранит две произвольные операции. Общая cycleDevice выполняет set и observe; check сначала исполняет оба IO-цикла, затем применяет && к полученным Bool. Поэтому ошибка первого сравнения не отменяет выключение. State позволяет проверить commanded=0 и sensed=0/0/1. Сравнивается этот локальный контракт устройства; внутренние parent-адреса LMX не объявлены Haskell-адресами.
+
+## LMX — общая минимальная форма обоих стилей
 
 Оба цикла set/observe должны выполняться безусловно, в том числе после неуспешного первого. Замена на короткое замыкание пропустила бы off. Общие mark/cycle и обязательные эффекты сохраняются.
 
-Обоим стилям соответствует одна минимальная форма, необходимая для проверяемого низкоуровневого договора. Её исходник и листинг приведены один раз, значения в обоих столбцах равны. Два разных алгоритма не заявляются.
-
-## LMX — общая минимальная форма обоих стилей
+Оба стилевых варианта ссылаются на один полный исходник; повторный листинг не нужен.
 
 ```lmx
 Indicator:
@@ -1339,35 +2050,93 @@ Commissioning:
         return: on && off
 ```
 
-[Полный исходник](examples/lmx/V05.lm3)
+[Полный исходник](examples/haskell_comparision/source/lmx/V05.lm3)
 
 ## Haskell
 
-Сопоставимого существующего листинга для этого договора нет. Новая иностранная реализация не сочиняется; статус остаётся lmx_only.
+```haskell
+module V05 where
 
-## Размер полного текста
+import Prelude hiding (reads)
+import Data.IORef (IORef, newIORef, readIORef, modifyIORef')
+
+data State = State
+  { commanded :: Int, sensed :: Int, writes :: Int, reads :: Int, trace :: Int }
+  deriving (Eq, Show)
+data Device = Device { set :: Int -> IO Int, observe :: IO Int }
+
+makeDevice :: Int -> IO (Device, IORef State)
+makeDevice fault = do
+  state <- newIORef (State 0 0 0 0 0)
+  let mark event = modifyIORef' state (\s -> s { trace = trace s * 10 + event })
+      setCommand command = do
+        modifyIORef' state (\s -> s { commanded = command, writes = writes s + 1,
+          sensed = case fault of { 0 -> command; 1 -> 0; 2 -> 1; _ -> sensed s } })
+        mark command
+        pure 1
+      readSensor = do
+        modifyIORef' state (\s -> s { reads = reads s + 1 })
+        mark 2
+        sensed <$> readIORef state
+  pure (Device setCommand readSensor, state)
+
+cycleDevice :: Device -> Int -> IO Bool
+cycleDevice candidate command = do
+  ack <- set candidate command
+  seen <- observe candidate
+  pure (ack == 1 && seen == command)
+
+check :: Device -> IO Bool
+check candidate = do
+  on <- cycleDevice candidate 1
+  off <- cycleDevice candidate 0
+  pure (on && off)
+```
+
+[Полный исходник](examples/haskell_comparision/source/haskell/V05.hs).
+
+## Сравнение
+
+| Аспект | LMX | Haskell |
+| --- | --- | --- |
+| Представленные формы | Полные процедурная и функциональная записи | Полный самостоятельный модуль; custom helpers указаны явно |
+| Договор | Два обязательных цикла set(1),observe,set(0),observe; при fault=0/1/2 ответы True/False/False. Всегда две записи, два чтения, trace=1202. | Наблюдения и пределы соответствия описаны выше |
+| Числовой рейтинг | Полный сопоставимый текст | Тот же полный договор |
+| Метрики этой редакции | Полные актуальные исходники | Полный модуль и необходимые собственные зависимости |
+| Исполнение | NOT_RUN | NOT_RUN |
+
+Все размеры пересчитаны по актуальным исходникам. Обе LMX-формы включают объявления и полные Throws. Пользовательские Haskell-зависимости учитываются в полной границе один раз; несовпадающие механизмы остаются явно отмеченными аналогиями.
+
+## Проверяемые наблюдения
+
+[Контракты и ожидаемые результаты](examples/haskell_comparision/validation/fixtures.json), [исполнимый Haskell harness](examples/haskell_comparision/validation/Main.hs), [команда проверки](examples/haskell_comparision/README.md#проверка). Ожидаемый результат не является протоколом успешного исполнения. GHC в среде подготовки отсутствует; компиляция и выполнение новых модулей не заявлены.
+
+LMX всегда стартует с корня как L3 Thread без DATA и пользовательских аргументов. Именованные операции фикстуры выполняются после старта обычным механизмом вызовов; они не заменяют точку запуска программы.
+
+Источники интерфейсов Haskell: [Haskell 2010 Report: expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html); [base: Data.IORef](https://hackage-content.haskell.org/package/base-4.20.1.0/docs/Data-IORef.html).
+
+## Размер полного исходника
 
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX — процедурный | **547** | 39 |
-| LMX — функциональный | **547** | 39 |
-
-Обе LMX-записи учитываются целиком, включая объявления, общие локальные helpers и Throws. Ошибки не исключаются из подсчёта. Общая реализация ядра не размножается ради стилей. Существующий статус иностранной пары/аналогии сохранён.
-
-Runtime LMX: NOT_RUN. Это публикация исходников, договоров и полных размеров, не новый parser/runtime receipt.
+| LMX — процедурный | <span style="color:#176233"><u>547</u></span> | 39 |
+| LMX — функциональный | <span style="color:#176233"><u>547</u></span> | 39 |
+| Haskell | 885 | 31 |
 
 <a id="m01"></a>
 ### M01. Serial state updates at one Message owner
 
 ## Общий договор
 
-Complete local-owner fixture: one owner, two sender threads submit additions 4 and 9, each accepted request has one serialized update, final read occurs after both responses and returns 13 for either arrival order. The counted Haskell service uses actual Chan/MVar facilities and includes its owner loop and existing Stop acknowledgement branch. counterExample launches/sends/observes/stops it only as an external verification harness and is excluded from this service-to-service count, just as the LMX sender/owner launcher is outside Counter. The LMX fixture relies on the existing Message owner launcher. Neither side of this local comparison is credited with a complete HTTP or distributed-delivery stack; the separate HTTP profile remains outside this ratio.
+Один владелец последовательно принимает два запроса +4 и +9 от разных отправителей. После обоих ответов чтение даёт 13 при любом порядке поступления.
+
+**Сопоставимость: полная пара.** Chan и MVar — реальные средства base. В сравниваемом модуле целиком показан service loop, включая завершение; запуск потоков и проверка ответов находятся в одинаково исключённом из размера внешнем harness. Проверяются оба допустимых набора промежуточных ответов. HTTP и распределённая доставка не входят в эту локальную пару.
+
+## LMX — общая минимальная форма обоих стилей
 
 Сериализованное изменение состояния одного Message-owner — сам договор. Одна запись и вызов общего read являются минимальной формой в обоих стилях.
 
-Обоим стилям соответствует одна минимальная форма, необходимая для проверяемого низкоуровневого договора. Её исходник и листинг приведены один раз, значения в обоих столбцах равны. Два разных алгоритма не заявляются.
-
-## LMX — общая минимальная форма обоих стилей
+Оба стилевых варианта ссылаются на один полный исходник; повторный листинг не нужен.
 
 ```lmx
 Counter:
@@ -1381,11 +2150,13 @@ Counter:
         return: node\value
 ```
 
-[Полный исходник](examples/lmx/M01.lm3)
+[Полный исходник](examples/haskell_comparision/source/lmx/M01.lm3)
 
 ## Haskell
 
 ```haskell
+module M01 where
+
 import Control.Concurrent (MVar, putMVar)
 import Control.Concurrent.Chan (Chan, readChan)
 
@@ -1399,36 +2170,54 @@ counterLoop inbox value = do
       let next = value + delta
       next `seq` putMVar reply next
       counterLoop inbox next
-    ReadValue reply -> do
-      putMVar reply value
-      counterLoop inbox value
+    ReadValue reply -> putMVar reply value >> counterLoop inbox value
     Stop ack -> putMVar ack ()
 ```
 
-## Размер полного текста
+[Полный исходник](examples/haskell_comparision/source/haskell/M01.hs).
+
+## Сравнение
+
+| Аспект | LMX | Haskell |
+| --- | --- | --- |
+| Представленные формы | Полные процедурная и функциональная записи | Полный самостоятельный модуль; custom helpers указаны явно |
+| Договор | Один владелец последовательно принимает два запроса +4 и +9 от разных отправителей. После обоих ответов чтение даёт 13 при любом порядке поступления. | Наблюдения и пределы соответствия описаны выше |
+| Числовой рейтинг | Полный сопоставимый текст | Тот же полный договор |
+| Метрики этой редакции | Полные актуальные исходники | Полный модуль и необходимые собственные зависимости |
+| Исполнение | NOT_RUN | NOT_RUN |
+
+Все размеры пересчитаны по актуальным исходникам. Обе LMX-формы включают объявления и полные Throws. Пользовательские Haskell-зависимости учитываются в полной границе один раз; несовпадающие механизмы остаются явно отмеченными аналогиями.
+
+## Проверяемые наблюдения
+
+[Контракты и ожидаемые результаты](examples/haskell_comparision/validation/fixtures.json), [исполнимый Haskell harness](examples/haskell_comparision/validation/Main.hs), [команда проверки](examples/haskell_comparision/README.md#проверка). Ожидаемый результат не является протоколом успешного исполнения. GHC в среде подготовки отсутствует; компиляция и выполнение новых модулей не заявлены.
+
+LMX всегда стартует с корня как L3 Thread без DATA и пользовательских аргументов. Именованные операции фикстуры выполняются после старта обычным механизмом вызовов; они не заменяют точку запуска программы.
+
+Источники интерфейсов Haskell: [Haskell 2010 Report: expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html); [base: Control.Concurrent.Chan](https://downloads.haskell.org/ghc/9.6.1/docs/libraries/base-4.18.0.0/Control-Concurrent-Chan.html).
+
+## Размер полного исходника
 
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX — процедурный | **93** | 9 |
-| LMX — функциональный | **93** | 9 |
-| Haskell | 411 | 15 |
-
-Обе LMX-записи учитываются целиком, включая объявления, общие локальные helpers и Throws. Ошибки не исключаются из подсчёта. Общая реализация ядра не размножается ради стилей. Существующий статус иностранной пары/аналогии сохранён.
-
-Runtime LMX: NOT_RUN. Это публикация исходников, договоров и полных размеров, не новый parser/runtime receipt.
+| LMX — процедурный | <span style="color:#176233"><u>93</u></span> | 9 |
+| LMX — функциональный | <span style="color:#176233"><u>93</u></span> | 9 |
+| Haskell | 425 | 14 |
 
 <a id="m05"></a>
 ### M05. Void Message procedure without a fabricated reply
 
 ## Общий договор
 
-There is no current Haskell counterpart for the no-result Message procedure and its zero reply/ACK expectation. CounterRequest.Stop has an explicit ACK and is not a substitute.
+Процедура set сохраняет состояние 1 и не имеет контракта прикладного ответа. Отсутствие результата не должно порождать фиктивный ACK.
+
+**Сопоставимость: аналогия.** lampLoop читает команды без поля для reply и вызывает IO () setter. Nothing завершает внешний тестовый worker. Harness ожидает завершение потока отдельно; эта синхронизация не является ответом на set. Фикстура действительно наблюдает state=1. Отсутствие прикладного reply выражено типом и телом worker; HTTP/Message-доставку LMX и её счётчики этот локальный Haskell-код не исполняет.
+
+## LMX — общая минимальная форма обоих стилей
 
 Единственная операция — void-процедура Message с записью состояния и без выдуманного reply. Обе формы совпадают; возвращаемое значение не добавляется.
 
-Обоим стилям соответствует одна минимальная форма, необходимая для проверяемого низкоуровневого договора. Её исходник и листинг приведены один раз, значения в обоих столбцах равны. Два разных алгоритма не заявляются.
-
-## LMX — общая минимальная форма обоих стилей
+Оба стилевых варианта ссылаются на один полный исходник; повторный листинг не нужен.
 
 ```lmx
 Lamp:
@@ -1438,26 +2227,60 @@ Lamp:
         node\state := command
 ```
 
-[Полный исходник](examples/lmx/M05.lm3)
+[Полный исходник](examples/haskell_comparision/source/lmx/M05.lm3)
 
 ## Haskell
 
-Сопоставимого существующего листинга для этого договора нет. Новая иностранная реализация не сочиняется; статус остаётся lmx_only.
+```haskell
+module M05 where
 
-## Размер полного текста
+import Control.Concurrent.Chan (Chan, readChan)
+import Data.IORef (IORef, writeIORef)
+
+set :: IORef Int -> Int -> IO ()
+set = writeIORef
+
+lampLoop :: Chan (Maybe Int) -> IORef Int -> IO ()
+lampLoop inbox state = do
+  request <- readChan inbox
+  case request of
+    Just command -> set state command >> lampLoop inbox state
+    Nothing -> pure ()
+```
+
+[Полный исходник](examples/haskell_comparision/source/haskell/M05.hs).
+
+## Сравнение
+
+| Аспект | LMX | Haskell |
+| --- | --- | --- |
+| Представленные формы | Полные процедурная и функциональная записи | Полный самостоятельный модуль; custom helpers указаны явно |
+| Договор | Процедура set сохраняет состояние 1 и не имеет контракта прикладного ответа. Отсутствие результата не должно порождать фиктивный ACK. | Наблюдения и пределы соответствия описаны выше |
+| Числовой рейтинг | Не применяется к неполной аналогии | Граница аналогии не маскируется совпадением чисел |
+| Метрики этой редакции | Полные актуальные исходники | Полный модуль и необходимые собственные зависимости |
+| Исполнение | NOT_RUN | NOT_RUN |
+
+Все размеры пересчитаны по актуальным исходникам. Обе LMX-формы включают объявления и полные Throws. Пользовательские Haskell-зависимости учитываются в полной границе один раз; несовпадающие механизмы остаются явно отмеченными аналогиями.
+
+## Проверяемые наблюдения
+
+[Контракты и ожидаемые результаты](examples/haskell_comparision/validation/fixtures.json), [исполнимый Haskell harness](examples/haskell_comparision/validation/Main.hs), [команда проверки](examples/haskell_comparision/README.md#проверка). Ожидаемый результат не является протоколом успешного исполнения. GHC в среде подготовки отсутствует; компиляция и выполнение новых модулей не заявлены.
+
+LMX всегда стартует с корня как L3 Thread без DATA и пользовательских аргументов. Именованные операции фикстуры выполняются после старта обычным механизмом вызовов; они не заменяют точку запуска программы.
+
+Источники интерфейсов Haskell: [Haskell 2010 Report: expressions](https://www.haskell.org/onlinereport/haskell2010/haskellch3.html); [base: Data.IORef](https://hackage-content.haskell.org/package/base-4.20.1.0/docs/Data-IORef.html); [base: Control.Concurrent.Chan](https://downloads.haskell.org/ghc/9.6.1/docs/libraries/base-4.18.0.0/Control-Concurrent-Chan.html).
+
+## Размер полного исходника
 
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX — процедурный | **49** | 5 |
-| LMX — функциональный | **49** | 5 |
-
-Обе LMX-записи учитываются целиком, включая объявления, общие локальные helpers и Throws. Ошибки не исключаются из подсчёта. Общая реализация ядра не размножается ради стилей. Существующий статус иностранной пары/аналогии сохранён.
-
-Runtime LMX: NOT_RUN. Это публикация исходников, договоров и полных размеров, не новый parser/runtime receipt.
+| LMX — процедурный | 49 | 5 |
+| LMX — функциональный | 49 | 5 |
+| Haskell | 289 | 11 |
 
 ## Дополнительные главы и пояснения к примерам LMX
 
-Эти главы сохраняют все 18 дополнительных фикстур, общие правила, навигацию и пояснения исходного руководства. Они не добавляются к 96 клиентским договорам четырёх наборов examples; вместе с четырьмя функциональными клиентами 082–085 сравнение охватывает 100 договоров и 200 полных LMX-форм. Полные сравниваемые листинги публикуются в основном руководстве; одинаковые тела здесь повторно не приводятся.
+Эти главы сохраняют все 18 дополнительных фикстур, общие правила, навигацию и пояснения исходного руководства. Они не добавляются к 96 клиентским договорам четырёх наборов examples; вместе с четырьмя функциональными клиентами 082–085 и девятью сценариями групп 10–11 сравнение охватывает 109 договоров и 218 полных LMX-форм. Полные сравниваемые листинги публикуются в основном руководстве; одинаковые тела здесь повторно не приводятся.
 
 
 Редакция: 23 ноября 2026 года. Дополнительные главы исходного руководства сохранены и согласованы с текущей нормой. Для Михаила и проверки реализации Fable.
@@ -1992,10 +2815,10 @@ Message — изолированный граф с владением. Испо�
 
 В [expected_results.json](examples/expected_results.json) перечислены обычные вызовы сценариев, ожидаемые числа, отказы, счётчики и условия подготовки. JSON — данные для существующего стенда Fable, не новый runtime или формат программы LMX. Сценарии, которым нужен транспорт, адресная идентичность или типизированный массив, сохраняют явный статус fixture.
 
-[Analogies.hs](examples/haskell/Analogies.hs) содержит Haskell-аналоги и проверки числовых результатов, AST, неизменяемого массива, mock, счётчика-владельца и fan-out. Его можно запускать из каталога `spec/patterns` распакованного комплекта командой:
+[Analogies.hs](examples/haskell_comparision/Analogies.hs) содержит Haskell-аналоги и проверки числовых результатов, AST, неизменяемого массива, mock, счётчика-владельца и fan-out. Его можно запускать из каталога `spec/patterns` распакованного комплекта командой:
 
 ```sh
-runghc examples/haskell/Analogies.hs
+runghc examples/haskell_comparision/Analogies.hs
 ```
 Интерфейсы библиотечных примеров сверены с официальными [Control.Concurrent](https://downloads.haskell.org/ghc/9.6.1/docs/libraries/base-4.18.0.0/Control-Concurrent.html), [Chan](https://downloads.haskell.org/ghc/9.6.1/docs/libraries/base-4.18.0.0/Control-Concurrent-Chan.html) и [IORef](https://hackage-content.haskell.org/package/base-4.20.1.0/docs/Data-IORef.html). В этой редакционной проверке GHC не запускался.
 
@@ -2161,7 +2984,7 @@ lazy создаёт типизированный nullary-callable и кешир�
 
 Haskell-выражения `sum (map (*2) [1,2,3])` и `sum (take 3 (map (*2) [1..]))` дают **12**. Чтобы честно показать механизм пользовательской библиотеки, рядом теперь приведены [оба полных цикла LMX/Haskell](examples/library_comparisons/h09_iterator_comparision.md), а не только готовый список.
 
-[H09.lm3](examples/lmx/H09.lm3) снова содержит полный короткий `Cycles\iterate` из 22-Nov. Декларация и связанное тело исполняются обычными вызовами; это прямо описанный авторский пример [текущей нормы](../LMX_semantics.en.md#declaration-arguments). `catch: Stop` относится только к источнику; отказ тела не перехватывается и не переименовывается. Отдельный adapter `iterateUntilStop` с `FxCallFailure` остаётся [показан рядом](examples/library_comparisons/h09_iterator_comparision.md), но его другой API отказов не требуется этому сценарию и не получает приоритета только из-за размещения в ядре.
+[H09.lm3](examples/haskell_comparision/source/lmx/H09.lm3) снова содержит полный короткий `Cycles\iterate` из 22-Nov. Декларация и связанное тело исполняются обычными вызовами; это прямо описанный авторский пример [текущей нормы](../LMX_semantics.en.md#declaration-arguments). `catch: Stop` относится только к источнику; отказ тела не перехватывается и не переименовывается. Отдельный adapter `iterateUntilStop` с `FxCallFailure` остаётся [показан рядом](examples/library_comparisons/h09_iterator_comparision.md), но его другой API отказов не требуется этому сценарию и не получает приоритета только из-за размещения в ядре.
 
 
 `Numbers\demo()` → **12**. next вызывается **четыре** раза: три значения и один Stop. Тело исполняется **три** раза. Форма `int: item Numbers\next()` сохранена; очередной шаг исполняет её в принимающем корневом namespace, а тело использует полученное место item. Повторного вычисления инициализатора только ради входа в тело нет.
@@ -2431,7 +3254,7 @@ Haskell можно дать явный результат `Either Failure Int` �
 
 Контрпример: начальное `10`; оба отправителя отдельно читают `10`, затем каждый присылает запись `11`. Итог **11** допустим при таком протоколе. Последовательные turns не объединяют несколько отдельных сообщений в одну транзакцию. Исправление задачи — отправлять целиком `add(delta := 1)`, а не добавлять mutex вокруг чужого графа. [Основание](../LMX_semantics.en.md#delivery).
 
-На Haskell аналог владельца можно построить обычным циклом обработки `Chan Request`, запущенным через `forkIO`, и возвращать результат через `MVar`. В таком варианте счётчик передаётся следующей итерации цикла как обычное число. Это библиотечная реализация модели владения, а не автоматическое свойство любого Haskell-объекта. Полный пример находится в [Analogies.hs](examples/haskell/Analogies.hs).
+На Haskell аналог владельца можно построить обычным циклом обработки `Chan Request`, запущенным через `forkIO`, и возвращать результат через `MVar`. В таком варианте счётчик передаётся следующей итерации цикла как обычное число. Это библиотечная реализация модели владения, а не автоматическое свойство любого Haskell-объекта. Полный пример находится в [Analogies.hs](examples/haskell_comparision/Analogies.hs).
 
 Для удалённого варианта стенд использует уже описанный [HTTP-профиль](../LMX_semantics.en.md#transport): endpoint + route, документ `application/lmx`, decoder и admission. Синхронный профиль может вернуть семантический результат в HTTP-ответе; асинхронный — подтвердить admission и доставить результат через `replyTo` с `correlation`. Финальный `read()` проверяется после завершения обоих add, а не только после двух подтверждений приёма. Операторная или библиотечная обёртка здесь не заменяет Message, отдельные turns и корреляцию результатов.
 

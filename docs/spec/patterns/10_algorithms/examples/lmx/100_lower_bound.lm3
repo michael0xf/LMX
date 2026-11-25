@@ -1,0 +1,24 @@
+LowerBoundStep:
+    int: low
+    int: high
+    return: int
+    search:
+        throws: copy(FxSeqRead\read\throws) copy(FxApply\apply\throws) copy(FxSeqPredicate\truth\throws)
+        if: low >= high
+            return: low
+        int: middle low + (high - low) / 2
+        @: item FxSeqRead\read(items; middle)
+        @: flag FxApply\apply(less; FxTwo\make(item; needle))
+        if: FxSeqPredicate\truth(flag) != 0
+            return: search(middle + 1; high)
+        return: search(low; middle)
+
+LowerBound:
+    @: items
+    @: needle
+    @: less
+    return: int
+    run:
+        throws: copy(FxSeqInfo\get\throws) copy(LowerBoundStep\search\throws)
+        FxSeqInfo\get(items)
+        return: LowerBoundStep\search(0; length(items))

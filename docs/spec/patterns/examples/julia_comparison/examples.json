@@ -1,7 +1,7 @@
 {
   "suite": "julia",
   "foreign_language": "Julia",
-  "edition": "2026-11-23",
+  "edition": "2026-11-25; practical client scenarios; full-source recount authorized",
   "runtime_profile": {
     "julia": "1.9+",
     "packages": [
@@ -260,27 +260,30 @@
     },
     {
       "id": "J03",
-      "title": "Разворот без изменения входа",
+      "title": "Последние уникальные события из журнала",
       "category": "Массивы",
-      "contract": "Вернуть элементы в обратном порядке в новом внешнем массиве; исходный массив сохраняется.",
+      "contract": "Журнал хранит события от старых к новым. Просмотреть его с конца и оставить первое встреченное значение каждого события: последнее появление в исходнике выигрывает. Вернуть новый массив, источник сохранить. Общий проверяемый домен — скалярные значения с одинаковой политикой равенства.",
       "inputs": {
         "xs": [
-          1,
+          7,
+          3,
+          7,
           2,
           3,
-          4
+          9
         ]
       },
       "expected": [
-        4,
+        9,
         3,
         2,
-        1
+        7
       ],
-      "lmx": "Example:\n    @: xs\n    return: @\n    run:\n        throws: copy(reverse\\throws)\n        return: reverse(xs)\n",
-      "foreign": "example(xs) = reverse(xs)\n",
+      "lmx": "Example:\n    @: xs\n    return: @\n    run:\n        throws: copy(reverse\\throws) copy(unique\\throws)\n        return: unique(reverse(xs))\n",
+      "foreign": "function example(xs)\n    latest_first = reverse(xs)\n    unique(latest_first)\nend\n",
       "core_functions": [
-        "reverse"
+        "reverse",
+        "unique"
       ],
       "foreign_dependencies": [
         "Base.reverse"
@@ -290,7 +293,7 @@
         "https://docs.julialang.org/en/v1/base/collections/"
       ],
       "alternatives": [],
-      "notes_ru": "",
+      "notes_ru": "Сценарий расширен по замечанию автора: показана обработка данных и полезный итог, а не только вызов одной функции. Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "source_files": {
         "lmx": "source/lmx/J03.lm3",
         "foreign": "source/julia/J03.jl"
@@ -299,7 +302,8 @@
         "foreign": "example"
       },
       "implementation_links": {
-        "reverse": "library_comparisons/JI02_comparision.md"
+        "reverse": "library_comparisons/JI02_comparision.md",
+        "unique": "library_comparisons/JI04_comparision.md"
       },
       "semantic_cases": [
         {
@@ -311,32 +315,28 @@
         {
           "inputs": [
             [
-              "a",
-              "b"
+              1,
+              1,
+              2,
+              1
             ]
           ],
           "expected": [
-            "b",
-            "a"
+            1,
+            2
           ]
         }
       ],
       "implementation_targets": {
-        "reverse": "FxSeqReverse\\reverse"
+        "reverse": "FxSeqReverse\\reverse",
+        "unique": "FxUnique\\unique"
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    @: xs\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxSeqRead\\read\\throws) copy(FxSeqStore\\write\\throws)\n        @: info FxSeqInfo\\get(xs)\n        int: n length(xs)\n        @: out FxSeqAllocate\\make(info\\arrayType; n)\n        int: i 0\n        while: i < n\n            FxSeqStore\\write(out; i; FxSeqRead\\read(xs; n - i - 1))\n            i += 1\n        return: out\n",
+          "code": "Example:\n    @: xs\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxSeqRead\\read\\throws) copy(FxSeqStore\\write\\throws) copy(FxValueSame\\test\\throws) copy(sys\\resize\\throws)\n        @: info FxSeqInfo\\get(xs)\n        @: out FxSeqAllocate\\make(info\\arrayType; length(xs))\n        int: used 0\n        int: i length(xs)\n        while: i > 0\n            i -= 1\n            @: item FxSeqRead\\read(xs; i)\n            int: j 0\n            while: j < used && FxValueSame\\test(FxSeqRead\\read(out; j); item; 0) = 0\n                j += 1\n            if: j = used\n                FxSeqStore\\write(out; used; item)\n                used += 1\n        ---\n        sys\\resize(out; used)\n        return: out\n",
           "source_file": "source/lmx/procedural/J03.lm3",
           "contract_id": "J03",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 300,
-            "characters_with_whitespace": 433,
-            "nonblank_lines": 13,
-            "utf8_bytes": 433,
-            "sha256": "e108d5f733293a55cf5d2d85717b1d92bfa1925b224fe3d398de57f0f1140cb0"
-          },
           "core_functions": [
             "copy"
           ],
@@ -345,24 +345,35 @@
             "FxSeqInfo\\get",
             "FxSeqRead\\read",
             "FxSeqStore\\write"
-          ]
+          ],
+          "source_sha256": "493fc3fc21c4ee97bf025d58588a64fdca721c0653a9c259e16fb4e33cf38d3a",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 484,
+            "characters_with_whitespace": 745,
+            "nonblank_lines": 21,
+            "utf8_bytes": 745,
+            "sha256": "493fc3fc21c4ee97bf025d58588a64fdca721c0653a9c259e16fb4e33cf38d3a"
+          }
         },
         "functional": {
-          "code": "Example:\n    @: xs\n    return: @\n    run:\n        throws: copy(reverse\\throws)\n        return: reverse(xs)\n",
+          "code": "Example:\n    @: xs\n    return: @\n    run:\n        throws: copy(reverse\\throws) copy(unique\\throws)\n        return: unique(reverse(xs))\n",
           "source_file": "source/lmx/J03.lm3",
           "contract_id": "J03",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 69,
-            "characters_with_whitespace": 107,
-            "nonblank_lines": 6,
-            "utf8_bytes": 107,
-            "sha256": "be2a3957e980d8a7cbc3369d2ec368cf43bb5df63ccf69c51eb19f30981d88bb"
-          },
           "core_functions": [
             "reverse"
           ],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "source_sha256": "1c00bffdae94a4f1531321608c63f40fbe9fe27c379e6a598490f3da9d7878b0",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 96,
+            "characters_with_whitespace": 135,
+            "nonblank_lines": 6,
+            "utf8_bytes": 135,
+            "sha256": "1c00bffdae94a4f1531321608c63f40fbe9fe27c379e6a598490f3da9d7878b0"
+          }
         }
       },
       "lmx_comparison_variants": [
@@ -371,9 +382,31 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
+      "style_note": "Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "previous_contract": {
+        "title": "Разворот без изменения входа",
+        "contract": "Вернуть элементы в обратном порядке в новом внешнем массиве; исходный массив сохраняется.",
+        "inputs": {
+          "xs": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        "expected": [
+          4,
+          3,
+          2,
+          1
+        ]
+      },
+      "lmx_parser_execution": "NOT_RUN",
+      "lmx_runtime_execution": "NOT_RUN",
+      "foreign_execution": "NOT_RUN",
+      "foreign_sha256": "e43e368a5319004b44826e5d8d5702f289667ae886c0ad8a1530a590ac6f5a59"
     },
     {
       "id": "J04",
@@ -500,24 +533,23 @@
     },
     {
       "id": "J05",
-      "title": "Квадраты через comprehension",
+      "title": "Энергия отклонений от опорного показания",
       "category": "Преобразования",
-      "contract": "Вычислить квадрат каждого целого слева направо. Значения выбраны без переполнения, исходный массив сохраняется.",
+      "contract": "Вычесть baseline из каждого целого измерения и сложить квадраты отклонений. Пустой набор имеет энергию 0, источник не меняется. Домен арифметики выбран без переполнения.",
       "inputs": {
         "xs": [
-          -3,
-          0,
-          4
-        ]
+          4,
+          7,
+          5
+        ],
+        "baseline": 5
       },
-      "expected": [
-        9,
-        0,
-        16
+      "expected": 5,
+      "lmx": "Example:\n    int[]: xs\n    int: baseline\n    return: int\n    run:\n        throws: copy(sum\\throws)\n        @: delta xs - baseline\n        return: \\sum(delta * delta)\n",
+      "foreign": "function example(xs, baseline)\n    delta = xs .- baseline\n    sum(delta .* delta)\nend\n",
+      "core_functions": [
+        "sum"
       ],
-      "lmx": "Example:\n    int[]: xs\n    return: @\n    run:\n        return: xs * xs\n",
-      "foreign": "example(xs) = [x * x for x in xs]\n",
-      "core_functions": [],
       "foreign_dependencies": [
         "Base.Generator",
         "Base.collect"
@@ -526,7 +558,7 @@
         "https://docs.julialang.org/en/v1/manual/arrays/"
       ],
       "alternatives": [],
-      "notes_ru": "Чистое поэлементное умножение — уже существующее Expression. Оно даёт новый плотный int[]; результат сравнивается по значениям. Отдельный callback Square не требуется.",
+      "notes_ru": "Сценарий расширен по замечанию автора: показана обработка данных и полезный итог, а не только вызов одной функции. Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "source_files": {
         "lmx": "source/lmx/J05.lm3",
         "foreign": "source/julia/J05.jl"
@@ -534,62 +566,80 @@
       "entry_points": {
         "foreign": "example"
       },
-      "implementation_links": {},
+      "implementation_links": {
+        "sum": "../../LMX_Fn_Receivers/src/coreStandardNumeric.lmx"
+      },
       "semantic_cases": [
         {
           "inputs": [
-            []
+            [],
+            10
           ],
-          "expected": []
+          "expected": 0
         },
         {
           "inputs": [
             [
-              1,
-              2
-            ]
+              -3,
+              0,
+              4
+            ],
+            0
           ],
-          "expected": [
-            1,
-            4
-          ]
+          "expected": 25
+        },
+        {
+          "inputs": [
+            [
+              5,
+              5
+            ],
+            5
+          ],
+          "expected": 0
         }
       ],
-      "implementation_targets": {},
+      "implementation_targets": {
+        "sum": "FxSum\\sum"
+      },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        int[]: out []\n        sys\\resize(out; length(xs))\n        int: i 0\n        while: i < length(xs)\n            out[i] := xs[i] * xs[i]\n            i += 1\n        return: out\n",
+          "code": "Example:\n    int[]: xs\n    int: baseline\n    return: int\n    run:\n        int: total 0\n        int: i 0\n        while: i < length(xs)\n            int: delta xs[i] - baseline\n            total += delta * delta\n            i += 1\n        return: total\n",
           "source_file": "source/lmx/procedural/J05.lm3",
           "contract_id": "J05",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 152,
-            "characters_with_whitespace": 266,
-            "nonblank_lines": 12,
-            "utf8_bytes": 266,
-            "sha256": "e192d59f9da19d6dbc6e326f96b7b26f1e76e8a3a980215648372c28fbbaf461"
-          },
           "core_functions": [
             "copy"
           ],
           "low_level_operations": [
             "sys\\resize"
-          ]
+          ],
+          "source_sha256": "80c15348338f591a07db8e8ba0ce518a0a947a6811734dac0060eb5fdaea869b",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 133,
+            "characters_with_whitespace": 250,
+            "nonblank_lines": 12,
+            "utf8_bytes": 250,
+            "sha256": "80c15348338f591a07db8e8ba0ce518a0a947a6811734dac0060eb5fdaea869b"
+          }
         },
         "functional": {
-          "code": "Example:\n    int[]: xs\n    return: @\n    run:\n        return: xs * xs\n",
+          "code": "Example:\n    int[]: xs\n    int: baseline\n    return: int\n    run:\n        throws: copy(sum\\throws)\n        @: delta xs - baseline\n        return: \\sum(delta * delta)\n",
           "source_file": "source/lmx/J05.lm3",
           "contract_id": "J05",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 40,
-            "characters_with_whitespace": 70,
-            "nonblank_lines": 5,
-            "utf8_bytes": 70,
-            "sha256": "43d7bf562fcb870ac9c97ed57e7547e53b452ec17bdafeb7a332976b542a1b41"
-          },
           "core_functions": [],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "source_sha256": "7782e7d8283a8f886095e9dd780720dd40e1b4ba80526ca9ca386100ed993e8f",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 107,
+            "characters_with_whitespace": 166,
+            "nonblank_lines": 8,
+            "utf8_bytes": 166,
+            "sha256": "7782e7d8283a8f886095e9dd780720dd40e1b4ba80526ca9ca386100ed993e8f"
+          }
         }
       },
       "lmx_comparison_variants": [
@@ -598,23 +648,44 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
+      "style_note": "Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "previous_contract": {
+        "title": "Квадраты через comprehension",
+        "contract": "Вычислить квадрат каждого целого слева направо. Значения выбраны без переполнения, исходный массив сохраняется.",
+        "inputs": {
+          "xs": [
+            -3,
+            0,
+            4
+          ]
+        },
+        "expected": [
+          9,
+          0,
+          16
+        ]
+      },
+      "lmx_parser_execution": "NOT_RUN",
+      "lmx_runtime_execution": "NOT_RUN",
+      "foreign_execution": "NOT_RUN",
+      "foreign_sha256": "0824aaa08d403d9c38e63c7869635f986b080a270856bb66a37ded91d6d5c2c2"
     },
     {
       "id": "J06",
-      "title": "Стабильный отбор нечётных",
+      "title": "Уникальные задания для нечётного раздела",
       "category": "Предикаты",
-      "contract": "Сохранить все нечётные целые в исходном порядке, включая отрицательные.",
+      "contract": "Из входного потока целых ID выбрать нечётные, затем убрать повторы, сохранив порядок первых появлений. Отрицательные нечётные ID допустимы; исходный поток не меняется.",
       "inputs": {
         "xs": [
           -3,
           -2,
-          0,
           1,
-          4,
-          5
+          5,
+          -3,
+          1,
+          4
         ]
       },
       "expected": [
@@ -622,10 +693,11 @@
         1,
         5
       ],
-      "lmx": "Example:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(compress\\throws)\n        return: compress(xs; xs % 2 != 0)\n",
-      "foreign": "example(xs) = filter(isodd, xs)\n",
+      "lmx": "Example:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(compress\\throws) copy(unique\\throws)\n        return: unique(compress(xs; xs % 2 != 0))\n",
+      "foreign": "function example(xs)\n    routed = filter(isodd, xs)\n    unique(routed)\nend\n",
       "core_functions": [
-        "compress"
+        "compress",
+        "unique"
       ],
       "foreign_dependencies": [
         "Base.filter",
@@ -635,7 +707,7 @@
         "https://docs.julialang.org/en/v1/base/collections/"
       ],
       "alternatives": [],
-      "notes_ru": "Готовая поэлементная маска сохраняет прежний отбор чистого предиката, порядок и профиль. Отрицательные нечётные имеют ненулевой остаток независимо от его знака.",
+      "notes_ru": "Сценарий расширен по замечанию автора: показана обработка данных и полезный итог, а не только вызов одной функции. Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "source_files": {
         "lmx": "source/lmx/J06.lm3",
         "foreign": "source/julia/J06.jl"
@@ -644,7 +716,8 @@
         "foreign": "example"
       },
       "implementation_links": {
-        "compress": "library_comparisons/JI02_comparision.md"
+        "compress": "library_comparisons/JI02_comparision.md",
+        "unique": "library_comparisons/JI04_comparision.md"
       },
       "semantic_cases": [
         {
@@ -661,48 +734,67 @@
             ]
           ],
           "expected": []
+        },
+        {
+          "inputs": [
+            [
+              3,
+              3,
+              1,
+              3
+            ]
+          ],
+          "expected": [
+            3,
+            1
+          ]
         }
       ],
       "implementation_targets": {
-        "compress": "FxSeqCompress\\compress"
+        "compress": "FxSeqCompress\\compress",
+        "unique": "FxUnique\\unique"
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        int[]: out []\n        int: i 0\n        while: i < length(xs)\n            if: xs[i] % 2 != 0\n                FxSeqPush\\append(out; (xs[i] record))\n            i += 1\n        return: out\n",
+          "code": "Example:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        int[]: out []\n        int: i 0\n        while: i < length(xs)\n            if: xs[i] % 2 != 0\n                int: j 0\n                while: j < length(out) && out[j] != xs[i]\n                    j += 1\n                if: j = length(out)\n                    FxSeqPush\\append(out; (xs[i] record))\n            ---\n            i += 1\n        return: out\n",
           "source_file": "source/lmx/procedural/J06.lm3",
           "contract_id": "J06",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 180,
-            "characters_with_whitespace": 305,
-            "nonblank_lines": 12,
-            "utf8_bytes": 305,
-            "sha256": "71fb1611f54751746f9d6c46d16900e4bbbef2f9fdd1cdc7b26bed7a8d1357d7"
-          },
           "core_functions": [
             "copy",
             "record"
           ],
           "low_level_operations": [
             "FxSeqPush\\append"
-          ]
+          ],
+          "source_sha256": "30ae0011ebb6b42b90250c973e51475456d1dc8bf33d2ccfe454bb9000293c18",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 243,
+            "characters_with_whitespace": 471,
+            "nonblank_lines": 17,
+            "utf8_bytes": 471,
+            "sha256": "30ae0011ebb6b42b90250c973e51475456d1dc8bf33d2ccfe454bb9000293c18"
+          }
         },
         "functional": {
-          "code": "Example:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(compress\\throws)\n        return: compress(xs; xs % 2 != 0)\n",
+          "code": "Example:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(compress\\throws) copy(unique\\throws)\n        return: unique(compress(xs; xs % 2 != 0))\n",
           "source_file": "source/lmx/J06.lm3",
           "contract_id": "J06",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 83,
-            "characters_with_whitespace": 126,
-            "nonblank_lines": 6,
-            "utf8_bytes": 126,
-            "sha256": "76e14b1ec9aff66b95ee98ed73fff6a2f1b9e56106656cb43177380e798253a0"
-          },
           "core_functions": [
             "compress"
           ],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "source_sha256": "5d4af91081b2c39be78ecab4a8509db4627297c95658866e246118b3905299e1",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 110,
+            "characters_with_whitespace": 154,
+            "nonblank_lines": 6,
+            "utf8_bytes": 154,
+            "sha256": "5d4af91081b2c39be78ecab4a8509db4627297c95658866e246118b3905299e1"
+          }
         }
       },
       "lmx_comparison_variants": [
@@ -711,26 +803,49 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
+      "style_note": "Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "previous_contract": {
+        "title": "Стабильный отбор нечётных",
+        "contract": "Сохранить все нечётные целые в исходном порядке, включая отрицательные.",
+        "inputs": {
+          "xs": [
+            -3,
+            -2,
+            0,
+            1,
+            4,
+            5
+          ]
+        },
+        "expected": [
+          -3,
+          1,
+          5
+        ]
+      },
+      "lmx_parser_execution": "NOT_RUN",
+      "lmx_runtime_execution": "NOT_RUN",
+      "foreign_execution": "NOT_RUN",
+      "foreign_sha256": "2bf93abbe70bd391b7f3285c56f73aa47142821533ce49c901048550eb51c8ae"
     },
     {
       "id": "J07",
-      "title": "Левая свёртка с неассоциативным шагом",
+      "title": "Последовательные списания и возвраты с нижней границей",
       "category": "Свёртки",
-      "contract": "Последовательно вычитать элементы из seed: ((seed - x0) - x1) ... . Пустой вход возвращает seed. Арифметика без переполнения.",
+      "contract": "Начать с неотрицательного seed. Положительное amount списывает средства, отрицательное возвращает их; после каждого шага баланс ограничивается снизу нулём. Порядок важен: превышение доступного баланса не превращается в переносимый долг. Пустой вход сохраняет seed; переполнение исключено.",
       "inputs": {
         "xs": [
-          1,
-          2,
+          13,
+          -5,
           3
         ],
-        "seed": 100
+        "seed": 10
       },
-      "expected": 94,
-      "lmx": "Example:\n    int[]: xs\n    int: seed\n    return: int\n    run:\n        throws: copy(foldl\\throws) copy(record\\throws)\n        return: \\foldl(xs; (seed record); `-`)\n",
-      "foreign": "example(xs, seed) = foldl(-, xs; init=seed)\n",
+      "expected": 2,
+      "lmx": "BudgetStep:\n    int: balance\n    int: amount\n    return: int\n    apply:\n        int: next balance - amount\n        if: next < 0\n            return: 0\n        return: next\n\nExample:\n    int[]: xs\n    int: seed\n    return: int\n    run:\n        throws: copy(foldl\\throws) copy(record\\throws)\n        return: \\foldl(xs; (seed record); BudgetStep\\apply)\n",
+      "foreign": "function example(xs, seed)\n    debit(balance, amount) = max(balance - amount, 0)\n    foldl(debit, xs; init=seed)\nend\n",
       "core_functions": [
         "foldl",
         "record"
@@ -742,7 +857,7 @@
         "https://docs.julialang.org/en/v1/base/collections/"
       ],
       "alternatives": [],
-      "notes_ru": "Используется foldl, а не reduce: порядок связывания входит в контракт.",
+      "notes_ru": "Сценарий расширен по замечанию автора: показана обработка данных и полезный итог, а не только вызов одной функции. Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "source_files": {
         "lmx": "source/lmx/J07.lm3",
         "foreign": "source/julia/J07.jl"
@@ -765,12 +880,23 @@
         {
           "inputs": [
             [
-              10,
-              2
+              -5,
+              13,
+              3
             ],
-            0
+            10
           ],
-          "expected": -12
+          "expected": 0
+        },
+        {
+          "inputs": [
+            [
+              2,
+              3
+            ],
+            10
+          ],
+          "expected": 5
         }
       ],
       "implementation_targets": {
@@ -779,37 +905,41 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: xs\n    int: seed\n    return: int\n    run:\n        int: total seed\n        int: i 0\n        while: i < length(xs)\n            total -= xs[i]\n            i += 1\n        return: total\n",
+          "code": "Example:\n    int[]: xs\n    int: seed\n    return: int\n    run:\n        int: balance seed\n        int: i 0\n        while: i < length(xs)\n            balance -= xs[i]\n            if: balance < 0\n                balance := 0\n            i += 1\n        return: balance\n",
           "source_file": "source/lmx/procedural/J07.lm3",
           "contract_id": "J07",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 103,
-            "characters_with_whitespace": 201,
-            "nonblank_lines": 11,
-            "utf8_bytes": 201,
-            "sha256": "b242f696f9b1c96b3f9ebd025cf9f5a8f4140d0bc8d8376e3cf18a2ea834474b"
-          },
           "core_functions": [],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "source_sha256": "925b6f172fe651448456f3c23bd06461f78c98e8af4929c59503a49534b28eaf",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 131,
+            "characters_with_whitespace": 264,
+            "nonblank_lines": 13,
+            "utf8_bytes": 264,
+            "sha256": "925b6f172fe651448456f3c23bd06461f78c98e8af4929c59503a49534b28eaf"
+          }
         },
         "functional": {
-          "code": "Example:\n    int[]: xs\n    int: seed\n    return: int\n    run:\n        throws: copy(foldl\\throws) copy(record\\throws)\n        return: \\foldl(xs; (seed record); `-`)\n",
+          "code": "BudgetStep:\n    int: balance\n    int: amount\n    return: int\n    apply:\n        int: next balance - amount\n        if: next < 0\n            return: 0\n        return: next\n\nExample:\n    int[]: xs\n    int: seed\n    return: int\n    run:\n        throws: copy(foldl\\throws) copy(record\\throws)\n        return: \\foldl(xs; (seed record); BudgetStep\\apply)\n",
           "source_file": "source/lmx/J07.lm3",
           "contract_id": "J07",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 116,
-            "characters_with_whitespace": 164,
-            "nonblank_lines": 7,
-            "utf8_bytes": 164,
-            "sha256": "eedd4bf60e3e0447a50f42bcce16362654fea94a75a91f18d4db549ab1aa5bfc"
-          },
           "core_functions": [
             "foldl",
             "record"
           ],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "source_sha256": "ad5617e910a166b6fed120ca95dd8b70f22f8eaa3c5745d813464d6de292be3f",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 227,
+            "characters_with_whitespace": 349,
+            "nonblank_lines": 16,
+            "utf8_bytes": 349,
+            "sha256": "ad5617e910a166b6fed120ca95dd8b70f22f8eaa3c5745d813464d6de292be3f"
+          }
         }
       },
       "lmx_comparison_variants": [
@@ -818,34 +948,52 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
+      "style_note": "Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "previous_contract": {
+        "title": "Левая свёртка с неассоциативным шагом",
+        "contract": "Последовательно вычитать элементы из seed: ((seed - x0) - x1) ... . Пустой вход возвращает seed. Арифметика без переполнения.",
+        "inputs": {
+          "xs": [
+            1,
+            2,
+            3
+          ],
+          "seed": 100
+        },
+        "expected": 94
+      },
+      "lmx_parser_execution": "NOT_RUN",
+      "lmx_runtime_execution": "NOT_RUN",
+      "foreign_execution": "NOT_RUN",
+      "foreign_sha256": "195fa6d08b17cdf3102d35cddc50ba872ad9c04ef9b5d49d13c576fc019e4e27"
     },
     {
       "id": "J08",
-      "title": "Все промежуточные суммы с начальным значением",
+      "title": "История отрицательных остатков",
       "category": "Свёртки",
-      "contract": "Вернуть seed, затем результат каждого последовательного прибавления. Длина результата length(xs)+1; на пустом входе [seed].",
+      "contract": "Построить все остатки счёта: начальный seed и результат каждого поступления или списания из xs. Вернуть только отрицательные остатки в хронологическом порядке, включая отрицательный начальный остаток. Пустой вход может дать один отрицательный seed; переполнение исключено.",
       "inputs": {
         "xs": [
-          1,
+          -8,
           2,
-          3
+          -5,
+          10
         ],
-        "seed": 10
+        "seed": 5
       },
       "expected": [
-        10,
-        11,
-        13,
-        16
+        -3,
+        -1,
+        -6
       ],
-      "lmx": "Example:\n    int[]: xs\n    int: seed\n    return: @\n    run:\n        throws: copy(scanl\\throws) copy(record\\throws)\n        return: scanl(xs; (seed record); `+`)\n",
-      "foreign": "example(xs, seed) = [seed; accumulate(+, xs; init=seed)]\n",
+      "lmx": "Negative:\n    int: value\n    return: int\n    accepts:\n        return: value < 0\n\nExample:\n    int[]: xs\n    int: seed\n    return: @\n    run:\n        throws: copy(scanl\\throws) copy(record\\throws) copy(filter\\throws)\n        return: filter(scanl(xs; (seed record); `+`); Negative\\accepts)\n",
+      "foreign": "function example(xs, seed)\n    balances = [seed; accumulate(+, xs; init=seed)]\n    filter(<(0), balances)\nend\n",
       "core_functions": [
         "scanl",
-        "record"
+        "record",
+        "filter"
       ],
       "foreign_dependencies": [
         "Base.accumulate",
@@ -855,7 +1003,7 @@
         "https://docs.julialang.org/en/v1/base/arrays/"
       ],
       "alternatives": [],
-      "notes_ru": "accumulate не возвращает init отдельным первым элементом; его добавление явно входит в Julia-код.",
+      "notes_ru": "Сценарий расширен по замечанию автора: показана обработка данных и полезный итог, а не только вызов одной функции. Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "source_files": {
         "lmx": "source/lmx/J08.lm3",
         "foreign": "source/julia/J08.jl"
@@ -865,7 +1013,8 @@
       },
       "implementation_links": {
         "scanl": "library_comparisons/JI01_comparision.md",
-        "record": "library_comparisons/JI01_comparision.md"
+        "record": "library_comparisons/JI01_comparision.md",
+        "filter": "library_comparisons/JI01_comparision.md"
       },
       "semantic_cases": [
         {
@@ -873,8 +1022,15 @@
             [],
             7
           ],
+          "expected": []
+        },
+        {
+          "inputs": [
+            [],
+            -2
+          ],
           "expected": [
-            7
+            -2
           ]
         },
         {
@@ -885,55 +1041,56 @@
             ],
             0
           ],
-          "expected": [
-            0,
-            1,
-            0
-          ]
+          "expected": []
         }
       ],
       "implementation_targets": {
         "scanl": "FxScan\\scan",
-        "record": "FxRecordOperands\\record"
+        "record": "FxRecordOperands\\record",
+        "filter": "FxFilter\\filter"
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: xs\n    int: seed\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        @[]: out []\n        int: total seed\n        FxSeqPush\\append(out; (total record))\n        int: i 0\n        while: i < length(xs)\n            total += xs[i]\n            FxSeqPush\\append(out; (total record))\n            i += 1\n        return: out\n",
+          "code": "Example:\n    int[]: xs\n    int: seed\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        @[]: out []\n        int: balance seed\n        int: i 0\n        while: 1\n            if: balance < 0\n                FxSeqPush\\append(out; (balance record))\n            if: i = length(xs)\n                break\n            balance += xs[i]\n            i += 1\n        return: out\n",
           "source_file": "source/lmx/procedural/J08.lm3",
           "contract_id": "J08",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 233,
-            "characters_with_whitespace": 379,
-            "nonblank_lines": 15,
-            "utf8_bytes": 379,
-            "sha256": "5bbd7ac2ac6fd76d93d92e5d52fb7dccd583289fbb603fef2ab04ae7db5a3572"
-          },
           "core_functions": [
             "copy",
             "record"
           ],
           "low_level_operations": [
             "FxSeqPush\\append"
-          ]
+          ],
+          "source_sha256": "207a50e65cd520234601a8abf2f2dfca81f2cf53825277375d96724a341750a7",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 225,
+            "characters_with_whitespace": 411,
+            "nonblank_lines": 17,
+            "utf8_bytes": 411,
+            "sha256": "207a50e65cd520234601a8abf2f2dfca81f2cf53825277375d96724a341750a7"
+          }
         },
         "functional": {
-          "code": "Example:\n    int[]: xs\n    int: seed\n    return: @\n    run:\n        throws: copy(scanl\\throws) copy(record\\throws)\n        return: scanl(xs; (seed record); `+`)\n",
+          "code": "Negative:\n    int: value\n    return: int\n    accepts:\n        return: value < 0\n\nExample:\n    int[]: xs\n    int: seed\n    return: @\n    run:\n        throws: copy(scanl\\throws) copy(record\\throws) copy(filter\\throws)\n        return: filter(scanl(xs; (seed record); `+`); Negative\\accepts)\n",
           "source_file": "source/lmx/J08.lm3",
           "contract_id": "J08",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 113,
-            "characters_with_whitespace": 161,
-            "nonblank_lines": 7,
-            "utf8_bytes": 161,
-            "sha256": "5dcea6a96bb5d75e55d497c3bab2c8d23e213157ab4d28efe5f4f6062eb459a4"
-          },
           "core_functions": [
             "scanl",
             "record"
           ],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "source_sha256": "0864558dd3c0478c4cfbb44f2677cfb45ed8da70a1a0e1f20ee006ea9d5c46b1",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 207,
+            "characters_with_whitespace": 288,
+            "nonblank_lines": 12,
+            "utf8_bytes": 288,
+            "sha256": "0864558dd3c0478c4cfbb44f2677cfb45ed8da70a1a0e1f20ee006ea9d5c46b1"
+          }
         }
       },
       "lmx_comparison_variants": [
@@ -942,40 +1099,54 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
+      "style_note": "Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "previous_contract": {
+        "title": "Все промежуточные суммы с начальным значением",
+        "contract": "Вернуть seed, затем результат каждого последовательного прибавления. Длина результата length(xs)+1; на пустом входе [seed].",
+        "inputs": {
+          "xs": [
+            1,
+            2,
+            3
+          ],
+          "seed": 10
+        },
+        "expected": [
+          10,
+          11,
+          13,
+          16
+        ]
+      },
+      "lmx_parser_execution": "NOT_RUN",
+      "lmx_runtime_execution": "NOT_RUN",
+      "foreign_execution": "NOT_RUN",
+      "foreign_sha256": "bed6c745aca9b858b7a822a6bcb7c1ecf7ac92f4432b15b6046c8cee1cc0c3aa"
     },
     {
       "id": "J09",
-      "title": "Парное прохождение до короткого входа",
+      "title": "Общий дефицит по сопоставленным позициям склада",
       "category": "Итераторы",
-      "contract": "Материализовать пары соответствующих элементов. Результат заканчивается вместе с более коротким входом; входы не меняются.",
+      "contract": "Попарно сопоставить требуемое и доступное количество до конца более короткого входа. Излишки одной позиции не компенсируют дефицит другой: сложить max(required-available,0) для сопоставленных позиций. Пустой любой вход даёт 0; входы сохраняются, переполнение исключено.",
       "inputs": {
         "left": [
-          1,
+          5,
           2,
-          3
+          7
         ],
         "right": [
-          "a",
-          "b"
+          3,
+          4
         ]
       },
-      "expected": [
-        [
-          1,
-          "a"
-        ],
-        [
-          2,
-          "b"
-        ]
-      ],
-      "lmx": "Example:\n    @: left\n    @: right\n    return: @\n    run:\n        throws: copy(zip\\throws)\n        return: zip(left; right)\n",
-      "foreign": "example(left, right) = collect(zip(left, right))\n",
+      "expected": 2,
+      "lmx": "Shortage:\n    int: required\n    int: available\n    return: int\n    value:\n        int: gap required - available\n        if: gap > 0\n            return: gap\n        return: 0\n\nExample:\n    int[]: left\n    int[]: right\n    return: int\n    run:\n        throws: copy(zipWith\\throws) copy(sum\\throws)\n        return: \\sum(zipWith(left; right; Shortage\\value))\n",
+      "foreign": "function example(left, right)\n    shortages = [max(required - available, 0) for (required, available) in zip(left, right)]\n    sum(shortages)\nend\n",
       "core_functions": [
-        "zip"
+        "zipWith",
+        "sum"
       ],
       "foreign_dependencies": [
         "Base.zip",
@@ -985,7 +1156,7 @@
         "https://docs.julialang.org/en/v1/base/iterators/"
       ],
       "alternatives": [],
-      "notes_ru": "Наблюдение нормализует FxPair{first,second} и Julia Tuple к паре значений. Ленивый zip в Julia явно материализован.",
+      "notes_ru": "Сценарий расширен по замечанию автора: показана обработка данных и полезный итог, а не только вызов одной функции. Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "source_files": {
         "lmx": "source/lmx/J09.lm3",
         "foreign": "source/julia/J09.jl"
@@ -994,7 +1165,8 @@
         "foreign": "example"
       },
       "implementation_links": {
-        "zip": "library_comparisons/JI01_comparision.md"
+        "zipWith": "library_comparisons/JI01_comparision.md",
+        "sum": "../../LMX_Fn_Receivers/src/coreStandardNumeric.lmx"
       },
       "semantic_cases": [
         {
@@ -1004,7 +1176,23 @@
               1
             ]
           ],
-          "expected": []
+          "expected": 0
+        },
+        {
+          "inputs": [
+            [
+              5,
+              2,
+              9
+            ],
+            [
+              1,
+              1,
+              3,
+              99
+            ]
+          ],
+          "expected": 11
         },
         {
           "inputs": [
@@ -1016,30 +1204,19 @@
               3
             ]
           ],
-          "expected": [
-            [
-              1,
-              2
-            ]
-          ]
+          "expected": 0
         }
       ],
       "implementation_targets": {
-        "zip": "FxZip\\zip"
+        "zipWith": "FxZipWith\\zipWith",
+        "sum": "FxSum\\sum"
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    @: left\n    @: right\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqRead\\read\\throws) copy(FxSeqPush\\append\\throws)\n        FxSeqInfo\\get(left)\n        FxSeqInfo\\get(right)\n        @[]: out []\n        int: i 0\n        while: i < length(left) && i < length(right)\n            @: pair (copy(FxPair))\n            pair\\first := FxSeqRead\\read(left; i)\n            pair\\second := FxSeqRead\\read(right; i)\n            FxSeqPush\\append(out; pair)\n            i += 1\n        return: out\n",
+          "code": "Example:\n    int[]: left\n    int[]: right\n    return: int\n    run:\n        int: total 0\n        int: i 0\n        while: i < length(left) && i < length(right)\n            int: gap left[i] - right[i]\n            if: gap > 0\n                total += gap\n            i += 1\n        return: total\n",
           "source_file": "source/lmx/procedural/J09.lm3",
           "contract_id": "J09",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 343,
-            "characters_with_whitespace": 521,
-            "nonblank_lines": 17,
-            "utf8_bytes": 521,
-            "sha256": "c8fa5f61693c34a3970d4f95dfd385a0489e456a270c882c2ced904dc4f56ffb"
-          },
           "core_functions": [
             "copy"
           ],
@@ -1047,24 +1224,35 @@
             "FxSeqInfo\\get",
             "FxSeqPush\\append",
             "FxSeqRead\\read"
-          ]
+          ],
+          "source_sha256": "335a8c7c981fc973309ca847ea17992af5a64410bab3945054f7a1b21bd6e7d4",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 153,
+            "characters_with_whitespace": 292,
+            "nonblank_lines": 13,
+            "utf8_bytes": 292,
+            "sha256": "335a8c7c981fc973309ca847ea17992af5a64410bab3945054f7a1b21bd6e7d4"
+          }
         },
         "functional": {
-          "code": "Example:\n    @: left\n    @: right\n    return: @\n    run:\n        throws: copy(zip\\throws)\n        return: zip(left; right)\n",
+          "code": "Shortage:\n    int: required\n    int: available\n    return: int\n    value:\n        int: gap required - available\n        if: gap > 0\n            return: gap\n        return: 0\n\nExample:\n    int[]: left\n    int[]: right\n    return: int\n    run:\n        throws: copy(zipWith\\throws) copy(sum\\throws)\n        return: \\sum(zipWith(left; right; Shortage\\value))\n",
           "source_file": "source/lmx/J09.lm3",
           "contract_id": "J09",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 78,
-            "characters_with_whitespace": 123,
-            "nonblank_lines": 7,
-            "utf8_bytes": 123,
-            "sha256": "774c6030695919aee62de832b64cf2218a2f3c22b9f68846a21edfddf2ee4c38"
-          },
           "core_functions": [
             "zip"
           ],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "source_sha256": "566b402c600f66a5b3c42f518abdefd7e39778bc3eb4190368a535005ffdfbdf",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 234,
+            "characters_with_whitespace": 355,
+            "nonblank_lines": 16,
+            "utf8_bytes": 355,
+            "sha256": "566b402c600f66a5b3c42f518abdefd7e39778bc3eb4190368a535005ffdfbdf"
+          }
         }
       },
       "lmx_comparison_variants": [
@@ -1073,15 +1261,44 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
+      "style_note": "Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "previous_contract": {
+        "title": "Парное прохождение до короткого входа",
+        "contract": "Материализовать пары соответствующих элементов. Результат заканчивается вместе с более коротким входом; входы не меняются.",
+        "inputs": {
+          "left": [
+            1,
+            2,
+            3
+          ],
+          "right": [
+            "a",
+            "b"
+          ]
+        },
+        "expected": [
+          [
+            1,
+            "a"
+          ],
+          [
+            2,
+            "b"
+          ]
+        ]
+      },
+      "lmx_parser_execution": "NOT_RUN",
+      "lmx_runtime_execution": "NOT_RUN",
+      "foreign_execution": "NOT_RUN",
+      "foreign_sha256": "9aebf2e0fb2aefc6f8144615125421a2b378e901d64a857bb1b63273adaab7e0"
     },
     {
       "id": "J10",
-      "title": "Слитное поэлементное выражение",
+      "title": "Пороговый отбор калиброванных оценок",
       "category": "Broadcast",
-      "contract": "Для двух целочисленных векторов одинаковой длины вернуть 2*x + y*y по позициям. Арифметика без переполнения, callbacks не имеют эффектов.",
+      "contract": "Для двух целочисленных векторов одинаковой длины вычислить score=2*x+y*y, затем сохранить оценки не ниже limit. Порядок прежний, оба входа не меняются; переполнение исключено. Несовпадение длин — ошибка формы до выдачи результата.",
       "inputs": {
         "left": [
           1,
@@ -1092,16 +1309,18 @@
           4,
           5,
           6
-        ]
+        ],
+        "limit": 20
       },
       "expected": [
-        18,
         29,
         42
       ],
-      "lmx": "Example:\n    int[]: left\n    int[]: right\n    return: @\n    run:\n        return: 2 * left + right * right\n",
-      "foreign": "example(left, right) = 2 .* left .+ right .* right\n",
-      "core_functions": [],
+      "lmx": "Example:\n    int[]: left\n    int[]: right\n    int: limit\n    return: @\n    run:\n        throws: copy(compress\\throws) SequenceSize\n        if: length(left) != length(right)\n            throw: SequenceSize()\n        @: scores 2 * left + right * right\n        return: compress(scores; scores >= limit)\n",
+      "foreign": "function example(left, right, limit)\n    length(left) == length(right) || throw(DimensionMismatch(\"scores\"))\n    scores = 2 .* left .+ right .* right\n    scores[scores .>= limit]\nend\n",
+      "core_functions": [
+        "compress"
+      ],
       "foreign_dependencies": [
         "Base.broadcast"
       ],
@@ -1110,7 +1329,7 @@
         "https://docs.julialang.org/en/v1/base/arrays/"
       ],
       "alternatives": [],
-      "notes_ru": "В обеих сторонах используется поэлементная арифметика существующего языка. Общий домен — одинаковые длины, целые без переполнения и чистые операции. Материализованный результат сохраняет порядок; отдельный Combine/zipWith не нужен.",
+      "notes_ru": "Сценарий расширен по замечанию автора: показана обработка данных и полезный итог, а не только вызов одной функции. Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "source_files": {
         "lmx": "source/lmx/J10.lm3",
         "foreign": "source/julia/J10.jl"
@@ -1118,12 +1337,15 @@
       "entry_points": {
         "foreign": "example"
       },
-      "implementation_links": {},
+      "implementation_links": {
+        "compress": "library_comparisons/JI02_comparision.md"
+      },
       "semantic_cases": [
         {
           "inputs": [
             [],
-            []
+            [],
+            0
           ],
           "expected": []
         },
@@ -1134,48 +1356,68 @@
             ],
             [
               -3
-            ]
+            ],
+            13
           ],
           "expected": [
             13
           ]
+        },
+        {
+          "inputs": [
+            [
+              1,
+              2
+            ],
+            [
+              3
+            ],
+            0
+          ],
+          "error": "shape"
         }
       ],
-      "implementation_targets": {},
+      "implementation_targets": {
+        "compress": "FxSeqCompress\\compress"
+      },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: left\n    int[]: right\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws) SequenceSize\n        if: length(left) != length(right)\n            throw: SequenceSize()\n        int[]: out []\n        sys\\resize(out; length(left))\n        int: i 0\n        while: i < length(left)\n            out[i] := 2 * left[i] + right[i] * right[i]\n            i += 1\n        return: out\n",
+          "code": "Example:\n    int[]: left\n    int[]: right\n    int: limit\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws) SequenceSize\n        if: length(left) != length(right)\n            throw: SequenceSize()\n        int[]: out []\n        int: i 0\n        while: i < length(left)\n            int: score 2 * left[i] + right[i] * right[i]\n            if: score >= limit\n                FxSeqPush\\append(out; (score record))\n            i += 1\n        return: out\n",
           "source_file": "source/lmx/procedural/J10.lm3",
           "contract_id": "J10",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 247,
-            "characters_with_whitespace": 398,
-            "nonblank_lines": 15,
-            "utf8_bytes": 398,
-            "sha256": "9a916e91437a787e7e805b2a8a076b5a2f13898166319b555453378e8cd6a00b"
-          },
           "core_functions": [
             "copy"
           ],
           "low_level_operations": [
             "sys\\resize"
-          ]
+          ],
+          "source_sha256": "9b71379e12082af1137ccc6cdd82495a1ea25ba30e98e939b65e94fb7435e2d2",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 304,
+            "characters_with_whitespace": 487,
+            "nonblank_lines": 17,
+            "utf8_bytes": 487,
+            "sha256": "9b71379e12082af1137ccc6cdd82495a1ea25ba30e98e939b65e94fb7435e2d2"
+          }
         },
         "functional": {
-          "code": "Example:\n    int[]: left\n    int[]: right\n    return: @\n    run:\n        return: 2 * left + right * right\n",
+          "code": "Example:\n    int[]: left\n    int[]: right\n    int: limit\n    return: @\n    run:\n        throws: copy(compress\\throws) SequenceSize\n        if: length(left) != length(right)\n            throw: SequenceSize()\n        @: scores 2 * left + right * right\n        return: compress(scores; scores >= limit)\n",
           "source_file": "source/lmx/J10.lm3",
           "contract_id": "J10",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 66,
-            "characters_with_whitespace": 106,
-            "nonblank_lines": 6,
-            "utf8_bytes": 106,
-            "sha256": "e4cb90ddaddba14cde9df8eaa899abbdaef9f27b1ffcac1fc1f5d15166113d4d"
-          },
           "core_functions": [],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "source_sha256": "a9544b646ec35140f51a61c41d3b4163d09ce52e09d2320b3be357f979f7d441",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 203,
+            "characters_with_whitespace": 300,
+            "nonblank_lines": 11,
+            "utf8_bytes": 300,
+            "sha256": "a9544b646ec35140f51a61c41d3b4163d09ce52e09d2320b3be357f979f7d441"
+          }
         }
       },
       "lmx_comparison_variants": [
@@ -1184,31 +1426,59 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
+      "style_note": "Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "previous_contract": {
+        "title": "Слитное поэлементное выражение",
+        "contract": "Для двух целочисленных векторов одинаковой длины вернуть 2*x + y*y по позициям. Арифметика без переполнения, callbacks не имеют эффектов.",
+        "inputs": {
+          "left": [
+            1,
+            2,
+            3
+          ],
+          "right": [
+            4,
+            5,
+            6
+          ]
+        },
+        "expected": [
+          18,
+          29,
+          42
+        ]
+      },
+      "lmx_parser_execution": "NOT_RUN",
+      "lmx_runtime_execution": "NOT_RUN",
+      "foreign_execution": "NOT_RUN",
+      "foreign_sha256": "319da099cdf825dfb7f9b3b8dc1be0502996590ea963989d447a5fe63637712b"
     },
     {
       "id": "J11",
-      "title": "Плоское разворачивание результатов",
+      "title": "Уникальные позиции вокруг событий",
       "category": "Итераторы",
-      "contract": "Для каждого целого x получить пару [x, x*x] и объединить пары по порядку. Происходит ровно одно разворачивание внешнего результата callback.",
+      "contract": "Каждая позиция события порождает x-1,x,x+1. Соединить эти окрестности в порядке событий, удалить отрицательные позиции, затем оставить первые вхождения. Нельзя сортировать результат или рекурсивно раскрывать данные. Целочисленная арифметика без переполнения.",
       "inputs": {
         "xs": [
+          0,
           2,
-          -3
+          2
         ]
       },
       "expected": [
+        0,
+        1,
         2,
-        4,
-        -3,
-        9
+        3
       ],
-      "lmx": "Expand:\n    int: x\n    return: @\n    expand:\n        return: (x; x * x)\n\nExample:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(FxListBind\\bind\\throws)\n        return: bind(xs; Expand\\expand)\n",
-      "foreign": "example(xs) = collect(Iterators.flatmap(x -> (x, x * x), xs))\n",
+      "lmx": "Neighborhood:\n    int: x\n    return: @\n    expand:\n        return: (x - 1; x; x + 1)\n\nNonnegative:\n    int: value\n    return: int\n    accepts:\n        return: value >= 0\n\nExample:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(FxListBind\\bind\\throws) copy(filter\\throws) copy(unique\\throws)\n        return: unique(filter(bind(xs; Neighborhood\\expand); Nonnegative\\accepts))\n",
+      "foreign": "function example(xs)\n    candidates = collect(Iterators.flatmap(x -> (x-1, x, x+1), xs))\n    unique(filter(>=(0), candidates))\nend\n",
       "core_functions": [
-        "bind"
+        "bind",
+        "filter",
+        "unique"
       ],
       "foreign_dependencies": [
         "Base.Iterators.flatmap",
@@ -1218,7 +1488,7 @@
         "https://docs.julialang.org/en/v1/base/iterators/"
       ],
       "alternatives": [],
-      "notes_ru": "Julia требует 1.9 или новее для Iterators.flatmap. LMX возвращает обычную структуру как Array<@>; отдельный контейнер items не создаётся.",
+      "notes_ru": "Сценарий расширен по замечанию автора: показана обработка данных и полезный итог, а не только вызов одной функции. Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "source_files": {
         "lmx": "source/lmx/J11.lm3",
         "foreign": "source/julia/J11.jl"
@@ -1227,7 +1497,9 @@
         "foreign": "example"
       },
       "implementation_links": {
-        "bind": "library_comparisons/JI01_comparision.md"
+        "bind": "library_comparisons/JI01_comparision.md",
+        "filter": "library_comparisons/JI01_comparision.md",
+        "unique": "library_comparisons/JI04_comparision.md"
       },
       "semantic_cases": [
         {
@@ -1239,34 +1511,41 @@
         {
           "inputs": [
             [
-              0
+              3,
+              1
             ]
           ],
           "expected": [
+            2,
+            3,
+            4,
             0,
-            0
+            1
           ]
+        },
+        {
+          "inputs": [
+            [
+              -2
+            ]
+          ],
+          "expected": []
         }
       ],
       "core_families": {
         "bind": "Array"
       },
       "implementation_targets": {
-        "bind": "FxListBind\\bind"
+        "bind": "FxListBind\\bind",
+        "filter": "FxFilter\\filter",
+        "unique": "FxUnique\\unique"
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        @[]: out []\n        int: i 0\n        while: i < length(xs)\n            FxSeqPush\\append(out; (xs[i] record))\n            FxSeqPush\\append(out; ((xs[i] * xs[i]) record))\n            i += 1\n        return: out\n",
+          "code": "Example:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        @[]: out []\n        int: i 0\n        while: i < length(xs)\n            int: offset -1\n            while: offset <= 1\n                int: value xs[i] + offset\n                if: value >= 0\n                    int: j 0\n                    while: j < length(out) && \\out[j] != value\n                        j += 1\n                    if: j = length(out)\n                        FxSeqPush\\append(out; (value record))\n                ---\n                offset += 1\n            ---\n            i += 1\n        return: out\n",
           "source_file": "source/lmx/procedural/J11.lm3",
           "contract_id": "J11",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 208,
-            "characters_with_whitespace": 328,
-            "nonblank_lines": 12,
-            "utf8_bytes": 328,
-            "sha256": "71e693481d816ef05151c04f57a5867977c91a1ec99178a05560768a70d85092"
-          },
           "core_functions": [
             "copy",
             "record"
@@ -1276,26 +1555,37 @@
           ],
           "core_families": {
             "bind": "Array"
+          },
+          "source_sha256": "4c9a4250c6a58b7ee3b862ee34bb1cee6fe0aeb03482261ca079851fc4f550ad",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 300,
+            "characters_with_whitespace": 638,
+            "nonblank_lines": 22,
+            "utf8_bytes": 638,
+            "sha256": "4c9a4250c6a58b7ee3b862ee34bb1cee6fe0aeb03482261ca079851fc4f550ad"
           }
         },
         "functional": {
-          "code": "Expand:\n    int: x\n    return: @\n    expand:\n        return: (x; x * x)\n\nExample:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(FxListBind\\bind\\throws)\n        return: bind(xs; Expand\\expand)\n",
+          "code": "Neighborhood:\n    int: x\n    return: @\n    expand:\n        return: (x - 1; x; x + 1)\n\nNonnegative:\n    int: value\n    return: int\n    accepts:\n        return: value >= 0\n\nExample:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(FxListBind\\bind\\throws) copy(filter\\throws) copy(unique\\throws)\n        return: unique(filter(bind(xs; Neighborhood\\expand); Nonnegative\\accepts))\n",
           "source_file": "source/lmx/J11.lm3",
           "contract_id": "J11",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 133,
-            "characters_with_whitespace": 204,
-            "nonblank_lines": 11,
-            "utf8_bytes": 204,
-            "sha256": "537f1ca9eff80fa04f1dae9f2950161494a552597e539782c3545816751c1e84"
-          },
           "core_functions": [
             "bind"
           ],
           "low_level_operations": [],
           "core_families": {
             "bind": "Array"
+          },
+          "source_sha256": "ab6e433d0d009e1421101ed2a179dc295968ceefa3f5df6f68f260973804e614",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 277,
+            "characters_with_whitespace": 385,
+            "nonblank_lines": 16,
+            "utf8_bytes": 385,
+            "sha256": "ab6e433d0d009e1421101ed2a179dc295968ceefa3f5df6f68f260973804e614"
           }
         }
       },
@@ -1305,38 +1595,59 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
+      "style_note": "Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "previous_contract": {
+        "title": "Плоское разворачивание результатов",
+        "contract": "Для каждого целого x получить пару [x, x*x] и объединить пары по порядку. Происходит ровно одно разворачивание внешнего результата callback.",
+        "inputs": {
+          "xs": [
+            2,
+            -3
+          ]
+        },
+        "expected": [
+          2,
+          4,
+          -3,
+          9
+        ]
+      },
+      "lmx_parser_execution": "NOT_RUN",
+      "lmx_runtime_execution": "NOT_RUN",
+      "foreign_execution": "NOT_RUN",
+      "foreign_sha256": "bbe25cd4f9f61da4def622a04c435aa6f8d6a819aa5330ea6b6c83c1054470c0"
     },
     {
       "id": "J12",
-      "title": "Группировка по чётности",
+      "title": "Группировка уникальных ID по разделам",
       "category": "Группировка",
-      "contract": "Разбить целые на группы odd=true/false, сохранить порядок элементов внутри каждой группы. Отсутствующие группы не создаются. Порядок обхода самих групп не сравнивается.",
+      "contract": "Сначала удалить повторные целые ID по первому появлению, затем разбить их на нечётный и чётный разделы. Порядок внутри разделов сохраняется, отсутствующие разделы не создаются. Порядок самих групп не сравнивается; исходный поток не меняется.",
       "inputs": {
         "xs": [
           3,
           2,
           5,
           4,
-          3
+          3,
+          2
         ]
       },
       "expected": {
         "true": [
           3,
-          5,
-          3
+          5
         ],
         "false": [
           2,
           4
         ]
       },
-      "lmx": "Parity:\n    int: value\n    return: int\n    key:\n        return: value % 2 != 0\n\n\nExample:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(groupBy\\throws)\n        return: groupBy(xs; Parity\\key)\n",
-      "foreign": "using SplitApplyCombine: group\nexample(xs) = group(isodd, xs)\n",
+      "lmx": "Parity:\n    int: value\n    return: int\n    key:\n        return: value % 2 != 0\n\n\nExample:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(groupBy\\throws) copy(unique\\throws)\n        return: groupBy(unique(xs); Parity\\key)\n",
+      "foreign": "using SplitApplyCombine: group\nfunction example(xs)\n    distinct = unique(xs)\n    group(isodd, distinct)\nend\n",
       "core_functions": [
+        "unique",
         "groupBy"
       ],
       "foreign_dependencies": [
@@ -1347,7 +1658,7 @@
         "https://github.com/JuliaData/SplitApplyCombine.jl#grouping"
       ],
       "alternatives": [],
-      "notes_ru": "Клиент импортирует настоящий пакет SplitApplyCombine. LMX возвращает список {key,items}, Julia — Dictionary; сравниваются ключи и полные группы, без искусственного преобразования одного клиента в устройство другого.",
+      "notes_ru": "Сценарий расширен по замечанию автора: показана обработка данных и полезный итог, а не только вызов одной функции. Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "source_files": {
         "lmx": "source/lmx/J12.lm3",
         "foreign": "source/julia/J12.jl"
@@ -1356,6 +1667,7 @@
         "foreign": "example"
       },
       "implementation_links": {
+        "unique": "library_comparisons/JI04_comparision.md",
         "groupBy": "library_comparisons/JI04_comparision.md"
       },
       "semantic_cases": [
@@ -1369,7 +1681,8 @@
           "inputs": [
             [
               2,
-              4
+              4,
+              2
             ]
           ],
           "expected": {
@@ -1381,45 +1694,50 @@
         }
       ],
       "implementation_targets": {
+        "unique": "FxUnique\\unique",
         "groupBy": "FxGroupBy\\groupBy"
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        @[]: out []\n        int: i 0\n        while: i < length(xs)\n            int: key xs[i] % 2 != 0\n            int: j 0\n            while: j < length(out) && \\out[j]\\key != key\n                j += 1\n            if: j = length(out)\n                @: group (copy(FxGroup))\n                group\\key := (key record)\n                group\\items := (copy(()))\n                FxSeqPush\\append(out; group)\n            FxSeqPush\\append(out[j]\\items; (xs[i] record))\n            i += 1\n        return: out\n",
+          "code": "Example:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        @[]: out []\n        int: i 0\n        while: i < length(xs)\n            int: prior 0\n            while: prior < i && xs[prior] != xs[i]\n                prior += 1\n            if: prior = i\n                int: key xs[i] % 2 != 0\n                int: j 0\n                while: j < length(out) && \\out[j]\\key != key\n                    j += 1\n                if: j = length(out)\n                    @: group (copy(FxGroup))\n                    group\\key := (key record)\n                    group\\items := (copy(()))\n                    FxSeqPush\\append(out; group)\n                FxSeqPush\\append(out[j]\\items; (xs[i] record))\n            ---\n            i += 1\n        return: out\n",
           "source_file": "source/lmx/procedural/J12.lm3",
           "contract_id": "J12",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 348,
-            "characters_with_whitespace": 616,
-            "nonblank_lines": 20,
-            "utf8_bytes": 616,
-            "sha256": "c213e96634044a6be6f6d5a5554f11e90886f1f9e4974dbb8fd0fcef5a2a6bbd"
-          },
           "core_functions": [
             "copy",
             "record"
           ],
           "low_level_operations": [
             "FxSeqPush\\append"
-          ]
+          ],
+          "source_sha256": "6bc7aa9d99d554ba5b70e058034f7323f78aaf4f6504413725df36a871c334f4",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 410,
+            "characters_with_whitespace": 801,
+            "nonblank_lines": 25,
+            "utf8_bytes": 801,
+            "sha256": "6bc7aa9d99d554ba5b70e058034f7323f78aaf4f6504413725df36a871c334f4"
+          }
         },
         "functional": {
-          "code": "Parity:\n    int: value\n    return: int\n    key:\n        return: value % 2 != 0\n\n\nExample:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(groupBy\\throws)\n        return: groupBy(xs; Parity\\key)\n",
+          "code": "Parity:\n    int: value\n    return: int\n    key:\n        return: value % 2 != 0\n\n\nExample:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(groupBy\\throws) copy(unique\\throws)\n        return: groupBy(unique(xs); Parity\\key)\n",
           "source_file": "source/lmx/J12.lm3",
           "contract_id": "J12",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 131,
-            "characters_with_whitespace": 204,
-            "nonblank_lines": 11,
-            "utf8_bytes": 204,
-            "sha256": "bdcb30fe79f0b70943139bac74fb4fb45ec02d08b47a7fd4a4224b3ec48c2cfc"
-          },
           "core_functions": [
             "groupBy"
           ],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "source_sha256": "ce9670fd3aaf07819a21f186d012101ce053a379b86e93bf717d94a543fb24a9",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 158,
+            "characters_with_whitespace": 232,
+            "nonblank_lines": 11,
+            "utf8_bytes": 232,
+            "sha256": "ce9670fd3aaf07819a21f186d012101ce053a379b86e93bf717d94a543fb24a9"
+          }
         }
       },
       "lmx_comparison_variants": [
@@ -1428,27 +1746,58 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
+      "style_note": "Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "previous_contract": {
+        "title": "Группировка по чётности",
+        "contract": "Разбить целые на группы odd=true/false, сохранить порядок элементов внутри каждой группы. Отсутствующие группы не создаются. Порядок обхода самих групп не сравнивается.",
+        "inputs": {
+          "xs": [
+            3,
+            2,
+            5,
+            4,
+            3
+          ]
+        },
+        "expected": {
+          "true": [
+            3,
+            5,
+            3
+          ],
+          "false": [
+            2,
+            4
+          ]
+        }
+      },
+      "lmx_parser_execution": "NOT_RUN",
+      "lmx_runtime_execution": "NOT_RUN",
+      "foreign_execution": "NOT_RUN",
+      "foreign_sha256": "a92b962844f27dc4be8920a4961f7f0b07bba9f67c5a587499f863873f238546"
     },
     {
       "id": "J13",
-      "title": "Хотя бы одно превышение",
+      "title": "Сигнал только после двух превышений подряд",
       "category": "Предикаты",
-      "contract": "Вернуть логическую истину, если существует x > limit. Пустой вход даёт ложь; просмотр заканчивается после первого успеха.",
+      "contract": "Одиночный выброс датчика не включает тревогу. Вернуть истину при первой паре соседних значений, оба строго выше limit. При длине меньше двух ответ ложный; после первого успеха дальнейшие пары не проверяются. xs и limit доступны predicate через действующее динамическое связывание LMX.",
       "inputs": {
         "xs": [
           1,
           9,
-          3
+          2,
+          8,
+          9
         ],
         "limit": 5
       },
       "expected": true,
-      "lmx": "Above:\n    int: value\n    return: int\n    accepts:\n        return: value > limit\n\nExample:\n    int[]: xs\n    int: limit\n    return: int\n    run:\n        throws: copy(any\\throws)\n        return: any(xs; Above\\accepts)\n",
-      "foreign": "example(xs, limit) = any(x -> x > limit, xs)\n",
+      "lmx": "Consecutive:\n    int: i\n    return: int\n    accepts:\n        return: xs[i - 1] > limit && xs[i] > limit\n\nExample:\n    int[]: xs\n    int: limit\n    return: int\n    run:\n        throws: copy(FxSeqRange\\range\\throws) copy(any\\throws)\n        return: any(range(1; length(xs); 1); Consecutive\\accepts)\n",
+      "foreign": "function example(xs, limit)\n    positions = 2:length(xs)\n    any(i -> xs[i-1] > limit && xs[i] > limit, positions)\nend\n",
       "core_functions": [
+        "range",
         "any"
       ],
       "foreign_dependencies": [
@@ -1458,7 +1807,7 @@
         "https://docs.julialang.org/en/v1/base/collections/"
       ],
       "alternatives": [],
-      "notes_ru": "limit разрешается в живом DATA вызывающего Example; исходник не копирует его в отдельную замкнутую структуру.",
+      "notes_ru": "Сценарий расширен по замечанию автора: показана обработка данных и полезный итог, а не только вызов одной функции. Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "source_files": {
         "lmx": "source/lmx/J13.lm3",
         "foreign": "source/julia/J13.jl"
@@ -1467,6 +1816,7 @@
         "foreign": "example"
       },
       "implementation_links": {
+        "range": "library_comparisons/JI02_comparision.md",
         "any": "library_comparisons/JI01_comparision.md"
       },
       "semantic_cases": [
@@ -1480,49 +1830,74 @@
         {
           "inputs": [
             [
-              1,
-              2
+              9
             ],
             5
           ],
           "expected": false
+        },
+        {
+          "inputs": [
+            [
+              9,
+              1,
+              9
+            ],
+            5
+          ],
+          "expected": false
+        },
+        {
+          "inputs": [
+            [
+              6,
+              6
+            ],
+            5
+          ],
+          "expected": true
         }
       ],
       "implementation_targets": {
+        "range": "FxSeqRange\\range",
         "any": "FxSeqAny\\any"
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: xs\n    int: limit\n    return: int\n    run:\n        int: i 0\n        while: i < length(xs)\n            if: xs[i] > limit\n                return: 1\n            i += 1\n        return: 0\n",
+          "code": "Example:\n    int[]: xs\n    int: limit\n    return: int\n    run:\n        int: i 1\n        while: i < length(xs)\n            if: xs[i - 1] > limit && xs[i] > limit\n                return: 1\n            i += 1\n        return: 0\n",
           "source_file": "source/lmx/procedural/J13.lm3",
           "contract_id": "J13",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 97,
-            "characters_with_whitespace": 203,
-            "nonblank_lines": 11,
-            "utf8_bytes": 203,
-            "sha256": "994c4ccff1529bf0e7d74025f4947ddbfdf29cacb3042da459e2b16570c0a040"
-          },
           "core_functions": [],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "source_sha256": "0f3cd405799744fbf201c0a860beff5165b6391b8830d781a9179c221dbf7502",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 112,
+            "characters_with_whitespace": 224,
+            "nonblank_lines": 11,
+            "utf8_bytes": 224,
+            "sha256": "0f3cd405799744fbf201c0a860beff5165b6391b8830d781a9179c221dbf7502"
+          }
         },
         "functional": {
-          "code": "Above:\n    int: value\n    return: int\n    accepts:\n        return: value > limit\n\nExample:\n    int[]: xs\n    int: limit\n    return: int\n    run:\n        throws: copy(any\\throws)\n        return: any(xs; Above\\accepts)\n",
+          "code": "Consecutive:\n    int: i\n    return: int\n    accepts:\n        return: xs[i - 1] > limit && xs[i] > limit\n\nExample:\n    int[]: xs\n    int: limit\n    return: int\n    run:\n        throws: copy(FxSeqRange\\range\\throws) copy(any\\throws)\n        return: any(range(1; length(xs); 1); Consecutive\\accepts)\n",
           "source_file": "source/lmx/J13.lm3",
           "contract_id": "J13",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 141,
-            "characters_with_whitespace": 217,
-            "nonblank_lines": 12,
-            "utf8_bytes": 217,
-            "sha256": "d258f9de846cf3ff14cf0cce4c8e837d062ec208458edda89c7923b246451394"
-          },
           "core_functions": [
             "any"
           ],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "source_sha256": "1d8fbcaaf00caf606976161cea528bf0d7527125847b0c411bdc765dafa73f43",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 212,
+            "characters_with_whitespace": 297,
+            "nonblank_lines": 12,
+            "utf8_bytes": 297,
+            "sha256": "1d8fbcaaf00caf606976161cea528bf0d7527125847b0c411bdc765dafa73f43"
+          }
         }
       },
       "lmx_comparison_variants": [
@@ -1531,26 +1906,49 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
+      "style_note": "Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "previous_contract": {
+        "title": "Хотя бы одно превышение",
+        "contract": "Вернуть логическую истину, если существует x > limit. Пустой вход даёт ложь; просмотр заканчивается после первого успеха.",
+        "inputs": {
+          "xs": [
+            1,
+            9,
+            3
+          ],
+          "limit": 5
+        },
+        "expected": true
+      },
+      "lmx_parser_execution": "NOT_RUN",
+      "lmx_runtime_execution": "NOT_RUN",
+      "foreign_execution": "NOT_RUN",
+      "foreign_sha256": "7c33b3f494d95d210c59a548bf8da03ea608551d6cd6368812d30447824750fc"
     },
     {
       "id": "J14",
-      "title": "Все значения положительны",
+      "title": "Проверка заказа против доступных запасов",
       "category": "Предикаты",
-      "contract": "Истина, если каждый элемент больше нуля. Пустой вход даёт истину; просмотр заканчивается после первого отказа.",
+      "contract": "Принять заказ, если длины required и available равны, каждая заказанная величина положительна и не превышает доступный запас на той же позиции. Любое нарушение даёт ложь; пустой заказ с пустым запасом корректен. После отказа дальнейшие позиции не проверяются.",
       "inputs": {
-        "xs": [
-          1,
+        "required": [
           2,
-          3
+          1,
+          4
+        ],
+        "available": [
+          3,
+          1,
+          6
         ]
       },
       "expected": true,
-      "lmx": "Positive:\n    int: value\n    return: int\n    accepts:\n        return: value > 0\n\nExample:\n    int[]: xs\n    return: int\n    run:\n        throws: copy(all\\throws)\n        return: all(xs; Positive\\accepts)\n",
-      "foreign": "example(xs) = all(x -> x > 0, xs)\n",
+      "lmx": "Fits:\n    int: i\n    return: int\n    accepts:\n        return: required[i] > 0 && required[i] <= available[i]\n\nExample:\n    int[]: required\n    int[]: available\n    return: int\n    run:\n        throws: copy(FxSeqRange\\range\\throws) copy(all\\throws)\n        if: length(required) != length(available)\n            return: 0\n        return: all(range(0; length(required); 1); Fits\\accepts)\n",
+      "foreign": "function example(required, available)\n    length(required) == length(available) || return false\n    all(i -> 0 < required[i] <= available[i], eachindex(required))\nend\n",
       "core_functions": [
+        "range",
         "all"
       ],
       "foreign_dependencies": [
@@ -1560,7 +1958,7 @@
         "https://docs.julialang.org/en/v1/base/collections/"
       ],
       "alternatives": [],
-      "notes_ru": "",
+      "notes_ru": "Сценарий расширен по замечанию автора: показана обработка данных и полезный итог, а не только вызов одной функции. Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "source_files": {
         "lmx": "source/lmx/J14.lm3",
         "foreign": "source/julia/J14.jl"
@@ -1569,11 +1967,13 @@
         "foreign": "example"
       },
       "implementation_links": {
+        "range": "library_comparisons/JI02_comparision.md",
         "all": "library_comparisons/JI01_comparision.md"
       },
       "semantic_cases": [
         {
           "inputs": [
+            [],
             []
           ],
           "expected": true
@@ -1582,48 +1982,79 @@
           "inputs": [
             [
               1,
-              0,
+              0
+            ],
+            [
+              2,
               2
+            ]
+          ],
+          "expected": false
+        },
+        {
+          "inputs": [
+            [
+              3
+            ],
+            [
+              2
+            ]
+          ],
+          "expected": false
+        },
+        {
+          "inputs": [
+            [
+              1,
+              2
+            ],
+            [
+              9
             ]
           ],
           "expected": false
         }
       ],
       "implementation_targets": {
+        "range": "FxSeqRange\\range",
         "all": "FxSeqAll\\all"
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: xs\n    return: int\n    run:\n        int: i 0\n        while: i < length(xs)\n            if: xs[i] <= 0\n                return: 0\n            i += 1\n        return: 1\n",
+          "code": "Example:\n    int[]: required\n    int[]: available\n    return: int\n    run:\n        if: length(required) != length(available)\n            return: 0\n        int: i 0\n        while: i < length(required)\n            if: required[i] <= 0 || required[i] > available[i]\n                return: 0\n            i += 1\n        return: 1\n",
           "source_file": "source/lmx/procedural/J14.lm3",
           "contract_id": "J14",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 85,
-            "characters_with_whitespace": 185,
-            "nonblank_lines": 10,
-            "utf8_bytes": 185,
-            "sha256": "b497447ec1b0b8e28955c0ff96eccfbd2c973098b0696e4b3218b8bb3cc7177e"
-          },
           "core_functions": [],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "source_sha256": "ca4e9903d81c6df006a46f763a88fe82756677d8b05e6a35d1d08260972bf6ba",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 190,
+            "characters_with_whitespace": 326,
+            "nonblank_lines": 13,
+            "utf8_bytes": 326,
+            "sha256": "ca4e9903d81c6df006a46f763a88fe82756677d8b05e6a35d1d08260972bf6ba"
+          }
         },
         "functional": {
-          "code": "Positive:\n    int: value\n    return: int\n    accepts:\n        return: value > 0\n\nExample:\n    int[]: xs\n    return: int\n    run:\n        throws: copy(all\\throws)\n        return: all(xs; Positive\\accepts)\n",
+          "code": "Fits:\n    int: i\n    return: int\n    accepts:\n        return: required[i] > 0 && required[i] <= available[i]\n\nExample:\n    int[]: required\n    int[]: available\n    return: int\n    run:\n        throws: copy(FxSeqRange\\range\\throws) copy(all\\throws)\n        if: length(required) != length(available)\n            return: 0\n        return: all(range(0; length(required); 1); Fits\\accepts)\n",
           "source_file": "source/lmx/J14.lm3",
           "contract_id": "J14",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 134,
-            "characters_with_whitespace": 204,
-            "nonblank_lines": 11,
-            "utf8_bytes": 204,
-            "sha256": "6b0956ca574b8d0872a255fa7492fc3227d354455327e1ff9407676ff0d6bf4d"
-          },
           "core_functions": [
             "all"
           ],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "source_sha256": "6c520fb2ef0036447621b92ce654ca212fd012da53849fe4d93b5a54f2ec456c",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 276,
+            "characters_with_whitespace": 385,
+            "nonblank_lines": 14,
+            "utf8_bytes": 385,
+            "sha256": "6c520fb2ef0036447621b92ce654ca212fd012da53849fe4d93b5a54f2ec456c"
+          }
         }
       },
       "lmx_comparison_variants": [
@@ -1632,9 +2063,25 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
+      "style_note": "Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "previous_contract": {
+        "title": "Все значения положительны",
+        "contract": "Истина, если каждый элемент больше нуля. Пустой вход даёт истину; просмотр заканчивается после первого отказа.",
+        "inputs": {
+          "xs": [
+            1,
+            2,
+            3
+          ]
+        },
+        "expected": true
+      },
+      "lmx_parser_execution": "NOT_RUN",
+      "lmx_runtime_execution": "NOT_RUN",
+      "foreign_execution": "NOT_RUN",
+      "foreign_sha256": "c753befc036adf0d3d78748077182b34caf57c4a0ede798da954a44b40d51d41"
     },
     {
       "id": "J15",
@@ -1765,22 +2212,26 @@
     },
     {
       "id": "J16",
-      "title": "Количество чётных элементов",
+      "title": "Доля годных измерений в промилле",
       "category": "Подсчёт",
-      "contract": "Посчитать чётные элементы; ноль и отрицательные чётные учитываются. Исходный массив сохраняется.",
+      "contract": "Посчитать значения в включённом интервале [lo,hi] и вернуть целую долю годных на тысячу: floor(1000*accepted/length). Для пустого входа вернуть 0. Источник сохраняется; произведение 1000*length помещается в int.",
       "inputs": {
         "xs": [
-          -2,
-          -1,
-          0,
-          3,
-          4
-        ]
+          9,
+          10,
+          11,
+          12,
+          20
+        ],
+        "lo": 10,
+        "hi": 12
       },
-      "expected": 3,
-      "lmx": "Example:\n    int[]: xs\n    return: int\n    run:\n        return: (+ 0 copy(xs % 2 = 0))\n",
-      "foreign": "example(xs) = count(iseven, xs)\n",
-      "core_functions": [],
+      "expected": 600,
+      "lmx": "Example:\n    int[]: xs\n    int: lo\n    int: hi\n    return: int\n    run:\n        throws: copy(sum\\throws)\n        int: n length(xs)\n        if: n = 0\n            return: 0\n        int: accepted \\sum((xs >= lo) * (xs <= hi))\n        int: scaled 1000 * accepted\n        return: (scaled - scaled % n) / n\n",
+      "foreign": "function example(xs, lo, hi)\n    isempty(xs) && return 0\n    accepted = count(x -> lo <= x <= hi, xs)\n    1000 * accepted ÷ length(xs)\nend\n",
+      "core_functions": [
+        "sum"
+      ],
       "foreign_dependencies": [
         "Base.count",
         "Base.iseven"
@@ -1789,7 +2240,7 @@
         "https://docs.julialang.org/en/v1/base/collections/"
       ],
       "alternatives": [],
-      "notes_ru": "Поэлементное сравнение даёт маску int 0/1; общий вариативный + складывает её поля вместе с начальным 0. Это тот же счёт чистого предиката, без отдельного тела Even.",
+      "notes_ru": "Сценарий расширен по замечанию автора: показана обработка данных и полезный итог, а не только вызов одной функции. Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "source_files": {
         "lmx": "source/lmx/J16.lm3",
         "foreign": "source/julia/J16.jl"
@@ -1797,11 +2248,38 @@
       "entry_points": {
         "foreign": "example"
       },
-      "implementation_links": {},
+      "implementation_links": {
+        "sum": "../../LMX_Fn_Receivers/src/coreStandardNumeric.lmx"
+      },
       "semantic_cases": [
         {
           "inputs": [
-            []
+            [],
+            0,
+            1
+          ],
+          "expected": 0
+        },
+        {
+          "inputs": [
+            [
+              0,
+              1,
+              2
+            ],
+            1,
+            1
+          ],
+          "expected": 333
+        },
+        {
+          "inputs": [
+            [
+              1,
+              2
+            ],
+            3,
+            4
           ],
           "expected": 0
         },
@@ -1809,43 +2287,51 @@
           "inputs": [
             [
               1,
-              3
-            ]
+              2
+            ],
+            0,
+            5
           ],
-          "expected": 0
+          "expected": 1000
         }
       ],
-      "implementation_targets": {},
+      "implementation_targets": {
+        "sum": "FxSum\\sum"
+      },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: xs\n    return: int\n    run:\n        int: count 0\n        int: i 0\n        while: i < length(xs)\n            if: xs[i] % 2 = 0\n                count += 1\n            i += 1\n        return: count\n",
+          "code": "Example:\n    int[]: xs\n    int: lo\n    int: hi\n    return: int\n    run:\n        int: n length(xs)\n        if: n = 0\n            return: 0\n        int: accepted 0\n        int: i 0\n        while: i < n\n            if: xs[i] >= lo && xs[i] <= hi\n                accepted += 1\n            i += 1\n        int: scaled 1000 * accepted\n        return: (scaled - scaled % n) / n\n",
           "source_file": "source/lmx/procedural/J16.lm3",
           "contract_id": "J16",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 100,
-            "characters_with_whitespace": 214,
-            "nonblank_lines": 11,
-            "utf8_bytes": 214,
-            "sha256": "7796c5caef9d7bf24e62b4758f78722b275888c865d3416bc86d27304b0bb6f8"
-          },
           "core_functions": [],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "source_sha256": "a6f994be783f025440acedf43654576a6bab9ea0519b983f21826fb75cb50672",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 186,
+            "characters_with_whitespace": 370,
+            "nonblank_lines": 17,
+            "utf8_bytes": 370,
+            "sha256": "a6f994be783f025440acedf43654576a6bab9ea0519b983f21826fb75cb50672"
+          }
         },
         "functional": {
-          "code": "Example:\n    int[]: xs\n    return: int\n    run:\n        return: (+ 0 copy(xs % 2 = 0))\n",
+          "code": "Example:\n    int[]: xs\n    int: lo\n    int: hi\n    return: int\n    run:\n        throws: copy(sum\\throws)\n        int: n length(xs)\n        if: n = 0\n            return: 0\n        int: accepted \\sum((xs >= lo) * (xs <= hi))\n        int: scaled 1000 * accepted\n        return: (scaled - scaled % n) / n\n",
           "source_file": "source/lmx/J16.lm3",
           "contract_id": "J16",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 53,
-            "characters_with_whitespace": 87,
-            "nonblank_lines": 5,
-            "utf8_bytes": 87,
-            "sha256": "3f4b5a6402e30f9418d992bbd5c36694da4f0af7647590bb0488f8a860b3da16"
-          },
           "core_functions": [],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "source_sha256": "4bd24945a9e5ad3b0bc1fc3c95bf5b86e227ec11846f48d5d804cb8516213ae1",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 178,
+            "characters_with_whitespace": 301,
+            "nonblank_lines": 13,
+            "utf8_bytes": 301,
+            "sha256": "4bd24945a9e5ad3b0bc1fc3c95bf5b86e227ec11846f48d5d804cb8516213ae1"
+          }
         }
       },
       "lmx_comparison_variants": [
@@ -1854,44 +2340,63 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
+      "style_note": "Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "previous_contract": {
+        "title": "Количество чётных элементов",
+        "contract": "Посчитать чётные элементы; ноль и отрицательные чётные учитываются. Исходный массив сохраняется.",
+        "inputs": {
+          "xs": [
+            -2,
+            -1,
+            0,
+            3,
+            4
+          ]
+        },
+        "expected": 3
+      },
+      "lmx_parser_execution": "NOT_RUN",
+      "lmx_runtime_execution": "NOT_RUN",
+      "foreign_execution": "NOT_RUN",
+      "foreign_sha256": "e373b674eacb393a9e06d086f40aa0117a66b7a1f5b27253faf994a997b429c3"
     },
     {
       "id": "J17",
-      "title": "Дополнение существующего массива",
+      "title": "Добавление пачки в ограниченный журнал",
       "category": "Мутации",
-      "contract": "Добавить values в конец target и вернуть тот же target. Сравниваемый домен: отдельные совместимые векторы без перекрытия; наблюдаются содержимое и идентичность target.",
+      "contract": "Добавить values в конец изменяемого target, затем при превышении неотрицательной capacity удалить самые старые элементы. Вернуть тот же target с последними capacity значениями. Источник values не пересекается с target; сохранение идентичности target входит в договор. capacity=0 очищает журнал.",
       "inputs": {
         "target": [
           1,
-          2
+          2,
+          3
         ],
         "values": [
-          3,
-          4
-        ]
+          4,
+          5
+        ],
+        "capacity": 3
       },
       "expected": {
         "returned": [
-          1,
-          2,
           3,
-          4
+          4,
+          5
         ],
         "target": [
-          1,
-          2,
           3,
-          4
+          4,
+          5
         ],
         "same_target": true
       },
-      "lmx": "Example:\n    @: target\n    @: values\n    return: @\n    run:\n        throws: copy(append\\throws)\n        return: append(target; values)\n",
-      "foreign": "example(target, values) = append!(target, values)\n",
+      "lmx": "Example:\n    @: target\n    @: values\n    int: capacity\n    return: @\n    run:\n        throws: copy(append\\throws) copy(splice\\throws)\n        append(target; values)\n        int: drop length(target) - capacity\n        if: drop > 0\n            splice(target; 0; drop; ())\n        return: target\n",
+      "foreign": "function example(target, values, capacity)\n    append!(target, values)\n    drop = length(target) - capacity\n    drop > 0 && splice!(target, 1:drop)\n    target\nend\n",
       "core_functions": [
-        "append"
+        "append",
+        "splice"
       ],
       "foreign_dependencies": [
         "Base.append!"
@@ -1900,7 +2405,7 @@
         "https://docs.julialang.org/en/v1/base/collections/"
       ],
       "alternatives": [],
-      "notes_ru": "LMX дополнительно умеет безопасно подготовить перекрывающиеся источники; это свойство проверяется отдельно на реализациях, а не приписывается Base.append!.",
+      "notes_ru": "Сценарий расширен по замечанию автора: показана обработка данных и полезный итог, а не только вызов одной функции. Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "source_files": {
         "lmx": "source/lmx/J17.lm3",
         "foreign": "source/julia/J17.jl"
@@ -1909,37 +2414,71 @@
         "foreign": "example"
       },
       "implementation_links": {
-        "append": "library_comparisons/JI03_comparision.md"
+        "append": "library_comparisons/JI03_comparision.md",
+        "splice": "library_comparisons/JI03_comparision.md"
       },
       "semantic_cases": [
         {
           "inputs": [
             [],
-            []
+            [],
+            2
           ],
           "expected": {
             "returned": [],
             "target": [],
             "same_target": true
           }
+        },
+        {
+          "inputs": [
+            [
+              1
+            ],
+            [
+              2
+            ],
+            0
+          ],
+          "expected": {
+            "returned": [],
+            "target": [],
+            "same_target": true
+          }
+        },
+        {
+          "inputs": [
+            [
+              1
+            ],
+            [
+              2
+            ],
+            5
+          ],
+          "expected": {
+            "returned": [
+              1,
+              2
+            ],
+            "target": [
+              1,
+              2
+            ],
+            "same_target": true
+          }
         }
       ],
       "implementation_targets": {
-        "append": "FxSeqAppend\\append"
+        "append": "FxSeqAppend\\append",
+        "splice": "FxSeqSplice\\splice"
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    @: target\n    @: values\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqSize\\sum\\throws) copy(FxSeqAdmit\\admit\\throws) copy(FxSeqRead\\read\\throws) copy(FxKernel\\arrayWrite\\throws) copy(sys\\resize\\throws)\n        @: info FxSeqInfo\\get(target)\n        FxSeqInfo\\get(values)\n        int: oldSize length(target)\n        int: added length(values)\n        int: newSize FxSeqSize\\sum(oldSize; added; info\\maxLength)\n        @[]: ready []\n        sys\\resize(ready; added)\n        int: i 0\n        while: i < added\n            ready[i] := FxSeqAdmit\\admit(target; FxSeqRead\\read(values; i))\n            i += 1\n        sys\\resize(target; newSize)\n        i := 0\n        while: i < added\n            FxKernel\\arrayWrite(target; oldSize + i; ready[i])\n            i += 1\n        return: target\n",
+          "code": "Example:\n    @: target\n    @: values\n    int: capacity\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqSize\\sum\\throws) copy(FxSeqAdmit\\admit\\throws) copy(FxSeqRead\\read\\throws) copy(FxKernel\\arrayWrite\\throws) copy(sys\\resize\\throws)\n        @: info FxSeqInfo\\get(target)\n        FxSeqInfo\\get(values)\n        int: oldSize length(target)\n        int: added length(values)\n        int: newSize FxSeqSize\\sum(oldSize; added; info\\maxLength)\n        @[]: ready []\n        sys\\resize(ready; added)\n        int: i 0\n        while: i < added\n            ready[i] := FxSeqAdmit\\admit(target; FxSeqRead\\read(values; i))\n            i += 1\n        sys\\resize(target; newSize)\n        i := 0\n        while: i < added\n            FxKernel\\arrayWrite(target; oldSize + i; ready[i])\n            i += 1\n        int: drop length(target) - capacity\n        if: drop > 0\n            i := 0\n            while: i < capacity\n                FxKernel\\arrayWrite(target; i; FxSeqRead\\read(target; drop + i))\n                i += 1\n            sys\\resize(target; capacity)\n        return: target\n",
           "source_file": "source/lmx/procedural/J17.lm3",
           "contract_id": "J17",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 578,
-            "characters_with_whitespace": 823,
-            "nonblank_lines": 23,
-            "utf8_bytes": 823,
-            "sha256": "9f5266645441d5a61467c2566f9735f33647084128ebbd1d3c8607e5a81cec79"
-          },
           "core_functions": [
             "copy"
           ],
@@ -1950,24 +2489,35 @@
             "FxSeqRead\\read",
             "FxSeqSize\\sum",
             "sys\\resize"
-          ]
+          ],
+          "source_sha256": "aa089f18d9b180f65d17100b60a4f65a57f87dce145eb2d8b139abf2ec35085d",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 740,
+            "characters_with_whitespace": 1102,
+            "nonblank_lines": 31,
+            "utf8_bytes": 1102,
+            "sha256": "aa089f18d9b180f65d17100b60a4f65a57f87dce145eb2d8b139abf2ec35085d"
+          }
         },
         "functional": {
-          "code": "Example:\n    @: target\n    @: values\n    return: @\n    run:\n        throws: copy(append\\throws)\n        return: append(target; values)\n",
+          "code": "Example:\n    @: target\n    @: values\n    int: capacity\n    return: @\n    run:\n        throws: copy(append\\throws) copy(splice\\throws)\n        append(target; values)\n        int: drop length(target) - capacity\n        if: drop > 0\n            splice(target; 0; drop; ())\n        return: target\n",
           "source_file": "source/lmx/J17.lm3",
           "contract_id": "J17",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 90,
-            "characters_with_whitespace": 135,
-            "nonblank_lines": 7,
-            "utf8_bytes": 135,
-            "sha256": "46a42befea28fd347e448762c7b12257a65caa960bc9974010fbd6aed25cccac"
-          },
           "core_functions": [
             "append"
           ],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "source_sha256": "e1392dae10e2b9bf53bbde3d96dd7ee10bf45f2bfd8ba2f8dbbdaf6918f2753e",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 191,
+            "characters_with_whitespace": 293,
+            "nonblank_lines": 12,
+            "utf8_bytes": 293,
+            "sha256": "e1392dae10e2b9bf53bbde3d96dd7ee10bf45f2bfd8ba2f8dbbdaf6918f2753e"
+          }
         }
       },
       "lmx_comparison_variants": [
@@ -1976,9 +2526,42 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
+      "style_note": "Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "previous_contract": {
+        "title": "Дополнение существующего массива",
+        "contract": "Добавить values в конец target и вернуть тот же target. Сравниваемый домен: отдельные совместимые векторы без перекрытия; наблюдаются содержимое и идентичность target.",
+        "inputs": {
+          "target": [
+            1,
+            2
+          ],
+          "values": [
+            3,
+            4
+          ]
+        },
+        "expected": {
+          "returned": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "target": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "same_target": true
+        }
+      },
+      "lmx_parser_execution": "NOT_RUN",
+      "lmx_runtime_execution": "NOT_RUN",
+      "foreign_execution": "NOT_RUN",
+      "foreign_sha256": "e1a3472c9d970fdc91691b4566a6f0433375e2e7326419c96aabf9643eef0e45"
     },
     {
       "id": "J18",
@@ -2148,41 +2731,35 @@
     },
     {
       "id": "J19",
-      "title": "Транспонирование прямоугольной матрицы",
+      "title": "Итоги каналов после вычитания фона",
       "category": "Матрицы",
-      "contract": "Вернуть транспонированные значения без сопряжения и без изменения входа. Общий домен: непустые прямоугольные матрицы с положительной шириной и отдельно матрица 0x0.",
+      "contract": "Строки матрицы — последовательные измерения, столбцы — каналы. Вычесть общий целочисленный baseline из каждого показания и вернуть сумму каждого канала в исходном порядке столбцов. Вход не меняется; допустимы прямоугольные матрицы положительной ширины и отдельно 0x0. Арифметика без переполнения.",
       "inputs": {
         "rows": [
           [
-            1,
             2,
-            3
+            4,
+            6
           ],
           [
-            4,
+            3,
             5,
-            6
+            7
           ]
-        ]
+        ],
+        "baseline": 1
       },
       "expected": [
-        [
-          1,
-          4
-        ],
-        [
-          2,
-          5
-        ],
-        [
-          3,
-          6
-        ]
+        3,
+        7,
+        11
       ],
-      "lmx": "Example:\n    @: rows\n    return: @\n    run:\n        throws: copy(transpose\\throws)\n        return: transpose(rows)\n",
-      "foreign": "example(matrix) = permutedims(matrix)\n",
+      "lmx": "ChannelTotal:\n    @: column\n    return: int\n    value:\n        throws: copy(sum\\throws)\n        return: \\sum(column) - baseline * length(column)\n\nExample:\n    @: rows\n    int: baseline\n    return: @\n    run:\n        throws: copy(transpose\\throws) copy(map\\throws) copy(ChannelTotal\\value\\throws)\n        return: map(transpose(rows); ChannelTotal\\value)\n",
+      "foreign": "function example(matrix, baseline)\n    calibrated = matrix .- baseline\n    [sum(column) for column in eachcol(calibrated)]\nend\n",
       "core_functions": [
-        "transpose"
+        "transpose",
+        "map",
+        "sum"
       ],
       "foreign_dependencies": [
         "Base.permutedims"
@@ -2191,7 +2768,7 @@
         "https://docs.julialang.org/en/v1/base/arrays/"
       ],
       "alternatives": [],
-      "notes_ru": "Julia получает родную Matrix; LMX — массив строк. Конвертация тестовых данных не включена в алгоритмы. LMX без отдельной метаинформации не различает все формы 0xn, поэтому такие формы не объявлены равнозначными.",
+      "notes_ru": "Сценарий расширен по замечанию автора: показана обработка данных и полезный итог, а не только вызов одной функции. Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "source_files": {
         "lmx": "source/lmx/J19.lm3",
         "foreign": "source/julia/J19.jl"
@@ -2200,7 +2777,9 @@
         "foreign": "example"
       },
       "implementation_links": {
-        "transpose": "library_comparisons/JI02_comparision.md"
+        "transpose": "library_comparisons/JI02_comparision.md",
+        "map": "library_comparisons/JI01_comparision.md",
+        "sum": "../../LMX_Fn_Receivers/src/coreStandardNumeric.lmx"
       },
       "semantic_cases": [
         {
@@ -2209,37 +2788,32 @@
               [
                 7
               ]
-            ]
+            ],
+            2
           ],
           "expected": [
-            [
-              7
-            ]
+            5
           ]
         },
         {
           "inputs": [
-            []
+            [],
+            3
           ],
           "expected": []
         }
       ],
       "implementation_targets": {
-        "transpose": "FxTranspose\\transpose"
+        "transpose": "FxTranspose\\transpose",
+        "map": "FxMap\\map",
+        "sum": "FxSum\\sum"
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    @: rows\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxSeqRead\\read\\throws) copy(sys\\resize\\throws) FxShape\n        FxSeqInfo\\get(rows)\n        @[]: out []\n        if: length(rows) = 0\n            return: out\n        @: first FxSeqRead\\read(rows; 0)\n        FxSeqInfo\\get(first)\n        int: width length(first)\n        int: i 0\n        while: i < length(rows)\n            @: row FxSeqRead\\read(rows; i)\n            FxSeqInfo\\get(row)\n            if: length(row) != width\n                throw: FxShape()\n            i += 1\n        sys\\resize(out; width)\n        int: j 0\n        while: j < width\n            @: column FxSeqAllocate\\make(@[]; length(rows))\n            i := 0\n            while: i < length(rows)\n                @: row FxSeqRead\\read(rows; i)\n                column[i] := FxSeqRead\\read(row; j)\n                i += 1\n            out[j] := column\n            j += 1\n        return: out\n",
+          "code": "Example:\n    @: rows\n    int: baseline\n    return: @\n    run:\n        throws: copy(FxSeqRead\\read\\throws) copy(FxSeqInfo\\get\\throws) copy(sys\\resize\\throws) copy(record\\throws) FxShape\n        @[]: out []\n        if: length(rows) = 0\n            return: out\n        @: first FxSeqRead\\read(rows; 0)\n        int: width length(first)\n        int: i 0\n        while: i < length(rows)\n            @: row FxSeqRead\\read(rows; i)\n            FxSeqInfo\\get(row)\n            if: length(row) != width\n                throw: FxShape()\n            i += 1\n        sys\\resize(out; width)\n        int: j 0\n        while: j < width\n            int: total 0\n            i := 0\n            while: i < length(rows)\n                @: row FxSeqRead\\read(rows; i)\n                total += \\FxSeqRead\\read(row; j) - baseline\n                i += 1\n            out[j] := (total record)\n            j += 1\n        return: out\n",
           "source_file": "source/lmx/procedural/J19.lm3",
           "contract_id": "J19",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 583,
-            "characters_with_whitespace": 973,
-            "nonblank_lines": 31,
-            "utf8_bytes": 973,
-            "sha256": "c74d1cf2279e9526e4e1c90dbff6fc50894889fe911302736352348e77baa06f"
-          },
           "core_functions": [
             "copy"
           ],
@@ -2248,24 +2822,35 @@
             "FxSeqInfo\\get",
             "FxSeqRead\\read",
             "sys\\resize"
-          ]
+          ],
+          "source_sha256": "812536625e1fa938fda718d9555179dee2fd4ac69b5e7aa163312d7ad2dcdc7e",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 523,
+            "characters_with_whitespace": 903,
+            "nonblank_lines": 30,
+            "utf8_bytes": 903,
+            "sha256": "812536625e1fa938fda718d9555179dee2fd4ac69b5e7aa163312d7ad2dcdc7e"
+          }
         },
         "functional": {
-          "code": "Example:\n    @: rows\n    return: @\n    run:\n        throws: copy(transpose\\throws)\n        return: transpose(rows)\n",
+          "code": "ChannelTotal:\n    @: column\n    return: int\n    value:\n        throws: copy(sum\\throws)\n        return: \\sum(column) - baseline * length(column)\n\nExample:\n    @: rows\n    int: baseline\n    return: @\n    run:\n        throws: copy(transpose\\throws) copy(map\\throws) copy(ChannelTotal\\value\\throws)\n        return: map(transpose(rows); ChannelTotal\\value)\n",
           "source_file": "source/lmx/J19.lm3",
           "contract_id": "J19",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 77,
-            "characters_with_whitespace": 115,
-            "nonblank_lines": 6,
-            "utf8_bytes": 115,
-            "sha256": "dcab061406bbb73d00db0a6d189d76de535986c472d34f5ef093bf1fde819ea5"
-          },
           "core_functions": [
             "transpose"
           ],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "source_sha256": "d2cb67904c6b934127cae2c2b9201b9206199b9e27387d9ee5daf330f10a501d",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 263,
+            "characters_with_whitespace": 353,
+            "nonblank_lines": 13,
+            "utf8_bytes": 353,
+            "sha256": "d2cb67904c6b934127cae2c2b9201b9206199b9e27387d9ee5daf330f10a501d"
+          }
         }
       },
       "lmx_comparison_variants": [
@@ -2274,15 +2859,51 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
+      "style_note": "Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "previous_contract": {
+        "title": "Транспонирование прямоугольной матрицы",
+        "contract": "Вернуть транспонированные значения без сопряжения и без изменения входа. Общий домен: непустые прямоугольные матрицы с положительной шириной и отдельно матрица 0x0.",
+        "inputs": {
+          "rows": [
+            [
+              1,
+              2,
+              3
+            ],
+            [
+              4,
+              5,
+              6
+            ]
+          ]
+        },
+        "expected": [
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            5
+          ],
+          [
+            3,
+            6
+          ]
+        ]
+      },
+      "lmx_parser_execution": "NOT_RUN",
+      "lmx_runtime_execution": "NOT_RUN",
+      "foreign_execution": "NOT_RUN",
+      "foreign_sha256": "8ac99000fd95226b3a513ca65b5b122a4e30d38178519eff593b55d3f5da2cc9"
     },
     {
       "id": "J20",
-      "title": "Устойчивая сортировка записей",
+      "title": "Ограниченная очередь по приоритету",
       "category": "Сортировка",
-      "contract": "Отсортировать записи по key, сохраняя порядок равных ключей, все остальные поля и исходный массив. Результат — новый внешний массив.",
+      "contract": "Стабильно отсортировать задания по key и вернуть не более capacity первых записей. capacity неотрицательна; равные приоритеты сохраняют порядок поступления. Все поля записей и исходный массив сохраняются, результат — новый внешний массив.",
       "inputs": {
         "items": [
           {
@@ -2301,7 +2922,8 @@
             "key": 1,
             "id": "d"
           }
-        ]
+        ],
+        "capacity": 3
       },
       "expected": [
         {
@@ -2315,16 +2937,13 @@
         {
           "key": 2,
           "id": "a"
-        },
-        {
-          "key": 2,
-          "id": "c"
         }
       ],
-      "lmx": "Order:\n    @: first\n    @: second\n    return: int\n    compare:\n        return: (first\\key > second\\key) - (first\\key < second\\key)\n\nExample:\n    @: items\n    return: @\n    run:\n        throws: copy(sort\\throws)\n        return: sort(items; Order\\compare)\n",
-      "foreign": "example(items) = sort(items; by=item -> item.key)\n",
+      "lmx": "Order:\n    @: first\n    @: second\n    return: int\n    compare:\n        return: (first\\key > second\\key) - (first\\key < second\\key)\n\nExample:\n    @: items\n    int: capacity\n    return: @\n    run:\n        throws: copy(sort\\throws) copy(slice\\throws)\n        @: ordered sort(items; Order\\compare)\n        int: count length(ordered)\n        if: capacity < count\n            count := capacity\n        return: slice(ordered; 0; count)\n",
+      "foreign": "function example(items, capacity)\n    ordered = sort(items; by=item -> item.key)\n    ordered[1:min(capacity, length(ordered))]\nend\n",
       "core_functions": [
-        "sort"
+        "sort",
+        "slice"
       ],
       "foreign_dependencies": [
         "Base.sort"
@@ -2333,7 +2952,7 @@
         "https://docs.julialang.org/en/v1/base/sort/"
       ],
       "alternatives": [],
-      "notes_ru": "Компаратор вычитает два результата сравнения int 0/1, а не сами ключи: переполнения разности ключей нет. id наблюдает устойчивость; все поля сохраняются. Используется общий FxSort. Общий домен ключей — согласованный полный порядок для сравниваемых >/< и иностранного порядка; специальные NaN/частичные порядки не приписываются этому компаратору. Тип записей и набор их полей не ограничиваются int.",
+      "notes_ru": "Сценарий расширен по замечанию автора: показана обработка данных и полезный итог, а не только вызов одной функции. Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "source_files": {
         "lmx": "source/lmx/J20.lm3",
         "foreign": "source/julia/J20.jl"
@@ -2342,12 +2961,38 @@
         "foreign": "example"
       },
       "implementation_links": {
-        "sort": "library_comparisons/JI04_comparision.md"
+        "sort": "library_comparisons/JI04_comparision.md",
+        "slice": "library_comparisons/JI02_comparision.md"
       },
       "semantic_cases": [
         {
           "inputs": [
-            []
+            [],
+            2
+          ],
+          "expected": []
+        },
+        {
+          "inputs": [
+            [
+              {
+                "key": 2,
+                "id": "a"
+              },
+              {
+                "key": 1,
+                "id": "b"
+              },
+              {
+                "key": 2,
+                "id": "c"
+              },
+              {
+                "key": 1,
+                "id": "d"
+              }
+            ],
+            0
           ],
           "expected": []
         },
@@ -2362,7 +3007,8 @@
                 "key": 1,
                 "id": "b"
               }
-            ]
+            ],
+            5
           ],
           "expected": [
             {
@@ -2377,21 +3023,15 @@
         }
       ],
       "implementation_targets": {
-        "sort": "FxSort\\sort"
+        "sort": "FxSort\\sort",
+        "slice": "FxSeqSlice\\slice"
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    @: items\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxSeqRead\\read\\throws) copy(FxSeqStore\\write\\throws)\n        @: info FxSeqInfo\\get(items)\n        @: out FxSeqAllocate\\make(info\\arrayType; length(items))\n        int: i 0\n        while: i < length(items)\n            @: held FxSeqRead\\read(items; i)\n            @: value \\held\n            int: j i\n            while: j > 0\n                @: previous FxSeqRead\\read(out; j - 1)\n                @: item \\previous\n                if: (item\\key > value\\key) - (item\\key < value\\key) <= 0\n                    break\n                FxSeqStore\\write(out; j; previous)\n                j -= 1\n            FxSeqStore\\write(out; j; held)\n            i += 1\n        return: out\n",
+          "code": "Example:\n    @: items\n    int: capacity\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxSeqRead\\read\\throws) copy(FxSeqStore\\write\\throws) copy(sys\\resize\\throws)\n        @: info FxSeqInfo\\get(items)\n        @: out FxSeqAllocate\\make(info\\arrayType; length(items))\n        int: i 0\n        while: i < length(items)\n            @: held FxSeqRead\\read(items; i)\n            @: value \\held\n            int: j i\n            while: j > 0\n                @: previous FxSeqRead\\read(out; j - 1)\n                @: item \\previous\n                if: (item\\key > value\\key) - (item\\key < value\\key) <= 0\n                    break\n                FxSeqStore\\write(out; j; previous)\n                j -= 1\n            FxSeqStore\\write(out; j; held)\n            i += 1\n        if: capacity < length(out)\n            sys\\resize(out; capacity)\n        return: out\n",
           "source_file": "source/lmx/procedural/J20.lm3",
           "contract_id": "J20",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 487,
-            "characters_with_whitespace": 792,
-            "nonblank_lines": 22,
-            "utf8_bytes": 792,
-            "sha256": "ac27997e3c1f9fa36a8259aa0cc03017136a5690d7d0d63044182908552fe196"
-          },
           "core_functions": [
             "copy"
           ],
@@ -2400,24 +3040,35 @@
             "FxSeqInfo\\get",
             "FxSeqRead\\read",
             "FxSeqStore\\write"
-          ]
+          ],
+          "source_sha256": "2e3974627b3e4b0ed211cb0be92550e5d25b716a892f36e45f88babcbfcf8c0b",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 569,
+            "characters_with_whitespace": 907,
+            "nonblank_lines": 25,
+            "utf8_bytes": 907,
+            "sha256": "2e3974627b3e4b0ed211cb0be92550e5d25b716a892f36e45f88babcbfcf8c0b"
+          }
         },
         "functional": {
-          "code": "Order:\n    @: first\n    @: second\n    return: int\n    compare:\n        return: (first\\key > second\\key) - (first\\key < second\\key)\n\nExample:\n    @: items\n    return: @\n    run:\n        throws: copy(sort\\throws)\n        return: sort(items; Order\\compare)\n",
+          "code": "Order:\n    @: first\n    @: second\n    return: int\n    compare:\n        return: (first\\key > second\\key) - (first\\key < second\\key)\n\nExample:\n    @: items\n    int: capacity\n    return: @\n    run:\n        throws: copy(sort\\throws) copy(slice\\throws)\n        @: ordered sort(items; Order\\compare)\n        int: count length(ordered)\n        if: capacity < count\n            count := capacity\n        return: slice(ordered; 0; count)\n",
           "source_file": "source/lmx/J20.lm3",
           "contract_id": "J20",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 174,
-            "characters_with_whitespace": 254,
-            "nonblank_lines": 12,
-            "utf8_bytes": 254,
-            "sha256": "069881a2f6ea4689e3310873d4d0ab0a2ab1801e2d097fd75c22ad931839e359"
-          },
           "core_functions": [
             "sort"
           ],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "source_sha256": "cee5dc8bd2126c8e0e3706a3fb5a89669fc3b1cbe7d9043ecc9aed3a56d4af5e",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 291,
+            "characters_with_whitespace": 429,
+            "nonblank_lines": 17,
+            "utf8_bytes": 429,
+            "sha256": "cee5dc8bd2126c8e0e3706a3fb5a89669fc3b1cbe7d9043ecc9aed3a56d4af5e"
+          }
         }
       },
       "lmx_comparison_variants": [
@@ -2426,23 +3077,77 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
+      "style_note": "Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "previous_contract": {
+        "title": "Устойчивая сортировка записей",
+        "contract": "Отсортировать записи по key, сохраняя порядок равных ключей, все остальные поля и исходный массив. Результат — новый внешний массив.",
+        "inputs": {
+          "items": [
+            {
+              "key": 2,
+              "id": "a"
+            },
+            {
+              "key": 1,
+              "id": "b"
+            },
+            {
+              "key": 2,
+              "id": "c"
+            },
+            {
+              "key": 1,
+              "id": "d"
+            }
+          ]
+        },
+        "expected": [
+          {
+            "key": 1,
+            "id": "b"
+          },
+          {
+            "key": 1,
+            "id": "d"
+          },
+          {
+            "key": 2,
+            "id": "a"
+          },
+          {
+            "key": 2,
+            "id": "c"
+          }
+        ]
+      },
+      "lmx_parser_execution": "NOT_RUN",
+      "lmx_runtime_execution": "NOT_RUN",
+      "foreign_execution": "NOT_RUN",
+      "foreign_sha256": "45d380821a9031f55fee3024257216749218849a852244ce2c8e0009f88e79b2"
     },
     {
       "id": "J21",
-      "title": "Первые уникальные значения",
+      "title": "Первые уникальные значения из пачек",
       "category": "Уникальность",
-      "contract": "Оставить первое появление каждого целого, сохранив порядок. Вход не меняется.",
+      "contract": "Последовательно объединить конечные пачки на один уровень, затем оставить первое появление каждого значения во всём потоке. Пустые пачки допустимы, входы сохраняются. Реализация LMX принимает общие профили последовательностей; проверяемый общий домен этой пары — скалярные целые без расхождения политик равенства.",
       "inputs": {
-        "xs": [
-          3,
-          1,
-          3,
-          2,
-          1,
-          4
+        "batches": [
+          [
+            3,
+            1,
+            3
+          ],
+          [],
+          [
+            2,
+            1
+          ],
+          [
+            4,
+            2
+          ]
         ]
       },
       "expected": [
@@ -2451,9 +3156,10 @@
         2,
         4
       ],
-      "lmx": "Example:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(unique\\throws)\n        return: unique(xs)\n",
-      "foreign": "example(xs) = unique(xs)\n",
+      "lmx": "Example:\n    @: batches\n    return: @\n    run:\n        throws: copy(concat\\throws) copy(unique\\throws)\n        return: unique(concat(batches))\n",
+      "foreign": "function example(batches)\n    joined = collect(Iterators.flatten(batches))\n    unique(joined)\nend\n",
       "core_functions": [
+        "concat",
         "unique"
       ],
       "foreign_dependencies": [
@@ -2463,7 +3169,7 @@
         "https://docs.julialang.org/en/v1/base/collections/"
       ],
       "alternatives": [],
-      "notes_ru": "unique(xs) использует обычное сравнение фактических значений; отдельный Equal не нужен. Для канонических целых этого сравнения отношение совпадает с isequal Julia. Общее LMX-определение сохраняет первый представитель, профиль массива и допускает явный same для иного отношения; рекурсивный режим определён для конечных ациклических последовательностей.",
+      "notes_ru": "Сценарий расширен по замечанию автора: показана обработка данных и полезный итог, а не только вызов одной функции. Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "source_files": {
         "lmx": "source/lmx/J21.lm3",
         "foreign": "source/julia/J21.jl"
@@ -2472,6 +3178,7 @@
         "foreign": "example"
       },
       "implementation_links": {
+        "concat": "library_comparisons/JI02_comparision.md",
         "unique": "library_comparisons/JI04_comparision.md"
       },
       "semantic_cases": [
@@ -2484,9 +3191,22 @@
         {
           "inputs": [
             [
-              2,
-              2,
-              2
+              [],
+              []
+            ]
+          ],
+          "expected": []
+        },
+        {
+          "inputs": [
+            [
+              [
+                2,
+                2
+              ],
+              [
+                2
+              ]
             ]
           ],
           "expected": [
@@ -2496,45 +3216,50 @@
       ],
       "lmx_runtime_execution": "NOT_RUN",
       "implementation_targets": {
+        "concat": "FxSeqConcat\\concat",
         "unique": "FxUnique\\unique"
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        int[]: out []\n        int: i 0\n        while: i < length(xs)\n            int: j 0\n            while: j < length(out) && out[j] != xs[i]\n                j += 1\n            if: j = length(out)\n                FxSeqPush\\append(out; (xs[i] record))\n            i += 1\n        return: out\n",
+          "code": "Example:\n    @: batches\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxSeqRead\\read\\throws) copy(FxSeqStore\\write\\throws) copy(sys\\resize\\throws) copy(FxValueSame\\test\\throws) SequenceSize\n        FxSeqInfo\\get(batches)\n        int: kind @[]\n        int: uniform 1\n        bigint: count 0\n        int: i 0\n        while: i < length(batches)\n            @: part FxSeqRead\\read(batches; i)\n            @: info FxSeqInfo\\get(part)\n            if: i = 0\n                kind := info\\arrayType\n            if: info\\dense = 0 || info\\arrayType != kind\n                uniform := 0\n            count += length(part)\n            i += 1\n        if: uniform = 0\n            kind := @[]\n        @: out FxSeqAllocate\\make(kind; 0)\n        @: info FxSeqInfo\\get(out)\n        if: count > info\\maxLength\n            throw: SequenceSize()\n        int: size count\n        sys\\resize(out; size)\n        int: at 0\n        i := 0\n        while: i < length(batches)\n            @: part FxSeqRead\\read(batches; i)\n            int: j 0\n            while: j < length(part)\n                @: item FxSeqRead\\read(part; j)\n                int: k 0\n                while: k < at && FxValueSame\\test(FxSeqRead\\read(out; k); item; 0) = 0\n                    k += 1\n                if: k = at\n                    FxSeqStore\\write(out; at; item)\n                    at += 1\n                ---\n                j += 1\n            i += 1\n        sys\\resize(out; at)\n        return: out\n",
           "source_file": "source/lmx/procedural/J21.lm3",
           "contract_id": "J21",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 227,
-            "characters_with_whitespace": 404,
-            "nonblank_lines": 15,
-            "utf8_bytes": 404,
-            "sha256": "ee4cecde4b7c3cc057a09a05185662cd37047ba1d2c8d4aad583a1f1c98bf301"
-          },
           "core_functions": [
             "copy",
             "record"
           ],
           "low_level_operations": [
             "FxSeqPush\\append"
-          ]
+          ],
+          "source_sha256": "f92b0c01f7b41832ca794bdbd34b2bb1233abc532705e8dc3ac3a4f7ecfedb41",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 873,
+            "characters_with_whitespace": 1511,
+            "nonblank_lines": 45,
+            "utf8_bytes": 1511,
+            "sha256": "f92b0c01f7b41832ca794bdbd34b2bb1233abc532705e8dc3ac3a4f7ecfedb41"
+          }
         },
         "functional": {
-          "code": "Example:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(unique\\throws)\n        return: unique(xs)\n",
+          "code": "Example:\n    @: batches\n    return: @\n    run:\n        throws: copy(concat\\throws) copy(unique\\throws)\n        return: unique(concat(batches))\n",
           "source_file": "source/lmx/J21.lm3",
           "contract_id": "J21",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 71,
-            "characters_with_whitespace": 109,
-            "nonblank_lines": 6,
-            "utf8_bytes": 109,
-            "sha256": "c56b476e1543ee1f89955ca81d28bcf6a96c98ac0d1e11700e619bfc8690480e"
-          },
           "core_functions": [
             "unique"
           ],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "source_sha256": "5f48d9c19572a70ba412e64accea245d7260f67d8aae318cabfb144ba5b4b12a",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 104,
+            "characters_with_whitespace": 143,
+            "nonblank_lines": 6,
+            "utf8_bytes": 143,
+            "sha256": "5f48d9c19572a70ba412e64accea245d7260f67d8aae318cabfb144ba5b4b12a"
+          }
         }
       },
       "lmx_comparison_variants": [
@@ -2543,23 +3268,47 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
+      "style_note": "Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "previous_contract": {
+        "title": "Первые уникальные значения",
+        "contract": "Оставить первое появление каждого целого, сохранив порядок. Вход не меняется.",
+        "inputs": {
+          "xs": [
+            3,
+            1,
+            3,
+            2,
+            1,
+            4
+          ]
+        },
+        "expected": [
+          3,
+          1,
+          2,
+          4
+        ]
+      },
+      "lmx_parser_execution": "NOT_RUN",
+      "foreign_execution": "NOT_RUN",
+      "foreign_sha256": "c6764216eb130a57a360084795672ee01ce16b283dd0df86a04502485568fdc2"
     },
     {
       "id": "J22",
-      "title": "Цифры в ASCII-строке",
+      "title": "Последние четыре цифры нормализованного номера",
       "category": "Строки",
-      "contract": "Сохранить только символы от ASCII 0 до 9 в прежнем порядке. Контракт строкового клиента ограничен ASCII, а не всеми Unicode-категориями цифр.",
+      "contract": "Из ASCII-текста сохранить только символы 0–9, затем вернуть последние четыре цифры или весь результат, если он короче. Ведущие нули в оставшейся части сохраняются; это строковая обработка, не преобразование в число. Пустой набор цифр даёт пустую строку.",
       "inputs": {
-        "text": "AB-09 x2!"
+        "text": "invoice42-ref-09123"
       },
-      "expected": "092",
-      "lmx": "Example:\n    char[]: text\n    return: char[]\n    run:\n        throws: copy(compress\\throws)\n        return: \\compress(text; (text >= '0') * (text <= '9'))\n",
-      "foreign": "example(text) = filter(c -> '0' <= c <= '9', text)\n",
+      "expected": "9123",
+      "lmx": "Example:\n    char[]: text\n    return: char[]\n    run:\n        throws: copy(compress\\throws) copy(last\\throws)\n        char[]: digits \\compress(text; (text >= '0') * (text <= '9'))\n        return: \\last(digits; 4)\n",
+      "foreign": "function example(text)\n    digits = filter(c -> '0' <= c <= '9', text)\n    last(digits, 4)\nend\n",
       "core_functions": [
-        "compress"
+        "compress",
+        "last"
       ],
       "foreign_dependencies": [
         "Base.filter"
@@ -2569,7 +3318,7 @@
         "https://docs.julialang.org/en/v1/base/strings/"
       ],
       "alternatives": [],
-      "notes_ru": "Две поэлементные маски int 0/1 умножаются; compress оставляет ровно ASCII-цифры и сохраняет плотный char[]. Профиль сравнения ограничен ASCII, без обещания Unicode-категорий.",
+      "notes_ru": "Сценарий расширен по замечанию автора: показана обработка данных и полезный итог, а не только вызов одной функции. Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "source_files": {
         "lmx": "source/lmx/J22.lm3",
         "foreign": "source/julia/J22.jl"
@@ -2578,7 +3327,8 @@
         "foreign": "example"
       },
       "implementation_links": {
-        "compress": "library_comparisons/JI02_comparision.md"
+        "compress": "library_comparisons/JI02_comparision.md",
+        "last": "../../LMX_Fn_Receivers/src/last.lmx"
       },
       "semantic_cases": [
         {
@@ -2589,51 +3339,68 @@
         },
         {
           "inputs": [
-            "a0-9"
+            "AB-09 x2!"
           ],
-          "expected": "09"
+          "expected": "092"
+        },
+        {
+          "inputs": [
+            "code-000012"
+          ],
+          "expected": "0012"
+        },
+        {
+          "inputs": [
+            "none"
+          ],
+          "expected": ""
         }
       ],
       "implementation_targets": {
-        "compress": "FxSeqCompress\\compress"
+        "compress": "FxSeqCompress\\compress",
+        "last": "FxSeqLast\\last"
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    char[]: text\n    return: char[]\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        char[]: out []\n        int: i 0\n        while: i < length(text)\n            if: text[i] >= '0' && text[i] <= '9'\n                FxSeqPush\\append(out; (text[i] record))\n            i += 1\n        return: out\n",
+          "code": "Example:\n    char[]: text\n    return: char[]\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws) copy(sys\\resize\\throws)\n        char[]: out []\n        int: i 0\n        while: i < length(text)\n            if: text[i] >= '0' && text[i] <= '9'\n                FxSeqPush\\append(out; (text[i] record))\n            i += 1\n        int: drop length(out) - 4\n        if: drop > 0\n            i := 0\n            while: i < 4\n                out[i] := out[drop + i]\n                i += 1\n            sys\\resize(out; 4)\n        return: out\n",
           "source_file": "source/lmx/procedural/J22.lm3",
           "contract_id": "J22",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 209,
-            "characters_with_whitespace": 336,
-            "nonblank_lines": 12,
-            "utf8_bytes": 336,
-            "sha256": "941268042caa187ff2ab16c9482fa4e9f48e6d1267e60dc7cadffd4ebbeeb3e0"
-          },
           "core_functions": [
             "copy",
             "record"
           ],
           "low_level_operations": [
             "FxSeqPush\\append"
-          ]
+          ],
+          "source_sha256": "397511581db8a8c7fa7b9f481d336bf295fd0863f0625e7c6fab39e9d12f81e8",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 315,
+            "characters_with_whitespace": 553,
+            "nonblank_lines": 19,
+            "utf8_bytes": 553,
+            "sha256": "397511581db8a8c7fa7b9f481d336bf295fd0863f0625e7c6fab39e9d12f81e8"
+          }
         },
         "functional": {
-          "code": "Example:\n    char[]: text\n    return: char[]\n    run:\n        throws: copy(compress\\throws)\n        return: \\compress(text; (text >= '0') * (text <= '9'))\n",
+          "code": "Example:\n    char[]: text\n    return: char[]\n    run:\n        throws: copy(compress\\throws) copy(last\\throws)\n        char[]: digits \\compress(text; (text >= '0') * (text <= '9'))\n        return: \\last(digits; 4)\n",
           "source_file": "source/lmx/J22.lm3",
           "contract_id": "J22",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 110,
-            "characters_with_whitespace": 155,
-            "nonblank_lines": 6,
-            "utf8_bytes": 155,
-            "sha256": "1dca10ab55c81206ccde343eb7da84f68cfdda893e22454852c8cdf54afe9ebf"
-          },
           "core_functions": [
             "compress"
           ],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "source_sha256": "0030d6ab1ade7d4937449cd9c8902d3761465c87a822d86de97a7801e69fbfc4",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 155,
+            "characters_with_whitespace": 213,
+            "nonblank_lines": 7,
+            "utf8_bytes": 213,
+            "sha256": "0030d6ab1ade7d4937449cd9c8902d3761465c87a822d86de97a7801e69fbfc4"
+          }
         }
       },
       "lmx_comparison_variants": [
@@ -2642,15 +3409,27 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
+      "style_note": "Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "previous_contract": {
+        "title": "Цифры в ASCII-строке",
+        "contract": "Сохранить только символы от ASCII 0 до 9 в прежнем порядке. Контракт строкового клиента ограничен ASCII, а не всеми Unicode-категориями цифр.",
+        "inputs": {
+          "text": "AB-09 x2!"
+        },
+        "expected": "092"
+      },
+      "lmx_parser_execution": "NOT_RUN",
+      "lmx_runtime_execution": "NOT_RUN",
+      "foreign_execution": "NOT_RUN",
+      "foreign_sha256": "1367c20a39f05eef5a3b68e5016eb69062f39de3c1d53c283829cbd95bdc0ea2"
     },
     {
       "id": "J23",
-      "title": "Объединение частей на один уровень",
+      "title": "Обратный порядок операций из сохранённых пачек",
       "category": "Вложенные массивы",
-      "contract": "Последовательно объединить конечные части. Пустые части допустимы. В клиентском сценарии части содержат целые; вложенные элементы не раскрываются рекурсивно.",
+      "contract": "Пачки записаны в порядке выполнения. Составить порядок отмены: сначала последние операции последней пачки, затем предыдущие. Соединение выполняется только на одном уровне; вложенное значение остаётся одним элементом. Входы и ссылочные цели сохраняются, пустые пачки допустимы.",
       "inputs": {
         "parts": [
           [
@@ -2668,16 +3447,17 @@
         ]
       },
       "expected": [
-        1,
-        2,
-        3,
+        5,
         4,
-        5
+        3,
+        2,
+        1
       ],
-      "lmx": "Example:\n    @: parts\n    return: @\n    run:\n        throws: copy(concat\\throws)\n        return: concat(parts)\n",
-      "foreign": "example(parts) = collect(Iterators.flatten(parts))\n",
+      "lmx": "Example:\n    @: parts\n    return: @\n    run:\n        throws: copy(concat\\throws) copy(reverse\\throws)\n        return: reverse(concat(parts))\n",
+      "foreign": "function example(parts)\n    history = collect(Iterators.flatten(parts))\n    reverse(history)\nend\n",
       "core_functions": [
-        "concat"
+        "concat",
+        "reverse"
       ],
       "foreign_dependencies": [
         "Base.Iterators.flatten",
@@ -2687,7 +3467,7 @@
         "https://docs.julialang.org/en/v1/base/iterators/"
       ],
       "alternatives": [],
-      "notes_ru": "Материализация результата входит в Julia-код. При пустом внешнем входе сравниваются пустые значения, а не несуществующий выведенный тип элемента.",
+      "notes_ru": "Сценарий расширен по замечанию автора: показана обработка данных и полезный итог, а не только вызов одной функции. Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "source_files": {
         "lmx": "source/lmx/J23.lm3",
         "foreign": "source/julia/J23.jl"
@@ -2696,7 +3476,8 @@
         "foreign": "example"
       },
       "implementation_links": {
-        "concat": "library_comparisons/JI02_comparision.md"
+        "concat": "library_comparisons/JI02_comparision.md",
+        "reverse": "library_comparisons/JI02_comparision.md"
       },
       "semantic_cases": [
         {
@@ -2731,30 +3512,24 @@
           ],
           "expected": [
             [
-              1
+              2
             ],
             [
-              2
+              1
             ]
           ]
         }
       ],
       "implementation_targets": {
-        "concat": "FxSeqConcat\\concat"
+        "concat": "FxSeqConcat\\concat",
+        "reverse": "FxSeqReverse\\reverse"
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    @: parts\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxSeqRead\\read\\throws) copy(FxSeqStore\\write\\throws) copy(sys\\resize\\throws) SequenceSize\n        FxSeqInfo\\get(parts)\n        int: kind @[]\n        int: uniform 1\n        bigint: count 0\n        int: i 0\n        while: i < length(parts)\n            @: part FxSeqRead\\read(parts; i)\n            @: info FxSeqInfo\\get(part)\n            if: i = 0\n                kind := info\\arrayType\n            if: info\\dense = 0 || info\\arrayType != kind\n                uniform := 0\n            count += length(part)\n            i += 1\n        if: uniform = 0\n            kind := @[]\n        @: out FxSeqAllocate\\make(kind; 0)\n        @: info FxSeqInfo\\get(out)\n        if: count > info\\maxLength\n            throw: SequenceSize()\n        int: size count\n        sys\\resize(out; size)\n        int: at 0\n        i := 0\n        while: i < length(parts)\n            @: part FxSeqRead\\read(parts; i)\n            int: j 0\n            while: j < length(part)\n                FxSeqStore\\write(out; at; FxSeqRead\\read(part; j))\n                at += 1\n                j += 1\n            i += 1\n        return: out\n",
+          "code": "Example:\n    @: parts\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxSeqRead\\read\\throws) copy(FxSeqStore\\write\\throws) copy(sys\\resize\\throws) SequenceSize\n        FxSeqInfo\\get(parts)\n        int: kind @[]\n        int: uniform 1\n        bigint: count 0\n        int: i 0\n        while: i < length(parts)\n            @: part FxSeqRead\\read(parts; i)\n            @: info FxSeqInfo\\get(part)\n            if: i = 0\n                kind := info\\arrayType\n            if: info\\dense = 0 || info\\arrayType != kind\n                uniform := 0\n            count += length(part)\n            i += 1\n        if: uniform = 0\n            kind := @[]\n        @: out FxSeqAllocate\\make(kind; 0)\n        @: info FxSeqInfo\\get(out)\n        if: count > info\\maxLength\n            throw: SequenceSize()\n        int: size count\n        sys\\resize(out; size)\n        int: at 0\n        i := length(parts) - 1\n        while: i >= 0\n            @: part FxSeqRead\\read(parts; i)\n            int: j length(part) - 1\n            while: j >= 0\n                FxSeqStore\\write(out; at; FxSeqRead\\read(part; j))\n                at += 1\n                j -= 1\n            i -= 1\n        return: out\n",
           "source_file": "source/lmx/procedural/J23.lm3",
           "contract_id": "J23",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 724,
-            "characters_with_whitespace": 1218,
-            "nonblank_lines": 38,
-            "utf8_bytes": 1218,
-            "sha256": "81050df40f7d98ef2eea2214656ac75927c4dcaab481e831cc45153d4f0c9b1f"
-          },
           "core_functions": [
             "copy"
           ],
@@ -2764,24 +3539,35 @@
             "FxSeqRead\\read",
             "FxSeqStore\\write",
             "sys\\resize"
-          ]
+          ],
+          "source_sha256": "b6eacd8ca7376ba99e2445888c9bdb2347e2e0a1a50e5a0280d7dfe59dd13f84",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 730,
+            "characters_with_whitespace": 1228,
+            "nonblank_lines": 38,
+            "utf8_bytes": 1228,
+            "sha256": "b6eacd8ca7376ba99e2445888c9bdb2347e2e0a1a50e5a0280d7dfe59dd13f84"
+          }
         },
         "functional": {
-          "code": "Example:\n    @: parts\n    return: @\n    run:\n        throws: copy(concat\\throws)\n        return: concat(parts)\n",
+          "code": "Example:\n    @: parts\n    return: @\n    run:\n        throws: copy(concat\\throws) copy(reverse\\throws)\n        return: reverse(concat(parts))\n",
           "source_file": "source/lmx/J23.lm3",
           "contract_id": "J23",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 73,
-            "characters_with_whitespace": 111,
-            "nonblank_lines": 6,
-            "utf8_bytes": 111,
-            "sha256": "f2887a3c05b93e99aa4f90dc5aa25eabb7a428cc3cef2d9ec4ddc52e132478ae"
-          },
           "core_functions": [
             "concat"
           ],
-          "low_level_operations": []
+          "low_level_operations": [],
+          "source_sha256": "e1dab23cb1ce4e2782c284e98c71de5dcea8791134626c7620286510b3bae157",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 102,
+            "characters_with_whitespace": 141,
+            "nonblank_lines": 6,
+            "utf8_bytes": 141,
+            "sha256": "e1dab23cb1ce4e2782c284e98c71de5dcea8791134626c7620286510b3bae157"
+          }
         }
       },
       "lmx_comparison_variants": [
@@ -2790,48 +3576,77 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
+      "style_note": "Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "previous_contract": {
+        "title": "Объединение частей на один уровень",
+        "contract": "Последовательно объединить конечные части. Пустые части допустимы. В клиентском сценарии части содержат целые; вложенные элементы не раскрываются рекурсивно.",
+        "inputs": {
+          "parts": [
+            [
+              1,
+              2
+            ],
+            [],
+            [
+              3
+            ],
+            [
+              4,
+              5
+            ]
+          ]
+        },
+        "expected": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "lmx_parser_execution": "NOT_RUN",
+      "lmx_runtime_execution": "NOT_RUN",
+      "foreign_execution": "NOT_RUN",
+      "foreign_sha256": "244acedbd68e39163d6d9fffdbbe587610cf3fb9c652326f61e72d3af108dabc"
     },
     {
       "id": "J24",
-      "title": "Декартово произведение через вложенные comprehensions",
+      "title": "Пары покупок в пределах бюджета",
       "category": "Композиция",
-      "contract": "Для каждого x из left, затем каждого y из right вернуть пару (x,y). Порядок: правый вход меняется быстрее. Результат материализован, пустой любой вход даёт пустой результат.",
+      "contract": "Из двух списков цен построить пары (x,y), для которых x+y не превышает budget. Сначала меняется правый список, затем левый; равные цены и повторные пары не удаляются. Пустой любой вход даёт пустой результат, источники сохраняются; арифметика без переполнения.",
       "inputs": {
         "left": [
-          1,
-          2
+          2,
+          5
         ],
         "right": [
-          10,
-          20
-        ]
+          3,
+          6
+        ],
+        "budget": 8
       },
       "expected": [
         [
-          1,
-          10
-        ],
-        [
-          1,
-          20
+          2,
+          3
         ],
         [
           2,
-          10
+          6
         ],
         [
-          2,
-          20
+          5,
+          3
         ]
       ],
-      "lmx": "Example:\n    int[]: left\n    int[]: right\n    return: @\n    Row:\n        int: x\n        return: @\n        Pair:\n            int: y\n            return: @\n            make:\n                return: (x; y)\n        ---\n        expand:\n            throws: copy(map\\throws)\n            return: map(right; Pair\\make)\n    ---\n    run:\n        throws: copy(FxListBind\\bind\\throws) copy(Example\\Row\\expand\\throws)\n        return: bind(left; Row\\expand)\n",
-      "foreign": "example(left, right) = [(x, y) for x in left for y in right]\n",
+      "lmx": "Example:\n    int[]: left\n    int[]: right\n    int: budget\n    return: @\n    Row:\n        int: x\n        return: @\n        Pair:\n            int: y\n            return: @\n            make:\n                return: (x; y)\n        ---\n        expand:\n            throws: copy(map\\throws) copy(compress\\throws)\n            return: map(compress(right; x + right <= budget); Pair\\make)\n    ---\n    run:\n        throws: copy(FxListBind\\bind\\throws) copy(Example\\Row\\expand\\throws)\n        return: bind(left; Row\\expand)\n",
+      "foreign": "function example(left, right, budget)\n    [(x, y) for x in left for y in right if x + y <= budget]\nend\n",
       "core_functions": [
         "map",
-        "bind"
+        "bind",
+        "compress"
       ],
       "foreign_dependencies": [
         "Base.Generator",
@@ -2843,7 +3658,7 @@
         "https://docs.julialang.org/en/v1/base/iterators/"
       ],
       "alternatives": [],
-      "notes_ru": "Вложенные Row/Pair используют живое DATA текущего вызова, а не искусственный статический closure-класс. В Julia два последовательных for дают нужный порядок; форма с запятой создаёт матрицу другого устройства.",
+      "notes_ru": "Сценарий расширен по замечанию автора: показана обработка данных и полезный итог, а не только вызов одной функции. Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "source_files": {
         "lmx": "source/lmx/J24.lm3",
         "foreign": "source/julia/J24.jl"
@@ -2853,7 +3668,8 @@
       },
       "implementation_links": {
         "map": "library_comparisons/JI01_comparision.md",
-        "bind": "library_comparisons/JI01_comparision.md"
+        "bind": "library_comparisons/JI01_comparision.md",
+        "compress": "library_comparisons/JI02_comparision.md"
       },
       "semantic_cases": [
         {
@@ -2861,7 +3677,8 @@
             [],
             [
               1
-            ]
+            ],
+            4
           ],
           "expected": []
         },
@@ -2870,9 +3687,44 @@
             [
               1
             ],
-            []
+            [],
+            4
           ],
           "expected": []
+        },
+        {
+          "inputs": [
+            [
+              5
+            ],
+            [
+              6
+            ],
+            10
+          ],
+          "expected": []
+        },
+        {
+          "inputs": [
+            [
+              1,
+              1
+            ],
+            [
+              2
+            ],
+            3
+          ],
+          "expected": [
+            [
+              1,
+              2
+            ],
+            [
+              1,
+              2
+            ]
+          ]
         }
       ],
       "core_families": {
@@ -2880,21 +3732,15 @@
       },
       "implementation_targets": {
         "map": "FxMap\\map",
-        "bind": "FxListBind\\bind"
+        "bind": "FxListBind\\bind",
+        "compress": "FxSeqCompress\\compress"
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: left\n    int[]: right\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        @[]: out []\n        int: i 0\n        while: i < length(left)\n            int: j 0\n            while: j < length(right)\n                FxSeqPush\\append(out; ((left[i]; right[j]) record))\n                j += 1\n            i += 1\n        return: out\n",
+          "code": "Example:\n    int[]: left\n    int[]: right\n    int: budget\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        @[]: out []\n        int: i 0\n        while: i < length(left)\n            int: j 0\n            while: j < length(right)\n                if: left[i] + right[j] <= budget\n                    FxSeqPush\\append(out; ((left[i]; right[j]) record))\n                j += 1\n            i += 1\n        return: out\n",
           "source_file": "source/lmx/procedural/J24.lm3",
           "contract_id": "J24",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 224,
-            "characters_with_whitespace": 388,
-            "nonblank_lines": 15,
-            "utf8_bytes": 388,
-            "sha256": "9cc529c4305d4e10a3b70e45d0f5eddf80c5b1b2bb338cc01086755e3855c4d8"
-          },
           "core_functions": [
             "copy",
             "record"
@@ -2904,20 +3750,22 @@
           ],
           "core_families": {
             "bind": "Array"
+          },
+          "source_sha256": "8584f8cd93bdac0351b9cbdcc0aeddf450438d7e08f2f4e55ab5f5b21f096e01",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 261,
+            "characters_with_whitespace": 457,
+            "nonblank_lines": 17,
+            "utf8_bytes": 457,
+            "sha256": "8584f8cd93bdac0351b9cbdcc0aeddf450438d7e08f2f4e55ab5f5b21f096e01"
           }
         },
         "functional": {
-          "code": "Example:\n    int[]: left\n    int[]: right\n    return: @\n    Row:\n        int: x\n        return: @\n        Pair:\n            int: y\n            return: @\n            make:\n                return: (x; y)\n        ---\n        expand:\n            throws: copy(map\\throws)\n            return: map(right; Pair\\make)\n    ---\n    run:\n        throws: copy(FxListBind\\bind\\throws) copy(Example\\Row\\expand\\throws)\n        return: bind(left; Row\\expand)\n",
+          "code": "Example:\n    int[]: left\n    int[]: right\n    int: budget\n    return: @\n    Row:\n        int: x\n        return: @\n        Pair:\n            int: y\n            return: @\n            make:\n                return: (x; y)\n        ---\n        expand:\n            throws: copy(map\\throws) copy(compress\\throws)\n            return: map(compress(right; x + right <= budget); Pair\\make)\n    ---\n    run:\n        throws: copy(FxListBind\\bind\\throws) copy(Example\\Row\\expand\\throws)\n        return: bind(left; Row\\expand)\n",
           "source_file": "source/lmx/J24.lm3",
           "contract_id": "J24",
           "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 250,
-            "characters_with_whitespace": 442,
-            "nonblank_lines": 20,
-            "utf8_bytes": 442,
-            "sha256": "7124eb49a4fe4eadfb078190f6f0083a360077c0d6e16e993b3157bf7d440209"
-          },
           "core_functions": [
             "map",
             "bind"
@@ -2925,6 +3773,15 @@
           "low_level_operations": [],
           "core_families": {
             "bind": "Array"
+          },
+          "source_sha256": "1c05e420713b04965be5756828d047d39460662c6ab1d0ef50a7dec3f5274212",
+          "parser_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 307,
+            "characters_with_whitespace": 511,
+            "nonblank_lines": 21,
+            "utf8_bytes": 511,
+            "sha256": "1c05e420713b04965be5756828d047d39460662c6ab1d0ef50a7dec3f5274212"
           }
         }
       },
@@ -2934,9 +3791,45 @@
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
-      "style_note": "Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.",
+      "style_note": "Обе полные реализации выполняют один новый прикладной сценарий: процедурная задаёт алгоритм явно, функциональная использует общие операции ядра. Изменённые тексты требуют нового P0-прогона.",
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "previous_contract": {
+        "title": "Декартово произведение через вложенные comprehensions",
+        "contract": "Для каждого x из left, затем каждого y из right вернуть пару (x,y). Порядок: правый вход меняется быстрее. Результат материализован, пустой любой вход даёт пустой результат.",
+        "inputs": {
+          "left": [
+            1,
+            2
+          ],
+          "right": [
+            10,
+            20
+          ]
+        },
+        "expected": [
+          [
+            1,
+            10
+          ],
+          [
+            1,
+            20
+          ],
+          [
+            2,
+            10
+          ],
+          [
+            2,
+            20
+          ]
+        ]
+      },
+      "lmx_parser_execution": "NOT_RUN",
+      "lmx_runtime_execution": "NOT_RUN",
+      "foreign_execution": "NOT_RUN",
+      "foreign_sha256": "c3d49357c15da002cf8a7f8aa9e1970e5930cfc8229f1be476add28bcb083e4d"
     }
   ],
   "implementations": [
@@ -3292,5 +4185,33 @@
     "argument_fixture": "A parent stub may have its own arguments and send a message to the root; this does not give DATA or user arguments to the root.",
     "source_dependencies": "Required source definitions and load_before dependencies belong to the fixture. They do not introduce a DATA-load startup or a named alternative entry."
   },
-  "lmx_runner_contract": "Always start the root as an L3 Thread without DATA or user arguments. Local declarations and calls use the ordinary common language mechanism. An invoke path or named case operation is performed by the root or an ordinary handler after startup; Main and Example\\run are not alternative program entries. A parent stub with its own arguments may send a message to the root. load_before lists required fixture definitions; import exposes existing names, not a new file loader. These records specify acceptance observations and do not claim an executed LMX runner."
+  "lmx_runner_contract": "Always start the root as an L3 Thread without DATA or user arguments. Local declarations and calls use the ordinary common language mechanism. An invoke path or named case operation is performed by the root or an ordinary handler after startup; Main and Example\\run are not alternative program entries. A parent stub with its own arguments may send a message to the root. load_before lists required fixture definitions; import exposes existing names, not a new file loader. These records specify acceptance observations and do not claim an executed LMX runner.",
+  "scenario_revision": {
+    "changed_examples": [
+      "J03",
+      "J05",
+      "J06",
+      "J07",
+      "J08",
+      "J09",
+      "J10",
+      "J11",
+      "J12",
+      "J13",
+      "J14",
+      "J16",
+      "J17",
+      "J19",
+      "J20",
+      "J21",
+      "J22",
+      "J23",
+      "J24"
+    ],
+    "lmx_parser_execution": "NOT_RUN",
+    "lmx_runtime_execution": "NOT_RUN",
+    "julia_execution": "NOT_RUN",
+    "note": "Existing parser receipts apply only to their original hashes, not rewritten sources.",
+    "measurement_policy": "Full current measurements requested by author after expansion."
+  }
 }

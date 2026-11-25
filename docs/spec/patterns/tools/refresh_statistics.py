@@ -174,6 +174,7 @@ def build_metadata(root=ROOT):
             group_compared += len(record['listings']) + int(styled)
         group['totals'] = totals
         group['pattern_count'] = sum(row['kind'] == 'pattern' for row in group['records'])
+        group['algorithm_count'] = sum(row['kind'] == 'algorithm' for row in group['records'])
         group['implementation_count'] = sum(row['kind'] == 'implementation' for row in group['records'])
         group['compared_listing_count'] = group_compared
         if style_cases:
@@ -183,6 +184,7 @@ def build_metadata(root=ROOT):
         report['groups'].append(group)
         writes.append((path, data))
     report['pattern_count'] = sum(group['pattern_count'] for group in report['groups'])
+    report['algorithm_count'] = sum(group['algorithm_count'] for group in report['groups'])
     report['implementation_count'] = sum(group['implementation_count'] for group in report['groups'])
     # Retain the old key for its actual compatibility-row count; do not count it
     # in addition to the compared style listings.
@@ -227,7 +229,7 @@ def build_metadata(root=ROOT):
                 raise ValueError(f'Duplicate root compatibility source: {source}')
             root_styles[source] = record
     examples = []
-    for path in sorted((root / 'examples/lmx').glob('*.lm3')):
+    for path in sorted((root / 'examples/haskell_comparision/source/lmx').glob('*.lm3')):
         row = {'id': path.stem, 'source': path.relative_to(root).as_posix(),
                **metrics(primary(path)),
                'procedural_archived': MARKER in path.read_text() or ALTERNATIVE_MARKER in path.read_text()}

@@ -1,21 +1,35 @@
-# P15. Проверка полного ASCII-идентификатора
+# P15. Отбор допустимых имён и число отклонений
 
 ## Общий наблюдаемый договор
 
-Принять целиком строку вида [A-Za-z][A-Za-z0-9_]* и вернуть 0/1. Пустая строка и конечный перевод строки не допускаются.
+Обработать список ASCII-строк как предложенные имена: принять только целые строки вида [A-Za-z][A-Za-z0-9_]*; вернуть (принятые имена в исходном порядке, число отклонённых). Повторные корректные имена сохраняются. Пустая строка, ведущая цифра и конечный перевод строки недопустимы. Пустой список даёт ([],0), входные строки не меняются.
 
-Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.
+Обе формы решают полный прикладной сценарий. Процедурная показывает алгоритм циклами и ветвлениями, функциональная использует общие операции; все поля, порядок, ошибки и полезный результат сохраняются.
 
-Используются именно \A и \z; проверка не ослаблена до поиска подстроки или до конца перед последним переводом строки.
+Один и тот же предикат применяется к произвольному списку имён, а число отказов позволяет сформировать отчёт импорта. Используются строгие границы \A и \z; проверка не ослаблена до поиска подстроки. Общий Ascii\letter определён один раз в source/lmx/common/ascii.lm3 и включён в полный процедурный листинг и метрику; entry-файл загружается вместе с ним.
 
 ## Вход и ожидаемое наблюдение
 
 ```json
 {
   "arguments": [
-    "user_21"
+    [
+      "user_21",
+      "7user",
+      "name\n",
+      "",
+      "Abc",
+      "user_21"
+    ]
   ],
-  "result": 1
+  "result": [
+    [
+      "user_21",
+      "Abc",
+      "user_21"
+    ],
+    3
+  ]
 }
 ```
 
@@ -23,9 +37,9 @@
 
 | Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
 | --- | ---: | ---: | ---: |
-| LMX процедурный | 296 | 497 | 18 |
-| LMX функциональный | 199 | 245 | 6 |
-| Perl | 92 | 118 | 6 |
+| LMX процедурный | 669 | 1025 | 32 |
+| LMX функциональный | 343 | 443 | 13 |
+| Perl | 154 | 191 | 7 |
 
 Обе LMX-формы опубликованы и считаются независимо. Все определения, обработчики и ссылки на throws входят в полный размер. Выбор единственного LMX-варианта по длине не выполняется.
 
@@ -38,11 +52,10 @@ Ascii:
     letter:
         return: (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z')
 
-
-Example:
+Identifier:
     char[]: text
     return: int
-    run:
+    test:
         if: length(text) = 0 || Ascii\letter(text[0]) = 0
             return: 0
         int: i 1
@@ -52,22 +65,45 @@ Example:
                 return: 0
             i += 1
         return: 1
+
+Example:
+    @: items
+    return: @
+    run:
+        throws: copy(FxSeqInfo\get\throws) copy(FxSeqAllocate\make\throws) copy(FxSeqRead\read\throws) copy(FxSeqPush\append\throws)
+        @: info FxSeqInfo\get(items)
+        @: out FxSeqAllocate\make(info\arrayType; 0)
+        int: i 0
+        while: i < length(items)
+            @: value FxSeqRead\read(items; i)
+            if: Identifier\test(\value) != 0
+                FxSeqPush\append(out; value)
+            i += 1
+        return: (out; length(items) - length(out))
 ```
 
-[Полный исходник](source/lmx/procedural/P15.lm3). 296 непробельных символов; 18 непустых строк. Все объявления и Throws включены.
+Канонические части полного исходника: [ascii.lm3](source/lmx/common/ascii.lm3), [P15.lm3](source/lmx/procedural/P15.lm3). 669 непробельных символов; 32 непустых строк. Все объявления и Throws включены.
 
 ## LMX — функциональный
 
 ```lmx
-Example:
+Identifier:
     char[]: text
     return: int
-    run:
+    test:
         throws: copy(byteText\throws) copy(atLeast\throws) copy(RxThenOperand\then\throws) copy(matches\throws)
         return: matches(byteText(text); (then asciiLetter (asciiWord atLeast 0)))
+
+Example:
+    @: items
+    return: @
+    run:
+        throws: copy(filter\throws)
+        @: accepted filter(items; Identifier\test)
+        return: (accepted; length(items) - length(accepted))
 ```
 
-[Полный исходник](source/lmx/P15.lm3). 199 непробельных символов; 6 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/P15.lm3). 343 непробельных символов; 13 непустых строк. Все объявления и Throws включены.
 
 ## Perl
 
@@ -77,14 +113,16 @@ Example:
 use strict;
 use warnings;
 sub example {
-    my ($text) = @_;
-    return 0 + ($text =~ /\A[A-Za-z][A-Za-z0-9_]*\z/);
+    my ($items) = @_;
+    my @accepted = grep { /\A[A-Za-z][A-Za-z0-9_]*\z/ } @$items;
+    return [\@accepted, scalar(@$items) - scalar(@accepted)];
 }
 ```
 
 ## Общие библиотечные реализации
 
 - matches: [PI07](library_comparisons/PI07_comparision.md)
+- filter: [PI01](library_comparisons/PI01_comparision.md)
 
 Тела библиотечного ядра сохранены в одном общем источнике и не размножаются для двух стилей. Иностранный клиент использует свои настоящие средства; соседние comparison-реализации он не импортирует.
 
@@ -95,3 +133,16 @@ Perl-клиенты проверяет [действительный harness](va
 ## Первичные источники
 
 - <https://perldoc.perl.org/5.40.1/perlre>
+
+## Все проверочные входы
+
+Каждый случай проверяет полный результат и отсутствие изменения входов. prime_empty_pattern дополнительно создаёт ранее успешное regex-состояние Perl.
+
+| Случай | Аргументы | Результат | Дополнительное условие |
+| --- | --- | --- | --- |
+| 1 | `[["user_21","7user","name\n","","Abc","user_21"]]` | `[["user_21","Abc","user_21"],3]` | — |
+| 2 | `[["user_21"]]` | `[["user_21"],0]` | — |
+| 3 | `[["7user"]]` | `[[],1]` | — |
+| 4 | `[["name\n"]]` | `[[],1]` | — |
+| 5 | `[[""]]` | `[[],1]` | — |
+| 6 | `[[]]` | `[[],0]` | — |

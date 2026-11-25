@@ -1,5 +1,13 @@
 Example:
     int[]: xs
+    int: lo
+    int: hi
     return: int
     run:
-        return: (+ 0 copy(xs % 2 = 0))
+        throws: copy(sum\throws)
+        int: n length(xs)
+        if: n = 0
+            return: 0
+        int: accepted \sum((xs >= lo) * (xs <= hi))
+        int: scaled 1000 * accepted
+        return: (scaled - scaled % n) / n

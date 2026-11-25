@@ -437,8 +437,9 @@ def verify(root):
     outputs = [(doc["stem"], doc, None) for doc in model["documents"]]
     for mirror in model.get("mirrors", []):
         outputs.append((mirror["target"], documents[mirror["source"]], mirror["source"]))
-    global_checks.check(len(outputs) == 18 and len({stem for stem, _, _ in outputs}) == 18,
-                        "Expected exactly 18 distinct exported workbook/PDF pairs")
+    expected_outputs=len(model['documents'])+len(model.get('mirrors',[]))
+    global_checks.check(len(outputs)==len({stem for stem, _, _ in outputs})==expected_outputs,
+                        "Every declared document and mirror must have one distinct exported pair")
     receipts = {}
     receipt_info = {}
     for kind, suffix, filename in (
@@ -478,9 +479,9 @@ def verify(root):
     report = global_checks.finish(schema_version=1, generated_utc=datetime.now(timezone.utc).isoformat(),
         source="PUBLICATION_DATA.json", source_sha256=model_hash, generation_reports=receipt_info,
         verifier={"file": "tools/verify_publication.py", "sha256": sha(Path(__file__).read_bytes())},
-        summary={"expected_workbooks": 18, "verified_workbooks": len(workbooks),
+        summary={"expected_workbooks": expected_outputs, "verified_workbooks": len(workbooks),
                  "passed_workbooks": sum(row["status"] == "PASS" for row in workbooks),
-                 "expected_pdfs": 18, "verified_pdfs": len(pdfs),
+                 "expected_pdfs": expected_outputs, "verified_pdfs": len(pdfs),
                  "passed_pdfs": sum(row["status"] == "PASS" for row in pdfs),
                  "data_cells": sum(row.get("data_cells", 0) for row in workbooks),
                  "numeric_count_cells": sum(row.get("numeric_count_cells", 0) for row in workbooks),

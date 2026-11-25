@@ -15,7 +15,7 @@ CORE = PATTERNS / "LMX_Fn_Receivers"
 FENCE = chr(96) * 3
 sys.path.insert(0, str(PATTERNS / "tools"))
 from lmx_style_variants import get_variants, validate_variants
-from lmx_style_suite_reports import prepare as prepare_style, rows_for, client_markdown, count_table as complete_count_table, write_overview, write_csv
+from lmx_style_suite_reports import prepare as prepare_style, rows_for, client_markdown as base_client_markdown, count_table as complete_count_table, write_overview, write_csv
 from lmx_execution_contract import apply_execution_contract
 from canonical_operations import definitions, public_roots as catalog_roots, selected_operations
 
@@ -92,6 +92,29 @@ def block(lang,text):
 
 def count_table(first,second):
     return complete_count_table([("LMX",first),("Perl",second)])
+
+def client_markdown(entry, *args):
+    """Keep complete fixture observations and canonical fragment links visible."""
+    text = base_client_markdown(entry, *args)
+    for variant in entry["lmx_variants"].values():
+        sources = variant.get("source_files", [variant["source_file"]])
+        if len(sources) > 1:
+            links = ", ".join(f"[{Path(source).name}]({source})" for source in sources)
+            text = text.replace(
+                f"[Полный исходник]({variant['source_file']}).",
+                "Канонические части полного исходника: " + links + ".")
+    rows = ["## Все проверочные входы", "",
+            "Каждый случай проверяет полный результат и отсутствие изменения входов. "
+            "prime_empty_pattern дополнительно создаёт ранее успешное regex-состояние Perl.", "",
+            "| Случай | Аргументы | Результат | Дополнительное условие |",
+            "| --- | --- | --- | --- |"]
+    tick = chr(96)
+    for index, case in enumerate(entry["test_cases"], 1):
+        encode = lambda value: json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+        extra = "prime_empty_pattern" if case.get("prime_empty_pattern") else "—"
+        rows.append(f"| {index} | {tick}{encode(case['args'])}{tick} | "
+                    f"{tick}{encode(case['expected'])}{tick} | {extra} |")
+    return text + "\n" + "\n".join(rows) + "\n"
 
 def main():
     data=apply_execution_contract(json.loads((ROOT/"examples.json").read_text()))
@@ -174,6 +197,18 @@ def main():
     totals={scope:{lang:{key:sum(r[key] for r in rows if r["scope"]==scope and r["language"]==lang) for key in ("characters","nonwhitespace","nonblank_lines")} for lang in ("LMX","Perl")} for scope in ("client","implementation")}
     style_totals=write_overview(ROOT,data,"Perl",
         "[Единые библиотечные реализации](library_comparisons/README.md) PI01–PI07 и [общие зависимости](validation/implementation_dependencies.json) учитываются отдельно.")
+    if data.get("scenario_revision"):
+        additions = (
+            "\n## Прикладные сценарии редакции 25 ноября\n\n"
+            "Расширены " + ", ".join(data["scenario_revision"]["expanded"]) + ". "
+            "Они выполняют обработку данных и возвращают полезный составной результат; "
+            "содержательные сценарии остальных строк сохранены. Все текущие размеры пересчитаны после изменений.\n\n"
+            "В процедурных P15/P16/P17/P20 используется единственный "
+            "[Ascii\\letter](source/lmx/common/ascii.lm3). Полный код каждой формы состоит из "
+            "упорядоченных source_files в examples.json: общий helper, затем entry. "
+            "Оба фрагмента входят в показанный листинг и полную метрику; helper не копируется в entry-файлы. "
+            "Все 98 проверочных входов опубликованы на страницах, LMX P0/L3 остаются NOT_RUN.\n")
+        write(ROOT/"README.md", (ROOT/"README.md").read_text() + additions)
     write(ROOT/"statistics.json",json.dumps({"suite":"perl","edition":data["edition"],"examples":len(data["examples"]),"implementations":len(data["implementations"]),"legacy_lmx_role":"functional compatibility mirror only","totals":totals,"style_totals":style_totals,"shared_lmx":dependency_report["shared_not_in_primary"],"unique_lmx_implementation":dependency_report["unique_lmx_total"],"rows":rows,"comparison_rows":comparison_rows},ensure_ascii=False,indent=2)+"\n")
     cover={"coverage":coverage,"cases":{e["id"]:e["implementation_pairs"] for e in data["examples"]},"missing":sorted({f for e in data["examples"] for f in e["core_functions"] if f not in aliases}),"unpaired_functions":dependency_report["unpaired_functions"],"canonical_sources":{e["id"]:e["core_sources"] for e in data["examples"]},"coverage_policy":"One canonical implementation shared by both client styles; unpaired foreign implementations remain explicit.","foreign_dependencies":sorted(dependencies)}
     write(ROOT/"validation/library_coverage.json",json.dumps(cover,ensure_ascii=False,indent=2)+"\n")

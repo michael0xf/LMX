@@ -31,7 +31,7 @@ def write(path, value):
 
 
 def main():
-    provenance = json.loads((PATTERNS / 'validation/restoration_baseline_20261123.json').read_text())
+    provenance = json.loads((PATTERNS / 'validation/expansion_baseline_20261124.json').read_text())
     base = provenance['base_archive']
     historical = provenance.get('historical_provenance', {})
     catalog = json.loads((PACKAGE / 'catalog.json').read_text())
@@ -43,7 +43,7 @@ def main():
     assert not static['errors'], 'Fix source checks before publishing manifests'
     package_files = files(PACKAGE, {'MANIFEST.json'})
     write(PACKAGE / 'MANIFEST.json', {
-        'revision': 'pure-graph-expression-grouping-arrow-shortened-examples-2026-11-24',
+        'revision': 'examples-expansion-current-statistics-doc-examples-2026-11-24',
         'base_archive': base['name'], 'base_archive_sha256': base['sha256'],
         'historical_provenance': historical,
         'public_receivers': len(catalog),

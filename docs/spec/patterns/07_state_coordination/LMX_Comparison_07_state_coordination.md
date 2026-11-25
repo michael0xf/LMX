@@ -8,12 +8,12 @@
 
 | ID | Сценарий | LMX | Java | Rust | Слой |
 | --- | --- | --- | --- | --- | --- |
-| 065 | Read-Write Lock | 107 | 348 | 239 | Сценарий |
-| 066 | Double-Checked Locking | 117 | 292 | 179 | Сценарий |
-| 067 | Guarded Suspension | 253 | 208 | 386 | Сценарий |
-| 068 | Balking | 106 | 211 | 296 | Сценарий |
-| 069 | Thread-Local Storage | 70 | 202 | 157 | Сценарий |
-| 070 | Monitor Object | 143 | 184 | 299 | Сценарий |
+| 065 | Read-Write Lock | <span style="color:#176233"><u>107</u></span> | 348 | 239 | Сценарий |
+| 066 | Double-Checked Locking | <span style="color:#176233"><u>117</u></span> | 292 | 179 | Сценарий |
+| 067 | Guarded Suspension | 253 | <span style="color:#176233"><u>208</u></span> | 386 | Сценарий |
+| 068 | Balking | <span style="color:#176233"><u>106</u></span> | 211 | 296 | Сценарий |
+| 069 | Thread-Local Storage | <span style="color:#176233"><u>70</u></span> | 202 | 157 | Сценарий |
+| 070 | Monitor Object | <span style="color:#176233"><u>143</u></span> | 184 | 299 | Сценарий |
 
 Java показывает мониторы, volatile и TLS; Rust — Mutex/RwLock, OnceLock и безопасные области доступа. Они делают видимыми свойства, которые у LMX заменяются владением Message, а не исчезают бесплатно.
 

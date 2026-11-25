@@ -81,7 +81,7 @@ locks.reserve/renew/release и db.writeWithLease — явные инфрастр
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 200 | 14 |
+| LMX | <span style="color:#176233"><u>200</u></span> | 14 |
 | Python | 295 | 8 |
 | C# | 438 | 10 |
 

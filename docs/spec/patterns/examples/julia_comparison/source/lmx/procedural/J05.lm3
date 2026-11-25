@@ -1,12 +1,12 @@
 Example:
     int[]: xs
-    return: @
+    int: baseline
+    return: int
     run:
-        throws: copy(sys\resize\throws)
-        int[]: out []
-        sys\resize(out; length(xs))
+        int: total 0
         int: i 0
         while: i < length(xs)
-            out[i] := xs[i] * xs[i]
+            int: delta xs[i] - baseline
+            total += delta * delta
             i += 1
-        return: out
+        return: total

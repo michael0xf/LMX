@@ -60,9 +60,9 @@
 | 070 | [Monitor Object](07_state_coordination/070_monitor_object_comparision.md) | 149 | 143 |
 | 083 | [Trampoline](09_functional_computation/083_trampoline_comparision.md) | 433 | 417 |
 | 084 | [Execute Around](09_functional_computation/084_execute_around_comparision.md) | 719 | 709 |
-| H09 | [Корневой пример](examples/lmx/H09.lm3) | 212 | 285 |
-| V02 | [Корневой пример](examples/lmx/V02.lm3) | 263 | 462 |
-| V03 | [Корневой пример](examples/lmx/V03.lm3) | 304 | 298 |
+| H09 | [Корневой пример](examples/haskell_comparision/source/lmx/H09.lm3) | 212 | 285 |
+| V02 | [Корневой пример](examples/haskell_comparision/source/lmx/V02.lm3) | 263 | 462 |
+| V03 | [Корневой пример](examples/haskell_comparision/source/lmx/V03.lm3) | 304 | 298 |
 
 ## Публикация и проверки
 

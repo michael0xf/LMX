@@ -1,13 +1,13 @@
-Above:
-    int: value
+Consecutive:
+    int: i
     return: int
     accepts:
-        return: value > limit
+        return: xs[i - 1] > limit && xs[i] > limit
 
 Example:
     int[]: xs
     int: limit
     return: int
     run:
-        throws: copy(any\throws)
-        return: any(xs; Above\accepts)
+        throws: copy(FxSeqRange\range\throws) copy(any\throws)
+        return: any(range(1; length(xs); 1); Consecutive\accepts)

@@ -1,6 +1,6 @@
 # Iteration until Stop: usage and implementation are separate
 
-Edition: 2026-11-23. Client: [H09](../lmx/H09.lm3), [scenario](../../LMX_examples_and_analogies.ru.md#h09).
+Edition: 2026-11-23. Client: [H09](../haskell_comparision/source/lmx/H09.lm3), [scenario](../../LMX_examples_and_analogies.ru.md#h09).
 
 ## Contract
 
@@ -8,11 +8,11 @@ The accepted declaration remains DATA until execution. Its established item and 
 
 Primary H09 uses the local `Cycles\iterate` shown in full below. The optional `iterateUntilStop` adapter remains in the proposed core with its separate error-envelope contract.
 
-**Foreign usage client:** Control.Monad.Loops.whileJust_ from the actual monad-loops package. The implementation below is for comparison only. It is not on the client's module search path, and [Analogies.hs](../haskell/Analogies.hs) does not import it.
+**Foreign usage client:** Control.Monad.Loops.whileJust_ from the actual monad-loops package. The implementation below is for comparison only. It is not on the client's module search path, and [Analogies.hs](../haskell_comparision/Analogies.hs) does not import it.
 
 ## Primary ordinary LMX implementation
 
-The complete helper below is also included in [H09.lm3](../lmx/H09.lm3), so its cost is part of the full scenario. It is the original short implementation restored from 22-Nov, directly covered by the [current declaration/body specification](../../../LMX_semantics.en.md#declaration-arguments).
+The complete helper below is also included in [H09.lm3](../haskell_comparision/source/lmx/H09.lm3), so its cost is part of the full scenario. It is the original short implementation restored from 22-Nov, directly covered by the [current declaration/body specification](../../../LMX_semantics.en.md#declaration-arguments).
 
 ```lmx
 Cycles:
@@ -118,4 +118,4 @@ These are implementation sizes, separate from client sizes. They do not compare 
 
 The reusable helpers here are synchronous computations on their owner. To run an LMX owner operation asynchronously, use existing Message `post`; it already provides delivery and reply handling, including the documented HTTP transport. No cross-Message mutable cache, hidden global scheduler, cancellation guarantee or extra worker pool is claimed. In the Haskell comparison Lazy explicitly checks its owning thread and masks the bookkeeping around an interruptible action.
 
-**Verification:** reproducible source/metric checks only; neither LMX runtime nor GHC execution is claimed. The client dependency list is [lmx-examples.cabal](../haskell/lmx-examples.cabal).
+**Verification:** reproducible source/metric checks only; neither LMX runtime nor GHC execution is claimed. The client dependency list is [lmx-examples.cabal](../haskell_comparision/lmx-examples.cabal).

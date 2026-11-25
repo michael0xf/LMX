@@ -1,10 +1,10 @@
-# S07. STABLE-SORT: ключ и устойчивость
+# S07. STABLE-SORT: приоритетная очередь с квотой
 
 Полное сравнение на указанном домене.
 
 ## Общий договор
 
-Стабильно отсортировать пары [целый ключ, строковая метка] по ключу. Сохранить порядок равных ключей и значения входа; пары не изменять.
+Для конечного списка пар [целый priority, строковая label] и целого limit >= 0 выбрать не более limit задач с наименьшим priority. Равные приоритеты обслуживаются в исходном порядке. Вернуть [selectedRows, deferredCount]. Вход и поля пар не меняются; выбранные пары сохраняют идентичность, копируется лишь внешняя последовательность. Пустой список и нулевая квота допустимы.
 
 ## Входы и ожидаемые наблюдения
 
@@ -29,32 +29,36 @@
           1,
           "d"
         ]
-      ]
+      ],
+      3
     ],
     "expected": [
       [
-        1,
-        "b"
+        [
+          1,
+          "b"
+        ],
+        [
+          1,
+          "d"
+        ],
+        [
+          2,
+          "a"
+        ]
       ],
-      [
-        1,
-        "d"
-      ],
-      [
-        2,
-        "a"
-      ],
-      [
-        2,
-        "c"
-      ]
+      1
     ]
   },
   {
     "args": [
-      []
+      [],
+      2
     ],
-    "expected": []
+    "expected": [
+      [],
+      0
+    ]
   },
   {
     "args": [
@@ -63,13 +67,64 @@
           3,
           "x"
         ]
-      ]
+      ],
+      0
+    ],
+    "expected": [
+      [],
+      1
+    ]
+  },
+  {
+    "args": [
+      [
+        [
+          3,
+          "x"
+        ]
+      ],
+      9
     ],
     "expected": [
       [
-        3,
-        "x"
-      ]
+        [
+          3,
+          "x"
+        ]
+      ],
+      0
+    ]
+  },
+  {
+    "args": [
+      [
+        [
+          1,
+          "a"
+        ],
+        [
+          1,
+          "b"
+        ],
+        [
+          1,
+          "c"
+        ]
+      ],
+      2
+    ],
+    "expected": [
+      [
+        [
+          1,
+          "a"
+        ],
+        [
+          1,
+          "b"
+        ]
+      ],
+      1
     ]
   }
 ]
@@ -79,9 +134,9 @@
 
 | Источник | Без пробельных | Все символы | Непустые строки |
 | --- | ---: | ---: | ---: |
-| LMX — процедурный | 242 | 490 | 19 |
-| LMX — функциональный | 168 | 271 | 14 |
-| Common Lisp / SBCL | 64 | 75 | 2 |
+| LMX — процедурный | 376 | 691 | 25 |
+| LMX — функциональный | 256 | 382 | 16 |
+| Common Lisp / SBCL | 183 | 225 | 4 |
 
 Оба стиля LMX сравниваются независимо по одному договору. Все объявления, вспомогательные определения и Throws входят в размер. Реализация общих библиотечных операций учитывается отдельно один раз.
 
@@ -90,8 +145,10 @@
 ```lmx
 Example:
     @: items
+    int: limit
     return: @
     run:
+        throws: copy(sys\resize\throws)
         @[]: result []
         sys\resize(result; length(items))
         int: i 0
@@ -106,10 +163,14 @@ Example:
                 j -= 1
             result[j] := current
             i += 1
-        return: result
+        int: count length(result)
+        if: limit < count
+            count := limit
+        sys\resize(result; count)
+        return: (result; length(items) - count)
 ```
 
-[Полный исходник](source/lmx/procedural/S07.lm3). 242 непробельных символов; 19 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/procedural/S07.lm3). 376 непробельных символов; 25 непустых строк. Все объявления и Throws включены.
 
 ## LMX — функциональный
 
@@ -125,41 +186,46 @@ Order:
 
 Example:
     @: items
+    int: limit
     return: @
     run:
-        throws: copy(sort\throws)
-        return: (sort items Order\compare)
+        throws: copy(sort\throws) copy(take\throws)
+        @: selected (take (sort items Order\compare) limit)
+        return: (selected; length(items) - length(selected))
 ```
 
-[Полный исходник](source/lmx/S07.lm3). 168 непробельных символов; 14 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/S07.lm3). 256 непробельных символов; 16 непустых строк. Все объявления и Throws включены.
 
 ## Common Lisp / SBCL
 
 [Полный исходник](source/common-lisp/S07.lisp).
 
 ```common-lisp
-(defun example (items)
-  (stable-sort (copy-list items) #'< :key #'first))
+(defun example (items limit)
+  (let* ((ordered (stable-sort (copy-list items) #'< :key #'first))
+         (selected (subseq ordered 0 (min limit (length ordered)))))
+    (list selected (- (length items) (length selected)))))
 ```
 
 ## Соответствие стилей договору
 
-Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма.
+Процедурный вариант раскрывает стабильную сортировку вставками и ограничение длины; функциональный соединяет стабильный sort и take. Оба сохраняют ссылки на исходные пары.
 
-STABLE-SORT разрешено менять переданный список. Поэтому внешняя структура предварительно копируется; поля пар разделяются и не изменяются.
-
-Каждая пара — структура [key,label] на границе сравнения; [0] выбирает запись ключа. sort сохраняет профиль внешней последовательности, вход и идентичность записей; comparator возвращает -1/0/1. Два сравнения дают int 0/1; их разность — тот же трёхзначный порядок.
+STABLE-SORT может менять переданный список, поэтому Lisp сортирует copy-list. LMX sort сохраняет вход и идентичность записей; take задаёт квоту без изменения порядка равных ключей. Метки позволяют видеть, какие именно задачи отложены.
 
 ## Общие операции и реализации
 
 - `sort`: [тело ядра](../../LMX_Fn_Receivers/src/corePerlExamples.lmx); отдельное сравнение [SI03](library_comparisons/SI03_comparision.md).
 
+- `take`: [тело ядра](../../LMX_Fn_Receivers/src/coreStandardFunctional.lmx).
+
 Common Lisp-клиент использует указанные native/standard средства и не импортирует сравнительные реализации.
 
 ## Проверка
 
-SBCL: [фактический отчёт](validation/common_lisp.json). Оба LMX-варианта: **NOT_RUN**; проверки текста не доказывают исполнение.
+Для обновлённого кода **SBCL: NOT_RUN; LMX parser/runtime: NOT_RUN**. Статистика пересчитана по полным исходникам; это не выполнение программ. [Статус и прежний receipt](validation/common_lisp.json).
 
 ## Первичные источники
 
 - <https://www.lispworks.com/documentation/HyperSpec/Body/f_sort_.htm>
+- <https://www.lispworks.com/documentation/HyperSpec/Body/f_subseq.htm>

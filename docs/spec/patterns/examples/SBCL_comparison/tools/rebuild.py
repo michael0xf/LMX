@@ -9,7 +9,7 @@ PATTERNS=ROOT.parents[1]
 sys.path.insert(0,str(PATTERNS/'tools'))
 from lmx_style_variants import attach_variants, validate_variants, markdown_variants, STYLES
 from lmx_execution_contract import apply_execution_contract, ensure_startup_note
-EDITION='2026-11-23'
+EDITION='2026-11-25-workflows'
 FENCE='`'*3
 
 def normalized(text):
@@ -54,6 +54,8 @@ def total(rows,language):
 
 def main():
     data=apply_execution_contract(json.loads((ROOT/'examples.json').read_text()))
+    data['edition']=EDITION
+    data['metrics_status']='current'
     impl_data=json.loads((ROOT/'implementation_data.json').read_text())
     implementations=impl_data['implementations']
     catalog={x['name']:x for x in json.loads((PATTERNS/'LMX_Fn_Receivers/catalog.json').read_text())}
@@ -62,6 +64,11 @@ def main():
         for name in item['core_functions']:coverage.setdefault(name,[]).append(item['id'])
     rows=[]; alternatives=[]; inventory=[]
     for entry in data['examples']:
+        entry['metrics_status']='current'
+        if entry.get('contract_revision'):
+            entry['selection_reason']='Оба стиля решают новый полный прикладной договор; оба измеряются целиком и остаются в сравнении.'
+        for key in ('historical_counts','historical_counts_revision','metric_note'):
+            entry.pop(key,None)
         sid=entry['id'];functional=source_code(entry['source_files']['lmx'])
         proc_path=entry['source_files']['lmx'] if entry.get('style_relation')=='same_minimal_form' else f'source/lmx/procedural/{sid}.lm3'
         procedural=source_code(proc_path)
@@ -71,6 +78,9 @@ def main():
             functional_source=entry['source_files']['lmx'],contract_id=sid,style_relation=relation,style_note=entry['style_note'])
         entry['lmx_variants']['procedural']['core_functions']=[]
         entry['lmx_variants']['functional']['core_functions']=entry.get('core_functions',[])
+        for variant in entry['lmx_variants'].values():
+            variant['metrics_status']='current'
+            variant['parser_execution']='NOT_RUN'
         problems=validate_variants(entry,ROOT)
         if problems:raise ValueError((sid,problems))
         entry['lmx']=functional;entry['foreign']=foreign
@@ -115,7 +125,12 @@ def main():
             inventory.append({'id':sid,'scope':'alternative','language':alt.get('language','LMX'),'path':alt['source_file'],**m})
             parts += ['## Дополнительный способ: '+alt['approach']+'\n',as_paragraphs(alt.get('reason')),f"[Исходник]({alt['source_file']}); вне двух основных сравнений.\n",code_block('lmx',code)]
         entry['alternatives']=retained
-        parts += ['## Проверка\n','SBCL: [фактический отчёт](validation/common_lisp.json). Оба LMX-варианта: **NOT_RUN**; проверки текста не доказывают исполнение.\n','## Первичные источники\n',source_list(entry.get('sources',[]))]
+        runtime_note=('Для обновлённого кода **SBCL: NOT_RUN; LMX parser/runtime: NOT_RUN**. '
+                      'Статистика пересчитана по полным исходникам; это не выполнение программ. '
+                      '[Статус и прежний receipt](validation/common_lisp.json).\n'
+                      if entry.get('contract_revision') else
+                      'SBCL: [статус и датированный отчёт](validation/common_lisp.json). Оба LMX-варианта: **NOT_RUN**; проверки текста не доказывают исполнение.\n')
+        parts += ['## Проверка\n',runtime_note,'## Первичные источники\n',source_list(entry.get('sources',[]))]
         write(sid+'_comparision.md','\n'.join(x for x in parts if x))
     impl_rows=[]
     for item in implementations:
@@ -132,6 +147,14 @@ def main():
         'implementation_primary_totals':{key:total(impl_rows,key) for key in ('lmx','foreign')},'examples':rows,'implementations':impl_rows,'alternatives':alternatives,
         'dependency_closure':impl_data.get('totals',{}),'runtime':{'common_lisp':'See validation/common_lisp.json and implementation_execution.json','lmx':'NOT_RUN'}}
     write_json('examples.json',data);write_json('statistics.json',statistics);write_json('SOURCE_INVENTORY.json',{'edition':EDITION,'files':inventory})
+    selections=[]
+    for e in data['examples']:
+        selections.append({'id':e['id'],'variants':[{'style':s,'path':e['lmx_variants'][s]['source_file'],
+            'compared':True,**e['counts']['lmx_'+s]} for s in STYLES],
+            'alternatives':[{'path':a['source_file'],'compared':False,**a['counts']} for a in e.get('alternatives',[])],
+            'style_relation':e['style_relation'],'style_note':e['style_note'],'metrics_status':'current',
+            'selection_rule':'Both complete LMX styles are compared; size never selects or discards a style'})
+    write_json('variant_selection.json',{'methodology':'Both full procedural and functional LMX variants are primary. Current full counts; no shortened Throws metric.','examples':selections})
     flat=[]
     for scope,selected in [('client',rows),('implementation',impl_rows)]:
         for row in selected:

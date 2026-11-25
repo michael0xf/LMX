@@ -519,7 +519,7 @@ source. Place-declaration receivers such as `int` and `@` establish their
 places under their own namespace and initializer contracts. Repeated actual
 DATA declarations remain separate occurrences under the existing rules.
 
-In CODE, a headed form applies its resolved head. `S(args)`, `S: args` and its vertical form execute `S` with the selected actuals; they do not assign to `S` or declare a new Structure. A declaration receiver such as `int: i 6` establishes or updates its logical place under the receiver's contract. A numeric or null head is not callable. A call used for its value must have an admitted result described by `return` in its actual DATA. Bare `S` is a reference and does not call it.
+In CODE, a headed form applies its resolved head. `S(args)`, `S: args` and its vertical form execute `S` with the selected actuals; they do not assign to `S` or declare a new Structure. A declaration receiver such as `int: i 6` establishes or updates its logical place under the receiver's contract. A numeric or null head is not callable. A call used for its value must have an admitted result described by `return` in its actual DATA. Merely obtaining a reference to `S` does not execute it. A Structure consumed as a whole VALUE, TYPE or DATA description retains that contract. When traversal reaches the node in CODE/Expression, the common name/actual-parent guard applies.
 
 These role rules are applied by the resolved receiving contract. In particular, a [place-declaration receiver supplied as a CODE argument](#declaration-arguments) is read as DATA and preserves its form. This does not change an ordinary `Producer()` or `Producer: tail` into a declaration: its head is an ordinary callable, so it remains a CODE call.
 

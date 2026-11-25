@@ -104,3 +104,24 @@
 | [Python — immutable tuples ](https://docs.python.org/3/library/stdtypes.html#tuples) | 096 |
 | [Python — data model and slots ](https://docs.python.org/3/reference/datamodel.html#slots) | 096 |
 | [Microsoft — readonly struct ](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/struct#readonly-struct) | 096 |
+
+## Алгоритмы и симуляции 100–108
+
+- [C++ working draft: lower_bound](https://eel.is/c++draft/lower.bound) — 100. Lower bound / двоичный поиск границы.
+- [Python: bisect_left](https://docs.python.org/3/library/bisect.html) — 100. Lower bound / двоичный поиск границы.
+- [Boost.Graph: breadth_first_search](https://www.boost.org/doc/libs/1_82_0/libs/graph/doc/breadth_first_search.html) — 101. Breadth-first search / поиск в ширину.
+- [Java: Arrays.fill](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Arrays.html) — 101. Breadth-first search / поиск в ширину.
+- [Sedgewick / Wayne: TopologicalX](https://algs4.cs.princeton.edu/code/edu/princeton/cs/algs4/TopologicalX.java.html) — 102. Kahn topological sort / порядок зависимостей.
+- [Python: graphlib.TopologicalSorter](https://docs.python.org/3/library/graphlib.html) — 102. Kahn topological sort / порядок зависимостей.
+- [Sedgewick / Wayne: weighted union with path halving](https://algs4.cs.princeton.edu/15uf/WeightedQuickUnionPathHalvingUF.java.html) — 103. Union–find / непересекающиеся множества.
+- [Manning / Raghavan / Schütze: edit distance](https://nlp.stanford.edu/IR-book/html/htmledition/edit-distance-1.html) — 104. Levenshtein distance / расстояние редактирования.
+- [Boost.Graph: Dijkstra shortest paths](https://www.boost.org/doc/libs/1_82_0/libs/graph/doc/dijkstra_shortest_paths.html) — 105. Dijkstra / кратчайшие взвешенные пути.
+- [Robert Nystrom — Double Buffer](https://gameprogrammingpatterns.com/double-buffer.html) — 106. Double Buffer.
+- [Go specification — appending to and copying slices](https://go.dev/ref/spec#Appending_to_and_copying_slices) — 106. Double Buffer.
+- [Robert Nystrom — Dirty Flag, original author repository](https://github.com/munificent/game-programming-patterns/blob/master/book/dirty-flag.markdown) — 107. Dirty Flag.
+- [C++ working draft — minimum and maximum](https://eel.is/c++draft/alg.min.max) — 107. Dirty Flag.
+- [ECMAScript — Array.prototype.reduce](https://tc39.es/ecma262/multipage/indexed-collections.html#sec-array.prototype.reduce) — 107. Dirty Flag.
+- [Robert Nystrom — Game Loop, original author repository](https://github.com/munificent/game-programming-patterns/blob/master/book/game-loop.markdown) — 108. Fixed Timestep Game Loop.
+- [ECMAScript — Array.prototype.map](https://tc39.es/ecma262/multipage/indexed-collections.html#sec-array.prototype.map) — 108. Fixed Timestep Game Loop.
+
+Источники интерфейсов Haskell, Julia, Perl и Common Lisp приведены в README наборов и на страницах соответствующих сравнений. Новые примеры `->` опираются на текущую спецификацию LMX: [ARROW_EXAMPLES](../ARROW_EXAMPLES.md).

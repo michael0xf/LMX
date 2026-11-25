@@ -108,6 +108,10 @@ FxOne:
         out[0] := value
         return: out
 
+FxPair:
+    @: first 0
+    @: second 0
+
 FxProjectValue:
     private:
         @: value
@@ -256,6 +260,26 @@ FxSeqConcat:
             i += 1
         return: out
 
+FxSeqCount:
+    private:
+        @: items
+        @: accepts
+    required: items accepts
+    return: int
+    count:
+        throws: copy(FxThrows\predicate)
+        FxSeqInfo\get(items)
+        private: int: count length(items)
+        private: int: matched 0
+        private: int: i 0
+        while: i < count
+            private: @: item FxSeqRead\read(items; i)
+            private: @: value FxApply\apply(accepts; FxOne\make(item))
+            if: FxSeqPredicate\truth(value) != 0
+                matched += 1
+            i += 1
+        return: matched
+
 FxSeqEmpty:
     private: @: source
     required: source
@@ -321,6 +345,22 @@ FxSeqRead:
     read:
         throws: FxKernelFailure FxTypeToken ReceiverIndex
         return: FxKernel\arrayRead(source := source; index := index)
+
+FxSeqReverse:
+    private: @: source
+    required: source
+    return: @
+    reverse:
+        throws: copy(FxThrows\sequence)
+        private: @: info FxSeqInfo\get(source)
+        private: int: count length(source)
+        private: @: out FxSeqAllocate\make(info\arrayType; count)
+        private: int: i 0
+        while: i < count
+            private: @: value FxSeqRead\read(source; count - 1 - i)
+            FxKernel\arrayWrite(target := out; index := i; value := value)
+            i += 1
+        return: out
 
 FxSeqSize:
     private:
@@ -409,6 +449,37 @@ FxStdCollect:
             FxSeqPush\append(out; outcome\value)
         return: out
 
+FxStdCut:
+    private:
+        @: items
+        int: count
+    required: items count
+    return: @
+    take:
+        throws: copy(FxThrows\sequence)
+        return: FxSeqSlice\slice(items; 0; FxStdCutIndex\get(items; count))
+    drop:
+        throws: copy(FxThrows\sequence)
+        return: FxSeqSlice\slice(items; FxStdCutIndex\get(items; count); length(items))
+    splitAt:
+        throws: copy(FxThrows\sequence)
+        return: FxStdPair\make(take(items; count); drop(items; count))
+
+FxStdCutIndex:
+    private:
+        @: items
+        int: count
+    required: items count
+    return: int
+    get:
+        throws: copy(FxThrows\kernel)
+        FxSeqInfo\get(items)
+        if: count < 0
+            return: 0
+        if: count > length(items)
+            return: length(items)
+        return: count
+
 FxStdCycle:
     private:
         @: items
@@ -427,6 +498,63 @@ FxStdCycle:
             throw: SequenceSize()
         return: FxSeqConcat\concat(FxStdReplicate\replicate(items; count))
 
+FxStdMaybeMap:
+    private:
+        @: items
+        @: transform
+    required: items transform
+    return: @
+    filterMap:
+        throws: copy(FxThrows\traversal) SequenceElement
+        return: FxStdMaybeMapEngine\run(items; transform; 0; 0)
+    mapWhile:
+        throws: copy(FxThrows\traversal) SequenceElement
+        return: FxStdMaybeMapEngine\run(items; transform; 1; 0)
+    findMap:
+        throws: copy(FxThrows\traversal) SequenceElement
+        return: FxStdMaybeMapEngine\run(items; transform; 0; 1)
+
+FxStdMaybeMapEngine:
+    private:
+        @: items
+        @: transform
+        int: stopOnNone
+        int: firstOnly
+    required: items transform stopOnNone firstOnly
+    return: @
+    run:
+        throws: copy(FxThrows\traversal) SequenceElement
+        FxSeqInfo\get(items)
+        private: @: out FxSeqAllocate\make(@[]; 0)
+        private: int: i 0
+        while: i < length(items)
+            private: @: packed FxApply\apply(transform; FxOne\make(FxSeqRead\read(items; i)))
+            private: FxMaybe@: answer packed
+            if: answer\present != 0
+                if: firstOnly != 0
+                    return: answer
+                FxSeqPush\append(out; answer\value)
+            else:
+                if: stopOnNone != 0
+                    break
+            ---
+            i += 1
+        if: firstOnly != 0
+            return: FxNone\none()
+        return: out
+
+FxStdPair:
+    private:
+        @: first
+        @: second
+    required: first second
+    return: @
+    make:
+        private: @: pair (copy(FxPair))
+        pair\first := first
+        pair\second := second
+        return: pair
+
 FxStdReplicate:
     private:
         @: value
@@ -444,6 +572,15 @@ FxStdReplicate:
             out[i] := value
             i += 1
         return: out
+
+FxSum:
+    private:
+        @: items
+        @: initial (0 record)
+    return: @
+    sum:
+        throws: FxRecordArity
+        return: ((+ \initial copy(items)) record)
 
 FxTextCycle:
     private:

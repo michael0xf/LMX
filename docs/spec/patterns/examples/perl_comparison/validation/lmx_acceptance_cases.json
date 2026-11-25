@@ -142,5 +142,1900 @@
     "argument_fixture": "A parent stub may have its own arguments and send a message to the root; this does not give DATA or user arguments to the root.",
     "source_dependencies": "Required source definitions and load_before dependencies belong to the fixture. They do not introduce a DATA-load startup or a named alternative entry."
   },
-  "lmx_runner_contract": "Always start the root as an L3 Thread without DATA or user arguments. Local declarations and calls use the ordinary common language mechanism. An invoke path or named case operation is performed by the root or an ordinary handler after startup; Main and Example\\run are not alternative program entries. A parent stub with its own arguments may send a message to the root. load_before lists required fixture definitions; import exposes existing names, not a new file loader. These records specify acceptance observations and do not claim an executed LMX runner."
+  "lmx_runner_contract": "Always start the root as an L3 Thread without DATA or user arguments. Local declarations and calls use the ordinary common language mechanism. An invoke path or named case operation is performed by the root or an ordinary handler after startup; Main and Example\\run are not alternative program entries. A parent stub with its own arguments may send a message to the root. load_before lists required fixture definitions; import exposes existing names, not a new file loader. These records specify acceptance observations and do not claim an executed LMX runner.",
+  "client_scenarios": [
+    {
+      "id": "P01",
+      "contract": "Калибровать целочисленные измерения множителем 3; вернуть пару (новый список измерений, их сумма). Порядок, нули и знак сохраняются, пустой пакет даёт ([],0). Вход не меняется. Все промежуточные значения и сумма входят в общий точный диапазон int LMX и Perl.",
+      "cases": [
+        {
+          "args": [
+            [
+              -2,
+              0,
+              3
+            ]
+          ],
+          "expected": [
+            [
+              -6,
+              0,
+              9
+            ],
+            3
+          ]
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": [
+            [],
+            0
+          ]
+        },
+        {
+          "args": [
+            [
+              7
+            ]
+          ],
+          "expected": [
+            [
+              21
+            ],
+            21
+          ]
+        },
+        {
+          "args": [
+            [
+              -1,
+              1
+            ]
+          ],
+          "expected": [
+            [
+              -3,
+              3
+            ],
+            0
+          ]
+        }
+      ],
+      "variants": [
+        "procedural",
+        "functional"
+      ],
+      "runtime_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup",
+      "source_files": {
+        "procedural": [
+          "source/lmx/procedural/P01.lm3"
+        ],
+        "functional": [
+          "source/lmx/P01.lm3"
+        ]
+      }
+    },
+    {
+      "id": "P02",
+      "contract": "Из списка целых размеров отобрать неотрицательные чётные значения, сохранив порядок и повторы; вернуть (принятые размеры, сумма принятой нагрузки). Ноль допустим, отрицательные и нечётные значения отбрасываются. Пустой результат имеет сумму 0. Вход не меняется; арифметика остаётся в общем точном диапазоне.",
+      "cases": [
+        {
+          "args": [
+            [
+              -3,
+              -2,
+              0,
+              1,
+              2,
+              2
+            ]
+          ],
+          "expected": [
+            [
+              0,
+              2,
+              2
+            ],
+            4
+          ]
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": [
+            [],
+            0
+          ]
+        },
+        {
+          "args": [
+            [
+              1,
+              3
+            ]
+          ],
+          "expected": [
+            [],
+            0
+          ]
+        },
+        {
+          "args": [
+            [
+              -4,
+              0,
+              2,
+              3,
+              6
+            ]
+          ],
+          "expected": [
+            [
+              0,
+              2,
+              6
+            ],
+            8
+          ]
+        }
+      ],
+      "variants": [
+        "procedural",
+        "functional"
+      ],
+      "runtime_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup",
+      "source_files": {
+        "procedural": [
+          "source/lmx/procedural/P02.lm3"
+        ],
+        "functional": [
+          "source/lmx/P02.lm3"
+        ]
+      }
+    },
+    {
+      "id": "P03",
+      "contract": "Применить последовательность целочисленных изменений к initial и вернуть (конечный баланс, флаг balance<0). Пустой список оставляет initial, нулевой баланс не является дефицитом. История промежуточных балансов не требуется; вход не меняется. Все суммы входят в общий точный диапазон int LMX и Perl.",
+      "cases": [
+        {
+          "args": [
+            [
+              7,
+              -2,
+              0,
+              4
+            ],
+            10
+          ],
+          "expected": [
+            19,
+            0
+          ]
+        },
+        {
+          "args": [
+            [],
+            0
+          ],
+          "expected": [
+            0,
+            0
+          ]
+        },
+        {
+          "args": [
+            [
+              -5
+            ],
+            10
+          ],
+          "expected": [
+            5,
+            0
+          ]
+        },
+        {
+          "args": [
+            [
+              -5
+            ],
+            2
+          ],
+          "expected": [
+            -3,
+            1
+          ]
+        },
+        {
+          "args": [
+            [
+              -5
+            ],
+            5
+          ],
+          "expected": [
+            0,
+            0
+          ]
+        }
+      ],
+      "variants": [
+        "procedural",
+        "functional"
+      ],
+      "runtime_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup",
+      "source_files": {
+        "procedural": [
+          "source/lmx/procedural/P03.lm3"
+        ],
+        "functional": [
+          "source/lmx/P03.lm3"
+        ]
+      }
+    },
+    {
+      "id": "P04",
+      "contract": "Из начального остатка и списка изменений получить начальный остаток и все последующие суммы, в том числе начальный элемент для пустого списка.",
+      "cases": [
+        {
+          "args": [
+            [
+              5,
+              -3,
+              8
+            ],
+            100
+          ],
+          "expected": [
+            100,
+            105,
+            102,
+            110
+          ]
+        },
+        {
+          "args": [
+            [],
+            7
+          ],
+          "expected": [
+            7
+          ]
+        },
+        {
+          "args": [
+            [
+              -7
+            ],
+            7
+          ],
+          "expected": [
+            7,
+            0
+          ]
+        }
+      ],
+      "variants": [
+        "procedural",
+        "functional"
+      ],
+      "runtime_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup",
+      "source_files": {
+        "procedural": [
+          "source/lmx/procedural/P04.lm3"
+        ],
+        "functional": [
+          "source/lmx/P04.lm3"
+        ]
+      }
+    },
+    {
+      "id": "P05",
+      "contract": "Вернуть два булевых int: существует ли отрицательный элемент; все ли элементы меньше 10. На пустом списке результат [0,1].",
+      "cases": [
+        {
+          "args": [
+            [
+              -1,
+              20
+            ]
+          ],
+          "expected": [
+            1,
+            0
+          ]
+        },
+        {
+          "args": [
+            [
+              0,
+              3
+            ]
+          ],
+          "expected": [
+            0,
+            1
+          ]
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": [
+            0,
+            1
+          ]
+        }
+      ],
+      "variants": [
+        "procedural",
+        "functional"
+      ],
+      "runtime_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup",
+      "source_files": {
+        "procedural": [
+          "source/lmx/procedural/P05.lm3"
+        ],
+        "functional": [
+          "source/lmx/P05.lm3"
+        ]
+      }
+    },
+    {
+      "id": "P06",
+      "contract": "items и labels — две последовательности одинаковой длины: значения экспортируемых полей и их метки. Выбрать обе по одному списку допустимых индексов positions; вернуть пару новых внешних массивов. Порядок и повторы индексов существенны; повторная ссылка указывает на тот же исходный объект, вложенные поля не теряются. Пустые positions дают два пустых массива. Индексы 0..n-1 являются общим предусловием, входы не меняются.",
+      "cases": [
+        {
+          "args": [
+            [
+              "a",
+              "b",
+              "c"
+            ],
+            [
+              "field0",
+              "field1",
+              "field2"
+            ],
+            [
+              2,
+              0,
+              2
+            ]
+          ],
+          "expected": [
+            [
+              "c",
+              "a",
+              "c"
+            ],
+            [
+              "field2",
+              "field0",
+              "field2"
+            ]
+          ]
+        },
+        {
+          "args": [
+            [
+              1,
+              2
+            ],
+            [
+              "field0",
+              "field1"
+            ],
+            []
+          ],
+          "expected": [
+            [],
+            []
+          ]
+        },
+        {
+          "args": [
+            [],
+            [],
+            []
+          ],
+          "expected": [
+            [],
+            []
+          ]
+        },
+        {
+          "args": [
+            [
+              {
+                "id": "a",
+                "width": 2
+              },
+              {
+                "id": "b",
+                "width": 4
+              }
+            ],
+            [
+              "left",
+              "right"
+            ],
+            [
+              1,
+              0,
+              1
+            ]
+          ],
+          "expected": [
+            [
+              {
+                "id": "b",
+                "width": 4
+              },
+              {
+                "id": "a",
+                "width": 2
+              },
+              {
+                "id": "b",
+                "width": 4
+              }
+            ],
+            [
+              "right",
+              "left",
+              "right"
+            ]
+          ]
+        }
+      ],
+      "variants": [
+        "procedural",
+        "functional"
+      ],
+      "runtime_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup",
+      "source_files": {
+        "procedural": [
+          "source/lmx/procedural/P06.lm3"
+        ],
+        "functional": [
+          "source/lmx/P06.lm3"
+        ]
+      }
+    },
+    {
+      "id": "P07",
+      "contract": "Заменить диапазон [begin,end) и вернуть [тот же изменённый массив, новый список удалённых элементов]. Вставляемые значения читаются до изменения; пустые вставка и удаление допустимы. Общий домен диапазона: 0 <= begin <= end <= length(items); отрицательные и выходящие за границы Perl-индексы не сравниваются с этим договором.",
+      "cases": [
+        {
+          "args": [
+            [
+              1,
+              2,
+              3,
+              4
+            ],
+            1,
+            3,
+            [
+              8,
+              9,
+              10
+            ]
+          ],
+          "expected": [
+            [
+              1,
+              8,
+              9,
+              10,
+              4
+            ],
+            [
+              2,
+              3
+            ]
+          ]
+        },
+        {
+          "args": [
+            [
+              1
+            ],
+            1,
+            1,
+            [
+              2
+            ]
+          ],
+          "expected": [
+            [
+              1,
+              2
+            ],
+            []
+          ]
+        },
+        {
+          "args": [
+            [
+              1,
+              2
+            ],
+            0,
+            2,
+            []
+          ],
+          "expected": [
+            [],
+            [
+              1,
+              2
+            ]
+          ]
+        }
+      ],
+      "variants": [
+        "procedural",
+        "functional"
+      ],
+      "runtime_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup",
+      "source_files": {
+        "procedural": [
+          "source/lmx/procedural/P07.lm3"
+        ],
+        "functional": [
+          "source/lmx/P07.lm3"
+        ]
+      }
+    },
+    {
+      "id": "P08",
+      "contract": "Отсортировать ссылки на записи по возрастанию priority, сохранить исходный порядок равных ключей, взять первые min(limit,n) записей и вернуть (выбранные записи, сумма их width). limit — неотрицательное целое; каждый width — неотрицательное целое, сумма представима. Все поля и идентичность исходных записей сохраняются, вход не меняется. limit=0 и пустой вход дают ([],0). Общий домен priority имеет полный согласованный порядок без NaN.",
+      "cases": [
+        {
+          "args": [
+            [
+              {
+                "priority": 2,
+                "id": "a",
+                "width": 8
+              },
+              {
+                "priority": 1,
+                "id": "b",
+                "width": 4
+              },
+              {
+                "priority": 2,
+                "id": "c",
+                "width": 12
+              }
+            ],
+            2
+          ],
+          "expected": [
+            [
+              {
+                "priority": 1,
+                "id": "b",
+                "width": 4
+              },
+              {
+                "priority": 2,
+                "id": "a",
+                "width": 8
+              }
+            ],
+            12
+          ]
+        },
+        {
+          "args": [
+            [],
+            2
+          ],
+          "expected": [
+            [],
+            0
+          ]
+        },
+        {
+          "args": [
+            [
+              {
+                "priority": 2,
+                "id": "a",
+                "width": 8
+              }
+            ],
+            2
+          ],
+          "expected": [
+            [
+              {
+                "priority": 2,
+                "id": "a",
+                "width": 8
+              }
+            ],
+            8
+          ]
+        },
+        {
+          "args": [
+            [
+              {
+                "priority": 2,
+                "id": "a",
+                "width": 8
+              },
+              {
+                "priority": 2,
+                "id": "b",
+                "width": 4
+              }
+            ],
+            0
+          ],
+          "expected": [
+            [],
+            0
+          ]
+        },
+        {
+          "args": [
+            [
+              {
+                "priority": 2,
+                "id": "a",
+                "width": 8
+              },
+              {
+                "priority": 2,
+                "id": "b",
+                "width": 4
+              }
+            ],
+            8
+          ],
+          "expected": [
+            [
+              {
+                "priority": 2,
+                "id": "a",
+                "width": 8
+              },
+              {
+                "priority": 2,
+                "id": "b",
+                "width": 4
+              }
+            ],
+            12
+          ]
+        }
+      ],
+      "variants": [
+        "procedural",
+        "functional"
+      ],
+      "runtime_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup",
+      "source_files": {
+        "procedural": [
+          "source/lmx/procedural/P08.lm3"
+        ],
+        "functional": [
+          "source/lmx/P08.lm3"
+        ]
+      }
+    },
+    {
+      "id": "P09",
+      "contract": "Из потока канонических целых идентификаторов оставить первые вхождения в исходном порядке и вернуть (уникальные идентификаторы, число удалённых повторных поступлений). Ноль и отрицательные идентификаторы остаются значениями. Пустой вход даёт ([],0), вход не меняется. Обобщённая операция unique ядра этим прикладным целочисленным доменом не ограничена.",
+      "cases": [
+        {
+          "args": [
+            [
+              0,
+              1,
+              0,
+              -1,
+              1
+            ]
+          ],
+          "expected": [
+            [
+              0,
+              1,
+              -1
+            ],
+            2
+          ]
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": [
+            [],
+            0
+          ]
+        },
+        {
+          "args": [
+            [
+              5,
+              5,
+              5
+            ]
+          ],
+          "expected": [
+            [
+              5
+            ],
+            2
+          ]
+        },
+        {
+          "args": [
+            [
+              2,
+              2,
+              1,
+              2,
+              1,
+              0
+            ]
+          ],
+          "expected": [
+            [
+              2,
+              1,
+              0
+            ],
+            3
+          ]
+        }
+      ],
+      "variants": [
+        "procedural",
+        "functional"
+      ],
+      "runtime_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup",
+      "source_files": {
+        "procedural": [
+          "source/lmx/procedural/P09.lm3"
+        ],
+        "functional": [
+          "source/lmx/P09.lm3"
+        ]
+      }
+    },
+    {
+      "id": "P10",
+      "contract": "Для списка целых кодов вернуть пары [код,число вхождений], расположенные по первому появлению кода, а не по произвольному порядку хеша.",
+      "cases": [
+        {
+          "args": [
+            [
+              2,
+              1,
+              2,
+              3,
+              1,
+              2
+            ]
+          ],
+          "expected": [
+            [
+              2,
+              3
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              3,
+              1
+            ]
+          ]
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": []
+        },
+        {
+          "args": [
+            [
+              0,
+              0
+            ]
+          ],
+          "expected": [
+            [
+              0,
+              2
+            ]
+          ]
+        }
+      ],
+      "variants": [
+        "procedural",
+        "functional"
+      ],
+      "runtime_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup",
+      "source_files": {
+        "procedural": [
+          "source/lmx/procedural/P10.lm3"
+        ],
+        "functional": [
+          "source/lmx/P10.lm3"
+        ]
+      }
+    },
+    {
+      "id": "P11",
+      "contract": "Сгруппировать целые записи по целому kind. Порядок групп — первое появление kind, порядок записей внутри группы — исходный. Никакие поля записи не удаляются.",
+      "cases": [
+        {
+          "args": [
+            [
+              {
+                "kind": 2,
+                "text": "a",
+                "width": 8
+              },
+              {
+                "kind": 1,
+                "text": "b",
+                "width": 4
+              },
+              {
+                "kind": 2,
+                "text": "c",
+                "width": 12
+              }
+            ]
+          ],
+          "expected": [
+            [
+              2,
+              [
+                {
+                  "kind": 2,
+                  "text": "a",
+                  "width": 8
+                },
+                {
+                  "kind": 2,
+                  "text": "c",
+                  "width": 12
+                }
+              ]
+            ],
+            [
+              1,
+              [
+                {
+                  "kind": 1,
+                  "text": "b",
+                  "width": 4
+                }
+              ]
+            ]
+          ]
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": []
+        },
+        {
+          "args": [
+            [
+              {
+                "kind": 2,
+                "text": "a",
+                "width": 8
+              }
+            ]
+          ],
+          "expected": [
+            [
+              2,
+              [
+                {
+                  "kind": 2,
+                  "text": "a",
+                  "width": 8
+                }
+              ]
+            ]
+          ]
+        }
+      ],
+      "variants": [
+        "procedural",
+        "functional"
+      ],
+      "runtime_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup",
+      "source_files": {
+        "procedural": [
+          "source/lmx/procedural/P11.lm3"
+        ],
+        "functional": [
+          "source/lmx/P11.lm3"
+        ]
+      }
+    },
+    {
+      "id": "P12",
+      "contract": "Наложить плоские совместимые настройки patch на base и вернуть (новые настройки, width*height). После наложения width и height обязательно присутствуют и являются неотрицательными целыми с представимым произведением. Ноль — полноценное значение, все другие поля сохраняются, входы не меняются. Вложенные изменяемые графы не входят в общий профиль сравнения.",
+      "cases": [
+        {
+          "args": [
+            {
+              "width": 80,
+              "height": 24,
+              "theme": "dark"
+            },
+            {
+              "width": 120,
+              "border": 0
+            }
+          ],
+          "expected": [
+            {
+              "width": 120,
+              "height": 24,
+              "theme": "dark",
+              "border": 0
+            },
+            2880
+          ]
+        },
+        {
+          "args": [
+            {
+              "width": 80,
+              "height": 24
+            },
+            {
+              "width": 0
+            }
+          ],
+          "expected": [
+            {
+              "width": 0,
+              "height": 24
+            },
+            0
+          ]
+        },
+        {
+          "args": [
+            {
+              "width": 80,
+              "height": 24
+            },
+            {}
+          ],
+          "expected": [
+            {
+              "width": 80,
+              "height": 24
+            },
+            1920
+          ]
+        },
+        {
+          "args": [
+            {
+              "width": 5,
+              "height": 4,
+              "theme": "dark"
+            },
+            {
+              "height": 0,
+              "border": 0
+            }
+          ],
+          "expected": [
+            {
+              "width": 5,
+              "height": 0,
+              "theme": "dark",
+              "border": 0
+            },
+            0
+          ]
+        }
+      ],
+      "variants": [
+        "procedural",
+        "functional"
+      ],
+      "runtime_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup",
+      "source_files": {
+        "procedural": [
+          "source/lmx/P12.lm3"
+        ],
+        "functional": [
+          "source/lmx/P12.lm3"
+        ]
+      }
+    },
+    {
+      "id": "P13",
+      "contract": "Объединить один уровень конечной последовательности пакетов rows и вернуть (плоская последовательность элементов, последовательность исходных размеров пакетов). Пустые пакеты сохраняются в отчёте размеров как 0; пустой внешний список даёт ([],[]). Глубже одного уровня ничего не раскрывается: вложенный массив остаётся отдельным элементом и сохраняет ссылку. Входы не меняются. Размеры во второй последовательности — обычные целые значения в общем протоколе результатов.",
+      "cases": [
+        {
+          "args": [
+            [
+              [
+                1,
+                2
+              ],
+              [],
+              [
+                3
+              ]
+            ]
+          ],
+          "expected": [
+            [
+              1,
+              2,
+              3
+            ],
+            [
+              2,
+              0,
+              1
+            ]
+          ]
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": [
+            [],
+            []
+          ]
+        },
+        {
+          "args": [
+            [
+              [
+                1,
+                [
+                  2
+                ]
+              ],
+              [
+                [
+                  3
+                ]
+              ]
+            ]
+          ],
+          "expected": [
+            [
+              1,
+              [
+                2
+              ],
+              [
+                3
+              ]
+            ],
+            [
+              2,
+              1
+            ]
+          ]
+        },
+        {
+          "args": [
+            [
+              [],
+              [
+                0
+              ],
+              []
+            ]
+          ],
+          "expected": [
+            [
+              0
+            ],
+            [
+              0,
+              1,
+              0
+            ]
+          ]
+        }
+      ],
+      "variants": [
+        "procedural",
+        "functional"
+      ],
+      "runtime_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup",
+      "source_files": {
+        "procedural": [
+          "source/lmx/procedural/P13.lm3"
+        ],
+        "functional": [
+          "source/lmx/P13.lm3"
+        ]
+      }
+    },
+    {
+      "id": "P14",
+      "contract": "Разделить ASCII-строку простого импорта по запятым и вернуть (поля, флаг числа полей=columns, число пустых полей). columns — положительное ожидаемое число колонок. Начальные, промежуточные и конечные пустые поля сохраняются; пустая строка означает одно пустое поле. Это явно простой формат без CSV-кавычек/экранирования; ввод не исправляется автоматически и не меняется.",
+      "cases": [
+        {
+          "args": [
+            "a,,b,",
+            4
+          ],
+          "expected": [
+            [
+              "a",
+              "",
+              "b",
+              ""
+            ],
+            1,
+            2
+          ]
+        },
+        {
+          "args": [
+            "",
+            1
+          ],
+          "expected": [
+            [
+              ""
+            ],
+            1,
+            1
+          ]
+        },
+        {
+          "args": [
+            ",",
+            1
+          ],
+          "expected": [
+            [
+              "",
+              ""
+            ],
+            0,
+            2
+          ]
+        },
+        {
+          "args": [
+            "a,b",
+            3
+          ],
+          "expected": [
+            [
+              "a",
+              "b"
+            ],
+            0,
+            0
+          ]
+        },
+        {
+          "args": [
+            "",
+            2
+          ],
+          "expected": [
+            [
+              ""
+            ],
+            0,
+            1
+          ]
+        }
+      ],
+      "variants": [
+        "procedural",
+        "functional"
+      ],
+      "runtime_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup",
+      "source_files": {
+        "procedural": [
+          "source/lmx/procedural/P14.lm3"
+        ],
+        "functional": [
+          "source/lmx/P14.lm3"
+        ]
+      }
+    },
+    {
+      "id": "P15",
+      "contract": "Обработать список ASCII-строк как предложенные имена: принять только целые строки вида [A-Za-z][A-Za-z0-9_]*; вернуть (принятые имена в исходном порядке, число отклонённых). Повторные корректные имена сохраняются. Пустая строка, ведущая цифра и конечный перевод строки недопустимы. Пустой список даёт ([],0), входные строки не меняются.",
+      "cases": [
+        {
+          "args": [
+            [
+              "user_21",
+              "7user",
+              "name\n",
+              "",
+              "Abc",
+              "user_21"
+            ]
+          ],
+          "expected": [
+            [
+              "user_21",
+              "Abc",
+              "user_21"
+            ],
+            3
+          ]
+        },
+        {
+          "args": [
+            [
+              "user_21"
+            ]
+          ],
+          "expected": [
+            [
+              "user_21"
+            ],
+            0
+          ]
+        },
+        {
+          "args": [
+            [
+              "7user"
+            ]
+          ],
+          "expected": [
+            [],
+            1
+          ]
+        },
+        {
+          "args": [
+            [
+              "name\n"
+            ]
+          ],
+          "expected": [
+            [],
+            1
+          ]
+        },
+        {
+          "args": [
+            [
+              ""
+            ]
+          ],
+          "expected": [
+            [],
+            1
+          ]
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": [
+            [],
+            0
+          ]
+        }
+      ],
+      "variants": [
+        "procedural",
+        "functional"
+      ],
+      "runtime_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup",
+      "source_files": {
+        "procedural": [
+          "source/lmx/common/ascii.lm3",
+          "source/lmx/procedural/P15.lm3"
+        ],
+        "functional": [
+          "source/lmx/P15.lm3"
+        ]
+      }
+    },
+    {
+      "id": "P16",
+      "contract": "Разобрать всю строку key=value, где key — непустые ASCII-буквы, value — непустые ASCII-цифры. Вернуть [1,key,value] либо [0,\"\",\"\"]. Ведущие нули значения сохраняются.",
+      "cases": [
+        {
+          "args": [
+            "Port=0080"
+          ],
+          "expected": [
+            1,
+            "Port",
+            "0080"
+          ]
+        },
+        {
+          "args": [
+            "x="
+          ],
+          "expected": [
+            0,
+            "",
+            ""
+          ]
+        },
+        {
+          "args": [
+            "x=1!"
+          ],
+          "expected": [
+            0,
+            "",
+            ""
+          ]
+        },
+        {
+          "args": [
+            ""
+          ],
+          "expected": [
+            0,
+            "",
+            ""
+          ]
+        }
+      ],
+      "variants": [
+        "procedural",
+        "functional"
+      ],
+      "runtime_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup",
+      "source_files": {
+        "procedural": [
+          "source/lmx/common/ascii.lm3",
+          "source/lmx/procedural/P16.lm3"
+        ],
+        "functional": [
+          "source/lmx/P16.lm3"
+        ]
+      }
+    },
+    {
+      "id": "P17",
+      "contract": "Из ASCII-текста журнала извлечь максимальные последовательности букв [A-Za-z]+, оставить слова длины не меньше неотрицательного minimum и вернуть (принятые слова, число отброшенных коротких слов). Порядок и регистр сохраняются; цифры и знаки — разделители. При отсутствии слов результат ([],0), minimum=0 оставляет все найденные слова. Вход не меняется.",
+      "cases": [
+        {
+          "args": [
+            "ab12CODE, useful",
+            3
+          ],
+          "expected": [
+            [
+              "CODE",
+              "useful"
+            ],
+            1
+          ]
+        },
+        {
+          "args": [
+            "ab12CD, ef",
+            2
+          ],
+          "expected": [
+            [
+              "ab",
+              "CD",
+              "ef"
+            ],
+            0
+          ]
+        },
+        {
+          "args": [
+            "123",
+            2
+          ],
+          "expected": [
+            [],
+            0
+          ]
+        },
+        {
+          "args": [
+            "",
+            2
+          ],
+          "expected": [
+            [],
+            0
+          ]
+        },
+        {
+          "args": [
+            "a ab",
+            0
+          ],
+          "expected": [
+            [
+              "a",
+              "ab"
+            ],
+            0
+          ]
+        }
+      ],
+      "variants": [
+        "procedural",
+        "functional"
+      ],
+      "runtime_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup",
+      "source_files": {
+        "procedural": [
+          "source/lmx/common/ascii.lm3",
+          "source/lmx/procedural/P17.lm3"
+        ],
+        "functional": [
+          "source/lmx/P17.lm3"
+        ]
+      }
+    },
+    {
+      "id": "P18",
+      "contract": "Заменить все неперекрывающиеся буквальные вхождения needle на replacement в ASCII-строке и вернуть (новая строка, число выбранных замен). Исходный текст не меняется; regex-метасимволы needle и доллар/backslash в replacement остаются буквальными. Пустой needle вставляет между символами и на концах, давая length(text)+1 замен; предыдущее regex-состояние Perl не влияет. Вставленный replacement повторно не просматривается.",
+      "cases": [
+        {
+          "args": [
+            "a.b aXb a.b",
+            "a.b",
+            "$x"
+          ],
+          "expected": [
+            "$x aXb $x",
+            2
+          ]
+        },
+        {
+          "args": [
+            "ab",
+            "",
+            "-"
+          ],
+          "expected": [
+            "-a-b-",
+            3
+          ]
+        },
+        {
+          "args": [
+            "abc",
+            "z",
+            "!"
+          ],
+          "expected": [
+            "abc",
+            0
+          ]
+        },
+        {
+          "args": [
+            "ab",
+            "",
+            "-"
+          ],
+          "expected": [
+            "-a-b-",
+            3
+          ],
+          "prime_empty_pattern": true
+        },
+        {
+          "args": [
+            "a a a",
+            "a",
+            "aa"
+          ],
+          "expected": [
+            "aa aa aa",
+            3
+          ]
+        }
+      ],
+      "variants": [
+        "procedural",
+        "functional"
+      ],
+      "runtime_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup",
+      "source_files": {
+        "procedural": [
+          "source/lmx/procedural/P18.lm3"
+        ],
+        "functional": [
+          "source/lmx/P18.lm3"
+        ]
+      }
+    },
+    {
+      "id": "P19",
+      "contract": "Каждую максимальную последовательность ASCII-цифр заменить таким же количеством звёздочек. Длина строки и прочие символы сохраняются; callback вызывается один раз на выбранное совпадение.",
+      "cases": [
+        {
+          "args": [
+            "card 1234 / 09"
+          ],
+          "expected": "card **** / **"
+        },
+        {
+          "args": [
+            "a0b"
+          ],
+          "expected": "a*b"
+        },
+        {
+          "args": [
+            "abc"
+          ],
+          "expected": "abc"
+        }
+      ],
+      "variants": [
+        "procedural",
+        "functional"
+      ],
+      "runtime_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup",
+      "source_files": {
+        "procedural": [
+          "source/lmx/procedural/P19.lm3"
+        ],
+        "functional": [
+          "source/lmx/P19.lm3"
+        ]
+      }
+    },
+    {
+      "id": "P20",
+      "contract": "Из списка ASCII-строк выбрать те, что целиком состоят ровно из двух одинаковых непустых слов [A-Za-z]+ с одним пробелом; заменить каждую принятую строку одним экземпляром слова. Вернуть (исправленные слова в исходном порядке, число отклонённых строк). Сравнение чувствительно к регистру, лишние пробелы и конечный перевод строки запрещены. Пустой список даёт ([],0), вход не меняется.",
+      "cases": [
+        {
+          "args": [
+            [
+              "cat cat",
+              "cat dog",
+              "Cat cat",
+              "x x",
+              "x x ",
+              ""
+            ]
+          ],
+          "expected": [
+            [
+              "cat",
+              "x"
+            ],
+            4
+          ]
+        },
+        {
+          "args": [
+            [
+              "cat cat"
+            ]
+          ],
+          "expected": [
+            [
+              "cat"
+            ],
+            0
+          ]
+        },
+        {
+          "args": [
+            [
+              "cat dog"
+            ]
+          ],
+          "expected": [
+            [],
+            1
+          ]
+        },
+        {
+          "args": [
+            [
+              "Cat cat"
+            ]
+          ],
+          "expected": [
+            [],
+            1
+          ]
+        },
+        {
+          "args": [
+            [
+              "x x "
+            ]
+          ],
+          "expected": [
+            [],
+            1
+          ]
+        },
+        {
+          "args": [
+            [
+              ""
+            ]
+          ],
+          "expected": [
+            [],
+            1
+          ]
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": [
+            [],
+            0
+          ]
+        }
+      ],
+      "variants": [
+        "procedural",
+        "functional"
+      ],
+      "runtime_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup",
+      "source_files": {
+        "procedural": [
+          "source/lmx/common/ascii.lm3",
+          "source/lmx/procedural/P20.lm3"
+        ],
+        "functional": [
+          "source/lmx/P20.lm3"
+        ]
+      }
+    },
+    {
+      "id": "P21",
+      "contract": "Вернуть reverse-complement ASCII-последовательности: одновременно заменить A↔T и C↔G, затем развернуть весь результат. Длина сохраняется; N, дефис, строчные буквы и прочие неуказанные символы только меняют позицию, но не транслитерируются. Это явно профиль uppercase ACGT, а не полная таблица IUPAC. Пустая строка остаётся пустой, вход не меняется.",
+      "cases": [
+        {
+          "args": [
+            "ACGTN"
+          ],
+          "expected": "NACGT"
+        },
+        {
+          "args": [
+            "AAAA"
+          ],
+          "expected": "TTTT"
+        },
+        {
+          "args": [
+            ""
+          ],
+          "expected": ""
+        },
+        {
+          "args": [
+            "AAGC"
+          ],
+          "expected": "GCTT"
+        },
+        {
+          "args": [
+            "A-N"
+          ],
+          "expected": "N-T"
+        }
+      ],
+      "variants": [
+        "procedural",
+        "functional"
+      ],
+      "runtime_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup",
+      "source_files": {
+        "procedural": [
+          "source/lmx/procedural/P21.lm3"
+        ],
+        "functional": [
+          "source/lmx/P21.lm3"
+        ]
+      }
+    },
+    {
+      "id": "P22",
+      "contract": "Создать два независимых счётчика: первый стартует с initial, второй со 100. Последовательно прибавить первому 1 и 3, второму 2, первому −2; вернуть все четыре результата.",
+      "cases": [
+        {
+          "args": [
+            10
+          ],
+          "expected": [
+            11,
+            14,
+            102,
+            12
+          ]
+        },
+        {
+          "args": [
+            0
+          ],
+          "expected": [
+            1,
+            4,
+            102,
+            2
+          ]
+        },
+        {
+          "args": [
+            -5
+          ],
+          "expected": [
+            -4,
+            -1,
+            102,
+            -3
+          ]
+        }
+      ],
+      "variants": [
+        "procedural",
+        "functional"
+      ],
+      "runtime_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup",
+      "source_files": {
+        "procedural": [
+          "source/lmx/procedural/P22.lm3"
+        ],
+        "functional": [
+          "source/lmx/P22.lm3"
+        ]
+      }
+    },
+    {
+      "id": "P23",
+      "contract": "Итератор выдаёт квадраты 0..limit−1 по одному и завершается отдельно от значения. Собрать его в список; limit неотрицателен. Нулевой первый элемент нельзя потерять как false.",
+      "cases": [
+        {
+          "args": [
+            4
+          ],
+          "expected": [
+            0,
+            1,
+            4,
+            9
+          ]
+        },
+        {
+          "args": [
+            0
+          ],
+          "expected": []
+        },
+        {
+          "args": [
+            1
+          ],
+          "expected": [
+            0
+          ]
+        }
+      ],
+      "variants": [
+        "procedural",
+        "functional"
+      ],
+      "runtime_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup",
+      "source_files": {
+        "procedural": [
+          "source/lmx/procedural/P23.lm3"
+        ],
+        "functional": [
+          "source/lmx/P23.lm3"
+        ]
+      }
+    },
+    {
+      "id": "P24",
+      "contract": "Ресурс содержит value=42 и width=8. Журнал: 1 acquire, 2 action, 3 release. mode=0 возвращает [50,123], mode=1 — отказ action и [0,123], mode=2 — отказ acquire и [0,1]. Release после успешного acquire выполняется ровно один раз.",
+      "cases": [
+        {
+          "args": [
+            0
+          ],
+          "expected": [
+            50,
+            123
+          ]
+        },
+        {
+          "args": [
+            1
+          ],
+          "expected": [
+            0,
+            123
+          ]
+        },
+        {
+          "args": [
+            2
+          ],
+          "expected": [
+            0,
+            1
+          ]
+        }
+      ],
+      "variants": [
+        "procedural",
+        "functional"
+      ],
+      "runtime_status": "NOT_RUN",
+      "lmx_operation_phase": "after_root_startup",
+      "source_files": {
+        "procedural": [
+          "source/lmx/procedural/P24.lm3"
+        ],
+        "functional": [
+          "source/lmx/P24.lm3"
+        ]
+      }
+    }
+  ],
+  "scenario_revision": "2026-11-25"
 }

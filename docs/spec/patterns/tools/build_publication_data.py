@@ -108,6 +108,31 @@ def build():
         records=sorted(data['patterns'],key=lambda p:(p.get('paired_with',p['id']),p.get('kind')=='implementation',p['id']))
         clients=[]; implementations=[]; ordinary=[]; layer_records=[]
         foreign=data['languages']
+        if data.get('language_pairing') == 'per_record' or data.get('language_pairs_scope'):
+            paired_rows=[]; layer_records=[]
+            for record in records:
+                pair=record['languages']
+                if len(pair)!=2:
+                    raise ValueError(f"{directory.name}/{record['id']}: exactly two control languages required")
+                metrics={listing['language']:measure(listing['code']) for listing in record['listings']}
+                styles=variant_metrics(record,directory,errors)
+                paired_rows.append([f"{record['id']:03d}", record['name'],
+                                    styles['procedural']['characters'], styles['functional']['characters'],
+                                    pair[0], metrics[pair[0]]['characters'], pair[1], metrics[pair[1]]['characters']])
+                layer_records.append({'id':record['id'],'role':'Сценарий','metrics':metrics,
+                                      'lmx_variants':styles,'languages':pair})
+                all_cases.append({'suite':directory.name,'id':f"{record['id']:03d}",'title':record['name'],
+                                  'lmx_variants':styles,'foreign':{lang:metrics[lang] for lang in pair},
+                                  'comparison_status':'complete_pair'})
+            tabs=[table('Два стиля LMX и пара языков для каждого сценария',
+                        ['ID','Сценарий','LMX\nпроцедурный','LMX\nфункциональный','Язык 1','Символы','Язык 2','Символы'],
+                        paired_rows,[2,3,5,7],widths=[.5,3.6,1.1,1.1,1,1,1,1])]
+            notes=[data.get('rationale_ru',''),data.get('overview_ru',''),STYLE_METHOD,METHOD,RUNTIME]
+            stem=f'{directory.name}/LMX_Comparison_{directory.name}'
+            docs.append(document(stem,data['group_title_ru'],[sheet('Сравнение',data['group_title_ru'],tabs,notes)]))
+            groups.append({'directory':directory.name,'title':data['group_title_ru'],'languages':foreign,
+                           'language_pairing':'per_record','records':layer_records})
+            continue
         for record in records:
             metrics={listing['language']:measure(listing['code']) for listing in record['listings']}
             kind='implementation' if record.get('kind')=='implementation' else 'client'
@@ -161,11 +186,11 @@ def build():
         docs.append(document(stem,f'LMX: паттерны {first}–{last}',[sheet(name,f'LMX: паттерны {first}–{last}',[tab])]))
 
     suite_cases={}; suite_labels={'haskell':'Haskell','julia':'Julia','perl':'Perl','sbcl':'Common Lisp (SBCL)'}
-    haskell=read(EXAMPLES/'haskell/comparison_index.json')
+    haskell=read(EXAMPLES/'haskell_comparision/comparison_index.json')
     for entry in haskell['entries']:
         styles=variant_metrics(entry,EXAMPLES,errors)
         case={'suite':'haskell','id':entry['id'],'title':entry['title'],
-              'lmx_variants':styles,'foreign':measure(entry['foreign_code']) if entry.get('foreign_code','').strip() else None,
+              'lmx_variants':styles,'foreign':measure(entry.get('foreign_measurement_code',entry['foreign_code'])) if entry.get('foreign_code','').strip() else None,
               'comparison_status':entry['status'],'style_relation':entry.get('style_relation'),
               'style_note':entry.get('style_note','')}
         suite_cases.setdefault('haskell',[]).append(case)
@@ -201,7 +226,7 @@ def build():
     existing_order=['Обзор','Haskell','Julia','Perl','Реализации','SBCL']
     example_sheets.sort(key=lambda view:existing_order.index(view['name']))
     docs.append(document('examples/STATISTICS','LMX: все примеры',example_sheets))
-    for suite,dirname,label in [('julia','julia_comparison','Julia'),('perl','perl_comparison','Perl'),('sbcl','SBCL_comparison','SBCL')]:
+    for suite,dirname,label in [('haskell','haskell_comparision','Haskell'),('julia','julia_comparison','Julia'),('perl','perl_comparison','Perl'),('sbcl','SBCL_comparison','SBCL')]:
         cases=suite_cases[suite]
         shname='Сравнения' if suite=='sbcl' else 'Примеры'
         docs.append(document(f'examples/{dirname}/LMX_Comparison_{label}', 'LMX / '+suite_labels[suite],
@@ -210,6 +235,16 @@ def build():
 
     summary_rows=[]; functional_clients=[]; functional_implementations=[]
     for group in groups:
+        if group.get('language_pairing')=='per_record':
+            pairs=list(dict.fromkeys(tuple(entry['languages']) for entry in group['records']))
+            for first,second in pairs:
+                subset=[e for e in group['records'] if e['languages']==[first,second]]
+                summary_rows.append([group['title'],'Сценарии',len(subset),None,
+                                     sum(e['lmx_variants']['procedural']['characters'] for e in subset),
+                                     sum(e['lmx_variants']['functional']['characters'] for e in subset),
+                                     first,sum(e['metrics'][first]['characters'] for e in subset),
+                                     second,sum(e['metrics'][second]['characters'] for e in subset)])
+            continue
         if group['directory']=='09_functional_computation':
             for entry in group['records']:
                 if entry.get('lmx_variants'):
@@ -223,11 +258,11 @@ def build():
         for role in dict.fromkeys(e['role'] for e in group['records']):
             subset=[e for e in group['records'] if e['role']==role]
             first,second=group['languages']
-            summary_rows.append([group['title'],role,len(subset),sum(e['metrics']['LMX']['characters'] for e in subset),
+            summary_rows.append([group['title'],role,len(subset),sum(e['metrics']['LMX']['characters'] for e in subset),None,None,
                                  first,sum(e['metrics'][first]['characters'] for e in subset),
                                  second,sum(e['metrics'][second]['characters'] for e in subset)])
-    group_tables=[table('Группы сравнений',['Группа','Слой','Число','LMX','Контроль 1','Символы','Контроль 2','Символы'],
-                        summary_rows,[3,5,7],widths=[3.2,1.3,.7,1,1,1,1,1]),
+    group_tables=[table('Группы сравнений',['Группа','Слой','Число','LMX','LMX\nпроцедурный','LMX\nфункциональный','Контроль 1','Символы','Контроль 2','Символы'],
+                        summary_rows,[3,4,5,7,9],widths=[3.2,1.3,.7,.8,1.1,1.1,1,.8,1,.8]),
                   table('Функциональные клиенты',['ID','LMX процедурный','LMX функциональный','Haskell','Scala'],
                         functional_clients,[1,2,3,4],totals=[1,2,3,4],widths=[.5,2,2,1.5,1.5]),
                   table('Функциональные реализации',['ID','LMX — реализация','Haskell','Scala'],
@@ -255,8 +290,18 @@ def build():
 def md_table(tab):
     headers=[h.replace('\n',' ') for h in tab['headers']]
     out=['| '+' | '.join(headers)+' |','| '+' | '.join('---' for _ in headers)+' |']
-    for row in tab['rows']+([tab['total']['values']] if tab.get('total') else []):
-        out.append('| '+' | '.join('—' if value is None else str(value).replace('|','\\|').replace('\n',' ') for value in row)+' |')
+    rows=list(zip(tab['rows'],tab['eligible_rows']))
+    if tab.get('total'): rows.append((tab['total']['values'],tab['total']['compare']))
+    for row,eligible in rows:
+        numbers=[row[i] for i in tab['comparison_columns'] if isinstance(row[i],(int,float))]
+        minimum=min(numbers) if eligible and numbers else None
+        cells=[]
+        for i,value in enumerate(row):
+            cell='—' if value is None else str(value).replace('|','\\|').replace('\n',' ')
+            if minimum is not None and i in tab['comparison_columns'] and value==minimum:
+                cell=f'<span style="color:#176233"><u>{cell}</u></span>'
+            cells.append(cell)
+        out.append('| '+' | '.join(cells)+' |')
     return '\n'.join(out)
 
 
@@ -300,8 +345,11 @@ def main():
     if model['errors']:
         print(json.dumps({'status':'FAIL','errors':model['errors']},ensure_ascii=False,indent=2))
         return 1
-    if model['lmx_style_clients']!=100:
-        raise ValueError('Expected 96 named-suite clients plus four functional-group clients')
+    expected_clients=96+sum(bool(record.get('lmx_variants'))
+                            for path in ROOT.glob('[0-9][0-9]_*/patterns.json')
+                            for record in read(path)['patterns'])
+    if model['lmx_style_clients']!=expected_clients:
+        raise ValueError('Publication lost one or more declared style pairs')
     write(ROOT/'PUBLICATION_DATA.json',model)
     if args.text: publish_text(model)
     print(json.dumps({'status':'PASS','documents':len(model['documents']),'mirrors':len(model['mirrors']),

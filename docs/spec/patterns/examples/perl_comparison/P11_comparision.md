@@ -159,3 +159,13 @@ Perl-клиенты проверяет [действительный harness](va
 
 - <https://perldoc.perl.org/5.40.1/perldsc#HASHES-OF-ARRAYS>
 - <https://perldoc.perl.org/5.40.1/perlref>
+
+## Все проверочные входы
+
+Каждый случай проверяет полный результат и отсутствие изменения входов. prime_empty_pattern дополнительно создаёт ранее успешное regex-состояние Perl.
+
+| Случай | Аргументы | Результат | Дополнительное условие |
+| --- | --- | --- | --- |
+| 1 | `[[{"kind":2,"text":"a","width":8},{"kind":1,"text":"b","width":4},{"kind":2,"text":"c","width":12}]]` | `[[2,[{"kind":2,"text":"a","width":8},{"kind":2,"text":"c","width":12}]],[1,[{"kind":1,"text":"b","width":4}]]]` | — |
+| 2 | `[[]]` | `[]` | — |
+| 3 | `[[{"kind":2,"text":"a","width":8}]]` | `[[2,[{"kind":2,"text":"a","width":8}]]]` | — |

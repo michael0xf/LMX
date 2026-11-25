@@ -1,1 +1,4 @@
-example(xs) = [x * x for x in xs]
+function example(xs, baseline)
+    delta = xs .- baseline
+    sum(delta .* delta)
+end

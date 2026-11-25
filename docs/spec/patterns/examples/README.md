@@ -1,10 +1,10 @@
 # Примеры LMX: Haskell, Julia, Perl и SBCL
 
-Редакция **23 ноября 2026 года**. Здесь **96 клиентских сценариев**: по 24 исходных/Haskell, Julia, Perl и Common Lisp/SBCL. Ещё четыре функциональных клиента 082–085 находятся в соседней [функциональной группе](../09_functional_computation/README.md); вместе это **100 договоров с двумя LMX-стилями**.
+Редакция **24 ноября 2026 года**. Здесь **96 клиентских сценариев**: по 24 исходных/Haskell, Julia, Perl и Common Lisp/SBCL. Ещё четыре функциональных клиента 082–085 находятся в соседней [функциональной группе](../09_functional_computation/README.md); В [группах 10–11](../EXPANSION_2026-11-24.md) добавлено ещё девять сценариев; всего **109 договоров с двумя LMX-стилями**.
 
 | Набор | Содержание | Исходные данные |
 | --- | --- | --- |
-| [Исходные примеры и Haskell](README.ru.md) | Граф, DATA, вызовы, функциональные приёмы, структуры, проверка поведения и Message | [Ожидания](expected_results.json), [покрытие Haskell](haskell/comparison_index.json) |
+| [Исходные примеры и Haskell](README.ru.md) | Граф, DATA, вызовы, функциональные приёмы, структуры, проверка поведения и Message | [Ожидания](expected_results.json), [покрытие Haskell](haskell_comparision/comparison_index.json) |
 | [Julia](julia_comparison/README.md) | Массивы, поэлементные операции, свёртки, отбор, группировка и работа с последовательностями | [Все примеры](julia_comparison/examples.json) |
 | [Perl](perl_comparison/README.md) | Списки, хеши, текст, регулярные выражения, замыкания и управление ресурсами | [Все примеры](perl_comparison/examples.json) |
 | [Common Lisp / SBCL](SBCL_comparison/README.md) | Общий Expression, последовательности, DATA, динамические места, условия и ресурсы; Message выделен как аналогия | [Все примеры](SBCL_comparison/examples.json) |
@@ -15,7 +15,7 @@
 
 Для каждого из 96 сценариев процедурная и функциональная LMX-формы опубликованы и посчитаны независимо. Считаются непробельные Unicode-символы полного текста, все Unicode-символы, непустые строки, UTF-8-байты и SHA-256. При обоснованном `same_minimal_form` один исходник и один Markdown-блок обслуживают две равные записи метрик. Существенные подходы с другим договором остаются отдельными материалами.
 
-**Отношение размеров строится только для полных сопоставимых пар.** В исходном Haskell-разборе есть точные примеры, поясняющие аналогии и особенности LMX без соответствующего Haskell-клиента. Они явно различаются в реестре; отсутствие пары не превращается в ноль символов. Наборы Julia, Perl и SBCL имеют собственные характерные задачи, поэтому отношение сумм разных наборов не является рейтингом языков.
+**Отношение размеров строится только для полных сопоставимых пар.** В Haskell-разборе теперь есть 24 самостоятельных контрольных модуля: 9 полных пар и 15 реализованных аналогий. Ограничения аналогий явно описаны; они не участвуют в рейтинге размера. Пользовательские зависимости вроде GraphCopy входят в полный размер использующего их клиента. Наборы Julia, Perl и SBCL имеют собственные характерные задачи, поэтому отношение сумм разных наборов не является рейтингом языков.
 
 ## Полные Throws и выделение минимума
 
@@ -48,16 +48,19 @@
 Из корня `spec`:
 
 ```sh
-python3 patterns/examples/tools/check_receiver_revision.py
-python3 patterns/examples/tools/update_receiver_comparisons.py
 python3 patterns/examples/julia_comparison/tools/rebuild.py
 python3 patterns/examples/perl_comparison/tools/rebuild.py
 python3 patterns/examples/SBCL_comparison/tools/rebuild.py
-python3 patterns/examples/SBCL_comparison/tools/rebuild_implementations.py
+python3 patterns/examples/tools/update_receiver_comparisons.py
 python3 patterns/examples/tools/refresh_examples_statistics.py
-python3 patterns/examples/tools/refresh_examples_pdfs.py
+python3 patterns/tools/refresh_group_csv.py
+python3 patterns/tools/refresh_statistics.py --metadata-only
+python3 patterns/tools/build_publication_data.py --text
+python3 patterns/tools/publish_pdfs.py
+node patterns/tools/publish_workbooks.mjs
+python3 patterns/tools/verify_publication.py
 ```
-Генератор XLSX — [refresh_examples_workbooks.mjs](tools/refresh_examples_workbooks.mjs); ему требуется `@oai/artifact-tool`. Переменная `LMX_EXAMPLES_ROOT` задаёт путь к этой директории. Все изменения источников после проверки требуют повторного подсчёта и генерации.
+Генератор XLSX — [publish_workbooks.mjs](../tools/publish_workbooks.mjs); ему требуется `@oai/artifact-tool`. Переменная `LMX_DOCS_NEW_PARTS` задаёт путь к директории `patterns`. Все изменения источников после проверки требуют повторного подсчёта и генерации.
 
 ## Единые операции и формы
 

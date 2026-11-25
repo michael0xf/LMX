@@ -74,7 +74,7 @@ def main():
     current_names = {entry['name'] for item in manifests if item['file'] in family_files for entry in item['document']['entries']}
     additions = [item for item in additions if item['name'] in current_names]
     provenance = restoration_metadata(ROOT)
-    base = provenance['base_archive']; reference = provenance['historical_provenance']['short_example_reference']
+    base = json.loads((ROOT/'validation/expansion_baseline_20261124.json').read_text())['base_archive']; reference = provenance['historical_provenance']['short_example_reference']
     families = [item for item in manifests if item['file'] in family_files]
     report = [
         '# Текущая редакция сравнений и функций ядра', '',

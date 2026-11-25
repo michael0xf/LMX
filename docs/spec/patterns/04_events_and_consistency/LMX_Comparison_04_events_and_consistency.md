@@ -8,15 +8,15 @@
 
 | ID | Сценарий | LMX | Java | Go | Слой |
 | --- | --- | --- | --- | --- | --- |
-| 011 | CQRS | 257 | 395 | 347 | Сценарий |
-| 012 | Event Sourcing | 248 | 372 | 366 | Сценарий |
-| 041 | Saga | 301 | 452 | 359 | Сценарий |
-| 048 | Transactional Outbox | 326 | 563 | 588 | Сценарий |
-| 050 | Materialized View | 208 | 205 | 269 | Сценарий |
-| 051 | Sharding | 171 | 291 | 240 | Сценарий |
-| 055 | Leader Election | 199 | 319 | 278 | Сценарий |
-| 057 | Claim Check | 388 | 488 | 476 | Сценарий |
-| 086 | Idempotent Consumer / Transactional Inbox | 177 | 337 | 405 | Сценарий |
+| 011 | CQRS | <span style="color:#176233"><u>257</u></span> | 395 | 347 | Сценарий |
+| 012 | Event Sourcing | <span style="color:#176233"><u>248</u></span> | 372 | 366 | Сценарий |
+| 041 | Saga | <span style="color:#176233"><u>301</u></span> | 452 | 359 | Сценарий |
+| 048 | Transactional Outbox | <span style="color:#176233"><u>326</u></span> | 563 | 588 | Сценарий |
+| 050 | Materialized View | 208 | <span style="color:#176233"><u>205</u></span> | 269 | Сценарий |
+| 051 | Sharding | <span style="color:#176233"><u>171</u></span> | 291 | 240 | Сценарий |
+| 055 | Leader Election | <span style="color:#176233"><u>199</u></span> | 319 | 278 | Сценарий |
+| 057 | Claim Check | <span style="color:#176233"><u>388</u></span> | 488 | 476 | Сценарий |
+| 086 | Idempotent Consumer / Transactional Inbox | <span style="color:#176233"><u>177</u></span> | 337 | 405 | Сценарий |
 
 Java представляет явные интерфейсы сервисов и зрелую экосистему транзакционных приложений; Go — компактные сервисные обработчики и явную обработку ошибок. Сравниваются одинаковые протоколы и одинаковые внешние гарантии, а не разные по полноте фреймворки.
 

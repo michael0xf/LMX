@@ -1,14 +1,9 @@
-Multiply:
-    int: first
-    int: second
-    return: int
-    run:
-        return: first * second
-
 Example:
-    int[]: first
-    int[]: second
+    int[]: quantities
+    int[]: prices
     return: @
     run:
-        throws: copy(FxThrows\traversal)
-        return: zipWith(first; second; Multiply\run)
+        throws: copy(zipWith\throws) copy(sum\throws)
+        @: totals (zipWith quantities prices `*`)
+        int: count length(totals)
+        return: (totals; \(sum totals); length(quantities) - count; length(prices) - count)

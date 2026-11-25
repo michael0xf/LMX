@@ -75,7 +75,7 @@ public sealed record RangeQuery(int Minimum,int Maximum) {
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 178 | 10 |
+| LMX | <span style="color:#176233"><u>178</u></span> | 10 |
 | Python | 254 | 8 |
 | C# | 294 | 8 |
 

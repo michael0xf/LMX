@@ -101,6 +101,18 @@ def main():
         return bool(ok)
 
     catalog = json.loads((ROOT / 'examples.json').read_text())
+    if catalog.get('workflow_expansion_ids'):
+        # Validate current workflow sources, measurements and acceptance data.
+        # The earlier runtime receipt is kept separate from these new sources.
+        from check_workflow_sources import main as check_workflows
+        result = check_workflows()
+        if result or args.skip_artifacts:
+            return result
+        artifacts = validate_artifacts(check, catalog)
+        (ROOT / 'validation/workflow_artifact_checks.json').write_text(
+            json.dumps(artifacts, ensure_ascii=False, indent=2) + '\n')
+        print(json.dumps({'artifacts': artifacts, 'errors': errors}, ensure_ascii=False))
+        return 1 if errors else 0
     stats = json.loads((ROOT / 'statistics.json').read_text())
     implementations = json.loads((ROOT / 'implementation_data.json').read_text())
     index = {row['id']: row for row in stats['examples']}

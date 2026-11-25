@@ -1,6 +1,19 @@
+Payment:
+    @: state
+    int: cost
+    return: @
+    accept:
+        int: remaining \state[0]
+        int: accepted \state[1]
+        int: rejected \state[2]
+        if: cost <= remaining
+            return: (remaining - cost; accepted + 1; rejected)
+        return: (remaining; accepted; rejected + 1)
+
 Example:
-    int[]: items
-    return: int
+    int: initial
+    int[]: costs
+    return: @
     run:
-        throws: copy(foldl\throws) copy(record\throws)
-        return: \(foldl items (20 record) `-`)
+        throws: copy(foldl\throws)
+        return: (foldl costs (initial; 0; 0) Payment\accept)

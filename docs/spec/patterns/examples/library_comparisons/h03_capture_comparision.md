@@ -1,6 +1,6 @@
 # Partial application: usage and implementation are separate
 
-Edition: 2026-11-23. Client: [H03](../lmx/H03.lm3), [scenario](../../LMX_examples_and_analogies.ru.md#h03).
+Edition: 2026-11-23. Client: [H03](../haskell_comparision/source/lmx/H03.lm3), [scenario](../../LMX_examples_and_analogies.ru.md#h03).
 
 ## Contract
 
@@ -8,7 +8,7 @@ LMX captures any finite prefix, preserving value/reference rules, remaining inpu
 
 LMX public names: `partial`. These names belong to the proposed core; no user library import is needed.
 
-**Foreign usage client:** Native Haskell application: makeAdder n = (+) n. The implementation below is for comparison only. It is not on the client's module search path, and [Analogies.hs](../haskell/Analogies.hs) does not import it.
+**Foreign usage client:** Native Haskell application: makeAdder n = (+) n. The implementation below is for comparison only. It is not on the client's module search path, and [Analogies.hs](../haskell_comparision/Analogies.hs) does not import it.
 
 ## LMX implementation
 
@@ -110,4 +110,4 @@ These are implementation sizes, separate from client sizes. They do not compare 
 
 The reusable helpers here are synchronous computations on their owner. To run an LMX owner operation asynchronously, use existing Message `post`; it already provides delivery and reply handling, including the documented HTTP transport. No cross-Message mutable cache, hidden global scheduler, cancellation guarantee or extra worker pool is claimed. In the Haskell comparison Lazy explicitly checks its owning thread and masks the bookkeeping around an interruptible action.
 
-**Verification:** reproducible source/metric checks only; neither LMX runtime nor GHC execution is claimed. The client dependency list is [lmx-examples.cabal](../haskell/lmx-examples.cabal).
+**Verification:** reproducible source/metric checks only; neither LMX runtime nor GHC execution is claimed. The client dependency list is [lmx-examples.cabal](../haskell_comparision/lmx-examples.cabal).

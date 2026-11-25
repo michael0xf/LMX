@@ -56,11 +56,36 @@ def attach_variants(record, *, procedural, functional, procedural_source, functi
     return record
 
 
+def metrics_deferred(record):
+    statuses = [record.get(key, '') for key in ('metrics_status', 'measurement_status')]
+    statuses += [v.get(key, '') for _, v in get_variants(record)
+                 for key in ('metrics_status', 'measurement_status')]
+    return any('defer' in str(status).lower() for status in statuses)
+
+
+def source_files(variant):
+    """The canonical fragments in one comparison boundary, once each."""
+    return variant.get('source_files') or [variant['source_file']]
+
+
+def read_variant(variant, directory):
+    paths = source_files(variant)
+    if len(set(paths)) != len(paths):
+        raise ValueError('A shared source cannot be counted twice in one variant')
+    parts = [(Path(directory)/name).read_text() for name in paths]
+    return normalize('\n\n'.join(part.rstrip() for part in parts))
+
+
 def write_sources(record, directory):
     directory=Path(directory)
     written={}
     for _,variant in get_variants(record):
-        path=directory/variant['source_file'];code=normalize(variant['code'])
+        code=normalize(variant['code'])
+        if len(source_files(variant)) > 1 or variant.get('source_file_is_fragment'):
+            if read_variant(variant, directory) != code:
+                raise ValueError('Edit the canonical shared/variant fragments before publishing; a combined body must not overwrite one fragment')
+            continue
+        path=directory/variant['source_file']
         if path in written:
             if written[path]!=code:raise ValueError('Different style bodies cannot share a source path')
             continue
@@ -94,7 +119,9 @@ def validate_variants(record, directory=None, *, procedural_restrictions=True):
     variants=record.get('lmx_variants',{})
     if set(variants)!=set(STYLES):
         return ['exactly procedural and functional variants are required']
-    if record.get('lmx_comparison_variants')!=list(STYLES):errors.append('comparison order must include both styles')
+    order=record.get('lmx_comparison_variants')
+    if not (order==list(STYLES) or isinstance(order,dict) and list(order)==list(STYLES)):
+        errors.append('comparison order must include both styles')
     if record.get('lmx_legacy_role')!=LEGACY_ROLE:errors.append('legacy mirror must not count as a third comparison')
     if len({v.get('contract_id') for v in variants.values()})!=1 or not variants['functional'].get('contract_id'):
         errors.append('both styles require the same nonempty observable contract ID')
@@ -105,11 +132,15 @@ def validate_variants(record, directory=None, *, procedural_restrictions=True):
         code=variant.get('code','')
         if not code.strip():errors.append(style+': empty source')
         errors.extend(style+': '+issue for issue in type_declaration_issues(code))
-        if variant.get('metrics')!=measure(code):errors.append(style+': full-source metrics are stale')
+        if not metrics_deferred(record) and variant.get('metrics')!=measure(code):
+            errors.append(style+': full-source metrics are stale')
         if variant.get('runtime_execution')!='NOT_RUN':errors.append(style+': this publication has no new LMX execution receipt')
         if directory is not None:
-            path=Path(directory)/variant.get('source_file','')
-            if not path.is_file() or path.read_text()!=normalize(code):errors.append(style+': source/JSON mirror differs')
+            try:
+                actual=read_variant(variant,directory)
+                if actual!=normalize(code):errors.append(style+': source/JSON mirror differs')
+            except (OSError,ValueError,KeyError) as exc:
+                errors.append(style+': source boundary: '+str(exc))
     relation=record.get('style_relation')
     same=normalize(variants['procedural']['code'])==normalize(variants['functional']['code'])
     if relation not in {'distinct','same_minimal_form'}:errors.append('unknown style relation')
@@ -128,16 +159,22 @@ def validate_variants(record, directory=None, *, procedural_restrictions=True):
     return errors
 
 
+def metric_note(record, variant):
+    if metrics_deferred(record):
+        return 'Пересчёт размеров отложен по указанию автора; прежние числа не относятся к изменённому тексту.'
+    m=variant['metrics']
+    return f"{m['characters']} непробельных символов; {m['nonblank_lines']} непустых строк. Все объявления и Throws включены."
+
+
 def markdown_variants(record):
     if record.get('style_relation')=='same_minimal_form':
         variant=record['lmx_variants']['functional']
         return '\n'.join(['## LMX — общая минимальная форма обоих стилей','',record.get('style_note',''),'',
             '```lmx',normalize(variant['code']).rstrip(),'```','',
-            f"[Общий полный исходник]({variant['source_file']}). Оба стилевых столбца учитывают этот текст целиком: {variant['metrics']['characters']} непробельных символов; {variant['metrics']['nonblank_lines']} непустых строк.",''])
+            f"[Общий исходник]({variant['source_file']}). Обе формы используют этот текст. "+metric_note(record,variant),''])
     chunks=[]
     for style,variant in get_variants(record):
         label='процедурный' if style=='procedural' else 'функциональный'
         chunks += [f'## LMX — {label}', '', '```lmx', normalize(variant['code']).rstrip(), '```', '',
-                   f"[Полный исходник]({variant['source_file']}). {variant['metrics']['characters']} непробельных символов; "
-                   f"{variant['metrics']['nonblank_lines']} непустых строк. Все объявления и Throws включены.", '']
+                   f"[Полный исходник]({variant['source_file']}). "+metric_note(record,variant), '']
     return '\n'.join(chunks)

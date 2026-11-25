@@ -1,10 +1,10 @@
-# S09. REPLACE: ограниченный диапазон
+# S09. REPLACE: изменение остатков и отчёт о правке
 
 Полное сравнение на указанном домене.
 
 ## Общий договор
 
-Заменить диапазон [start,end) в копии списка. 0 <= start <= end <= длина; длина replacement равна end-start. Размер результата неизменен; оба входных списка не меняются. Выход за эту область не сравнивается.
+Даны конечный список целых items, 0 <= start <= end <= length(items) и replacement длиной ровно end-start. На независимой копии заменить полуинтервал [start,end). Вернуть [updated, changedCount, deltaTotal], где changedCount считает позиции с фактически новым значением, а deltaTotal — сумма updated[i]-items[i]. Входы не меняются; пустой диапазон допустим. Все значения, разности и суммы помещаются в LMX int.
 
 ## Входы и ожидаемые наблюдения
 
@@ -13,23 +13,27 @@
   {
     "args": [
       [
-        1,
-        2,
-        3,
-        4
+        4,
+        5,
+        6,
+        7
       ],
       1,
       3,
       [
-        8,
+        5,
         9
       ]
     ],
     "expected": [
+      [
+        4,
+        5,
+        9,
+        7
+      ],
       1,
-      8,
-      9,
-      4
+      3
     ]
   },
   {
@@ -43,8 +47,12 @@
       []
     ],
     "expected": [
-      1,
-      2
+      [
+        1,
+        2
+      ],
+      0,
+      0
     ]
   },
   {
@@ -54,24 +62,32 @@
       0,
       []
     ],
-    "expected": []
+    "expected": [
+      [],
+      0,
+      0
+    ]
   },
   {
     "args": [
       [
-        1,
-        2
+        5,
+        8
       ],
       0,
       2,
       [
-        7,
-        8
+        1,
+        2
       ]
     ],
     "expected": [
-      7,
-      8
+      [
+        1,
+        2
+      ],
+      2,
+      -10
     ]
   }
 ]
@@ -81,9 +97,9 @@
 
 | Источник | Без пробельных | Все символы | Непустые строки |
 | --- | ---: | ---: | ---: |
-| LMX — процедурный | 227 | 405 | 17 |
-| LMX — функциональный | 170 | 240 | 10 |
-| Common Lisp / SBCL | 96 | 112 | 2 |
+| LMX — процедурный | 347 | 591 | 22 |
+| LMX — функциональный | 237 | 325 | 11 |
+| Common Lisp / SBCL | 207 | 255 | 4 |
 
 Оба стиля LMX сравниваются независимо по одному договору. Все объявления, вспомогательные определения и Throws входят в размер. Реализация общих библиотечных операций учитывается отдельно один раз.
 
@@ -97,19 +113,24 @@ Example:
     int[]: replacement
     return: @
     run:
+        throws: copy(sys\resize\throws)
         int[]: result []
         sys\resize(result; length(items))
+        int: changed 0
+        int: delta 0
         int: i 0
         while: i < length(items)
+            int: value items[i]
             if: i >= start && i < end
-                result[i] := replacement[i - start]
-            else:
-                result[i] := items[i]
+                value := replacement[i - start]
+            result[i] := value
+            changed += (value != items[i])
+            delta += value - items[i]
             i += 1
-        return: result
+        return: (result; changed; delta)
 ```
 
-[Полный исходник](source/lmx/procedural/S09.lm3). 227 непробельных символов; 17 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/procedural/S09.lm3). 347 непробельных символов; 22 непустых строк. Все объявления и Throws включены.
 
 ## LMX — функциональный
 
@@ -121,12 +142,13 @@ Example:
     int[]: replacement
     return: @
     run:
-        throws: copy(replaceRange\throws)
+        throws: copy(replaceRange\throws) copy(sum\throws)
         int[]: result [copy(items)]
-        return: replaceRange(result; start; end; replacement)
+        replaceRange(result; start; end; replacement)
+        return: (result; \(sum (result != items)); \(sum (result - items)))
 ```
 
-[Полный исходник](source/lmx/S09.lm3). 170 непробельных символов; 10 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/S09.lm3). 237 непробельных символов; 11 непустых строк. Все объявления и Throws включены.
 
 ## Common Lisp / SBCL
 
@@ -134,27 +156,32 @@ Example:
 
 ```common-lisp
 (defun example (items start end replacement)
-  (replace (copy-list items) replacement :start1 start :end1 end))
+  (let ((updated (replace (copy-list items) replacement :start1 start :end1 end)))
+    (list updated (count nil (mapcar #'= updated items))
+          (reduce #'+ (mapcar #'- updated items) :initial-value 0))))
 ```
 
 ## Соответствие стилей договору
 
-Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма.
+Процедурный цикл одновременно создаёт копию и отчёт. Функциональный вариант применяет replaceRange к независимой копии и строит сводку элементными выражениями и sum.
 
-CL REPLACE не меняет длину последовательности. Общий контракт здесь ограничен равной длиной удаляемого и вставляемого диапазонов; это не утверждение тождества всему LMX replaceRange.
-
-Используется только общая область с равной длиной замены. Полный replaceRange умеет менять размер; CL REPLACE этого не обещает. Копирование здесь необходимо для неизменности исходного массива.
+Одинаковая длина replacement и диапазона сохраняет прежнюю согласованную границу REPLACE/replaceRange. Изменения считаются по значениям: запись прежнего значения не увеличивает changedCount. Сравнение и вычитание равнодлинных dense Array в LMX элементные; сумма получает их результаты явно.
 
 ## Общие операции и реализации
 
 - `replaceRange`: [тело ядра](../../LMX_Fn_Receivers/src/sequences_mutation.lmx); отдельное сравнение [SI04](library_comparisons/SI04_comparision.md).
 
+- `sum`: [тело ядра](../../LMX_Fn_Receivers/src/coreStandardNumeric.lmx).
+
 Common Lisp-клиент использует указанные native/standard средства и не импортирует сравнительные реализации.
 
 ## Проверка
 
-SBCL: [фактический отчёт](validation/common_lisp.json). Оба LMX-варианта: **NOT_RUN**; проверки текста не доказывают исполнение.
+Для обновлённого кода **SBCL: NOT_RUN; LMX parser/runtime: NOT_RUN**. Статистика пересчитана по полным исходникам; это не выполнение программ. [Статус и прежний receipt](validation/common_lisp.json).
 
 ## Первичные источники
 
 - <https://www.lispworks.com/documentation/HyperSpec/Body/f_replac.htm>
+- <https://www.lispworks.com/documentation/HyperSpec/Body/f_mapc_.htm>
+- <https://www.lispworks.com/documentation/HyperSpec/Body/f_countc.htm>
+- <https://www.lispworks.com/documentation/HyperSpec/Body/f_reduce.htm>

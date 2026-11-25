@@ -16,7 +16,7 @@
           "status": "NOT_RUN"
         }
       },
-      "contract": "Умножить каждый элемент конечного списка целых на 3; сохранить порядок, вход не менять. Числа и промежуточные результаты помещаются в LMX int.",
+      "contract": "Для конечного списка целых items и целых gain, offset получить calibrated[i] = items[i] * gain + offset; вернуть [calibrated, total], где total — сумма откалиброванных значений. Сохранить порядок и входы. Пустой список даёт [[], 0]. Все произведения, суммы и промежуточные значения помещаются в выбранный LMX int.",
       "cases": [
         {
           "args": [
@@ -24,33 +24,68 @@
               -2,
               0,
               3
-            ]
+            ],
+            3,
+            2
           ],
           "expected": [
-            -6,
-            0,
+            [
+              -4,
+              2,
+              11
+            ],
             9
           ]
         },
         {
           "args": [
-            []
+            [],
+            3,
+            2
           ],
-          "expected": []
+          "expected": [
+            [],
+            0
+          ]
         },
         {
           "args": [
             [
               7
-            ]
+            ],
+            -2,
+            1
           ],
           "expected": [
-            21
+            [
+              -13
+            ],
+            -13
+          ]
+        },
+        {
+          "args": [
+            [
+              1,
+              1,
+              2
+            ],
+            0,
+            5
+          ],
+          "expected": [
+            [
+              5,
+              5,
+              5
+            ],
+            15
           ]
         }
       ],
       "additional_cases": [],
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "contract_revision": "2026-11-25-workflows"
     },
     {
       "id": "S02",
@@ -67,7 +102,7 @@
           "status": "NOT_RUN"
         }
       },
-      "contract": "Оставить положительные целые в исходном порядке; ноль не проходит. Вход не меняется; независимость хранения результата от входа не требуется.",
+      "contract": "Для конечного списка целых items и целого limit >= 0 оставить заявки 0 < value <= limit в исходном порядке; вернуть [accepted, total, rejectedCount]. total — сумма принятых заявок, rejectedCount включает все неподходящие позиции, в том числе повторяющиеся. Входы не меняются. Пустой список даёт [[], 0, 0]. Все значения и суммы помещаются в LMX int.",
       "cases": [
         {
           "args": [
@@ -75,44 +110,68 @@
               -2,
               0,
               3,
-              1
-            ]
+              1,
+              8,
+              3
+            ],
+            3
           ],
           "expected": [
-            3,
-            1
+            [
+              3,
+              1,
+              3
+            ],
+            7,
+            3
           ]
         },
         {
           "args": [
-            []
+            [],
+            5
           ],
-          "expected": []
+          "expected": [
+            [],
+            0,
+            0
+          ]
         },
         {
           "args": [
             [
-              -1,
-              0
-            ]
+              1,
+              2
+            ],
+            0
           ],
-          "expected": []
+          "expected": [
+            [],
+            0,
+            2
+          ]
         },
         {
           "args": [
             [
               4,
               4
-            ]
+            ],
+            4
           ],
           "expected": [
-            4,
-            4
+            [
+              4,
+              4
+            ],
+            8,
+            0
           ]
         }
       ],
       "additional_cases": [],
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "contract_revision": "2026-11-25-workflows"
     },
     {
       "id": "S03",
@@ -129,37 +188,85 @@
           "status": "NOT_RUN"
         }
       },
-      "contract": "Вычесть слева направо все элементы из начального значения 20; пустой список возвращает 20.",
+      "contract": "Даны initial >= 0 и конечный список неотрицательных целых costs. Заявки рассматриваются строго слева направо: если стоимость не больше остатка, она оплачивается и уменьшает остаток; иначе отклоняется без изменения остатка. Вернуть [remaining, acceptedCount, rejectedCount]. Нулевая заявка принимается, вход не меняется. Пустой список возвращает [initial, 0, 0]. Числа и счётчики помещаются в LMX int.",
       "cases": [
         {
           "args": [
+            20,
             [
               2,
+              30,
               3,
-              4
+              15,
+              0
             ]
           ],
-          "expected": 11
+          "expected": [
+            0,
+            4,
+            1
+          ]
         },
         {
           "args": [
+            20,
             []
           ],
-          "expected": 20
+          "expected": [
+            20,
+            0,
+            0
+          ]
         },
         {
           "args": [
+            0,
             [
-              -2,
               0,
-              5
+              1,
+              0
             ]
           ],
-          "expected": 17
+          "expected": [
+            0,
+            2,
+            1
+          ]
+        },
+        {
+          "args": [
+            5,
+            [
+              4,
+              2,
+              1
+            ]
+          ],
+          "expected": [
+            0,
+            2,
+            1
+          ]
+        },
+        {
+          "args": [
+            5,
+            [
+              2,
+              4,
+              1
+            ]
+          ],
+          "expected": [
+            2,
+            2,
+            1
+          ]
         }
       ],
       "additional_cases": [],
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "contract_revision": "2026-11-25-workflows"
     },
     {
       "id": "S04",
@@ -176,7 +283,7 @@
           "status": "NOT_RUN"
         }
       },
-      "contract": "Попарно умножить элементы двух списков; остановиться на конце более короткого. Порядок сохраняется, входы не меняются.",
+      "contract": "Даны конечные списки неотрицательных целых quantities и prices. Сформировать суммы строк для попарных элементов до конца более короткого списка. Вернуть [lineTotals, total, extraQuantities, extraPrices], где последние поля — числа непарных элементов соответствующего входа. Входы и порядок сохраняются; все произведения и суммы помещаются в LMX int.",
       "cases": [
         {
           "args": [
@@ -186,52 +293,91 @@
               4
             ],
             [
-              5,
-              6
+              10,
+              5
             ]
           ],
           "expected": [
-            10,
-            18
+            [
+              20,
+              15
+            ],
+            35,
+            1,
+            0
+          ]
+        },
+        {
+          "args": [
+            [
+              2
+            ],
+            [
+              10,
+              5,
+              7
+            ]
+          ],
+          "expected": [
+            [
+              20
+            ],
+            20,
+            0,
+            2
           ]
         },
         {
           "args": [
             [],
             [
-              1
-            ]
-          ],
-          "expected": []
-        },
-        {
-          "args": [
-            [
-              1
-            ],
-            []
-          ],
-          "expected": []
-        },
-        {
-          "args": [
-            [
-              -2,
-              0
-            ],
-            [
-              3,
-              7
+              4
             ]
           ],
           "expected": [
-            -6,
+            [],
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "args": [
+            [],
+            []
+          ],
+          "expected": [
+            [],
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "args": [
+            [
+              0,
+              2
+            ],
+            [
+              9,
+              6
+            ]
+          ],
+          "expected": [
+            [
+              0,
+              12
+            ],
+            12,
+            0,
             0
           ]
         }
       ],
       "additional_cases": [],
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "contract_revision": "2026-11-25-workflows"
     },
     {
       "id": "S05",
@@ -323,46 +469,73 @@
           "status": "NOT_RUN"
         }
       },
-      "contract": "Вернуть индекс первого отрицательного целого, начиная с нуля, либо -1 при отсутствии. Вход не меняется.",
+      "contract": "Из конечного списка целых items выделить непрерывный префикс до первого отрицательного значения. Вернуть [acceptedPrefix, total, badIndex], где badIndex — нулевой индекс первого отрицательного либо -1 при его отсутствии. Ноль допустим. Хвост после первой ошибки не включается даже при положительных значениях. Вход не меняется; суммы помещаются в LMX int.",
       "cases": [
         {
           "args": [
             [
               2,
               0,
-              -4,
-              -1
-            ]
-          ],
-          "expected": 2
-        },
-        {
-          "args": [
-            [
+              3,
               -1,
-              2
+              9
             ]
           ],
-          "expected": 0
+          "expected": [
+            [
+              2,
+              0,
+              3
+            ],
+            5,
+            3
+          ]
         },
         {
           "args": [
             [
-              0,
-              2
+              -2,
+              4
             ]
           ],
-          "expected": -1
+          "expected": [
+            [],
+            0,
+            0
+          ]
+        },
+        {
+          "args": [
+            [
+              1,
+              2,
+              0
+            ]
+          ],
+          "expected": [
+            [
+              1,
+              2,
+              0
+            ],
+            3,
+            -1
+          ]
         },
         {
           "args": [
             []
           ],
-          "expected": -1
+          "expected": [
+            [],
+            0,
+            -1
+          ]
         }
       ],
       "additional_cases": [],
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "contract_revision": "2026-11-25-workflows"
     },
     {
       "id": "S07",
@@ -379,7 +552,7 @@
           "status": "NOT_RUN"
         }
       },
-      "contract": "Стабильно отсортировать пары [целый ключ, строковая метка] по ключу. Сохранить порядок равных ключей и значения входа; пары не изменять.",
+      "contract": "Для конечного списка пар [целый priority, строковая label] и целого limit >= 0 выбрать не более limit задач с наименьшим priority. Равные приоритеты обслуживаются в исходном порядке. Вернуть [selectedRows, deferredCount]. Вход и поля пар не меняются; выбранные пары сохраняют идентичность, копируется лишь внешняя последовательность. Пустой список и нулевая квота допустимы.",
       "cases": [
         {
           "args": [
@@ -400,32 +573,36 @@
                 1,
                 "d"
               ]
-            ]
+            ],
+            3
           ],
           "expected": [
             [
-              1,
-              "b"
+              [
+                1,
+                "b"
+              ],
+              [
+                1,
+                "d"
+              ],
+              [
+                2,
+                "a"
+              ]
             ],
-            [
-              1,
-              "d"
-            ],
-            [
-              2,
-              "a"
-            ],
-            [
-              2,
-              "c"
-            ]
+            1
           ]
         },
         {
           "args": [
-            []
+            [],
+            2
           ],
-          "expected": []
+          "expected": [
+            [],
+            0
+          ]
         },
         {
           "args": [
@@ -434,18 +611,70 @@
                 3,
                 "x"
               ]
-            ]
+            ],
+            0
+          ],
+          "expected": [
+            [],
+            1
+          ]
+        },
+        {
+          "args": [
+            [
+              [
+                3,
+                "x"
+              ]
+            ],
+            9
           ],
           "expected": [
             [
-              3,
-              "x"
-            ]
+              [
+                3,
+                "x"
+              ]
+            ],
+            0
+          ]
+        },
+        {
+          "args": [
+            [
+              [
+                1,
+                "a"
+              ],
+              [
+                1,
+                "b"
+              ],
+              [
+                1,
+                "c"
+              ]
+            ],
+            2
+          ],
+          "expected": [
+            [
+              [
+                1,
+                "a"
+              ],
+              [
+                1,
+                "b"
+              ]
+            ],
+            1
           ]
         }
       ],
       "additional_cases": [],
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "contract_revision": "2026-11-25-workflows"
     },
     {
       "id": "S08",
@@ -462,7 +691,7 @@
           "status": "NOT_RUN"
         }
       },
-      "contract": "Убрать повторные целые, сохранив первое вхождение каждого значения и исходный порядок первых вхождений. Вход не меняется; идентичность результирующего контейнера не входит в контракт.",
+      "contract": "Даны конечные списки целых идентификаторов items и completed. Сохранить только первое появление каждого идентификатора items, затем удалить идентификаторы, встречающиеся в completed. Вернуть [pending, duplicateCount, completedCount]. duplicateCount считает отброшенные повторные позиции items; completedCount считает удалённые уникальные идентификаторы, а не их повторы в completed. Порядок первых появлений и входы сохраняются.",
       "cases": [
         {
           "args": [
@@ -471,48 +700,79 @@
               1,
               3,
               2,
-              1
+              1,
+              4
+            ],
+            [
+              2,
+              2,
+              9
             ]
           ],
           "expected": [
-            3,
-            1,
-            2
+            [
+              3,
+              1,
+              4
+            ],
+            2,
+            1
           ]
         },
         {
           "args": [
-            []
-          ],
-          "expected": []
-        },
-        {
-          "args": [
+            [],
             [
-              0,
-              0
+              1
             ]
           ],
           "expected": [
+            [],
+            0,
             0
           ]
         },
         {
           "args": [
             [
-              -1,
-              2,
-              -1
+              5,
+              5,
+              5
+            ],
+            [
+              5
             ]
           ],
           "expected": [
-            -1,
-            2
+            [],
+            2,
+            1
+          ]
+        },
+        {
+          "args": [
+            [
+              3,
+              2,
+              3,
+              1
+            ],
+            []
+          ],
+          "expected": [
+            [
+              3,
+              2,
+              1
+            ],
+            1,
+            0
           ]
         }
       ],
       "additional_cases": [],
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "contract_revision": "2026-11-25-workflows"
     },
     {
       "id": "S09",
@@ -529,28 +789,32 @@
           "status": "NOT_RUN"
         }
       },
-      "contract": "Заменить диапазон [start,end) в копии списка. 0 <= start <= end <= длина; длина replacement равна end-start. Размер результата неизменен; оба входных списка не меняются. Выход за эту область не сравнивается.",
+      "contract": "Даны конечный список целых items, 0 <= start <= end <= length(items) и replacement длиной ровно end-start. На независимой копии заменить полуинтервал [start,end). Вернуть [updated, changedCount, deltaTotal], где changedCount считает позиции с фактически новым значением, а deltaTotal — сумма updated[i]-items[i]. Входы не меняются; пустой диапазон допустим. Все значения, разности и суммы помещаются в LMX int.",
       "cases": [
         {
           "args": [
             [
-              1,
-              2,
-              3,
-              4
+              4,
+              5,
+              6,
+              7
             ],
             1,
             3,
             [
-              8,
+              5,
               9
             ]
           ],
           "expected": [
+            [
+              4,
+              5,
+              9,
+              7
+            ],
             1,
-            8,
-            9,
-            4
+            3
           ]
         },
         {
@@ -564,8 +828,12 @@
             []
           ],
           "expected": [
-            1,
-            2
+            [
+              1,
+              2
+            ],
+            0,
+            0
           ]
         },
         {
@@ -575,29 +843,38 @@
             0,
             []
           ],
-          "expected": []
+          "expected": [
+            [],
+            0,
+            0
+          ]
         },
         {
           "args": [
             [
-              1,
-              2
+              5,
+              8
             ],
             0,
             2,
             [
-              7,
-              8
+              1,
+              2
             ]
           ],
           "expected": [
-            7,
-            8
+            [
+              1,
+              2
+            ],
+            2,
+            -10
           ]
         }
       ],
       "additional_cases": [],
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "contract_revision": "2026-11-25-workflows"
     },
     {
       "id": "S10",
@@ -675,37 +952,73 @@
           "status": "NOT_RUN"
         }
       },
-      "contract": "Просуммировать конечный список целых; пустой список даёт 0. Размер входа ниже CALL-ARGUMENTS-LIMIT установленной реализации; сумма помещается в LMX int.",
+      "contract": "Даны начальный целый баланс opening и конечные списки неотрицательных целых charges и credits. Вернуть [chargeTotal, creditTotal, closing], где closing = opening + chargeTotal - creditTotal. Пустой список имеет сумму 0, входы не меняются. Все суммы и промежуточные значения помещаются в LMX int.",
       "cases": [
         {
           "args": [
+            100,
             [
-              1,
-              2,
-              3
+              20,
+              5
+            ],
+            [
+              10,
+              7
             ]
           ],
-          "expected": 6
+          "expected": [
+            25,
+            17,
+            108
+          ]
         },
         {
           "args": [
+            0,
+            [],
             []
           ],
-          "expected": 0
+          "expected": [
+            0,
+            0,
+            0
+          ]
         },
         {
           "args": [
+            -5,
+            [],
             [
-              -2,
-              0,
-              5
+              2
             ]
           ],
-          "expected": 3
+          "expected": [
+            0,
+            2,
+            -7
+          ]
+        },
+        {
+          "args": [
+            0,
+            [
+              2,
+              2
+            ],
+            [
+              1
+            ]
+          ],
+          "expected": [
+            4,
+            1,
+            3
+          ]
         }
       ],
       "additional_cases": [],
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "contract_revision": "2026-11-25-workflows"
     },
     {
       "id": "S12",
@@ -861,7 +1174,7 @@
       "source_role": "functional_compatibility_mirror",
       "variants": {
         "procedural": {
-          "source": "source/lmx/S15.lm3",
+          "source": "source/lmx/procedural/S15.lm3",
           "status": "NOT_RUN"
         },
         "functional": {
@@ -869,7 +1182,7 @@
           "status": "NOT_RUN"
         }
       },
-      "contract": "Для целого n>=0 и целого divisor>0 вернуть [quotient,remainder], где n=quotient*divisor+remainder и 0<=remainder<divisor. Числа помещаются в LMX int.",
+      "contract": "Для целых n >= 0 и capacity > 0 составить план упаковки: вернуть [fullBoxes, remainder, boxesNeeded, unusedPlaces]. fullBoxes и remainder получены целочисленным делением n на capacity; boxesNeeded добавляет одну коробку при ненулевом остатке, unusedPlaces — свободные места в последней неполной коробке, либо 0 при точном делении. При n=0 все четыре результата равны 0. Числа и промежуточные значения помещаются в LMX int.",
       "cases": [
         {
           "args": [
@@ -878,7 +1191,9 @@
           ],
           "expected": [
             3,
-            2
+            2,
+            4,
+            3
           ]
         },
         {
@@ -887,6 +1202,8 @@
             7
           ],
           "expected": [
+            0,
+            0,
             0,
             0
           ]
@@ -898,6 +1215,8 @@
           ],
           "expected": [
             4,
+            0,
+            4,
             0
           ]
         },
@@ -908,12 +1227,27 @@
           ],
           "expected": [
             0,
-            2
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "args": [
+            1,
+            1
+          ],
+          "expected": [
+            1,
+            0,
+            1,
+            0
           ]
         }
       ],
       "additional_cases": [],
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "contract_revision": "2026-11-25-workflows"
     },
     {
       "id": "S16",
@@ -1413,5 +1747,17 @@
     "argument_fixture": "A parent stub may have its own arguments and send a message to the root; this does not give DATA or user arguments to the root.",
     "source_dependencies": "Required source definitions and load_before dependencies belong to the fixture. They do not introduce a DATA-load startup or a named alternative entry."
   },
-  "lmx_runner_contract": "Always start the root as an L3 Thread without DATA or user arguments. Local declarations and calls use the ordinary common language mechanism. An invoke path or named case operation is performed by the root or an ordinary handler after startup; Main and Example\\run are not alternative program entries. A parent stub with its own arguments may send a message to the root. load_before lists required fixture definitions; import exposes existing names, not a new file loader. These records specify acceptance observations and do not claim an executed LMX runner."
+  "lmx_runner_contract": "Always start the root as an L3 Thread without DATA or user arguments. Local declarations and calls use the ordinary common language mechanism. An invoke path or named case operation is performed by the root or an ordinary handler after startup; Main and Example\\run are not alternative program entries. A parent stub with its own arguments may send a message to the root. load_before lists required fixture definitions; import exposes existing names, not a new file loader. These records specify acceptance observations and do not claim an executed LMX runner.",
+  "workflow_expansion_ids": [
+    "S01",
+    "S02",
+    "S03",
+    "S04",
+    "S06",
+    "S07",
+    "S08",
+    "S09",
+    "S11",
+    "S15"
+  ]
 }

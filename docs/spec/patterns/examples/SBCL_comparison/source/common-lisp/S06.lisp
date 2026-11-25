@@ -1,2 +1,4 @@
 (defun example (items)
-  (or (position-if #'minusp items) -1))
+  (let* ((bad (position-if #'minusp items))
+         (accepted (subseq items 0 (or bad (length items)))))
+    (list accepted (reduce #'+ accepted :initial-value 0) (or bad -1))))

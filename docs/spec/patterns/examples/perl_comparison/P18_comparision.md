@@ -1,12 +1,12 @@
-# P18. Буквальная замена всех совпадений
+# P18. Буквальная замена с отчётом о числе изменений
 
 ## Общий наблюдаемый договор
 
-Заменить все неперекрывающиеся буквальные вхождения needle на replacement в ASCII-строке; исходная строка не меняется. Метасимволы needle не становятся regex. Пустой needle вставляет между символами и на концах.
+Заменить все неперекрывающиеся буквальные вхождения needle на replacement в ASCII-строке и вернуть (новая строка, число выбранных замен). Исходный текст не меняется; regex-метасимволы needle и доллар/backslash в replacement остаются буквальными. Пустой needle вставляет между символами и на концах, давая length(text)+1 замен; предыдущее regex-состояние Perl не влияет. Вставленный replacement повторно не просматривается.
 
-Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.
+Обе формы решают полный прикладной сценарий. Процедурная показывает алгоритм циклами и ветвлениями, функциональная использует общие операции; все поля, порядок, ошибки и полезный результат сохраняются.
 
-Строка replacement вставляется как значение переменной: содержащиеся в ней $ и обратные ссылки повторно не интерпретируются. Не захватывающая группа делает runtime-pattern непустым даже для пустого needle и исключает зависимость от предыдущего успешного regex вызывающего кода. Строка в позиции Pattern уже означает буквальную последовательность; обёртка literal здесь избыточна.
+Функциональный replacement-callback увеличивает changed ровно один раз на выбранное Match; текст замены остаётся строковым значением. В Perl непустая оболочка (?:...) сохраняет корректность пустого needle даже после ранее успешного regex.
 
 ## Вход и ожидаемое наблюдение
 
@@ -17,7 +17,10 @@
     "a.b",
     "$x"
   ],
-  "result": "$x aXb $x"
+  "result": [
+    "$x aXb $x",
+    2
+  ]
 }
 ```
 
@@ -25,9 +28,9 @@
 
 | Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
 | --- | ---: | ---: | ---: |
-| LMX процедурный | 461 | 894 | 29 |
-| LMX функциональный | 164 | 217 | 8 |
-| Perl | 115 | 141 | 6 |
+| LMX процедурный | 488 | 952 | 31 |
+| LMX функциональный | 285 | 401 | 16 |
+| Perl | 155 | 200 | 8 |
 
 Обе LMX-формы опубликованы и считаются независимо. Все определения, обработчики и ссылки на throws входят в полный размер. Выбор единственного LMX-варианта по длине не выполняется.
 
@@ -38,10 +41,11 @@ Example:
     char[]: text
     char[]: needle
     char[]: replacement
-    return: char[]
+    return: @
     run:
         throws: copy(FxSeqPush\append\throws) copy(record\throws)
         char[]: out []
+        int: changed 0
         int: i 0
         while: 1
             int: same length(needle) <= length(text) - i
@@ -51,6 +55,7 @@ Example:
                     same := 0
                 j += 1
             if: same != 0
+                changed += 1
                 j := 0
                 while: j < length(replacement)
                     FxSeqPush\append(out; (replacement[j] record))
@@ -60,27 +65,36 @@ Example:
                     continue
             ---
             if: i = length(text)
-                return: out
+                return: (out; changed)
             FxSeqPush\append(out; (text[i] record))
             i += 1
 ```
 
-[Полный исходник](source/lmx/procedural/P18.lm3). 461 непробельных символов; 29 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/procedural/P18.lm3). 488 непробельных символов; 31 непустых строк. Все объявления и Throws включены.
 
 ## LMX — функциональный
 
 ```lmx
+CountedReplacement:
+    Match@: matched
+    return: char[]
+    make:
+        changed += 1
+        return: replacement
+
 Example:
     char[]: text
     char[]: needle
     char[]: replacement
-    return: char[]
+    return: @
     run:
         throws: copy(byteText\throws) copy(replace\throws)
-        return: replace(byteText(text); needle; replacement)
+        int: changed 0
+        char[]: out replace(byteText(text); needle; CountedReplacement\make)
+        return: (out; changed)
 ```
 
-[Полный исходник](source/lmx/P18.lm3). 164 непробельных символов; 8 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/P18.lm3). 285 непробельных символов; 16 непустых строк. Все объявления и Throws включены.
 
 ## Perl
 
@@ -91,7 +105,9 @@ use strict;
 use warnings;
 sub example {
     my ($text, $needle, $replacement) = @_;
-    return $text =~ s/(?:\Q$needle\E)/$replacement/gr;
+    my $out = $text;
+    my $changed = $out =~ s/(?:\Q$needle\E)/$replacement/g;
+    return [$out, 0 + $changed];
 }
 ```
 
@@ -108,3 +124,15 @@ Perl-клиенты проверяет [действительный harness](va
 ## Первичные источники
 
 - <https://perldoc.perl.org/5.40.1/perlop#s/PATTERN/REPLACEMENT/msixpodualngcer>
+
+## Все проверочные входы
+
+Каждый случай проверяет полный результат и отсутствие изменения входов. prime_empty_pattern дополнительно создаёт ранее успешное regex-состояние Perl.
+
+| Случай | Аргументы | Результат | Дополнительное условие |
+| --- | --- | --- | --- |
+| 1 | `["a.b aXb a.b","a.b","$x"]` | `["$x aXb $x",2]` | — |
+| 2 | `["ab","","-"]` | `["-a-b-",3]` | — |
+| 3 | `["abc","z","!"]` | `["abc",0]` | — |
+| 4 | `["ab","","-"]` | `["-a-b-",3]` | prime_empty_pattern |
+| 5 | `["a a a","a","aa"]` | `["aa aa aa",3]` | — |

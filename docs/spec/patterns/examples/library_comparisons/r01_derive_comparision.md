@@ -6,7 +6,7 @@ ordinary model composition with one copy map. The expected result remains 257.
 
 ## Client and one-line equivalent
 
-The complete scenario lives in [R01.lm3](../lmx/R01.lm3). It uses direct core
+The complete scenario lives in [R01.lm3](../haskell_comparision/source/lmx/R01.lm3). It uses direct core
 `derive(RecordModel; RecordPatch)`. The spelling `(merge(RecordModel; RecordPatch))`
 uses the same composition; no second full client listing is needed.
 

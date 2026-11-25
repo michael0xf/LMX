@@ -88,7 +88,7 @@
 | [Русский разбор](LMX_examples_and_analogies.ru.md) | 41 семейство H01–H12, R01–R10, A01–A06, V01–V05, M01–M08; карта всех 23 шаблонов и английского корпуса |
 | [Отдельные LMX-файлы](examples/README.ru.md) | 24 самостоятельных `.lm3`; R06 имеет два отдельных исходника |
 | [Ожидаемые результаты](examples/expected_results.json) | 43 проверки при исходниках, 18 дополнительных fixture-сценариев и 23 точных точки входа сравнительных программ |
-| [Haskell-аналоги](examples/haskell/Analogies.hs) | `apply`, замыкания/default, явное окружение, композиция, эффекты, AST, массивы, mock, владелец счётчика и fan-out |
+| [Haskell-аналоги](examples/haskell_comparision/Analogies.hs) | `apply`, замыкания/default, явное окружение, композиция, эффекты, AST, массивы, mock, владелец счётчика и fan-out |
 | [Английский корпус для Fable](LMX_regression_examples.to_fable.en.md) | 94 семейства; уточнённые различающие проверки и новый G13 |
 | [Полный граф и графовое присваивание](../LMX_semantics.en.md#program-representation) | Полный граф без рабочего двойника, методы/R0, private, нулевой payload и графовая замена |
 

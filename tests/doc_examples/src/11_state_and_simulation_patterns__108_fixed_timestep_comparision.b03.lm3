@@ -1,0 +1,27 @@
+TickFold:
+    SimulationState@: state
+    int: index
+    return: @
+    advance:
+        return: Tick\update(state)
+
+Frame:
+    SimulationState@: state
+    int: elapsed
+    return: @
+    advance:
+        throws: copy(foldl\throws) copy(range\throws)
+        @: next (copy(state))
+        next\lag += elapsed
+        foldl(range(0; next\lag / next\step); next; TickFold\advance)
+        return: FxStdPair\make(next; next)
+
+Frames:
+    int: step
+    int[]: deltas
+    return: @
+    run:
+        throws: copy(SimulationMake\make\throws) copy(mapAccumL\throws)
+        @: initial SimulationMake\make(step; deltas)
+        @: result mapAccumL(deltas; initial; Frame\advance)
+        return: result\second

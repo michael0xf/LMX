@@ -1,24 +1,27 @@
-# P17. Глобальное извлечение слов
+# P17. Слова журнала с порогом длины
 
 ## Общий наблюдаемый договор
 
-Вернуть все максимальные неперекрывающиеся последовательности ASCII-букв слева направо. Цифры и знаки — разделители; отсутствие слов даёт пустой массив.
+Из ASCII-текста журнала извлечь максимальные последовательности букв [A-Za-z]+, оставить слова длины не меньше неотрицательного minimum и вернуть (принятые слова, число отброшенных коротких слов). Порядок и регистр сохраняются; цифры и знаки — разделители. При отсутствии слов результат ([],0), minimum=0 оставляет все найденные слова. Вход не меняется.
 
-Обе формы сохраняют один наблюдаемый договор; процедурная запись показывает управление и изменение данных, функциональная использует общие операции ядра.
+Обе формы решают полный прикладной сценарий. Процедурная показывает алгоритм циклами и ветвлениями, функциональная использует общие операции; все поля, порядок, ошибки и полезный результат сохраняются.
 
-Perl собирает список встроенным /g. LMX материализует источник Stop общим collect, затем читает тексты общим map; оба результата конечны и упорядочены. Нулевое/пустое значение не используется как признак завершения. Общий collect сохраняет остальные объявленные отказы источника в FxCallFailure; фактический пример сравнивает успешные ASCII-входы.
+Порог длины имеет обычное динамическое связывание в LongWord; подготовка фабрики и копирование текстового шаблона не требуются. Цепочка возвращает полезный отобранный материал и статистику пропуска. Общий Ascii\letter определён один раз в source/lmx/common/ascii.lm3 и включён в полный процедурный листинг и метрику; entry-файл загружается вместе с ним.
 
 ## Вход и ожидаемое наблюдение
 
 ```json
 {
   "arguments": [
-    "ab12CD, ef"
+    "ab12CODE, useful",
+    3
   ],
   "result": [
-    "ab",
-    "CD",
-    "ef"
+    [
+      "CODE",
+      "useful"
+    ],
+    1
   ]
 }
 ```
@@ -27,9 +30,9 @@ Perl собирает список встроенным /g. LMX материал
 
 | Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
 | --- | ---: | ---: | ---: |
-| LMX процедурный | 489 | 870 | 28 |
-| LMX функциональный | 243 | 290 | 6 |
-| Perl | 75 | 99 | 6 |
+| LMX процедурный | 577 | 1022 | 32 |
+| LMX функциональный | 421 | 532 | 14 |
+| Perl | 182 | 232 | 8 |
 
 Обе LMX-формы опубликованы и считаются независимо. Все определения, обработчики и ссылки на throws входят в полный размер. Выбор единственного LMX-варианта по длине не выполняется.
 
@@ -42,13 +45,14 @@ Ascii:
     letter:
         return: (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z')
 
-
 Example:
     char[]: text
+    int: minimum
     return: @
     run:
         throws: copy(sys\resize\throws) copy(FxSeqPush\append\throws) copy(record\throws)
         @[]: out []
+        int: skipped 0
         int: i 0
         while: i < length(text)
             while: i < length(text) && Ascii\letter(text[i]) = 0
@@ -56,7 +60,9 @@ Example:
             int: begin i
             while: i < length(text) && Ascii\letter(text[i]) != 0
                 i += 1
-            if: i > begin
+            if: i > begin && i - begin < minimum
+                skipped += 1
+            if: i > begin && i - begin >= minimum
                 char[]: word []
                 sys\resize(word; i - begin)
                 int: j 0
@@ -65,23 +71,32 @@ Example:
                     j += 1
                 FxSeqPush\append(out; (word record))
         ---
-        return: out
+        return: (out; skipped)
 ```
 
-[Полный исходник](source/lmx/procedural/P17.lm3). 489 непробельных символов; 28 непустых строк. Все объявления и Throws включены.
+Канонические части полного исходника: [ascii.lm3](source/lmx/common/ascii.lm3), [P17.lm3](source/lmx/procedural/P17.lm3). 577 непробельных символов; 32 непустых строк. Все объявления и Throws включены.
 
 ## LMX — функциональный
 
 ```lmx
+LongWord:
+    char[]: word
+    return: int
+    test:
+        return: length(word) >= minimum
+
 Example:
     char[]: text
+    int: minimum
     return: @
     run:
-        throws: copy(byteText\throws) copy(atLeast\throws) copy(eachMatch\throws) copy(collect\throws) copy(map\throws) copy(matchedValue\throws)
-        return: map(collect(eachMatch(byteText(text); (asciiLetter atLeast 1))); matchedValue)
+        throws: copy(byteText\throws) copy(atLeast\throws) copy(eachMatch\throws) copy(collect\throws) copy(map\throws) copy(matchedValue\throws) copy(filter\throws)
+        @: words map(collect(eachMatch(byteText(text); (asciiLetter atLeast 1))); matchedValue)
+        @: selected filter(words; LongWord\test)
+        return: (selected; length(words) - length(selected))
 ```
 
-[Полный исходник](source/lmx/P17.lm3). 243 непробельных символов; 6 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/P17.lm3). 421 непробельных символов; 14 непустых строк. Все объявления и Throws включены.
 
 ## Perl
 
@@ -91,17 +106,20 @@ Example:
 use strict;
 use warnings;
 sub example {
-    my ($text) = @_;
-    return [$text =~ /[A-Za-z]+/g];
+    my ($text, $minimum) = @_;
+    my @words = $text =~ /[A-Za-z]+/g;
+    my @selected = grep { length($_) >= $minimum } @words;
+    return [\@selected, scalar(@words) - scalar(@selected)];
 }
 ```
 
 ## Общие библиотечные реализации
 
 - eachMatch: [PI07](library_comparisons/PI07_comparision.md)
-- matchedValue: [PI07](library_comparisons/PI07_comparision.md)
 - collect: [полное тело ядра](../../LMX_Fn_Receivers/src/coreStandardFunctional.lmx); [общие зависимости](library_comparisons/shared_dependencies.lmx).
 - map: [PI01](library_comparisons/PI01_comparision.md)
+- filter: [PI01](library_comparisons/PI01_comparision.md)
+- matchedValue: [PI07](library_comparisons/PI07_comparision.md)
 
 Тела библиотечного ядра сохранены в одном общем источнике и не размножаются для двух стилей. Иностранный клиент использует свои настоящие средства; соседние comparison-реализации он не импортирует.
 
@@ -112,3 +130,15 @@ Perl-клиенты проверяет [действительный harness](va
 ## Первичные источники
 
 - <https://perldoc.perl.org/5.40.1/perlop#Regexp-Quote-Like-Operators>
+
+## Все проверочные входы
+
+Каждый случай проверяет полный результат и отсутствие изменения входов. prime_empty_pattern дополнительно создаёт ранее успешное regex-состояние Perl.
+
+| Случай | Аргументы | Результат | Дополнительное условие |
+| --- | --- | --- | --- |
+| 1 | `["ab12CODE, useful",3]` | `[["CODE","useful"],1]` | — |
+| 2 | `["ab12CD, ef",2]` | `[["ab","CD","ef"],0]` | — |
+| 3 | `["123",2]` | `[[],0]` | — |
+| 4 | `["",2]` | `[[],0]` | — |
+| 5 | `["a ab",0]` | `[["a","ab"],0]` | — |

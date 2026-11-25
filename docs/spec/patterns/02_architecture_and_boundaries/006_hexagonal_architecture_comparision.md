@@ -82,7 +82,7 @@ func demo() int { return quote(2, memory) + quote(2, alternate) }
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 181 | 14 |
+| LMX | <span style="color:#176233"><u>181</u></span> | 14 |
 | Java | 264 | 9 |
 | Go | 183 | 5 |
 

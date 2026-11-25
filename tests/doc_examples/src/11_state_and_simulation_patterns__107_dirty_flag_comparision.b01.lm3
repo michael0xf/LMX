@@ -1,0 +1,42 @@
+CachedMaximum:
+    @: values
+    int: dirty 1
+    int: cached 0
+    int: rebuilds 0
+
+CacheMake:
+    int[]: values
+    return: @
+    make:
+        @: state (copy(CachedMaximum))
+        return: CacheWrite\reset(state; values)
+
+CacheWrite:
+    CachedMaximum@: state
+    int[]: values
+    int: index
+    int: value
+    return: @
+    reset:
+        int[]: owned [copy(values)]
+        state\values := owned
+        state\dirty := 1
+        return: state
+    set:
+        throws: InvalidIndex
+        if: index < 0 || index >= length(state\values)
+            throw: InvalidIndex()
+        state\values[index] := value
+        state\dirty := 1
+        return: state
+
+CacheRead:
+    CachedMaximum@: state
+    return: int
+    get:
+        throws: copy(Maximum\calculate\throws)
+        if: state\dirty != 0
+            state\cached := Maximum\calculate(state\values)
+            state\dirty := 0
+            state\rebuilds += 1
+        return: state\cached

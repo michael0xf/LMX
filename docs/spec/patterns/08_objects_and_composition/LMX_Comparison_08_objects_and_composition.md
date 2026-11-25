@@ -8,16 +8,16 @@
 
 | ID | Сценарий | LMX | Java | Python | Слой |
 | --- | --- | --- | --- | --- | --- |
-| 072 | Dependency Injection | 163 | 246 | 154 | Сценарий |
-| 073 | Service Locator | 223 | 238 | 151 | Сценарий |
-| 074 | Null Object | 138 | 205 | 98 | Сценарий |
-| 075 | Object Pool | 266 | 350 | 280 | Сценарий |
-| 076 | Simple Factory | 201 | 155 | 141 | Сценарий |
-| 077 | Multiton | 246 | 283 | 291 | Сценарий |
-| 078 | Marker Interface | 175 | 238 | 177 | Сценарий |
-| 079 | Fluent Interface | 285 | 251 | 220 | Сценарий |
-| 080 | Type Object | 225 | 283 | 265 | Сценарий |
-| 081 | Extension Object | 255 | 285 | 308 | Сценарий |
+| 072 | Dependency Injection | 163 | 246 | <span style="color:#176233"><u>154</u></span> | Сценарий |
+| 073 | Service Locator | 223 | 238 | <span style="color:#176233"><u>151</u></span> | Сценарий |
+| 074 | Null Object | 138 | 205 | <span style="color:#176233"><u>98</u></span> | Сценарий |
+| 075 | Object Pool | <span style="color:#176233"><u>266</u></span> | 350 | 280 | Сценарий |
+| 076 | Simple Factory | 201 | 155 | <span style="color:#176233"><u>141</u></span> | Сценарий |
+| 077 | Multiton | <span style="color:#176233"><u>246</u></span> | 283 | 291 | Сценарий |
+| 078 | Marker Interface | <span style="color:#176233"><u>175</u></span> | 238 | 177 | Сценарий |
+| 079 | Fluent Interface | 285 | 251 | <span style="color:#176233"><u>220</u></span> | Сценарий |
+| 080 | Type Object | <span style="color:#176233"><u>225</u></span> | 283 | 265 | Сценарий |
+| 081 | Extension Object | <span style="color:#176233"><u>255</u></span> | 285 | 308 | Сценарий |
 
 Java показывает номинальные интерфейсы, классы и явные объектные контракты; Python — динамическую композицию и функции. Такое сравнение не вынуждает все языки копировать Java-иерархии и выявляет реальные различия nominal/structural.
 

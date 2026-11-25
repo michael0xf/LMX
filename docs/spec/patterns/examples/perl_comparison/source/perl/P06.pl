@@ -1,6 +1,6 @@
 use strict;
 use warnings;
 sub example {
-    my ($items, $positions) = @_;
-    return [@$items[@$positions]];
+    my ($items, $labels, $positions) = @_;
+    return [[@$items[@$positions]], [@$labels[@$positions]]];
 }

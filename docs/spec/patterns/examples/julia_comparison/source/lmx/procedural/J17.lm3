@@ -1,6 +1,7 @@
 Example:
     @: target
     @: values
+    int: capacity
     return: @
     run:
         throws: copy(FxSeqInfo\get\throws) copy(FxSeqSize\sum\throws) copy(FxSeqAdmit\admit\throws) copy(FxSeqRead\read\throws) copy(FxKernel\arrayWrite\throws) copy(sys\resize\throws)
@@ -20,4 +21,11 @@ Example:
         while: i < added
             FxKernel\arrayWrite(target; oldSize + i; ready[i])
             i += 1
+        int: drop length(target) - capacity
+        if: drop > 0
+            i := 0
+            while: i < capacity
+                FxKernel\arrayWrite(target; i; FxSeqRead\read(target; drop + i))
+                i += 1
+            sys\resize(target; capacity)
         return: target

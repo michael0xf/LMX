@@ -1,10 +1,10 @@
-# S04. MAPCAR по двум спискам
+# S04. MAPCAR по двум спискам: строки счёта и непарные позиции
 
 Полное сравнение на указанном домене.
 
 ## Общий договор
 
-Попарно умножить элементы двух списков; остановиться на конце более короткого. Порядок сохраняется, входы не меняются.
+Даны конечные списки неотрицательных целых quantities и prices. Сформировать суммы строк для попарных элементов до конца более короткого списка. Вернуть [lineTotals, total, extraQuantities, extraPrices], где последние поля — числа непарных элементов соответствующего входа. Входы и порядок сохраняются; все произведения и суммы помещаются в LMX int.
 
 ## Входы и ожидаемые наблюдения
 
@@ -18,46 +18,84 @@
         4
       ],
       [
-        5,
-        6
+        10,
+        5
       ]
     ],
     "expected": [
-      10,
-      18
+      [
+        20,
+        15
+      ],
+      35,
+      1,
+      0
+    ]
+  },
+  {
+    "args": [
+      [
+        2
+      ],
+      [
+        10,
+        5,
+        7
+      ]
+    ],
+    "expected": [
+      [
+        20
+      ],
+      20,
+      0,
+      2
     ]
   },
   {
     "args": [
       [],
       [
-        1
-      ]
-    ],
-    "expected": []
-  },
-  {
-    "args": [
-      [
-        1
-      ],
-      []
-    ],
-    "expected": []
-  },
-  {
-    "args": [
-      [
-        -2,
-        0
-      ],
-      [
-        3,
-        7
+        4
       ]
     ],
     "expected": [
-      -6,
+      [],
+      0,
+      0,
+      1
+    ]
+  },
+  {
+    "args": [
+      [],
+      []
+    ],
+    "expected": [
+      [],
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "args": [
+      [
+        0,
+        2
+      ],
+      [
+        9,
+        6
+      ]
+    ],
+    "expected": [
+      [
+        0,
+        12
+      ],
+      12,
+      0,
       0
     ]
   }
@@ -68,9 +106,9 @@
 
 | Источник | Без пробельных | Все символы | Непустые строки |
 | --- | ---: | ---: | ---: |
-| LMX — процедурный | 174 | 294 | 12 |
-| LMX — функциональный | 100 | 147 | 7 |
-| Common Lisp / SBCL | 45 | 55 | 2 |
+| LMX — процедурный | 347 | 553 | 19 |
+| LMX — функциональный | 224 | 302 | 9 |
+| Common Lisp / SBCL | 188 | 241 | 5 |
 
 Оба стиля LMX сравниваются независимо по одному договору. Все объявления, вспомогательные определения и Throws входят в размер. Реализация общих библиотечных операций учитывается отдельно один раз.
 
@@ -78,60 +116,75 @@
 
 ```lmx
 Example:
-    int[]: first
-    int[]: second
-    return: int[]
+    int[]: quantities
+    int[]: prices
+    return: @
     run:
-        int[]: result []
+        throws: copy(sys\resize\throws)
+        int: count length(quantities)
+        if: length(prices) < count
+            count := length(prices)
+        int[]: totals []
+        sys\resize(totals; count)
+        int: total 0
         int: i 0
-        while: i < length(first) && i < length(second)
-            sys\resize(result; i + 1)
-            result[i] := first[i] * second[i]
+        while: i < count
+            int: value quantities[i] * prices[i]
+            totals[i] := value
+            total += value
             i += 1
-        return: result
+        return: (totals; total; length(quantities) - count; length(prices) - count)
 ```
 
-[Полный исходник](source/lmx/procedural/S04.lm3). 174 непробельных символов; 12 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/procedural/S04.lm3). 347 непробельных символов; 19 непустых строк. Все объявления и Throws включены.
 
 ## LMX — функциональный
 
 ```lmx
 Example:
-    int[]: first
-    int[]: second
+    int[]: quantities
+    int[]: prices
     return: @
     run:
-        throws: copy(zipWith\throws)
-        return: (zipWith first second `*`)
+        throws: copy(zipWith\throws) copy(sum\throws)
+        @: totals (zipWith quantities prices `*`)
+        int: count length(totals)
+        return: (totals; \(sum totals); length(quantities) - count; length(prices) - count)
 ```
 
-[Полный исходник](source/lmx/S04.lm3). 100 непробельных символов; 7 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/S04.lm3). 224 непробельных символов; 9 непустых строк. Все объявления и Throws включены.
 
 ## Common Lisp / SBCL
 
 [Полный исходник](source/common-lisp/S04.lisp).
 
 ```common-lisp
-(defun example (left right)
-  (mapcar #'* left right))
+(defun example (quantities prices)
+  (let* ((totals (mapcar #'* quantities prices))
+         (count (length totals)))
+    (list totals (reduce #'+ totals :initial-value 0)
+          (- (length quantities) count) (- (length prices) count))))
 ```
 
 ## Соответствие стилей договору
 
-Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма.
+Оба стиля возвращают строки счёта и сверку длины входов; процедурный вычисляет общий итог в том же цикле, функциональный применяет zipWith и sum.
 
-Функциональная форма передаёт готовый стандартный ресивер `*` в zipWith; локальный Multiply не нужен. Обход заканчивается на более коротком входе и допускает разные длины; это не замена на поэлементное first*second.
+Короткий список больше не приводит к незаметной потере хвоста: результат явно содержит число непарных позиций. zipWith сохраняет тот же контракт остановки, что многосписочный MAPCAR. Обобщённый sum читает записи из возвращённой последовательности.
 
 ## Общие операции и реализации
 
 - `zipWith`: [тело ядра](../../LMX_Fn_Receivers/src/collections.lmx); отдельное сравнение [SI01](library_comparisons/SI01_comparision.md).
 
+- `sum`: [тело ядра](../../LMX_Fn_Receivers/src/coreStandardNumeric.lmx).
+
 Common Lisp-клиент использует указанные native/standard средства и не импортирует сравнительные реализации.
 
 ## Проверка
 
-SBCL: [фактический отчёт](validation/common_lisp.json). Оба LMX-варианта: **NOT_RUN**; проверки текста не доказывают исполнение.
+Для обновлённого кода **SBCL: NOT_RUN; LMX parser/runtime: NOT_RUN**. Статистика пересчитана по полным исходникам; это не выполнение программ. [Статус и прежний receipt](validation/common_lisp.json).
 
 ## Первичные источники
 
 - <https://www.lispworks.com/documentation/HyperSpec/Body/f_mapc_.htm>
+- <https://www.lispworks.com/documentation/HyperSpec/Body/f_reduce.htm>

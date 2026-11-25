@@ -1,0 +1,17 @@
+BudgetStep:
+    int: balance
+    int: amount
+    return: int
+    apply:
+        int: next balance - amount
+        if: next < 0
+            return: 0
+        return: next
+
+Example:
+    int[]: xs
+    int: seed
+    return: int
+    run:
+        throws: copy(foldl\throws) copy(record\throws)
+        return: \foldl(xs; (seed record); BudgetStep\apply)

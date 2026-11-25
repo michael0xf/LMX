@@ -1,8 +1,8 @@
 {
   "suite": "SBCL",
   "foreign_language": "Common Lisp (SBCL)",
-  "edition": "2026-11-23",
-  "runtime_profile": "ANSI Common Lisp; S24 additionally requires SBCL threads and bundled sb-concurrency. Executable validation targets SBCL 2.2.9.debian, not an assertion of latest SBCL.",
+  "edition": "2026-11-25-workflows",
+  "runtime_profile": "ANSI Common Lisp; S24 additionally requires SBCL threads and sb-concurrency. Changed workflows have NOT_RUN status; the earlier SBCL 2.2.9 report applies only to its recorded source hashes.",
   "methodology": {
     "code_scope": "Every source file is loaded into a fresh package using CL by the test harness. Harness package names, test assertions and host bootstrap are not client code. All helper definitions used by a primary are included in that primary.",
     "integers": "Finite proper lists and bounded machine-range integers; arithmetic values/results must fit LMX int. No arbitrary precision advantage is claimed.",
@@ -11,19 +11,24 @@
   "examples": [
     {
       "id": "S01",
-      "title": "MAPCAR: преобразование списка",
+      "title": "MAPCAR: калибровка измерений и итог",
       "category": "Последовательности",
-      "contract": "Умножить каждый элемент конечного списка целых на 3; сохранить порядок, вход не менять. Числа и промежуточные результаты помещаются в LMX int.",
+      "contract": "Для конечного списка целых items и целых gain, offset получить calibrated[i] = items[i] * gain + offset; вернуть [calibrated, total], где total — сумма откалиброванных значений. Сохранить порядок и входы. Пустой список даёт [[], 0]. Все произведения, суммы и промежуточные значения помещаются в выбранный LMX int.",
       "inputs": [
         [
           -2,
           0,
           3
-        ]
+        ],
+        3,
+        2
       ],
       "expected": [
-        -6,
-        0,
+        [
+          -4,
+          2,
+          11
+        ],
         9
       ],
       "test_cases": [
@@ -33,135 +38,125 @@
               -2,
               0,
               3
-            ]
+            ],
+            3,
+            2
           ],
           "expected": [
-            -6,
-            0,
+            [
+              -4,
+              2,
+              11
+            ],
             9
           ]
         },
         {
           "args": [
-            []
+            [],
+            3,
+            2
           ],
-          "expected": []
+          "expected": [
+            [],
+            0
+          ]
         },
         {
           "args": [
             [
               7
-            ]
+            ],
+            -2,
+            1
           ],
           "expected": [
-            21
+            [
+              -13
+            ],
+            -13
+          ]
+        },
+        {
+          "args": [
+            [
+              1,
+              1,
+              2
+            ],
+            0,
+            5
+          ],
+          "expected": [
+            [
+              5,
+              5,
+              5
+            ],
+            15
           ]
         }
       ],
       "foreign_entry_point": "example",
       "foreign_dependencies": [
-        "CL:MAPCAR"
+        "CL:MAPCAR",
+        "CL:REDUCE"
       ],
       "sources": [
-        "https://www.lispworks.com/documentation/HyperSpec/Body/f_mapc_.htm"
+        "https://www.lispworks.com/documentation/HyperSpec/Body/f_mapc_.htm",
+        "https://www.lispworks.com/documentation/HyperSpec/Body/f_reduce.htm"
       ],
-      "foreign_extra_tests": [],
+      "foreign_extra_tests": [
+        "(let* ((args (copy-tree '((-2 0 3) 3 2))) (before (copy-tree args))) (apply #'example args) (equalp args before))"
+      ],
       "input_mutation": false,
       "core_functions": [],
       "comparison_status": "complete_pair",
       "lmx_runtime_execution": "NOT_RUN",
       "selected_approach": "two_equal_contract_lmx_styles",
-      "selection_reason": "Оба стиля LMX являются полными сравниваемыми вариантами. Размер не выбирает один из них; Common Lisp-код и общий договор сохранены.",
+      "selection_reason": "Оба стиля решают новый полный прикладной договор; оба измеряются целиком и остаются в сравнении.",
       "source_files": {
         "lmx": "source/lmx/S01.lm3",
         "foreign": "source/common-lisp/S01.lisp"
       },
-      "notes_ru": " Основной вариант выбран по меньшему полному размеру: Элементная Array/scalar арифметика прямо закреплена §18; чистый общий int-профиль, без изменения входа.",
-      "alternatives": [
-        {
-          "id": "S01_core",
-          "label": "LMX с общими ресиверами ядра",
-          "source_file": "alternatives/lmx/S01_core.lm3",
-          "core_functions": [
-            "map"
-          ],
-          "included_in_comparison": false,
-          "reason": "Исходный полный вариант; нормы и конечные эффекты проверены. Полные текущие размеры приведены в статистике.",
-          "lmx_runtime_execution": "NOT_RUN",
-          "approach": "LMX с общими ресиверами ядра",
-          "language": "LMX",
-          "code": "Scale:\n    int: value\n    return: int\n    run:\n        return: value * 3\n\nExample:\n    int[]: items\n    return: @\n    run:\n        throws: copy(FxThrows\\traversal)\n        return: map(items; Scale\\run)\n",
-          "counts": {
-            "characters_nonwhitespace": 132,
-            "characters_all": 202,
-            "nonblank_lines": 11,
-            "utf8_bytes": 202,
-            "sha256": "a3267371398cc6cbbb4d9437dbea9b172d8ddb02470b811b79171ccfbd81b902"
-          }
-        }
-      ],
-      "lmx": "Example:\n    int[]: items\n    return: int[]\n    run:\n        return: items * 3\n",
-      "foreign": "(defun example (items)\n  (mapcar (lambda (x) (* x 3)) items))\n",
-      "counts": {
-        "lmx": {
-          "characters_nonwhitespace": 49,
-          "characters_all": 79,
-          "nonblank_lines": 5,
-          "utf8_bytes": 79,
-          "sha256": "2d03236f2ab7102ab9b3dcc77a3353dcb8abca263c7493583393b2721f64dca4"
-        },
-        "foreign": {
-          "characters_nonwhitespace": 50,
-          "characters_all": 62,
-          "nonblank_lines": 2,
-          "utf8_bytes": 62,
-          "sha256": "cf6e91ba6b9f38146e4fd62151c1b19d62de24eca3da41e7fff778ee32e91cd3"
-        },
-        "lmx_procedural": {
-          "characters_nonwhitespace": 146,
-          "characters_all": 250,
-          "nonblank_lines": 11,
-          "utf8_bytes": 250,
-          "sha256": "8b472a40d5ff7ad3b2b7983f820766422ab6b9c193754e41f2f7532d033d2906"
-        },
-        "lmx_functional": {
-          "characters_nonwhitespace": 49,
-          "characters_all": 79,
-          "nonblank_lines": 5,
-          "utf8_bytes": 79,
-          "sha256": "2d03236f2ab7102ab9b3dcc77a3353dcb8abca263c7493583393b2721f64dca4"
-        }
-      },
+      "notes_ru": "Калибровка имеет два настраиваемых параметра; откалиброванный ряд используется и как результат, и для итогового накопления. Элементная арифметика Array/scalar сохраняется, а copy явно открывает готовые значения для суммирующего Expression.",
+      "alternatives": [],
+      "lmx": "Example:\n    int[]: items\n    int: gain\n    int: offset\n    return: @\n    run:\n        int[]: calibrated items * gain + offset\n        return: (calibrated; (+ 0 copy(calibrated)))\n",
+      "foreign": "(defun example (items gain offset)\n  (let ((calibrated (mapcar (lambda (x) (+ (* x gain) offset)) items)))\n    (list calibrated (reduce #'+ calibrated :initial-value 0))))\n",
       "implementation_links": {},
-      "style_note": "Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма.",
+      "style_note": "Процедурная форма выполняет один цикл и одновременно накапливает итог. Функциональная строит откалиброванный массив элементным Expression и затем вычисляет сумму общего потока.",
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: items\n    return: int[]\n    run:\n        int[]: result []\n        sys\\resize(result; length(items))\n        int: i 0\n        while: i < length(items)\n            result[i] := items[i] * 3\n            i += 1\n        return: result\n",
+          "code": "Example:\n    int[]: items\n    int: gain\n    int: offset\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        int[]: calibrated []\n        sys\\resize(calibrated; length(items))\n        int: total 0\n        int: i 0\n        while: i < length(items)\n            int: value items[i] * gain + offset\n            calibrated[i] := value\n            total += value\n            i += 1\n        return: (calibrated; total)\n",
           "source_file": "source/lmx/procedural/S01.lm3",
           "contract_id": "S01",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 146,
-            "characters_with_whitespace": 250,
-            "nonblank_lines": 11,
-            "utf8_bytes": 250,
-            "sha256": "8b472a40d5ff7ad3b2b7983f820766422ab6b9c193754e41f2f7532d033d2906"
+            "characters": 260,
+            "characters_with_whitespace": 430,
+            "nonblank_lines": 17,
+            "utf8_bytes": 430,
+            "sha256": "3999efc4556293f5ab62026fde0de7751a540959f7f3cb8fe938363013c62d90"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         },
         "functional": {
-          "code": "Example:\n    int[]: items\n    return: int[]\n    run:\n        return: items * 3\n",
+          "code": "Example:\n    int[]: items\n    int: gain\n    int: offset\n    return: @\n    run:\n        int[]: calibrated items * gain + offset\n        return: (calibrated; (+ 0 copy(calibrated)))\n",
           "source_file": "source/lmx/S01.lm3",
           "contract_id": "S01",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 49,
-            "characters_with_whitespace": 79,
-            "nonblank_lines": 5,
-            "utf8_bytes": 79,
-            "sha256": "2d03236f2ab7102ab9b3dcc77a3353dcb8abca263c7493583393b2721f64dca4"
+            "characters": 122,
+            "characters_with_whitespace": 180,
+            "nonblank_lines": 8,
+            "utf8_bytes": 180,
+            "sha256": "321fc2ee14b5c0908057e4fd866c857c56038c8440cf2b8078fc74bdd7d9f445"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         }
       },
       "lmx_comparison_variants": [
@@ -172,24 +167,66 @@
       "style_relation": "distinct",
       "core_sources": {},
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "contract_revision": "2026-11-25-workflows",
+      "metrics_status": "current",
+      "lmx_parser_execution": "NOT_RUN",
+      "foreign_runtime_execution": "NOT_RUN",
+      "counts": {
+        "lmx": {
+          "characters_nonwhitespace": 122,
+          "characters_all": 180,
+          "nonblank_lines": 8,
+          "utf8_bytes": 180,
+          "sha256": "321fc2ee14b5c0908057e4fd866c857c56038c8440cf2b8078fc74bdd7d9f445"
+        },
+        "foreign": {
+          "characters_nonwhitespace": 143,
+          "characters_all": 172,
+          "nonblank_lines": 3,
+          "utf8_bytes": 172,
+          "sha256": "2c9fc7f0162c85ab582cde9b661cd4c9be44db81aa9e734a457a29fbdd20eaa7"
+        },
+        "lmx_procedural": {
+          "characters_nonwhitespace": 260,
+          "characters_all": 430,
+          "nonblank_lines": 17,
+          "utf8_bytes": 430,
+          "sha256": "3999efc4556293f5ab62026fde0de7751a540959f7f3cb8fe938363013c62d90"
+        },
+        "lmx_functional": {
+          "characters_nonwhitespace": 122,
+          "characters_all": 180,
+          "nonblank_lines": 8,
+          "utf8_bytes": 180,
+          "sha256": "321fc2ee14b5c0908057e4fd866c857c56038c8440cf2b8078fc74bdd7d9f445"
+        }
+      }
     },
     {
       "id": "S02",
-      "title": "REMOVE-IF-NOT: устойчивый отбор",
+      "title": "REMOVE-IF-NOT: допуск заявок и сводка отказов",
       "category": "Последовательности",
-      "contract": "Оставить положительные целые в исходном порядке; ноль не проходит. Вход не меняется; независимость хранения результата от входа не требуется.",
+      "contract": "Для конечного списка целых items и целого limit >= 0 оставить заявки 0 < value <= limit в исходном порядке; вернуть [accepted, total, rejectedCount]. total — сумма принятых заявок, rejectedCount включает все неподходящие позиции, в том числе повторяющиеся. Входы не меняются. Пустой список даёт [[], 0, 0]. Все значения и суммы помещаются в LMX int.",
       "inputs": [
         [
           -2,
           0,
           3,
-          1
-        ]
+          1,
+          8,
+          3
+        ],
+        3
       ],
       "expected": [
-        3,
-        1
+        [
+          3,
+          1,
+          3
+        ],
+        7,
+        3
       ],
       "test_cases": [
         {
@@ -198,482 +235,136 @@
               -2,
               0,
               3,
-              1
-            ]
+              1,
+              8,
+              3
+            ],
+            3
           ],
           "expected": [
-            3,
-            1
+            [
+              3,
+              1,
+              3
+            ],
+            7,
+            3
           ]
         },
         {
           "args": [
-            []
+            [],
+            5
           ],
-          "expected": []
+          "expected": [
+            [],
+            0,
+            0
+          ]
         },
         {
           "args": [
             [
-              -1,
-              0
-            ]
+              1,
+              2
+            ],
+            0
           ],
-          "expected": []
+          "expected": [
+            [],
+            0,
+            2
+          ]
         },
         {
           "args": [
             [
               4,
               4
-            ]
-          ],
-          "expected": [
-            4,
+            ],
             4
-          ]
-        }
-      ],
-      "foreign_entry_point": "example",
-      "foreign_dependencies": [
-        "CL:REMOVE-IF-NOT"
-      ],
-      "sources": [
-        "https://www.lispworks.com/documentation/HyperSpec/Body/f_rm_rm.htm"
-      ],
-      "foreign_extra_tests": [],
-      "input_mutation": false,
-      "core_functions": [
-        "compress"
-      ],
-      "comparison_status": "complete_pair",
-      "lmx_runtime_execution": "NOT_RUN",
-      "selected_approach": "two_equal_contract_lmx_styles",
-      "selection_reason": "Оба стиля LMX являются полными сравниваемыми вариантами. Размер не выбирает один из них; Common Lisp-код и общий договор сохранены.",
-      "source_files": {
-        "lmx": "source/lmx/S02.lm3",
-        "foreign": "source/common-lisp/S02.lisp"
-      },
-      "notes_ru": "REMOVE-IF-NOT может разделять неизменённые части списка. Контракт сравнивает значения и отсутствие записи во вход.\n\n Основной вариант выбран по меньшему полному размеру: Сравнение создаёт int-маску, compress устойчиво отбирает элементы; нет callback с внешними эффектами.",
-      "alternatives": [
-        {
-          "id": "S02_core",
-          "label": "LMX с общими ресиверами ядра",
-          "source_file": "alternatives/lmx/S02_core.lm3",
-          "core_functions": [
-            "filter"
-          ],
-          "included_in_comparison": false,
-          "reason": "Исходный полный вариант; нормы и конечные эффекты проверены. Полные текущие размеры приведены в статистике.",
-          "lmx_runtime_execution": "NOT_RUN",
-          "approach": "LMX с общими ресиверами ядра",
-          "language": "LMX",
-          "code": "Positive:\n    int: value\n    return: int\n    accepts:\n        return: value > 0\n\nExample:\n    int[]: items\n    return: @\n    run:\n        throws: copy(FxThrows\\traversal)\n        return: filter(items; Positive\\accepts)\n",
-          "counts": {
-            "characters_nonwhitespace": 149,
-            "characters_all": 219,
-            "nonblank_lines": 11,
-            "utf8_bytes": 219,
-            "sha256": "240e6764bc9ec9517318d927cd6401cb1687d2f83e3b2c295270306a457e5871"
-          }
-        }
-      ],
-      "lmx": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(compress\\throws)\n        return: (compress items (items > 0))\n",
-      "foreign": "(defun example (items)\n  (remove-if-not #'plusp items))\n",
-      "counts": {
-        "lmx": {
-          "characters_nonwhitespace": 90,
-          "characters_all": 132,
-          "nonblank_lines": 6,
-          "utf8_bytes": 132,
-          "sha256": "449a6b5757d65df6d3c88dd21fc0e786fe70b890864fb33a8d9390966e487fc7"
-        },
-        "foreign": {
-          "characters_nonwhitespace": 48,
-          "characters_all": 56,
-          "nonblank_lines": 2,
-          "utf8_bytes": 56,
-          "sha256": "3e47fa866d3a994c9e80da9805cc47b0e87c5ce10717725e41e17acf5e0d1ed1"
-        },
-        "lmx_procedural": {
-          "characters_nonwhitespace": 165,
-          "characters_all": 327,
-          "nonblank_lines": 14,
-          "utf8_bytes": 327,
-          "sha256": "501c8afc7126584b37acce84c6c6219c3e6e79932f39eb710556d6ab79dbffeb"
-        },
-        "lmx_functional": {
-          "characters_nonwhitespace": 90,
-          "characters_all": 132,
-          "nonblank_lines": 6,
-          "utf8_bytes": 132,
-          "sha256": "449a6b5757d65df6d3c88dd21fc0e786fe70b890864fb33a8d9390966e487fc7"
-        }
-      },
-      "implementation_links": {
-        "compress": [
-          "SI01"
-        ]
-      },
-      "style_note": "Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма.",
-      "lmx_variants": {
-        "procedural": {
-          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        int[]: result []\n        int: used 0\n        int: i 0\n        while: i < length(items)\n            if: items[i] > 0\n                sys\\resize(result; used + 1)\n                result[used] := items[i]\n                used += 1\n            i += 1\n        return: result\n",
-          "source_file": "source/lmx/procedural/S02.lm3",
-          "contract_id": "S02",
-          "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 165,
-            "characters_with_whitespace": 327,
-            "nonblank_lines": 14,
-            "utf8_bytes": 327,
-            "sha256": "501c8afc7126584b37acce84c6c6219c3e6e79932f39eb710556d6ab79dbffeb"
-          },
-          "core_functions": []
-        },
-        "functional": {
-          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(compress\\throws)\n        return: (compress items (items > 0))\n",
-          "source_file": "source/lmx/S02.lm3",
-          "contract_id": "S02",
-          "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 90,
-            "characters_with_whitespace": 132,
-            "nonblank_lines": 6,
-            "utf8_bytes": 132,
-            "sha256": "449a6b5757d65df6d3c88dd21fc0e786fe70b890864fb33a8d9390966e487fc7"
-          },
-          "core_functions": [
-            "compress"
-          ]
-        }
-      },
-      "lmx_comparison_variants": [
-        "procedural",
-        "functional"
-      ],
-      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
-      "style_relation": "distinct",
-      "core_sources": {
-        "compress": "../../LMX_Fn_Receivers/src/sequences.lmx"
-      },
-      "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
-    },
-    {
-      "id": "S03",
-      "title": "REDUCE: левая свёртка",
-      "category": "Последовательности",
-      "contract": "Вычесть слева направо все элементы из начального значения 20; пустой список возвращает 20.",
-      "inputs": [
-        [
-          2,
-          3,
-          4
-        ]
-      ],
-      "expected": 11,
-      "test_cases": [
-        {
-          "args": [
-            [
-              2,
-              3,
-              4
-            ]
-          ],
-          "expected": 11
-        },
-        {
-          "args": [
-            []
-          ],
-          "expected": 20
-        },
-        {
-          "args": [
-            [
-              -2,
-              0,
-              5
-            ]
-          ],
-          "expected": 17
-        }
-      ],
-      "foreign_entry_point": "example",
-      "foreign_dependencies": [
-        "CL:REDUCE"
-      ],
-      "sources": [
-        "https://www.lispworks.com/documentation/HyperSpec/Body/f_reduce.htm"
-      ],
-      "foreign_extra_tests": [],
-      "input_mutation": false,
-      "core_functions": [
-        "foldl",
-        "record"
-      ],
-      "comparison_status": "complete_pair",
-      "lmx_runtime_execution": "NOT_RUN",
-      "selected_approach": "two_equal_contract_lmx_styles",
-      "selection_reason": "Оба стиля LMX являются полными сравниваемыми вариантами. Размер не выбирает один из них; Common Lisp-код и общий договор сохранены.",
-      "source_files": {
-        "lmx": "source/lmx/S03.lm3",
-        "foreign": "source/common-lisp/S03.lisp"
-      },
-      "notes_ru": "Функциональная форма передаёт готовый стандартный ресивер `-` в foldl; локальный Subtract не нужен. Строгое вычитание слева с seed20 и пустой вход сохраняют исходный договор. Процедурная форма раскрывает тот же обход.",
-      "alternatives": [],
-      "lmx": "Example:\n    int[]: items\n    return: int\n    run:\n        throws: copy(foldl\\throws) copy(record\\throws)\n        return: \\(foldl items (20 record) `-`)\n",
-      "foreign": "(defun example (items)\n  (reduce #'- items :initial-value 20))\n",
-      "counts": {
-        "lmx": {
-          "characters_nonwhitespace": 110,
-          "characters_all": 153,
-          "nonblank_lines": 6,
-          "utf8_bytes": 153,
-          "sha256": "f119f7f5f28ef2027c8f49f322d6089eeeea8cae3a845402981acb7141f22f9d"
-        },
-        "foreign": {
-          "characters_nonwhitespace": 53,
-          "characters_all": 63,
-          "nonblank_lines": 2,
-          "utf8_bytes": 63,
-          "sha256": "406b268988cc41c5778811717f5b6349f186fccf8aeca4f72f597e9040a54d0d"
-        },
-        "lmx_procedural": {
-          "characters_nonwhitespace": 102,
-          "characters_all": 194,
-          "nonblank_lines": 10,
-          "utf8_bytes": 194,
-          "sha256": "b46c40f572528ad8db626167c495d79a3c9636305717fda1767473fea5e1474c"
-        },
-        "lmx_functional": {
-          "characters_nonwhitespace": 110,
-          "characters_all": 153,
-          "nonblank_lines": 6,
-          "utf8_bytes": 153,
-          "sha256": "f119f7f5f28ef2027c8f49f322d6089eeeea8cae3a845402981acb7141f22f9d"
-        }
-      },
-      "implementation_links": {
-        "foldl": [
-          "SI01"
-        ],
-        "record": [
-          "SI02"
-        ]
-      },
-      "style_note": "Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма.",
-      "lmx_variants": {
-        "procedural": {
-          "code": "Example:\n    int[]: items\n    return: int\n    run:\n        int: total 20\n        int: i 0\n        while: i < length(items)\n            total -= items[i]\n            i += 1\n        return: total\n",
-          "source_file": "source/lmx/procedural/S03.lm3",
-          "contract_id": "S03",
-          "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 102,
-            "characters_with_whitespace": 194,
-            "nonblank_lines": 10,
-            "utf8_bytes": 194,
-            "sha256": "b46c40f572528ad8db626167c495d79a3c9636305717fda1767473fea5e1474c"
-          },
-          "core_functions": []
-        },
-        "functional": {
-          "code": "Example:\n    int[]: items\n    return: int\n    run:\n        throws: copy(foldl\\throws) copy(record\\throws)\n        return: \\(foldl items (20 record) `-`)\n",
-          "source_file": "source/lmx/S03.lm3",
-          "contract_id": "S03",
-          "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 110,
-            "characters_with_whitespace": 153,
-            "nonblank_lines": 6,
-            "utf8_bytes": 153,
-            "sha256": "f119f7f5f28ef2027c8f49f322d6089eeeea8cae3a845402981acb7141f22f9d"
-          },
-          "core_functions": [
-            "foldl",
-            "record"
-          ]
-        }
-      },
-      "lmx_comparison_variants": [
-        "procedural",
-        "functional"
-      ],
-      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
-      "style_relation": "distinct",
-      "core_sources": {
-        "foldl": "../../LMX_Fn_Receivers/src/collections.lmx",
-        "record": "../../LMX_Fn_Receivers/src/generic_functions.lmx"
-      },
-      "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
-    },
-    {
-      "id": "S04",
-      "title": "MAPCAR по двум спискам",
-      "category": "Последовательности",
-      "contract": "Попарно умножить элементы двух списков; остановиться на конце более короткого. Порядок сохраняется, входы не меняются.",
-      "inputs": [
-        [
-          2,
-          3,
-          4
-        ],
-        [
-          5,
-          6
-        ]
-      ],
-      "expected": [
-        10,
-        18
-      ],
-      "test_cases": [
-        {
-          "args": [
-            [
-              2,
-              3,
-              4
-            ],
-            [
-              5,
-              6
-            ]
           ],
           "expected": [
-            10,
-            18
-          ]
-        },
-        {
-          "args": [
-            [],
             [
-              1
-            ]
-          ],
-          "expected": []
-        },
-        {
-          "args": [
-            [
-              1
+              4,
+              4
             ],
-            []
-          ],
-          "expected": []
-        },
-        {
-          "args": [
-            [
-              -2,
-              0
-            ],
-            [
-              3,
-              7
-            ]
-          ],
-          "expected": [
-            -6,
+            8,
             0
           ]
         }
       ],
       "foreign_entry_point": "example",
       "foreign_dependencies": [
-        "CL:MAPCAR"
+        "CL:REMOVE-IF-NOT",
+        "CL:REDUCE"
       ],
       "sources": [
-        "https://www.lispworks.com/documentation/HyperSpec/Body/f_mapc_.htm"
+        "https://www.lispworks.com/documentation/HyperSpec/Body/f_rm_rm.htm",
+        "https://www.lispworks.com/documentation/HyperSpec/Body/f_reduce.htm"
       ],
-      "foreign_extra_tests": [],
+      "foreign_extra_tests": [
+        "(let* ((args (copy-tree '((-2 0 3 1 8 3) 3))) (before (copy-tree args))) (apply #'example args) (equalp args before))"
+      ],
       "input_mutation": false,
       "core_functions": [
-        "zipWith"
+        "filter",
+        "sum"
       ],
       "comparison_status": "complete_pair",
       "lmx_runtime_execution": "NOT_RUN",
       "selected_approach": "two_equal_contract_lmx_styles",
-      "selection_reason": "Оба стиля LMX являются полными сравниваемыми вариантами. Размер не выбирает один из них; Common Lisp-код и общий договор сохранены.",
+      "selection_reason": "Оба стиля решают новый полный прикладной договор; оба измеряются целиком и остаются в сравнении.",
       "source_files": {
-        "lmx": "source/lmx/S04.lm3",
-        "foreign": "source/common-lisp/S04.lisp"
+        "lmx": "source/lmx/S02.lm3",
+        "foreign": "source/common-lisp/S02.lisp"
       },
-      "notes_ru": "Функциональная форма передаёт готовый стандартный ресивер `*` в zipWith; локальный Multiply не нужен. Обход заканчивается на более коротком входе и допускает разные длины; это не замена на поэлементное first*second.",
+      "notes_ru": "Свободный limit в Eligible\\accepts получает значение из активного вызова Example\\run по динамическому связыванию LMX. Не добавляются отдельный объект-контекст или дублирующий helper. Результат сообщает и принятые заявки, и сумму, и число отказов.",
       "alternatives": [],
-      "lmx": "Example:\n    int[]: first\n    int[]: second\n    return: @\n    run:\n        throws: copy(zipWith\\throws)\n        return: (zipWith first second `*`)\n",
-      "foreign": "(defun example (left right)\n  (mapcar #'* left right))\n",
-      "counts": {
-        "lmx": {
-          "characters_nonwhitespace": 100,
-          "characters_all": 147,
-          "nonblank_lines": 7,
-          "utf8_bytes": 147,
-          "sha256": "f20441e71f263e35aae3f2150dc1f51d686c9d4a0100c83630469135bffc9197"
-        },
-        "foreign": {
-          "characters_nonwhitespace": 45,
-          "characters_all": 55,
-          "nonblank_lines": 2,
-          "utf8_bytes": 55,
-          "sha256": "fba0a8f3394b9df7c4a1b77a878c3c3bcbbae307979f5bdd24ac09831dca283f"
-        },
-        "lmx_procedural": {
-          "characters_nonwhitespace": 174,
-          "characters_all": 294,
-          "nonblank_lines": 12,
-          "utf8_bytes": 294,
-          "sha256": "45597fd6be667db73b770c08eed4a462b1eed7a6bae74cef24e64282e2afb27e"
-        },
-        "lmx_functional": {
-          "characters_nonwhitespace": 100,
-          "characters_all": 147,
-          "nonblank_lines": 7,
-          "utf8_bytes": 147,
-          "sha256": "f20441e71f263e35aae3f2150dc1f51d686c9d4a0100c83630469135bffc9197"
-        }
-      },
+      "lmx": "Eligible:\n    int: value\n    return: int\n    accepts:\n        return: value > 0 && value <= limit\n\nExample:\n    int[]: items\n    int: limit\n    return: @\n    run:\n        throws: copy(filter\\throws) copy(sum\\throws)\n        @: accepted (filter items Eligible\\accepts)\n        return: (accepted; \\(sum accepted); length(items) - length(accepted))\n",
+      "foreign": "(defun example (items limit)\n  (let ((accepted (remove-if-not (lambda (x) (<= 1 x limit)) items)))\n    (list accepted (reduce #'+ accepted :initial-value 0)\n          (- (length items) (length accepted)))))\n",
       "implementation_links": {
-        "zipWith": [
+        "filter": [
           "SI01"
-        ]
+        ],
+        "sum": []
       },
-      "style_note": "Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма.",
+      "style_note": "Процедурный проход явно отбирает, сохраняет и суммирует. Функциональный объединяет filter и sum, сохраняя порядок и повторные подходящие заявки.",
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: first\n    int[]: second\n    return: int[]\n    run:\n        int[]: result []\n        int: i 0\n        while: i < length(first) && i < length(second)\n            sys\\resize(result; i + 1)\n            result[i] := first[i] * second[i]\n            i += 1\n        return: result\n",
-          "source_file": "source/lmx/procedural/S04.lm3",
-          "contract_id": "S04",
+          "code": "Example:\n    int[]: items\n    int: limit\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        int[]: accepted []\n        sys\\resize(accepted; length(items))\n        int: used 0\n        int: total 0\n        int: i 0\n        while: i < length(items)\n            int: value items[i]\n            if: value > 0 && value <= limit\n                accepted[used] := value\n                used += 1\n                total += value\n            i += 1\n        sys\\resize(accepted; used)\n        return: (accepted; total; length(items) - used)\n",
+          "source_file": "source/lmx/procedural/S02.lm3",
+          "contract_id": "S02",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 174,
-            "characters_with_whitespace": 294,
-            "nonblank_lines": 12,
-            "utf8_bytes": 294,
-            "sha256": "45597fd6be667db73b770c08eed4a462b1eed7a6bae74cef24e64282e2afb27e"
+            "characters": 318,
+            "characters_with_whitespace": 549,
+            "nonblank_lines": 20,
+            "utf8_bytes": 549,
+            "sha256": "0f3ccc89ca12d21384e2b1312910dd7e8925473504032d2b955bac96af2f8b69"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         },
         "functional": {
-          "code": "Example:\n    int[]: first\n    int[]: second\n    return: @\n    run:\n        throws: copy(zipWith\\throws)\n        return: (zipWith first second `*`)\n",
-          "source_file": "source/lmx/S04.lm3",
-          "contract_id": "S04",
+          "code": "Eligible:\n    int: value\n    return: int\n    accepts:\n        return: value > 0 && value <= limit\n\nExample:\n    int[]: items\n    int: limit\n    return: @\n    run:\n        throws: copy(filter\\throws) copy(sum\\throws)\n        @: accepted (filter items Eligible\\accepts)\n        return: (accepted; \\(sum accepted); length(items) - length(accepted))\n",
+          "source_file": "source/lmx/S02.lm3",
+          "contract_id": "S02",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 100,
-            "characters_with_whitespace": 147,
-            "nonblank_lines": 7,
-            "utf8_bytes": 147,
-            "sha256": "f20441e71f263e35aae3f2150dc1f51d686c9d4a0100c83630469135bffc9197"
+            "characters": 248,
+            "characters_with_whitespace": 346,
+            "nonblank_lines": 13,
+            "utf8_bytes": 346,
+            "sha256": "f37aafb58f1ade4ffd2cdb9476a17b358f8b3d682200ddef66562affe3901ff2"
           },
           "core_functions": [
-            "zipWith"
-          ]
+            "filter",
+            "sum"
+          ],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         }
       },
       "lmx_comparison_variants": [
@@ -683,10 +374,492 @@
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
       "core_sources": {
-        "zipWith": "../../LMX_Fn_Receivers/src/collections.lmx"
+        "filter": "../../LMX_Fn_Receivers/src/collections.lmx",
+        "sum": "../../LMX_Fn_Receivers/src/coreStandardNumeric.lmx"
       },
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "contract_revision": "2026-11-25-workflows",
+      "metrics_status": "current",
+      "lmx_parser_execution": "NOT_RUN",
+      "foreign_runtime_execution": "NOT_RUN",
+      "counts": {
+        "lmx": {
+          "characters_nonwhitespace": 248,
+          "characters_all": 346,
+          "nonblank_lines": 13,
+          "utf8_bytes": 346,
+          "sha256": "f37aafb58f1ade4ffd2cdb9476a17b358f8b3d682200ddef66562affe3901ff2"
+        },
+        "foreign": {
+          "characters_nonwhitespace": 165,
+          "characters_all": 207,
+          "nonblank_lines": 4,
+          "utf8_bytes": 207,
+          "sha256": "4a1e5797b0eb43cb4080f8622defdf20adc3cce35e77fdd6e639e546cf5adc10"
+        },
+        "lmx_procedural": {
+          "characters_nonwhitespace": 318,
+          "characters_all": 549,
+          "nonblank_lines": 20,
+          "utf8_bytes": 549,
+          "sha256": "0f3ccc89ca12d21384e2b1312910dd7e8925473504032d2b955bac96af2f8b69"
+        },
+        "lmx_functional": {
+          "characters_nonwhitespace": 248,
+          "characters_all": 346,
+          "nonblank_lines": 13,
+          "utf8_bytes": 346,
+          "sha256": "f37aafb58f1ade4ffd2cdb9476a17b358f8b3d682200ddef66562affe3901ff2"
+        }
+      }
+    },
+    {
+      "id": "S03",
+      "title": "REDUCE: последовательное распределение бюджета",
+      "category": "Последовательности",
+      "contract": "Даны initial >= 0 и конечный список неотрицательных целых costs. Заявки рассматриваются строго слева направо: если стоимость не больше остатка, она оплачивается и уменьшает остаток; иначе отклоняется без изменения остатка. Вернуть [remaining, acceptedCount, rejectedCount]. Нулевая заявка принимается, вход не меняется. Пустой список возвращает [initial, 0, 0]. Числа и счётчики помещаются в LMX int.",
+      "inputs": [
+        20,
+        [
+          2,
+          30,
+          3,
+          15,
+          0
+        ]
+      ],
+      "expected": [
+        0,
+        4,
+        1
+      ],
+      "test_cases": [
+        {
+          "args": [
+            20,
+            [
+              2,
+              30,
+              3,
+              15,
+              0
+            ]
+          ],
+          "expected": [
+            0,
+            4,
+            1
+          ]
+        },
+        {
+          "args": [
+            20,
+            []
+          ],
+          "expected": [
+            20,
+            0,
+            0
+          ]
+        },
+        {
+          "args": [
+            0,
+            [
+              0,
+              1,
+              0
+            ]
+          ],
+          "expected": [
+            0,
+            2,
+            1
+          ]
+        },
+        {
+          "args": [
+            5,
+            [
+              4,
+              2,
+              1
+            ]
+          ],
+          "expected": [
+            0,
+            2,
+            1
+          ]
+        },
+        {
+          "args": [
+            5,
+            [
+              2,
+              4,
+              1
+            ]
+          ],
+          "expected": [
+            2,
+            2,
+            1
+          ]
+        }
+      ],
+      "foreign_entry_point": "example",
+      "foreign_dependencies": [
+        "CL:REDUCE",
+        "CL:DESTRUCTURING-BIND"
+      ],
+      "sources": [
+        "https://www.lispworks.com/documentation/HyperSpec/Body/f_reduce.htm",
+        "https://www.lispworks.com/documentation/HyperSpec/Body/m_destru.htm"
+      ],
+      "foreign_extra_tests": [
+        "(let* ((args (copy-tree '(20 (2 30 3 15 0)))) (before (copy-tree args))) (apply #'example args) (equalp args before))"
+      ],
+      "input_mutation": false,
+      "core_functions": [
+        "foldl"
+      ],
+      "comparison_status": "complete_pair",
+      "lmx_runtime_execution": "NOT_RUN",
+      "selected_approach": "two_equal_contract_lmx_styles",
+      "selection_reason": "Оба стиля решают новый полный прикладной договор; оба измеряются целиком и остаются в сравнении.",
+      "source_files": {
+        "lmx": "source/lmx/S03.lm3",
+        "foreign": "source/common-lisp/S03.lisp"
+      },
+      "notes_ru": "Состояние свёртки — настоящая структура из остатка и двух счётчиков. Порядок заявок влияет на оплату; предварительная сумма не заменяет алгоритм. После отклонённой заявки обработка продолжается. Seed содержит три элемента и передаётся как одна структура.",
+      "alternatives": [],
+      "lmx": "Payment:\n    @: state\n    int: cost\n    return: @\n    accept:\n        int: remaining \\state[0]\n        int: accepted \\state[1]\n        int: rejected \\state[2]\n        if: cost <= remaining\n            return: (remaining - cost; accepted + 1; rejected)\n        return: (remaining; accepted; rejected + 1)\n\nExample:\n    int: initial\n    int[]: costs\n    return: @\n    run:\n        throws: copy(foldl\\throws)\n        return: (foldl costs (initial; 0; 0) Payment\\accept)\n",
+      "foreign": "(defun example (initial costs)\n  (reduce (lambda (state cost)\n            (destructuring-bind (remaining accepted rejected) state\n              (if (<= cost remaining)\n                  (list (- remaining cost) (1+ accepted) rejected)\n                  (list remaining accepted (1+ rejected)))))\n          costs :initial-value (list initial 0 0)))\n",
+      "implementation_links": {
+        "foldl": [
+          "SI01"
+        ]
+      },
+      "style_note": "Процедурный вариант изменяет три локальных значения; функциональный foldl передаёт структуру состояния между шагами и возвращает новую структуру на каждом шаге.",
+      "lmx_variants": {
+        "procedural": {
+          "code": "Example:\n    int: initial\n    int[]: costs\n    return: @\n    run:\n        int: remaining initial\n        int: accepted 0\n        int: rejected 0\n        int: i 0\n        while: i < length(costs)\n            if: costs[i] <= remaining\n                remaining -= costs[i]\n                accepted += 1\n            else:\n                rejected += 1\n            i += 1\n        return: (remaining; accepted; rejected)\n",
+          "source_file": "source/lmx/procedural/S03.lm3",
+          "contract_id": "S03",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 223,
+            "characters_with_whitespace": 416,
+            "nonblank_lines": 17,
+            "utf8_bytes": 416,
+            "sha256": "3532af5511aa5864c5fb93f11c1385434e1a7842d4506b9071e65d16ec4e5292"
+          },
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
+        },
+        "functional": {
+          "code": "Payment:\n    @: state\n    int: cost\n    return: @\n    accept:\n        int: remaining \\state[0]\n        int: accepted \\state[1]\n        int: rejected \\state[2]\n        if: cost <= remaining\n            return: (remaining - cost; accepted + 1; rejected)\n        return: (remaining; accepted; rejected + 1)\n\nExample:\n    int: initial\n    int[]: costs\n    return: @\n    run:\n        throws: copy(foldl\\throws)\n        return: (foldl costs (initial; 0; 0) Payment\\accept)\n",
+          "source_file": "source/lmx/S03.lm3",
+          "contract_id": "S03",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 314,
+            "characters_with_whitespace": 467,
+            "nonblank_lines": 18,
+            "utf8_bytes": 467,
+            "sha256": "fb32f47bfd85e6afeee1028cd1ee36f7a43686168771943b5e2863cc489d7b4b"
+          },
+          "core_functions": [
+            "foldl"
+          ],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "core_sources": {
+        "foldl": "../../LMX_Fn_Receivers/src/collections.lmx"
+      },
+      "lmx_operation": "Example\\run",
+      "lmx_operation_phase": "after_root_startup",
+      "contract_revision": "2026-11-25-workflows",
+      "metrics_status": "current",
+      "lmx_parser_execution": "NOT_RUN",
+      "foreign_runtime_execution": "NOT_RUN",
+      "counts": {
+        "lmx": {
+          "characters_nonwhitespace": 314,
+          "characters_all": 467,
+          "nonblank_lines": 18,
+          "utf8_bytes": 467,
+          "sha256": "fb32f47bfd85e6afeee1028cd1ee36f7a43686168771943b5e2863cc489d7b4b"
+        },
+        "foreign": {
+          "characters_nonwhitespace": 239,
+          "characters_all": 348,
+          "nonblank_lines": 7,
+          "utf8_bytes": 348,
+          "sha256": "4e72e435e27cb11b9b396f5b804b0147227e9516d9d2ddf419621b1967fe49a0"
+        },
+        "lmx_procedural": {
+          "characters_nonwhitespace": 223,
+          "characters_all": 416,
+          "nonblank_lines": 17,
+          "utf8_bytes": 416,
+          "sha256": "3532af5511aa5864c5fb93f11c1385434e1a7842d4506b9071e65d16ec4e5292"
+        },
+        "lmx_functional": {
+          "characters_nonwhitespace": 314,
+          "characters_all": 467,
+          "nonblank_lines": 18,
+          "utf8_bytes": 467,
+          "sha256": "fb32f47bfd85e6afeee1028cd1ee36f7a43686168771943b5e2863cc489d7b4b"
+        }
+      }
+    },
+    {
+      "id": "S04",
+      "title": "MAPCAR по двум спискам: строки счёта и непарные позиции",
+      "category": "Последовательности",
+      "contract": "Даны конечные списки неотрицательных целых quantities и prices. Сформировать суммы строк для попарных элементов до конца более короткого списка. Вернуть [lineTotals, total, extraQuantities, extraPrices], где последние поля — числа непарных элементов соответствующего входа. Входы и порядок сохраняются; все произведения и суммы помещаются в LMX int.",
+      "inputs": [
+        [
+          2,
+          3,
+          4
+        ],
+        [
+          10,
+          5
+        ]
+      ],
+      "expected": [
+        [
+          20,
+          15
+        ],
+        35,
+        1,
+        0
+      ],
+      "test_cases": [
+        {
+          "args": [
+            [
+              2,
+              3,
+              4
+            ],
+            [
+              10,
+              5
+            ]
+          ],
+          "expected": [
+            [
+              20,
+              15
+            ],
+            35,
+            1,
+            0
+          ]
+        },
+        {
+          "args": [
+            [
+              2
+            ],
+            [
+              10,
+              5,
+              7
+            ]
+          ],
+          "expected": [
+            [
+              20
+            ],
+            20,
+            0,
+            2
+          ]
+        },
+        {
+          "args": [
+            [],
+            [
+              4
+            ]
+          ],
+          "expected": [
+            [],
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "args": [
+            [],
+            []
+          ],
+          "expected": [
+            [],
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "args": [
+            [
+              0,
+              2
+            ],
+            [
+              9,
+              6
+            ]
+          ],
+          "expected": [
+            [
+              0,
+              12
+            ],
+            12,
+            0,
+            0
+          ]
+        }
+      ],
+      "foreign_entry_point": "example",
+      "foreign_dependencies": [
+        "CL:MAPCAR",
+        "CL:REDUCE"
+      ],
+      "sources": [
+        "https://www.lispworks.com/documentation/HyperSpec/Body/f_mapc_.htm",
+        "https://www.lispworks.com/documentation/HyperSpec/Body/f_reduce.htm"
+      ],
+      "foreign_extra_tests": [
+        "(let* ((args (copy-tree '((2 3 4) (10 5)))) (before (copy-tree args))) (apply #'example args) (equalp args before))"
+      ],
+      "input_mutation": false,
+      "core_functions": [
+        "zipWith",
+        "sum"
+      ],
+      "comparison_status": "complete_pair",
+      "lmx_runtime_execution": "NOT_RUN",
+      "selected_approach": "two_equal_contract_lmx_styles",
+      "selection_reason": "Оба стиля решают новый полный прикладной договор; оба измеряются целиком и остаются в сравнении.",
+      "source_files": {
+        "lmx": "source/lmx/S04.lm3",
+        "foreign": "source/common-lisp/S04.lisp"
+      },
+      "notes_ru": "Короткий список больше не приводит к незаметной потере хвоста: результат явно содержит число непарных позиций. zipWith сохраняет тот же контракт остановки, что многосписочный MAPCAR. Обобщённый sum читает записи из возвращённой последовательности.",
+      "alternatives": [],
+      "lmx": "Example:\n    int[]: quantities\n    int[]: prices\n    return: @\n    run:\n        throws: copy(zipWith\\throws) copy(sum\\throws)\n        @: totals (zipWith quantities prices `*`)\n        int: count length(totals)\n        return: (totals; \\(sum totals); length(quantities) - count; length(prices) - count)\n",
+      "foreign": "(defun example (quantities prices)\n  (let* ((totals (mapcar #'* quantities prices))\n         (count (length totals)))\n    (list totals (reduce #'+ totals :initial-value 0)\n          (- (length quantities) count) (- (length prices) count))))\n",
+      "implementation_links": {
+        "zipWith": [
+          "SI01"
+        ],
+        "sum": []
+      },
+      "style_note": "Оба стиля возвращают строки счёта и сверку длины входов; процедурный вычисляет общий итог в том же цикле, функциональный применяет zipWith и sum.",
+      "lmx_variants": {
+        "procedural": {
+          "code": "Example:\n    int[]: quantities\n    int[]: prices\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        int: count length(quantities)\n        if: length(prices) < count\n            count := length(prices)\n        int[]: totals []\n        sys\\resize(totals; count)\n        int: total 0\n        int: i 0\n        while: i < count\n            int: value quantities[i] * prices[i]\n            totals[i] := value\n            total += value\n            i += 1\n        return: (totals; total; length(quantities) - count; length(prices) - count)\n",
+          "source_file": "source/lmx/procedural/S04.lm3",
+          "contract_id": "S04",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 347,
+            "characters_with_whitespace": 553,
+            "nonblank_lines": 19,
+            "utf8_bytes": 553,
+            "sha256": "eb79ef9d47dc2792a21db9d9d7421c3997305d4ac2b588853a911b47032538eb"
+          },
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
+        },
+        "functional": {
+          "code": "Example:\n    int[]: quantities\n    int[]: prices\n    return: @\n    run:\n        throws: copy(zipWith\\throws) copy(sum\\throws)\n        @: totals (zipWith quantities prices `*`)\n        int: count length(totals)\n        return: (totals; \\(sum totals); length(quantities) - count; length(prices) - count)\n",
+          "source_file": "source/lmx/S04.lm3",
+          "contract_id": "S04",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 224,
+            "characters_with_whitespace": 302,
+            "nonblank_lines": 9,
+            "utf8_bytes": 302,
+            "sha256": "a1f2344f92ce24de108b08255c666825dc5f826dd6fdfd10510979aa8395733d"
+          },
+          "core_functions": [
+            "zipWith",
+            "sum"
+          ],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "core_sources": {
+        "zipWith": "../../LMX_Fn_Receivers/src/collections.lmx",
+        "sum": "../../LMX_Fn_Receivers/src/coreStandardNumeric.lmx"
+      },
+      "lmx_operation": "Example\\run",
+      "lmx_operation_phase": "after_root_startup",
+      "contract_revision": "2026-11-25-workflows",
+      "metrics_status": "current",
+      "lmx_parser_execution": "NOT_RUN",
+      "foreign_runtime_execution": "NOT_RUN",
+      "counts": {
+        "lmx": {
+          "characters_nonwhitespace": 224,
+          "characters_all": 302,
+          "nonblank_lines": 9,
+          "utf8_bytes": 302,
+          "sha256": "a1f2344f92ce24de108b08255c666825dc5f826dd6fdfd10510979aa8395733d"
+        },
+        "foreign": {
+          "characters_nonwhitespace": 188,
+          "characters_all": 241,
+          "nonblank_lines": 5,
+          "utf8_bytes": 241,
+          "sha256": "f069ae3e344bcc9b78767f15195c85ec510ff131a33908bf96a591724019ca5f"
+        },
+        "lmx_procedural": {
+          "characters_nonwhitespace": 347,
+          "characters_all": 553,
+          "nonblank_lines": 19,
+          "utf8_bytes": 553,
+          "sha256": "eb79ef9d47dc2792a21db9d9d7421c3997305d4ac2b588853a911b47032538eb"
+        },
+        "lmx_functional": {
+          "characters_nonwhitespace": 224,
+          "characters_all": 302,
+          "nonblank_lines": 9,
+          "utf8_bytes": 302,
+          "sha256": "a1f2344f92ce24de108b08255c666825dc5f826dd6fdfd10510979aa8395733d"
+        }
+      }
     },
     {
       "id": "S05",
@@ -840,7 +1013,9 @@
             "utf8_bytes": 364,
             "sha256": "05e012e6d557f05081a9283a1971bbe4a2006a31679124c1e10fe7575508fcf4"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         },
         "functional": {
           "code": "Probe:\n    int: calls 0\n    Test:\n        int: value\n        return: int\n        run:\n            Probe\\calls += 1\n            return: value > 0\n\nExample:\n    int[]: items\n    return: @\n    run:\n        throws: copy(any\\throws) copy(all\\throws)\n        Probe\\calls := 0\n        int: a (any items Probe\\Test\\run)\n        int: ac Probe\\calls\n        Probe\\calls := 0\n        int: b (all items Probe\\Test\\run)\n        return: (a; ac; b; Probe\\calls)\n",
@@ -857,7 +1032,9 @@
           "core_functions": [
             "any",
             "all"
-          ]
+          ],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         }
       },
       "lmx_comparison_variants": [
@@ -871,149 +1048,171 @@
         "all": "../../LMX_Fn_Receivers/src/sequences.lmx"
       },
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "metrics_status": "current"
     },
     {
       "id": "S06",
-      "title": "POSITION-IF: первый подходящий индекс",
+      "title": "POSITION-IF: полезный префикс до первой ошибки",
       "category": "Последовательности",
-      "contract": "Вернуть индекс первого отрицательного целого, начиная с нуля, либо -1 при отсутствии. Вход не меняется.",
+      "contract": "Из конечного списка целых items выделить непрерывный префикс до первого отрицательного значения. Вернуть [acceptedPrefix, total, badIndex], где badIndex — нулевой индекс первого отрицательного либо -1 при его отсутствии. Ноль допустим. Хвост после первой ошибки не включается даже при положительных значениях. Вход не меняется; суммы помещаются в LMX int.",
       "inputs": [
         [
           2,
           0,
-          -4,
-          -1
+          3,
+          -1,
+          9
         ]
       ],
-      "expected": 2,
+      "expected": [
+        [
+          2,
+          0,
+          3
+        ],
+        5,
+        3
+      ],
       "test_cases": [
         {
           "args": [
             [
               2,
               0,
-              -4,
-              -1
-            ]
-          ],
-          "expected": 2
-        },
-        {
-          "args": [
-            [
+              3,
               -1,
-              2
+              9
             ]
           ],
-          "expected": 0
+          "expected": [
+            [
+              2,
+              0,
+              3
+            ],
+            5,
+            3
+          ]
         },
         {
           "args": [
             [
-              0,
-              2
+              -2,
+              4
             ]
           ],
-          "expected": -1
+          "expected": [
+            [],
+            0,
+            0
+          ]
+        },
+        {
+          "args": [
+            [
+              1,
+              2,
+              0
+            ]
+          ],
+          "expected": [
+            [
+              1,
+              2,
+              0
+            ],
+            3,
+            -1
+          ]
         },
         {
           "args": [
             []
           ],
-          "expected": -1
+          "expected": [
+            [],
+            0,
+            -1
+          ]
         }
       ],
       "foreign_entry_point": "example",
       "foreign_dependencies": [
-        "CL:POSITION-IF"
+        "CL:POSITION-IF",
+        "CL:SUBSEQ",
+        "CL:REDUCE"
       ],
       "sources": [
-        "https://www.lispworks.com/documentation/HyperSpec/Body/f_pos_p.htm"
+        "https://www.lispworks.com/documentation/HyperSpec/Body/f_pos_p.htm",
+        "https://www.lispworks.com/documentation/HyperSpec/Body/f_subseq.htm",
+        "https://www.lispworks.com/documentation/HyperSpec/Body/f_reduce.htm"
       ],
-      "foreign_extra_tests": [],
+      "foreign_extra_tests": [
+        "(let* ((args (copy-tree '((2 0 3 -1 9)))) (before (copy-tree args))) (apply #'example args) (equalp args before))"
+      ],
       "input_mutation": false,
       "core_functions": [
-        "index"
+        "index",
+        "take",
+        "sum"
       ],
       "comparison_status": "complete_pair",
       "lmx_runtime_execution": "NOT_RUN",
       "selected_approach": "two_equal_contract_lmx_styles",
-      "selection_reason": "Оба стиля LMX являются полными сравниваемыми вариантами. Размер не выбирает один из них; Common Lisp-код и общий договор сохранены.",
+      "selection_reason": "Оба стиля решают новый полный прикладной договор; оба измеряются целиком и остаются в сравнении.",
       "source_files": {
         "lmx": "source/lmx/S06.lm3",
         "foreign": "source/common-lisp/S06.lisp"
       },
-      "notes_ru": "В Common Lisp 0 истинен; OR корректно сохраняет найденный нулевой индекс. Отсутствие NIL переводится в -1. Основной прямой проход возвращает тот же индекс или -1. В отдельной альтернативе index возвращает Maybe записи int; present проверяется до извлечения значения.",
+      "notes_ru": "LMX сохраняет различие отсутствующего результата index и найденной позиции 0. Lisp NIL нормализуется только для диагностического badIndex. Порядок остановки и возвращаемый префикс делают поиск частью обработки входного потока.",
       "alternatives": [],
-      "lmx": "Negative:\n    int: value\n    return: int\n    accepts:\n        return: value < 0\n\nExample:\n    int[]: items\n    return: int\n    run:\n        throws: copy(index\\throws)\n        @: found (index items Negative\\accepts)\n        if: found\\present = 0\n            return: -1\n        return: \\found\\value\n",
-      "foreign": "(defun example (items)\n  (or (position-if #'minusp items) -1))\n",
-      "counts": {
-        "lmx": {
-          "characters_nonwhitespace": 189,
-          "characters_all": 297,
-          "nonblank_lines": 14,
-          "utf8_bytes": 297,
-          "sha256": "2703944ec890cc46f1a3d380aeca816e9362dcf73db499e48dbe934d2b5fde2b"
-        },
-        "foreign": {
-          "characters_nonwhitespace": 53,
-          "characters_all": 63,
-          "nonblank_lines": 2,
-          "utf8_bytes": 63,
-          "sha256": "78fae921cf84ee51812a40314c623d26ea1a0cb4a2fd2f28b5e55b8fe64a3223"
-        },
-        "lmx_procedural": {
-          "characters_nonwhitespace": 94,
-          "characters_all": 194,
-          "nonblank_lines": 10,
-          "utf8_bytes": 194,
-          "sha256": "470a7b8d364ab445014f987e6ef13d1c62293769430d6f61e56182b3e55a82fb"
-        },
-        "lmx_functional": {
-          "characters_nonwhitespace": 189,
-          "characters_all": 297,
-          "nonblank_lines": 14,
-          "utf8_bytes": 297,
-          "sha256": "2703944ec890cc46f1a3d380aeca816e9362dcf73db499e48dbe934d2b5fde2b"
-        }
-      },
+      "lmx": "Negative:\n    int: value\n    return: int\n    accepts:\n        return: value < 0\n\nExample:\n    int[]: items\n    return: @\n    run:\n        throws: copy(index\\throws) copy(take\\throws) copy(sum\\throws)\n        @: found (index items Negative\\accepts)\n        int: bad -1\n        int: count length(items)\n        if: found\\present != 0\n            bad := \\found\\value\n            count := bad\n        @: accepted (take items count)\n        return: (accepted; \\(sum accepted); bad)\n",
+      "foreign": "(defun example (items)\n  (let* ((bad (position-if #'minusp items))\n         (accepted (subseq items 0 (or bad (length items)))))\n    (list accepted (reduce #'+ accepted :initial-value 0) (or bad -1))))\n",
       "implementation_links": {
         "index": [
           "SI02"
-        ]
+        ],
+        "take": [],
+        "sum": []
       },
-      "style_note": "Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма.",
+      "style_note": "Процедурная форма останавливает один цикл; функциональная находит границу через index, выделяет take и суммирует выбранную часть.",
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: items\n    return: int\n    run:\n        int: i 0\n        while: i < length(items)\n            if: items[i] < 0\n                return: i\n            i += 1\n        return: -1\n",
+          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        int[]: accepted []\n        sys\\resize(accepted; length(items))\n        int: total 0\n        int: used 0\n        int: bad -1\n        while: used < length(items)\n            if: items[used] < 0\n                bad := used\n                break\n            accepted[used] := items[used]\n            total += items[used]\n            used += 1\n        sys\\resize(accepted; used)\n        return: (accepted; total; bad)\n",
           "source_file": "source/lmx/procedural/S06.lm3",
           "contract_id": "S06",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 94,
-            "characters_with_whitespace": 194,
-            "nonblank_lines": 10,
-            "utf8_bytes": 194,
-            "sha256": "470a7b8d364ab445014f987e6ef13d1c62293769430d6f61e56182b3e55a82fb"
+            "characters": 297,
+            "characters_with_whitespace": 510,
+            "nonblank_lines": 19,
+            "utf8_bytes": 510,
+            "sha256": "6248ef1db4139b60121e07c3a1552af7a83be0e95fef6d05e1342242ab40bbff"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         },
         "functional": {
-          "code": "Negative:\n    int: value\n    return: int\n    accepts:\n        return: value < 0\n\nExample:\n    int[]: items\n    return: int\n    run:\n        throws: copy(index\\throws)\n        @: found (index items Negative\\accepts)\n        if: found\\present = 0\n            return: -1\n        return: \\found\\value\n",
+          "code": "Negative:\n    int: value\n    return: int\n    accepts:\n        return: value < 0\n\nExample:\n    int[]: items\n    return: @\n    run:\n        throws: copy(index\\throws) copy(take\\throws) copy(sum\\throws)\n        @: found (index items Negative\\accepts)\n        int: bad -1\n        int: count length(items)\n        if: found\\present != 0\n            bad := \\found\\value\n            count := bad\n        @: accepted (take items count)\n        return: (accepted; \\(sum accepted); bad)\n",
           "source_file": "source/lmx/S06.lm3",
           "contract_id": "S06",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 189,
-            "characters_with_whitespace": 297,
-            "nonblank_lines": 14,
-            "utf8_bytes": 297,
-            "sha256": "2703944ec890cc46f1a3d380aeca816e9362dcf73db499e48dbe934d2b5fde2b"
+            "characters": 313,
+            "characters_with_whitespace": 477,
+            "nonblank_lines": 18,
+            "utf8_bytes": 477,
+            "sha256": "82d610710bf16cb66540e17519b7b1fa1dd9342c4b4d1efc3500e54476c1f31f"
           },
           "core_functions": [
-            "index"
-          ]
+            "index",
+            "take",
+            "sum"
+          ],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         }
       },
       "lmx_comparison_variants": [
@@ -1023,16 +1222,52 @@
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
       "core_sources": {
-        "index": "../../LMX_Fn_Receivers/src/sequences.lmx"
+        "index": "../../LMX_Fn_Receivers/src/sequences.lmx",
+        "take": "../../LMX_Fn_Receivers/src/coreStandardFunctional.lmx",
+        "sum": "../../LMX_Fn_Receivers/src/coreStandardNumeric.lmx"
       },
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "contract_revision": "2026-11-25-workflows",
+      "metrics_status": "current",
+      "lmx_parser_execution": "NOT_RUN",
+      "foreign_runtime_execution": "NOT_RUN",
+      "counts": {
+        "lmx": {
+          "characters_nonwhitespace": 313,
+          "characters_all": 477,
+          "nonblank_lines": 18,
+          "utf8_bytes": 477,
+          "sha256": "82d610710bf16cb66540e17519b7b1fa1dd9342c4b4d1efc3500e54476c1f31f"
+        },
+        "foreign": {
+          "characters_nonwhitespace": 161,
+          "characters_all": 202,
+          "nonblank_lines": 4,
+          "utf8_bytes": 202,
+          "sha256": "ba99e35b2f7cd030898ef4c8887f4190a80f59158947a4e4c2e3398e0ad52286"
+        },
+        "lmx_procedural": {
+          "characters_nonwhitespace": 297,
+          "characters_all": 510,
+          "nonblank_lines": 19,
+          "utf8_bytes": 510,
+          "sha256": "6248ef1db4139b60121e07c3a1552af7a83be0e95fef6d05e1342242ab40bbff"
+        },
+        "lmx_functional": {
+          "characters_nonwhitespace": 313,
+          "characters_all": 477,
+          "nonblank_lines": 18,
+          "utf8_bytes": 477,
+          "sha256": "82d610710bf16cb66540e17519b7b1fa1dd9342c4b4d1efc3500e54476c1f31f"
+        }
+      }
     },
     {
       "id": "S07",
-      "title": "STABLE-SORT: ключ и устойчивость",
+      "title": "STABLE-SORT: приоритетная очередь с квотой",
       "category": "Последовательности",
-      "contract": "Стабильно отсортировать пары [целый ключ, строковая метка] по ключу. Сохранить порядок равных ключей и значения входа; пары не изменять.",
+      "contract": "Для конечного списка пар [целый priority, строковая label] и целого limit >= 0 выбрать не более limit задач с наименьшим priority. Равные приоритеты обслуживаются в исходном порядке. Вернуть [selectedRows, deferredCount]. Вход и поля пар не меняются; выбранные пары сохраняют идентичность, копируется лишь внешняя последовательность. Пустой список и нулевая квота допустимы.",
       "inputs": [
         [
           [
@@ -1051,25 +1286,25 @@
             1,
             "d"
           ]
-        ]
+        ],
+        3
       ],
       "expected": [
         [
-          1,
-          "b"
+          [
+            1,
+            "b"
+          ],
+          [
+            1,
+            "d"
+          ],
+          [
+            2,
+            "a"
+          ]
         ],
-        [
-          1,
-          "d"
-        ],
-        [
-          2,
-          "a"
-        ],
-        [
-          2,
-          "c"
-        ]
+        1
       ],
       "test_cases": [
         {
@@ -1091,32 +1326,36 @@
                 1,
                 "d"
               ]
-            ]
+            ],
+            3
           ],
           "expected": [
             [
-              1,
-              "b"
+              [
+                1,
+                "b"
+              ],
+              [
+                1,
+                "d"
+              ],
+              [
+                2,
+                "a"
+              ]
             ],
-            [
-              1,
-              "d"
-            ],
-            [
-              2,
-              "a"
-            ],
-            [
-              2,
-              "c"
-            ]
+            1
           ]
         },
         {
           "args": [
-            []
+            [],
+            2
           ],
-          "expected": []
+          "expected": [
+            [],
+            0
+          ]
         },
         {
           "args": [
@@ -1125,280 +1364,141 @@
                 3,
                 "x"
               ]
-            ]
+            ],
+            0
           ],
           "expected": [
-            [
-              3,
-              "x"
-            ]
-          ]
-        }
-      ],
-      "foreign_entry_point": "example",
-      "foreign_dependencies": [
-        "CL:STABLE-SORT",
-        "CL:COPY-LIST"
-      ],
-      "sources": [
-        "https://www.lispworks.com/documentation/HyperSpec/Body/f_sort_.htm"
-      ],
-      "foreign_extra_tests": [
-        "(let* ((x (list (list 2 \"a\") (list 1 \"b\"))) (before (copy-tree x))) (example x) (equal x before))"
-      ],
-      "input_mutation": false,
-      "core_functions": [
-        "sort"
-      ],
-      "comparison_status": "complete_pair",
-      "lmx_runtime_execution": "NOT_RUN",
-      "selected_approach": "two_equal_contract_lmx_styles",
-      "selection_reason": "Оба стиля LMX являются полными сравниваемыми вариантами. Размер не выбирает один из них; Common Lisp-код и общий договор сохранены.",
-      "source_files": {
-        "lmx": "source/lmx/S07.lm3",
-        "foreign": "source/common-lisp/S07.lisp"
-      },
-      "notes_ru": "STABLE-SORT разрешено менять переданный список. Поэтому внешняя структура предварительно копируется; поля пар разделяются и не изменяются.\n\nКаждая пара — структура [key,label] на границе сравнения; [0] выбирает запись ключа. sort сохраняет профиль внешней последовательности, вход и идентичность записей; comparator возвращает -1/0/1. Два сравнения дают int 0/1; их разность — тот же трёхзначный порядок.",
-      "alternatives": [],
-      "lmx": "Order:\n    @: first\n    @: second\n    return: int\n    compare:\n        int: a \\first[0]\n        int: b \\second[0]\n        return: (a > b) - (a < b)\n\nExample:\n    @: items\n    return: @\n    run:\n        throws: copy(sort\\throws)\n        return: (sort items Order\\compare)\n",
-      "foreign": "(defun example (items)\n  (stable-sort (copy-list items) #'< :key #'first))\n",
-      "counts": {
-        "lmx": {
-          "characters_nonwhitespace": 168,
-          "characters_all": 271,
-          "nonblank_lines": 14,
-          "utf8_bytes": 271,
-          "sha256": "ac9004f454cc6fa6c211be4ba441407b86b3cd9e7cf5d69a791b81988873b213"
-        },
-        "foreign": {
-          "characters_nonwhitespace": 64,
-          "characters_all": 75,
-          "nonblank_lines": 2,
-          "utf8_bytes": 75,
-          "sha256": "96eb3783d67283fbe0a0df27d3d50b153e646c3a17a0baba72d9776d2a5182fd"
-        },
-        "lmx_procedural": {
-          "characters_nonwhitespace": 242,
-          "characters_all": 490,
-          "nonblank_lines": 19,
-          "utf8_bytes": 490,
-          "sha256": "beca2e0efc62b0b1662db0fa37f563069a45def6b6582220604be0cd5b92c2d4"
-        },
-        "lmx_functional": {
-          "characters_nonwhitespace": 168,
-          "characters_all": 271,
-          "nonblank_lines": 14,
-          "utf8_bytes": 271,
-          "sha256": "ac9004f454cc6fa6c211be4ba441407b86b3cd9e7cf5d69a791b81988873b213"
-        }
-      },
-      "implementation_links": {
-        "sort": [
-          "SI03"
-        ]
-      },
-      "style_note": "Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма.",
-      "lmx_variants": {
-        "procedural": {
-          "code": "Example:\n    @: items\n    return: @\n    run:\n        @[]: result []\n        sys\\resize(result; length(items))\n        int: i 0\n        while: i < length(items)\n            @: current items[i]\n            int: j i\n            while: j > 0\n                @: previous result[j - 1]\n                if: \\previous[0] <= \\current[0]\n                    break\n                result[j] := previous\n                j -= 1\n            result[j] := current\n            i += 1\n        return: result\n",
-          "source_file": "source/lmx/procedural/S07.lm3",
-          "contract_id": "S07",
-          "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 242,
-            "characters_with_whitespace": 490,
-            "nonblank_lines": 19,
-            "utf8_bytes": 490,
-            "sha256": "beca2e0efc62b0b1662db0fa37f563069a45def6b6582220604be0cd5b92c2d4"
-          },
-          "core_functions": []
-        },
-        "functional": {
-          "code": "Order:\n    @: first\n    @: second\n    return: int\n    compare:\n        int: a \\first[0]\n        int: b \\second[0]\n        return: (a > b) - (a < b)\n\nExample:\n    @: items\n    return: @\n    run:\n        throws: copy(sort\\throws)\n        return: (sort items Order\\compare)\n",
-          "source_file": "source/lmx/S07.lm3",
-          "contract_id": "S07",
-          "runtime_execution": "NOT_RUN",
-          "metrics": {
-            "characters": 168,
-            "characters_with_whitespace": 271,
-            "nonblank_lines": 14,
-            "utf8_bytes": 271,
-            "sha256": "ac9004f454cc6fa6c211be4ba441407b86b3cd9e7cf5d69a791b81988873b213"
-          },
-          "core_functions": [
-            "sort"
-          ]
-        }
-      },
-      "lmx_comparison_variants": [
-        "procedural",
-        "functional"
-      ],
-      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
-      "style_relation": "distinct",
-      "core_sources": {
-        "sort": "../../LMX_Fn_Receivers/src/corePerlExamples.lmx"
-      },
-      "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
-    },
-    {
-      "id": "S08",
-      "title": "REMOVE-DUPLICATES: сохранить первые",
-      "category": "Последовательности",
-      "contract": "Убрать повторные целые, сохранив первое вхождение каждого значения и исходный порядок первых вхождений. Вход не меняется; идентичность результирующего контейнера не входит в контракт.",
-      "inputs": [
-        [
-          3,
-          1,
-          3,
-          2,
-          1
-        ]
-      ],
-      "expected": [
-        3,
-        1,
-        2
-      ],
-      "test_cases": [
-        {
-          "args": [
-            [
-              3,
-              1,
-              3,
-              2,
-              1
-            ]
-          ],
-          "expected": [
-            3,
-            1,
-            2
+            [],
+            1
           ]
         },
         {
           "args": [
-            []
-          ],
-          "expected": []
-        },
-        {
-          "args": [
             [
-              0,
-              0
-            ]
+              [
+                3,
+                "x"
+              ]
+            ],
+            9
           ],
           "expected": [
+            [
+              [
+                3,
+                "x"
+              ]
+            ],
             0
           ]
         },
         {
           "args": [
             [
-              -1,
-              2,
-              -1
-            ]
+              [
+                1,
+                "a"
+              ],
+              [
+                1,
+                "b"
+              ],
+              [
+                1,
+                "c"
+              ]
+            ],
+            2
           ],
           "expected": [
-            -1,
-            2
+            [
+              [
+                1,
+                "a"
+              ],
+              [
+                1,
+                "b"
+              ]
+            ],
+            1
           ]
         }
       ],
       "foreign_entry_point": "example",
       "foreign_dependencies": [
-        "CL:REMOVE-DUPLICATES"
+        "CL:STABLE-SORT",
+        "CL:COPY-LIST",
+        "CL:SUBSEQ",
+        "CL:MIN"
       ],
       "sources": [
-        "https://www.lispworks.com/documentation/HyperSpec/Body/f_rm_dup.htm"
+        "https://www.lispworks.com/documentation/HyperSpec/Body/f_sort_.htm",
+        "https://www.lispworks.com/documentation/HyperSpec/Body/f_subseq.htm"
       ],
-      "foreign_extra_tests": [],
+      "foreign_extra_tests": [
+        "(let* ((args (copy-tree '(((2 \"a\") (1 \"b\") (2 \"c\") (1 \"d\")) 3))) (before (copy-tree args))) (apply #'example args) (equalp args before))",
+        "(let* ((a (list 2 \"a\")) (b (list 1 \"b\")) (result (first (example (list a b) 1)))) (eq (first result) b))"
+      ],
       "input_mutation": false,
       "core_functions": [
-        "unique"
+        "sort",
+        "take"
       ],
       "comparison_status": "complete_pair",
       "lmx_runtime_execution": "NOT_RUN",
       "selected_approach": "two_equal_contract_lmx_styles",
-      "selection_reason": "Оба стиля LMX являются полными сравниваемыми вариантами. Размер не выбирает один из них; Common Lisp-код и общий договор сохранены.",
+      "selection_reason": "Оба стиля решают новый полный прикладной договор; оба измеряются целиком и остаются в сравнении.",
       "source_files": {
-        "lmx": "source/lmx/S08.lm3",
-        "foreign": "source/common-lisp/S08.lisp"
+        "lmx": "source/lmx/S07.lm3",
+        "foreign": "source/common-lisp/S07.lisp"
       },
-      "notes_ru": "(unique items) использует общий Expression и единственное стандартное определение unique с обычным равенством; локальный Equal удалён. Целочисленный домен сохраняет сопоставимость с REMOVE-DUPLICATES :FROM-END T, который оставляет первые вхождения. В общем LMX API same необязателен; профиль исходного массива и тип первого представителя сохраняются.",
+      "notes_ru": "STABLE-SORT может менять переданный список, поэтому Lisp сортирует copy-list. LMX sort сохраняет вход и идентичность записей; take задаёт квоту без изменения порядка равных ключей. Метки позволяют видеть, какие именно задачи отложены.",
       "alternatives": [],
-      "lmx": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(unique\\throws)\n        return: (unique items)\n",
-      "foreign": "(defun example (items)\n  (remove-duplicates items :from-end t :test #'=))\n",
-      "counts": {
-        "lmx": {
-          "characters_nonwhitespace": 77,
-          "characters_all": 116,
-          "nonblank_lines": 6,
-          "utf8_bytes": 116,
-          "sha256": "72b44d9890a57b6d512d6b06459dc873bc8f637b04004f8e81840a5574de2a66"
-        },
-        "foreign": {
-          "characters_nonwhitespace": 63,
-          "characters_all": 74,
-          "nonblank_lines": 2,
-          "utf8_bytes": 74,
-          "sha256": "bc60bacc2a8c586beffa0499551af44c39647657b4461a490ba1412e6ac4bae9"
-        },
-        "lmx_procedural": {
-          "characters_nonwhitespace": 202,
-          "characters_all": 388,
-          "nonblank_lines": 15,
-          "utf8_bytes": 388,
-          "sha256": "4c56b7de7e97ff16e62bd9520dae51546d37728e19f145371db7893293131550"
-        },
-        "lmx_functional": {
-          "characters_nonwhitespace": 77,
-          "characters_all": 116,
-          "nonblank_lines": 6,
-          "utf8_bytes": 116,
-          "sha256": "72b44d9890a57b6d512d6b06459dc873bc8f637b04004f8e81840a5574de2a66"
-        }
-      },
+      "lmx": "Order:\n    @: first\n    @: second\n    return: int\n    compare:\n        int: a \\first[0]\n        int: b \\second[0]\n        return: (a > b) - (a < b)\n\nExample:\n    @: items\n    int: limit\n    return: @\n    run:\n        throws: copy(sort\\throws) copy(take\\throws)\n        @: selected (take (sort items Order\\compare) limit)\n        return: (selected; length(items) - length(selected))\n",
+      "foreign": "(defun example (items limit)\n  (let* ((ordered (stable-sort (copy-list items) #'< :key #'first))\n         (selected (subseq ordered 0 (min limit (length ordered)))))\n    (list selected (- (length items) (length selected)))))\n",
       "implementation_links": {
-        "unique": [
+        "sort": [
           "SI03"
-        ]
+        ],
+        "take": []
       },
-      "style_note": "Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма.",
+      "style_note": "Процедурный вариант раскрывает стабильную сортировку вставками и ограничение длины; функциональный соединяет стабильный sort и take. Оба сохраняют ссылки на исходные пары.",
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        int[]: result []\n        int: i 0\n        while: i < length(items)\n            int: j 0\n            while: j < length(result) && result[j] != items[i]\n                j += 1\n            if: j = length(result)\n                sys\\resize(result; j + 1)\n                result[j] := items[i]\n            i += 1\n        return: result\n",
-          "source_file": "source/lmx/procedural/S08.lm3",
-          "contract_id": "S08",
+          "code": "Example:\n    @: items\n    int: limit\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        @[]: result []\n        sys\\resize(result; length(items))\n        int: i 0\n        while: i < length(items)\n            @: current items[i]\n            int: j i\n            while: j > 0\n                @: previous result[j - 1]\n                if: \\previous[0] <= \\current[0]\n                    break\n                result[j] := previous\n                j -= 1\n            result[j] := current\n            i += 1\n        int: count length(result)\n        if: limit < count\n            count := limit\n        sys\\resize(result; count)\n        return: (result; length(items) - count)\n",
+          "source_file": "source/lmx/procedural/S07.lm3",
+          "contract_id": "S07",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 202,
-            "characters_with_whitespace": 388,
-            "nonblank_lines": 15,
-            "utf8_bytes": 388,
-            "sha256": "4c56b7de7e97ff16e62bd9520dae51546d37728e19f145371db7893293131550"
+            "characters": 376,
+            "characters_with_whitespace": 691,
+            "nonblank_lines": 25,
+            "utf8_bytes": 691,
+            "sha256": "9e8b3283a3aafe1fcdd702b82ad74fe2694fc6809c9955eeb5a40de4bc8aaa7d"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         },
         "functional": {
-          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(unique\\throws)\n        return: (unique items)\n",
-          "source_file": "source/lmx/S08.lm3",
-          "contract_id": "S08",
+          "code": "Order:\n    @: first\n    @: second\n    return: int\n    compare:\n        int: a \\first[0]\n        int: b \\second[0]\n        return: (a > b) - (a < b)\n\nExample:\n    @: items\n    int: limit\n    return: @\n    run:\n        throws: copy(sort\\throws) copy(take\\throws)\n        @: selected (take (sort items Order\\compare) limit)\n        return: (selected; length(items) - length(selected))\n",
+          "source_file": "source/lmx/S07.lm3",
+          "contract_id": "S07",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 77,
-            "characters_with_whitespace": 116,
-            "nonblank_lines": 6,
-            "utf8_bytes": 116,
-            "sha256": "72b44d9890a57b6d512d6b06459dc873bc8f637b04004f8e81840a5574de2a66"
+            "characters": 256,
+            "characters_with_whitespace": 382,
+            "nonblank_lines": 16,
+            "utf8_bytes": 382,
+            "sha256": "40ac3708632e8ad88664017e6b0fd095ce422ceeac294067f4d66aac76b00b9e"
           },
           "core_functions": [
-            "unique"
-          ]
+            "sort",
+            "take"
+          ],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         }
       },
       "lmx_comparison_variants": [
@@ -1408,57 +1508,329 @@
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
       "core_sources": {
-        "unique": "../../LMX_Fn_Receivers/src/corePerlExamples.lmx"
+        "sort": "../../LMX_Fn_Receivers/src/corePerlExamples.lmx",
+        "take": "../../LMX_Fn_Receivers/src/coreStandardFunctional.lmx"
       },
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "contract_revision": "2026-11-25-workflows",
+      "metrics_status": "current",
+      "lmx_parser_execution": "NOT_RUN",
+      "foreign_runtime_execution": "NOT_RUN",
+      "counts": {
+        "lmx": {
+          "characters_nonwhitespace": 256,
+          "characters_all": 382,
+          "nonblank_lines": 16,
+          "utf8_bytes": 382,
+          "sha256": "40ac3708632e8ad88664017e6b0fd095ce422ceeac294067f4d66aac76b00b9e"
+        },
+        "foreign": {
+          "characters_nonwhitespace": 183,
+          "characters_all": 225,
+          "nonblank_lines": 4,
+          "utf8_bytes": 225,
+          "sha256": "b69fe3e95e5da1228e3b81859a8150d87bde0dcad1f35267c4734e358d9e66b2"
+        },
+        "lmx_procedural": {
+          "characters_nonwhitespace": 376,
+          "characters_all": 691,
+          "nonblank_lines": 25,
+          "utf8_bytes": 691,
+          "sha256": "9e8b3283a3aafe1fcdd702b82ad74fe2694fc6809c9955eeb5a40de4bc8aaa7d"
+        },
+        "lmx_functional": {
+          "characters_nonwhitespace": 256,
+          "characters_all": 382,
+          "nonblank_lines": 16,
+          "utf8_bytes": 382,
+          "sha256": "40ac3708632e8ad88664017e6b0fd095ce422ceeac294067f4d66aac76b00b9e"
+        }
+      }
     },
     {
-      "id": "S09",
-      "title": "REPLACE: ограниченный диапазон",
+      "id": "S08",
+      "title": "REMOVE-DUPLICATES: подготовка очереди новых работ",
       "category": "Последовательности",
-      "contract": "Заменить диапазон [start,end) в копии списка. 0 <= start <= end <= длина; длина replacement равна end-start. Размер результата неизменен; оба входных списка не меняются. Выход за эту область не сравнивается.",
+      "contract": "Даны конечные списки целых идентификаторов items и completed. Сохранить только первое появление каждого идентификатора items, затем удалить идентификаторы, встречающиеся в completed. Вернуть [pending, duplicateCount, completedCount]. duplicateCount считает отброшенные повторные позиции items; completedCount считает удалённые уникальные идентификаторы, а не их повторы в completed. Порядок первых появлений и входы сохраняются.",
       "inputs": [
         [
-          1,
-          2,
           3,
+          1,
+          3,
+          2,
+          1,
           4
         ],
-        1,
-        3,
         [
-          8,
+          2,
+          2,
           9
         ]
       ],
       "expected": [
-        1,
-        8,
-        9,
-        4
+        [
+          3,
+          1,
+          4
+        ],
+        2,
+        1
       ],
       "test_cases": [
         {
           "args": [
             [
-              1,
-              2,
               3,
+              1,
+              3,
+              2,
+              1,
               4
             ],
-            1,
-            3,
             [
-              8,
+              2,
+              2,
               9
             ]
           ],
           "expected": [
+            [
+              3,
+              1,
+              4
+            ],
+            2,
+            1
+          ]
+        },
+        {
+          "args": [
+            [],
+            [
+              1
+            ]
+          ],
+          "expected": [
+            [],
+            0,
+            0
+          ]
+        },
+        {
+          "args": [
+            [
+              5,
+              5,
+              5
+            ],
+            [
+              5
+            ]
+          ],
+          "expected": [
+            [],
+            2,
+            1
+          ]
+        },
+        {
+          "args": [
+            [
+              3,
+              2,
+              3,
+              1
+            ],
+            []
+          ],
+          "expected": [
+            [
+              3,
+              2,
+              1
+            ],
             1,
-            8,
-            9,
-            4
+            0
+          ]
+        }
+      ],
+      "foreign_entry_point": "example",
+      "foreign_dependencies": [
+        "CL:REMOVE-DUPLICATES",
+        "CL:REMOVE-IF",
+        "CL:MEMBER"
+      ],
+      "sources": [
+        "https://www.lispworks.com/documentation/HyperSpec/Body/f_rm_dup.htm",
+        "https://www.lispworks.com/documentation/HyperSpec/Body/f_rm_rm.htm",
+        "https://www.lispworks.com/documentation/HyperSpec/Body/f_mem_m.htm"
+      ],
+      "foreign_extra_tests": [
+        "(let* ((args (copy-tree '((3 1 3 2 1 4) (2 2 9)))) (before (copy-tree args))) (apply #'example args) (equalp args before))"
+      ],
+      "input_mutation": false,
+      "core_functions": [
+        "unique",
+        "difference"
+      ],
+      "comparison_status": "complete_pair",
+      "lmx_runtime_execution": "NOT_RUN",
+      "selected_approach": "two_equal_contract_lmx_styles",
+      "selection_reason": "Оба стиля решают новый полный прикладной договор; оба измеряются целиком и остаются в сравнении.",
+      "source_files": {
+        "lmx": "source/lmx/S08.lm3",
+        "foreign": "source/common-lisp/S08.lisp"
+      },
+      "notes_ru": "LMX difference уже сохраняет порядок первых появлений; unique перед ним нужен здесь ещё и для отдельного счётчика дублей. Common Lisp set-difference не используется как замена, потому что выбранный договор требует определённый порядок pending. REMOVE-DUPLICATES получает :from-end t, чтобы сохранить первые появления.",
+      "alternatives": [],
+      "lmx": "Example:\n    int[]: items\n    int[]: completed\n    return: @\n    run:\n        throws: copy(unique\\throws) copy(difference\\throws)\n        @: distinct (unique items)\n        @: pending (difference distinct completed)\n        return: (pending; length(items) - length(distinct); length(distinct) - length(pending))\n",
+      "foreign": "(defun example (items completed)\n  (let* ((distinct (remove-duplicates items :from-end t :test #'=))\n         (pending (remove-if (lambda (x) (member x completed :test #'=)) distinct)))\n    (list pending (- (length items) (length distinct))\n          (- (length distinct) (length pending)))))\n",
+      "implementation_links": {
+        "unique": [
+          "SI03"
+        ],
+        "difference": []
+      },
+      "style_note": "Процедурный код явно ведёт seen и проверяет completed. Функциональный использует обобщённые unique и difference, а не вводит новый int-only уникализатор.",
+      "lmx_variants": {
+        "procedural": {
+          "code": "Example:\n    int[]: items\n    int[]: completed\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        int[]: seen []\n        int[]: pending []\n        sys\\resize(seen; length(items))\n        sys\\resize(pending; length(items))\n        int: distinct 0\n        int: used 0\n        int: i 0\n        while: i < length(items)\n            int: value items[i]\n            int: j 0\n            while: j < distinct && seen[j] != value\n                j += 1\n            if: j = distinct\n                seen[distinct] := value\n                distinct += 1\n                j := 0\n                while: j < length(completed) && completed[j] != value\n                    j += 1\n                if: j = length(completed)\n                    pending[used] := value\n                    used += 1\n                ---\n            i += 1\n        sys\\resize(pending; used)\n        return: (pending; length(items) - distinct; distinct - used)\n",
+          "source_file": "source/lmx/procedural/S08.lm3",
+          "contract_id": "S08",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 503,
+            "characters_with_whitespace": 920,
+            "nonblank_lines": 30,
+            "utf8_bytes": 920,
+            "sha256": "18d9f182731bbeb0d745ca4c0cf94b17beb3c4ce86b4114d368950cfef684874"
+          },
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
+        },
+        "functional": {
+          "code": "Example:\n    int[]: items\n    int[]: completed\n    return: @\n    run:\n        throws: copy(unique\\throws) copy(difference\\throws)\n        @: distinct (unique items)\n        @: pending (difference distinct completed)\n        return: (pending; length(items) - length(distinct); length(distinct) - length(pending))\n",
+          "source_file": "source/lmx/S08.lm3",
+          "contract_id": "S08",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 236,
+            "characters_with_whitespace": 312,
+            "nonblank_lines": 9,
+            "utf8_bytes": 312,
+            "sha256": "f808471dbdd59df7bfacecc99f89eb9d1c7eaeb2b98a35572e06dbd0d736a173"
+          },
+          "core_functions": [
+            "unique",
+            "difference"
+          ],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
+        }
+      },
+      "lmx_comparison_variants": [
+        "procedural",
+        "functional"
+      ],
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "core_sources": {
+        "unique": "../../LMX_Fn_Receivers/src/corePerlExamples.lmx",
+        "difference": "../../LMX_Fn_Receivers/src/coreStandardFunctional.lmx"
+      },
+      "lmx_operation": "Example\\run",
+      "lmx_operation_phase": "after_root_startup",
+      "contract_revision": "2026-11-25-workflows",
+      "metrics_status": "current",
+      "lmx_parser_execution": "NOT_RUN",
+      "foreign_runtime_execution": "NOT_RUN",
+      "counts": {
+        "lmx": {
+          "characters_nonwhitespace": 236,
+          "characters_all": 312,
+          "nonblank_lines": 9,
+          "utf8_bytes": 312,
+          "sha256": "f808471dbdd59df7bfacecc99f89eb9d1c7eaeb2b98a35572e06dbd0d736a173"
+        },
+        "foreign": {
+          "characters_nonwhitespace": 234,
+          "characters_all": 293,
+          "nonblank_lines": 5,
+          "utf8_bytes": 293,
+          "sha256": "834104f44ea4047c99aeb17d8e062064f0f369db2d773def0ea6e0dac0816c3e"
+        },
+        "lmx_procedural": {
+          "characters_nonwhitespace": 503,
+          "characters_all": 920,
+          "nonblank_lines": 30,
+          "utf8_bytes": 920,
+          "sha256": "18d9f182731bbeb0d745ca4c0cf94b17beb3c4ce86b4114d368950cfef684874"
+        },
+        "lmx_functional": {
+          "characters_nonwhitespace": 236,
+          "characters_all": 312,
+          "nonblank_lines": 9,
+          "utf8_bytes": 312,
+          "sha256": "f808471dbdd59df7bfacecc99f89eb9d1c7eaeb2b98a35572e06dbd0d736a173"
+        }
+      }
+    },
+    {
+      "id": "S09",
+      "title": "REPLACE: изменение остатков и отчёт о правке",
+      "category": "Последовательности",
+      "contract": "Даны конечный список целых items, 0 <= start <= end <= length(items) и replacement длиной ровно end-start. На независимой копии заменить полуинтервал [start,end). Вернуть [updated, changedCount, deltaTotal], где changedCount считает позиции с фактически новым значением, а deltaTotal — сумма updated[i]-items[i]. Входы не меняются; пустой диапазон допустим. Все значения, разности и суммы помещаются в LMX int.",
+      "inputs": [
+        [
+          4,
+          5,
+          6,
+          7
+        ],
+        1,
+        3,
+        [
+          5,
+          9
+        ]
+      ],
+      "expected": [
+        [
+          4,
+          5,
+          9,
+          7
+        ],
+        1,
+        3
+      ],
+      "test_cases": [
+        {
+          "args": [
+            [
+              4,
+              5,
+              6,
+              7
+            ],
+            1,
+            3,
+            [
+              5,
+              9
+            ]
+          ],
+          "expected": [
+            [
+              4,
+              5,
+              9,
+              7
+            ],
+            1,
+            3
           ]
         },
         {
@@ -1472,8 +1844,12 @@
             []
           ],
           "expected": [
-            1,
-            2
+            [
+              1,
+              2
+            ],
+            0,
+            0
           ]
         },
         {
@@ -1483,118 +1859,111 @@
             0,
             []
           ],
-          "expected": []
+          "expected": [
+            [],
+            0,
+            0
+          ]
         },
         {
           "args": [
             [
-              1,
-              2
+              5,
+              8
             ],
             0,
             2,
             [
-              7,
-              8
+              1,
+              2
             ]
           ],
           "expected": [
-            7,
-            8
+            [
+              1,
+              2
+            ],
+            2,
+            -10
           ]
         }
       ],
       "foreign_entry_point": "example",
       "foreign_dependencies": [
         "CL:REPLACE",
-        "CL:COPY-LIST"
+        "CL:COPY-LIST",
+        "CL:MAPCAR",
+        "CL:COUNT",
+        "CL:REDUCE"
       ],
       "sources": [
-        "https://www.lispworks.com/documentation/HyperSpec/Body/f_replac.htm"
+        "https://www.lispworks.com/documentation/HyperSpec/Body/f_replac.htm",
+        "https://www.lispworks.com/documentation/HyperSpec/Body/f_mapc_.htm",
+        "https://www.lispworks.com/documentation/HyperSpec/Body/f_countc.htm",
+        "https://www.lispworks.com/documentation/HyperSpec/Body/f_reduce.htm"
       ],
-      "foreign_extra_tests": [],
+      "foreign_extra_tests": [
+        "(let* ((args (copy-tree '((4 5 6 7) 1 3 (5 9)))) (before (copy-tree args))) (apply #'example args) (equalp args before))"
+      ],
       "input_mutation": false,
       "core_functions": [
-        "replaceRange"
+        "replaceRange",
+        "sum"
       ],
       "comparison_status": "complete_pair",
       "lmx_runtime_execution": "NOT_RUN",
       "selected_approach": "two_equal_contract_lmx_styles",
-      "selection_reason": "Оба стиля LMX являются полными сравниваемыми вариантами. Размер не выбирает один из них; Common Lisp-код и общий договор сохранены.",
+      "selection_reason": "Оба стиля решают новый полный прикладной договор; оба измеряются целиком и остаются в сравнении.",
       "source_files": {
         "lmx": "source/lmx/S09.lm3",
         "foreign": "source/common-lisp/S09.lisp"
       },
-      "notes_ru": "CL REPLACE не меняет длину последовательности. Общий контракт здесь ограничен равной длиной удаляемого и вставляемого диапазонов; это не утверждение тождества всему LMX replaceRange.\n\nИспользуется только общая область с равной длиной замены. Полный replaceRange умеет менять размер; CL REPLACE этого не обещает. Копирование здесь необходимо для неизменности исходного массива.",
+      "notes_ru": "Одинаковая длина replacement и диапазона сохраняет прежнюю согласованную границу REPLACE/replaceRange. Изменения считаются по значениям: запись прежнего значения не увеличивает changedCount. Сравнение и вычитание равнодлинных dense Array в LMX элементные; сумма получает их результаты явно.",
       "alternatives": [],
-      "lmx": "Example:\n    int[]: items\n    int: start\n    int: end\n    int[]: replacement\n    return: @\n    run:\n        throws: copy(replaceRange\\throws)\n        int[]: result [copy(items)]\n        return: replaceRange(result; start; end; replacement)\n",
-      "foreign": "(defun example (items start end replacement)\n  (replace (copy-list items) replacement :start1 start :end1 end))\n",
-      "counts": {
-        "lmx": {
-          "characters_nonwhitespace": 170,
-          "characters_all": 240,
-          "nonblank_lines": 10,
-          "utf8_bytes": 240,
-          "sha256": "df6fce4a810bcab41609165d8887b5ea3e7f1c4d98642fd4a75c91da450eb87f"
-        },
-        "foreign": {
-          "characters_nonwhitespace": 96,
-          "characters_all": 112,
-          "nonblank_lines": 2,
-          "utf8_bytes": 112,
-          "sha256": "b3efb4851588eb0684355f6a63300fca85b7c9c71721a892a08d4bdc5ecc7970"
-        },
-        "lmx_procedural": {
-          "characters_nonwhitespace": 227,
-          "characters_all": 405,
-          "nonblank_lines": 17,
-          "utf8_bytes": 405,
-          "sha256": "67977a3bd14e1dfa744feef4078eb143d99dc2643287e7db67e2dbc8fefa1f49"
-        },
-        "lmx_functional": {
-          "characters_nonwhitespace": 170,
-          "characters_all": 240,
-          "nonblank_lines": 10,
-          "utf8_bytes": 240,
-          "sha256": "df6fce4a810bcab41609165d8887b5ea3e7f1c4d98642fd4a75c91da450eb87f"
-        }
-      },
+      "lmx": "Example:\n    int[]: items\n    int: start\n    int: end\n    int[]: replacement\n    return: @\n    run:\n        throws: copy(replaceRange\\throws) copy(sum\\throws)\n        int[]: result [copy(items)]\n        replaceRange(result; start; end; replacement)\n        return: (result; \\(sum (result != items)); \\(sum (result - items)))\n",
+      "foreign": "(defun example (items start end replacement)\n  (let ((updated (replace (copy-list items) replacement :start1 start :end1 end)))\n    (list updated (count nil (mapcar #'= updated items))\n          (reduce #'+ (mapcar #'- updated items) :initial-value 0))))\n",
       "implementation_links": {
         "replaceRange": [
           "SI04"
-        ]
+        ],
+        "sum": []
       },
-      "style_note": "Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма.",
+      "style_note": "Процедурный цикл одновременно создаёт копию и отчёт. Функциональный вариант применяет replaceRange к независимой копии и строит сводку элементными выражениями и sum.",
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: items\n    int: start\n    int: end\n    int[]: replacement\n    return: @\n    run:\n        int[]: result []\n        sys\\resize(result; length(items))\n        int: i 0\n        while: i < length(items)\n            if: i >= start && i < end\n                result[i] := replacement[i - start]\n            else:\n                result[i] := items[i]\n            i += 1\n        return: result\n",
+          "code": "Example:\n    int[]: items\n    int: start\n    int: end\n    int[]: replacement\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        int[]: result []\n        sys\\resize(result; length(items))\n        int: changed 0\n        int: delta 0\n        int: i 0\n        while: i < length(items)\n            int: value items[i]\n            if: i >= start && i < end\n                value := replacement[i - start]\n            result[i] := value\n            changed += (value != items[i])\n            delta += value - items[i]\n            i += 1\n        return: (result; changed; delta)\n",
           "source_file": "source/lmx/procedural/S09.lm3",
           "contract_id": "S09",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 227,
-            "characters_with_whitespace": 405,
-            "nonblank_lines": 17,
-            "utf8_bytes": 405,
-            "sha256": "67977a3bd14e1dfa744feef4078eb143d99dc2643287e7db67e2dbc8fefa1f49"
+            "characters": 347,
+            "characters_with_whitespace": 591,
+            "nonblank_lines": 22,
+            "utf8_bytes": 591,
+            "sha256": "576c0994ac4ea96013fd84b7ff70ffd85bceb75c08df0a77acce011fb13fbcab"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         },
         "functional": {
-          "code": "Example:\n    int[]: items\n    int: start\n    int: end\n    int[]: replacement\n    return: @\n    run:\n        throws: copy(replaceRange\\throws)\n        int[]: result [copy(items)]\n        return: replaceRange(result; start; end; replacement)\n",
+          "code": "Example:\n    int[]: items\n    int: start\n    int: end\n    int[]: replacement\n    return: @\n    run:\n        throws: copy(replaceRange\\throws) copy(sum\\throws)\n        int[]: result [copy(items)]\n        replaceRange(result; start; end; replacement)\n        return: (result; \\(sum (result != items)); \\(sum (result - items)))\n",
           "source_file": "source/lmx/S09.lm3",
           "contract_id": "S09",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 170,
-            "characters_with_whitespace": 240,
-            "nonblank_lines": 10,
-            "utf8_bytes": 240,
-            "sha256": "df6fce4a810bcab41609165d8887b5ea3e7f1c4d98642fd4a75c91da450eb87f"
+            "characters": 237,
+            "characters_with_whitespace": 325,
+            "nonblank_lines": 11,
+            "utf8_bytes": 325,
+            "sha256": "7ffbafb30a2314a80bcbc55d470dbc7b3742ac6d4b970cb18e80bc187b9f54e1"
           },
           "core_functions": [
-            "replaceRange"
-          ]
+            "replaceRange",
+            "sum"
+          ],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         }
       },
       "lmx_comparison_variants": [
@@ -1604,10 +1973,45 @@
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
       "style_relation": "distinct",
       "core_sources": {
-        "replaceRange": "../../LMX_Fn_Receivers/src/sequences_mutation.lmx"
+        "replaceRange": "../../LMX_Fn_Receivers/src/sequences_mutation.lmx",
+        "sum": "../../LMX_Fn_Receivers/src/coreStandardNumeric.lmx"
       },
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "contract_revision": "2026-11-25-workflows",
+      "metrics_status": "current",
+      "lmx_parser_execution": "NOT_RUN",
+      "foreign_runtime_execution": "NOT_RUN",
+      "counts": {
+        "lmx": {
+          "characters_nonwhitespace": 237,
+          "characters_all": 325,
+          "nonblank_lines": 11,
+          "utf8_bytes": 325,
+          "sha256": "7ffbafb30a2314a80bcbc55d470dbc7b3742ac6d4b970cb18e80bc187b9f54e1"
+        },
+        "foreign": {
+          "characters_nonwhitespace": 207,
+          "characters_all": 255,
+          "nonblank_lines": 4,
+          "utf8_bytes": 255,
+          "sha256": "914976c44a934189bb103a27ba060bd767ad609bb2e4afac513e934f650e4e6b"
+        },
+        "lmx_procedural": {
+          "characters_nonwhitespace": 347,
+          "characters_all": 591,
+          "nonblank_lines": 22,
+          "utf8_bytes": 591,
+          "sha256": "576c0994ac4ea96013fd84b7ff70ffd85bceb75c08df0a77acce011fb13fbcab"
+        },
+        "lmx_functional": {
+          "characters_nonwhitespace": 237,
+          "characters_all": 325,
+          "nonblank_lines": 11,
+          "utf8_bytes": 325,
+          "sha256": "7ffbafb30a2314a80bcbc55d470dbc7b3742ac6d4b970cb18e80bc187b9f54e1"
+        }
+      }
     },
     {
       "id": "S10",
@@ -1738,7 +2142,9 @@
             "utf8_bytes": 431,
             "sha256": "c6b1e32435e02709c9095c12c0539ff567ffd114a72d054acdad955b1f908772"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         },
         "functional": {
           "code": "Addition:\n    int: first\n    int: second\n    return: int\n    add:\n        return: first + second\n\nExample:\n    int: value\n    return: int\n    run:\n        throws: copy(partial\\throws)\n        @: add5 (partial Addition\\add (5))\n        return: add5(value)\n",
@@ -1754,7 +2160,9 @@
           },
           "core_functions": [
             "partial"
-          ]
+          ],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         }
       },
       "lmx_comparison_variants": [
@@ -1767,155 +2175,151 @@
         "partial": "../../LMX_Fn_Receivers/src/generic_functions.lmx"
       },
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "metrics_status": "current"
     },
     {
       "id": "S11",
-      "title": "APPLY: сумма аргументов из списка",
+      "title": "APPLY: обороты и итоговый баланс",
       "category": "Вызовы и окружения",
-      "contract": "Просуммировать конечный список целых; пустой список даёт 0. Размер входа ниже CALL-ARGUMENTS-LIMIT установленной реализации; сумма помещается в LMX int.",
+      "contract": "Даны начальный целый баланс opening и конечные списки неотрицательных целых charges и credits. Вернуть [chargeTotal, creditTotal, closing], где closing = opening + chargeTotal - creditTotal. Пустой список имеет сумму 0, входы не меняются. Все суммы и промежуточные значения помещаются в LMX int.",
       "inputs": [
+        100,
         [
-          1,
-          2,
-          3
+          20,
+          5
+        ],
+        [
+          10,
+          7
         ]
       ],
-      "expected": 6,
+      "expected": [
+        25,
+        17,
+        108
+      ],
       "test_cases": [
         {
           "args": [
+            100,
             [
-              1,
-              2,
-              3
+              20,
+              5
+            ],
+            [
+              10,
+              7
             ]
           ],
-          "expected": 6
+          "expected": [
+            25,
+            17,
+            108
+          ]
         },
         {
           "args": [
+            0,
+            [],
             []
           ],
-          "expected": 0
+          "expected": [
+            0,
+            0,
+            0
+          ]
         },
         {
           "args": [
+            -5,
+            [],
             [
-              -2,
-              0,
-              5
+              2
             ]
           ],
-          "expected": 3
+          "expected": [
+            0,
+            2,
+            -7
+          ]
+        },
+        {
+          "args": [
+            0,
+            [
+              2,
+              2
+            ],
+            [
+              1
+            ]
+          ],
+          "expected": [
+            4,
+            1,
+            3
+          ]
         }
       ],
       "foreign_entry_point": "example",
       "foreign_dependencies": [
-        "CL:APPLY",
-        "CL:+"
+        "CL:APPLY"
       ],
       "sources": [
         "https://www.lispworks.com/documentation/HyperSpec/Body/f_apply.htm"
       ],
-      "foreign_extra_tests": [],
+      "foreign_extra_tests": [
+        "(let* ((args (copy-tree '(100 (20 5) (10 7)))) (before (copy-tree args))) (apply #'example args) (equalp args before))"
+      ],
       "input_mutation": false,
       "core_functions": [],
       "comparison_status": "complete_pair",
       "lmx_runtime_execution": "NOT_RUN",
       "selected_approach": "two_equal_contract_lmx_styles",
-      "selection_reason": "Оба стиля LMX являются полными сравниваемыми вариантами. Размер не выбирает один из них; Common Lisp-код и общий договор сохранены.",
+      "selection_reason": "Оба стиля решают новый полный прикладной договор; оба измеряются целиком и остаются в сравнении.",
       "source_files": {
         "lmx": "source/lmx/S11.lm3",
         "foreign": "source/common-lisp/S11.lisp"
       },
-      "notes_ru": "copy(items) явно выдаёт поля в потребитель Expression; это не неявное раскрытие Array. Непустые и пустые плотные массивы требуют отдельной LMX runtime-приёмки, NOT_RUN.",
-      "alternatives": [
-        {
-          "id": "S11_core",
-          "label": "LMX с общими ресиверами ядра",
-          "source_file": "alternatives/lmx/S11_core.lm3",
-          "core_functions": [
-            "foldl",
-            "record"
-          ],
-          "included_in_comparison": false,
-          "reason": "Исходный полный вариант; нормы и конечные эффекты проверены. Полные текущие размеры приведены в статистике.",
-          "lmx_runtime_execution": "NOT_RUN",
-          "approach": "LMX с общими ресиверами ядра",
-          "language": "LMX",
-          "code": "Add:\n    int: total\n    int: value\n    return: int\n    run:\n        return: total + value\n\nExample:\n    int[]: items\n    return: int\n    run:\n        throws: copy(FxThrows\\recordcall) ReceiverIndex\n        return: \\foldl(items; (0 record); Add\\run)\n",
-          "counts": {
-            "characters_nonwhitespace": 170,
-            "characters_all": 249,
-            "nonblank_lines": 12,
-            "utf8_bytes": 249,
-            "sha256": "5f92b3f9137d1ca2a0397dad7cc0911de6f0ba06cdf2539f3561cf7fcb4fb32a"
-          }
-        }
-      ],
-      "lmx": "Example:\n    int[]: items\n    return: int\n    run:\n        return: (+ 0 copy(items))\n",
-      "foreign": "(defun example (items)\n  (apply #'+ items))\n",
-      "counts": {
-        "lmx": {
-          "characters_nonwhitespace": 55,
-          "characters_all": 85,
-          "nonblank_lines": 5,
-          "utf8_bytes": 85,
-          "sha256": "888f133d28df786bf1b1f7860965295ea3a62ad53daebe62e0b38b1bae3d1c1a"
-        },
-        "foreign": {
-          "characters_nonwhitespace": 36,
-          "characters_all": 44,
-          "nonblank_lines": 2,
-          "utf8_bytes": 44,
-          "sha256": "a3e8bc0ca123ba5a4a2bb27b8ee0d66878a2391cddc62333ec422675af45c4d9"
-        },
-        "lmx_procedural": {
-          "characters_nonwhitespace": 101,
-          "characters_all": 193,
-          "nonblank_lines": 10,
-          "utf8_bytes": 193,
-          "sha256": "aa9d5bd0164969e384bf09f9e28b004e8ac9ae9d710cd1bab2310bd28e7786c2"
-        },
-        "lmx_functional": {
-          "characters_nonwhitespace": 55,
-          "characters_all": 85,
-          "nonblank_lines": 5,
-          "utf8_bytes": 85,
-          "sha256": "888f133d28df786bf1b1f7860965295ea3a62ad53daebe62e0b38b1bae3d1c1a"
-        }
-      },
+      "notes_ru": "Две независимые последовательности превращаются в аргументы обычного +; готовые числовые итоги затем используются в балансе. Процедурный helper Total\\sum определён один раз для обоих входов. Copy открывает значения явно и не вводит неявное рекурсивное раскрытие произвольных записей.",
+      "alternatives": [],
+      "lmx": "Example:\n    int: opening\n    int[]: charges\n    int[]: credits\n    return: @\n    run:\n        int: charged (+ 0 copy(charges))\n        int: credited (+ 0 copy(credits))\n        return: (charged; credited; opening + charged - credited)\n",
+      "foreign": "(defun example (opening charges credits)\n  (let ((charged (apply #'+ charges))\n        (credited (apply #'+ credits)))\n    (list charged credited (- (+ opening charged) credited))))\n",
       "implementation_links": {},
-      "style_note": "Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма.",
+      "style_note": "Процедурный стиль использует один локальный цикл суммирования повторно. Функциональный записывает обе вариадические суммы через общий Expression, затем строит финансовую сводку без повторного вычисления сумм.",
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: items\n    return: int\n    run:\n        int: total 0\n        int: i 0\n        while: i < length(items)\n            total += items[i]\n            i += 1\n        return: total\n",
+          "code": "Total:\n    int[]: items\n    return: int\n    sum:\n        int: result 0\n        int: i 0\n        while: i < length(items)\n            result += items[i]\n            i += 1\n        return: result\n\nExample:\n    int: opening\n    int[]: charges\n    int[]: credits\n    return: @\n    run:\n        int: charged Total\\sum(charges)\n        int: credited Total\\sum(credits)\n        return: (charged; credited; opening + charged - credited)\n",
           "source_file": "source/lmx/procedural/S11.lm3",
           "contract_id": "S11",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 101,
-            "characters_with_whitespace": 193,
-            "nonblank_lines": 10,
-            "utf8_bytes": 193,
-            "sha256": "aa9d5bd0164969e384bf09f9e28b004e8ac9ae9d710cd1bab2310bd28e7786c2"
+            "characters": 268,
+            "characters_with_whitespace": 429,
+            "nonblank_lines": 19,
+            "utf8_bytes": 429,
+            "sha256": "44dbac8b11332e9d97d9183d416a63093d50e7af5e965830052ae531b5c5b14f"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         },
         "functional": {
-          "code": "Example:\n    int[]: items\n    return: int\n    run:\n        return: (+ 0 copy(items))\n",
+          "code": "Example:\n    int: opening\n    int[]: charges\n    int[]: credits\n    return: @\n    run:\n        int: charged (+ 0 copy(charges))\n        int: credited (+ 0 copy(credits))\n        return: (charged; credited; opening + charged - credited)\n",
           "source_file": "source/lmx/S11.lm3",
           "contract_id": "S11",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 55,
-            "characters_with_whitespace": 85,
-            "nonblank_lines": 5,
-            "utf8_bytes": 85,
-            "sha256": "888f133d28df786bf1b1f7860965295ea3a62ad53daebe62e0b38b1bae3d1c1a"
+            "characters": 164,
+            "characters_with_whitespace": 236,
+            "nonblank_lines": 9,
+            "utf8_bytes": 236,
+            "sha256": "9cac4b84a0c7d874a8498b77dc772bad05125ddae27c612d58693172cee1545f"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         }
       },
       "lmx_comparison_variants": [
@@ -1926,7 +2330,41 @@
       "style_relation": "distinct",
       "core_sources": {},
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "contract_revision": "2026-11-25-workflows",
+      "metrics_status": "current",
+      "lmx_parser_execution": "NOT_RUN",
+      "foreign_runtime_execution": "NOT_RUN",
+      "counts": {
+        "lmx": {
+          "characters_nonwhitespace": 164,
+          "characters_all": 236,
+          "nonblank_lines": 9,
+          "utf8_bytes": 236,
+          "sha256": "9cac4b84a0c7d874a8498b77dc772bad05125ddae27c612d58693172cee1545f"
+        },
+        "foreign": {
+          "characters_nonwhitespace": 146,
+          "characters_all": 182,
+          "nonblank_lines": 4,
+          "utf8_bytes": 182,
+          "sha256": "7419cef9adc439662301af0df262da164b0861173d3a837d45d1afecb2b64202"
+        },
+        "lmx_procedural": {
+          "characters_nonwhitespace": 268,
+          "characters_all": 429,
+          "nonblank_lines": 19,
+          "utf8_bytes": 429,
+          "sha256": "44dbac8b11332e9d97d9183d416a63093d50e7af5e965830052ae531b5c5b14f"
+        },
+        "lmx_functional": {
+          "characters_nonwhitespace": 164,
+          "characters_all": 236,
+          "nonblank_lines": 9,
+          "utf8_bytes": 236,
+          "sha256": "9cac4b84a0c7d874a8498b77dc772bad05125ddae27c612d58693172cee1545f"
+        }
+      }
     },
     {
       "id": "S12",
@@ -2042,7 +2480,9 @@
             "utf8_bytes": 251,
             "sha256": "3cf8c5f0852dd092ee8b4df30307bcfbd006ac73bb088534583c10116abbcfc8"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         },
         "functional": {
           "code": "Area:\n    int: width 1\n    int: height 1\n    return: int\n    area:\n        return: width * height\n\nExample:\n    int: width\n    int: height\n    return: @\n    run:\n        return: (Area\\area(height := height; width := width); Area\\area(width := width))\n",
@@ -2056,7 +2496,9 @@
             "utf8_bytes": 251,
             "sha256": "3cf8c5f0852dd092ee8b4df30307bcfbd006ac73bb088534583c10116abbcfc8"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         }
       },
       "lmx_comparison_variants": [
@@ -2067,7 +2509,8 @@
       "style_relation": "same_minimal_form",
       "core_sources": {},
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "metrics_status": "current"
     },
     {
       "id": "S13",
@@ -2186,7 +2629,9 @@
             "utf8_bytes": 311,
             "sha256": "643f89b899271a9e122c855d1ace13c67fd015041a0c07f2a22f97ce9bfbbf45"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         },
         "functional": {
           "code": "Reading:\n    int: scale 2\n    Eval:\n        return: int\n        read:\n            return: value * scale\n\nBound:\n    int: scale\n    return: int\n    read:\n        return: Reading\\Eval\\read()\n\nExample:\n    int: value\n    int: factor\n    return: @\n    run:\n        return: (Bound\\read(factor); Reading\\Eval\\read())\n",
@@ -2200,7 +2645,9 @@
             "utf8_bytes": 311,
             "sha256": "643f89b899271a9e122c855d1ace13c67fd015041a0c07f2a22f97ce9bfbbf45"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         }
       },
       "lmx_comparison_variants": [
@@ -2211,7 +2658,8 @@
       "style_relation": "same_minimal_form",
       "core_sources": {},
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "metrics_status": "current"
     },
     {
       "id": "S14",
@@ -2315,7 +2763,9 @@
             "utf8_bytes": 244,
             "sha256": "dc0d928d13fa4466db1ca497ffa6663c2a6364b38e801e10a4353761dd74635f"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         },
         "functional": {
           "code": "Example:\n    int: n\n    return: int\n    Factorial:\n        int: k\n        return: int\n        compute:\n            if: k = 0\n                return: 1\n            return: k * compute(k - 1)\n    ---\n    run:\n        return: Factorial\\compute(n)\n",
@@ -2329,7 +2779,9 @@
             "utf8_bytes": 244,
             "sha256": "dc0d928d13fa4466db1ca497ffa6663c2a6364b38e801e10a4353761dd74635f"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         }
       },
       "lmx_comparison_variants": [
@@ -2340,20 +2792,23 @@
       "style_relation": "same_minimal_form",
       "core_sources": {},
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "metrics_status": "current"
     },
     {
       "id": "S15",
-      "title": "Несколько возвращаемых значений",
+      "title": "MULTIPLE-VALUE-BIND: план упаковки",
       "category": "Данные и структуры",
-      "contract": "Для целого n>=0 и целого divisor>0 вернуть [quotient,remainder], где n=quotient*divisor+remainder и 0<=remainder<divisor. Числа помещаются в LMX int.",
+      "contract": "Для целых n >= 0 и capacity > 0 составить план упаковки: вернуть [fullBoxes, remainder, boxesNeeded, unusedPlaces]. fullBoxes и remainder получены целочисленным делением n на capacity; boxesNeeded добавляет одну коробку при ненулевом остатке, unusedPlaces — свободные места в последней неполной коробке, либо 0 при точном делении. При n=0 все четыре результата равны 0. Числа и промежуточные значения помещаются в LMX int.",
       "inputs": [
         17,
         5
       ],
       "expected": [
         3,
-        2
+        2,
+        4,
+        3
       ],
       "test_cases": [
         {
@@ -2363,7 +2818,9 @@
           ],
           "expected": [
             3,
-            2
+            2,
+            4,
+            3
           ]
         },
         {
@@ -2372,6 +2829,8 @@
             7
           ],
           "expected": [
+            0,
+            0,
             0,
             0
           ]
@@ -2383,6 +2842,8 @@
           ],
           "expected": [
             4,
+            0,
+            4,
             0
           ]
         },
@@ -2393,93 +2854,84 @@
           ],
           "expected": [
             0,
-            2
+            2,
+            1,
+            3
+          ]
+        },
+        {
+          "args": [
+            1,
+            1
+          ],
+          "expected": [
+            1,
+            0,
+            1,
+            0
           ]
         }
       ],
       "foreign_entry_point": "example",
       "foreign_dependencies": [
         "CL:FLOOR",
-        "CL:MULTIPLE-VALUE-LIST"
+        "CL:MULTIPLE-VALUE-BIND"
       ],
       "sources": [
-        "https://www.lispworks.com/documentation/HyperSpec/Body/f_floorc.htm"
+        "https://www.lispworks.com/documentation/HyperSpec/Body/f_floorc.htm",
+        "https://www.lispworks.com/documentation/HyperSpec/Body/m_multip.htm"
       ],
-      "foreign_extra_tests": [],
+      "foreign_extra_tests": [
+        "(let* ((args (copy-tree '(17 5))) (before (copy-tree args))) (apply #'example args) (equalp args before))"
+      ],
       "input_mutation": false,
       "core_functions": [],
       "comparison_status": "complete_pair",
       "lmx_runtime_execution": "NOT_RUN",
       "selected_approach": "two_equal_contract_lmx_styles",
-      "selection_reason": "Оба стиля LMX являются полными сравниваемыми вариантами. Размер не выбирает один из них; Common Lisp-код и общий договор сохранены.",
+      "selection_reason": "Оба стиля решают новый полный прикладной договор; оба измеряются целиком и остаются в сравнении.",
       "source_files": {
         "lmx": "source/lmx/S15.lm3",
         "foreign": "source/common-lisp/S15.lisp"
       },
-      "notes_ru": "CL FLOOR возвращает два значения по протоколу multiple values. На общей границе они явно собраны в список; LMX возвращает структуру значений. Отрицательное деление не входит в общий профиль.\n\nLMX возвращает одну структуру из двух значений; она не выдаётся за протокол нескольких независимых return values CL. Деление в числителе точное, отрицательные аргументы вне общего профиля.",
+      "notes_ru": "Lisp связывает два значения FLOOR через MULTIPLE-VALUE-BIND и использует оба при планировании. LMX получает те же составляющие обычными scalar-операциями и возвращает одну структуру результатов; это не объявляется нативным протоколом независимых multiple values. Формула unused не требует произведения boxesNeeded*capacity.",
       "alternatives": [],
-      "lmx": "Example:\n    int: n\n    int: divisor\n    return: @\n    run:\n        int: remainder n % divisor\n        return: ((n - remainder) / divisor; remainder)\n",
-      "foreign": "(defun example (n divisor)\n  (multiple-value-list (floor n divisor)))\n",
-      "counts": {
-        "lmx": {
-          "characters_nonwhitespace": 98,
-          "characters_all": 150,
-          "nonblank_lines": 7,
-          "utf8_bytes": 150,
-          "sha256": "651493e79f3f867a29ef2bcb59a72b3af8d584ee3e58cd88df71ef271f6ab18a"
-        },
-        "foreign": {
-          "characters_nonwhitespace": 60,
-          "characters_all": 70,
-          "nonblank_lines": 2,
-          "utf8_bytes": 70,
-          "sha256": "1d210c08932e153cfd8bb1b1fdcaebd096a8c8156648f03d07d451ef5e35ca5e"
-        },
-        "lmx_procedural": {
-          "characters_nonwhitespace": 98,
-          "characters_all": 150,
-          "nonblank_lines": 7,
-          "utf8_bytes": 150,
-          "sha256": "651493e79f3f867a29ef2bcb59a72b3af8d584ee3e58cd88df71ef271f6ab18a"
-        },
-        "lmx_functional": {
-          "characters_nonwhitespace": 98,
-          "characters_all": 150,
-          "nonblank_lines": 7,
-          "utf8_bytes": 150,
-          "sha256": "651493e79f3f867a29ef2bcb59a72b3af8d584ee3e58cd88df71ef271f6ab18a"
-        }
-      },
+      "lmx": "Example:\n    int: n\n    int: capacity\n    return: @\n    run:\n        int: remainder n % capacity\n        int: full (n - remainder) / capacity\n        return: (full; remainder; full + (remainder != 0); (capacity - remainder) % capacity)\n",
+      "foreign": "(defun example (n capacity)\n  (multiple-value-bind (full remainder) (floor n capacity)\n    (list full remainder (+ full (if (zerop remainder) 0 1))\n          (if (zerop remainder) 0 (- capacity remainder)))))\n",
       "implementation_links": {},
-      "style_note": "Скалярные remainder/division и обычная Structure результата уже составляют минимальное выражение. Оба стиля сохраняют вычисление целого quotient на заявленном int-домене без подмены его bigint-профилем.",
+      "style_note": "Процедурная форма явно добавляет неполную коробку ветвлением. Функциональная выражает дополнительную коробку и свободные места скалярными выражениями. Обе формы теперь различаются и решают завершённую прикладную задачу.",
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int: n\n    int: divisor\n    return: @\n    run:\n        int: remainder n % divisor\n        return: ((n - remainder) / divisor; remainder)\n",
-          "source_file": "source/lmx/S15.lm3",
+          "code": "Example:\n    int: n\n    int: capacity\n    return: @\n    run:\n        int: remainder n % capacity\n        int: full (n - remainder) / capacity\n        int: boxes full\n        int: unused 0\n        if: remainder != 0\n            boxes += 1\n            unused := capacity - remainder\n        return: (full; remainder; boxes; unused)\n",
+          "source_file": "source/lmx/procedural/S15.lm3",
           "contract_id": "S15",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 98,
-            "characters_with_whitespace": 150,
-            "nonblank_lines": 7,
-            "utf8_bytes": 150,
-            "sha256": "651493e79f3f867a29ef2bcb59a72b3af8d584ee3e58cd88df71ef271f6ab18a"
+            "characters": 199,
+            "characters_with_whitespace": 330,
+            "nonblank_lines": 13,
+            "utf8_bytes": 330,
+            "sha256": "32319624b0430c41b9ad08b1eb0d6d1c990738e88b6c990c91930a026668f1fd"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         },
         "functional": {
-          "code": "Example:\n    int: n\n    int: divisor\n    return: @\n    run:\n        int: remainder n % divisor\n        return: ((n - remainder) / divisor; remainder)\n",
+          "code": "Example:\n    int: n\n    int: capacity\n    return: @\n    run:\n        int: remainder n % capacity\n        int: full (n - remainder) / capacity\n        return: (full; remainder; full + (remainder != 0); (capacity - remainder) % capacity)\n",
           "source_file": "source/lmx/S15.lm3",
           "contract_id": "S15",
           "runtime_execution": "NOT_RUN",
           "metrics": {
-            "characters": 98,
-            "characters_with_whitespace": 150,
-            "nonblank_lines": 7,
-            "utf8_bytes": 150,
-            "sha256": "651493e79f3f867a29ef2bcb59a72b3af8d584ee3e58cd88df71ef271f6ab18a"
+            "characters": 163,
+            "characters_with_whitespace": 236,
+            "nonblank_lines": 8,
+            "utf8_bytes": 236,
+            "sha256": "5dff03c5970a73ecf34af1b836b97d42791224c115007130b3cb82d623729ff9"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         }
       },
       "lmx_comparison_variants": [
@@ -2487,10 +2939,44 @@
         "functional"
       ],
       "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
-      "style_relation": "same_minimal_form",
+      "style_relation": "distinct",
       "core_sources": {},
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "contract_revision": "2026-11-25-workflows",
+      "metrics_status": "current",
+      "lmx_parser_execution": "NOT_RUN",
+      "foreign_runtime_execution": "NOT_RUN",
+      "counts": {
+        "lmx": {
+          "characters_nonwhitespace": 163,
+          "characters_all": 236,
+          "nonblank_lines": 8,
+          "utf8_bytes": 236,
+          "sha256": "5dff03c5970a73ecf34af1b836b97d42791224c115007130b3cb82d623729ff9"
+        },
+        "foreign": {
+          "characters_nonwhitespace": 166,
+          "characters_all": 209,
+          "nonblank_lines": 4,
+          "utf8_bytes": 209,
+          "sha256": "9abbecddff806ac532f4a9532eafa17a54d885c185cf26735f84a13bb1397405"
+        },
+        "lmx_procedural": {
+          "characters_nonwhitespace": 199,
+          "characters_all": 330,
+          "nonblank_lines": 13,
+          "utf8_bytes": 330,
+          "sha256": "32319624b0430c41b9ad08b1eb0d6d1c990738e88b6c990c91930a026668f1fd"
+        },
+        "lmx_functional": {
+          "characters_nonwhitespace": 163,
+          "characters_all": 236,
+          "nonblank_lines": 8,
+          "utf8_bytes": 236,
+          "sha256": "5dff03c5970a73ecf34af1b836b97d42791224c115007130b3cb82d623729ff9"
+        }
+      }
     },
     {
       "id": "S16",
@@ -2612,7 +3098,9 @@
             "utf8_bytes": 118,
             "sha256": "083d4027b41a65d400583964581ba82125621a8f4abc84959ad8a131123faa58"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         },
         "functional": {
           "code": "Example:\n    @: tree\n    return: int\n    run:\n        @: tail \\tree[1]\n        return: \\tree[0] + \\tail[0] * \\tail[1]\n",
@@ -2626,7 +3114,9 @@
             "utf8_bytes": 118,
             "sha256": "083d4027b41a65d400583964581ba82125621a8f4abc84959ad8a131123faa58"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         }
       },
       "lmx_comparison_variants": [
@@ -2637,7 +3127,8 @@
       "style_relation": "same_minimal_form",
       "core_sources": {},
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "metrics_status": "current"
     },
     {
       "id": "S17",
@@ -2756,7 +3247,9 @@
             "utf8_bytes": 265,
             "sha256": "11d85fcbce4dc0f3deecf71b4a8ad715060ce72df8c8d68009d77ce35c140066"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         },
         "functional": {
           "code": "Example:\n    int[]: items\n    return: int\n    run:\n        throws: copy(compress\\throws)\n        int[]: odd compress(items; items % 2 != 0)\n        return: (+ 0 copy(odd * odd))\n",
@@ -2772,7 +3265,9 @@
           },
           "core_functions": [
             "compress"
-          ]
+          ],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         }
       },
       "lmx_comparison_variants": [
@@ -2785,7 +3280,8 @@
         "compress": "../../LMX_Fn_Receivers/src/sequences.lmx"
       },
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "metrics_status": "current"
     },
     {
       "id": "S18",
@@ -2907,7 +3403,9 @@
             "utf8_bytes": 560,
             "sha256": "776d613feb5b5ef1a11cad03f79dbb4473025894dd921fb02e42410575a7e5ef"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         },
         "functional": {
           "code": "Rectangle:\n    int: width 0\n    int: height 0\n    return: int\n    area:\n        return: width * height\n\nSquare:\n    int: side 0\n    return: int\n    area:\n        return: side * side\n\nExample:\n    int: width\n    int: height\n    int: side\n    return: @\n    run:\n        @: rectangle (copy(Rectangle))\n        rectangle := parent(rectangle\\area)\n        @: square (copy(Square))\n        square := parent(square\\area)\n        rectangle\\width := width\n        rectangle\\height := height\n        square\\side := side\n        return: (rectangle\\area(); square\\area())\n",
@@ -2921,7 +3419,9 @@
             "utf8_bytes": 560,
             "sha256": "776d613feb5b5ef1a11cad03f79dbb4473025894dd921fb02e42410575a7e5ef"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         }
       },
       "lmx_comparison_variants": [
@@ -2932,7 +3432,8 @@
       "style_relation": "same_minimal_form",
       "core_sources": {},
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "metrics_status": "current"
     },
     {
       "id": "S19",
@@ -3056,7 +3557,9 @@
             "utf8_bytes": 442,
             "sha256": "23ebb35d3663d61d50561f673384e97596cc8d5bb195451278aac0e5ae4cd79a"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         },
         "functional": {
           "code": "Rectangle:\n    int: width 0\n    int: height 0\n    return: int\n    area:\n        return: width * height\n\nExample:\n    int: width\n    int: height\n    int: newWidth\n    return: @\n    run:\n        @: rectangle (copy(Rectangle))\n        rectangle := parent(rectangle\\area)\n        rectangle\\width := width\n        rectangle\\height := height\n        rectangle\\width := newWidth\n        return: (rectangle\\width; rectangle\\height; rectangle\\area())\n",
@@ -3070,7 +3573,9 @@
             "utf8_bytes": 442,
             "sha256": "23ebb35d3663d61d50561f673384e97596cc8d5bb195451278aac0e5ae4cd79a"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         }
       },
       "lmx_comparison_variants": [
@@ -3081,7 +3586,8 @@
       "style_relation": "same_minimal_form",
       "core_sources": {},
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "metrics_status": "current"
     },
     {
       "id": "S20",
@@ -3192,7 +3698,9 @@
             "utf8_bytes": 226,
             "sha256": "024cd2d037a594809d887644574eddaeb6ffca5493dd4cd3e7be6c3166e56ca9"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         },
         "functional": {
           "code": "Producer:\n    return: int\n    produce:\n        calls += 1\n        return: value\n\nExample:\n    int: value\n    return: @\n    run:\n        int: calls 0\n        return: (Producer\\produce() * 2; calls)\n",
@@ -3206,7 +3714,9 @@
             "utf8_bytes": 197,
             "sha256": "e1f3581d344fb0d5140a795bca44145ecf7399db20762516485e04343f8501c8"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         }
       },
       "lmx_comparison_variants": [
@@ -3217,7 +3727,8 @@
       "style_relation": "distinct",
       "core_sources": {},
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "metrics_status": "current"
     },
     {
       "id": "S21",
@@ -3324,7 +3835,9 @@
             "utf8_bytes": 307,
             "sha256": "5c1ee938c906f2fbc17bd9633bf4e99a528884305565b759d29ae388af5becdd"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         },
         "functional": {
           "code": "Checked:\n    int: value\n    return: int\n    checked:\n        throws: InputFailure\n        if: value < 0\n            throw: InputFailure()\n        return: value * 2\n\nResultValue:\n    int: value\n    return: int\n    use:\n        return: value\n\nFailureValue:\n    @: reason\n    return: int\n    use:\n        return: 99\n\nExample:\n    int: value\n    return: int\n    run:\n        throws: copy(attempt\\throws) copy(foldResult\\throws)\n        return: \\(foldResult (attempt Checked\\checked (value)) FailureValue\\use ResultValue\\use)\n",
@@ -3341,7 +3854,9 @@
           "core_functions": [
             "attempt",
             "foldResult"
-          ]
+          ],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         }
       },
       "lmx_comparison_variants": [
@@ -3355,7 +3870,8 @@
         "foldResult": "../../LMX_Fn_Receivers/src/coreStandardObjects.lmx"
       },
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "metrics_status": "current"
     },
     {
       "id": "S22",
@@ -3490,7 +4006,9 @@
             "utf8_bytes": 761,
             "sha256": "632a756caa6400467c6ec8fbc4a401fe3d6351dd21d3ba696f53cb27ddcdba4d"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         },
         "functional": {
           "code": "Resource:\n    int: value 42\n    int: width 8\n\nEvent:\n    int: phase\n    int: failed\n    int: events 0\n    int: failure 0\n    run:\n        throws: ResourceFailure\n        node\\events := node\\events * 10 + phase\n        if: failed\n            node\\failure := phase\n            throw: ResourceFailure(phase)\n\nAcquire:\n    return: @\n    open:\n        throws: copy(Event\\run\\throws)\n        Event\\run(1; mode = 2)\n        return: Resource\n\nAction:\n    @: resource\n    return: int\n    use:\n        throws: copy(Event\\run\\throws)\n        Event\\run(2; mode = 1 || mode = 4)\n        return: resource\\value + resource\\width\n\nRelease:\n    @: resource\n    close:\n        throws: copy(Event\\run\\throws)\n        Event\\run(3; mode = 3 || mode = 4)\n\nExample:\n    int: mode\n    return: @\n    run:\n        throws: copy(bracket\\throws)\n        Event\\events := 0\n        int: result \\(bracket Acquire\\open Release\\close Action\\use)\n        return: (result; Event\\events)\n        catch: FxCallFailure (@: outcome)\n            return: (-Event\\failure; Event\\events)\n",
@@ -3506,7 +4024,9 @@
           },
           "core_functions": [
             "bracket"
-          ]
+          ],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         }
       },
       "lmx_comparison_variants": [
@@ -3519,7 +4039,8 @@
         "bracket": "../../LMX_Fn_Receivers/src/generic_wrappers.lmx"
       },
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "metrics_status": "current"
     },
     {
       "id": "S23",
@@ -3673,7 +4194,9 @@
             "utf8_bytes": 657,
             "sha256": "1c9f6e49a92f48c8ff101540c40e9a12aa51bcac33395e63e8dd1552c857a3ae"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         },
         "functional": {
           "code": "State:\n    int: calls 0\n\nSquare:\n    int: value\n    return: int\n    run:\n        State\\calls += 1\n        return: value * value\n\nExample:\n    int[]: items\n    return: @\n    run:\n        throws: copy(memoize\\throws) copy(map\\throws)\n        State\\calls := 0\n        @: result (map items (memoize Square\\run))\n        return: (result; State\\calls)\n",
@@ -3690,7 +4213,9 @@
           "core_functions": [
             "memoize",
             "map"
-          ]
+          ],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         }
       },
       "lmx_comparison_variants": [
@@ -3704,7 +4229,8 @@
         "map": "../../LMX_Fn_Receivers/src/collections.lmx"
       },
       "lmx_operation": "Example\\run",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "metrics_status": "current"
     },
     {
       "id": "S24",
@@ -3832,7 +4358,9 @@
             "utf8_bytes": 828,
             "sha256": "0f976a09059894682b13ab1a8dba0d0062e72fa43c6ff92957db253e1b37a6d7"
           },
-          "core_functions": []
+          "core_functions": [],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         },
         "functional": {
           "code": "ProducerMessage:\n    int[]: items\n    @: worker\n    @: collector\n    Send:\n        int: state\n        int: value\n        return: int\n        send:\n            post:\n                ask:\n                    worker\\Add\\add(value := value)\n            ---\n            return: state\n    ---\n    start:\n        throws: copy(foldl\\throws) copy(record\\throws)\n        (foldl items (0 record) Send\\send)\n        post:\n            ask:\n                worker\\Finish\\finish()\n            answer:\n                collector\\accept\n\nWorkerMessage:\n    int: total 0\n    Add:\n        int: value\n        add:\n            @: owner parent(node)\n            owner\\total += value\n    ---\n    Finish:\n        return: int\n        finish:\n            @: owner parent(node)\n            success := 1\n            return: owner\\total\n\nCollectorMessage:\n    int: value\n    int: result 0\n    int: completed 0\n    accept:\n        node\\result := value\n        node\\completed := 1\n        success := 1\n",
@@ -3849,7 +4377,9 @@
           "core_functions": [
             "foldl",
             "record"
-          ]
+          ],
+          "metrics_status": "current",
+          "parser_execution": "NOT_RUN"
         }
       },
       "lmx_comparison_variants": [
@@ -3863,7 +4393,8 @@
         "record": "../../LMX_Fn_Receivers/src/generic_functions.lmx"
       },
       "lmx_operation": "ProducerMessage\\start (на подготовленных host экземплярах)",
-      "lmx_operation_phase": "after_root_startup"
+      "lmx_operation_phase": "after_root_startup",
+      "metrics_status": "current"
     }
   ],
   "lmx_execution_contract": {
@@ -3878,5 +4409,18 @@
     "argument_fixture": "A parent stub may have its own arguments and send a message to the root; this does not give DATA or user arguments to the root.",
     "source_dependencies": "Required source definitions and load_before dependencies belong to the fixture. They do not introduce a DATA-load startup or a named alternative entry."
   },
-  "lmx_runner_contract": "Always start the root as an L3 Thread without DATA or user arguments. Local declarations and calls use the ordinary common language mechanism. An invoke path or named case operation is performed by the root or an ordinary handler after startup; Main and Example\\run are not alternative program entries. A parent stub with its own arguments may send a message to the root. load_before lists required fixture definitions; import exposes existing names, not a new file loader. These records specify acceptance observations and do not claim an executed LMX runner."
+  "lmx_runner_contract": "Always start the root as an L3 Thread without DATA or user arguments. Local declarations and calls use the ordinary common language mechanism. An invoke path or named case operation is performed by the root or an ordinary handler after startup; Main and Example\\run are not alternative program entries. A parent stub with its own arguments may send a message to the root. load_before lists required fixture definitions; import exposes existing names, not a new file loader. These records specify acceptance observations and do not claim an executed LMX runner.",
+  "metrics_status": "current",
+  "workflow_expansion_ids": [
+    "S01",
+    "S02",
+    "S03",
+    "S04",
+    "S06",
+    "S07",
+    "S08",
+    "S09",
+    "S11",
+    "S15"
+  ]
 }

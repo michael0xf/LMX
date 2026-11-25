@@ -1,7 +1,9 @@
 Example:
     @: items
+    int: limit
     return: @
     run:
+        throws: copy(sys\resize\throws)
         @[]: result []
         sys\resize(result; length(items))
         int: i 0
@@ -16,4 +18,8 @@ Example:
                 j -= 1
             result[j] := current
             i += 1
-        return: result
+        int: count length(result)
+        if: limit < count
+            count := limit
+        sys\resize(result; count)
+        return: (result; length(items) - count)

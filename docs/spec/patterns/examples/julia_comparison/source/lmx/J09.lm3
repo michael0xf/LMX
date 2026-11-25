@@ -1,7 +1,17 @@
+Shortage:
+    int: required
+    int: available
+    return: int
+    value:
+        int: gap required - available
+        if: gap > 0
+            return: gap
+        return: 0
+
 Example:
-    @: left
-    @: right
-    return: @
+    int[]: left
+    int[]: right
+    return: int
     run:
-        throws: copy(zip\throws)
-        return: zip(left; right)
+        throws: copy(zipWith\throws) copy(sum\throws)
+        return: \sum(zipWith(left; right; Shortage\value))

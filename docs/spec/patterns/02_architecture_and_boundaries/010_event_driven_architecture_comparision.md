@@ -86,7 +86,7 @@ sendEvent(destination:Message-ref,quantity:int)→без результата �
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 215 | 13 |
+| LMX | <span style="color:#176233"><u>215</u></span> | 13 |
 | Java | 263 | 11 |
 | Go | 241 | 8 |
 

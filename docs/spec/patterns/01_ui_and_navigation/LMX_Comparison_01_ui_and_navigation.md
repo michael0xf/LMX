@@ -8,13 +8,13 @@
 
 | ID | Сценарий | LMX | TypeScript | C# | Слой |
 | --- | --- | --- | --- | --- | --- |
-| 001 | MVC (Model-View-Controller) | 208 | 302 | 422 | Сценарий |
-| 002 | MVP (Model-View-Presenter) | 252 | 390 | 478 | Сценарий |
-| 003 | MVVM (Model-View-ViewModel) | 207 | 268 | 463 | Сценарий |
-| 004 | Flux / Redux | 273 | 402 | 366 | Сценарий |
-| 035 | Front Controller | 120 | 147 | 153 | Сценарий |
-| 036 | Page Controller | 99 | 128 | 160 | Сценарий |
-| 037 | Application Controller | 148 | 165 | 177 | Сценарий |
+| 001 | MVC (Model-View-Controller) | <span style="color:#176233"><u>208</u></span> | 302 | 422 | Сценарий |
+| 002 | MVP (Model-View-Presenter) | <span style="color:#176233"><u>252</u></span> | 390 | 478 | Сценарий |
+| 003 | MVVM (Model-View-ViewModel) | <span style="color:#176233"><u>207</u></span> | 268 | 463 | Сценарий |
+| 004 | Flux / Redux | <span style="color:#176233"><u>273</u></span> | 402 | 366 | Сценарий |
+| 035 | Front Controller | <span style="color:#176233"><u>120</u></span> | 147 | 153 | Сценарий |
+| 036 | Page Controller | <span style="color:#176233"><u>99</u></span> | 128 | 160 | Сценарий |
+| 037 | Application Controller | <span style="color:#176233"><u>148</u></span> | 165 | 177 | Сценарий |
 
 TypeScript показывает типичный браузерный стиль с функциями и объектами; C# — явные контракты и стандартные уведомления .NET. Оба языка допускают UI без привязки сравнения к конкретному toolkit.
 

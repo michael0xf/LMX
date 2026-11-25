@@ -13,7 +13,7 @@ from lmx_style_variants import get_variants, validate_variants
 from lmx_execution_contract import apply_execution_contract, acceptance_document
 from lmx_style_suite_reports import prepare as prepare_style, rows_for, client_markdown, count_table, write_overview, write_csv, block
 from canonical_operations import definitions, public_roots as catalog_roots, selected_operations
-EDITION = '2026-11-23'
+EDITION = '2026-11-24'
 COMPONENTS = [
  ('JI01','Упорядоченные обходы, предикаты и свёртки','JI01_ordered.jl',
   ['map','filter','foldl','scanl','zip','zipWith','bind','any','all','index','count','record'],
@@ -106,6 +106,10 @@ def main():
     data['core_additions']=[]
     data['shared_existing_additions']=['sort','unique']
     for case in data['examples']:
+        case_aliases = public_roots(available, case.get('core_families'))
+        selected_roots = {case_aliases[name] for name in case['core_functions'] if name in case_aliases}
+        needed_public, _ = closure(selected_roots, available)
+        all_defs.update(needed_public)
         for _, variant in get_variants(case):
             needed, _ = closure(refs(variant['code'], available), available)
             all_defs.update(needed)
@@ -139,7 +143,8 @@ def main():
         assert not re.search(r'Julia(?:Ordered|Array|Mutation|OrderGroup)Reference|include\(|library_comparisons',e['foreign'])
         links='\n'.join(f'- `{name}`: [полная пара реализации]({link})' for name,link in e['implementation_links'].items())
         (R/(e['id']+'_comparision.md')).write_text(client_markdown(e,'Julia',links,'notes_ru',
-            'LMX и Julia: **NOT_RUN** в этой сборке. Проверяются обе LMX-формы как текст и общий независимый oracle; это не языковое исполнение.'))
+            ('Изменённые LMX-исходники: parser/P0 **NOT_RUN**; прежний receipt не переносится на новый хэш. ' if e.get('lmx_parser_execution')=='NOT_RUN' else '') +
+            'LMX и Julia runtime: **NOT_RUN** в этой сборке. Проверяются обе LMX-формы как текст и общий независимый oracle; это не языковое исполнение. Численные размеры пересчитаны по текущим полным исходникам.'))
     for item in implementations:
         for language,key in [('LMX','lmx'),('Julia','foreign')]:
             rows.append({'id':item['id'],'role':'implementation','language':language,'title':item['title'],**metrics(item[key])})
@@ -164,6 +169,11 @@ def main():
             totals[role][lang]={k:sum(r[k] for r in selected) for k in ('characters_with_whitespace','characters_without_whitespace','nonblank_lines','utf8_bytes')}
     style_totals=write_overview(R,data,'Julia',
         '[Единые библиотечные реализации](library_comparisons/README.md) JI01–JI04 и [общие зависимости](validation/implementation_dependencies.json) учитываются отдельно.')
+    if data.get('scenario_revision'):
+        overview=(R/'README.md').read_text()
+        paragraph='В 19 клиентах простые вызовы библиотечных функций заменены завершёнными сценариями обработки данных: журнал событий, баланс и дефицит, калибровка, проверка заказа, ограниченная очередь и выбор пар по бюджету. J01/J02/J04/J15/J18 сохранены как отдельные базовые договоры с проверкой границ, формы, отсутствия и мутации. Численные таблицы ниже пересчитаны по текущему коду; новый parser/P0-прогон изменённых LMX-текстов и языковые runtime-прогоны остаются NOT_RUN.\n\n'
+        title,rest=overview.split('\n\n',1)
+        (R/'README.md').write_text(title+'\n\n'+paragraph+rest)
     write_json(R/'statistics.json',{'suite':'julia','edition':EDITION,'metrics':'Full-source Unicode code points; whitespace by str.isspace; comments and Throws retained.','legacy_lmx_role':'functional compatibility mirror only','totals':totals,'style_totals':style_totals,'shared_lmx':dep_report['shared_not_in_primary'],'rows':rows,'comparison_rows':comparison_rows})
     write_csv(R,data,'Julia')
     write_json(R/'validation/source_checks.json',{'status':'PASS','checks':checks,'core_coverage':mapping,'foreign_custom_helpers_imported':False,'runtime':{'julia':{'status':'NOT_RUN','executable':shutil.which('julia')},'lmx':{'status':'NOT_RUN'}}})

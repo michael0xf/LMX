@@ -8,17 +8,17 @@
 
 | ID | Сценарий | LMX | Go | Erlang | Слой |
 | --- | --- | --- | --- | --- | --- |
-| 058 | Thread Pool | 233 | 290 | 322 | Сценарий |
-| 059 | Producer-Consumer | 225 | 154 | 276 | Сценарий |
-| 060 | Actor Model | 100 | 141 | 144 | Сценарий |
-| 061 | Active Object | 143 | 247 | 194 | Сценарий |
-| 062 | Reactor | 100 | 157 | 168 | Сценарий |
-| 063 | Proactor | 140 | 214 | 106 | Сценарий |
-| 064 | Future / Promise | 268 | 256 | 292 | Сценарий |
-| 071 | Half-Sync / Half-Async | 174 | 205 | 259 | Сценарий |
-| 088 | Structured Concurrency | 316 | 517 | 602 | Сценарий |
-| 089 | Supervision Tree | 204 | 181 | 269 | Сценарий |
-| 090 | MapReduce | 216 | 290 | 267 | Сценарий |
+| 058 | Thread Pool | <span style="color:#176233"><u>233</u></span> | 290 | 322 | Сценарий |
+| 059 | Producer-Consumer | 225 | <span style="color:#176233"><u>154</u></span> | 276 | Сценарий |
+| 060 | Actor Model | <span style="color:#176233"><u>100</u></span> | 141 | 144 | Сценарий |
+| 061 | Active Object | <span style="color:#176233"><u>143</u></span> | 247 | 194 | Сценарий |
+| 062 | Reactor | <span style="color:#176233"><u>100</u></span> | 157 | 168 | Сценарий |
+| 063 | Proactor | 140 | 214 | <span style="color:#176233"><u>106</u></span> | Сценарий |
+| 064 | Future / Promise | 268 | <span style="color:#176233"><u>256</u></span> | 292 | Сценарий |
+| 071 | Half-Sync / Half-Async | <span style="color:#176233"><u>174</u></span> | 205 | 259 | Сценарий |
+| 088 | Structured Concurrency | <span style="color:#176233"><u>316</u></span> | 517 | 602 | Сценарий |
+| 089 | Supervision Tree | 204 | <span style="color:#176233"><u>181</u></span> | 269 | Сценарий |
+| 090 | MapReduce | <span style="color:#176233"><u>216</u></span> | 290 | 267 | Сценарий |
 
 Go показывает каналы и goroutine, Erlang — изолированные процессы, mail и OTP supervision. Это характерные контроли для Message-модели LMX. Сравнения явно различают логического исполнителя, OS thread, readiness и завершение I/O.
 

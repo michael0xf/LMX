@@ -8,20 +8,20 @@
 
 | ID | Сценарий | LMX | Go | C# | Слой |
 | --- | --- | --- | --- | --- | --- |
-| 038 | Circuit Breaker | 216 | 205 | 200 | Сценарий |
-| 039 | Retry | 213 | 112 | 125 | Общий клиент |
-| 097 | Retry Library — Implementation | 608 | 276 | 420 | Реализация |
-| 040 | Bulkhead | 113 | 238 | 196 | Сценарий |
-| 042 | API Gateway | 189 | 227 | 175 | Сценарий |
-| 043 | Backends for Frontends | 146 | 136 | 130 | Сценарий |
-| 044 | Sidecar | 132 | 130 | 204 | Сценарий |
-| 045 | Ambassador | 217 | 177 | 167 | Общий клиент |
-| 049 | Cache-Aside | 182 | 234 | 222 | Сценарий |
-| 052 | Throttling | 179 | 177 | 170 | Сценарий |
-| 053 | Queue-Based Load Leveling | 113 | 189 | 202 | Сценарий |
-| 054 | Competing Consumers | 242 | 233 | 445 | Сценарий |
-| 056 | Health Endpoint Monitoring | 96 | 84 | 77 | Сценарий |
-| 087 | Backpressure | 187 | 194 | 166 | Сценарий |
+| 038 | Circuit Breaker | 216 | 205 | <span style="color:#176233"><u>200</u></span> | Сценарий |
+| 039 | Retry | 216 | <span style="color:#176233"><u>112</u></span> | 125 | Общий клиент |
+| 097 | Retry Library — Implementation | 608 | <span style="color:#176233"><u>276</u></span> | 420 | Реализация |
+| 040 | Bulkhead | <span style="color:#176233"><u>113</u></span> | 238 | 196 | Сценарий |
+| 042 | API Gateway | 189 | 227 | <span style="color:#176233"><u>175</u></span> | Сценарий |
+| 043 | Backends for Frontends | 146 | 136 | <span style="color:#176233"><u>130</u></span> | Сценарий |
+| 044 | Sidecar | 132 | <span style="color:#176233"><u>130</u></span> | 204 | Сценарий |
+| 045 | Ambassador | 217 | 177 | <span style="color:#176233"><u>167</u></span> | Общий клиент |
+| 049 | Cache-Aside | <span style="color:#176233"><u>182</u></span> | 234 | 222 | Сценарий |
+| 052 | Throttling | 179 | 177 | <span style="color:#176233"><u>170</u></span> | Сценарий |
+| 053 | Queue-Based Load Leveling | <span style="color:#176233"><u>113</u></span> | 189 | 202 | Сценарий |
+| 054 | Competing Consumers | 242 | <span style="color:#176233"><u>233</u></span> | 445 | Сценарий |
+| 056 | Health Endpoint Monitoring | 96 | 84 | <span style="color:#176233"><u>77</u></span> | Сценарий |
+| 087 | Backpressure | 187 | 194 | <span style="color:#176233"><u>166</u></span> | Сценарий |
 
 Go и C# дают два привычных стиля сетевых сервисов: функции/каналы и .NET delegates/Channel. Сравнивается прикладной алгоритм поверх одинаково описанных transport/provider контрактов; развёртывание учитывается отдельно.
 

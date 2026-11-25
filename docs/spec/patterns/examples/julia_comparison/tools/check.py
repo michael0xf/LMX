@@ -52,46 +52,49 @@ def logical(ident,a):
         xs,lo,hi=a
         if not 0<=lo<=hi<=len(xs):raise ValueError('bounds')
         return xs[lo:hi]
-    if ident=='J03':return a[0][::-1]
+    if ident=='J03':return list(dict.fromkeys(a[0][::-1]))
     if ident=='J04':
         if len(a[0])!=len(a[1]):raise ValueError('shape')
         return [x for x,m in zip(*a) if m!=0]
-    if ident=='J05':return [x*x for x in a[0]]
-    if ident=='J06':return [x for x in a[0] if x%2!=0]
-    if ident=='J07':return reduce(lambda x,y:x-y,a[0],a[1])
+    if ident=='J05':return sum((x-a[1])**2 for x in a[0])
+    if ident=='J06':return list(dict.fromkeys(x for x in a[0] if x%2!=0))
+    if ident=='J07':return reduce(lambda balance,amount:max(balance-amount,0),a[0],a[1])
     if ident=='J08':
         out=[a[1]]
         for x in a[0]:out.append(out[-1]+x)
-        return out
-    if ident=='J09':return [list(p) for p in zip(*a)]
+        return [balance for balance in out if balance<0]
+    if ident=='J09':return sum(max(required-available,0) for required,available in zip(*a))
     if ident=='J10':
-        assert len(a[0])==len(a[1])
-        return [2*x+y*y for x,y in zip(*a)]
-    if ident=='J11':return [y for x in a[0] for y in (x,x*x)]
+        if len(a[0])!=len(a[1]):raise ValueError('shape')
+        return [score for x,y in zip(a[0],a[1]) if (score:=2*x+y*y)>=a[2]]
+    if ident=='J11':return list(dict.fromkeys(y for x in a[0] for y in (x-1,x,x+1) if y>=0))
     if ident=='J12':
         out={}
-        for x in a[0]:out.setdefault('true' if x%2 else 'false',[]).append(x)
+        for x in dict.fromkeys(a[0]):out.setdefault('true' if x%2 else 'false',[]).append(x)
         return out
-    if ident=='J13':return any(x>a[1] for x in a[0])
-    if ident=='J14':return all(x>0 for x in a[0])
+    if ident=='J13':return any(x>a[1] and y>a[1] for x,y in zip(a[0],a[0][1:]))
+    if ident=='J14':return len(a[0])==len(a[1]) and all(0<required<=available for required,available in zip(*a))
     if ident=='J15':
         for i,x in enumerate(a[0]):
             if x>a[1]:return {'present':True,'value':i}
         return {'present':False}
-    if ident=='J16':return sum(x%2==0 for x in a[0])
+    if ident=='J16':return 1000*sum(a[1]<=x<=a[2] for x in a[0])//len(a[0]) if a[0] else 0
     if ident=='J17':
-        a[0].extend(a[1]);return {'returned':a[0],'target':a[0],'same_target':True}
+        a[0].extend(a[1])
+        drop=len(a[0])-a[2]
+        if drop>0:del a[0][:drop]
+        return {'returned':a[0],'target':a[0],'same_target':True}
     if ident=='J18':
         target,lo,hi,values=a
         if not 0<=lo<=hi<=len(target):raise ValueError('bounds')
         removed=target[lo:hi];target[lo:hi]=values
         return {'removed':removed,'target':target}
-    if ident=='J19':return [list(column) for column in zip(*a[0])]
-    if ident=='J20':return sorted(a[0],key=lambda x:x['key'])
-    if ident=='J21':return list(dict.fromkeys(a[0]))
-    if ident=='J22':return ''.join(c for c in a[0] if '0'<=c<='9')
-    if ident=='J23':return [value for part in a[0] for value in part]
-    if ident=='J24':return [[x,y] for x in a[0] for y in a[1]]
+    if ident=='J19':return [sum(value-a[1] for value in column) for column in zip(*a[0])]
+    if ident=='J20':return sorted(a[0],key=lambda x:x['key'])[:a[1]]
+    if ident=='J21':return list(dict.fromkeys(value for part in a[0] for value in part))
+    if ident=='J22':return ''.join(c for c in a[0] if '0'<=c<='9')[-4:]
+    if ident=='J23':return [value for part in a[0] for value in part][::-1]
+    if ident=='J24':return [[x,y] for x in a[0] for y in a[1] if x+y<=a[2]]
     raise AssertionError(ident)
 
 def main():
@@ -156,7 +159,7 @@ def main():
             plain=target.split('#')[0]
             if path==R/'README.md' and plain in pending:continue
             if not (path.parent/plain).exists():errors.append(str(path.relative_to(R))+': missing local link '+plain)
-    report={'status':'FAIL' if errors else 'PASS','edition':'2026-11-23','scope':'Static source/metrics/provenance checks plus Python logical expectation oracle; not Julia/LMX execution.','checks':checks,'errors':errors,'logical_cases_checked':len(expectations),'lmx_source_files_checked':len(lmx_paths),'julia_executable':shutil.which('julia'),'julia_execution':'NOT_RUN','lmx_execution':'NOT_RUN'}
+    report={'status':'FAIL' if errors else 'PASS','edition':'2026-11-25','scope':'Static source/metrics/provenance checks plus Python logical expectation oracle; not Julia/LMX execution or P0.','checks':checks,'errors':errors,'logical_cases_checked':len(expectations),'lmx_source_files_checked':len(lmx_paths),'lmx_parser_execution_for_changed_sources':'NOT_RUN','julia_executable':shutil.which('julia'),'julia_execution':'NOT_RUN','lmx_execution':'NOT_RUN'}
     (R/'validation/check_report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
     (R/'validation/python_expectation_check.json').write_text(json.dumps({'status':'PASS' if all(x['status']=='PASS' for x in expectations) else 'FAIL','kind':'logical expectations in Python, not language execution','cases':expectations},ensure_ascii=False,indent=2)+'\n')
     print(json.dumps({'status':report['status'],'checks':len(checks),'cases':len(expectations),'errors':errors},ensure_ascii=False))

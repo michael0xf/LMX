@@ -29,7 +29,7 @@ def main():
               anchor+': supplementary semantic chapter survives guide regeneration')
     anchors=re.findall(r'<a\s+(?:id|name)="([^"]+)"',guide)
     check(len(anchors)==len(set(anchors)),'every guide anchor has one destination')
-    index=json.loads((EX/'haskell/comparison_index.json').read_text())
+    index=json.loads((EX/'haskell_comparision/comparison_index.json').read_text())
     if supplement.is_file():
         try:
             check(guide==guide_document(index['entries'],expected),
@@ -66,14 +66,14 @@ def main():
         rows.append({'id':ident,'style_relation':record['style_relation'],
                      'procedural':measure(record['lmx_variants']['procedural']['code']),
                      'functional':measure(record['lmx_variants']['functional']['code'])})
-    hs=(EX/'haskell/Analogies.hs').read_text()
+    hs=(EX/'haskell_comparision/Analogies.hs').read_text()
     for module in ['IntApply','Partial','IntPipe','Lazy','EvaluationModes','StepIterator','CharacterRange','CurryInt']:
         check(not re.search(r'^import\s+(?:qualified\s+)?'+module+r'\b',hs,re.M),'foreign client imports no comparison helper '+module)
     check('import Control.Monad.Loops (whileJust_)' in hs,'H09 uses real monad-loops')
     check('import Data.Ix (inRange)' in hs,'V02 uses real Data.Ix')
-    check('libraries' not in (EX/'haskell/lmx-examples.cabal').read_text(),'comparison modules do not leak into the client component')
+    check('libraries' not in (EX/'haskell_comparision/lmx-examples.cabal').read_text(),'comparison modules do not leak into the client component')
     check(len(cases['V02']['cases'])==11,'all11 V02 input expectations retained')
-    h09=(EX/'lmx/H09.lm3').read_text()
+    h09=(EX/'haskell_comparision/source/lmx/H09.lm3').read_text()
     check('Cycles:' in h09 and 'Cycles\\iterate:' in h09,'H09 contains its complete local helper')
     check('catch: Stop ()' in h09 and 'FxCallFailure' not in h09,'H09 retains ordinary source Stop handling')
     check(not cases['H09'].get('core_functions'),'H09 does not require an error-envelope adapter')

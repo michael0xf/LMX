@@ -5,9 +5,17 @@ Order:
     compare:
         return: (first\priority > second\priority) - (first\priority < second\priority)
 
+Width:
+    @: item
+    return: int
+    get:
+        return: item\width
+
 Example:
     @: items
+    int: limit
     return: @
     run:
-        throws: copy(sort\throws)
-        return: sort(items; Order\compare)
+        throws: copy(sort\throws) copy(take\throws) copy(map\throws) copy(sum\throws)
+        @: selected take(sort(items; Order\compare); limit)
+        return: (selected; \sum(map(selected; Width\get)))

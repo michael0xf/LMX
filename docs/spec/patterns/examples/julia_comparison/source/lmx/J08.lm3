@@ -1,7 +1,13 @@
+Negative:
+    int: value
+    return: int
+    accepts:
+        return: value < 0
+
 Example:
     int[]: xs
     int: seed
     return: @
     run:
-        throws: copy(scanl\throws) copy(record\throws)
-        return: scanl(xs; (seed record); `+`)
+        throws: copy(scanl\throws) copy(record\throws) copy(filter\throws)
+        return: filter(scanl(xs; (seed record); `+`); Negative\accepts)

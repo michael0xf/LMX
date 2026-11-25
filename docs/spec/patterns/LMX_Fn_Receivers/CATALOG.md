@@ -1,6 +1,6 @@
 # Canonical library operations and their two forms
 
-212 canonical names. Every input export is accounted for in [the migration inventory](CANONICAL_MIGRATION.json). Former names are not callable aliases.
+215 canonical names. Every input export is accounted for in [the migration inventory](CANONICAL_MIGRATION.json). Former names are not callable aliases.
 
 Both forms use the same algorithms and real owner DATA. Complete family/role binding, adaptive capture and exact result projection are defined in [PUBLICATION_CONTRACT.md](PUBLICATION_CONTRACT.md). Runtime execution is **NOT_RUN**.
 
@@ -218,6 +218,9 @@ Both forms use the same algorithms and real owner DATA. Complete family/role bin
 | `equals` | `equals(first; second; projection=0; same=0)` | **default** [`FxEquals\equals`](src/coreGenericOperations.lmx) → `StandardOperands\equals` (asOperand) |
 | `pipe` | `pipe(value; stages)` | **default** [`FxPipe\pipe`](src/coreGenericOperations.lmx) → `FxPipeBuild\make` (adaptive-exact-operand) |
 | `retry` | `retry(operation; retryOn; limit; delay=0; arguments=())` | **default** [`FxRetryValue\retry`](src/coreGenericOperations.lmx) → `FxRetryBuild\make` (adaptive-exact-operand) |
+| `fill` | `fill(target; valueRecord)` | **default** [`FxArrayFill\fill`](src/fill.lmx) → `StandardOperands\fill` (asOperand) |
+| `lowerBound` | `lowerBound(items; needleRecord; less)` | **default** [`FxLowerBound\lowerBound`](src/lowerBound.lmx) → `StandardOperands\lowerBound` (asOperand) |
+| `last` | `last(items; count)` | **default** [`FxSeqLast\last`](src/last.lmx) → `StandardOperands\last` (asOperand) |
 
 ## Roles, results and failures
 
@@ -433,5 +436,8 @@ Both forms use the same algorithms and real owner DATA. Complete family/role bin
 - **equals** — one projection per value followed by the shared equality. Roles: DECLARED_INPUT_ROLES.
 - **pipe** — apply value stages in order; exact final R through FxPipeBuild. Roles: VALUE_WHOLE, CALLABLE_SEQUENCE.
 - **retry** — retry ordinary results by predicate/limit/delay; exact request R through FxRetryBuild. Roles: DECLARED_INPUT_ROLES.
+- **fill** — Replace every reached element of the existing Array with one ready value through ordinary admission. Keep target identity and length; shallow references retain one target; empty Arrays perform no admission or write.. Roles: DECLARED_INPUT_ROLES.
+- **lowerBound** — Binary search for the first false position in a stable true-prefix/false-suffix partition under less(element, needle); return length for all true. Generic value records and callback types; no mutation; empty input performs no callback.. Roles: DECLARED_INPUT_ROLES.
+- **last** — Fresh outer Array containing the last min(count,length) elements in original order, preserving the physical source profile and shallow references. Negative count raises SequenceSize; count zero returns an empty Array. This Array operation does not infer Unicode grapheme or codepoint boundaries.. Roles: DECLARED_INPUT_ROLES.
 
 Every variant retains its actual result, void/field-stream/control role, context and finite failures. Quoting does not select a different implementation. See [forms](../../OPERATION_FORMS.md), [generic operations](../../GENERIC_OPERATIONS.md), [monads](../../MONADIC_OPERATIONS.md) and [equality](../../GENERIC_EQUALITY.md).

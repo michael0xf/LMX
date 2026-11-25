@@ -1,8 +1,9 @@
 Example:
     @: items
+    int: capacity
     return: @
     run:
-        throws: copy(FxSeqInfo\get\throws) copy(FxSeqAllocate\make\throws) copy(FxSeqRead\read\throws) copy(FxSeqStore\write\throws)
+        throws: copy(FxSeqInfo\get\throws) copy(FxSeqAllocate\make\throws) copy(FxSeqRead\read\throws) copy(FxSeqStore\write\throws) copy(sys\resize\throws)
         @: info FxSeqInfo\get(items)
         @: out FxSeqAllocate\make(info\arrayType; length(items))
         int: i 0
@@ -19,4 +20,6 @@ Example:
                 j -= 1
             FxSeqStore\write(out; j; held)
             i += 1
+        if: capacity < length(out)
+            sys\resize(out; capacity)
         return: out

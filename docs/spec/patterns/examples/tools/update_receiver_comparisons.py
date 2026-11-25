@@ -102,7 +102,7 @@ def main():
   if ident=='H07':extra+=lazy_review(defs)
   text=f'''# {title}: usage and implementation are separate
 
-Edition: 2026-11-23. Client: [{ident}](../lmx/{ident}.lm3), [scenario](../../LMX_examples_and_analogies.ru.md#{ident.lower()}).
+Edition: 2026-11-23. Client: [{ident}](../haskell_comparision/source/lmx/{ident}.lm3), [scenario](../../LMX_examples_and_analogies.ru.md#{ident.lower()}).
 
 ## Contract
 
@@ -110,7 +110,7 @@ Edition: 2026-11-23. Client: [{ident}](../lmx/{ident}.lm3), [scenario](../../LMX
 
 LMX public names: {', '.join('`'+p+'`' for p in public)}. These names belong to the proposed core; no user library import is needed.
 
-**Foreign usage client:** {usage} The implementation below is for comparison only. It is not on the client's module search path, and [Analogies.hs](../haskell/Analogies.hs) does not import it.
+**Foreign usage client:** {usage} The implementation below is for comparison only. It is not on the client's module search path, and [Analogies.hs](../haskell_comparision/Analogies.hs) does not import it.
 
 ## LMX implementation
 
@@ -151,14 +151,14 @@ Every declaration, complete Throws list and copy reference is included in the fu
 
 The reusable helpers here are synchronous computations on their owner. To run an LMX owner operation asynchronously, use existing Message `post`; it already provides delivery and reply handling, including the documented HTTP transport. No cross-Message mutable cache, hidden global scheduler, cancellation guarantee or extra worker pool is claimed. In the Haskell comparison Lazy explicitly checks its owning thread and masks the bookkeeping around an interruptible action.
 
-**Verification:** reproducible source/metric checks only; neither LMX runtime nor GHC execution is claimed. The client dependency list is [lmx-examples.cabal](../haskell/lmx-examples.cabal).
+**Verification:** reproducible source/metric checks only; neither LMX runtime nor GHC execution is claimed. The client dependency list is [lmx-examples.cabal](../haskell_comparision/lmx-examples.cabal).
 '''
   row={'file':'library_comparisons/'+filename,'entry':entries[0],'public':public[0],'public_names':public,'roots':roots,'source_files':paths,'lmx_entry':metric(body),'lmx':metric(allcode),'haskell':metric(hs),'haskell_source':'libraries/haskell/'+hsfile,'comparison_scope':'implementation_only','imported_by_clients':False,'core_versions':1,'kernel_provider_excluded_and_disclosed':True}
   if ident=='H09':
    local=(EX/'libraries/lmx/Cycles.lm3').read_text().strip()+'\n'
    direct='''## Primary ordinary LMX implementation
 
-The complete helper below is also included in [H09.lm3](../lmx/H09.lm3), so its cost is part of the full scenario. It is the original short implementation restored from 22-Nov, directly covered by the [current declaration/body specification](../../../LMX_semantics.en.md#declaration-arguments).
+The complete helper below is also included in [H09.lm3](../haskell_comparision/source/lmx/H09.lm3), so its cost is part of the full scenario. It is the original short implementation restored from 22-Nov, directly covered by the [current declaration/body specification](../../../LMX_semantics.en.md#declaration-arguments).
 
 ```lmx
 '''+local.rstrip()+'''

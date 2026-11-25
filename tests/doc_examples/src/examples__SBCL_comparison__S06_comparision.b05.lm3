@@ -1,0 +1,19 @@
+Negative:
+    int: value
+    return: int
+    accepts:
+        return: value < 0
+
+Example:
+    int[]: items
+    return: @
+    run:
+        throws: copy(index\throws) copy(take\throws) copy(sum\throws)
+        @: found (index items Negative\accepts)
+        int: bad -1
+        int: count length(items)
+        if: found\present != 0
+            bad := \found\value
+            count := bad
+        @: accepted (take items count)
+        return: (accepted; \(sum accepted); bad)

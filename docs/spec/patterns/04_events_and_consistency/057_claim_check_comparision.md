@@ -105,7 +105,7 @@ SenderMessage и ConsumerMessage — разные владельцы. blobs.put/
 
 | Язык | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX | 388 | 23 |
+| LMX | <span style="color:#176233"><u>388</u></span> | 23 |
 | Java | 488 | 14 |
 | Go | 476 | 13 |
 

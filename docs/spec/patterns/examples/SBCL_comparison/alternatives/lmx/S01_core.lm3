@@ -1,12 +1,8 @@
-Scale:
-    int: value
-    return: int
-    run:
-        return: value * 3
-
 Example:
     int[]: items
+    int: gain
+    int: offset
     return: @
     run:
-        throws: copy(FxThrows\traversal)
-        return: map(items; Scale\run)
+        int[]: calibrated items * gain + offset
+        return: (calibrated; (+ 0 copy(calibrated)))

@@ -116,13 +116,13 @@
         {
           "id": "procedural",
           "label_ru": "Процедурный LMX",
-          "code": "PairOperation :: (int: a; int: b; return: int)\n\nCandidate:\n    int: b\n    int: a\n    return: int\n    encode:\n        return: b * 10 + a\n\nSignatureProbe:\n    return: int\n    run:\n        PairOperation@: selected Candidate\\encode\n        int: first selected(a := 2; b := 7)\n        int: second Candidate\\encode(a := 2; b := 7)\n        return: first * 100 + second\n",
+          "code": "PairOperation :: (int: a; int: b; return: int)\n\nCandidate:\n    int: b\n    int: a\n    return: int\n    encode:\n        return: b * 10 + a\n\nSignatureProbe:\n    return: int\n    run:\n        @PairOperation: selected Candidate\\encode\n        int: first selected(a := 2; b := 7)\n        int: second Candidate\\encode(a := 2; b := 7)\n        return: first * 100 + second\n",
           "metrics": {
             "characters": 245,
             "characters_with_whitespace": 362,
             "nonblank_lines": 14,
             "utf8_bytes": 362,
-            "sha256": "d29ee535947aabaf29212394f4aef3c38dc95478805b8e0f97d374472642f19e"
+            "sha256": "9809f081a0f5bde159b0a944d03cfa30275a5667d3ef8341323183ccee166702"
           },
           "correct_for_scenario": true,
           "cases": [
@@ -137,13 +137,13 @@
         {
           "id": "functional",
           "label_ru": "Функциональный LMX",
-          "code": "PairOperation :: (int: a; int: b; return: int)\n\nCandidate:\n    int: b\n    int: a\n    return: int\n    encode:\n        return: b * 10 + a\n\nSignatureProbe:\n    return: int\n    run:\n        PairOperation@: selected Candidate\\encode\n        return: selected(a := 2; b := 7) * 100 + Candidate\\encode(a := 2; b := 7)\n",
+          "code": "PairOperation :: (int: a; int: b; return: int)\n\nCandidate:\n    int: b\n    int: a\n    return: int\n    encode:\n        return: b * 10 + a\n\nSignatureProbe:\n    return: int\n    run:\n        @PairOperation: selected Candidate\\encode\n        return: selected(a := 2; b := 7) * 100 + Candidate\\encode(a := 2; b := 7)\n",
           "metrics": {
             "characters": 215,
             "characters_with_whitespace": 310,
             "nonblank_lines": 12,
             "utf8_bytes": 310,
-            "sha256": "252fd568e46734139bbc6309b1ef1b329d00c1c5aa7aed5dcae824ef068832b3"
+            "sha256": "6e3810038be0f44f703144ed2effb616174b3e1223a4b4d28da5532f91460e22"
           },
           "correct_for_scenario": true,
           "cases": [
@@ -158,7 +158,7 @@
       ],
       "lmx_variants": {
         "procedural": {
-          "code": "PairOperation :: (int: a; int: b; return: int)\n\nCandidate:\n    int: b\n    int: a\n    return: int\n    encode:\n        return: b * 10 + a\n\nSignatureProbe:\n    return: int\n    run:\n        PairOperation@: selected Candidate\\encode\n        int: first selected(a := 2; b := 7)\n        int: second Candidate\\encode(a := 2; b := 7)\n        return: first * 100 + second\n",
+          "code": "PairOperation :: (int: a; int: b; return: int)\n\nCandidate:\n    int: b\n    int: a\n    return: int\n    encode:\n        return: b * 10 + a\n\nSignatureProbe:\n    return: int\n    run:\n        @PairOperation: selected Candidate\\encode\n        int: first selected(a := 2; b := 7)\n        int: second Candidate\\encode(a := 2; b := 7)\n        return: first * 100 + second\n",
           "source_file": "haskell_comparision/source/lmx/procedural/H02.lm3",
           "contract_id": "root/H02",
           "runtime_execution": "NOT_RUN",
@@ -167,11 +167,11 @@
             "characters_with_whitespace": 362,
             "nonblank_lines": 14,
             "utf8_bytes": 362,
-            "sha256": "d29ee535947aabaf29212394f4aef3c38dc95478805b8e0f97d374472642f19e"
+            "sha256": "9809f081a0f5bde159b0a944d03cfa30275a5667d3ef8341323183ccee166702"
           }
         },
         "functional": {
-          "code": "PairOperation :: (int: a; int: b; return: int)\n\nCandidate:\n    int: b\n    int: a\n    return: int\n    encode:\n        return: b * 10 + a\n\nSignatureProbe:\n    return: int\n    run:\n        PairOperation@: selected Candidate\\encode\n        return: selected(a := 2; b := 7) * 100 + Candidate\\encode(a := 2; b := 7)\n",
+          "code": "PairOperation :: (int: a; int: b; return: int)\n\nCandidate:\n    int: b\n    int: a\n    return: int\n    encode:\n        return: b * 10 + a\n\nSignatureProbe:\n    return: int\n    run:\n        @PairOperation: selected Candidate\\encode\n        return: selected(a := 2; b := 7) * 100 + Candidate\\encode(a := 2; b := 7)\n",
           "source_file": "haskell_comparision/source/lmx/H02.lm3",
           "contract_id": "root/H02",
           "runtime_execution": "NOT_RUN",
@@ -180,7 +180,7 @@
             "characters_with_whitespace": 310,
             "nonblank_lines": 12,
             "utf8_bytes": 310,
-            "sha256": "252fd568e46734139bbc6309b1ef1b329d00c1c5aa7aed5dcae824ef068832b3"
+            "sha256": "6e3810038be0f44f703144ed2effb616174b3e1223a4b4d28da5532f91460e22"
           }
         }
       },
@@ -1938,13 +1938,13 @@
         {
           "id": "procedural",
           "label_ru": "Процедурный LMX",
-          "code": "TicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        if: length(candidate) != 5\n            return: 0\n        int: i 0\n        while: i < 5\n            if: i != 2\n                char: first '0'\n                char: last '9'\n                if: i < 2\n                    first := 'A'\n                    last := 'Z'\n                if: candidate[i] < first || candidate[i] > last\n                    return: 0\n                ---\n            i += 1\n        return: candidate[2] = '-'\n",
+          "code": "TicketCode:\n    []char: candidate\n    return: int\n    accepts:\n        if: length(candidate) != 5\n            return: 0\n        int: i 0\n        while: i < 5\n            if: i != 2\n                char: first '0'\n                char: last '9'\n                if: i < 2\n                    first := 'A'\n                    last := 'Z'\n                if: candidate[i] < first || candidate[i] > last\n                    return: 0\n                ---\n            i += 1\n        return: candidate[2] = '-'\n",
           "metrics": {
             "characters": 226,
             "characters_with_whitespace": 503,
             "nonblank_lines": 19,
             "utf8_bytes": 503,
-            "sha256": "d926c7d970622a0b2995a5e81add3238db507e9d81adb1baec2f80367d45a56d"
+            "sha256": "7b2ede7752f8dfe0e5636e0e543ab32f5242d47d9aa056815733bd07eefd07ce"
           },
           "correct_for_scenario": true,
           "cases": [
@@ -2008,13 +2008,13 @@
         {
           "id": "functional",
           "label_ru": "Функциональный LMX",
-          "code": "TicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        throws: copy(matches\\throws)\n        return: matches(byteText(candidate); (within(\"A\"; \"Z\") times 2) then \"-\" then (asciiDigit times 2))\n",
+          "code": "TicketCode:\n    []char: candidate\n    return: int\n    accepts:\n        throws: copy(matches\\throws)\n        return: matches(byteText(candidate); (within(\"A\"; \"Z\") times 2) then \"-\" then (asciiDigit times 2))\n",
           "metrics": {
             "characters": 160,
             "characters_with_whitespace": 208,
             "nonblank_lines": 6,
             "utf8_bytes": 208,
-            "sha256": "0246eb09dd1852f7d77164d3d49cff396293a02bc1be68aad53edff72921f414"
+            "sha256": "c04f46b3e81e1852a927ab5178843517ff23bb29231ce44e088eed349f820dbd"
           },
           "correct_for_scenario": true,
           "cases": [
@@ -2078,7 +2078,7 @@
       ],
       "lmx_variants": {
         "procedural": {
-          "code": "TicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        if: length(candidate) != 5\n            return: 0\n        int: i 0\n        while: i < 5\n            if: i != 2\n                char: first '0'\n                char: last '9'\n                if: i < 2\n                    first := 'A'\n                    last := 'Z'\n                if: candidate[i] < first || candidate[i] > last\n                    return: 0\n                ---\n            i += 1\n        return: candidate[2] = '-'\n",
+          "code": "TicketCode:\n    []char: candidate\n    return: int\n    accepts:\n        if: length(candidate) != 5\n            return: 0\n        int: i 0\n        while: i < 5\n            if: i != 2\n                char: first '0'\n                char: last '9'\n                if: i < 2\n                    first := 'A'\n                    last := 'Z'\n                if: candidate[i] < first || candidate[i] > last\n                    return: 0\n                ---\n            i += 1\n        return: candidate[2] = '-'\n",
           "source_file": "haskell_comparision/source/lmx/procedural/V02.lm3",
           "contract_id": "root/V02",
           "runtime_execution": "NOT_RUN",
@@ -2087,11 +2087,11 @@
             "characters_with_whitespace": 503,
             "nonblank_lines": 19,
             "utf8_bytes": 503,
-            "sha256": "d926c7d970622a0b2995a5e81add3238db507e9d81adb1baec2f80367d45a56d"
+            "sha256": "7b2ede7752f8dfe0e5636e0e543ab32f5242d47d9aa056815733bd07eefd07ce"
           }
         },
         "functional": {
-          "code": "TicketCode:\n    char[]: candidate\n    return: int\n    accepts:\n        throws: copy(matches\\throws)\n        return: matches(byteText(candidate); (within(\"A\"; \"Z\") times 2) then \"-\" then (asciiDigit times 2))\n",
+          "code": "TicketCode:\n    []char: candidate\n    return: int\n    accepts:\n        throws: copy(matches\\throws)\n        return: matches(byteText(candidate); (within(\"A\"; \"Z\") times 2) then \"-\" then (asciiDigit times 2))\n",
           "source_file": "haskell_comparision/source/lmx/V02.lm3",
           "contract_id": "root/V02",
           "runtime_execution": "NOT_RUN",
@@ -2100,7 +2100,7 @@
             "characters_with_whitespace": 208,
             "nonblank_lines": 6,
             "utf8_bytes": 208,
-            "sha256": "0246eb09dd1852f7d77164d3d49cff396293a02bc1be68aad53edff72921f414"
+            "sha256": "c04f46b3e81e1852a927ab5178843517ff23bb29231ce44e088eed349f820dbd"
           }
         }
       },

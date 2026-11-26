@@ -147,7 +147,7 @@ The same structural form is interpreted by role:
 | `i := value` | A retained written form unless consumed by its declared contract | Write an already known writable place |
 
 A place is declared by its receiver: `int: i 5`, `@: ptr`,
-`@: ptr Model`, or `Model@: ptr candidate`. The first argument identifies the
+`@: ptr Model`, or `@Model: ptr candidate`. The first argument identifies the
 place. A full reference requirement belongs in the typed head; `@: ptr Model`
 initializes a universal reference with Model. Nested `Model: Other` remains a
 Frame; it is not an alternative spelling of the typed declaration's candidate.
@@ -644,25 +644,25 @@ are carried into the documentation in full; the documentation alone is the norm.
 <a id="unified-20261122"></a>
 ## Current type and sequence rules
 
-Use T[], T[extentExpression] and T@ postfix forms. In TYPE, each [] or [size]
+Use []T, [extentExpression]T and @T prefix forms. In TYPE, each [] or [size]
 contributes one axis; VALUE/PLACE brackets remain indexing. Keep a declaration
 colon distinct from atomic := and preserve indexed callable receiver heads.
 Common P0 parses full size expressions; TYPE obtains each occurrence once in
-lexical order and checks a nonnegative integer. `T[](R)` counts unspecified axes;
-T[R] constrains one axis. No initializer still means uninit without allocation.
+lexical order and checks a nonnegative integer. `[](R)T` counts unspecified axes;
+[R]T constrains one axis. No initializer still means uninit without allocation.
 
 The normalized complete LEFT alone determines TypeRef. Equal requirements reuse
-one immutable descriptor: int[][] equals `int[](2)`, int[] lengths 2/3 share TYPE,
-and int[2][3] differs from int[3][2]. Runtime int[N] reuses the canonical address
+one immutable descriptor: [][]int equals `[](2)int`, []int lengths 2/3 share TYPE,
+and [2][3]int differs from [3][2]int. Runtime [N]int reuses the canonical address
 when its evaluated requirement matches. Names, initializer rows, actual length
 and reserve never specialize type. Type producers, typeof and signature producers
 return references; types returns references to descriptions, not int codes.
 
-int[][3] and six flat elements determine [2,3]. int[][] with six elements is also
+[][3]int and six flat elements determine [2,3]. [][]int with six elements is also
 valid but retains two unknown extents, even when explicit rows validated [2,3]
 during construction. A single missing size can be derived from length divided
 by a positive known product when exact; several unknown sizes stay unknown.
-int[0][]: [] and int[][0]: [] are valid incomplete zero shapes; int[2][0]: []
+[0][]int: [] and [][0]int: [] are valid incomplete zero shapes; [2][0]int: []
 is fully specified. Reject proven contradictions, irregular explicit rows,
 negative/noninteger sizes and impossible products. Lack of dimension information
 fails only when a reached operation needs it. Never retain hidden per-value shape
@@ -678,7 +678,7 @@ No capacity-specific TYPE, extra Lmx field or hidden shape storage is allowed.
 Compatibility is directed admission between complete descriptions, not pointer
 equality. Receiving an existing ready object through another type does not retag
 or copy it. Generic consumers admit compatible types; they cannot demand equality
-with bare T[] when a fixed-size T[5] also satisfies the intended contract.
+with bare []T when a fixed-size [5]T also satisfies the intended contract.
 Copy preserves normalized TYPE; restore interns the full description in the
 destination and relocates TypeRefs. Reserve may become length without changing
 type. Same-context attach preserves addresses and keeps metadata alive for every
@@ -698,7 +698,7 @@ storage/compatibility rules; instance capacity remains sys\capacity(obj).
 
 **Migration gate:** [TYPE_REFERENCES_CHANGE.md](../TYPE_REFERENCES_CHANGE.md)
 identifies unchanged prior-ABI LMX reflection/type-return sources, int-record
-normalizer bridges and the teaching C runtime. Their int[] type sequences,
+normalizer bridges and the teaching C runtime. Their []int type sequences,
 return:int type queries, p-4 reads and four-byte tag assertions require source
 migration and regeneration before runtime acceptance. No old native binary or
 fixture receipt validates this ABI. Native entries/loaders must use matching
@@ -707,7 +707,7 @@ This documentation-only addition is **DOC_SPEC_ADDITION_ONLY**, production
 parser/translator/runtime acceptance **NOT_RUN**.
 
 Use an explicit square initializer for an anonymous typed array, preserve arbitrary
-pointer depth and distinguish []: pending from @[]: pending. Universal sequences
+pointer depth and distinguish []: pending from []@: pending. Universal sequences
 inspect actual dense/reference storage; they do not cast dense T to void**.
 Keep callback defaults and omitted actuals intact. Only the documented one-level
 right-container opening is permitted; no P0 unwrap or private array/regex parser.

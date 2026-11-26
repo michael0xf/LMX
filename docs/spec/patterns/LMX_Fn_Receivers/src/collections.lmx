@@ -1,6 +1,6 @@
 # UNIVERSAL SEQUENTIAL COLLECTIONS.
-# items/source/rows are direct @ references to any admitted Array: dense T[]
-# or the ordinary Structure/@[]. FxSeqRead uses the actual layout, never void**
+# items/source/rows are direct @ references to any admitted Array: dense []T
+# or the ordinary Structure/[]@. FxSeqRead uses the actual layout, never void**
 # reinterpretation. One selected element is one prepared actual, including a
 # whole Structure. Callbacks retain their own defaults, required/private and R.
 # Calls are ordered in one Message. A callback must not change source slots or
@@ -16,7 +16,7 @@ FxMap:
         throws: copy(FxThrows\traversal)
         FxSeqInfo\get(items)
         private: int: count length(items)
-        private: @: result FxSeqAllocate\make(@[]; count)
+        private: @: result FxSeqAllocate\make([]@; count)
         private: int: i 0
         while: i < count
             private: @: item FxSeqRead\read(items; i)
@@ -85,7 +85,7 @@ FxZip:
         private: int: count length(first)
         if: length(second) < count
             count := length(second)
-        private: @: result FxSeqAllocate\make(@[]; count)
+        private: @: result FxSeqAllocate\make([]@; count)
         private: int: i 0
         while: i < count
             private: @: pair (copy(FxPair))
@@ -109,7 +109,7 @@ FxZipWith:
         private: int: count length(first)
         if: length(second) < count
             count := length(second)
-        private: @: result FxSeqAllocate\make(@[]; count)
+        private: @: result FxSeqAllocate\make([]@; count)
         private: int: i 0
         while: i < count
             private: @: leftValue FxSeqRead\read(first; i)
@@ -129,7 +129,7 @@ FxScan:
         throws: copy(FxThrows\traversal)
         FxSeqInfo\get(items)
         private: int: count length(items)
-        private: @: result FxSeqAllocate\make(@[]; 0)
+        private: @: result FxSeqAllocate\make([]@; 0)
         private: @: info FxSeqInfo\get(result)
         private: int: total FxSeqSize\sum(count; 1; info\maxLength)
         sys\resize(result; total)
@@ -153,12 +153,12 @@ FxTraverse:
         throws: copy(FxThrows\traversal)
         FxSeqInfo\get(items)
         private: int: count length(items)
-        private: @: result FxSeqAllocate\make(@[]; count)
+        private: @: result FxSeqAllocate\make([]@; count)
         private: int: i 0
         while: i < count
             private: @: item FxSeqRead\read(items; i)
             private: @: record FxApply\apply(next; FxOne\make(item))
-            private: FxMaybe@: answer record
+            private: @FxMaybe: answer record
             if: answer\present = 0
                 return: answer
             result[i] := answer\value
@@ -175,7 +175,7 @@ FxTranspose:
         throws: FxKernelFailure FxShape FxTypeToken ReceiverIndex SequenceSize
         FxSeqInfo\get(rows)
         private: int: height length(rows)
-        private: @: result FxSeqAllocate\make(@[]; 0)
+        private: @: result FxSeqAllocate\make([]@; 0)
         if: height = 0
             return: result
         private: @: first FxSeqRead\read(rows; 0)
@@ -193,7 +193,7 @@ FxTranspose:
         sys\resize(result; width)
         private: int: j 0
         while: j < width
-            private: @: column FxSeqAllocate\make(@[]; height)
+            private: @: column FxSeqAllocate\make([]@; height)
             i := 0
             while: i < height
                 private: @: row FxSeqRead\read(rows; i)
@@ -218,7 +218,7 @@ FxGroupBy:
         throws: copy(FxThrows\predicate) SequenceElement SequenceSize
         FxSeqInfo\get(items)
         private: int: count length(items)
-        private: @: result FxSeqAllocate\make(@[]; 0)
+        private: @: result FxSeqAllocate\make([]@; 0)
         private: int: i 0
         while: i < count
             private: @: item FxSeqRead\read(items; i)
@@ -226,7 +226,7 @@ FxGroupBy:
             private: @: group 0
             private: int: j 0
             while: j < length(result)
-                private: FxGroup@: candidate result[j]
+                private: @FxGroup: candidate result[j]
                 private: int: flag FxValueSame\test(candidate\key; key; sameKey)
                 if: flag != 0
                     group := candidate
@@ -235,7 +235,7 @@ FxGroupBy:
             if: group = 0
                 group := (copy(FxGroup))
                 group\key := key
-                group\items := FxSeqAllocate\make(@[]; 0)
+                group\items := FxSeqAllocate\make([]@; 0)
                 FxSeqPush\append(result; group)
             FxSeqPush\append(group\items; item)
             i += 1

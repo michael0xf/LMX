@@ -101,7 +101,7 @@
 ```lmx
 Example:
     int: initial
-    int[]: costs
+    []int: costs
     return: @
     run:
         int: remaining initial
@@ -137,7 +137,7 @@ Payment:
 
 Example:
     int: initial
-    int[]: costs
+    []int: costs
     return: @
     run:
         throws: copy(foldl\throws)

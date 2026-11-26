@@ -22,7 +22,7 @@ def expected_files():
     readme = f"""# Присваивание: `:=`, `.:` и сравнение `.=`
 
 Фикстуры предыдущей редакции: {positives} положительных и {negatives} отрицательных.
-Для TypeRef ABI случаи 021, 022 и negative/023 требуют `int[2][2]` вместо `int[][]`:
+Для TypeRef ABI случаи 021, 022 и negative/023 требуют `[2][2]int` вместо `[][]int`:
 границы строк не сохраняют оси; готовый вход с заданным TYPE сохраняет его при допуске.
 Production P0, translator и LMX runtime — **NOT_RUN**; нового `Main` нет.
 

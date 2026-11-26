@@ -91,13 +91,13 @@
 
 ```lmx
 Example:
-    int[]: items
+    []int: items
     int: gain
     int: offset
     return: @
     run:
         throws: copy(sys\resize\throws)
-        int[]: calibrated []
+        []int: calibrated []
         sys\resize(calibrated; length(items))
         int: total 0
         int: i 0
@@ -115,12 +115,12 @@ Example:
 
 ```lmx
 Example:
-    int[]: items
+    []int: items
     int: gain
     int: offset
     return: @
     run:
-        int[]: calibrated items * gain + offset
+        []int: calibrated items * gain + offset
         return: (calibrated; (+ 0 copy(calibrated)))
 ```
 

@@ -58,10 +58,10 @@ Example:
     run:
         throws: copy(record\throws) copy(FxSeqInfo\get\throws) copy(FxSeqAllocate\make\throws) copy(FxSeqRead\read\throws) copy(FxSeqStore\write\throws) copy(sys\resize\throws) SequenceSize
         FxSeqInfo\get(rows)
-        int: kind @[]
+        int: kind []@
         int: uniform 1
         bigint: count 0
-        @: sizes FxSeqAllocate\make(@[]; length(rows))
+        @: sizes FxSeqAllocate\make([]@; length(rows))
         int: i 0
         while: i < length(rows)
             @: part FxSeqRead\read(rows; i)
@@ -75,7 +75,7 @@ Example:
             count += partSize
             i += 1
         if: uniform = 0
-            kind := @[]
+            kind := []@
         @: out FxSeqAllocate\make(kind; 0)
         @: info FxSeqInfo\get(out)
         if: count > info\maxLength

@@ -95,22 +95,14 @@ def write_sources(record, directory):
 
 
 def type_declaration_issues(code):
-    """Typed reference declarations are Model@: p / int@: left / FxMaybe@: input.
-
-    A generic @: target expression is valid and must not be rewritten as a type.
-    """
-    issues=[]
-    primitives='(?:bool|byte|char|short|int|long|float|double|word|uint|uint8|uint16|uint32|uint64|int8|int16|int32|int64)'
-    for number,line in enumerate(code.splitlines(),1):
-        line=line.split('#',1)[0]
-        if re.search(r'(?<![A-Za-z0-9_])@[A-Za-z_][A-Za-z0-9_]*\s*:',line):
-            issues.append(f'line {number}: prefix @Type declaration; use Type@: name')
-        if re.search(r'\[\][A-Za-z_][A-Za-z0-9_]*\s*:',line):
-            issues.append(f'line {number}: prefix []Type declaration; use Type[]: name')
-        if re.search(r'@:\s*'+primitives+r'\s+[A-Za-z_][A-Za-z0-9_]*\s*$',line):
-            issues.append(f'line {number}: old @: Type name declaration; use Type@: name')
-        if re.search(r'@:\s*[A-Za-z_][A-Za-z0-9_]*\s+'+primitives+r'\s*$',line):
-            issues.append(f'line {number}: old @: name Type declaration; use Type@: name')
+    """Flag the retired suffix spellings used by earlier source editions."""
+    issues = []
+    for number, line in enumerate(code.splitlines(), 1):
+        line = line.split('#', 1)[0]
+        if re.search(r'\b[A-Za-z_]\w*@+\s*:(?!=|:)', line):
+            issues.append(f'line {number}: suffix pointer type; put @ before the type')
+        if re.search(r'\b[A-Za-z_]\w*\[\]\s*:(?!=|:)', line):
+            issues.append(f'line {number}: suffix array type; put [] before the type')
     return issues
 
 
@@ -152,7 +144,7 @@ def validate_variants(record, directory=None, *, procedural_restrictions=True):
         for operation in sorted(PROCEDURAL_FORBIDDEN):
             if re.search(r'(?<![A-Za-z0-9_])'+operation+r'(?=\s*\(|\s+[^:=\n]|\\)',code):
                 errors.append('procedural: functional traversal '+operation)
-        arrays=re.findall(r'^\s*(?:[A-Za-z_@][A-Za-z0-9_@]*)?\[\]:\s+([A-Za-z_][A-Za-z0-9_]*)',code,re.M)
+        arrays=re.findall(r'^\s*(?:\[[^\]\n]*\])+(?:@*[A-Za-z_]\w*|@+)?\s*:\s+([A-Za-z_]\w*)',code,re.M)
         for name in arrays:
             if re.search(r'\b'+re.escape(name)+r'\s*[+*/%]',code):
                 errors.append('procedural: element-wise Array arithmetic on '+name)

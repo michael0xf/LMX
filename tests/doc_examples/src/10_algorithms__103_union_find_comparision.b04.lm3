@@ -1,0 +1,54 @@
+UnionFind:
+    int: n
+    @: pairs
+    @: traverse
+    return: @
+    run:
+        throws: copy(AlgorithmArray\make\throws) copy(FxSeqAllocate\make\throws) copy(FxApply\apply\throws)
+        @: parent FxSeqAllocate\make([]int; n)
+        @: size AlgorithmArray\make([]int; n; (1 record))
+        @: labels FxSeqAllocate\make([]int; n)
+        FxApply\apply(traverse; ())
+        return: labels
+
+DsuInitialize:
+    int: vertex
+    return: int
+    run:
+        throws: ReceiverIndex
+        parent[vertex] := vertex
+        return: vertex
+
+DsuRoot:
+    int: vertex
+    return: int
+    run:
+        throws: ReceiverIndex
+        while: parent[vertex] != vertex
+            parent[vertex] := parent[parent[vertex]]
+            vertex := parent[vertex]
+        return: vertex
+
+DsuJoin:
+    int: count
+    @: pair
+    return: int
+    run:
+        throws: copy(DsuRoot\run\throws)
+        int: a DsuRoot\run(pair[0])
+        int: b DsuRoot\run(pair[1])
+        if: a = b
+            return: count
+        if: size[a] < size[b]
+            (a b) .: (b a)
+        parent[b] := a
+        size[a] += size[b]
+        return: count - 1
+
+DsuEmit:
+    int: vertex
+    return: int
+    run:
+        throws: copy(DsuRoot\run\throws)
+        labels[vertex] := DsuRoot\run(vertex)
+        return: labels[vertex]

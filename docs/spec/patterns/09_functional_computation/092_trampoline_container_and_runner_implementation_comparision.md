@@ -21,7 +21,7 @@ FxBounce:
 FxDone:
     private: @: value
     required: value
-    return: FxBounce@
+    return: @FxBounce
     done:
         private: @: result (copy(FxBounce))
         result\done := 1
@@ -41,7 +41,7 @@ FxMore:
         return: result
 
 FxTrampoline:
-    private: FxBounce@: current
+    private: @FxBounce: current
     return: @
     trampoline:
         throws: copy(FxThrows\call)

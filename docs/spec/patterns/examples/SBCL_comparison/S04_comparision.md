@@ -116,15 +116,15 @@
 
 ```lmx
 Example:
-    int[]: quantities
-    int[]: prices
+    []int: quantities
+    []int: prices
     return: @
     run:
         throws: copy(sys\resize\throws)
         int: count length(quantities)
         if: length(prices) < count
             count := length(prices)
-        int[]: totals []
+        []int: totals []
         sys\resize(totals; count)
         int: total 0
         int: i 0
@@ -142,8 +142,8 @@ Example:
 
 ```lmx
 Example:
-    int[]: quantities
-    int[]: prices
+    []int: quantities
+    []int: prices
     return: @
     run:
         throws: copy(zipWith\throws) copy(sum\throws)

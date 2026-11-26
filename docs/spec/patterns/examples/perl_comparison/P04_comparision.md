@@ -43,12 +43,12 @@
 
 ```lmx
 Example:
-    int[]: deltas
+    []int: deltas
     int: initial
     return: @
     run:
         throws: copy(FxSeqPush\append\throws) copy(record\throws)
-        @[]: out []
+        []@: out []
         int: total initial
         FxSeqPush\append(out; (total record))
         int: i 0
@@ -65,7 +65,7 @@ Example:
 
 ```lmx
 Example:
-    int[]: deltas
+    []int: deltas
     int: initial
     return: @
     run:

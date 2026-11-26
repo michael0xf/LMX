@@ -592,14 +592,14 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "ScopeMessage:\n    int: childId\n    int: ok\n    int: value\n    int[]: seen [0 0]\n    int: remaining 2\n    int: failed 0\n    int: total 0\n    @: lifecycle\n    @: result\n    stopped:\n        if: node\\seen[childId] = 1\n            return\n        node\\seen[childId] := 1\n        if: ok = 0\n            node\\failed := 1\n            lifecycle\\requestStopChildren()\n        if: ok = 1\n            node\\total += value\n        node\\remaining -= 1\n        if: node\\remaining = 0\n            result\\finish(1 - node\\failed; node\\total)\n",
+          "code": "ScopeMessage:\n    int: childId\n    int: ok\n    int: value\n    []int: seen [0 0]\n    int: remaining 2\n    int: failed 0\n    int: total 0\n    @: lifecycle\n    @: result\n    stopped:\n        if: node\\seen[childId] = 1\n            return\n        node\\seen[childId] := 1\n        if: ok = 0\n            node\\failed := 1\n            lifecycle\\requestStopChildren()\n        if: ok = 1\n            node\\total += value\n        node\\remaining -= 1\n        if: node\\remaining = 0\n            result\\finish(1 - node\\failed; node\\total)\n",
           "notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. Хост запускает ровно двух прямых детей ScopeMessage; stopped(childId:0|1,ok:0|1,value:int) приходит только после cleanup и безопасной остановки ребёнка. lifecycle.requestStopChildren():void посылает stop через штатный Thread.children без второго реестра. result.finish(ok:int,total:int):void закрывает scope после barrier; при ok=0 total не является успешным результатом. Сокращение 23-Nov: The two child IDs 0 and 1 select one shared duplicate-notification branch; lifecycle and result barrier are unchanged.",
           "notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. The host launches exactly two direct children of ScopeMessage; stopped(childId:0|1,ok:0|1,value:int) arrives only after cleanup and safe child termination. lifecycle.requestStopChildren():void sends stop through ordinary Thread.children without a second registry. result.finish(ok:int,total:int):void closes the scope after the barrier; total is not a successful result when ok=0.",
           "metrics": {
             "characters": 316,
             "nonblank_lines": 22,
             "utf8_bytes": 523,
-            "sha256": "bf35702ae1b9c6b9c4db9d5d2518fa188280394202354b161a9bb19c56d23d63"
+            "sha256": "d15e6d018737727a0f400bc94ad36ab013a2d230bba69abaf039c4f1441cecbe"
           }
         },
         {

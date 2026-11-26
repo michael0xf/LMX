@@ -1,0 +1,25 @@
+Example:
+    @: values
+    int: count
+    int: newestFirst
+    return: @
+    run:
+        throws: copy(FxSeqInfo\get\throws) copy(FxSeqAllocate\make\throws) ReceiverIndex
+        if: count < 0
+            throw: ReceiverIndex()
+        @: info FxSeqInfo\get(values)
+        int: n count
+        if: n > length(values)
+            n := length(values)
+        @: out FxSeqAllocate\make(info\arrayType; n)
+        int: at length(values) - n
+        int: step 1
+        if: newestFirst
+            at := length(values) - 1
+            step := -1
+        int: i 0
+        while: i < n
+            out[i] := values[at]
+            at += step
+            i += 1
+        return: out

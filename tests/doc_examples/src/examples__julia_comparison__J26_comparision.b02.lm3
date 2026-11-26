@@ -1,0 +1,11 @@
+Example:
+    @: values
+    int: count
+    int: newestFirst
+    return: @
+    run:
+        throws: copy(slice\throws) ReceiverIndex
+        if: count < 0
+            throw: ReceiverIndex()
+        @: window count = 0 ? values[:0] : values[-count:]
+        return: newestFirst ? window[::-1] : window

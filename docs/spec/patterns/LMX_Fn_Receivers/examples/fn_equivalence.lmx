@@ -4,9 +4,9 @@
 # Передача описания сигнатуры в call не получает новую семантику исполнения.
 # Имена формалов специально НЕ p0/p1/p2 и не имена исходного callable.
 
-FxLegacyMixedContract :: (int: amount; double: factor; char[]: suffix; return: double)
+FxLegacyMixedContract :: (int: amount; double: factor; []char: suffix; return: double)
 
-FxLegacyProcedureContract :: (int: amount; char[]: suffix)
+FxLegacyProcedureContract :: (int: amount; []char: suffix)
 
 FxLegacyNullaryContract :: (return: double)
 
@@ -18,25 +18,25 @@ FxFnEquivalenceExamples:
         private: @: originalInfo FxKernel\signature(subject := FxMixedTarget\evaluate)
         private: @: tokenContract FxToTypes\`->`(inputs := originalInfo\inputTypes; result := originalInfo\resultType)
         # Новое fn-требование принимает callable с прежним именованным DATA.
-        private: tokenContract@: acceptsNamed FxMixedTarget\evaluate
+        private: @tokenContract: acceptsNamed FxMixedTarget\evaluate
         sys\assert(acceptsNamed(p0 := 2; p1 := 1.5; p2 := "abc") = 6.0)
         # Именованная сигнатура принимает callable, созданный общим type builder.
         private: @: generated FxPartial\partial(FxMixedTarget\evaluate; prefix := empty)
-        private: FxLegacyMixedContract@: acceptsGenerated generated
+        private: @FxLegacyMixedContract: acceptsGenerated generated
         sys\assert(acceptsGenerated(amount := 2; factor := 1.5; suffix := "abc") = 6.0)
         # Оба описания передаются одному общему introspection/construction API.
         private: @: legacyInfo FxKernel\signature(subject := FxLegacyMixedContract)
         private: @: tokenInfo FxKernel\signature(subject := tokenContract)
         sys\assert(length(legacyInfo\inputTypes) = length(tokenInfo\inputTypes))
         sys\assert(legacyInfo\hasResult = tokenInfo\hasResult)
-        private: tokenContract@: generatedForToken generated
+        private: @tokenContract: generatedForToken generated
         sys\assert(generatedForToken(p0 := 1; p1 := 2.0; p2 := "x") = 3.0)
         # void остаётся отсутствием return, не @0, int0 или пустой Structure.
         private: @: procedureInfo FxKernel\signature(subject := FxProcedureTarget\run)
         private: @: procedureType FxToTypes\`->`(inputs := procedureInfo\inputTypes; result := procedureInfo\resultType)
-        private: procedureType@: newAcceptsOldProcedure FxProcedureTarget\run
+        private: @procedureType: newAcceptsOldProcedure FxProcedureTarget\run
         private: @: generatedProcedure FxPartial\partial(FxProcedureTarget\run; prefix := empty)
-        private: FxLegacyProcedureContract@: oldAcceptsNewProcedure generatedProcedure
+        private: @FxLegacyProcedureContract: oldAcceptsNewProcedure generatedProcedure
         private: int: before FxGenericCounter\calls
         newAcceptsOldProcedure(p0 := 2; p1 := "x")
         oldAcceptsNewProcedure(amount := 3; suffix := "xy")
@@ -44,9 +44,9 @@ FxFnEquivalenceExamples:
         # Нулевая арность не подменяется одним фиктивным void-параметром.
         private: @: nullaryInfo FxKernel\signature(subject := FxNullaryTarget\value)
         private: @: nullaryType FxToTypes\`->`(inputs := empty; result := nullaryInfo\resultType)
-        private: nullaryType@: typedNullary FxNullaryTarget\value
+        private: @nullaryType: typedNullary FxNullaryTarget\value
         private: @: generatedNullary FxPartial\partial(FxNullaryTarget\value; prefix := empty)
-        private: FxLegacyNullaryContract@: legacyNullary generatedNullary
+        private: @FxLegacyNullaryContract: legacyNullary generatedNullary
         sys\assert(typedNullary() = 2.5)
         sys\assert(legacyNullary() = 2.5)
         return: 1

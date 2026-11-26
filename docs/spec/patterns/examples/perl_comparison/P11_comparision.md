@@ -80,7 +80,7 @@ Example:
     run:
         throws: copy(FxSeqInfo\get\throws) copy(FxSeqRead\read\throws) copy(FxSeqPush\append\throws) copy(record\throws)
         FxSeqInfo\get(items)
-        @[]: out []
+        []@: out []
         int: i 0
         while: i < length(items)
             @: held FxSeqRead\read(items; i)
@@ -110,7 +110,7 @@ Key:
         return: event\kind
 
 GroupRow:
-    FxGroup@: group
+    @FxGroup: group
     return: @
     row:
         return: (\group\key; group\items)

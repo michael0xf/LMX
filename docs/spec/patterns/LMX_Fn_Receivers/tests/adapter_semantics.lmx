@@ -104,17 +104,17 @@ FxAdapterEqualKeys:
     same:
         return: \first[0] = \second[0]
 
-FxAdapterNextSignature :: (char[]: text; return: double)
+FxAdapterNextSignature :: ([]char: text; return: double)
 
 FxAdapterNextA:
-    char[]: text "default"
+    []char: text "default"
     return: double
     value:
         FxAdapterJournal\stages += 1
         return: 2.5
 
 FxAdapterNextB:
-    char[]: otherText
+    []char: otherText
     return: double
     value:
         FxAdapterJournal\stages += 1
@@ -122,14 +122,14 @@ FxAdapterNextB:
 
 FxAdapterExactChain:
     int: select 0
-    return: FxAdapterNextSignature@
+    return: @FxAdapterNextSignature
     next:
         FxAdapterJournal\stages += 1
         if: select = 0
             return: FxAdapterNextA\value
         return: FxAdapterNextB\value
 
-FxAdapterFlatSignature :: (int: select; char[]: text; return: double)
+FxAdapterFlatSignature :: (int: select; []char: text; return: double)
 
 FxAdapterFinalSignature :: (return: int)
 
@@ -141,12 +141,12 @@ FxAdapterFinal:
 
 FxAdapterCallableResult:
     int: ignored
-    return: FxAdapterFinalSignature@
+    return: @FxAdapterFinalSignature
     value:
         FxAdapterJournal\stages += 1
         return: FxAdapterFinal\value
 
-FxAdapterCallableFlat :: (int: ignored; return: FxAdapterFinalSignature@)
+FxAdapterCallableFlat :: (int: ignored; return: @FxAdapterFinalSignature)
 
 FxAdapterExamples:
     return: int

@@ -45,9 +45,9 @@ UnionFind:
     return: @
     run:
         throws: copy(AlgorithmArray\make\throws) copy(FxSeqAllocate\make\throws) copy(FxApply\apply\throws)
-        @: parent FxSeqAllocate\make(int[]; n)
-        @: size AlgorithmArray\make(int[]; n; (1 record))
-        @: labels FxSeqAllocate\make(int[]; n)
+        @: parent FxSeqAllocate\make([]int; n)
+        @: size AlgorithmArray\make([]int; n; (1 record))
+        @: labels FxSeqAllocate\make([]int; n)
         FxApply\apply(traverse; ())
         return: labels
 

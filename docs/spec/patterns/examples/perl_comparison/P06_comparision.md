@@ -73,7 +73,7 @@ SelectFields:
 Example:
     @: items
     @: labels
-    int[]: positions
+    []int: positions
     return: @
     run:
         throws: copy(SelectFields\run\throws)
@@ -88,7 +88,7 @@ Example:
 Example:
     @: items
     @: labels
-    int[]: positions
+    []int: positions
     return: @
     run:
         throws: copy(select\throws)

@@ -34,7 +34,7 @@ SimulationState:
 
 SimulationMake:
     int: step
-    int[]: deltas
+    []int: deltas
     return: @
     make:
         throws: InvalidStep InvalidElapsed TimeOverflow
@@ -55,7 +55,7 @@ SimulationMake:
         return: state
 
 Tick:
-    SimulationState@: state
+    @SimulationState: state
     return: @
     update:
         state\velocity := (state\velocity + 1) % 7
@@ -72,12 +72,12 @@ Tick:
 ```lmx
 Frames:
     int: step
-    int[]: deltas
+    []int: deltas
     return: @
     run:
         throws: copy(SimulationMake\make\throws) copy(sys\resize\throws)
         @: state SimulationMake\make(step; deltas)
-        @[]: output []
+        []@: output []
         sys\resize(output; length(deltas))
         int: frame 0
         while: frame < length(deltas)
@@ -95,14 +95,14 @@ Frames:
 
 ```lmx
 TickFold:
-    SimulationState@: state
+    @SimulationState: state
     int: index
     return: @
     advance:
         return: Tick\update(state)
 
 Frame:
-    SimulationState@: state
+    @SimulationState: state
     int: elapsed
     return: @
     advance:
@@ -114,7 +114,7 @@ Frame:
 
 Frames:
     int: step
-    int[]: deltas
+    []int: deltas
     return: @
     run:
         throws: copy(SimulationMake\make\throws) copy(mapAccumL\throws)

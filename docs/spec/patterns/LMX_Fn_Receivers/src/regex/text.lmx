@@ -10,7 +10,7 @@
 
 RxOctet:
     private:
-        char[]: source
+        []char: source
         int: index
     return: int
     read:
@@ -21,7 +21,7 @@ RxOctet:
 
 RxTextBuild:
     private:
-        char[]: source
+        []char: source
         int: profile
     return: @
     make:
@@ -31,8 +31,8 @@ RxTextBuild:
             throw: PatternEncoding()
         if: profile != 0 && profile != 1
             throw: PatternArgument()
-        private: int[]: units []
-        private: int[]: offsets []
+        private: []int: units []
+        private: []int: offsets []
         # Exact upper bounds: an octet cannot create more than one scalar.
         private: @: unitInfo FxSeqInfo\get(source := units)
         private: int: unitCapacity FxSeqSize\sum(0; length(source); unitInfo\maxLength)
@@ -99,7 +99,7 @@ RxTextBuild:
 # Repeated searches prepare their own current index. No change watcher is used.
 RxTextViewMake:
     private:
-        char[]: source
+        []char: source
         int: profile
     return: @
     make:
@@ -110,7 +110,7 @@ RxTextViewMake:
         return: out
 
 RxPrepare:
-    private: TextView@: source
+    private: @TextView: source
     required: source
     return: @
     make:
@@ -119,14 +119,14 @@ RxPrepare:
         return: prepared
 
 RxUtf8Text:
-    private: char[]: source
+    private: []char: source
     required: source
     return: @
     utf8Text:
         return: RxTextViewMake\make(source := source; profile := 0)
 
 RxByteText:
-    private: char[]: source
+    private: []char: source
     required: source
     return: @
     byteText:
@@ -134,10 +134,10 @@ RxByteText:
 
 RxTextSlice:
     private:
-        RxPreparedText@: source
+        @RxPreparedText: source
         int: begin
         int: end
-    return: char[]
+    return: []char
     copyText:
         throws: copy(FxThrows\pattern)
         if: begin < 0 || end < begin || end > length(source\units)

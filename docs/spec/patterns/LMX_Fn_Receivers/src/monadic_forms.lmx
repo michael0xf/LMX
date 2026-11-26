@@ -2,14 +2,14 @@
 # Public role/family selection is specified in ../../../MONADIC_OPERATIONS.md.
 
 FxMaybeActive:
-    private: FxMaybe@: input
+    private: @FxMaybe: input
     required: input
     return: int
     active:
         return: input\present
 
 FxResultActive:
-    private: FxResult@: input
+    private: @FxResult: input
     required: input
     return: int
     active:
@@ -18,7 +18,7 @@ FxResultActive:
 FxBindChain:
     private:
         @: current
-        @[]: steps
+        []@: steps
         @: step
         @: active
     required: current steps step active
@@ -38,25 +38,25 @@ FxBindChain:
 FxBindOperandTail:
     private:
         int: depth 0
-        @[]: right
+        []@: right
     required: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("+")
 
 FxMaybeBindOperand:
-    private: FxMaybe@@: left
+    private: @@FxMaybe: left
     copy: FxBindOperandTail
     required: left
-    return: FxMaybe@
+    return: @FxMaybe
     bind:
         throws: copy(FxThrows\call) FxArity
         return: FxBindChain\run(\left; right; FxBind\bind; FxMaybeActive\active)
 
 FxResultBindOperand:
-    private: FxResult@@: left
+    private: @@FxResult: left
     copy: FxBindOperandTail
     required: left
-    return: FxResult@
+    return: @FxResult
     bind:
         throws: copy(FxThrows\call) FxArity
         return: FxBindChain\run(\left; right; FxBindResult\bind; FxResultActive\active)

@@ -65,7 +65,7 @@ Example:
         int: oldSize length(target)
         int: added length(values)
         int: newSize FxSeqSize\sum(oldSize; added; info\maxLength)
-        @[]: ready []
+        []@: ready []
         sys\resize(ready; added)
         int: i 0
         while: i < added

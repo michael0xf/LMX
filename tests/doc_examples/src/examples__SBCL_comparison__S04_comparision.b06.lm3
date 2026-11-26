@@ -1,0 +1,19 @@
+Example:
+    []int: quantities
+    []int: prices
+    return: @
+    run:
+        throws: copy(sys\resize\throws)
+        int: count length(quantities)
+        if: length(prices) < count
+            count := length(prices)
+        []int: totals []
+        sys\resize(totals; count)
+        int: total 0
+        int: i 0
+        while: i < count
+            int: value quantities[i] * prices[i]
+            totals[i] := value
+            total += value
+            i += 1
+        return: (totals; total; length(quantities) - count; length(prices) - count)

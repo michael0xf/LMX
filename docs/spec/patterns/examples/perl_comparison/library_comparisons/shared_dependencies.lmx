@@ -95,7 +95,7 @@ FxMaybe:
     @: value 0
 
 FxNone:
-    return: FxMaybe@
+    return: @FxMaybe
     none:
         return: (copy(FxMaybe))
 
@@ -190,7 +190,7 @@ FxSeqCompress:
         private: int: count length(source)
         if: length(mask) != count
             throw: FxShape()
-        private: @: flags FxSeqAllocate\make(int[]; count)
+        private: @: flags FxSeqAllocate\make([]int; count)
         private: int: accepted 0
         private: int: i 0
         # Validate every mask value before constructing the selected result.
@@ -220,7 +220,7 @@ FxSeqConcat:
         throws: copy(FxThrows\sequence)
         FxSeqInfo\get(parts)
         private: int: count length(parts)
-        private: int: arrayType @[]
+        private: int: arrayType []@
         private: int: elementType 0
         private: int: allDense 1
         private: int: i 0
@@ -236,7 +236,7 @@ FxSeqConcat:
                 allDense := 0
             i += 1
         if: count = 0 || allDense = 0
-            arrayType := @[]
+            arrayType := []@
         private: @: out FxSeqAllocate\make(arrayType; 0)
         private: @: outInfo FxSeqInfo\get(out)
         private: int: total 0
@@ -422,7 +422,7 @@ FxSequenceDifference:
 FxSome:
     private: @: value
     required: value
-    return: FxMaybe@
+    return: @FxMaybe
     some:
         private: @: result (copy(FxMaybe))
         result\present := 1
@@ -439,7 +439,7 @@ FxStdCollect:
         throws: copy(FxThrows\mutation) FxCallFailure
         if: limit < -1
             throw: SequenceSize()
-        private: @: out FxSeqAllocate\make(@[]; 0)
+        private: @: out FxSeqAllocate\make([]@; 0)
         while: limit = -1 || length(out) < limit
             private: @: outcome FxTry\attempt(next; ())
             if: outcome\ok = 0
@@ -525,11 +525,11 @@ FxStdMaybeMapEngine:
     run:
         throws: copy(FxThrows\traversal) SequenceElement
         FxSeqInfo\get(items)
-        private: @: out FxSeqAllocate\make(@[]; 0)
+        private: @: out FxSeqAllocate\make([]@; 0)
         private: int: i 0
         while: i < length(items)
             private: @: packed FxApply\apply(transform; FxOne\make(FxSeqRead\read(items; i)))
-            private: FxMaybe@: answer packed
+            private: @FxMaybe: answer packed
             if: answer\present != 0
                 if: firstOnly != 0
                     return: answer
@@ -566,7 +566,7 @@ FxStdReplicate:
         private: int: size count
         if: size < 0
             size := 0
-        private: @: out FxSeqAllocate\make(@[]; size)
+        private: @: out FxSeqAllocate\make([]@; size)
         private: int: i 0
         while: i < size
             out[i] := value
@@ -584,11 +584,11 @@ FxSum:
 
 FxTextCycle:
     private:
-        char[]: items
+        []char: items
         int: count
         int: rejectNegative 0
     required: items count
-    return: char[]
+    return: []char
     cycle:
         throws: copy(FxThrows\sequence)
         return: \FxStdCycle\cycle(items; count; rejectNegative)
@@ -830,7 +830,7 @@ RxCandidateMake:
 RxCaptureAdd:
     private:
         @: previous
-        char[]: name
+        []char: name
         int: begin
         int: end
     return: @
@@ -844,14 +844,14 @@ RxCaptureAdd:
 
 RxCaptureEntry:
     @: previous 0
-    char[]: name ""
+    []char: name ""
     int: begin 0
     int: end 0
 
 RxCaptureLatest:
     private:
         @: captures
-        char[]: name
+        []char: name
     return: @
     find:
         private: @: cursor captures
@@ -864,7 +864,7 @@ RxCaptureLatest:
 RxCaptureOpen:
     private:
         @: config
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: @
@@ -876,7 +876,7 @@ RxCaptureOpen:
         return: RxCursorFactory\make(RxCaptureStep\step; state)
 
 RxCaptureState:
-    char[]: name ""
+    []char: name ""
     int: begin 0
     @: cursor 0
 
@@ -926,7 +926,7 @@ RxIsPattern:
 RxLiteralProbe:
     private:
         @: payload
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: int
@@ -943,7 +943,7 @@ RxLiteralProbe:
 
 RxMatchMake:
     private:
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: begin
         @: candidate
     return: @
@@ -957,7 +957,7 @@ RxMatchMake:
         return: out
 
 RxNameConfig:
-    char[]: name ""
+    []char: name ""
 
 RxNormalize:
     private: @: value
@@ -971,7 +971,7 @@ RxNormalize:
 
 RxOctet:
     private:
-        char[]: source
+        []char: source
         int: index
     return: int
     read:
@@ -982,8 +982,8 @@ RxOctet:
 
 RxOpen:
     private:
-        Pattern@: pattern
-        RxPreparedSource@: source
+        @Pattern: pattern
+        @RxPreparedSource: source
         int: position
         @: captures
     return: @
@@ -1011,7 +1011,7 @@ RxPatternOwner:
         @: config 0
     Call:
         private:
-            RxPreparedSource@: source
+            @RxPreparedSource: source
             int: position
             @: captures
         required: source position captures
@@ -1033,15 +1033,15 @@ RxPrepareSource:
 RxPreparedSource:
     @: view 0
     @: units 0
-    RxSourceDomain@: domain 0
+    @RxSourceDomain: domain 0
     @: profile 0
 
 RxPreparedText:
-    TextView@: view 0
+    @TextView: view 0
     int: profile
-    char[]: source
-    int[]: units
-    int[]: byteOffsets
+    []char: source
+    []int: units
+    []int: byteOffsets
 
 RxPrimitiveMake:
     private:
@@ -1057,7 +1057,7 @@ RxPrimitiveMake:
 RxPrimitiveOpen:
     private:
         @: config
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: @
@@ -1118,7 +1118,7 @@ RxRepeatFrameMake:
 RxRepeatOpen:
     private:
         @: config
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: @
@@ -1171,8 +1171,8 @@ RxRepeatStep:
 
 RxSameAsProbe:
     private:
-        RxNameConfig@: payload
-        RxPreparedSource@: source
+        @RxNameConfig: payload
+        @RxPreparedSource: source
         int: position
         @: captures
     return: int
@@ -1206,7 +1206,7 @@ RxSequenceFrame:
 
 RxSequenceFrameMake:
     private:
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         @: parts
         int: index
         @: candidate
@@ -1222,7 +1222,7 @@ RxSequenceFrameMake:
 RxSequenceOpen:
     private:
         @: config
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: @
@@ -1260,7 +1260,7 @@ RxSourceAppend:
     private:
         @: target
         @: fragment
-        RxPreparedSource@: source
+        @RxPreparedSource: source
     required: target fragment source
     append:
         throws: copy(FxThrows\pattern)
@@ -1271,7 +1271,7 @@ RxSourceAppend:
 RxSourceAppendSpan:
     private:
         @: target
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: begin
         int: end
     required: target source begin end
@@ -1286,7 +1286,7 @@ RxSourceDomain:
 
 RxSourceSlice:
     private:
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: begin
         int: end
     required: source begin end
@@ -1298,7 +1298,7 @@ RxSourceSlice:
 
 RxSpanMake:
     private:
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: begin
         int: end
     return: @
@@ -1312,7 +1312,7 @@ RxSpanMake:
 
 RxTextBuild:
     private:
-        char[]: source
+        []char: source
         int: profile
     return: @
     make:
@@ -1322,8 +1322,8 @@ RxTextBuild:
             throw: PatternEncoding()
         if: profile != 0 && profile != 1
             throw: PatternArgument()
-        private: int[]: units []
-        private: int[]: offsets []
+        private: []int: units []
+        private: []int: offsets []
         # Exact upper bounds: an octet cannot create more than one scalar.
         private: @: unitInfo FxSeqInfo\get(source := units)
         private: int: unitCapacity FxSeqSize\sum(0; length(source); unitInfo\maxLength)

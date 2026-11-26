@@ -1,0 +1,37 @@
+FxGroup:
+    @: key 0
+    @: items 0
+
+FxGroupBy:
+    private:
+        @: items
+        @: keyOf 0
+        @: sameKey 0
+    required: items
+    return: @
+    groupBy:
+        throws: copy(FxThrows\predicate) SequenceElement SequenceSize
+        FxSeqInfo\get(items)
+        private: int: count length(items)
+        private: @: result FxSeqAllocate\make([]@; 0)
+        private: int: i 0
+        while: i < count
+            private: @: item FxSeqRead\read(items; i)
+            private: @: key FxProjectValue\get(item; keyOf)
+            private: @: group 0
+            private: int: j 0
+            while: j < length(result)
+                private: @FxGroup: candidate result[j]
+                private: int: flag FxValueSame\test(candidate\key; key; sameKey)
+                if: flag != 0
+                    group := candidate
+                    break
+                j += 1
+            if: group = 0
+                group := (copy(FxGroup))
+                group\key := key
+                group\items := FxSeqAllocate\make([]@; 0)
+                FxSeqPush\append(result; group)
+            FxSeqPush\append(group\items; item)
+            i += 1
+        return: result

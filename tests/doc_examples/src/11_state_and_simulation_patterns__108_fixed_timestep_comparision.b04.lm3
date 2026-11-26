@@ -1,0 +1,38 @@
+SimulationState:
+    int: step
+    int: lag 0
+    int: ticks 0
+    int: position 0
+    int: velocity 0
+
+SimulationMake:
+    int: step
+    []int: deltas
+    return: @
+    make:
+        throws: InvalidStep InvalidElapsed TimeOverflow
+        if: step <= 0
+            throw: InvalidStep()
+        int: total 0
+        int: i 0
+        while: i < length(deltas)
+            int: elapsed deltas[i]
+            if: elapsed < 0
+                throw: InvalidElapsed()
+            if: elapsed > 2147483647 - total
+                throw: TimeOverflow()
+            total += elapsed
+            i += 1
+        @: state (copy(SimulationState))
+        state\step := step
+        return: state
+
+Tick:
+    @SimulationState: state
+    return: @
+    update:
+        state\velocity := (state\velocity + 1) % 7
+        state\position := (state\position + state\velocity) % 97
+        state\ticks += 1
+        state\lag -= state\step
+        return: state

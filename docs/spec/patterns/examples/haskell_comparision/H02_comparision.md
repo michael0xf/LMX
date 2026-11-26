@@ -21,7 +21,7 @@ Candidate:
 SignatureProbe:
     return: int
     run:
-        PairOperation@: selected Candidate\encode
+        @PairOperation: selected Candidate\encode
         int: first selected(a := 2; b := 7)
         int: second Candidate\encode(a := 2; b := 7)
         return: first * 100 + second
@@ -43,7 +43,7 @@ Candidate:
 SignatureProbe:
     return: int
     run:
-        PairOperation@: selected Candidate\encode
+        @PairOperation: selected Candidate\encode
         return: selected(a := 2; b := 7) * 100 + Candidate\encode(a := 2; b := 7)
 ```
 

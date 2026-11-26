@@ -88,7 +88,7 @@
 
 ```lmx
 Total:
-    int[]: items
+    []int: items
     return: int
     sum:
         int: result 0
@@ -100,8 +100,8 @@ Total:
 
 Example:
     int: opening
-    int[]: charges
-    int[]: credits
+    []int: charges
+    []int: credits
     return: @
     run:
         int: charged Total\sum(charges)
@@ -116,8 +116,8 @@ Example:
 ```lmx
 Example:
     int: opening
-    int[]: charges
-    int[]: credits
+    []int: charges
+    []int: credits
     return: @
     run:
         int: charged (+ 0 copy(charges))

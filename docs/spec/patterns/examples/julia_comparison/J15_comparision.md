@@ -41,7 +41,7 @@ LMX Maybe.present/value сопоставляется с Julia nothing/Int. Вы�
 
 ```lmx
 Example:
-    int[]: xs
+    []int: xs
     int: limit
     return: @
     run:
@@ -66,7 +66,7 @@ Above:
         return: value > limit
 
 Example:
-    int[]: xs
+    []int: xs
     int: limit
     return: @
     run:

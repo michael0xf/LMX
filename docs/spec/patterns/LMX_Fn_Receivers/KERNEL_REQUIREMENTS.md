@@ -213,11 +213,11 @@ explicit void retains the absence of a result. Full Structure, callable, Array,
 pointer and qualifier requirements remain intact. A plain initialized int is
 not a TYPE code and must not be reinterpreted as a descriptor address.
 
-Postfix `T[]`, `T[N]`, `T@` and dynamic rank/pointer forms produce TypeRef through
+Postfix `[]T`, `[N]T`, `@T` and dynamic rank/pointer forms produce TypeRef through
 the common canonicalizer. The complete normalized constructing description alone
-determines type identity: `int[][]` and `int[](2)` share a descriptor;
+determines type identity: `[][]int` and `[](2)int` share a descriptor;
 initializer rows, actual length and reserve do not refine it. `[]: value` retains
-uninitialized AnyArray, and `@[]: value` the ordinary Structure/reference-array
+uninitialized AnyArray, and `[]@: value` the ordinary Structure/reference-array
 requirement. Neither form allocates a typed backing merely by naming a type.
 
 The old int-code source prototypes are pending ABI migration. Invalid TYPE
@@ -248,7 +248,7 @@ No target/default runs at construction. No generated text is reparsed per call. 
 
 ### attempt(operation; args; failures)
 
-Perform an ordinary call from a **ready finite sequence of actual values**. The sequence may be Structure/@[] or a dense Array; typed access uses the actual element type/stride. @[] is read directly; a dense native argument can use its normal ABI without a mandatory record allocation. The bridge does not reinterpret dense backing as pointers or create an extra items container.
+Perform an ordinary call from a **ready finite sequence of actual values**. The sequence may be Structure/[]@ or a dense Array; typed access uses the actual element type/stride. []@ is read directly; a dense native argument can use its normal ABI without a mandatory record allocation. The bridge does not reinterpret dense backing as pointers or create an extra items container.
 
 The number of actuals may be smaller than the full formal count. The actual candidate's defaults, required/private and ordinary binding rules govern remaining positions. A ready Structure element is exactly one actual; W/E and source expression evaluation are not repeated by this internal transport.
 
@@ -272,7 +272,7 @@ This remains a required provider contract, not evidence of runtime execution.
 
 ### fieldNames(source)
 
-Read the existing owning-field association in physical order, including repeated names. A named field yields a ready LMX string; an anonymous field yields `uninit:char[]`, not an empty string or @0. `sys\name(identifier)` is a different source-identifier operation. No second name table is stored in graph fields.
+Read the existing owning-field association in physical order, including repeated names. A named field yields a ready LMX string; an anonymous field yields `uninit:[]char`, not an empty string or @0. `sys\name(identifier)` is a different source-identifier operation. No second name table is stored in graph fields.
 
 ### renameFields(target; indices; labels)
 
@@ -344,7 +344,7 @@ Do not implement these algorithms again inside `FxKernel`. Equally, do not claim
 
 Run the current specification's [A01–A20](../../LMX_semantics.en.md#adapter-observations) and [B01–B11](../../LMX_semantics.en.md#uncurry-observations), the separate [PA01 integration gate](tests/ADAPTER_ACCEPTANCE.md#place-actual-integration), the prepared [adapter fixtures](tests/adapter_semantics.lmx), and [the package acceptance](tests/ACCEPTANCE.md) in I→I, I→N, N→I and N→N. Native tests must actually execute compiled methods. Compare journals, place identities, lifetime and partial failure order, not just final return values.
 
-Optimize after correctness: use existing cached type relationships, prepared contracts, direct native ABI and real Array access; avoid copies of already-ready @[] vectors, whole-frame snapshots and repeated parsing. Measure direct/partial/once hit/miss/uncurry at equal work, including reads, calls and allocations. No measured speed claim is made in this archive.
+Optimize after correctness: use existing cached type relationships, prepared contracts, direct native ABI and real Array access; avoid copies of already-ready []@ vectors, whole-frame snapshots and repeated parsing. Measure direct/partial/once hit/miss/uncurry at equal work, including reads, calls and allocations. No measured speed claim is made in this archive.
 
 The historical eight-hook source is retained under reference solely for provenance. The current callable contract includes policy and five phase hooks. A test of text, assembled file or declared effects is never recorded as runtime PASS.
 
@@ -355,8 +355,8 @@ The sequence and Regex implementations share the existing canonical type descrip
 | Operation | Contract |
 | --- | --- |
 | `arrayInfo(source)` | Require an initialized Array/Structure; return `arrayType` and `elementType` as canonical TypeRef references, and `elementBits`, `dense`, `maxLength` as ordinary int metadata. Complete normalized descriptions preserve full nested requirements; the array profile is linear, and maxLength accounts for index and actual byte-size overflow. |
-| `arrayRead(source,index)` | Return one direct stored value reference for @[] or an ordinary stable dense-T record using actual stride. Preserve full type/reference/uninit state where representable. Do not execute saved graph forms, require a value box, or pre-materialize the entire input. |
-| `arrayAdmit(target,value)` | Before commit, prepare the value against the actual target's complete element requirement. @[] takes the direct reference independently of the former slot. Dense T uses permitted ordinary representation preparation; no hidden user converter/initializer is added. |
+| `arrayRead(source,index)` | Return one direct stored value reference for []@ or an ordinary stable dense-T record using actual stride. Preserve full type/reference/uninit state where representable. Do not execute saved graph forms, require a value box, or pre-materialize the entire input. |
+| `arrayAdmit(target,value)` | Before commit, prepare the value against the actual target's complete element requirement. []@ takes the direct reference independently of the former slot. Dense T uses permitted ordinary representation preparation; no hidden user converter/initializer is added. |
 | `arrayWrite(target,index,value)` | Write an already prepared same-profile/admitted value with ordinary bounds/lifetime checks and no repeated full admission, converter or callback. Keep descriptor identity and parent links. |
 
 `arrayRead` uses `ReceiverIndex`, `FxKernelFailure`, `FxTypeToken`; incompatible insertion uses `SequenceElement` from `arrayAdmit`. System/implicit failures retain their ordinary channels. A prepared native path may use direct typed loads/stores without observable boxing. These hooks contain no map/filter/range-replacement/matcher algorithm and add no Sequence value kind.
@@ -404,7 +404,7 @@ representations follow [canonical Array descriptions](../../ARRAY_STORAGE.en.md#
 For a fixed shaped result, common construction allocates/initializes the valid
 backing directly under the complete evaluated requirement before publication.
 The old `FxSeqAllocate` empty-value-plus-resize helper only serves unconstrained
-linear types; it cannot publish an empty `int[2][3]` or retag a ready generic
+linear types; it cannot publish an empty `[2][3]int` or retag a ready generic
 Array. Migrating that prototype is part of this boundary, without a second
 allocator or growth mechanism.
 An operation-local frame/layout is temporary and does not restore a mandatory

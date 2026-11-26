@@ -88,11 +88,11 @@
 
 ```lmx
 Example:
-    int[]: items
+    []int: items
     return: @
     run:
         throws: copy(sys\resize\throws)
-        int[]: accepted []
+        []int: accepted []
         sys\resize(accepted; length(items))
         int: total 0
         int: used 0
@@ -120,7 +120,7 @@ Negative:
         return: value < 0
 
 Example:
-    int[]: items
+    []int: items
     return: @
     run:
         throws: copy(index\throws) copy(take\throws) copy(sum\throws)

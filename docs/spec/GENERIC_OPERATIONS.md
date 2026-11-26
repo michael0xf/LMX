@@ -32,7 +32,7 @@
 | Публичный `type` | В проверенных `src/public.lmx` и каталоге обеих версий не найден. | Это добавляемый вход, а не утверждение о ранее готовой функции. |
 | Сигнатуры | `Name :: DATA` уже обозначает именованную сигнатуру; `signatureTypes` строит описание по TYPE-токенам. | Не менять смысл `::`. Добавить короткую ориентацию «вход `->` результат», переиспользовав построитель сигнатур. |
 | Сравнение | Есть `FxValueSame`, `equalFields`, `FxSequenceDifference`, `wholeMatch`. | Один выбор сравнения и один проход по диапазонам; отдельный `sameText` не вводить. |
-| Последовательности | Большинство `FxSeq*` уже работает с фактическими профилями Array. | Сохранить типизированное чтение/запись; обобщать найденные ограничения, а не стирать всё до `@[]`. |
+| Последовательности | Большинство `FxSeq*` уже работает с фактическими профилями Array. | Сохранить типизированное чтение/запись; обобщать найденные ограничения, а не стирать всё до `[]@`. |
 
 Основания: [public.lmx](patterns/LMX_Fn_Receivers/src/public.lmx), [CATALOG.md](patterns/LMX_Fn_Receivers/CATALOG.md), [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx), [fn_operand.lmx](patterns/LMX_Fn_Receivers/src/fn_operand.lmx), [regex/operands.lmx](patterns/LMX_Fn_Receivers/src/regex/operands.lmx).
 
@@ -209,7 +209,7 @@ FxTypeOperand:
 ```lmx
 FxToTypes:
     private:
-        @[]: inputs
+        []@: inputs
         @: result
     required: inputs result
     return: @
@@ -221,7 +221,7 @@ FxToTypes:
         )
 
 FxToTokens:
-    private: @[]: tokens
+    private: []@: tokens
     required: tokens
     return: @
     `->`:
@@ -229,7 +229,7 @@ FxToTokens:
         if: length(tokens) = 0
             throw: FxArity()
         private: int: last length(tokens) - 1
-        private: @[]: inputs FxSeqSlice\slice(tokens; 0; last)
+        private: []@: inputs FxSeqSlice\slice(tokens; 0; last)
         return: FxToTypes\`->`(inputs := inputs; result := tokens[last])
 
 FxToOperand:
@@ -279,7 +279,7 @@ FxToOperand:
 
 Полный код — в [монадических операциях](MONADIC_OPERATIONS.md). Здесь обязательна миграция прежних `bindResult` и `flatMap` в `bind` соответствующего семейства. Старые публичные имена удаляются; внутренние методы также получают единое имя `bind`. Сами тела связывания не копируются.
 
-Для Array результат существующего алгоритма — новый `@[]` с фактическими записями элементов. Он соединяет результаты продолжения ровно на один уровень. Это не обещание сохранить плотный профиль входного массива.
+Для Array результат существующего алгоритма — новый `[]@` с фактическими записями элементов. Он соединяет результаты продолжения ровно на один уровень. Это не обещание сохранить плотный профиль входного массива.
 
 ## 5. Один общий проход сравнения
 
@@ -391,7 +391,7 @@ FxKeyIndex:
 
 ### 6.1. Где находится текстовое ограничение
 
-В исходном текстовом профиле [regex/support.lmx](patterns/LMX_Fn_Receivers/src/regex/support.lmx) `Pattern` прежде принимал `RxPreparedText@`. В [regex/primitives.lmx](patterns/LMX_Fn_Receivers/src/regex/primitives.lmx) литералы и классы принимают `char[]`, предикат — `int`. Это были ограничения входа и источника; сами последовательная композиция, выбор, повторение, захват и возврат к альтернативам работают через курсор и кандидатов.
+В исходном текстовом профиле [regex/support.lmx](patterns/LMX_Fn_Receivers/src/regex/support.lmx) `Pattern` прежде принимал `@RxPreparedText`. В [regex/primitives.lmx](patterns/LMX_Fn_Receivers/src/regex/primitives.lmx) литералы и классы принимают `[]char`, предикат — `int`. Это были ограничения входа и источника; сами последовательная композиция, выбор, повторение, захват и возврат к альтернативам работают через курсор и кандидатов.
 
 В обобщении общий Pattern получает источник с последовательностью **типизированных единиц** и отдельным профилем. Для Array единица — целый элемент исходного Array. Для текста единица — результат существующего декодирования, а профиль сохраняет текст и отображение позиций в байтовые границы.
 
@@ -408,10 +408,10 @@ RxSourceDomain:
 RxPreparedSource:
     @: view 0
     @: units 0
-    RxSourceDomain@: domain 0
+    @RxSourceDomain: domain 0
     @: profile 0
 
-Pattern :: (RxPreparedSource@: source; int: position; @: captures; return: @)
+Pattern :: (@RxPreparedSource: source; int: position; @: captures; return: @)
 
 ArrayView:
     @: items 0
@@ -433,7 +433,7 @@ RxSourceMake:
     private:
         @: view
         @: units
-        RxSourceDomain@: domain
+        @RxSourceDomain: domain
         @: profile
     required: view units domain profile
     return: @
@@ -459,12 +459,12 @@ RxArrayLiteralUnits:
 RxTextLiteralUnits:
     private:
         @: value
-        RxPreparedText@: profile
+        @RxPreparedText: profile
     required: value profile
     return: @
     make:
         throws: copy(FxThrows\sequence) PatternArgument PatternEncoding
-        private: char[]: text \value
+        private: []char: text \value
         private: @: prepared RxTextBuild\make(text; profile\profile)
         return: prepared\units
 
@@ -475,7 +475,7 @@ RxTextDomain:
     @: literalUnits RxTextLiteralUnits\make
 
 RxArrayPrepare:
-    private: ArrayView@: source
+    private: @ArrayView: source
     required: source
     return: @
     make:
@@ -489,7 +489,7 @@ RxArrayPrepare:
         )
 
 RxTextPrepareSource:
-    private: TextView@: source
+    private: @TextView: source
     required: source
     return: @
     make:
@@ -498,7 +498,7 @@ RxTextPrepareSource:
         return: RxSourceMake\make(source; text\units; RxTextDomain; text)
 ```
 
-`units` у Array указывает на исходную типизированную последовательность; преобразование всех элементов в `int` или все плотные Arrays в `@[]` не выполняется. `int position` — координата, а не тип содержимого. Пустой `RxArrayProfile` — явное состояние профиля, а не отсутствие источника.
+`units` у Array указывает на исходную типизированную последовательность; преобразование всех элементов в `int` или все плотные Arrays в `[]@` не выполняется. `int position` — координата, а не тип содержимого. Пустой `RxArrayProfile` — явное состояние профиля, а не отсутствие источника.
 
 `arrayView(xs)` — обычный вход значения целиком по разделу 3. Внутренний `RxArrayView` получает готовую запись Array. `utf8Text` и `byteText` продолжают выбирать текстовые профили. Автоматическое удобное преобразование голого Array допустимо только в однозначном контексте источника; не распознавать произвольную Structure по нескольким случайно совпавшим полям.
 
@@ -519,7 +519,7 @@ RxLiteral:
 RxLiteralProbe:
     private:
         @: payload
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: int
@@ -550,7 +550,7 @@ RxElement:
 RxElementProbe:
     private:
         @: payload
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: int
@@ -565,7 +565,7 @@ RxElementProbe:
 
 У `element(x)` также нужен единичный захват фактического значения: значение-ссылка не превращается в её цель, а Array не раскрывается.
 
-Обобщённый `literal` переносит проверку совместимости литерала с выбранным доменом к моменту сопоставления, потому что при создании Pattern источник ещё не выбран. Это наблюдаемое изменение времени ошибки и должно быть указано в документации. Если существующий типизированный текстовый вход должен сохранять раннюю проверку, его адаптивное представление проверяет `char[]` до общей фабрики, без отдельного распознавателя и без старого имени-алиаса.
+Обобщённый `literal` переносит проверку совместимости литерала с выбранным доменом к моменту сопоставления, потому что при создании Pattern источник ещё не выбран. Это наблюдаемое изменение времени ошибки и должно быть указано в документации. Если существующий типизированный текстовый вход должен сохранять раннюю проверку, его адаптивное представление проверяет `[]char` до общей фабрики, без отдельного распознавателя и без старого имени-алиаса.
 
 ### 6.4. Предикат над настоящим элементом
 
@@ -604,7 +604,7 @@ RxSatisfy:
 RxPredicateProbe:
     private:
         @: payload
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: int
@@ -653,8 +653,8 @@ RxMembers:
 
 RxClassProbe:
     private:
-        RxClassConfig@: payload
-        RxPreparedSource@: source
+        @RxClassConfig: payload
+        @RxPreparedSource: source
         int: position
         @: captures
     return: int
@@ -695,7 +695,7 @@ RxThenOperand:
     private:
         @: left
         int: depth 0
-        @[]: right
+        []@: right
     required: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("+")
@@ -719,7 +719,7 @@ RxThenOperand:
 | Файл / узлы | Требуемая замена |
 | --- | --- |
 | `regex/support.lmx`: `RxPatternOwner\Call\open`, `RxOpen`, фабрики `Span`/`Match` | Обязательно заменить входы на `RxPreparedSource`. Иначе новая сигнатура `Pattern` будет противоречить настоящему callable, который возвращает фабрика. |
-| `regex/combinators.lmx` | Заменить узкие аргументы `RxPreparedText@: source` на `RxPreparedSource@: source`. Сохранить порядок ветвей, кадров и кандидатов. |
+| `regex/combinators.lmx` | Заменить узкие аргументы `@RxPreparedText: source` на `@RxPreparedSource: source`. Сохранить порядок ветвей, кадров и кандидатов. |
 | `regex/primitives.lmx` | Перенести общий `RxPrimitiveOpen` на новый источник; подключить приведённые probe. |
 | `regex/values.lmx` | Общие `emptyPattern`, `neverPattern`, «любой элемент», начало и конец используют единый заголовок Pattern. Убрать повторные специализированные заголовки. |
 | `Span` и `Match` | Общая ссылка на исходный view и подготовленный источник; координаты соответствуют его единицам. Текстовый профиль сохраняет таблицу байтовых смещений. |
@@ -779,7 +779,7 @@ FxStdCycle:
         return: FxSeqConcat\concat(FxStdReplicate\replicate(items; count))
 ```
 
-Прежний вызов `repeatText(text; n)` мигрирует в `cycle(text; n; rejectNegative := 1)`, если требуется сохранить его отрицательную границу. Это один дополнительный аргумент политики, не копия реализации. При доказанном неотрицательном n используется `cycle(text; n)`. Публичное текстовое представление сохраняет результат `char[]` через точное требование, а не выдаёт пользователю служебную ссылку на запись.
+Прежний вызов `repeatText(text; n)` мигрирует в `cycle(text; n; rejectNegative := 1)`, если требуется сохранить его отрицательную границу. Это один дополнительный аргумент политики, не копия реализации. При доказанном неотрицательном n используется `cycle(text; n)`. Публичное текстовое представление сохраняет результат `[]char` через точное требование, а не выдаёт пользователю служебную ссылку на запись.
 
 ### 7.3. Числа и упорядоченные значения
 

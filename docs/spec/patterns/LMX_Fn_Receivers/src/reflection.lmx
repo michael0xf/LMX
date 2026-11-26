@@ -25,14 +25,14 @@ RxPhysicalTypes:
         return: result
 
 # types(S): плотный Array<int>, новый массив на каждый вызов.
-# int[]: result [] использует обычный конструктор типизированного пустого
+# []int: result [] использует обычный конструктор типизированного пустого
 # массива; конкретный синтаксис, как и весь этот файл, ещё не прогнан ядром.
 # Никакого изменения типа обычной Structure через sys\resize здесь нет.
 RxTypes:
     private: @: source
-    return: int[]
+    return: []int
     types:
-        private: int[]: result []
+        private: []int: result []
         sys\resize(result; length(source))
         private: int: i 0
         while: i < length(source)
@@ -40,15 +40,15 @@ RxTypes:
             i += 1
         return: result
 
-# Точная плотная форма результата int[]: с явно переданным готовым буфером.
+# Точная плотная форма результата []int: с явно переданным готовым буфером.
 # types(source := S; output := buffer) изменяет buffer и возвращает тот же
 # массив. S также Structure/Array<@>. Новый тип массива не выводится из () .
 # Вариант позволяет переиспользовать буфер и не выделять новый при каждом вызове.
 RxTypesInto:
     private:
         @: source
-        int[]: output
-    return: int[]
+        []int: output
+    return: []int
     types:
         sys\resize(output; length(source))
         private: int: i 0

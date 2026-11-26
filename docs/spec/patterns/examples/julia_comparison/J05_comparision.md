@@ -38,7 +38,7 @@
 
 ```lmx
 Example:
-    int[]: xs
+    []int: xs
     int: baseline
     return: int
     run:
@@ -57,7 +57,7 @@ Example:
 
 ```lmx
 Example:
-    int[]: xs
+    []int: xs
     int: baseline
     return: int
     run:

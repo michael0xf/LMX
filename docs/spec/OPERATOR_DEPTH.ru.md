@@ -49,7 +49,7 @@ P0 разбирает обычное выражение до соответст�
 operand_template:
     @: left
     int: depth
-    @[]: right
+    []@: right
     const: int: PASS_ARGS_AS_IS
     const: int: PRIORITY
 ```
@@ -82,7 +82,7 @@ PASS_ARGS_AS_IS продолжает задавать потребление lef
 DepthProbe:
     @: left
     int: depth
-    @[]: right
+    []@: right
     const: int: PASS_ARGS_AS_IS 1
     const: int: PRIORITY sys\priority("+")
     return: int
@@ -192,7 +192,7 @@ rank или независимых размеров.
 уровень для depth» заменено этим правилом по сохранённой форме. Механизм
 общий для операций, без специального исключения для умножения.
 
-Обычная Structure остаётся `@[]`. Поле может ссылаться на другую обычную
+Обычная Structure остаётся `[]@`. Поле может ссылаться на другую обычную
 Structure; отдельной сущности «массив массивов» из-за этого не возникает.
 Путь `struct[i]\[j]` — индексная запись `struct\struct2\field`, если i и j
 выбирают соответствующие поля; `struct[i]\[j]\[k]` соответствует

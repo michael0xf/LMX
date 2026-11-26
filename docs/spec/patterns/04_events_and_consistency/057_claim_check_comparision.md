@@ -20,7 +20,7 @@ independent: TicketData:
 SenderMessage:
     @: blobs
     @: transport
-    char[]: payload
+    []char: payload
     send:
         int: key blobs\put(payload)
         @: ticket (copy(TicketData))

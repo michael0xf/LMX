@@ -47,7 +47,7 @@ The first three inputs are **left, depth, right**, in that order:
 operand_template:
     @: left
     int: depth
-    @[]: right
+    []@: right
     const: int: PASS_ARGS_AS_IS
     const: int: PRIORITY
 ```
@@ -80,7 +80,7 @@ depth and does not automatically map over its arguments:
 DepthProbe:
     @: left
     int: depth
-    @[]: right
+    []@: right
     const: int: PASS_ARGS_AS_IS 1
     const: int: PRIORITY sys\priority("+")
     return: int
@@ -188,7 +188,7 @@ rank. The former claim that every flat rank has only one usable depth level
 is replaced by this shape-aware rule. The same mechanism applies to all
 operations, without a multiplication-specific depth exception.
 
-An ordinary Structure remains `@[]`. A field may refer to another ordinary
+An ordinary Structure remains `[]@`. A field may refer to another ordinary
 Structure; that introduces no separate “array of arrays” entity. The path
 `struct[i]\[j]` is the index spelling of `struct\struct2\field` when i and j
 select those fields; `struct[i]\[j]\[k]` spells `struct\struct2\field[k]`.

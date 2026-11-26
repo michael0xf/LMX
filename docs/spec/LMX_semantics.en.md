@@ -266,7 +266,7 @@ including permitted cycles, without an infinite tower of allocations. See
 
 Pointer depth and Array rank are independent arbitrary finite quantities; the language has no fixed limit. A typed reference's indirection level is distinct from prefix `@`, which explicitly obtains a numeric address under the selected level's address contract; ordinary Structure and method references need no prefix `@`. Dereferencing follows the reference or admitted address contract without calling its target. An explicit write through `S\field` or a typed dereference follows the place's general requirement, including references and function pointers. Restrictions on assignment through a bare Structure or function name and on implicit external lookup do not prohibit such explicit writes.
 
-An Array uses the common graph descriptor and its actual element storage type. A Structure is exactly the general reference-array `@[]`; it is not an artificial separate kind. Dense `T[]` stores T directly, while `@[]` stores references to value records. `[]: pending` requires any Array and is distinct from `@[]: pending`. All use one length/capacity mechanism; size requirements constrain admitted values without another storage family. Postfix constructors apply left to right; a consecutive run of `[]` or `[extent]` specifies axes of one flat Array: `int[][][]: arr` requires rank 3, while `int[][3]` requires rank 2 with second-axis size 3. Independent referenced Arrays use `@[]` or a typed reference composition such as `char[]@[]` for independently stored strings; `int@[]` differs from `int[]@`. The canonical type description records the normalized complete left requirement, including rank and written axis constraints. A single missing extent may be derived from current length when unique; initializer rows do not become hidden shape metadata. Capacity=length needs no secondary descriptor, and a larger reserve needs only its optional capacity entry without changing TypeRef. Neither kind of information is a user Structure field. The header remains `parent/length/storage`. Flat one-dimensional traversal and rank-aware multidimensional operations remain available on the same storage under their receiving contracts. Rank is not inferred from length or a pointer's depth. Operator `depth` uses the retained logical dimensions of this flat storage; it does not require row objects. An ordinary field may reference another Structure, without a separate array-of-arrays entity. For the corresponding fields, `struct\struct2\field` is indexed as `struct[i]\[j]`, and `struct\struct2\field[k]` as `struct[i]\[j]\[k]`; these are forms of the common access path. See [Array storage and rank](ARRAY_STORAGE.en.md). Strings are exact-length `char[]` values without an implied trailing NUL; the C door has its own representation. The current forms and complete type requirements are specified in [the unified type contract](CORE_SEQUENCES_REGEX.en.md#types).
+An Array uses the common graph descriptor and its actual element storage type. A Structure is exactly the general reference-array `[]@`; it is not an artificial separate kind. Dense `[]T` stores T directly, while `[]@` stores references to value records. `[]: pending` requires any Array and is distinct from `[]@: pending`. All use one length/capacity mechanism; size requirements constrain admitted values without another storage family. The leftmost prefix is the outermost constructor; a consecutive run of `[]` or `[extent]` specifies axes of one flat Array: `[][][]int: arr` requires rank 3, while `[][3]int` requires rank 2 with second-axis size 3. Independent referenced Arrays use `[]@` or a typed reference composition such as `[]@[]char` for independently stored strings; `[]@int` differs from `@[]int`. The canonical type description records the normalized complete left requirement, including rank and written axis constraints. A single missing extent may be derived from current length when unique; initializer rows do not become hidden shape metadata. Capacity=length needs no secondary descriptor, and a larger reserve needs only its optional capacity entry without changing TypeRef. Neither kind of information is a user Structure field. The header remains `parent/length/storage`. Flat one-dimensional traversal and rank-aware multidimensional operations remain available on the same storage under their receiving contracts. Rank is not inferred from length or a pointer's depth. Operator `depth` uses the retained logical dimensions of this flat storage; it does not require row objects. An ordinary field may reference another Structure, without a separate array-of-arrays entity. For the corresponding fields, `struct\struct2\field` is indexed as `struct[i]\[j]`, and `struct\struct2\field[k]` as `struct[i]\[j]\[k]`; these are forms of the common access path. See [Array storage and rank](ARRAY_STORAGE.en.md). Strings are exact-length `[]char` values without an implied trailing NUL; the C door has its own representation. The current forms and complete type requirements are specified in [the unified type contract](CORE_SEQUENCES_REGEX.en.md#types).
 
 An empty Structure is a present value with zero fields. It differs from an absent field, numeric zero, and `void`, which denotes no primitive-cell content. A Frame's argument list is itself a Structure; an anonymous Structure in it remains a distinct value also when it alone occupies the entire list: P0 does not unwrap it, whether it is empty or not (author's decision of 2026-11-10). Thus in the parse tree `f()`, `f:`, and an explicitly closed empty vertical body are one tree with an empty body, `f: ()` and `f(())` are one tree with one field, an empty Structure; `f(a b)` and `f: a b` are one tree with two fields, `f((a b))` and `f: (a b)` one tree with one Structure field. This is said of the tree only; in the clean graph the form lies as it is written, too. What a form does is determined in translation and interpretation -- by the role of the form ([the roles `data` and `code`](#data-code-roles)) and by the kind of the receiver ([two kinds of receivers](#two-kinds-of-receivers)). In a call of a callable and of a receiver that takes its arguments as `code`, the four forms `f: a b`, `f(a b)`, `f: (a b)` and `f((a b))` are one and the same call when reading E is selected: the sole Structure among the arguments is expanded into the chain of its fields, once and only when the call is processed; reading W accepts it as a whole, and the two readings are equal ([choosing the declaration by the call](#declaration-selection), [the whole argument structure](#whole-arguments)). A receiver that takes its arguments as `data` receives exactly what is written; in the role of `data` the forms do not change either, and nothing is unwrapped: `f: (a b)` declares `f` with one anonymous Structure inside it, while `f(a b)` and `f: a b` declare a Structure with the fields `a` and `b` (the author's clarification of 2026-11-18). See [empty bodies](LMX_grammar.en.md#empty-colon).
 
@@ -680,17 +680,17 @@ A place with a requirement is declared by the receiver's own argument form: `int
 
 The composed form `name: receiver: value` does not declare a variable named by the outer head. In DATA, `timeout: ms: int: time 500` declares timeout containing ms containing the primitive time; its path is `timeout\ms\time`. In CODE the same outer form calls timeout. Likewise `i: int: 5` in DATA is a Structure i containing the receiver form, not an int variable i; in CODE it applies i and is invalid if i is a noncallable numeric place. Declaring a primitive or reference is done with its receiver, not by replacing that receiver's parent. `:=` assigns an existing place; it does not declare one.
 
-In a receiving VALUE/TYPE/DATA position, a bare atom does not add an unwritten receiver or callable invocation. If the resolved field contains a computed declaration, an explicit path reads the record of the declaration and executes nothing ([explicit path](#path-reads-no-execution)); the written expression is evaluated by a call when it reads its local place by a bare name, and that does not call the returned callable with no arguments. The expression is formed and evaluated the same way whether its result is consumed or not; a write into a place is an effect of an unconsumed declaring form, not a special parse of the right operand. Thus `Model: 0` consumed by another expression does not change `Model`: in arguments it is a call of `Model` -- formerly it yielded a candidate under the requirement `Model`, now the requirement is in the typed head, `Model@: ptr 0` ([the roles `data` and `code`](#data-code-roles)); if `Model` is a Structure, this is its call with the argument `0`, and at a place where a value is needed (an operand of an expression, an actual argument of a call, an initial value, an operand of `merge`) it yields a value only if the data of `Model` describe a result by the field `return` ([`return` in DATA](#return-in-data)); as a statement of its own, `Model: 0` still calls the selected Structure under its ordinary argument contract and discards any unconsumed result. If `Model` is instead a noncallable primitive place, the form is an error; in neither case does the colon assign ([structural forms](#forms-declare-or-call)).
+In a receiving VALUE/TYPE/DATA position, a bare atom does not add an unwritten receiver or callable invocation. If the resolved field contains a computed declaration, an explicit path reads the record of the declaration and executes nothing ([explicit path](#path-reads-no-execution)); the written expression is evaluated by a call when it reads its local place by a bare name, and that does not call the returned callable with no arguments. The expression is formed and evaluated the same way whether its result is consumed or not; a write into a place is an effect of an unconsumed declaring form, not a special parse of the right operand. Thus `Model: 0` consumed by another expression does not change `Model`: in arguments it is a call of `Model` -- formerly it yielded a candidate under the requirement `Model`, now the requirement is in the typed head, `@Model: ptr 0` ([the roles `data` and `code`](#data-code-roles)); if `Model` is a Structure, this is its call with the argument `0`, and at a place where a value is needed (an operand of an expression, an actual argument of a call, an initial value, an operand of `merge`) it yields a value only if the data of `Model` describe a result by the field `return` ([`return` in DATA](#return-in-data)); as a statement of its own, `Model: 0` still calls the selected Structure under its ordinary argument contract and discards any unconsumed result. If `Model` is instead a noncallable primitive place, the form is an error; in neither case does the colon assign ([structural forms](#forms-declare-or-call)).
 
 Two-field `int: x 5` declares place `x` with an `int` requirement and value `5`: in data it creates the place, in code it is a call of the receiver -- a check of the type with an assignment to the local namespace place `x` ([the roles `data` and `code`](#data-code-roles)). Unary `int: x` describes place `x` with an `int` requirement and no invented initial value: a first definition creates the place; with an already known `x` the same form in code checks its compatibility by ordinary admission without a new write or second field, and in data it stays one more occurrence of the name, which is addressed only with the index of an occurrence after that. An uninitialized graph place contains only the distinct TypeRef `uninit:int`, with `sizeof(value) = 0`, not a reserved int cell, numeric zero or an external initialization mark; every primitive has such a type, alike in code, data and a signature, where it distinguishes a formal without a default `int: q` from the default `int: q 0`: such a formal is not mandatory -- an input without a value, to which no value is supplied, does not make the call refuse: it is filled by [autofill](#binding-autofill), and where that is inapplicable it holds this type (the author's decision of 2026-11-16), and the receiver [`required`](#required-receiver) checks that a given field is initialized; [explicit graph assignment](#graph-fragment-assignment) (`D\a := 5`) replaces the fragment at that structural place: `{uninit_int}` becomes `{int 5}`. It does not retag a preallocated T cell, require in-place expansion, or preserve a raw payload address across replacement ([L2 §3.1](L2_spec_en.md#uninit-record-control)). An assignment to a local of the call -- `a := 5` for a formal that received no value -- writes into the place of the call: the graph does not change and the data are not published. The absence of a value is written as a value of that separate type: `nil: T` (`nil: int`; any other primitive type in place of `int`), and simply `nil` where possible. `int: var` declares a variable without initialization, and a separate type exists for that; it was introduced for passing arguments and stays needed with `required`. A variable can be compared with `nil` by its absence state; no numeric sentinel or imaginary value bytes are introduced. The graph holds nothing but Structures and primitives: a primitive is the declaration of its type with a value or with the absence of a value, and everything else is written as Structures. The null pointer stays `0` where that is possible; a pointer declared without a value (`@: ptr`) is not zero and is written with the same `nil` (the author's decision of 2026-11-17). Every receiver that used to be written without arguments in the place of a type has a one-argument form: `int: i` is written instead of `i: int` (the author's decision of 2026-11-10). With `i` already declared, `int: i` in code is not an error but a check that the type conforms: repeated declarations are allowed. The one-argument form given the primitive itself instead of a name, `int: 54554878477838734`, returns the number in an expression or throws a failure that `catch` receives. In a signature these forms describe a formal, and a written value supplies a default when an actual argument is absent; describing a formal does not execute it as a body. This is one mechanism for primitives, references, Structures, and callables, with no parser branch for a receiver's name. The constructed source graph fixes its physical slots until an explicit graph operation changes them. Logical namespace places and bare-name visibility follow sequential declarations, lexical scopes and explicit receiver-stream consumption; reaching a branch does not append a hidden slot to the source `Lmx`.
 
-The author-approved postfix forms are `Model@: p`, `int@: left`, `Model[]: arr`, `int[]: values`, `Model[]: arr [Model Model]`, `Model[]: [Model Model]`, `int[]: values [1 2 3]`, and `int[]: [1 2 3]`. Each is a separate declaration example. In particular, a typed pointer places its requirement only in the head before the colon; neither `@: p int` nor `@: int p` means an uninitialized pointer-to-int declaration. Genuine `@: model Model` remains a universal-reference initialization from the existing Model value. A named or anonymous square initializer uses the same element admission and preserves the actual values, reference identities and supported storage profile, without a cast or auxiliary constructor. The [positive-form acceptance matrix](TYPE_DECLARATION_FORMS.md) includes absence versus empty, Model identity and pointer/array composition.
+The author-approved prefix forms are `@Model: p`, `@int: left`, `[]Model: arr`, `[]int: values`, `[]Model: arr [Model Model]`, `[]Model: [Model Model]`, `[]int: values [1 2 3]`, and `[]int: [1 2 3]`. Each is a separate declaration example. In particular, a typed pointer places its requirement only in the head before the colon; neither `@: p int` nor `@: int p` means an uninitialized pointer-to-int declaration. Genuine `@: model Model` remains a universal-reference initialization from the existing Model value. A named or anonymous square initializer uses the same element admission and preserves the actual values, reference identities and supported storage profile, without a cast or auxiliary constructor. The [positive-form acceptance matrix](TYPE_DECLARATION_FORMS.md) includes absence versus empty, Model identity and pointer/array composition.
 
-Sized array requirements such as `int[][3]` and `Struct[2][5]` are also complete TYPE heads; anonymous and named initializers follow the same receiver contract ([sized axes](#sized-array-requirements)).
+Sized array requirements such as `[][3]int` and `[2][5]Struct` are also complete TYPE heads; anonymous and named initializers follow the same receiver contract ([sized axes](#sized-array-requirements)).
 
-The named declaration contract is `R: name [initializer]`, with the complete requirement supplied by the resolved head R. A raw NAME is consumed before lookup; the optional initializer follows the ordinary value/admission contract. `int: x`, `[]: pending`, `T[]: pending`, `@: p`, and `T@: p` preserve uninitialized absence when no value is supplied. The array receivers additionally accept their explicit anonymous square-group forms; this is their declared contract, not a P0 rewrite. A reference requirement belongs in a postfix head such as `Model@: ptr Candidate`; it is not a third argument to @. `@: ptr Model` remains a universal-reference initialization with Model. Repeated declarations, const/immutable writes, and DATA/CODE roles remain ordinary. An existing name cannot change how the receiver classifies a written declaration name.
+Array and pointer constructors are prefixes in every TYPE position, including standalone type expressions. `[5]type` describes the Array type without declaring a name. `type[5]` reads a physical index, and `struct\[5]type` selects occurrence 5 of the field named `type`. In TYPE `@type` denotes the address type, while in VALUE the same spelling takes the address. The named declaration contract is `R: name [initializer]`, with the complete requirement supplied by the resolved head R. The head `type[n]: args` calls the ordinary target selected by indexing type at n. A sized declaration is written `[n]type: args` and an indexed write is `type[n] := value`. A raw NAME is consumed before lookup; the optional initializer follows the ordinary value/admission contract. `int: x`, `[]: pending`, `[]T: pending`, `@: p`, and `@T: p` preserve uninitialized absence when no value is supplied. The array receivers additionally accept their explicit anonymous square-group forms; this is their declared contract, not a P0 rewrite. A reference requirement belongs in a prefix head such as `@Model: ptr Candidate`; it is not a third argument to @. `@: ptr Model` remains a universal-reference initialization with Model. Repeated declarations, const/immutable writes, and DATA/CODE roles remain ordinary. An existing name cannot change how the receiver classifies a written declaration name.
 
-A typed reference declaration is `Model@: ptr Other`, and `Model@: ptr 0` initializes a null pointer of that requirement. The old `@: ptr Model Other` reading is withdrawn. `@: ptr Model: Other` contains a nested call in a CODE-reading position, not a special typed-candidate pair. Normal admission neither writes to Model nor invents an addressable temporary target. The candidate is evaluated once before the ordinary binding/write. An outer `ptr: ...` remains a DATA declaration of a Structure or a CODE call; it does not replace the reference receiver's own declared NAME role.
+A typed reference declaration is `@Model: ptr Other`, and `@Model: ptr 0` initializes a null pointer of that requirement. The old `@: ptr Model Other` reading is withdrawn. `@: ptr Model: Other` contains a nested call in a CODE-reading position, not a special typed-candidate pair. Normal admission neither writes to Model nor invents an addressable temporary target. The candidate is evaluated once before the ordinary binding/write. An outer `ptr: ...` remains a DATA declaration of a Structure or a CODE call; it does not replace the reference receiver's own declared NAME role.
 
 A bare identifier follows ordinary resolution and the receiving role. In a whole VALUE, TYPE, NAME or DATA position it does not invent a call or an empty actual list: a value/reference is consumed under that position's contract. An incompatible value is rejected rather than repaired by a nullary call. When a resolved Structure is actually reached in CODE/Expression, its handling follows the [occurrence-role and name/actual-parent rules](#expression-structure-parent-guard). This is semantic traversal of the existing graph, not a call Frame fabricated by P0. Explicit Frames `A()`, `A(args)` and `call: A` retain their ordinary contracts. Mere value lookup captures no neighboring atoms. In `if: p` the condition's value contract reads p; passing a callable as that value does not call it to manufacture a condition. Admission of that value is a separate check.
 
@@ -749,7 +749,7 @@ A free input is a free value used by a callable without being declared as its ex
 <a id="explicit-copy"></a>
 ### Explicit copying and pointer variables
 
-The reference receiver uses ordinary declaring forms. `@: ptr` declares an uninitialized universal reference; `@: ptr 0` initializes null; `@: ptr Model` retains a reference to Model. A typed declaration places its complete requirement in the head: `Model@: ptr Candidate`, or `Model@: ptr` without a value. The former three-argument requirement/candidate form is withdrawn. Prefix `@Model` takes an address; postfix `Model@` constructs a canonical TypeRef. `@(name)` is the ordinary compact declaration `@: name`, not an address expression. Pointer depth and composition use the same common mechanism for every finite depth. No spelling or payload-value heuristic changes the argument roles.
+The reference receiver uses ordinary declaring forms. `@: ptr` declares an uninitialized universal reference; `@: ptr 0` initializes null; `@: ptr Model` retains a reference to Model. A typed declaration places its complete requirement in the head: `@Model: ptr Candidate`, or `@Model: ptr` without a value. The former three-argument requirement/candidate form is withdrawn. In TYPE position `@Model` constructs the canonical pointer TypeRef. In a VALUE expression `@Model` takes an address. `@(name)` is the ordinary compact declaration `@: name`, not an address expression. Pointer depth and composition use the same common mechanism for every finite depth. No spelling or payload-value heuristic changes the argument roles.
 
 A repeated declaration at the same CODE level with no new candidate checks the existing place without clearing its value. A supplied candidate follows ordinary conversion/admission before the write. Address assignment does not retroactively type an already declared void-reference place. The outer form `ptr: @: Model` instead declares a Structure in DATA or calls ptr in CODE; it is not a reference-variable declaration. These are resolved receiver contracts after the common parser.
 
@@ -768,7 +768,7 @@ Candidate conversion and admission follow the receiving contract; reference stor
 
 ### A signature is not executed
 
-A named `name :: data` signature describes ordered input types and, where there is a result, the field `return`; the forms written in it are not executed as the body of a callable. In the DATA-template form, the identifier and signature description are consumed in their declaration/DATA roles, and the nested records only describe ([named signature](#fn-signature)); the description of inputs in the data of a called Structure is arranged the same way ([structural call](#call-receivers)). Supplying a ready description follows its existing profile; an inline producer follows the [CODE Expression and receiver contract](#signature-description-consumption). Neither is permission to execute a template's formal initializers. Input places are described by declarations by receivers. For nonprimitive `A`, a formal requiring `A` is written `A@: p`, admits a candidate through `satisfies(c, A, Consumer)` and transports its descriptor reference without copying or implicit `merge`. Value and reference requirements are written with the same receiver forms as in a body, but describing a formal does not assign a place while the callable is built. A value written in the description is a default, not a result of executing the body.
+A named `name :: data` signature describes ordered input types and, where there is a result, the field `return`; the forms written in it are not executed as the body of a callable. In the DATA-template form, the identifier and signature description are consumed in their declaration/DATA roles, and the nested records only describe ([named signature](#fn-signature)); the description of inputs in the data of a called Structure is arranged the same way ([structural call](#call-receivers)). Supplying a ready description follows its existing profile; an inline producer follows the [CODE Expression and receiver contract](#signature-description-consumption). Neither is permission to execute a template's formal initializers. Input places are described by declarations by receivers. For nonprimitive `A`, a formal requiring `A` is written `@A: p`, admits a candidate through `satisfies(c, A, Consumer)` and transports its descriptor reference without copying or implicit `merge`. Value and reference requirements are written with the same receiver forms as in a body, but describing a formal does not assign a place while the callable is built. A value written in the description is a default, not a result of executing the body.
 
 For structural `c`, `mytest(c)` passes its ordinary reference, while `mytest(@c)` explicitly obtains an address under the prefix-@ contract; these are not interchangeable arguments. No extra level is removed to fit a formal. This applies equally to a Structure, a pointer variable and a nonprimitive formal; the target is its own language storage, not a transport-ABI box. A primitive value and a reference to its cell are not synonyms either. Passing and returning nonprimitives never use C by-value aggregates.
 
@@ -864,16 +864,16 @@ The ordinary structural header requirement is:
 operand_template:
     @: left
     int: depth
-    @[]: right
+    []@: right
     const: int: PASS_ARGS_AS_IS
     const: int: PRIORITY
 ```
 
 All five named fields must be present in the candidate's DATA. `left` is the first reference input, `depth` the second input (a nonnegative integer), and `right` the third input (an Array of references). `PASS_ARGS_AS_IS` must give a ready constant integer 0 or 1; `PRIORITY` must give a ready constant integer on the common expression scale before grouping is settled. Missing fields are not supplied by template checking, even if a template writes defaults. Ordinary explicit composition can construct them; `satisfies` only checks the actual result. Ready properties are not replaced by caller locals, and reading them executes no operator body. Cyclic or unavailable properties cannot be resolved by trial execution. A missing `PASS_ARGS_AS_IS` does not mean `0`, and a missing `PRIORITY` receives no implicit level. The mandatory fields do not make every actual mandatory: omission of the left or right actual, defaults, `required` and admissible binding follow the ordinary method contract; the operator form supplies `left/depth/right` and reads `PASS_ARGS_AS_IS` and `PRIORITY` from the chosen description, and the constant fields form no separate category outside DATA. Mode and priority are set independently: no mode is encoded as a special number in the priority field, and the right tail gets no invisible parentheses by being passed through `right` — the common analysis first determines its argument occurrences, then the mode decides whether they are executed before the method is entered.
 
-The header is an ordinary structural requirement: its names and entire explicitly stated tree matter. It does not constrain the result to `@`. A concrete method declares its normal result, such as `return: int` or `return: @`; a procedure cannot supply an expression value merely because its DATA matches the header. An optional specialized template can add `int@: left`, `int@[]: right`, and `return: int`. Such typed references require actual addressable integers; they do not mean unevaluated code that might later return an integer. The full names of the service operations are `sys\priority`, `sys\name` and `sys\eval`; `PASS_ARGS_AS_IS` and `PRIORITY` are fields of a method's description, not additional receivers. Operands get no special exceptions to the existing rules of ordinary Structures, `private`, DATA/CODE and native admission.
+The header is an ordinary structural requirement: its names and entire explicitly stated tree matter. It does not constrain the result to `@`. A concrete method declares its normal result, such as `return: int` or `return: @`; a procedure cannot supply an expression value merely because its DATA matches the header. An optional specialized template can add `@int: left`, `[]@int: right`, and `return: int`. Such typed references require actual addressable integers; they do not mean unevaluated code that might later return an integer. The full names of the service operations are `sys\priority`, `sys\name` and `sys\eval`; `PASS_ARGS_AS_IS` and `PRIORITY` are fields of a method's description, not additional receivers. Operands get no special exceptions to the existing rules of ordinary Structures, `private`, DATA/CODE and native admission.
 
-A positional callable-signature requirement remains a different check. For example, `TripleSignature :: (@: first; int: level; @[]: rest; return: int)` can admit compatible inputs named `lhs/level/rhs`, but this does not establish the named structural header `left/depth/right/PASS_ARGS_AS_IS/PRIORITY`. A callable reference is not called just because a consumer needs a value: `@: ptr add` stores the method reference, `add(...)` calls it explicitly, `a add b` applies its operator contract, and `\ptr` only dereferences.
+A positional callable-signature requirement remains a different check. For example, `TripleSignature :: (@: first; int: level; []@: rest; return: int)` can admit compatible inputs named `lhs/level/rhs`, but this does not establish the named structural header `left/depth/right/PASS_ARGS_AS_IS/PRIORITY`. A callable reference is not called just because a consumer needs a value: `@: ptr add` stores the method reference, `add(...)` calls it explicitly, `a add b` applies its operator contract, and `\ptr` only dereferences.
 
 
 The common [depth contract](OPERATOR_DEPTH.en.md#abi) defines the new middle input. An undotted occurrence supplies 0, a single-dot occurrence supplies 1, and `.(expression)` supplies one accepted result of the general expression evaluator. Only one dot is admitted; arbitrary depths use brackets, including explicit `.(0)`. Discovery does not evaluate depth. RAW left/right remain RAW, the right Array contains no hidden depth item, and a missing left is not filled from right. Structural receiver forms use the base name and the named input `depth`; the assignment family retains `:=` / `.:` / `.(expression):`. Exact names in backticks are never decoded as depth syntax.
@@ -958,7 +958,7 @@ context, and its contents execute in place. The same template applies to
 an operand description copied from it or built independently.
 
 Translation determines the role before any argument or body is evaluated.
-For an unknown reference such as `void@`, if the available description
+For an unknown reference such as `@void`, if the available description
 allows both `1` and `0`, translation rejects the expression. An unknown
 match does not establish `0`. Other competing interpretations are
 rejected by the same strict [selection rules as for calls](#declaration-selection).
@@ -1215,9 +1215,9 @@ The method returns its ordinary declared value: `return: int` produces an intege
 
 ```lmx
 operands:
-    int@: left
+    @int: left
     int: depth
-    int@[]: right
+    []@int: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("+")
     return: int
@@ -1239,7 +1239,7 @@ The required results are 7 for `Example\calculate(2)`, 13 for `Example\calculate
 <a id="raw-operands"></a>
 #### Original occurrences: `PASS_ARGS_AS_IS 1`
 
-The same expression analysis determines argument boundaries but supplies references to original occurrences without executing them. Occurrences can contain literals, names, calls, assignments or groups. A handler for arbitrary source forms uses general references `@: left` and `@[]: right`, not a physical-int requirement. Merely reading or retaining such a reference executes nothing. An unconsumed occurrence has no effects; explicit repeated evaluation repeats effects. Written groups do not force eager evaluation or remove the raw contract. Retaining a raw occurrence postpones its consumption; it does not turn its CODE Expression or resolved receiver into a DATA declaration. Restrictions on the admissible source forms are checked without executing them in order to obtain another type.
+The same expression analysis determines argument boundaries but supplies references to original occurrences without executing them. Occurrences can contain literals, names, calls, assignments or groups. A handler for arbitrary source forms uses general references `@: left` and `[]@: right`, not a physical-int requirement. Merely reading or retaining such a reference executes nothing. An unconsumed occurrence has no effects; explicit repeated evaluation repeats effects. Written groups do not force eager evaluation or remove the raw contract. Retaining a raw occurrence postpones its consumption; it does not turn its CODE Expression or resolved receiver into a DATA declaration. Restrictions on the admissible source forms are checked without executing them in order to obtain another type.
 
 <a id="expression-eval"></a>
 `sys\eval(fragment)` uses the single expression executor to obtain the ordinary value of a raw occurrence. Literals yield values, names resolve normally, and written calls execute; a callable received as a whole value remains a reference. A Structure reached in CODE/Expression follows the [name/parent guard](#expression-structure-parent-guard). `\fragment` is not shorthand for evaluation. Each explicit `sys\eval` is a new evaluation with once-per-occurrence effects within that evaluation, not a persistent cache.
@@ -1252,7 +1252,7 @@ The raw version of `add` uses this DATA and body:
 raw_operands:
     @: left
     int: depth
-    @[]: right
+    []@: right
     const: int: PASS_ARGS_AS_IS 1
     const: int: PRIORITY sys\priority("+")
     return: int
@@ -1276,7 +1276,7 @@ The existing canonical-name representation and service name table supply the spe
 <a id="expression-priority"></a>
 ### `sys\priority`: a priority by string name
 
-The query's named signature is `PrioritySignature :: (char[]: name; return: int)`. This describes a call and does not create the implementation; its full implementation name is `sys\priority`. It accepts one LMX string and returns the priority of the available built-in or structurally discovered user operand with that name, using the same visibility and property information as expression analysis. `sys\priority("+")` queries addition, `"-"` subtraction and `"*"` multiplication; contextual unary/postfix uses do not arbitrarily change that query result.
+The query's named signature is `PrioritySignature :: ([]char: name; return: int)`. This describes a call and does not create the implementation; its full implementation name is `sys\priority`. It accepts one LMX string and returns the priority of the available built-in or structurally discovered user operand with that name, using the same visibility and property information as expression analysis. `sys\priority("+")` queries addition, `"-"` subtraction and `"*"` multiplication; contextual unary/postfix uses do not arbitrarily change that query result.
 
 Names are matched by string content at this explicit lookup boundary. A separately created string with the same contents yields the same answer; ordinary resolved identifiers still use canonical addresses. `sys\priority(sys\name(foo))` performs no call of `foo`. The query reads its ready `PRIORITY`, registers nothing and evaluates no operand arguments. Missing, unsuitable or ambiguous operands produce ordinary resolution/contract diagnostics; no priority is invented. Discovery and query share the same description, not divergent registries. The placement of the receiver in `sys` does not limit the lookup to the field names of that service group. With a statically known name the translator may obtain the value beforehand; with a computed string name the ordinary lookup mechanism is used; the semantics and the result match the interpreter.
 
@@ -1434,7 +1434,7 @@ For the two-input fixtures use `PairSignature` of the section on the template an
 
 | ID | Check | Expected result |
 | --- | --- | --- |
-| F01 | `PairSignature :: (@: first; @[]: rest; return: int)` | A named signature, two inputs and a result; there is no body |
+| F01 | `PairSignature :: (@: first; []@: rest; return: int)` | A named signature, two inputs and a result; there is no body |
 | F02 | A candidate `lhs: @`, `rhs: Array<@>`, the result `int`, another name/body | A match of the types by positions |
 | F03 | The inputs of the candidate go `Array<@>`, then `@` | A mismatch; named supply does not change the order of the types of the signature |
 | F04 | Another number/type of inputs or another result | The ordinary fn diagnostics; `return` is not counted as an input |
@@ -1609,7 +1609,7 @@ A callable description is data with the common visibility and occurrence-selecti
 
 Program files form no categories of a main file and parts: a message is a Structure, and included files join the program graph. Declaration order for variables and `const`, and bidirectional visibility for named Structures and callables, follow the resulting lexical tree. Comparing line offsets in separate source documents does not define visibility.
 
-A signature describes inputs and the result; it is not an executable body ([named signature](#fn-signature)). A formal's spelling does not execute the call, declaration, or assignment that the same spelling might denote in a body. The formals are declared by receivers -- `int: arg default`, `Template@: arg`; the latter has a typed requirement and no written default, whereas `@: arg Template` would initialize a universal-reference formal with Template. A structural form does not declare a formal variable: in the data role it is a declaration of a Structure (this is how, for example, a structural result is written in the `return` field), and the former synonymy of the two descriptions of a formal in a signature -- by a structural form and by a receiver -- is withdrawn ([the roles `data` and `code`](#data-code-roles)). Supplying an actual argument performs the contract's conversions and admission, but does not execute the formal description as a body operator. Uses of the resulting parameter in the body are resolved by its contract and the general expression rules, not by executing the signature text.
+A signature describes inputs and the result; it is not an executable body ([named signature](#fn-signature)). A formal's spelling does not execute the call, declaration, or assignment that the same spelling might denote in a body. The formals are declared by receivers -- `int: arg default`, `@Template: arg`; the latter has a typed requirement and no written default, whereas `@: arg Template` would initialize a universal-reference formal with Template. A structural form does not declare a formal variable: in the data role it is a declaration of a Structure (this is how, for example, a structural result is written in the `return` field), and the former synonymy of the two descriptions of a formal in a signature -- by a structural form and by a receiver -- is withdrawn ([the roles `data` and `code`](#data-code-roles)). Supplying an actual argument performs the contract's conversions and admission, but does not execute the formal description as a body operator. Uses of the resulting parameter in the body are resolved by its contract and the general expression rules, not by executing the signature text.
 
 <a id="method-parts"></a>
 ### Parts of a callable Structure
@@ -1885,10 +1885,10 @@ SumContext:
     sum:
         return: a + b
 
-SumSignature@: sumPtr SumContext\sum
+@SumSignature: sumPtr SumContext\sum
 ```
 
-The head `SumSignature@` supplies the signature requirement; its arguments are the reference name and actual callable. `sumPtr(a := 2; b := 3)` and direct `SumContext\sum(a := 2; b := 3)` return 5. `SumContext()` would execute a different Structure and does not automatically choose `sum`. The ordinary two-argument form `@: p Model` initially points at `Model` itself; it does not invent an implementation for a signature. On a later assignment `sumPtr` keeps the same signature requirement: the common admission applies the positional comparison to the new callable.
+The head `@SumSignature` supplies the signature requirement; its arguments are the reference name and actual callable. `sumPtr(a := 2; b := 3)` and direct `SumContext\sum(a := 2; b := 3)` return 5. `SumContext()` would execute a different Structure and does not automatically choose `sum`. The ordinary two-argument form `@: p Model` initially points at `Model` itself; it does not invent an implementation for a signature. On a later assignment `sumPtr` keeps the same signature requirement: the common admission applies the positional comparison to the new callable.
 
 Input positions are the data template's ordinary declared input places in order. `return` describes a result and is not an input; a nested user Structure is not automatically a formal, and an Array is one input regardless of element count. No `return` means a procedural signature. A structured result uses ordinary DATA notation:
 
@@ -1913,18 +1913,18 @@ An ordinary Structure used explicitly as a structural model instead requires its
 
 ```lmx
 PrioritiesTemplate:
-    char[]: name
+    []char: name
     return: int
 
 Priorities:
-    char[]: name
+    []char: name
     return: int
     lookup:
         return: sys\priority(name)
 
 PrioritySignature :: PrioritiesTemplate
-PrioritiesTemplate@: priorities_data Priorities
-PrioritySignature@: priority_fn Priorities\lookup
+@PrioritiesTemplate: priorities_data Priorities
+@PrioritySignature: priority_fn Priorities\lookup
 ```
 
 `satisfies(Priorities, PrioritiesTemplate)` checks all of the minimal template, which has no `lookup` requirement. Choosing the whole `Priorities` as a structural model includes `lookup` and its stated subtree. `PrioritySignature` instead checks the selected callable's ordered input types and result; `name` need not physically occur inside `lookup`. Neither a `return` field nor a name ending in “Signature” turns an ordinary Structure into a positional signature description.
@@ -1937,23 +1937,23 @@ The same composition can be written `PrioritiesMerged: merge(PrioritiesTemplate 
 On a call through a reference constrained by a signature, the signature's formal names are the public labels of explicit actuals. Normal positional/named mapping first identifies a signature position; that position maps to the candidate input at the same index. The candidate's own names are used by direct calls and are not fallback aliases of the public interface. Actual expressions still evaluate once in written order, not in position order. Declaration-form actuals use that same external map without changing the preserved form's internal name ([declaration arguments](#declaration-arguments)).
 
 ```lmx
-SelectSignature :: (int: count; char[]: text; return: int)
+SelectSignature :: (int: count; []char: text; return: int)
 
 First:
     int: n
-    char[]: s
+    []char: s
     return: int
     select:
         return: n
 
 Reordered:
-    char[]: text
+    []char: text
     int: count
     return: int
     select:
         return: count
 
-SelectSignature@: chosen First\select
+@SelectSignature: chosen First\select
 ```
 
 In CODE, `chosen(text := "x"; count := 3)` maps text to position 2 (`s`) and count to position 1 (`n`), and returns 3. Direct `First\select(s := "x"; n := 3)` is also valid. Direct `Reordered\select(count := 3; text := "x")` can be valid, but assigning that callable to `chosen` fails: `[Array<char>, int]` does not match `[int, Array<char>]`. If both types were `int`, renamed or swapped labels would not change the positional map: public `a=1, b=2` still reaches candidate positions 1 and 2.
@@ -2204,7 +2204,7 @@ A returned reference preserves its exact target identity. Constructing a result,
 | C04 | The reference `ExistingCode` is placed inside `NewContainer` | The parent of `ExistingCode` is not changed by itself |
 | C05 | R0 is started without arguments | There is no data and no artificial `D = C`; an ordinary procedural execution |
 | C06 | `SumSignature :: SumData` with `return` in `SumData` and `StepSignature :: StepData` without `return` | The created signature names stand to the left of `::`; the same declaration describes functions and procedures, with no implementation is created |
-| C07 | `SumSignature@: sumPtr SumContext\sum` and a later assignment of an admissible callable reference | The requirement is resolved by the name `SumSignature` declared by the left identifier of `SumSignature :: DATA` and checks the callable with its parent, not the fields inside the code |
+| C07 | `@SumSignature: sumPtr SumContext\sum` and a later assignment of an admissible callable reference | The requirement is resolved by the name `SumSignature` declared by the left identifier of `SumSignature :: DATA` and checks the callable with its parent, not the fields inside the code |
 | C08 | All the examples of the table of required selection examples | The results match the table; hidden inputs do not change the choice |
 | C09 | W is chosen with a whole Structure | At execution one structural actual is kept without expansion |
 | C10 | E is chosen with one or several fields | The chosen map is used; there is no repeated expansion |
@@ -2741,7 +2741,7 @@ Producer inputs are fixed when its activation begins. A later `next` caller does
 
 An ordinary Structure and a reference Array `Array<@>` are fully interchangeable: indexing, named paths where names exist, `length`, admission, copying, execution, `sys\typeof` and `sys\descriptor` use the common contract. An ARRAY/STRUCT category alone is no reason for refusal. `length` reads the header field `length`; `parent/length/storage` are not counted as elements. A numeric `Array<T>` stores T directly. Structures, Arrays, and service lists share length and capacity management. Finite rectangular Array rank has no fixed limit and is independent of pointer depth. [Layout](L2_spec_en.md#lmx).
 
-An ordinary Array has a stable descriptor identity. `T[]` obtains its interned TypeRef; `T[]: [values]` creates an anonymous value, and `T[]: arr [values]` initializes a named place when execution reaches the form. The square group is explicit; it remains written in the source graph. `[]: arr` is an uninitialized any-array place, not an empty Array. Existing references and elements supplied as references keep their actual lexical parents; collecting them does not reparent them. Newly constructed source structures and explicit copy/merge follow their own construction and ownership rules. In DATA, `MyLmxStructFromArray: arr` contains one reference to the same Array, without copying it; in CODE the same outer form is an ordinary call. `@: p arr` retains the same target. Rebinding the local p does not mutate the target or its other references.
+An ordinary Array has a stable descriptor identity. `[]T` obtains its interned TypeRef; `[]T: [values]` creates an anonymous value, and `[]T: arr [values]` initializes a named place when execution reaches the form. The square group is explicit; it remains written in the source graph. `[]: arr` is an uninitialized any-array place, not an empty Array. Existing references and elements supplied as references keep their actual lexical parents; collecting them does not reparent them. Newly constructed source structures and explicit copy/merge follow their own construction and ownership rules. In DATA, `MyLmxStructFromArray: arr` contains one reference to the same Array, without copying it; in CODE the same outer form is an ordinary call. `@: p arr` retains the same target. Rebinding the local p does not mutate the target or its other references.
 
 An owning Array has one contiguous rectangular block of elements. Nested dimensions do not mean separately allocated rows. For shape `[d0, …, dN−1]`, element count is the product of dimensions, with the last index varying fastest. An Array of references to other Arrays is a different value, not a replacement for a rectangular multidimensional Array. A structural element is nested under the Array; a primitive element occupies its storage but acquires no separate `parent` field.
 
@@ -2753,71 +2753,71 @@ A graph Array has the common Lmx base with parent/length/storage and a stable de
 
 Each pair `[]` or `[extent]` contributes one Array axis, in outer-to-inner
 order; an empty pair leaves that size unspecified. The normalized complete
-left requirement determines the canonical TypeRef. `int[][3]` specifies rank 2
-and width 3; `int[2][5]` specifies rank 2 and shape `[2,5]`. This is the same
+left requirement determines the canonical TypeRef. `[][3]int` specifies rank 2
+and width 3; `[2][5]int` specifies rank 2 and shape `[2,5]`. This is the same
 flat Array storage family. It adds no user field, Lmx field, type-code counter
 or per-object shape descriptor.
 
 ```lmx
-int[][3]: values [1 2 3 4 5 6]
-int[][]: values [1 2 3; 4 5 6]
-int[][]: values [[1 2 3] [4 5 6]]
-int[][3]: values [1 2 3
+[][3]int: values [1 2 3 4 5 6]
+[][]int: values [1 2 3; 4 5 6]
+[][]int: values [[1 2 3] [4 5 6]]
+[][3]int: values [1 2 3
                  4 5 6]
 ```
 
 These examples produce the same ordered flat payload, but their complete
-left requirements are different: `int[][3]` retains width 3 and derives the
-other extent as `6 / 3`, whereas `int[][]` leaves both sizes unspecified.
+left requirements are different: `[][3]int` retains width 3 and derives the
+other extent as `6 / 3`, whereas `[][]int` leaves both sizes unspecified.
 Explicit row boundaries validate rectangular input and flatten it; they do not
 become persistent shape metadata or specialize TYPE. To retain shape `[2,3]`
-write `int[2][3]`. `int[][]` and `int[](2)` are the same normalized type, while
-`int[2][3]` and `int[3][2]` are different types even at the same total length.
+write `[2][3]int`. `[][]int` and `[](2)int` are the same normalized type, while
+`[2][3]int` and `[3][2]int` are different types even at the same total length.
 An ordinary newline within the bounded initializer is whitespace: it adds no
 row or declaration boundary. Omitting the name yields an anonymous initialized
 value of the same written requirement; an omitted initializer remains typed
 absence and allocates no elements.
 
 A flat initializer is valid even when several axes remain unspecified:
-`int[][]: [1 2 3 4 5 6]` stores six elements without guessing `[2,3]` or `[3,2]`.
+`[][]int: [1 2 3 4 5 6]` stores six elements without guessing `[2,3]` or `[3,2]`.
 Only an operation requiring undetermined axes diagnoses missing shape; flat
 operations remain available. One unknown axis is derivable from length divided
-exactly by the positive product of specified axes. `int[][3]: [1 2 3 4 5]`
+exactly by the positive product of specified axes. `[][3]int: [1 2 3 4 5]`
 is invalid, as are contradictory explicit rows, violated written extents and
 negative or noninteger extent results. No zero padding or truncation repairs
-such a mismatch. `int[0][]: []` and `int[][0]: []` are valid incomplete zero
-shapes: the other extent is not guessed. `int[2][0]: []` is fully specified.
+such a mismatch. `[0][]int: []` and `[][0]int: []` are valid incomplete zero
+shapes: the other extent is not guessed. `[2][0]int: []` is fully specified.
 See [shape consumption](ARRAY_STORAGE.en.md#shape-inference).
 
 ```lmx
-int[][N]: [1 2 3 4 5 6]
-int[2][5]: [[1 2 3 4 5] [1 2 3 4 5]]
-Struct[2][5]: [[a b c d e] [e d c b a]]
-Struct[2]: [a b]
-Struct[2]: var [a b]
-Struct[]: var [a b]
+[][N]int: [1 2 3 4 5 6]
+[2][5]int: [[1 2 3 4 5] [1 2 3 4 5]]
+[2][5]Struct: [[a b c d e] [e d c b a]]
+[2]Struct: [a b]
+[2]Struct: var [a b]
+[]Struct: var [a b]
 ```
 
 In these separate examples Struct supplies the complete element requirement;
-a through e must satisfy it. `Struct[2]` is the abstract requirement “Array of
+a through e must satisfy it. `[2]Struct` is the abstract requirement “Array of
 Struct, length 2”. The anonymous form with `: [a b]` obtains an initialized
 value of that requirement, while the NAME form declares var. An unsupplied
-initializer, including `int[2][5]: pending`, still means typed absence. The
+initializer, including `[2][5]int: pending`, still means typed absence. The
 stated sizes allocate no elements and supply no implicit zeros.
 
 Every written extent is a full ordinary VALUE expression inside an outer
-TYPE requirement. `int[][sizes[axis]]` uses an ordinary index and
-`int[][length(row)]` an ordinary call; neither inner expression adds an axis.
+TYPE requirement. `[][sizes[axis]]int` uses an ordinary index and
+`[][length(row)]int` an ordinary call; neither inner expression adds an axis.
 The common P0 preserves each complete region, including calls, nested groups,
 operators, slices and conditional expressions. The selected TYPE consumer
 obtains one nonnegative integer per written extent exactly once, left to right
 in the original context, before admitting initializer elements. Reusing the
-normalized requirement does not rerun these expressions. `int[N]` with the
+normalized requirement does not rerun these expressions. `[N]int` with the
 same obtained N reuses the same canonical TypeRef. No separate parser,
 restricted constant calculator, trial execution or source rewriting is added.
 
-`T[N]` contributes one axis of size N; `T[](N)` contributes N unspecified
-axes; `T@(N)` contributes N pointer levels. Rank and pointer-depth counts remain
+`[N]T` contributes one axis of size N; `[](N)T` contributes N unspecified
+axes; `@(N)T` contributes N pointer levels. Rank and pointer-depth counts remain
 positive, while an extent may be zero. Canonical normalization stores the full
 left requirement in a shared immutable system TYPE Structure. Equal requirements
 reuse its TypeRef; initializer lengths/rows, variable names and reserve are not
@@ -2831,7 +2831,7 @@ respect written bounds, and a cached type pair cannot prove a mutable value's
 current size. See [canonical types](ARRAY_STORAGE.en.md#array-profiles) and
 [representation](ARRAY_STORAGE.en.md#side-metadata).
 
-In a VALUE/PLACE role `Struct[2]` remains indexing. Consequently
+In a VALUE/PLACE role `[2]Struct` remains indexing. Consequently
 `Struct[2]:= [a b]` is the same indexed assignment as `Struct[2] := [a b]`:
 it writes the third slot of an existing indexed value. It does not construct
 an Array type or declare var. The atomic operand `:=` is not a declaration
@@ -2840,11 +2840,11 @@ NAME and VALUE/PLACE roles before evaluation; it does not probe a head by
 trying index execution. This extension does not redefine an ordinary indexed
 receiver invocation outside a TYPE role.
 
-`T[N]` gives one axis of size N; `T[](N)` gives N axes with unspecified sizes;
-`T@(N)` gives N pointer levels. The first admits zero size, whereas rank and
+`[N]T` gives one axis of size N; `[](N)T` gives N axes with unspecified sizes;
+`@(N)T` gives N pointer levels. The first admits zero size, whereas rank and
 pointer-depth counts remain positive. Their common full parser and size/rank
 contracts are specified in [the grammar](LMX_grammar.en.md#sized-array-postfix)
-and [postfix requirements](TYPE_DECLARATION_FORMS.md#sized-postfix).
+and [prefix requirements](TYPE_DECLARATION_FORMS.md#sized-postfix).
 Statically established violations are translator diagnostics; reached dynamic
 violations are interpreter diagnostics under the existing contracts, without a
 new catchable exception family. This documentation addition has production
@@ -2862,11 +2862,11 @@ current length and reserve do not add type parameters.
 
 | Complete requirements | Type identity |
 | --- | --- |
-| `int[]` used for length 2 and length 3 | The same TypeRef. |
-| `int[][]` and `int[](2)` | The same TypeRef after normalization. |
-| `int[2][3]` and `int[3][2]` | Different TypeRefs: the ordered axis constraints differ. |
-| `int[5]` and `int[]` | Different TypeRefs: a fixed size and an unspecified size are different requirements. |
-| `int[N]` with the same obtained N | Reuses the same canonical description; invocation does not force a new type. |
+| `[]int` used for length 2 and length 3 | The same TypeRef. |
+| `[][]int` and `[](2)int` | The same TypeRef after normalization. |
+| `[2][3]int` and `[3][2]int` | Different TypeRefs: the ordered axis constraints differ. |
+| `[5]int` and `[]int` | Different TypeRefs: a fixed size and an unspecified size are different requirements. |
+| `[N]int` with the same obtained N | Reuses the same canonical description; invocation does not force a new type. |
 
 Compatibility remains the existing directed admission between full descriptions.
 Generic Array, element/storage requirements, specified rank and specified axis
@@ -2879,8 +2879,8 @@ Available dimensions come only from TYPE plus current length. An unspecified
 rank-one extent equals length. One missing axis is uniquely derivable by exact
 division by the positive product of specified extents. Several missing axes
 remain unknown; a zero known product with length zero does not determine another
-axis. Thus `int[0][]: []` and `int[][0]: []` are valid without inventing the
-other extent, while `int[2][0]: []` records both sizes. Rectangular initializer
+axis. Thus `[0][]int: []` and `[][0]int: []` are valid without inventing the
+other extent, while `[2][0]int: []` records both sizes. Rectangular initializer
 rows are checked and flattened but do not specialize TYPE or persist as hidden
 per-object shape information. Flat operations remain available; only a reached
 operation needing undetermined axes diagnoses that missing information.
@@ -2896,7 +2896,7 @@ Capacity is an independent instance property:
 
 `sys\reserve(S,n)` changes reserve, retaining length and TypeRef. `sys\resize(S,n)`
 retains TypeRef and must satisfy the written size constraints and common admission
-contract. It cannot silently turn `int[5]` into `int[]` or change specified axes.
+contract. It cannot silently turn `[5]int` into `[]int` or change specified axes.
 A reserve entry is added only when capacity exceeds length and removed when the
 two become equal. None of these changes selects a new type merely for capacity,
 length or an initializer's shape. Primary identity and aliases remain unchanged;
@@ -2941,20 +2941,20 @@ not an int. An `uninit:T` record supplies the reference to its absence descripti
 without reading nonexistent value bytes. The Array-value query reads the target
 Array's full normalized constructor requirement; another receiving place does
 not substitute its own weaker requirement. `type(x)` and `x type` use the same
-consumer. All type constructors, including `T[]`, `T[N]`, `T@` and `->`, likewise
+consumer. All type constructors, including `[]T`, `[N]T`, `@T` and `->`, likewise
 produce references to canonical system TYPE Structures; `types` returns a
 reference sequence of the selected field types.
 
 ```lmx
-int[]: short [1 2]
-int[]: longer [1 2 3]
+[]int: short [1 2]
+[]int: longer [1 2 3]
 @: shortType sys\typeof(short)
 @: longerType sys\typeof(longer)
 ```
 
 The last two references designate the same type description. Reserve and admitted
-resize do not change it. `int[][]` and `int[](2)` normalize identically;
-`int[2][3]` and `int[3][2]` do not. A saved TypeRef remains the same immutable
+resize do not change it. `[][]int` and `[](2)int` normalize identically;
+`[2][3]int` and `[3][2]int` do not. A saved TypeRef remains the same immutable
 description even if a place is later rebound to a value of another type.
 Reference identity proves the same type; directed compatibility can also admit
 values of distinct complete types.
@@ -2996,7 +2996,7 @@ The [array contract](ARRAY_EXPRESSIONS.en.md) defines ordinary matrix `a * b + e
 <a id="array-operations"></a>
 ## 18. Array operations
 
-Array presence among the consumed actual values selects the applicable array/matrix profile. A Structure is the same freely typed Array, @[], and is not excluded. Ordinary `*` now performs the admitted vector/matrix product (or scalar scaling); `.*` applies the base operation at logical depth 1. For a flat rank-2 Array it operates on logical rows; scalar coordinate multiplication is `.(2)*`. The [common depth rule](OPERATOR_DEPTH.en.md) uses retained dimensions without allocating row objects. Equal-shape addition/subtraction and scalar expansion preserve operand order. Dotted arithmetic uses the selected scalar operations, not a fixed int/double implementation. `.=` is elementwise equality; `.:` is elementwise assignment, including `(a b c) .: (b c a)`. Shape comes from the existing description, never from pointer depth, total length alone, or nested-row probing. The full family, result-storage rules, generic LMX kernels and matrix examples are in [array expressions](ARRAY_EXPRESSIONS.en.md). [fuse](FUSION.en.md) requests one eligible component traversal; it does not turn matrix contraction into an elementwise operation.
+Array presence among the consumed actual values selects the applicable array/matrix profile. A Structure is the same freely typed Array, []@, and is not excluded. Ordinary `*` now performs the admitted vector/matrix product (or scalar scaling); `.*` applies the base operation at logical depth 1. For a flat rank-2 Array it operates on logical rows; scalar coordinate multiplication is `.(2)*`. The [common depth rule](OPERATOR_DEPTH.en.md) uses retained dimensions without allocating row objects. Equal-shape addition/subtraction and scalar expansion preserve operand order. Dotted arithmetic uses the selected scalar operations, not a fixed int/double implementation. `.=` is elementwise equality; `.:` is elementwise assignment, including `(a b c) .: (b c a)`. Shape comes from the existing description, never from pointer depth, total length alone, or nested-row probing. The full family, result-storage rules, generic LMX kernels and matrix examples are in [array expressions](ARRAY_EXPRESSIONS.en.md). [fuse](FUSION.en.md) requests one eligible component traversal; it does not turn matrix contraction into an elementwise operation.
 
 `reduce` and inclusive/exclusive `scan` retain their explicitly selected numeric contracts. The ordinary `map`, `filter`, `foldl`, `scanl`, `zip`, `zipWith`, `bind`, `traverse`, `groupBy`, and `transpose` receivers now accept dense Arrays and Structures through one universal @ access path. Their callbacks run sequentially, left to right, in one Message, preserving effects, defaults, and failures. Pure arithmetic/numeric profiles may optimize only while preserving their own observables. `scanl` includes the seed and all accumulated values; it differs from the inclusive numeric scan example.
 
@@ -3212,22 +3212,22 @@ The same holds for a model, a named signature and an implementation in one libra
 ~~~lmx
 Library:
     PrioritiesTemplate:
-        char[]: name
+        []char: name
         return: int
     PrioritySignature :: PrioritiesTemplate
     Priorities:
-        char[]: name
+        []char: name
         return: int
         lookup:
             return: sys\priority(name)
     end: Priorities
-    PrioritySignature@: selected Priorities\lookup
+    @PrioritySignature: selected Priorities\lookup
 
 Use:
     import: Library
 ~~~
 
-In the namespace of `Use` three root constant names are added: `PrioritiesTemplate`, `PrioritySignature` and `Priorities`. The ordinary reference variable `selected` is not imported; `name`, `return` and `lookup` are not lifted from the nested `Priorities` into the root of `Use`. Import does not change `parent`: the data for `Priorities\lookup` are still in `Priorities`. `PrioritiesTemplate` is an ordinary minimal structural model without `lookup`; `PrioritySignature` is the named call description created by `name :: signature` on its basis. The typed head in `PrioritySignature@: selected Priorities\lookup` supplies the requirement, and its arguments supply the reference name and actual callable. It is not rewritten as `@: selected PrioritySignature` as if a universal-reference initializer had chosen an implementation: by the general rule `@: p Model` first refers to `Model` itself. The old three-argument requirement/candidate form is withdrawn.
+In the namespace of `Use` three root constant names are added: `PrioritiesTemplate`, `PrioritySignature` and `Priorities`. The ordinary reference variable `selected` is not imported; `name`, `return` and `lookup` are not lifted from the nested `Priorities` into the root of `Use`. Import does not change `parent`: the data for `Priorities\lookup` are still in `Priorities`. `PrioritiesTemplate` is an ordinary minimal structural model without `lookup`; `PrioritySignature` is the named call description created by `name :: signature` on its basis. The typed head in `@PrioritySignature: selected Priorities\lookup` supplies the requirement, and its arguments supply the reference name and actual callable. It is not rewritten as `@: selected PrioritySignature` as if a universal-reference initializer had chosen an implementation: by the general rule `@: p Model` first refers to `Model` itself. The old three-argument requirement/candidate form is withdrawn.
 
 `import(A Producer())` calls Producer once when import is actually consumed and selects eligible declarations from that result as well as A. This holds even when the import record occurs in DATA; P0 and inspection of its source record do not execute it. Bare source references and anonymous source Structures are not themselves calls. Calls or initializers inside an anonymous Structure still follow their ordinary consuming contracts; import adds no blanket suppression or eager traversal. Multiple computed sources retain ordinary left-to-right evaluation and are not repeated during candidate selection. Ordinary CODE W/E applies in every placement: a sole library of Structures may fit both whole-library and expanded-source readings and be ambiguous. Import has no hidden preference for W. Its source record and written argument boundaries remain intact.
 
@@ -4027,7 +4027,7 @@ value-record or reason-record reference. The public constructors `some(x)`,
 `ok(x)`, `err(x)` and `done(x)` capture one whole actual value exactly once
 through the actor's existing adaptive conversion context. The common
 `FxRecordAdapter` retains the full actual requirement and the target's exact
-result (`FxMaybe@` or `FxResult@` where applicable). No user `record` call,
+result (`@FxMaybe` or `@FxResult` where applicable). No user `record` call,
 per-type factory or extra reference box is required. Internal constructors
 that explicitly consume an already prepared record keep that protocol.
 Omitted input is rejected; 0, null, an empty string and an empty Array remain
@@ -4037,7 +4037,7 @@ present values. `err(x)` is a value, not an exception.
 under its full receiving contract. Maybe/Result stop at the first None/Err,
 preserving that container and its reason. A callback failure remains the
 declared `FxCallFailure` path, never an implicit None/Err conversion. Sequence
-binding concatenates one result level into the established new `@[]`.
+binding concatenates one result level into the established new `[]@`.
 The context selects call/operand representation before normal overload
 selection; physical Structure/Array overlap grants no hidden preference to
 Maybe, Result or a generic sequence. Genuine ambiguity is reported without
@@ -4064,7 +4064,7 @@ TypeRef change has executed. Production acceptance for that migration is **NOT_R
 
 | Receiver | Contract | Source |
 | --- | --- | --- |
-| `types` | canonical TypeRef of each field; an ordinary reference sequence, not int[] | [reflection.lmx](patterns/LMX_Fn_Receivers/src/reflection.lmx) |
+| `types` | canonical TypeRef of each field; an ordinary reference sequence, not []int | [reflection.lmx](patterns/LMX_Fn_Receivers/src/reflection.lmx) |
 | `names` | physical canonical names; anonymous entries retain typed absence | [reflection_bridges.lmx](patterns/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
 | `signature` | ordinary positional signature description | [reflection_bridges.lmx](patterns/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
 | `->` | Complete TYPE tokens, ordered inputs followed by the result; same signature kind | [fn_operand.lmx](patterns/LMX_Fn_Receivers/src/fn_operand.lmx) |
@@ -4210,8 +4210,8 @@ for the `splice` result, are stabilized before any write or resize can change
 them. Commit runs no user converter or callback. Existing resource-failure and
 actual-evaluation rules do not become a general rollback guarantee.
 
-A dense T[] target yields a fresh dense T[] removed result; a Structure/@[]
-target yields a fresh @[] containing its original record references. This
+A dense []T target yields a fresh dense []T removed result; a Structure/[]@
+target yields a fresh []@ containing its original record references. This
 snapshot is shallow. It preserves actual element requirements, reference
 identities and actual lexical parents. Its outer slots are independent; objects
 referred to from multiple containers remain shared. An empty removed interval
@@ -4619,4 +4619,4 @@ receivers](patterns/RECEIVERS.md).
 <a id="unified-core"></a>
 ## 38. Unified type, sequence and Pattern profiles
 
-The [current unified chapter](CORE_SEQUENCES_REGEX.en.md) applies postfix type expressions, full derived requirements, the directed checked-type table, universal sequence operations, and ordinary Pattern values. New composed Frame heads are resolved by the common head mechanism; a complete written head is not forced into a canonical word cell. Literal word occurrences still use their one canonical spelling address. The five Pattern operands and the added Pattern branch of `|` use the existing Expression ABI and right-only opening rule. No old type spelling, array-only helper, or blanket prohibition on metadata caches overrides this chapter. Runtime graph edits and subsequent interpretation remain independent of optional native recompilation.
+The [current unified chapter](CORE_SEQUENCES_REGEX.en.md) applies prefix type expressions, full derived requirements, the directed checked-type table, universal sequence operations, and ordinary Pattern values. New composed Frame heads are resolved by the common head mechanism; a complete written head is not forced into a canonical word cell. Literal word occurrences still use their one canonical spelling address. The five Pattern operands and the added Pattern branch of `|` use the existing Expression ABI and right-only opening rule. No old type spelling, array-only helper, or blanket prohibition on metadata caches overrides this chapter. Runtime graph edits and subsequent interpretation remain independent of optional native recompilation.

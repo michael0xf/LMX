@@ -107,14 +107,14 @@
 
 ```lmx
 Example:
-    int[]: items
+    []int: items
     int: start
     int: end
-    int[]: replacement
+    []int: replacement
     return: @
     run:
         throws: copy(sys\resize\throws)
-        int[]: result []
+        []int: result []
         sys\resize(result; length(items))
         int: changed 0
         int: delta 0
@@ -136,14 +136,14 @@ Example:
 
 ```lmx
 Example:
-    int[]: items
+    []int: items
     int: start
     int: end
-    int[]: replacement
+    []int: replacement
     return: @
     run:
         throws: copy(replaceRange\throws) copy(sum\throws)
-        int[]: result [copy(items)]
+        []int: result [copy(items)]
         replaceRange(result; start; end; replacement)
         return: (result; \(sum (result != items)); \(sum (result - items)))
 ```

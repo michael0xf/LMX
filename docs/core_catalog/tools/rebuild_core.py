@@ -100,7 +100,7 @@ def emit_records(path, owner, rows, field_order=None):
             else:
                 if not isinstance(value, str):
                     value = json.dumps(value, ensure_ascii=False, separators=(',', ':'))
-                out.append(f'        char[]: {key} {quote(value)}')
+                out.append(f'        []char: {key} {quote(value)}')
         out.append('    ---')
     path.write_text(normalize_text('\n'.join(out) + '\n')[0])
 
@@ -120,9 +120,9 @@ def project_records(path):
             if list_field is None:
                 raise ValueError('Unowned list field in '+str(path))
             current[list_field].append(json.loads(line.strip()))
-        elif match := re.fullmatch(r'        (char\[\]|int): (\w+) (.*)', line):
+        elif match := re.fullmatch(r'        (\[\]char|char\[\]|int): (\w+) (.*)', line):
             kind, key, value = match.groups()
-            current[key] = json.loads(value) if kind == 'char[]' else int(value)
+            current[key] = json.loads(value) if kind != 'int' else int(value)
             list_field=None
     return rows
 

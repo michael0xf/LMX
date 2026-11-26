@@ -78,7 +78,7 @@ matching(r'HASH|^SXHASH$',
          'Linear association/memo lookup covers finite tasks without pretending O(1) hashing. General hashing consistent with equality, weak keys, mutation and identity needs its own contract. L09.')
 matching(r'^ARRAY|^ADJUST|^MAKE-ARRAY$|^AREF$|^ROW-MAJOR-AREF$|^SVREF$|^VECTOR|^SIMPLE-(?:ARRAY|VECTOR|BIT-VECTOR)|^BIT-VECTOR|^SBIT$|^FILL-POINTER$|^UPGRADED-ARRAY-ELEMENT-TYPE$',
          'arrays and storage', 'native_with_gap',
-         'T[] / ordinary indexing / length / resize / reserve / slice / append / insertAt / deleteAt',
+         '[]T / ordinary indexing / length / resize / reserve / slice / append / insertAt / deleteAt',
          'LMX Arrays have an existing typed storage/capacity contract. CL displaced arrays, fill-pointer behavior and exact rank/layout reflection are not silently aliases of one-dimensional sequence helpers.')
 matching(r'^BIT(?:-|$)|^BOOLE|^LOG(?:AND|IOR|XOR|NOT|EQV|NAND|NOR|ORC|TEST|BITP|COUNT)|^ASH$|^BYTE(?:-|$)|^LDB|^DPB$|^DEPOSIT-FIELD$|^MASK-FIELD$|^INTEGER-LENGTH$',
          'integer and bit operations', 'native_or_composition',
@@ -90,7 +90,7 @@ matching(r'^LEAST-|^MOST-|FLOAT|^FIXNUM$|^BIGNUM$|^INTEGERP?$|^RATIO$|^RATIONAL|
          'Existing numeric families solve the task; exact CL format limits, float decomposition, rounding and conversion profiles need explicit implementation evidence. L10 tracks missing profile operations.')
 matching(r'^CHAR|^BASE-CHAR$|^BASE-STRING$|^STANDARD-CHAR|^EXTENDED-CHAR$|^ALPHA-CHAR-P$|^ALPHANUMERICP$|^BOTH-CASE-P$|^GRAPHIC-CHAR-P$|^UPPER-CASE-P$|^LOWER-CASE-P$|^DIGIT-CHAR|^CODE-CHAR$|^NAME-CHAR$',
          'characters and Unicode', 'profile_or_library_gap',
-         'char[] / utf8Text / byteText / explicit codepoint profile',
+         '[]char / utf8Text / byteText / explicit codepoint profile',
          'Byte and Unicode scalar profiles are distinct. Complete Unicode properties and contextual case conversion require versioned tables; ASCII mapping is not advertised as Unicode. L11.')
 assign('STRING STRINGP STRING-CAPITALIZE STRING-DOWNCASE STRING-UPCASE NSTRING-CAPITALIZE NSTRING-DOWNCASE NSTRING-UPCASE STRING-EQUAL STRING-GREATERP STRING-LESSP STRING-NOT-EQUAL STRING-NOT-GREATERP STRING-NOT-LESSP STRING-LEFT-TRIM STRING-RIGHT-TRIM STRING-TRIM STRING/= STRING< STRING<= STRING= STRING> STRING>= SIMPLE-BASE-STRING SIMPLE-STRING SIMPLE-STRING-P BASE-STRING MAKE-STRING SCHAR',
          'text operations', 'core_with_limits',

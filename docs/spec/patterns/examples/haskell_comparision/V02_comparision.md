@@ -10,7 +10,7 @@
 
 ```lmx
 TicketCode:
-    char[]: candidate
+    []char: candidate
     return: int
     accepts:
         if: length(candidate) != 5
@@ -35,7 +35,7 @@ TicketCode:
 
 ```lmx
 TicketCode:
-    char[]: candidate
+    []char: candidate
     return: int
     accepts:
         throws: copy(matches\throws)

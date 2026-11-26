@@ -46,11 +46,11 @@
 
 ```lmx
 Example:
-    int[]: items
+    []int: items
     return: @
     run:
         throws: copy(FxSeqPush\append\throws) copy(record\throws)
-        int[]: out []
+        []int: out []
         int: i 0
         while: i < length(items)
             int: j 0
@@ -68,7 +68,7 @@ Example:
 
 ```lmx
 Example:
-    int[]: items
+    []int: items
     return: @
     run:
         throws: copy(unique\throws)

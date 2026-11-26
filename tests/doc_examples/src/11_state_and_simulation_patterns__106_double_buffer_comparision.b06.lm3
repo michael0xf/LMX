@@ -1,0 +1,26 @@
+Fill:
+    @Buffers: state
+    int: index
+    return: @
+    cell:
+        state\next[index] := Ring\value(state; index)
+        return: state
+
+Generation:
+    @Buffers: state
+    int: tick
+    return: @
+    advance:
+        throws: copy(foldl\throws) copy(range\throws)
+        foldl(range(0; length(state\current)); state; Fill\cell)
+        return: Publish\swap(state)
+
+Evolve:
+    []int: cells
+    int: steps
+    return: @
+    run:
+        throws: copy(BufferMake\make\throws) copy(foldl\throws) copy(range\throws)
+        @: initial BufferMake\make(cells; steps)
+        @: state foldl(range(0; steps); initial; Generation\advance)
+        return: state\current

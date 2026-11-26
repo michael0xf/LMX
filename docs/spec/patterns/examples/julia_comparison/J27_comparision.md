@@ -58,7 +58,7 @@ Example:
     run:
         throws: copy(sys\resize\throws)
         int: n length(values)
-        int[]: same []
+        []int: same []
         sys\resize(same; n)
         int: i n - 1
         while: i > 0

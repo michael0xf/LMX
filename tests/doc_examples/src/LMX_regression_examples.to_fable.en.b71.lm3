@@ -1,0 +1,15 @@
+ValueSignature :: (int: publicValue 1; return: int)
+
+Backend:
+    int: actualValue 8
+    return: int
+    read:
+        return: actualValue
+
+Checks:
+    return: int
+    demo:
+        @ValueSignature: chosen Backend\read
+        int: a chosen()
+        int: b chosen(publicValue := 0)
+        return: a * 10 + b

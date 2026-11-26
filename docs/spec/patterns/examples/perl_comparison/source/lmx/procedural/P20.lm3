@@ -1,5 +1,5 @@
 WordPair:
-    char[]: text
+    []char: text
     return: int
     test:
         int: at 0
@@ -19,13 +19,13 @@ Example:
     return: @
     run:
         throws: copy(FxSeqRead\read\throws) copy(sys\resize\throws) copy(FxSeqPush\append\throws) copy(record\throws)
-        @[]: out []
+        []@: out []
         int: i 0
         while: i < length(lines)
             @: value FxSeqRead\read(lines; i)
-            char[]: text \value
+            []char: text \value
             if: WordPair\test(text) != 0
-                char[]: word []
+                []char: word []
                 sys\resize(word; (length(text) - 1) / 2)
                 int: j 0
                 while: j < length(word)

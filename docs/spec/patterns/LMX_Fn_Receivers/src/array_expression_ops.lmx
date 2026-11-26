@@ -65,7 +65,7 @@ FxArrayInputsAt:
     return: @
     at:
         throws: copy(FxThrows\sequencefixture)
-        private: @: values FxSeqAllocate\make(@[]; length(context\inputs))
+        private: @: values FxSeqAllocate\make([]@; length(context\inputs))
         private: int: j 0
         while: j < length(context\inputs)
             private: @: input context\inputs[j]
@@ -204,7 +204,7 @@ FxArraySnapshot:
     capture:
         throws: copy(FxThrows\sequencefixture)
         FxSeqInfo\get(source)
-        private: @: out FxSeqAllocate\make(@[]; length(source))
+        private: @: out FxSeqAllocate\make([]@; length(source))
         private: int: i 0
         while: i < length(source)
             private: @: value FxSeqRead\read(source; i)
@@ -301,9 +301,9 @@ FxArrayDepthAssignPrepared:
     return: @
     assign:
         throws: copy(FxThrows\sequencefixture)
-        private: @: entries FxSeqAllocate\make(@[]; 0)
+        private: @: entries FxSeqAllocate\make([]@; 0)
         FxArrayDepthCollect\collect(context; target; depth; source; entries)
-        private: @: values FxArrayBuild\build(entries; @[]; length(entries); FxArrayWriteValue\at)
+        private: @: values FxArrayBuild\build(entries; []@; length(entries); FxArrayWriteValue\at)
         private: @: linear FxApply\apply(operation := context\linearize; args := (context; target; entries))
         return: FxArrayAssignPrepared\assign(linear; values)
 

@@ -39,7 +39,7 @@
 | callable R | Последний R сам является функцией | Он возвращён как значение, а не исполнен дополнительным шагом |
 | Точные имена | Контракт pN, исходные входы с другими именами | Actuals mapping по позиции, own names candidate не повреждены |
 | Capture | Изменить исходный primitive после partial | Captured primitive сохраняет значение; ссылочный target сохраняет identity |
-| Lifetime | Вернуть record/native temporary через границу | Нет dangling pointer / обращения к type по адресу native local минус 4 |
+| Lifetime | Вернуть record/native temporary через границу | Нет dangling pointer / чтения TypeRef перед адресом native local: у native local нет префикса графовой записи |
 | Общая Structure | Передать Structure вместо Array<@> в каждую sequence operation | Прямой length/index обход, без items-оболочки и лишнего copy |
 | Dense Array<T> | Передать целиком как значение/попытаться reinterpret как @ vector | Значение сохраняется; неявная reinterpretation запрещена |
 | Maybe | some(0), some(@0), some(empty), none | Первые три present, none absent; next не вызывается на none |

@@ -43,12 +43,12 @@
 
 ```lmx
 Example:
-    char[]: text
+    []char: text
     int: columns
     return: @
     run:
         throws: copy(sys\resize\throws) copy(FxSeqPush\append\throws) copy(record\throws)
-        @[]: out []
+        []@: out []
         int: empty 0
         int: begin 0
         int: i 0
@@ -56,7 +56,7 @@ Example:
             if: i = length(text) || text[i] = ','
                 if: i = begin
                     empty += 1
-                char[]: part []
+                []char: part []
                 sys\resize(part; i - begin)
                 int: j 0
                 while: j < length(part)
@@ -75,13 +75,13 @@ Example:
 
 ```lmx
 Empty:
-    char[]: text
+    []char: text
     return: int
     test:
         return: length(text) = 0
 
 Example:
-    char[]: text
+    []char: text
     int: columns
     return: @
     run:

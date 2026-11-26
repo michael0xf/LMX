@@ -55,7 +55,7 @@
 
 ```lmx
 Example:
-    int[]: items
+    []int: items
     return: int
     run:
         int: total 0
@@ -74,11 +74,11 @@ Example:
 
 ```lmx
 Example:
-    int[]: items
+    []int: items
     return: int
     run:
         throws: copy(compress\throws)
-        int[]: odd compress(items; items % 2 != 0)
+        []int: odd compress(items; items % 2 != 0)
         return: (+ 0 copy(odd * odd))
 ```
 

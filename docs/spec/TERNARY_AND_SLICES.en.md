@@ -61,7 +61,7 @@ Obtain the source once, then each present start, stop and step once in written o
 <a id="slice-values"></a>
 ## 4. Values, destinations and ranks
 
-As a VALUE, a slice is a new outer container with the source's actual storage profile. Dense elements retain their type; reference elements retain their existing targets and parents. There is no deep copying or reparenting. Slice `char[]` in its element units without implicit Unicode decoding. The result is an ordinary Array, not a new hidden view kind or persistent execution representation.
+As a VALUE, a slice is a new outer container with the source's actual storage profile. Dense elements retain their type; reference elements retain their existing targets and parents. There is no deep copying or reparenting. Slice `[]char` in its element units without implicit Unicode decoding. The result is an ordinary Array, not a new hidden view kind or persistent execution representation.
 
 As the destination of `.:`, the same index selection denotes real places in the source Array. The selection plan belongs to that operation. Obtain all required RHS values before the first store so overlapping selections, including `a[::-1] .: a`, are correct. Preflight count/shape and write admission. Destination length does not change. If RHS preparation changes its shape relative to the selected places, fail before stores. Existing const/immutable, ownership and actual-stride contracts apply.
 
@@ -114,8 +114,8 @@ Native L2 adds no automatic bounds check. This does not make an invalid index va
 
 ```lmx
 L2:
-    int[]: values [10 20 30]
-    int@: p @values[1]
+    []int: values [10 20 30]
+    @int: p @values[1]
     int: previous \(p - 1)
 ```
 
@@ -126,7 +126,7 @@ Negative slice bounds have their explicit separate meaning: `values[-1:]` return
 <a id="examples"></a>
 ## 7. Required examples and verification
 
-For `int[]: nums [0 1 2 3 4 5 6]`:
+For `[]int: nums [0 1 2 3 4 5 6]`:
 
 | Expression | Result |
 | --- | --- |

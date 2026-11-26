@@ -8,7 +8,7 @@
 
 Both forms use the same algorithms and real owner DATA. Complete family/role binding, adaptive capture and exact result projection are defined in [PUBLICATION_CONTRACT.md](PUBLICATION_CONTRACT.md). Runtime execution is **NOT_RUN**.
 
-Operand DATA order is `left`, `int: depth`, `right`, with ready `PASS_ARGS_AS_IS` and `PRIORITY`. `op`, `.op` and `.(expression)op` select one base operation. Ordinary VALUE adapters traverse logical outer axes of the flat Array shape through the shared engine and exact dependent result policy; rank-2 multiplication has matrix / row-dot / scalar profiles at depths 0 / 1 / 2. A Structure is an `@[]`, and indexed reference access introduces no separate array-of-arrays kind. Whole-role profiles admit depth 0 and diagnose unsupported depth before execution. No synthetic language exception is added. PD01 is a required kernel integration, not a passed runtime implementation.
+Operand DATA order is `left`, `int: depth`, `right`, with ready `PASS_ARGS_AS_IS` and `PRIORITY`. `op`, `.op` and `.(expression)op` select one base operation. Ordinary VALUE adapters traverse logical outer axes of the flat Array shape through the shared engine and exact dependent result policy; rank-2 multiplication has matrix / row-dot / scalar profiles at depths 0 / 1 / 2. A Structure is an `[]@`, and indexed reference access introduces no separate array-of-arrays kind. Whole-role profiles admit depth 0 and diagnose unsupported depth before execution. No synthetic language exception is added. PD01 is a required kernel integration, not a passed runtime implementation.
 
 | Name | Ordinary form | Implementations and operand form |
 | --- | --- | --- |
@@ -230,7 +230,7 @@ Operand DATA order is `left`, `int: depth`, `right`, with ready `PASS_ARGS_AS_IS
 
 ## Roles, results and failures
 
-- **types** — canonical field TypeRef references; @[] by the current language contract. The linked previous-ABI reflection source requires migration. Roles: DECLARED_INPUT_ROLES.
+- **types** — canonical field TypeRef references; []@ by the current language contract. The linked previous-ABI reflection source requires migration. Roles: DECLARED_INPUT_ROLES.
 - **names** — physical canonical names; anonymous entries retain typed absence. Roles: DECLARED_INPUT_ROLES.
 - **signature** — ordinary positional signature description. Roles: DECLARED_INPUT_ROLES.
 - **->** — ordered TYPE tokens, result last; one result TYPE constructs a nullary signature. Roles: TYPE....

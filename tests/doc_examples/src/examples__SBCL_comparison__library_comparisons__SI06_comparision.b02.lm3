@@ -1,0 +1,51 @@
+FxMemoEntry:
+    @: key 0
+    @: value 0
+
+FxMemoState:
+    @: operation 0
+    @: sameKey 0
+    @: entries 0
+
+FxMemoEngine:
+    private:
+        @: state
+        @: frame
+    return: @
+    run:
+        throws: copy(FxThrows\snapshot) FxPredicate
+        private: @: key FxFrameSnapshot\snapshot(frame)
+        private: int: i 0
+        while: i < length(state\entries)
+            private: @FxMemoEntry: entry state\entries[i]
+            if: FxValueSame\test(entry\key; key; state\sameKey) != 0
+                return: entry\value
+            i += 1
+        private: @: value FxFrameApply\apply(frame)
+        private: @: entry (copy(FxMemoEntry))
+        entry\key := key
+        entry\value := value
+        private: int: count length(state\entries)
+        sys\resize(state\entries; count + 1)
+        state\entries[count] := entry
+        return: value
+
+FxMemo:
+    private:
+        @: operation
+        @: sameKey 0
+    required: operation
+    return: @
+    memo:
+        throws: copy(FxThrows\adapter)
+        private: @: info FxKernel\signature(subject := operation)
+        private: @: state (copy(FxMemoState))
+        state\operation := operation
+        state\sameKey := sameKey
+        state\entries := (copy(()))
+        private: @: contract FxSignatures\make(info\inputTypes; info\resultType)
+        private: @: failures info\throws
+        if: sameKey != 0
+            private: @: equality FxKernel\signature(subject := sameKey)
+            failures := FxFailures\union(failures; equality\throws)
+        return: FxWrap\make(contract; FxMemoEngine\run; state; failures; FxFullPolicy\make(operation))

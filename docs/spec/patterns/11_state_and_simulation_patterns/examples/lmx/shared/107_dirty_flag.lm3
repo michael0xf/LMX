@@ -5,20 +5,20 @@ CachedMaximum:
     int: rebuilds 0
 
 CacheMake:
-    int[]: values
+    []int: values
     return: @
     make:
         @: state (copy(CachedMaximum))
         return: CacheWrite\reset(state; values)
 
 CacheWrite:
-    CachedMaximum@: state
-    int[]: values
+    @CachedMaximum: state
+    []int: values
     int: index
     int: value
     return: @
     reset:
-        int[]: owned [copy(values)]
+        []int: owned [copy(values)]
         state\values := owned
         state\dirty := 1
         return: state
@@ -31,7 +31,7 @@ CacheWrite:
         return: state
 
 CacheRead:
-    CachedMaximum@: state
+    @CachedMaximum: state
     return: int
     get:
         throws: copy(Maximum\calculate\throws)

@@ -91,12 +91,12 @@
 
 ```lmx
 Example:
-    int[]: items
+    []int: items
     int: limit
     return: @
     run:
         throws: copy(sys\resize\throws)
-        int[]: accepted []
+        []int: accepted []
         sys\resize(accepted; length(items))
         int: used 0
         int: total 0
@@ -124,7 +124,7 @@ Eligible:
         return: value > 0 && value <= limit
 
 Example:
-    int[]: items
+    []int: items
     int: limit
     return: @
     run:

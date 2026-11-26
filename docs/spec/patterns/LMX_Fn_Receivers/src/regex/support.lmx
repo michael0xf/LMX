@@ -6,35 +6,35 @@
 TextView:
     @: prepare RxTextPrepareSource\make
     int: profile
-    char[]: source
+    []char: source
 
 # Explicit per-operation text index. It is ordinary data, never executable
 # source or a second graph of the program. view is the original public view.
 RxPreparedText:
-    TextView@: view 0
+    @TextView: view 0
     int: profile
-    char[]: source
-    int[]: units
-    int[]: byteOffsets
+    []char: source
+    []int: units
+    []int: byteOffsets
 
 Span:
     @: source
     int: begin
     int: end
-    private: RxPreparedSource@: prepared
+    private: @RxPreparedSource: prepared
 
 Match:
     @: source
     int: begin
     int: end
     @: captures
-    private: RxPreparedSource@: prepared
+    private: @RxPreparedSource: prepared
 
-Pattern :: (RxPreparedSource@: source; int: position; @: captures; return: @)
+Pattern :: (@RxPreparedSource: source; int: position; @: captures; return: @)
 
 RxPredicate :: (int: unit; return: int)
 
-RxReplacementArgument :: (Match@: matched)
+RxReplacementArgument :: (@Match: matched)
 
 # The actual replacement callable supplies its own exact result requirement.
 
@@ -76,14 +76,14 @@ RxCandidateMake:
 # allocates a new link; no already published link or Match is ever rewritten.
 RxCaptureEntry:
     @: previous 0
-    char[]: name ""
+    []char: name ""
     int: begin 0
     int: end 0
 
 RxCaptureAdd:
     private:
         @: previous
-        char[]: name
+        []char: name
         int: begin
         int: end
     return: @
@@ -98,7 +98,7 @@ RxCaptureAdd:
 RxCaptureLatest:
     private:
         @: captures
-        char[]: name
+        []char: name
     return: @
     find:
         private: @: cursor captures
@@ -116,7 +116,7 @@ RxPatternOwner:
         @: config 0
     Call:
         private:
-            RxPreparedSource@: source
+            @RxPreparedSource: source
             int: position
             @: captures
         required: source position captures
@@ -183,8 +183,8 @@ RxNormalize:
 
 RxOpen:
     private:
-        Pattern@: pattern
-        RxPreparedSource@: source
+        @Pattern: pattern
+        @RxPreparedSource: source
         int: position
         @: captures
     return: @
@@ -197,7 +197,7 @@ RxOpen:
 
 RxSpanMake:
     private:
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: begin
         int: end
     return: @
@@ -211,7 +211,7 @@ RxSpanMake:
 
 RxMatchMake:
     private:
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: begin
         @: candidate
     return: @

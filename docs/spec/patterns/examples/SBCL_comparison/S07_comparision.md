@@ -149,7 +149,7 @@ Example:
     return: @
     run:
         throws: copy(sys\resize\throws)
-        @[]: result []
+        []@: result []
         sys\resize(result; length(items))
         int: i 0
         while: i < length(items)

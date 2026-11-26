@@ -9,7 +9,7 @@ def literal(value, records=False):
     if value is False:return 'false'
     if isinstance(value,(int,float)):return repr(value)
     if isinstance(value,str):return json.dumps(value,ensure_ascii=False)
-    if isinstance(value,list):return ('['+', '.join(literal(x,records) for x in value)+']') if value else 'Int[]'
+    if isinstance(value,list):return ('['+', '.join(literal(x,records) for x in value)+']') if value else '[]Int'
     if isinstance(value,dict):
         if records and set(value)=={'key','id'}:
             return '(key='+literal(value['key'])+', id='+literal(value['id'])+')'

@@ -26,7 +26,7 @@ FxSignatureOperand:
 
 FxToTypes:
     private:
-        @[]: inputs
+        []@: inputs
         @: result
     required: inputs result
     return: @
@@ -39,7 +39,7 @@ FxToTypes:
         )
 
 FxToTokens:
-    private: @[]: tokens
+    private: []@: tokens
     required: tokens
     return: @
     `->`:
@@ -47,7 +47,7 @@ FxToTokens:
         if: length(tokens) = 0
             throw: FxArity()
         private: int: last length(tokens) - 1
-        private: @[]: inputs FxSeqSlice\slice(tokens; 0; last)
+        private: []@: inputs FxSeqSlice\slice(tokens; 0; last)
         return: FxToTypes\`->`(inputs := inputs; result := tokens[last])
 
 FxToOperand:

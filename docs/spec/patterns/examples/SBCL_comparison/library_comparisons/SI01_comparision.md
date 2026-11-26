@@ -23,7 +23,7 @@ FxMap:
         throws: copy(FxThrows\traversal)
         FxSeqInfo\get(items)
         private: int: count length(items)
-        private: @: result FxSeqAllocate\make(@[]; count)
+        private: @: result FxSeqAllocate\make([]@; count)
         private: int: i 0
         while: i < count
             private: @: item FxSeqRead\read(items; i)
@@ -69,7 +69,7 @@ FxSeqCompress:
         private: int: count length(source)
         if: length(mask) != count
             throw: FxShape()
-        private: @: flags FxSeqAllocate\make(int[]; count)
+        private: @: flags FxSeqAllocate\make([]int; count)
         private: int: accepted 0
         private: int: i 0
         # Validate every mask value before constructing the selected result.
@@ -124,7 +124,7 @@ FxZipWith:
         private: int: count length(first)
         if: length(second) < count
             count := length(second)
-        private: @: result FxSeqAllocate\make(@[]; count)
+        private: @: result FxSeqAllocate\make([]@; count)
         private: int: i 0
         while: i < count
             private: @: leftValue FxSeqRead\read(first; i)

@@ -313,7 +313,7 @@ def _self_test():
         ('copy', 'F:\n    throws: copy(Missing)\n', 0),
         ('mixed', 'F:\n    throws: copy(Missing) Later\n', len('Later')),
         ('bank', 'Throws:\n    Zeta\n    Alpha\n\nF:\n    throws: copy(Throws)\n', len('Alpha')),
-        ('strings', 'F:\n    char[]: text "throws: A B"\n    # throws: A B\n', 0),
+        ('strings', 'F:\n    []char: text "throws: A B"\n    # throws: A B\n', 0),
         ('comments', 'F:\n    throws: A B # throws: C D\n', 1),
         ('multiline', 'F:\n    throws:\n        Zeta\n        Alpha\n', len('Alpha')),
         ('opaque', 'F:\n    throws: choose(A; B)\n', 0),

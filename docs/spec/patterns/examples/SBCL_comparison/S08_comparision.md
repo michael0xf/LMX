@@ -103,13 +103,13 @@
 
 ```lmx
 Example:
-    int[]: items
-    int[]: completed
+    []int: items
+    []int: completed
     return: @
     run:
         throws: copy(sys\resize\throws)
-        int[]: seen []
-        int[]: pending []
+        []int: seen []
+        []int: pending []
         sys\resize(seen; length(items))
         sys\resize(pending; length(items))
         int: distinct 0
@@ -141,8 +141,8 @@ Example:
 
 ```lmx
 Example:
-    int[]: items
-    int[]: completed
+    []int: items
+    []int: completed
     return: @
     run:
         throws: copy(unique\throws) copy(difference\throws)

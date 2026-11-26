@@ -38,7 +38,7 @@
 
 ```lmx
 Example:
-    int[]: xs
+    []int: xs
     int: seed
     return: int
     run:
@@ -68,7 +68,7 @@ BudgetStep:
         return: next
 
 Example:
-    int[]: xs
+    []int: xs
     int: seed
     return: int
     run:

@@ -176,7 +176,7 @@ Type-sensitive readers, `sys\typeof`, admission, copying and GC follow TypeRef.
 Former type-by-range helpers cannot classify types by ownership intervals. The
 common interner maps the complete normalized LEFT to one immutable description;
 names, initializer lengths/rows and reserve do not specialize it. Equivalent
-`int[][]` and `int[](2)` share one reference; `int[2][3]` and `int[3][2]` differ.
+`[][]int` and `[](2)int` share one reference; `[2][3]int` and `[3][2]int` differ.
 Qualification and absence remain part of the complete type. A ready admitted value
 is not retagged merely because another requirement accepts it. Type descriptions
 have a finite bootstrapped meta-description; ordinary cycles handle their own types
@@ -236,8 +236,8 @@ An initialized Array always has primary Lmx(parent/length/storage), with unchang
 payload size, alignment, identity and actual element stride. Its TypeRef denotes
 exactly the normalized LEFT used by construction. A rank or explicit size belongs
 to that shared description; initializer row boundaries, length and reserve do not
-refine it. `int[]` lengths 2 and 3 have the same type. A full shape such as
-`int[2][0][3]` remains available even at length zero; `int[][]` retains two unknown
+refine it. `[]int` lengths 2 and 3 have the same type. A full shape such as
+`[2][0][3]int` remains available even at length zero; `[][]int` retains two unknown
 extents. Do not add a hidden per-object shape entry or recover initializer source
 at runtime. A rank-one missing extent comes from length; one missing nD extent can
 be derived from length and a positive known product when exact.
@@ -251,9 +251,9 @@ or mandatory combined capacity/rank/extents descriptor is introduced.
 
 A TYPE consumer obtains complete dynamic size expressions once in source order.
 Explicit initializer rows validate rectangularity and written constraints before
-flattening. They do not specialize TypeRef. `int[][]: [1 2 3 4 5 6]` is valid
-with unknown extents; `int[][3]` derives 2 from six elements and rejects five.
-`int[0][]: []` is valid with an unknown second extent; `int[2][0]: []` is fully
+flattening. They do not specialize TypeRef. `[][]int: [1 2 3 4 5 6]` is valid
+with unknown extents; `[][3]int` derives 2 from six elements and rejects five.
+`[0][]int: []` is valid with an unknown second extent; `[2][0]int: []` is fully
 specified. Unknown shape becomes an error only at an operation needing unavailable
 information. Flat operations remain valid. No-initializer declarations allocate
 no Array payload. See [sized axes](ARRAY_STORAGE.en.md#sized-postfix).
@@ -312,7 +312,7 @@ not an invented global store.
 
 | Field, in order | L2 type | Meaning |
 |---|---|---|
-| `parent` | `Lmx@: parent` | Actual structural parent, zero at a graph root |
+| `parent` | `@Lmx: parent` | Actual structural parent, zero at a graph root |
 | `length` | `size_t: length` | Structure field count or Array element count |
 | `storage` | `@: storage` | Address of element storage |
 
@@ -526,7 +526,7 @@ the normal parser rule. `sys\priority(name)` resolves the string's content under
 visibility and operand description as expression analysis, and returns its ordinary int priority
 without running the body. Equal contents work at different string addresses; unknown/ambiguous
 operands fail normally. `sys\priority("+")` denotes addition's priority, not an arbitrary unary
-role. The descriptive contract is `PrioritySignature :: (char[]: name; return: int)`.
+role. The descriptive contract is `PrioritySignature :: ([]char: name; return: int)`.
 
 ### 3.4. Callables and namespace
 
@@ -587,7 +587,7 @@ SumContext:
     sum:
         return: first + second
 
-SumSignature@: sumPtr SumContext\sum
+@SumSignature: sumPtr SumContext\sum
 ```
 
 `sumPtr(a := 2; b := 3)` supplies positions 1 and 2 to first and second. A direct
@@ -603,7 +603,7 @@ to positions, and supplies the candidate at the same indexes. The candidate's ow
 extra public aliases. Actual evaluation remains in written order; defaults, requiredness,
 throws, and hidden binding use the candidate's real declarations and names. Values in the fn
 template do not overlay parent(C). A two-argument `@: p Model` initially refers to Model itself;
-separating requirement and implementation uses the typed head in `Requirement@: p Candidate`.
+separating requirement and implementation uses the typed head in `@Requirement: p Candidate`.
 
 An ordinary explicit structural model instead requires its entire specified tree, including
 written method subtrees; additional candidate fields are allowed under the common rules.
@@ -1353,7 +1353,7 @@ running those cases on the kernel.
 <a id="unified-20261122"></a>
 ## Common implementation points
 
-Implement postfix type construction, declaration-head resolution, normalization, canonical TypeRef interning, checked type pairs, and array/ref admission in the existing common kernel paths. A head can be a retained composed source form; only a literal word head is identified directly by its canonical spelling pointer. Resolve NAME/TYPE/VALUE roles before premature lookup or index attachment. Metadata must survive attach and must not reference rolled-back or freed temporary descriptions. No local per-receiver type registry is acceptable. Dense read/admit/write, safe extent calculation, and access to existing selected call phases are the narrow integration boundaries of the supplied LMX algorithms. Pattern backtracking, sequence loops, adapter projection, and memoization are LMX bodies, not opaque kernel substitutes. See [current contracts](CORE_SEQUENCES_REGEX.en.md) and [the bridge inventory](patterns/LMX_Fn_Receivers/KERNEL_REQUIREMENTS.md).
+Implement prefix type construction, declaration-head resolution, normalization, canonical TypeRef interning, checked type pairs, and array/ref admission in the existing common kernel paths. A head can be a retained composed source form; only a literal word head is identified directly by its canonical spelling pointer. Resolve NAME/TYPE/VALUE roles before premature lookup or index attachment. Metadata must survive attach and must not reference rolled-back or freed temporary descriptions. No local per-receiver type registry is acceptable. Dense read/admit/write, safe extent calculation, and access to existing selected call phases are the narrow integration boundaries of the supplied LMX algorithms. Pattern backtracking, sequence loops, adapter projection, and memoization are LMX bodies, not opaque kernel substitutes. See [current contracts](CORE_SEQUENCES_REGEX.en.md) and [the bridge inventory](patterns/LMX_Fn_Receivers/KERNEL_REQUIREMENTS.md).
 
 
 <a id="array-expression-lowering"></a>

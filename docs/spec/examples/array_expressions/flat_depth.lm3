@@ -2,14 +2,14 @@ FlatDepth:
     return: @
     run:
         throws: copy(`*`\throws)
-        int[][]: a [1 2; 3 4]
-        int[][]: b [[5 6] [7 8]]
+        [][]int: a [1 2; 3 4]
+        [][]int: b [[5 6] [7 8]]
         return: (a * b; a .* b; a .(2)* b)
 
 FlatDepthFusion:
     return: @
     run:
         throws: copy(fuse\throws) copy(`*`\throws) copy(`+`\throws)
-        int[][]: a [1 2; 3 4]
-        int[][]: b [[5 6] [7 8]]
+        [][]int: a [1 2; 3 4]
+        [][]int: b [[5 6] [7 8]]
         return: fuse(a .(2)* b .(2)+ 1)

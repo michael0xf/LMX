@@ -42,11 +42,11 @@
 
 ```lmx
 Example:
-    int[]: xs
+    []int: xs
     return: @
     run:
         throws: copy(FxSeqPush\append\throws) copy(record\throws)
-        @[]: out []
+        []@: out []
         int: i 0
         while: i < length(xs)
             int: offset -1
@@ -82,7 +82,7 @@ Nonnegative:
         return: value >= 0
 
 Example:
-    int[]: xs
+    []int: xs
     return: @
     run:
         throws: copy(FxListBind\bind\throws) copy(filter\throws) copy(unique\throws)

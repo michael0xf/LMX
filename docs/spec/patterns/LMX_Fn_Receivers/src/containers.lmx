@@ -10,7 +10,7 @@ FxMaybe:
 FxSome:
     private: @: value
     required: value
-    return: FxMaybe@
+    return: @FxMaybe
     some:
         private: @: result (copy(FxMaybe))
         result\present := 1
@@ -18,22 +18,22 @@ FxSome:
         return: result
 
 FxNone:
-    return: FxMaybe@
+    return: @FxMaybe
     none:
         return: (copy(FxMaybe))
 
 FxBind:
     private:
-        FxMaybe@: input
+        @FxMaybe: input
         @: next
     required: input next
-    return: FxMaybe@
+    return: @FxMaybe
     bind:
         throws: copy(FxThrows\call)
         if: input\present = 0
             return: input
         private: @: record FxApply\apply(next; FxOne\make(input\value))
-        private: FxMaybe@: result \record
+        private: @FxMaybe: result \record
         return: result
 
 # Result также не фиксирует тип полезного значения или причины неуспеха.
@@ -47,7 +47,7 @@ FxResult:
 FxOk:
     private: @: value
     required: value
-    return: FxResult@
+    return: @FxResult
     ok:
         private: @: result (copy(FxResult))
         result\ok := 1
@@ -57,7 +57,7 @@ FxOk:
 FxErr:
     private: @: reason
     required: reason
-    return: FxResult@
+    return: @FxResult
     err:
         private: @: result (copy(FxResult))
         result\reason := reason
@@ -65,16 +65,16 @@ FxErr:
 
 FxBindResult:
     private:
-        FxResult@: input
+        @FxResult: input
         @: next
     required: input next
-    return: FxResult@
+    return: @FxResult
     bind:
         throws: copy(FxThrows\call)
         if: input\ok = 0
             return: input
         private: @: record FxApply\apply(next; FxOne\make(input\value))
-        private: FxResult@: result \record
+        private: @FxResult: result \record
         return: result
 
 # List — последовательность записей, а не неизменяемый связный список.
@@ -98,7 +98,7 @@ FxListBind:
         []: input
         @: next
     required: input next
-    return: @[]
+    return: []@
     bind:
         throws: copy(FxThrows\traversal)
         private: @: result FxSeqBind\bind(items := input; next := next)
@@ -118,7 +118,7 @@ FxBounce:
 FxDone:
     private: @: value
     required: value
-    return: FxBounce@
+    return: @FxBounce
     done:
         private: @: result (copy(FxBounce))
         result\done := 1
@@ -138,7 +138,7 @@ FxMore:
         return: result
 
 FxTrampoline:
-    private: FxBounce@: current
+    private: @FxBounce: current
     return: @
     trampoline:
         throws: copy(FxThrows\call)

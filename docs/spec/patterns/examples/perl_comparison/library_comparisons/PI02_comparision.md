@@ -6,7 +6,7 @@
 
 ## Граница реализации
 
-Показаны проверка всех индексов, снимок вставки и commit; сравнительная Perl-реализация не вызывает штатный splice. Runtime обеспечивает расширение памяти и обычный тип элементов; LMX сохраняет полный профиль dense/@[] и проверяет допуск до commit.
+Показаны проверка всех индексов, снимок вставки и commit; сравнительная Perl-реализация не вызывает штатный splice. Runtime обеспечивает расширение памяти и обычный тип элементов; LMX сохраняет полный профиль dense/[]@ и проверяет допуск до commit.
 
 ## Размер
 
@@ -32,7 +32,7 @@ FxSeqIndices:
         FxSeqInfo\get(indices)
         private: int: total length(source)
         private: int: count length(indices)
-        private: @: checked FxSeqAllocate\make(int[]; count)
+        private: @: checked FxSeqAllocate\make([]int; count)
         private: int: i 0
         while: i < count
             private: @: value FxSeqRead\read(indices; i)
@@ -46,7 +46,7 @@ FxSeqIndices:
 FxSeqSelection:
     private:
         @: source
-        int[]: positions
+        []int: positions
     required: source positions
     return: @
     copySelected:
@@ -111,7 +111,7 @@ FxSeqReplaceRange:
         private: @: stage FxSeqAllocate\make(info\arrayType; added)
         private: int: i 0
         # This conservative overlap-safe path buffers only the inserted range.
-        # Dense preparation keeps dense T storage; @[] keeps direct references.
+        # Dense preparation keeps dense T storage; []@ keeps direct references.
         # No hidden user converter or initializer is called by arrayAdmit.
         # Full ordinary admission belongs here, never in the commit loop.
         while: i < added
@@ -230,7 +230,7 @@ sub splice_values {
 
 ## Проверка и ограничения
 
-Проверки диапазона и staging заканчиваются до первой записи в target. Сбой подготовки не меняет target; необратимые отказы процесса/аллокатора во время commit не объявлены транзакционно откатываемыми. Perl не имеет профиля dense T[], поэтому сохраняется свой родной ARRAY и тождество его ссылочных элементов.
+Проверки диапазона и staging заканчиваются до первой записи в target. Сбой подготовки не меняет target; необратимые отказы процесса/аллокатора во время commit не объявлены транзакционно откатываемыми. Perl не имеет профиля dense []T, поэтому сохраняется свой родной ARRAY и тождество его ссылочных элементов.
 
 Запуск Perl: [отчёт](../validation/implementation_tests.json). LMX: **NOT_RUN**; проверка текста не подменяет запуск.
 

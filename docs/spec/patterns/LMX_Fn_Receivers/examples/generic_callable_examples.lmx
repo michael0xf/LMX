@@ -8,7 +8,7 @@ FxMixedTarget:
     private:
         int: number
         double: scale
-        char[]: text
+        []char: text
     return: double
     evaluate:
         throws: copy(FxThrows\fixture)
@@ -29,7 +29,7 @@ FxMixedTarget:
 FxProcedureTarget:
     private:
         int: count
-        char[]: label
+        []char: label
     run:
         throws: copy(FxThrows\fixture)
         FxGenericCounter\calls += count + length(label)
@@ -44,10 +44,10 @@ FxNullaryTarget:
 FxPairTarget:
     private:
         int: count
-        char[]: label
+        []char: label
     return:
         int: number
-        char[]: text
+        []char: text
     create:
         throws: copy(FxThrows\fixture)
         return: count label
@@ -120,7 +120,7 @@ FxGenericExamples:
         @: pair FxLambda\lambda(operation := FxPairTarget\create)
         @: pairLast pair(p0 := 7)
         int: pairNumber 0
-        char[]: pairText ""
+        []char: pairText ""
         @: pairValue pairLast(p0 := "seven")
         (pairNumber pairText) .: copy(pairValue)
         sys\assert(pairNumber = 7)

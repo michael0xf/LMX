@@ -35,7 +35,7 @@ FxGroupBy:
         throws: copy(FxThrows\predicate) SequenceElement SequenceSize
         FxSeqInfo\get(items)
         private: int: count length(items)
-        private: @: result FxSeqAllocate\make(@[]; 0)
+        private: @: result FxSeqAllocate\make([]@; 0)
         private: int: i 0
         while: i < count
             private: @: item FxSeqRead\read(items; i)
@@ -43,7 +43,7 @@ FxGroupBy:
             private: @: group 0
             private: int: j 0
             while: j < length(result)
-                private: FxGroup@: candidate result[j]
+                private: @FxGroup: candidate result[j]
                 private: int: flag FxValueSame\test(candidate\key; key; sameKey)
                 if: flag != 0
                     group := candidate
@@ -52,7 +52,7 @@ FxGroupBy:
             if: group = 0
                 group := (copy(FxGroup))
                 group\key := key
-                group\items := FxSeqAllocate\make(@[]; 0)
+                group\items := FxSeqAllocate\make([]@; 0)
                 FxSeqPush\append(result; group)
             FxSeqPush\append(group\items; item)
             i += 1

@@ -41,7 +41,7 @@
 
 ```lmx
 Example:
-    int[]: xs
+    []int: xs
     int: lo
     int: hi
     return: int
@@ -65,7 +65,7 @@ Example:
 
 ```lmx
 Example:
-    int[]: xs
+    []int: xs
     int: lo
     int: hi
     return: int

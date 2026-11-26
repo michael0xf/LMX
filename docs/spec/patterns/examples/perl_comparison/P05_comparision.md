@@ -39,7 +39,7 @@
 
 ```lmx
 Example:
-    int[]: items
+    []int: items
     return: @
     run:
         int: negative 0
@@ -71,7 +71,7 @@ Below:
         return: value < threshold
 
 Example:
-    int[]: items
+    []int: items
     return: @
     run:
         throws: copy(any\throws) copy(all\throws)

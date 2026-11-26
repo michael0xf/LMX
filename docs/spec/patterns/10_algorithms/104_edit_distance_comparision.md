@@ -69,14 +69,14 @@ EditDistance:
     run:
         throws: copy(FxSeqAllocate\make\throws) copy(EditCell\value\throws)
         int: m length(right)
-        @: previous FxSeqAllocate\make(int[]; m + 1)
+        @: previous FxSeqAllocate\make([]int; m + 1)
         int: j 0
         while: j <= m
             previous[j] := j
             j += 1
         int: i 1
         while: i <= length(left)
-            @: current FxSeqAllocate\make(int[]; m + 1)
+            @: current FxSeqAllocate\make([]int; m + 1)
             current[0] := i
             j := 1
             while: j <= m
@@ -107,7 +107,7 @@ EditRow:
     return: @
     build:
         throws: copy(FxSeqAllocate\make\throws) copy(range\throws) copy(foldl\throws) ReceiverIndex
-        @: current FxSeqAllocate\make(int[]; length(right) + 1)
+        @: current FxSeqAllocate\make([]int; length(right) + 1)
         current[0] := i
         foldl(range(1; length(right) + 1); (i record); EditWrite\cell)
         return: current

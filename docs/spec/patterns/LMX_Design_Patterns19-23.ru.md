@@ -305,7 +305,7 @@ sys:
     OPERANDS_TEMPLATE:
         @: left
         int: depth 0
-        @[]: right
+        []@: right
         const: int: PASS_ARGS_AS_IS 0
         const: int: PRIORITY priority("+")
 ```

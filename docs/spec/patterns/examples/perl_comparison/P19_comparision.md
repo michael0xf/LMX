@@ -33,7 +33,7 @@
 
 ```lmx
 Mask:
-    char[]: target
+    []char: target
     int: begin
     int: end
     apply:
@@ -44,11 +44,11 @@ Mask:
 
 
 Example:
-    char[]: text
-    return: char[]
+    []char: text
+    return: []char
     run:
         throws: copy(sys\resize\throws)
-        char[]: out []
+        []char: out []
         sys\resize(out; length(text))
         int: i 0
         while: i < length(text)
@@ -73,15 +73,15 @@ Example:
 
 ```lmx
 Mask:
-    Match@: matched
-    return: char[]
+    @Match: matched
+    return: []char
     make:
         throws: copy(FxTextCycle\cycle\throws)
         return: cycle("*"; matched\end - matched\begin)
 
 Example:
-    char[]: text
-    return: char[]
+    []char: text
+    return: []char
     run:
         throws: copy(byteText\throws) copy(atLeast\throws) copy(replace\throws) copy(Mask\make\throws)
         return: replace(byteText(text); (asciiDigit atLeast 1); Mask\make)

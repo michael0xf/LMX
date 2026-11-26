@@ -3,18 +3,18 @@
 # The implementation must bind real methods to these contracts before use.
 BridgeLowerError:
     int: code
-    char[]: message
+    []char: message
 
 BridgeLowerRequirements:
     Open :: (@: request; @: catalog; @: entry; return: @)
-    Finish :: (@: frame; int: status; return: BridgeData\CallResult@)
+    Finish :: (@: frame; int: status; return: @BridgeData\CallResult)
     Release :: (@: frame)
-    char[]: openStatus "REQUIRES_KERNEL_IMPLEMENTATION"
-    char[]: finishStatus "REQUIRES_KERNEL_IMPLEMENTATION"
-    char[]: releaseStatus "REQUIRES_KERNEL_IMPLEMENTATION"
-    char[]: openContract "Read the explicit component catalog and entry, resolve their shared type/parameter/profile tables; validate request model, native profile, all argument relations and owner; materialize/pin; create a temporary C frame; return a raw address inside L2 only."
-    char[]: finishContract "Read status and exact native result; create ordinary LMX values; transfer authorized outputs; never publish the raw C frame. The enclosing finally releases remaining leases on every exit."
-    char[]: releaseContract "Idempotent, nonthrowing cleanup of temporary frame, leases and untransferred outputs; valid after success or failure of the C gate and finish. Registered immediately after a successful open."
-    char[]: callbackContract "Retain target/context for the documented interval; same-actor reentry only when proved; foreign threads post owner messages and never enter its arena."
-    char[]: failureContract "LMXC_REVIEW_REQUIRED becomes an explicit failed CallResult, not a successful zero/null result. Open rolls back partial allocation; finish is finally-safe."
-    char[]: graphContract "The frame is per-call host ABI, not graph storage, not an arena descriptor, not a shared singleton and not a persistent mirror of DATA."
+    []char: openStatus "REQUIRES_KERNEL_IMPLEMENTATION"
+    []char: finishStatus "REQUIRES_KERNEL_IMPLEMENTATION"
+    []char: releaseStatus "REQUIRES_KERNEL_IMPLEMENTATION"
+    []char: openContract "Read the explicit component catalog and entry, resolve their shared type/parameter/profile tables; validate request model, native profile, all argument relations and owner; materialize/pin; create a temporary C frame; return a raw address inside L2 only."
+    []char: finishContract "Read status and exact native result; create ordinary LMX values; transfer authorized outputs; never publish the raw C frame. The enclosing finally releases remaining leases on every exit."
+    []char: releaseContract "Idempotent, nonthrowing cleanup of temporary frame, leases and untransferred outputs; valid after success or failure of the C gate and finish. Registered immediately after a successful open."
+    []char: callbackContract "Retain target/context for the documented interval; same-actor reentry only when proved; foreign threads post owner messages and never enter its arena."
+    []char: failureContract "LMXC_REVIEW_REQUIRED becomes an explicit failed CallResult, not a successful zero/null result. Open rolls back partial allocation; finish is finally-safe."
+    []char: graphContract "The frame is per-call host ABI, not graph storage, not an arena descriptor, not a shared singleton and not a persistent mirror of DATA."

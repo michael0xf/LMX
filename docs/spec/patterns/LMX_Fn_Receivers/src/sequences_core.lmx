@@ -1,5 +1,5 @@
 # UNIVERSAL ARRAY ACCESS. These are common value/layout helpers, not a new
-# Sequence object. A Structure already is @[]; dense T[] keeps its real stride.
+# Sequence object. A Structure already is []@; dense []T keeps its real stride.
 # Only arrayInfo/arrayRead/arrayAdmit/arrayWrite are narrow kernel boundaries.
 # All sequence algorithms are ordinary LMX in this package.
 # No helper executes a selected graph field or applies callable W/E to it.
@@ -86,7 +86,7 @@ FxSeqBounds:
 # Ordinary admission of one value to the actual target's full requirement.
 # No hidden user converter or initializer is introduced. Required value checks
 # stay in this preparation phase; the later prepared write cannot repeat them.
-# @[] accepts the direct value reference, independently of former slot content.
+# []@ accepts the direct value reference, independently of former slot content.
 FxSeqAdmit:
     private:
         @: target
@@ -134,7 +134,7 @@ FxSeqRecords:
         throws: copy(FxThrows\sequence)
         FxSeqInfo\get(source)
         private: int: count length(source)
-        private: @: out FxSeqAllocate\make(@[]; count)
+        private: @: out FxSeqAllocate\make([]@; count)
         private: int: i 0
         while: i < count
             out[i] := FxSeqRead\read(source; i)

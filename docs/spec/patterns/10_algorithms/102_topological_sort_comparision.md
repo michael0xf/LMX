@@ -41,12 +41,12 @@ TopoCount, TopoEnqueue и TopoRemove записаны один раз. Проц�
 Topological:
     @: graph
     @: traverse
-    return: FxMaybe@
+    return: @FxMaybe
     run:
         throws: copy(AlgorithmArray\make\throws) copy(FxSeqAllocate\make\throws) copy(FxApply\apply\throws) FxRecordArity
         int: n length(graph)
-        @: degree AlgorithmArray\make(int[]; n; (0 record))
-        @: queue FxSeqAllocate\make(int[]; n)
+        @: degree AlgorithmArray\make([]int; n; (0 record))
+        @: queue FxSeqAllocate\make([]int; n)
         int: head 0
         int: tail 0
         FxApply\apply(traverse; ())

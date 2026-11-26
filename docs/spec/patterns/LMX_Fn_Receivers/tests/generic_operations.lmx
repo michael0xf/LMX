@@ -6,22 +6,22 @@ FxGenericEqualityProbe:
     return: int
     run:
         throws: copy(FxThrows\sequencefixture)
-        private: int[]: xs [3 1 3 2 1]
+        private: []int: xs [3 1 3 2 1]
         private: @: selected unique(xs)
         sys\assert(equalFields(selected; (3; 1; 2)))
-        sys\assert(sys\typeof(selected) = int[])
+        sys\assert(sys\typeof(selected) = []int)
         sys\assert(equalFields(xs; (3; 1; 3; 2; 1)))
-        private: char[]: text "abaca"
+        private: []char: text "abaca"
         sys\assert(equalFields(unique(text); "abc"))
         private: @: mixed ((1; "a"); (2; "b"); (1; "a"))
         sys\assert(length(unique(mixed)) = 2)
-        sys\assert(length(unique((int[]: []))) = 0)
+        sys\assert(length(unique(([]int: []))) = 0)
         return: 1
 
 FxGenericHalfProbe:
     int: value
     required: value
-    return: FxMaybe@
+    return: @FxMaybe
     half:
         throws: copy(FxThrows\sequencefixture)
         if: value % 2 != 0
@@ -32,13 +32,13 @@ FxGenericBindProbe:
     return: int
     run:
         throws: copy(FxThrows\sequencefixture)
-        private: FxMaybe@: infix some(8) bind FxGenericHalfProbe\half FxGenericHalfProbe\half
-        private: FxMaybe@: ordinary bind(bind(some(8); FxGenericHalfProbe\half); FxGenericHalfProbe\half)
+        private: @FxMaybe: infix some(8) bind FxGenericHalfProbe\half FxGenericHalfProbe\half
+        private: @FxMaybe: ordinary bind(bind(some(8); FxGenericHalfProbe\half); FxGenericHalfProbe\half)
         sys\assert(infix\present && ordinary\present)
         sys\assert(\infix\value = 2 && \ordinary\value = 2)
-        private: FxMaybe@: absent some(3) bind FxGenericHalfProbe\half FxGenericHalfProbe\half
+        private: @FxMaybe: absent some(3) bind FxGenericHalfProbe\half FxGenericHalfProbe\half
         sys\assert(absent\present = 0)
-        private: FxResult@: failure err("reason")
+        private: @FxResult: failure err("reason")
         sys\assert(failure\ok = 0)
         sys\assert(equalFields(\failure\reason; "reason"))
         return: 1
@@ -47,14 +47,14 @@ FxGenericPatternProbe:
     return: int
     run:
         throws: copy(FxThrows\sequencefixture) PatternArgument PatternEncoding PatternPosition
-        private: int[]: xs [1 2 3]
-        private: int[]: prefix [1 2]
+        private: []int: xs [1 2 3]
+        private: []int: prefix [1 2]
         sys\assert(matches(arrayView(xs); literal(prefix) then element(3)))
         sys\assert(hasPrefix(arrayView(xs); prefix))
         sys\assert(hasSuffix(arrayView(xs); element(3)))
-        private: FxMaybe@: found wholeMatch(arrayView(xs); start then literal(xs) then end)
+        private: @FxMaybe: found wholeMatch(arrayView(xs); start then literal(xs) then end)
         sys\assert(found\present)
         private: @: original matchedValue(\found\value)
         sys\assert(equalFields(original; xs))
-        sys\assert(sys\typeof(original) = int[])
+        sys\assert(sys\typeof(original) = []int)
         return: 1

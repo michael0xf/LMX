@@ -18,7 +18,7 @@ LMX использует существующие средства ядра ил
 
 ```lmx
 Repository:
-    @[]: rows
+    []@: rows
     int: id
     return: @
     Match:

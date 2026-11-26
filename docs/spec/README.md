@@ -1,7 +1,7 @@
 # Lingvamyxa — current specification and examples
 
 **Latest follow-up — sized axes and direct TypeRef for every type.**
-[The migration guide](../ARRAY_TYPE_MIGRATION.md) covers dynamic `T[N]`,
+[The migration guide](../ARRAY_TYPE_MIGRATION.md) covers dynamic `[N]T`,
 complete LEFT identity, optional capacity storage and `sys\descriptor(typeof(obj))`.
 The [TypeRef migration](../TYPE_REFERENCES_CHANGE.md) replaces integer type codes
 with references to canonical immutable system Structures. This is a documentation
@@ -19,8 +19,8 @@ information instead of guessing rows or factors.
 
 [Type identity](ARRAY_STORAGE.en.md#array-profiles) is the normalized complete LEFT.
 Every `{type value}` prefix stores TypeRef, the direct address of the canonical
-system Structure, for primitives as well as derived types. `int[]` lengths 2/3
-share a type; `int[][]` equals `int[](2)`; `int[2][3]` and `int[3][2]` differ.
+system Structure, for primitives as well as derived types. `[]int` lengths 2/3
+share a type; `[][]int` equals `[](2)int`; `[2][3]int` and `[3][2]int` differ.
 Names, initializer rows, length and reserve do not specialize TypeRef.
 
 The primary Lmx remains parent/length/storage. **Capacity=length means no secondary
@@ -32,9 +32,9 @@ Structure under the more specific canonical-TYPE contract. Ordinary object input
 still yields three live primary-field addresses. Actual capacity is `sys\capacity(obj)`.
 No per-object shape metadata or separate array-of-arrays entity is introduced.
 
-[Sized axes](ARRAY_STORAGE.en.md#sized-postfix) accept full expressions in T[extent],
-including int[][N] and Struct[2][5], alongside [dynamic repetitions](TYPE_DECLARATION_FORMS.md#dynamic-postfix)
-`T[](N)` and T@(N). int[][3] plus six elements determines [2,3]. int[][] with those
+[Sized axes](ARRAY_STORAGE.en.md#sized-postfix) accept full expressions in [extent]T,
+including [][N]int and [2][5]Struct, alongside [dynamic repetitions](TYPE_DECLARATION_FORMS.md#dynamic-postfix)
+`[](N)T` and @(N)T. [][3]int plus six elements determines [2,3]. [][]int with those
 same flat values or explicit rows is valid but retains two unknown extents; rows
 validate the initializer without changing TYPE. Flat operations remain available.
 Named/anonymous forms are supported; Struct[2]:= [a b] is ordinary indexed assignment.
@@ -93,10 +93,10 @@ functional LMX source independently, including every written declaration and
 `copy(target\throws)` reference. Green cells mark the actual minimum full count
 in each comparable row. There is no statistical reduction of Throws.
 
-**Author clarification — postfix declarations:** typed pointers use `Model@: p`
-and `int@: left`; typed arrays place `T[]` before the colon. Both named and
-anonymous square initialization are valid, including `Model[]: arr [Model Model]`,
-`Model[]: [Model Model]`, `int[]: values [1 2 3]`, and `int[]: [1 2 3]`.
+**Author clarification — postfix declarations:** typed pointers use `@Model: p`
+and `@int: left`; typed arrays place `[]T` before the colon. Both named and
+anonymous square initialization are valid, including `[]Model: arr [Model Model]`,
+`[]Model: [Model Model]`, `[]int: values [1 2 3]`, and `[]int: [1 2 3]`.
 The [eight positive forms and composition checks](TYPE_DECLARATION_FORMS.md)
 cover these declarations without rewriting genuine universal-reference initializers.
 
@@ -105,7 +105,7 @@ not an automatically executed call. Its internal name never selects an input. Un
 use ordinary positions; only an outer `name := value` names a destination. See the
 [merge note and complete numbers/cycles example](LMX_semantics.en.md#declaration-arguments).
 
-The final naming revision restores `replaceRange` for target-returning range replacement and adds removed-returning `splice`, plus `hasPrefix`/`hasSuffix`. Current examples and preserved algorithms use `Struct@: ptr` and `type[]: array`. See the [application review](patterns/APPLICATION_REVIEW.md) for explicit source coverage and remaining runtime acceptance.
+The final naming revision restores `replaceRange` for target-returning range replacement and adds removed-returning `splice`, plus `hasPrefix`/`hasSuffix`. Current examples and preserved algorithms use `@Struct: ptr` and `[]type: array`. See the [application review](patterns/APPLICATION_REVIEW.md) for explicit source coverage and remaining runtime acceptance.
 
 This edition integrates the requested
 receiver rename, general functional library, containers and signature interchangeability.

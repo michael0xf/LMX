@@ -53,7 +53,7 @@
 
 ```lmx
 ProducerMessage:
-    int[]: items
+    []int: items
     @: worker
     @: collector
     start:
@@ -101,7 +101,7 @@ CollectorMessage:
 
 ```lmx
 ProducerMessage:
-    int[]: items
+    []int: items
     @: worker
     @: collector
     Send:

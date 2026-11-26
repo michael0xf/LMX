@@ -54,13 +54,13 @@
 
 ```lmx
 Example:
-    int[]: left
-    int[]: right
+    []int: left
+    []int: right
     int: budget
     return: @
     run:
         throws: copy(FxSeqPush\append\throws) copy(record\throws)
-        @[]: out []
+        []@: out []
         int: i 0
         while: i < length(left)
             int: j 0
@@ -78,8 +78,8 @@ Example:
 
 ```lmx
 Example:
-    int[]: left
-    int[]: right
+    []int: left
+    []int: right
     int: budget
     return: @
     Row:

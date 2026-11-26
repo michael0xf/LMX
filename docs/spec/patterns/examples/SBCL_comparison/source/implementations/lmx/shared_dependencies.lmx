@@ -23,7 +23,7 @@ FxApply:
 FxBuild:
     private:
         @: contract
-        char[]: bodyText
+        []char: bodyText
         @: state
         @: failures
         @: policy 0
@@ -74,9 +74,9 @@ FxCapturePrefix:
 
 FxConcat:
     private:
-        char[]: first
-        char[]: second
-    return: char[]
+        []char: first
+        []char: second
+    return: []char
     concat:
         throws: copy(FxThrows\sequence)
         private: @: out FxSeqConcat\concat(parts := (first; second))
@@ -84,7 +84,7 @@ FxConcat:
 
 FxDecimal:
     private: int: number
-    return: char[]
+    return: []char
     decimal:
         throws: copy(FxThrows\selection)
         if: number < 0
@@ -122,7 +122,7 @@ FxEqualityTypes:
 FxFailureFilter:
     private:
         @: names
-        char[]: excluded
+        []char: excluded
     return: @
     without:
         private: @: out (copy(()))
@@ -130,7 +130,7 @@ FxFailureFilter:
         private: int: used 0
         private: int: i 0
         while: i < length(names)
-            private: char[]: name \names[i]
+            private: []char: name \names[i]
             if: FxEqualFields\equalFields(name; excluded) = 0
                 out[used] := names[i]
                 used += 1
@@ -152,17 +152,17 @@ FxFormat:
     private:
         bigint: value
         int: base 10
-    return: char[]
+    return: []char
     format:
         throws: copy(FxThrows\selection)
         if: base < 2 || base > 36
             throw: FxIndex()
-        private: char[]: digits "0123456789abcdefghijklmnopqrstuvwxyz"
+        private: []char: digits "0123456789abcdefghijklmnopqrstuvwxyz"
         private: bigint: magnitude value
         private: int: negative value < 0
         if: negative != 0
             magnitude := -magnitude
-        private: char[]: out []
+        private: []char: out []
         private: @: info FxSeqInfo\get(out)
         while: 1
             private: int: digit magnitude % base
@@ -317,13 +317,13 @@ FxPreparedOperands:
     private:
         @: left
         int: depth 0
-        @[]: right
+        []@: right
     const: int: PASS_ARGS_AS_IS 0
 
 FxRecordAdapter:
     private:
         @: typeToken
-        FxRecordConstructor@: constructor 0
+        @FxRecordConstructor: constructor 0
     required: typeToken
     return: @
     make:
@@ -339,7 +339,7 @@ FxRecordAdapter:
         state\record := FxRecordOperands\record
         private: @: resultType FxKernel\normalizeType(FxTypeTokens\reference[0])
         private: @: failures FxCaptureFailures\names()
-        private: char[]: body "return: (p0 node\\private\\state\\record)\n"
+        private: []char: body "return: (p0 node\\private\\state\\record)\n"
         if: constructor != 0
             state\constructor := constructor
             private: @: shape FxKernel\signature(constructor)
@@ -356,7 +356,7 @@ FxRecordAdapter:
 
 FxRecordAdapterState:
     @: record 0
-    FxRecordConstructor@: constructor
+    @FxRecordConstructor: constructor
 
 FxRecordConstructor :: (@: value; return: @)
 
@@ -409,7 +409,7 @@ FxSeqConcat:
         throws: copy(FxThrows\sequence)
         FxSeqInfo\get(parts)
         private: int: count length(parts)
-        private: int: arrayType @[]
+        private: int: arrayType []@
         private: int: elementType 0
         private: int: allDense 1
         private: int: i 0
@@ -425,7 +425,7 @@ FxSeqConcat:
                 allDense := 0
             i += 1
         if: count = 0 || allDense = 0
-            arrayType := @[]
+            arrayType := []@
         private: @: out FxSeqAllocate\make(arrayType; 0)
         private: @: outInfo FxSeqInfo\get(out)
         private: int: total 0
@@ -596,7 +596,7 @@ FxSignatures:
 
 FxSlice:
     private:
-        @[]: values
+        []@: values
         int: start
         int: count
     return: @
@@ -881,7 +881,7 @@ FxWrap:
         private: @: state (copy(FxEngineState))
         state\engine := engine
         state\payload := payload
-        private: char[]: text "private: @: fx_frame FxKernel\\currentCall(node)\nprivate: @: fx_engine node\\private\\state\\engine\nprivate: @: fx_answer fx_engine(state := node\\private\\state\\payload; frame := fx_frame)\n"
+        private: []char: text "private: @: fx_frame FxKernel\\currentCall(node)\nprivate: @: fx_engine node\\private\\state\\engine\nprivate: @: fx_answer fx_engine(state := node\\private\\state\\payload; frame := fx_frame)\n"
         if: info\hasResult != 0
             text := FxConcat\concat(text; "return: \\fx_answer\n")
         else:

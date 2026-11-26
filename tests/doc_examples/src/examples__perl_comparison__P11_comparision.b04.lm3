@@ -1,0 +1,18 @@
+Key:
+    @: event
+    return: int
+    get:
+        return: event\kind
+
+GroupRow:
+    @FxGroup: group
+    return: @
+    row:
+        return: (\group\key; group\items)
+
+Example:
+    @: items
+    return: @
+    run:
+        throws: copy(map\throws) copy(groupBy\throws)
+        return: map(groupBy(items; Key\get); GroupRow\row)

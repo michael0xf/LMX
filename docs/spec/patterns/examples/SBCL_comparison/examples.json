@@ -121,13 +121,13 @@
       },
       "notes_ru": "Калибровка имеет два настраиваемых параметра; откалиброванный ряд используется и как результат, и для итогового накопления. Элементная арифметика Array/scalar сохраняется, а copy явно открывает готовые значения для суммирующего Expression.",
       "alternatives": [],
-      "lmx": "Example:\n    int[]: items\n    int: gain\n    int: offset\n    return: @\n    run:\n        int[]: calibrated items * gain + offset\n        return: (calibrated; (+ 0 copy(calibrated)))\n",
+      "lmx": "Example:\n    []int: items\n    int: gain\n    int: offset\n    return: @\n    run:\n        []int: calibrated items * gain + offset\n        return: (calibrated; (+ 0 copy(calibrated)))\n",
       "foreign": "(defun example (items gain offset)\n  (let ((calibrated (mapcar (lambda (x) (+ (* x gain) offset)) items)))\n    (list calibrated (reduce #'+ calibrated :initial-value 0))))\n",
       "implementation_links": {},
       "style_note": "Процедурная форма выполняет один цикл и одновременно накапливает итог. Функциональная строит откалиброванный массив элементным Expression и затем вычисляет сумму общего потока.",
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: items\n    int: gain\n    int: offset\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        int[]: calibrated []\n        sys\\resize(calibrated; length(items))\n        int: total 0\n        int: i 0\n        while: i < length(items)\n            int: value items[i] * gain + offset\n            calibrated[i] := value\n            total += value\n            i += 1\n        return: (calibrated; total)\n",
+          "code": "Example:\n    []int: items\n    int: gain\n    int: offset\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        []int: calibrated []\n        sys\\resize(calibrated; length(items))\n        int: total 0\n        int: i 0\n        while: i < length(items)\n            int: value items[i] * gain + offset\n            calibrated[i] := value\n            total += value\n            i += 1\n        return: (calibrated; total)\n",
           "source_file": "source/lmx/procedural/S01.lm3",
           "contract_id": "S01",
           "runtime_execution": "NOT_RUN",
@@ -136,14 +136,14 @@
             "characters_with_whitespace": 430,
             "nonblank_lines": 17,
             "utf8_bytes": 430,
-            "sha256": "3999efc4556293f5ab62026fde0de7751a540959f7f3cb8fe938363013c62d90"
+            "sha256": "3e6f47b4292a656fe39ef6c50dad7b9ec9e18b6d92467bf77f1d3b871a77ff07"
           },
           "core_functions": [],
           "metrics_status": "current",
           "parser_execution": "NOT_RUN"
         },
         "functional": {
-          "code": "Example:\n    int[]: items\n    int: gain\n    int: offset\n    return: @\n    run:\n        int[]: calibrated items * gain + offset\n        return: (calibrated; (+ 0 copy(calibrated)))\n",
+          "code": "Example:\n    []int: items\n    int: gain\n    int: offset\n    return: @\n    run:\n        []int: calibrated items * gain + offset\n        return: (calibrated; (+ 0 copy(calibrated)))\n",
           "source_file": "source/lmx/S01.lm3",
           "contract_id": "S01",
           "runtime_execution": "NOT_RUN",
@@ -152,7 +152,7 @@
             "characters_with_whitespace": 180,
             "nonblank_lines": 8,
             "utf8_bytes": 180,
-            "sha256": "321fc2ee14b5c0908057e4fd866c857c56038c8440cf2b8078fc74bdd7d9f445"
+            "sha256": "99b7250775eb7987c2e8ab69993f906cfdaad654208573b58cc38d82a45cf55f"
           },
           "core_functions": [],
           "metrics_status": "current",
@@ -321,7 +321,7 @@
       },
       "notes_ru": "Свободный limit в Eligible\\accepts получает значение из активного вызова Example\\run по динамическому связыванию LMX. Не добавляются отдельный объект-контекст или дублирующий helper. Результат сообщает и принятые заявки, и сумму, и число отказов.",
       "alternatives": [],
-      "lmx": "Eligible:\n    int: value\n    return: int\n    accepts:\n        return: value > 0 && value <= limit\n\nExample:\n    int[]: items\n    int: limit\n    return: @\n    run:\n        throws: copy(filter\\throws) copy(sum\\throws)\n        @: accepted (filter items Eligible\\accepts)\n        return: (accepted; \\(sum accepted); length(items) - length(accepted))\n",
+      "lmx": "Eligible:\n    int: value\n    return: int\n    accepts:\n        return: value > 0 && value <= limit\n\nExample:\n    []int: items\n    int: limit\n    return: @\n    run:\n        throws: copy(filter\\throws) copy(sum\\throws)\n        @: accepted (filter items Eligible\\accepts)\n        return: (accepted; \\(sum accepted); length(items) - length(accepted))\n",
       "foreign": "(defun example (items limit)\n  (let ((accepted (remove-if-not (lambda (x) (<= 1 x limit)) items)))\n    (list accepted (reduce #'+ accepted :initial-value 0)\n          (- (length items) (length accepted)))))\n",
       "implementation_links": {
         "filter": [
@@ -332,7 +332,7 @@
       "style_note": "Процедурный проход явно отбирает, сохраняет и суммирует. Функциональный объединяет filter и sum, сохраняя порядок и повторные подходящие заявки.",
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: items\n    int: limit\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        int[]: accepted []\n        sys\\resize(accepted; length(items))\n        int: used 0\n        int: total 0\n        int: i 0\n        while: i < length(items)\n            int: value items[i]\n            if: value > 0 && value <= limit\n                accepted[used] := value\n                used += 1\n                total += value\n            i += 1\n        sys\\resize(accepted; used)\n        return: (accepted; total; length(items) - used)\n",
+          "code": "Example:\n    []int: items\n    int: limit\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        []int: accepted []\n        sys\\resize(accepted; length(items))\n        int: used 0\n        int: total 0\n        int: i 0\n        while: i < length(items)\n            int: value items[i]\n            if: value > 0 && value <= limit\n                accepted[used] := value\n                used += 1\n                total += value\n            i += 1\n        sys\\resize(accepted; used)\n        return: (accepted; total; length(items) - used)\n",
           "source_file": "source/lmx/procedural/S02.lm3",
           "contract_id": "S02",
           "runtime_execution": "NOT_RUN",
@@ -341,14 +341,14 @@
             "characters_with_whitespace": 549,
             "nonblank_lines": 20,
             "utf8_bytes": 549,
-            "sha256": "0f3ccc89ca12d21384e2b1312910dd7e8925473504032d2b955bac96af2f8b69"
+            "sha256": "fe3a7e437c37379b46daa9caea0871399066133ca97698fa28fc4101445458c2"
           },
           "core_functions": [],
           "metrics_status": "current",
           "parser_execution": "NOT_RUN"
         },
         "functional": {
-          "code": "Eligible:\n    int: value\n    return: int\n    accepts:\n        return: value > 0 && value <= limit\n\nExample:\n    int[]: items\n    int: limit\n    return: @\n    run:\n        throws: copy(filter\\throws) copy(sum\\throws)\n        @: accepted (filter items Eligible\\accepts)\n        return: (accepted; \\(sum accepted); length(items) - length(accepted))\n",
+          "code": "Eligible:\n    int: value\n    return: int\n    accepts:\n        return: value > 0 && value <= limit\n\nExample:\n    []int: items\n    int: limit\n    return: @\n    run:\n        throws: copy(filter\\throws) copy(sum\\throws)\n        @: accepted (filter items Eligible\\accepts)\n        return: (accepted; \\(sum accepted); length(items) - length(accepted))\n",
           "source_file": "source/lmx/S02.lm3",
           "contract_id": "S02",
           "runtime_execution": "NOT_RUN",
@@ -357,7 +357,7 @@
             "characters_with_whitespace": 346,
             "nonblank_lines": 13,
             "utf8_bytes": 346,
-            "sha256": "f37aafb58f1ade4ffd2cdb9476a17b358f8b3d682200ddef66562affe3901ff2"
+            "sha256": "69798bfbcfa26cf17c3c8e958bc08652eec4f3b8f51eca72973f5364302914b4"
           },
           "core_functions": [
             "filter",
@@ -535,7 +535,7 @@
       },
       "notes_ru": "Состояние свёртки — настоящая структура из остатка и двух счётчиков. Порядок заявок влияет на оплату; предварительная сумма не заменяет алгоритм. После отклонённой заявки обработка продолжается. Seed содержит три элемента и передаётся как одна структура.",
       "alternatives": [],
-      "lmx": "Payment:\n    @: state\n    int: cost\n    return: @\n    accept:\n        int: remaining \\state[0]\n        int: accepted \\state[1]\n        int: rejected \\state[2]\n        if: cost <= remaining\n            return: (remaining - cost; accepted + 1; rejected)\n        return: (remaining; accepted; rejected + 1)\n\nExample:\n    int: initial\n    int[]: costs\n    return: @\n    run:\n        throws: copy(foldl\\throws)\n        return: (foldl costs (initial; 0; 0) Payment\\accept)\n",
+      "lmx": "Payment:\n    @: state\n    int: cost\n    return: @\n    accept:\n        int: remaining \\state[0]\n        int: accepted \\state[1]\n        int: rejected \\state[2]\n        if: cost <= remaining\n            return: (remaining - cost; accepted + 1; rejected)\n        return: (remaining; accepted; rejected + 1)\n\nExample:\n    int: initial\n    []int: costs\n    return: @\n    run:\n        throws: copy(foldl\\throws)\n        return: (foldl costs (initial; 0; 0) Payment\\accept)\n",
       "foreign": "(defun example (initial costs)\n  (reduce (lambda (state cost)\n            (destructuring-bind (remaining accepted rejected) state\n              (if (<= cost remaining)\n                  (list (- remaining cost) (1+ accepted) rejected)\n                  (list remaining accepted (1+ rejected)))))\n          costs :initial-value (list initial 0 0)))\n",
       "implementation_links": {
         "foldl": [
@@ -545,7 +545,7 @@
       "style_note": "Процедурный вариант изменяет три локальных значения; функциональный foldl передаёт структуру состояния между шагами и возвращает новую структуру на каждом шаге.",
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int: initial\n    int[]: costs\n    return: @\n    run:\n        int: remaining initial\n        int: accepted 0\n        int: rejected 0\n        int: i 0\n        while: i < length(costs)\n            if: costs[i] <= remaining\n                remaining -= costs[i]\n                accepted += 1\n            else:\n                rejected += 1\n            i += 1\n        return: (remaining; accepted; rejected)\n",
+          "code": "Example:\n    int: initial\n    []int: costs\n    return: @\n    run:\n        int: remaining initial\n        int: accepted 0\n        int: rejected 0\n        int: i 0\n        while: i < length(costs)\n            if: costs[i] <= remaining\n                remaining -= costs[i]\n                accepted += 1\n            else:\n                rejected += 1\n            i += 1\n        return: (remaining; accepted; rejected)\n",
           "source_file": "source/lmx/procedural/S03.lm3",
           "contract_id": "S03",
           "runtime_execution": "NOT_RUN",
@@ -554,14 +554,14 @@
             "characters_with_whitespace": 416,
             "nonblank_lines": 17,
             "utf8_bytes": 416,
-            "sha256": "3532af5511aa5864c5fb93f11c1385434e1a7842d4506b9071e65d16ec4e5292"
+            "sha256": "137561e8f6470a71548cff3a901c77b68d5c4caf02bdd4963f33e90c9bba8fff"
           },
           "core_functions": [],
           "metrics_status": "current",
           "parser_execution": "NOT_RUN"
         },
         "functional": {
-          "code": "Payment:\n    @: state\n    int: cost\n    return: @\n    accept:\n        int: remaining \\state[0]\n        int: accepted \\state[1]\n        int: rejected \\state[2]\n        if: cost <= remaining\n            return: (remaining - cost; accepted + 1; rejected)\n        return: (remaining; accepted; rejected + 1)\n\nExample:\n    int: initial\n    int[]: costs\n    return: @\n    run:\n        throws: copy(foldl\\throws)\n        return: (foldl costs (initial; 0; 0) Payment\\accept)\n",
+          "code": "Payment:\n    @: state\n    int: cost\n    return: @\n    accept:\n        int: remaining \\state[0]\n        int: accepted \\state[1]\n        int: rejected \\state[2]\n        if: cost <= remaining\n            return: (remaining - cost; accepted + 1; rejected)\n        return: (remaining; accepted; rejected + 1)\n\nExample:\n    int: initial\n    []int: costs\n    return: @\n    run:\n        throws: copy(foldl\\throws)\n        return: (foldl costs (initial; 0; 0) Payment\\accept)\n",
           "source_file": "source/lmx/S03.lm3",
           "contract_id": "S03",
           "runtime_execution": "NOT_RUN",
@@ -570,7 +570,7 @@
             "characters_with_whitespace": 467,
             "nonblank_lines": 18,
             "utf8_bytes": 467,
-            "sha256": "fb32f47bfd85e6afeee1028cd1ee36f7a43686168771943b5e2863cc489d7b4b"
+            "sha256": "1a690e5c4968cdf5a55657f699dd3c96e6a114ec55181f7785cf7c7fcb86ef5e"
           },
           "core_functions": [
             "foldl"
@@ -768,7 +768,7 @@
       },
       "notes_ru": "Короткий список больше не приводит к незаметной потере хвоста: результат явно содержит число непарных позиций. zipWith сохраняет тот же контракт остановки, что многосписочный MAPCAR. Обобщённый sum читает записи из возвращённой последовательности.",
       "alternatives": [],
-      "lmx": "Example:\n    int[]: quantities\n    int[]: prices\n    return: @\n    run:\n        throws: copy(zipWith\\throws) copy(sum\\throws)\n        @: totals (zipWith quantities prices `*`)\n        int: count length(totals)\n        return: (totals; \\(sum totals); length(quantities) - count; length(prices) - count)\n",
+      "lmx": "Example:\n    []int: quantities\n    []int: prices\n    return: @\n    run:\n        throws: copy(zipWith\\throws) copy(sum\\throws)\n        @: totals (zipWith quantities prices `*`)\n        int: count length(totals)\n        return: (totals; \\(sum totals); length(quantities) - count; length(prices) - count)\n",
       "foreign": "(defun example (quantities prices)\n  (let* ((totals (mapcar #'* quantities prices))\n         (count (length totals)))\n    (list totals (reduce #'+ totals :initial-value 0)\n          (- (length quantities) count) (- (length prices) count))))\n",
       "implementation_links": {
         "zipWith": [
@@ -779,7 +779,7 @@
       "style_note": "Оба стиля возвращают строки счёта и сверку длины входов; процедурный вычисляет общий итог в том же цикле, функциональный применяет zipWith и sum.",
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: quantities\n    int[]: prices\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        int: count length(quantities)\n        if: length(prices) < count\n            count := length(prices)\n        int[]: totals []\n        sys\\resize(totals; count)\n        int: total 0\n        int: i 0\n        while: i < count\n            int: value quantities[i] * prices[i]\n            totals[i] := value\n            total += value\n            i += 1\n        return: (totals; total; length(quantities) - count; length(prices) - count)\n",
+          "code": "Example:\n    []int: quantities\n    []int: prices\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        int: count length(quantities)\n        if: length(prices) < count\n            count := length(prices)\n        []int: totals []\n        sys\\resize(totals; count)\n        int: total 0\n        int: i 0\n        while: i < count\n            int: value quantities[i] * prices[i]\n            totals[i] := value\n            total += value\n            i += 1\n        return: (totals; total; length(quantities) - count; length(prices) - count)\n",
           "source_file": "source/lmx/procedural/S04.lm3",
           "contract_id": "S04",
           "runtime_execution": "NOT_RUN",
@@ -788,14 +788,14 @@
             "characters_with_whitespace": 553,
             "nonblank_lines": 19,
             "utf8_bytes": 553,
-            "sha256": "eb79ef9d47dc2792a21db9d9d7421c3997305d4ac2b588853a911b47032538eb"
+            "sha256": "c55f446f82624f985a276d296a1380c5e1c414d0282e8ec13ac04de107bdc554"
           },
           "core_functions": [],
           "metrics_status": "current",
           "parser_execution": "NOT_RUN"
         },
         "functional": {
-          "code": "Example:\n    int[]: quantities\n    int[]: prices\n    return: @\n    run:\n        throws: copy(zipWith\\throws) copy(sum\\throws)\n        @: totals (zipWith quantities prices `*`)\n        int: count length(totals)\n        return: (totals; \\(sum totals); length(quantities) - count; length(prices) - count)\n",
+          "code": "Example:\n    []int: quantities\n    []int: prices\n    return: @\n    run:\n        throws: copy(zipWith\\throws) copy(sum\\throws)\n        @: totals (zipWith quantities prices `*`)\n        int: count length(totals)\n        return: (totals; \\(sum totals); length(quantities) - count; length(prices) - count)\n",
           "source_file": "source/lmx/S04.lm3",
           "contract_id": "S04",
           "runtime_execution": "NOT_RUN",
@@ -804,7 +804,7 @@
             "characters_with_whitespace": 302,
             "nonblank_lines": 9,
             "utf8_bytes": 302,
-            "sha256": "a1f2344f92ce24de108b08255c666825dc5f826dd6fdfd10510979aa8395733d"
+            "sha256": "eab3fb5ab09b11a63eb15812adc477dd618ee65559ddbd01fc556a6ee90c5afc"
           },
           "core_functions": [
             "zipWith",
@@ -959,7 +959,7 @@
       },
       "notes_ru": "SOME вообще возвращает первое истинное значение предиката; здесь результат намеренно нормализован в 0/1 для общего контракта.\n\nОдин Query описывает оба коротких прохода. copy выдаёт поля каждого результата в общий результат; промежуточные a/b не нужны. Количество вычислений предиката и независимость проходов сохранены.",
       "alternatives": [],
-      "lmx": "Probe:\n    int: calls 0\n    Test:\n        int: value\n        return: int\n        run:\n            Probe\\calls += 1\n            return: value > 0\n\nExample:\n    int[]: items\n    return: @\n    run:\n        throws: copy(any\\throws) copy(all\\throws)\n        Probe\\calls := 0\n        int: a (any items Probe\\Test\\run)\n        int: ac Probe\\calls\n        Probe\\calls := 0\n        int: b (all items Probe\\Test\\run)\n        return: (a; ac; b; Probe\\calls)\n",
+      "lmx": "Probe:\n    int: calls 0\n    Test:\n        int: value\n        return: int\n        run:\n            Probe\\calls += 1\n            return: value > 0\n\nExample:\n    []int: items\n    return: @\n    run:\n        throws: copy(any\\throws) copy(all\\throws)\n        Probe\\calls := 0\n        int: a (any items Probe\\Test\\run)\n        int: ac Probe\\calls\n        Probe\\calls := 0\n        int: b (all items Probe\\Test\\run)\n        return: (a; ac; b; Probe\\calls)\n",
       "foreign": "(defun example (items)\n  (let ((some-calls 0) (every-calls 0))\n    (let ((any (some (lambda (x) (incf some-calls) (plusp x)) items))\n          (all (every (lambda (x) (incf every-calls) (plusp x)) items)))\n      (list (if any 1 0) some-calls (if all 1 0) every-calls))))\n",
       "counts": {
         "lmx": {
@@ -1002,7 +1002,7 @@
       "style_note": "Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма.",
       "lmx_variants": {
         "procedural": {
-          "code": "Query:\n    int[]: items\n    int: wanted\n    return: @\n    run:\n        int: i 0\n        while: i < length(items)\n            if: (items[i] > 0) = wanted\n                return: (wanted; i + 1)\n            i += 1\n        return: (1 - wanted; i)\n\nExample:\n    int[]: items\n    return: @\n    run:\n        return: (copy(Query\\run(items; 1)) copy(Query\\run(items; 0)))\n",
+          "code": "Query:\n    []int: items\n    int: wanted\n    return: @\n    run:\n        int: i 0\n        while: i < length(items)\n            if: (items[i] > 0) = wanted\n                return: (wanted; i + 1)\n            i += 1\n        return: (1 - wanted; i)\n\nExample:\n    []int: items\n    return: @\n    run:\n        return: (copy(Query\\run(items; 1)) copy(Query\\run(items; 0)))\n",
           "source_file": "source/lmx/procedural/S05.lm3",
           "contract_id": "S05",
           "runtime_execution": "NOT_RUN",
@@ -1011,14 +1011,14 @@
             "characters_with_whitespace": 364,
             "nonblank_lines": 16,
             "utf8_bytes": 364,
-            "sha256": "05e012e6d557f05081a9283a1971bbe4a2006a31679124c1e10fe7575508fcf4"
+            "sha256": "abf9dd4421829db765736dd0627fe427c3f737c3d028bbd4c0f622a797276cfe"
           },
           "core_functions": [],
           "metrics_status": "current",
           "parser_execution": "NOT_RUN"
         },
         "functional": {
-          "code": "Probe:\n    int: calls 0\n    Test:\n        int: value\n        return: int\n        run:\n            Probe\\calls += 1\n            return: value > 0\n\nExample:\n    int[]: items\n    return: @\n    run:\n        throws: copy(any\\throws) copy(all\\throws)\n        Probe\\calls := 0\n        int: a (any items Probe\\Test\\run)\n        int: ac Probe\\calls\n        Probe\\calls := 0\n        int: b (all items Probe\\Test\\run)\n        return: (a; ac; b; Probe\\calls)\n",
+          "code": "Probe:\n    int: calls 0\n    Test:\n        int: value\n        return: int\n        run:\n            Probe\\calls += 1\n            return: value > 0\n\nExample:\n    []int: items\n    return: @\n    run:\n        throws: copy(any\\throws) copy(all\\throws)\n        Probe\\calls := 0\n        int: a (any items Probe\\Test\\run)\n        int: ac Probe\\calls\n        Probe\\calls := 0\n        int: b (all items Probe\\Test\\run)\n        return: (a; ac; b; Probe\\calls)\n",
           "source_file": "source/lmx/S05.lm3",
           "contract_id": "S05",
           "runtime_execution": "NOT_RUN",
@@ -1027,7 +1027,7 @@
             "characters_with_whitespace": 447,
             "nonblank_lines": 19,
             "utf8_bytes": 447,
-            "sha256": "fc08cf181905ee4833b97dd7613860f9b757d3d6f34474cdbc1a88c2e28476e1"
+            "sha256": "464bab98cfdc047c85227c4c0500e1e3783c0cf3a0610a5d73d67eaaaa2bb561"
           },
           "core_functions": [
             "any",
@@ -1167,7 +1167,7 @@
       },
       "notes_ru": "LMX сохраняет различие отсутствующего результата index и найденной позиции 0. Lisp NIL нормализуется только для диагностического badIndex. Порядок остановки и возвращаемый префикс делают поиск частью обработки входного потока.",
       "alternatives": [],
-      "lmx": "Negative:\n    int: value\n    return: int\n    accepts:\n        return: value < 0\n\nExample:\n    int[]: items\n    return: @\n    run:\n        throws: copy(index\\throws) copy(take\\throws) copy(sum\\throws)\n        @: found (index items Negative\\accepts)\n        int: bad -1\n        int: count length(items)\n        if: found\\present != 0\n            bad := \\found\\value\n            count := bad\n        @: accepted (take items count)\n        return: (accepted; \\(sum accepted); bad)\n",
+      "lmx": "Negative:\n    int: value\n    return: int\n    accepts:\n        return: value < 0\n\nExample:\n    []int: items\n    return: @\n    run:\n        throws: copy(index\\throws) copy(take\\throws) copy(sum\\throws)\n        @: found (index items Negative\\accepts)\n        int: bad -1\n        int: count length(items)\n        if: found\\present != 0\n            bad := \\found\\value\n            count := bad\n        @: accepted (take items count)\n        return: (accepted; \\(sum accepted); bad)\n",
       "foreign": "(defun example (items)\n  (let* ((bad (position-if #'minusp items))\n         (accepted (subseq items 0 (or bad (length items)))))\n    (list accepted (reduce #'+ accepted :initial-value 0) (or bad -1))))\n",
       "implementation_links": {
         "index": [
@@ -1179,7 +1179,7 @@
       "style_note": "Процедурная форма останавливает один цикл; функциональная находит границу через index, выделяет take и суммирует выбранную часть.",
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: items\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        int[]: accepted []\n        sys\\resize(accepted; length(items))\n        int: total 0\n        int: used 0\n        int: bad -1\n        while: used < length(items)\n            if: items[used] < 0\n                bad := used\n                break\n            accepted[used] := items[used]\n            total += items[used]\n            used += 1\n        sys\\resize(accepted; used)\n        return: (accepted; total; bad)\n",
+          "code": "Example:\n    []int: items\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        []int: accepted []\n        sys\\resize(accepted; length(items))\n        int: total 0\n        int: used 0\n        int: bad -1\n        while: used < length(items)\n            if: items[used] < 0\n                bad := used\n                break\n            accepted[used] := items[used]\n            total += items[used]\n            used += 1\n        sys\\resize(accepted; used)\n        return: (accepted; total; bad)\n",
           "source_file": "source/lmx/procedural/S06.lm3",
           "contract_id": "S06",
           "runtime_execution": "NOT_RUN",
@@ -1188,14 +1188,14 @@
             "characters_with_whitespace": 510,
             "nonblank_lines": 19,
             "utf8_bytes": 510,
-            "sha256": "6248ef1db4139b60121e07c3a1552af7a83be0e95fef6d05e1342242ab40bbff"
+            "sha256": "94216e8b64af05ec0821854c981a256defb0dc2bc1a5b32758fe7dc21c8193eb"
           },
           "core_functions": [],
           "metrics_status": "current",
           "parser_execution": "NOT_RUN"
         },
         "functional": {
-          "code": "Negative:\n    int: value\n    return: int\n    accepts:\n        return: value < 0\n\nExample:\n    int[]: items\n    return: @\n    run:\n        throws: copy(index\\throws) copy(take\\throws) copy(sum\\throws)\n        @: found (index items Negative\\accepts)\n        int: bad -1\n        int: count length(items)\n        if: found\\present != 0\n            bad := \\found\\value\n            count := bad\n        @: accepted (take items count)\n        return: (accepted; \\(sum accepted); bad)\n",
+          "code": "Negative:\n    int: value\n    return: int\n    accepts:\n        return: value < 0\n\nExample:\n    []int: items\n    return: @\n    run:\n        throws: copy(index\\throws) copy(take\\throws) copy(sum\\throws)\n        @: found (index items Negative\\accepts)\n        int: bad -1\n        int: count length(items)\n        if: found\\present != 0\n            bad := \\found\\value\n            count := bad\n        @: accepted (take items count)\n        return: (accepted; \\(sum accepted); bad)\n",
           "source_file": "source/lmx/S06.lm3",
           "contract_id": "S06",
           "runtime_execution": "NOT_RUN",
@@ -1204,7 +1204,7 @@
             "characters_with_whitespace": 477,
             "nonblank_lines": 18,
             "utf8_bytes": 477,
-            "sha256": "82d610710bf16cb66540e17519b7b1fa1dd9342c4b4d1efc3500e54476c1f31f"
+            "sha256": "16eb2d064c3d7d3512b7a0aa98af5aa236d9f91b1a9008ff2f5cfaf2a2b3b812"
           },
           "core_functions": [
             "index",
@@ -1466,7 +1466,7 @@
       "style_note": "Процедурный вариант раскрывает стабильную сортировку вставками и ограничение длины; функциональный соединяет стабильный sort и take. Оба сохраняют ссылки на исходные пары.",
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    @: items\n    int: limit\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        @[]: result []\n        sys\\resize(result; length(items))\n        int: i 0\n        while: i < length(items)\n            @: current items[i]\n            int: j i\n            while: j > 0\n                @: previous result[j - 1]\n                if: \\previous[0] <= \\current[0]\n                    break\n                result[j] := previous\n                j -= 1\n            result[j] := current\n            i += 1\n        int: count length(result)\n        if: limit < count\n            count := limit\n        sys\\resize(result; count)\n        return: (result; length(items) - count)\n",
+          "code": "Example:\n    @: items\n    int: limit\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        []@: result []\n        sys\\resize(result; length(items))\n        int: i 0\n        while: i < length(items)\n            @: current items[i]\n            int: j i\n            while: j > 0\n                @: previous result[j - 1]\n                if: \\previous[0] <= \\current[0]\n                    break\n                result[j] := previous\n                j -= 1\n            result[j] := current\n            i += 1\n        int: count length(result)\n        if: limit < count\n            count := limit\n        sys\\resize(result; count)\n        return: (result; length(items) - count)\n",
           "source_file": "source/lmx/procedural/S07.lm3",
           "contract_id": "S07",
           "runtime_execution": "NOT_RUN",
@@ -1475,7 +1475,7 @@
             "characters_with_whitespace": 691,
             "nonblank_lines": 25,
             "utf8_bytes": 691,
-            "sha256": "9e8b3283a3aafe1fcdd702b82ad74fe2694fc6809c9955eeb5a40de4bc8aaa7d"
+            "sha256": "e0afcf15e50671a48c2236e8265b21fd019a2e70df3de52b0157e88e15d8d622"
           },
           "core_functions": [],
           "metrics_status": "current",
@@ -1684,7 +1684,7 @@
       },
       "notes_ru": "LMX difference уже сохраняет порядок первых появлений; unique перед ним нужен здесь ещё и для отдельного счётчика дублей. Common Lisp set-difference не используется как замена, потому что выбранный договор требует определённый порядок pending. REMOVE-DUPLICATES получает :from-end t, чтобы сохранить первые появления.",
       "alternatives": [],
-      "lmx": "Example:\n    int[]: items\n    int[]: completed\n    return: @\n    run:\n        throws: copy(unique\\throws) copy(difference\\throws)\n        @: distinct (unique items)\n        @: pending (difference distinct completed)\n        return: (pending; length(items) - length(distinct); length(distinct) - length(pending))\n",
+      "lmx": "Example:\n    []int: items\n    []int: completed\n    return: @\n    run:\n        throws: copy(unique\\throws) copy(difference\\throws)\n        @: distinct (unique items)\n        @: pending (difference distinct completed)\n        return: (pending; length(items) - length(distinct); length(distinct) - length(pending))\n",
       "foreign": "(defun example (items completed)\n  (let* ((distinct (remove-duplicates items :from-end t :test #'=))\n         (pending (remove-if (lambda (x) (member x completed :test #'=)) distinct)))\n    (list pending (- (length items) (length distinct))\n          (- (length distinct) (length pending)))))\n",
       "implementation_links": {
         "unique": [
@@ -1695,7 +1695,7 @@
       "style_note": "Процедурный код явно ведёт seen и проверяет completed. Функциональный использует обобщённые unique и difference, а не вводит новый int-only уникализатор.",
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: items\n    int[]: completed\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        int[]: seen []\n        int[]: pending []\n        sys\\resize(seen; length(items))\n        sys\\resize(pending; length(items))\n        int: distinct 0\n        int: used 0\n        int: i 0\n        while: i < length(items)\n            int: value items[i]\n            int: j 0\n            while: j < distinct && seen[j] != value\n                j += 1\n            if: j = distinct\n                seen[distinct] := value\n                distinct += 1\n                j := 0\n                while: j < length(completed) && completed[j] != value\n                    j += 1\n                if: j = length(completed)\n                    pending[used] := value\n                    used += 1\n                ---\n            i += 1\n        sys\\resize(pending; used)\n        return: (pending; length(items) - distinct; distinct - used)\n",
+          "code": "Example:\n    []int: items\n    []int: completed\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        []int: seen []\n        []int: pending []\n        sys\\resize(seen; length(items))\n        sys\\resize(pending; length(items))\n        int: distinct 0\n        int: used 0\n        int: i 0\n        while: i < length(items)\n            int: value items[i]\n            int: j 0\n            while: j < distinct && seen[j] != value\n                j += 1\n            if: j = distinct\n                seen[distinct] := value\n                distinct += 1\n                j := 0\n                while: j < length(completed) && completed[j] != value\n                    j += 1\n                if: j = length(completed)\n                    pending[used] := value\n                    used += 1\n                ---\n            i += 1\n        sys\\resize(pending; used)\n        return: (pending; length(items) - distinct; distinct - used)\n",
           "source_file": "source/lmx/procedural/S08.lm3",
           "contract_id": "S08",
           "runtime_execution": "NOT_RUN",
@@ -1704,14 +1704,14 @@
             "characters_with_whitespace": 940,
             "nonblank_lines": 31,
             "utf8_bytes": 940,
-            "sha256": "825ddfb0cdb6cf246b7ba09769eaf69efba3580d270eb9fbfa9c98bd841669f5"
+            "sha256": "e1f13faeb39975db9df8d73752fdc0487b9d94ab27b9b00e907326689347e831"
           },
           "core_functions": [],
           "metrics_status": "current",
           "parser_execution": "NOT_RUN"
         },
         "functional": {
-          "code": "Example:\n    int[]: items\n    int[]: completed\n    return: @\n    run:\n        throws: copy(unique\\throws) copy(difference\\throws)\n        @: distinct (unique items)\n        @: pending (difference distinct completed)\n        return: (pending; length(items) - length(distinct); length(distinct) - length(pending))\n",
+          "code": "Example:\n    []int: items\n    []int: completed\n    return: @\n    run:\n        throws: copy(unique\\throws) copy(difference\\throws)\n        @: distinct (unique items)\n        @: pending (difference distinct completed)\n        return: (pending; length(items) - length(distinct); length(distinct) - length(pending))\n",
           "source_file": "source/lmx/S08.lm3",
           "contract_id": "S08",
           "runtime_execution": "NOT_RUN",
@@ -1720,7 +1720,7 @@
             "characters_with_whitespace": 312,
             "nonblank_lines": 9,
             "utf8_bytes": 312,
-            "sha256": "f808471dbdd59df7bfacecc99f89eb9d1c7eaeb2b98a35572e06dbd0d736a173"
+            "sha256": "899e6af144059527edbed8c71b18de24245e886b3e53dd3f7f354b5a2f58f6fe"
           },
           "core_functions": [
             "unique",
@@ -1920,7 +1920,7 @@
       },
       "notes_ru": "Одинаковая длина replacement и диапазона сохраняет прежнюю согласованную границу REPLACE/replaceRange. Изменения считаются по значениям: запись прежнего значения не увеличивает changedCount. Сравнение и вычитание равнодлинных dense Array в LMX элементные; сумма получает их результаты явно.",
       "alternatives": [],
-      "lmx": "Example:\n    int[]: items\n    int: start\n    int: end\n    int[]: replacement\n    return: @\n    run:\n        throws: copy(replaceRange\\throws) copy(sum\\throws)\n        int[]: result [copy(items)]\n        replaceRange(result; start; end; replacement)\n        return: (result; \\(sum (result != items)); \\(sum (result - items)))\n",
+      "lmx": "Example:\n    []int: items\n    int: start\n    int: end\n    []int: replacement\n    return: @\n    run:\n        throws: copy(replaceRange\\throws) copy(sum\\throws)\n        []int: result [copy(items)]\n        replaceRange(result; start; end; replacement)\n        return: (result; \\(sum (result != items)); \\(sum (result - items)))\n",
       "foreign": "(defun example (items start end replacement)\n  (let ((updated (replace (copy-list items) replacement :start1 start :end1 end)))\n    (list updated (count nil (mapcar #'= updated items))\n          (reduce #'+ (mapcar #'- updated items) :initial-value 0))))\n",
       "implementation_links": {
         "replaceRange": [
@@ -1931,7 +1931,7 @@
       "style_note": "Процедурный цикл одновременно создаёт копию и отчёт. Функциональный вариант применяет replaceRange к независимой копии и строит сводку элементными выражениями и sum.",
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: items\n    int: start\n    int: end\n    int[]: replacement\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        int[]: result []\n        sys\\resize(result; length(items))\n        int: changed 0\n        int: delta 0\n        int: i 0\n        while: i < length(items)\n            int: value items[i]\n            if: i >= start && i < end\n                value := replacement[i - start]\n            result[i] := value\n            changed += (value != items[i])\n            delta += value - items[i]\n            i += 1\n        return: (result; changed; delta)\n",
+          "code": "Example:\n    []int: items\n    int: start\n    int: end\n    []int: replacement\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        []int: result []\n        sys\\resize(result; length(items))\n        int: changed 0\n        int: delta 0\n        int: i 0\n        while: i < length(items)\n            int: value items[i]\n            if: i >= start && i < end\n                value := replacement[i - start]\n            result[i] := value\n            changed += (value != items[i])\n            delta += value - items[i]\n            i += 1\n        return: (result; changed; delta)\n",
           "source_file": "source/lmx/procedural/S09.lm3",
           "contract_id": "S09",
           "runtime_execution": "NOT_RUN",
@@ -1940,14 +1940,14 @@
             "characters_with_whitespace": 591,
             "nonblank_lines": 22,
             "utf8_bytes": 591,
-            "sha256": "576c0994ac4ea96013fd84b7ff70ffd85bceb75c08df0a77acce011fb13fbcab"
+            "sha256": "1f28dce6b1ac21d3fdc7595ecccdb4b28a5df6689112fe46e9e63b55d58d4f1c"
           },
           "core_functions": [],
           "metrics_status": "current",
           "parser_execution": "NOT_RUN"
         },
         "functional": {
-          "code": "Example:\n    int[]: items\n    int: start\n    int: end\n    int[]: replacement\n    return: @\n    run:\n        throws: copy(replaceRange\\throws) copy(sum\\throws)\n        int[]: result [copy(items)]\n        replaceRange(result; start; end; replacement)\n        return: (result; \\(sum (result != items)); \\(sum (result - items)))\n",
+          "code": "Example:\n    []int: items\n    int: start\n    int: end\n    []int: replacement\n    return: @\n    run:\n        throws: copy(replaceRange\\throws) copy(sum\\throws)\n        []int: result [copy(items)]\n        replaceRange(result; start; end; replacement)\n        return: (result; \\(sum (result != items)); \\(sum (result - items)))\n",
           "source_file": "source/lmx/S09.lm3",
           "contract_id": "S09",
           "runtime_execution": "NOT_RUN",
@@ -1956,7 +1956,7 @@
             "characters_with_whitespace": 325,
             "nonblank_lines": 11,
             "utf8_bytes": 325,
-            "sha256": "7ffbafb30a2314a80bcbc55d470dbc7b3742ac6d4b970cb18e80bc187b9f54e1"
+            "sha256": "1a064e27e7089b1f63e7b94823d716bd4612af33cffe8a582119b47ffe3ce41d"
           },
           "core_functions": [
             "replaceRange",
@@ -2284,13 +2284,13 @@
       },
       "notes_ru": "Две независимые последовательности превращаются в аргументы обычного +; готовые числовые итоги затем используются в балансе. Процедурный helper Total\\sum определён один раз для обоих входов. Copy открывает значения явно и не вводит неявное рекурсивное раскрытие произвольных записей.",
       "alternatives": [],
-      "lmx": "Example:\n    int: opening\n    int[]: charges\n    int[]: credits\n    return: @\n    run:\n        int: charged (+ 0 copy(charges))\n        int: credited (+ 0 copy(credits))\n        return: (charged; credited; opening + charged - credited)\n",
+      "lmx": "Example:\n    int: opening\n    []int: charges\n    []int: credits\n    return: @\n    run:\n        int: charged (+ 0 copy(charges))\n        int: credited (+ 0 copy(credits))\n        return: (charged; credited; opening + charged - credited)\n",
       "foreign": "(defun example (opening charges credits)\n  (let ((charged (apply #'+ charges))\n        (credited (apply #'+ credits)))\n    (list charged credited (- (+ opening charged) credited))))\n",
       "implementation_links": {},
       "style_note": "Процедурный стиль использует один локальный цикл суммирования повторно. Функциональный записывает обе вариадические суммы через общий Expression, затем строит финансовую сводку без повторного вычисления сумм.",
       "lmx_variants": {
         "procedural": {
-          "code": "Total:\n    int[]: items\n    return: int\n    sum:\n        int: result 0\n        int: i 0\n        while: i < length(items)\n            result += items[i]\n            i += 1\n        return: result\n\nExample:\n    int: opening\n    int[]: charges\n    int[]: credits\n    return: @\n    run:\n        int: charged Total\\sum(charges)\n        int: credited Total\\sum(credits)\n        return: (charged; credited; opening + charged - credited)\n",
+          "code": "Total:\n    []int: items\n    return: int\n    sum:\n        int: result 0\n        int: i 0\n        while: i < length(items)\n            result += items[i]\n            i += 1\n        return: result\n\nExample:\n    int: opening\n    []int: charges\n    []int: credits\n    return: @\n    run:\n        int: charged Total\\sum(charges)\n        int: credited Total\\sum(credits)\n        return: (charged; credited; opening + charged - credited)\n",
           "source_file": "source/lmx/procedural/S11.lm3",
           "contract_id": "S11",
           "runtime_execution": "NOT_RUN",
@@ -2299,14 +2299,14 @@
             "characters_with_whitespace": 429,
             "nonblank_lines": 19,
             "utf8_bytes": 429,
-            "sha256": "44dbac8b11332e9d97d9183d416a63093d50e7af5e965830052ae531b5c5b14f"
+            "sha256": "e897881c51020b593a01436ea788208cedf4483723e1896e8765cfd6c0cf758a"
           },
           "core_functions": [],
           "metrics_status": "current",
           "parser_execution": "NOT_RUN"
         },
         "functional": {
-          "code": "Example:\n    int: opening\n    int[]: charges\n    int[]: credits\n    return: @\n    run:\n        int: charged (+ 0 copy(charges))\n        int: credited (+ 0 copy(credits))\n        return: (charged; credited; opening + charged - credited)\n",
+          "code": "Example:\n    int: opening\n    []int: charges\n    []int: credits\n    return: @\n    run:\n        int: charged (+ 0 copy(charges))\n        int: credited (+ 0 copy(credits))\n        return: (charged; credited; opening + charged - credited)\n",
           "source_file": "source/lmx/S11.lm3",
           "contract_id": "S11",
           "runtime_execution": "NOT_RUN",
@@ -2315,7 +2315,7 @@
             "characters_with_whitespace": 236,
             "nonblank_lines": 9,
             "utf8_bytes": 236,
-            "sha256": "9cac4b84a0c7d874a8498b77dc772bad05125ddae27c612d58693172cee1545f"
+            "sha256": "6306c417add9209d8c928d4d7603d03ba2b1818057b3dc8ed7602f45eb699b47"
           },
           "core_functions": [],
           "metrics_status": "current",
@@ -3196,7 +3196,7 @@
       },
       "notes_ru": "compress сначала выбирает нечётные числа; затем общий Expression складывает квадраты выбранных значений. Чётные элементы не возводятся в квадрат. Сохраняется общий расчёт LOOP без имитации его синтаксического DSL.",
       "alternatives": [],
-      "lmx": "Example:\n    int[]: items\n    return: int\n    run:\n        throws: copy(compress\\throws)\n        int[]: odd compress(items; items % 2 != 0)\n        return: (+ 0 copy(odd * odd))\n",
+      "lmx": "Example:\n    []int: items\n    return: int\n    run:\n        throws: copy(compress\\throws)\n        []int: odd compress(items; items % 2 != 0)\n        return: (+ 0 copy(odd * odd))\n",
       "foreign": "(defun example (items)\n  (loop for x in items when (oddp x) sum (* x x)))\n",
       "counts": {
         "lmx": {
@@ -3236,7 +3236,7 @@
       "style_note": "Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма.",
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: items\n    return: int\n    run:\n        int: total 0\n        int: i 0\n        while: i < length(items)\n            int: value items[i]\n            if: value % 2 != 0\n                total += value * value\n            i += 1\n        return: total\n",
+          "code": "Example:\n    []int: items\n    return: int\n    run:\n        int: total 0\n        int: i 0\n        while: i < length(items)\n            int: value items[i]\n            if: value % 2 != 0\n                total += value * value\n            i += 1\n        return: total\n",
           "source_file": "source/lmx/procedural/S17.lm3",
           "contract_id": "S17",
           "runtime_execution": "NOT_RUN",
@@ -3245,14 +3245,14 @@
             "characters_with_whitespace": 265,
             "nonblank_lines": 12,
             "utf8_bytes": 265,
-            "sha256": "11d85fcbce4dc0f3deecf71b4a8ad715060ce72df8c8d68009d77ce35c140066"
+            "sha256": "9016bb4dae126e44394d4d6f700954d2ff9cd072d191057982ce8e78d9c90a5f"
           },
           "core_functions": [],
           "metrics_status": "current",
           "parser_execution": "NOT_RUN"
         },
         "functional": {
-          "code": "Example:\n    int[]: items\n    return: int\n    run:\n        throws: copy(compress\\throws)\n        int[]: odd compress(items; items % 2 != 0)\n        return: (+ 0 copy(odd * odd))\n",
+          "code": "Example:\n    []int: items\n    return: int\n    run:\n        throws: copy(compress\\throws)\n        []int: odd compress(items; items % 2 != 0)\n        return: (+ 0 copy(odd * odd))\n",
           "source_file": "source/lmx/S17.lm3",
           "contract_id": "S17",
           "runtime_execution": "NOT_RUN",
@@ -3261,7 +3261,7 @@
             "characters_with_whitespace": 178,
             "nonblank_lines": 7,
             "utf8_bytes": 178,
-            "sha256": "e91e5e994242176ae7db1d28bfd041350fb393b472ea3a693bc2bd325183486d"
+            "sha256": "243b84a3d9b67e6e7ac3c45fe570f4c6951f29ed47f6fd41845711f2aeafe686"
           },
           "core_functions": [
             "compress"
@@ -4138,9 +4138,9 @@
         "lmx": "source/lmx/S23.lm3",
         "foreign": "source/common-lisp/S23.lisp"
       },
-      "notes_ru": "В стандартном Common Lisp нет функции MEMOIZE: показана полная прикладная реализация через штатный HASH-TABLE. Основной LMX-вариант должен тоже содержать кеш; отдельный вариант с LMX memoize учитывается отдельно.\n\nОсновной вариант содержит прикладной кеш, как CL-пример с HASH-TABLE. Каждая строка кеша — обычная структура (key; value), уже @[]; один массив cache заменяет две параллельные таблицы и два resize. Линейный поиск не имитирует хеш-таблицу. cache/calls живут в текущем Example и доступны Memo по динамическому связыванию. Нулевое значение не означает промах. Вариант с готовым memoize вынесен отдельно из-за иного уровня абстракции.",
+      "notes_ru": "В стандартном Common Lisp нет функции MEMOIZE: показана полная прикладная реализация через штатный HASH-TABLE. Основной LMX-вариант должен тоже содержать кеш; отдельный вариант с LMX memoize учитывается отдельно.\n\nОсновной вариант содержит прикладной кеш, как CL-пример с HASH-TABLE. Каждая строка кеша — обычная структура (key; value), уже []@; один массив cache заменяет две параллельные таблицы и два resize. Линейный поиск не имитирует хеш-таблицу. cache/calls живут в текущем Example и доступны Memo по динамическому связыванию. Нулевое значение не означает промах. Вариант с готовым memoize вынесен отдельно из-за иного уровня абстракции.",
       "alternatives": [],
-      "lmx": "State:\n    int: calls 0\n\nSquare:\n    int: value\n    return: int\n    run:\n        State\\calls += 1\n        return: value * value\n\nExample:\n    int[]: items\n    return: @\n    run:\n        throws: copy(memoize\\throws) copy(map\\throws)\n        State\\calls := 0\n        @: result (map items (memoize Square\\run))\n        return: (result; State\\calls)\n",
+      "lmx": "State:\n    int: calls 0\n\nSquare:\n    int: value\n    return: int\n    run:\n        State\\calls += 1\n        return: value * value\n\nExample:\n    []int: items\n    return: @\n    run:\n        throws: copy(memoize\\throws) copy(map\\throws)\n        State\\calls := 0\n        @: result (map items (memoize Square\\run))\n        return: (result; State\\calls)\n",
       "foreign": "(defun example (items)\n  (let ((cache (make-hash-table :test #'eql)) (calls 0))\n    (flet ((square (x)\n             (multiple-value-bind (value present) (gethash x cache)\n               (if present value\n                   (progn (incf calls)\n                          (setf (gethash x cache) (* x x)))))))\n      (list (mapcar #'square items) calls))))\n",
       "counts": {
         "lmx": {
@@ -4183,7 +4183,7 @@
       "style_note": "Обе записи сохраняют полный договор; процедурная раскрывает прикладной обход, функциональная использует общие операции/Expression без копии ядрового алгоритма.",
       "lmx_variants": {
         "procedural": {
-          "code": "Memo:\n    int: value\n    return: int\n    get:\n        int: i 0\n        while: i < length(cache)\n            @: row cache[i]\n            if: \\row[0] = value\n                return: \\row[1]\n            i += 1\n        int: square value * value\n        calls += 1\n        sys\\resize(cache; i + 1)\n        cache[i] := (value; square)\n        return: square\n\nExample:\n    int[]: items\n    return: @\n    run:\n        @[]: cache []\n        int: calls 0\n        int[]: result []\n        sys\\resize(result; length(items))\n        int: i 0\n        while: i < length(items)\n            result[i] := Memo\\get(items[i])\n            i += 1\n        return: (result; calls)\n",
+          "code": "Memo:\n    int: value\n    return: int\n    get:\n        int: i 0\n        while: i < length(cache)\n            @: row cache[i]\n            if: \\row[0] = value\n                return: \\row[1]\n            i += 1\n        int: square value * value\n        calls += 1\n        sys\\resize(cache; i + 1)\n        cache[i] := (value; square)\n        return: square\n\nExample:\n    []int: items\n    return: @\n    run:\n        []@: cache []\n        int: calls 0\n        []int: result []\n        sys\\resize(result; length(items))\n        int: i 0\n        while: i < length(items)\n            result[i] := Memo\\get(items[i])\n            i += 1\n        return: (result; calls)\n",
           "source_file": "source/lmx/procedural/S23.lm3",
           "contract_id": "S23",
           "runtime_execution": "NOT_RUN",
@@ -4192,14 +4192,14 @@
             "characters_with_whitespace": 657,
             "nonblank_lines": 28,
             "utf8_bytes": 657,
-            "sha256": "1c9f6e49a92f48c8ff101540c40e9a12aa51bcac33395e63e8dd1552c857a3ae"
+            "sha256": "f1e908b8ef55078194f047fe0441364fafa367c9d7438022130ce784831f96a3"
           },
           "core_functions": [],
           "metrics_status": "current",
           "parser_execution": "NOT_RUN"
         },
         "functional": {
-          "code": "State:\n    int: calls 0\n\nSquare:\n    int: value\n    return: int\n    run:\n        State\\calls += 1\n        return: value * value\n\nExample:\n    int[]: items\n    return: @\n    run:\n        throws: copy(memoize\\throws) copy(map\\throws)\n        State\\calls := 0\n        @: result (map items (memoize Square\\run))\n        return: (result; State\\calls)\n",
+          "code": "State:\n    int: calls 0\n\nSquare:\n    int: value\n    return: int\n    run:\n        State\\calls += 1\n        return: value * value\n\nExample:\n    []int: items\n    return: @\n    run:\n        throws: copy(memoize\\throws) copy(map\\throws)\n        State\\calls := 0\n        @: result (map items (memoize Square\\run))\n        return: (result; State\\calls)\n",
           "source_file": "source/lmx/S23.lm3",
           "contract_id": "S23",
           "runtime_execution": "NOT_RUN",
@@ -4208,7 +4208,7 @@
             "characters_with_whitespace": 346,
             "nonblank_lines": 16,
             "utf8_bytes": 346,
-            "sha256": "b8d415d7b22626857fc05aa6a1e9ef3fa26a603ca44855197b9eff7fbc49d35b"
+            "sha256": "1169e8e1efdfaaae4b2a3ab531d45512b26d29438d3a42c8843236220f436ed8"
           },
           "core_functions": [
             "memoize",
@@ -4304,7 +4304,7 @@
       },
       "notes_ru": "В первичный исходник включены producer и worker. Симметричный хостовый bootstrap вынесен в source/common-lisp/S24_host.lisp; он создаёт mailbox/thread и ждёт завершения. Это действующие API SBCL, а не модель в одном потоке.\n\nMessage имеют отдельные арены; host заранее передаёт адреса worker и collector и данные items. Адресованные методы приведены полностью: WorkerMessage/Add/add, WorkerMessage/Finish/finish, CollectorMessage/accept. post не считается синхронным join. Producer сохраняется до обработки его pending reply, worker заканчивается только после finish, collector — после результата. Полный L3 bootstrap и parser fixture post в текущем пакете отсутствуют, поэтому пример исключён из суммарных отношений размеров.",
       "alternatives": [],
-      "lmx": "ProducerMessage:\n    int[]: items\n    @: worker\n    @: collector\n    Send:\n        int: state\n        int: value\n        return: int\n        send:\n            post:\n                ask:\n                    worker\\Add\\add(value := value)\n            ---\n            return: state\n    ---\n    start:\n        throws: copy(foldl\\throws) copy(record\\throws)\n        (foldl items (0 record) Send\\send)\n        post:\n            ask:\n                worker\\Finish\\finish()\n            answer:\n                collector\\accept\n\nWorkerMessage:\n    int: total 0\n    Add:\n        int: value\n        add:\n            @: owner parent(node)\n            owner\\total += value\n    ---\n    Finish:\n        return: int\n        finish:\n            @: owner parent(node)\n            success := 1\n            return: owner\\total\n\nCollectorMessage:\n    int: value\n    int: result 0\n    int: completed 0\n    accept:\n        node\\result := value\n        node\\completed := 1\n        success := 1\n",
+      "lmx": "ProducerMessage:\n    []int: items\n    @: worker\n    @: collector\n    Send:\n        int: state\n        int: value\n        return: int\n        send:\n            post:\n                ask:\n                    worker\\Add\\add(value := value)\n            ---\n            return: state\n    ---\n    start:\n        throws: copy(foldl\\throws) copy(record\\throws)\n        (foldl items (0 record) Send\\send)\n        post:\n            ask:\n                worker\\Finish\\finish()\n            answer:\n                collector\\accept\n\nWorkerMessage:\n    int: total 0\n    Add:\n        int: value\n        add:\n            @: owner parent(node)\n            owner\\total += value\n    ---\n    Finish:\n        return: int\n        finish:\n            @: owner parent(node)\n            success := 1\n            return: owner\\total\n\nCollectorMessage:\n    int: value\n    int: result 0\n    int: completed 0\n    accept:\n        node\\result := value\n        node\\completed := 1\n        success := 1\n",
       "foreign": "(require :sb-concurrency)\n\n(defun worker (inbox)\n  (loop for message = (sb-concurrency:receive-message inbox)\n        until (eq message :stop)\n        sum message))\n\n(defun produce (inbox items)\n  (dolist (item items) (sb-concurrency:send-message inbox item))\n  (sb-concurrency:send-message inbox :stop))\n",
       "counts": {
         "lmx": {
@@ -4347,7 +4347,7 @@
       "style_note": "Оба стиля используют один owning Message и тот же FIFO post/reply. Функциональный foldl только обходит конечный вход, каждый Send посылает один Add; Finish идёт после него. S24 остаётся протокольной аналогией, runtime NOT_RUN.",
       "lmx_variants": {
         "procedural": {
-          "code": "ProducerMessage:\n    int[]: items\n    @: worker\n    @: collector\n    start:\n        int: i 0\n        while: i < length(items)\n            post:\n                ask:\n                    worker\\Add\\add(value := items[i])\n            ---\n            i += 1\n        post:\n            ask:\n                worker\\Finish\\finish()\n            answer:\n                collector\\accept\n\nWorkerMessage:\n    int: total 0\n    Add:\n        int: value\n        add:\n            @: owner parent(node)\n            owner\\total += value\n    ---\n    Finish:\n        return: int\n        finish:\n            @: owner parent(node)\n            success := 1\n            return: owner\\total\n\nCollectorMessage:\n    int: value\n    int: result 0\n    int: completed 0\n    accept:\n        node\\result := value\n        node\\completed := 1\n        success := 1\n",
+          "code": "ProducerMessage:\n    []int: items\n    @: worker\n    @: collector\n    start:\n        int: i 0\n        while: i < length(items)\n            post:\n                ask:\n                    worker\\Add\\add(value := items[i])\n            ---\n            i += 1\n        post:\n            ask:\n                worker\\Finish\\finish()\n            answer:\n                collector\\accept\n\nWorkerMessage:\n    int: total 0\n    Add:\n        int: value\n        add:\n            @: owner parent(node)\n            owner\\total += value\n    ---\n    Finish:\n        return: int\n        finish:\n            @: owner parent(node)\n            success := 1\n            return: owner\\total\n\nCollectorMessage:\n    int: value\n    int: result 0\n    int: completed 0\n    accept:\n        node\\result := value\n        node\\completed := 1\n        success := 1\n",
           "source_file": "source/lmx/procedural/S24.lm3",
           "contract_id": "S24",
           "runtime_execution": "NOT_RUN",
@@ -4356,14 +4356,14 @@
             "characters_with_whitespace": 828,
             "nonblank_lines": 39,
             "utf8_bytes": 828,
-            "sha256": "0f976a09059894682b13ab1a8dba0d0062e72fa43c6ff92957db253e1b37a6d7"
+            "sha256": "48987844bc8227348e33de2c544c90365fb55d26433dc28faa52d92a2e4e87f6"
           },
           "core_functions": [],
           "metrics_status": "current",
           "parser_execution": "NOT_RUN"
         },
         "functional": {
-          "code": "ProducerMessage:\n    int[]: items\n    @: worker\n    @: collector\n    Send:\n        int: state\n        int: value\n        return: int\n        send:\n            post:\n                ask:\n                    worker\\Add\\add(value := value)\n            ---\n            return: state\n    ---\n    start:\n        throws: copy(foldl\\throws) copy(record\\throws)\n        (foldl items (0 record) Send\\send)\n        post:\n            ask:\n                worker\\Finish\\finish()\n            answer:\n                collector\\accept\n\nWorkerMessage:\n    int: total 0\n    Add:\n        int: value\n        add:\n            @: owner parent(node)\n            owner\\total += value\n    ---\n    Finish:\n        return: int\n        finish:\n            @: owner parent(node)\n            success := 1\n            return: owner\\total\n\nCollectorMessage:\n    int: value\n    int: result 0\n    int: completed 0\n    accept:\n        node\\result := value\n        node\\completed := 1\n        success := 1\n",
+          "code": "ProducerMessage:\n    []int: items\n    @: worker\n    @: collector\n    Send:\n        int: state\n        int: value\n        return: int\n        send:\n            post:\n                ask:\n                    worker\\Add\\add(value := value)\n            ---\n            return: state\n    ---\n    start:\n        throws: copy(foldl\\throws) copy(record\\throws)\n        (foldl items (0 record) Send\\send)\n        post:\n            ask:\n                worker\\Finish\\finish()\n            answer:\n                collector\\accept\n\nWorkerMessage:\n    int: total 0\n    Add:\n        int: value\n        add:\n            @: owner parent(node)\n            owner\\total += value\n    ---\n    Finish:\n        return: int\n        finish:\n            @: owner parent(node)\n            success := 1\n            return: owner\\total\n\nCollectorMessage:\n    int: value\n    int: result 0\n    int: completed 0\n    accept:\n        node\\result := value\n        node\\completed := 1\n        success := 1\n",
           "source_file": "source/lmx/S24.lm3",
           "contract_id": "S24",
           "runtime_execution": "NOT_RUN",
@@ -4372,7 +4372,7 @@
             "characters_with_whitespace": 970,
             "nonblank_lines": 45,
             "utf8_bytes": 970,
-            "sha256": "f0e0f5f2a66080bfd49556b578518be52f699296646b914e4dc20c1f165434a3"
+            "sha256": "66821abd483e5fcd49a279479fdbb56867b639a3d62878f05098d4904c34b95d"
           },
           "core_functions": [
             "foldl",

@@ -14,15 +14,15 @@ Host reference checks do not claim a production LMX parser/native run.
 The ordinary receiver first obtains its actual operands under the common
 Expression/argument contract. If an obtained value is an Array, its array
 profile participates in selection. An ordinary Structure is exactly an
-Array of freely typed elements, `@[]`; it is not excluded because its fields
+Array of freely typed elements, `[]@`; it is not excluded because its fields
 have names. No separate Matrix class, annotation or spelling is required.
 Array detection does not recursively inspect arbitrary nested fields and
 does not turn several right actuals into a single implicit argument.
 
 Actual physical storage and complete element requirements come from the current
 value and its canonical TypeRef description. The complete normalized constructing
-type determines rank and explicit axis constraints. `int[][][]` supplies rank
-three, while `int[2][2][2]` supplies all three extents. Initializer row boundaries
+type determines rank and explicit axis constraints. `[][][]int` supplies rank
+three, while `[2][2][2]int` supplies all three extents. Initializer row boundaries
 validate and flatten data but do not persist unknown extents or refine TypeRef.
 A rank-aware operation uses explicit or uniquely derivable dimensions from TYPE
 plus length; insufficient information is diagnosed only when needed.
@@ -31,7 +31,7 @@ At capacity=length there is no secondary descriptor, including for a multidimens
 Array. Real reserve has an optional capacity entry and does not change TypeRef.
 The `parent/length/storage` header is unchanged. See
 [canonical types and compatibility](ARRAY_STORAGE.en.md#array-profiles).
-Structure remains the ordinary `@[]`: stored references retain identity and
+Structure remains the ordinary `[]@`: stored references retain identity and
 ordinary field/index access without a separate array-of-arrays kind.
 
 Flat and dimensional operations remain available on the same value. A flat
@@ -40,7 +40,7 @@ rank-one proxy. A fresh linear selection has its own declared linear result.
 
 A result obtains the TypeRef of its complete declared/evaluated result requirement.
 An operation that promises persistent output extents includes them in that
-requirement. It cannot secretly refine a generic `T[][]` from output data.
+requirement. It cannot secretly refine a generic `[][]T` from output data.
 During `a * b + e`, a temporary expression plan may carry the product's `(m,n)`
 shape to `+`; allocation by flat count alone does not preserve those dimensions
 beyond the operation. Publication follows the actual full result requirement,
@@ -114,12 +114,12 @@ merely because names look related.
 <a id="inline"></a>
 ### 2.1. Inline Array values and an ordinary chain
 
-In VALUE position `[items]` constructs one anonymous freely typed `@[]` through
+In VALUE position `[items]` constructs one anonymous freely typed `[]@` through
 common P0. It is an explicit Array VALUE, not an anonymous grouping node that
 Expression may unwrap. Elements are obtained once in the established order;
 the first element does not determine a dense type. A typed constructor, such as
-`int[]: [10 20]`, gets its element contract from the receiver and need not create
-an intermediate `@[]` for conversion.
+`[]int: [10 20]`, gets its element contract from the receiver and need not create
+an intermediate `[]@` for conversion.
 
 ```lmx
 int: a 1
@@ -132,7 +132,7 @@ int: d 4
 `a + b` is obtained once before its Array-consuming parent operation. With
 effects or ordinary numeric failures, later literal elements and operands are
 not moved ahead of a dependency that may fail. The explicit typed variant
-`a + b + (int[]: [10 20]) + d` obeys the same expression priorities.
+`a + b + ([]int: [10 20]) + d` obeys the same expression priorities.
 
 ```lmx
 @: arr0 [[1 2]]
@@ -146,10 +146,10 @@ not moved ahead of a dependency that may fail. The explicit typed variant
 flattens arr2, and it does not request singleton broadcasting. An outer extent
 greater than one on the left therefore diagnoses a mismatch with `[arr2]`.
 This is an ordinary Structure reference in an element, not another Array kind.
-The typed rank-two initializer `int[][]: [1 2; 3 4]` (equivalently
-`int[][]: [[1 2] [3 4]]`) has a different receiving contract: it prepares one
+The typed rank-two initializer `[][]int: [1 2; 3 4]` (equivalently
+`[][]int: [[1 2] [3 4]]`) has a different receiving contract: it prepares one
 flat rectangular backing of rank two. The rows validate rectangularity but do
-not persist extents in `int[][]`; use `int[2][2]` to retain the 2×2 shape. That
+not persist extents in `[][]int`; use `[2][2]int` to retain the 2×2 shape. That
 contract does not globally flatten standalone `[arr2]`.
 
 A translator can use known shape, lifetime and scalar contracts to remove
@@ -190,8 +190,8 @@ field remains the same value and can be consumed through the same general
 Array mechanism; it is not a special nested-array model.
 
 ```lmx
-int[2][2]: a [1 2; 3 4]
-int[2][2]: b [[5 6] [7 8]]
+[2][2]int: a [1 2; 3 4]
+[2][2]int: b [[5 6] [7 8]]
 @: matrix a * b
 # shape (2,2): [19 22 43 50]
 @: rowProducts a .* b
@@ -234,8 +234,8 @@ result of scalar predicates, normally int 0/1, without reducing it to one
 truth value. Use an explicitly selected `all`/`any` reduction when needed.
 
 ```lmx
-@[]: a [1 2 3]
-@[]: b [1 8 3]
+[]@: a [1 2 3]
+[]@: b [1 8 3]
 @: equal a .= b
 # equal = [1 0 1]; a and b are unchanged.
 a .: b

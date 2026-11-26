@@ -1,0 +1,18 @@
+State:
+    int: calls 0
+
+Square:
+    int: value
+    return: int
+    run:
+        State\calls += 1
+        return: value * value
+
+Example:
+    []int: items
+    return: @
+    run:
+        throws: copy(memoize\throws) copy(map\throws)
+        State\calls := 0
+        @: result (map items (memoize Square\run))
+        return: (result; State\calls)

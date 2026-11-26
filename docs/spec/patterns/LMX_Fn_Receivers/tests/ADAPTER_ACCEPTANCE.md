@@ -24,7 +24,7 @@ Use [the current semantics A01–A20](../../../LMX_semantics.en.md#adapter-obser
 | B06, partial coverage | Final callable is returned and is invoked only by an explicit later source call |
 | B09, partial coverage | Prepared input values give the stated number/order of stage calls |
 
-All probes use ordinary typed inputs; the counters are observation tools, not an int-only adapter implementation. The exact intermediate callable result is `FxAdapterNextSignature@`, using the current postfix pointer-type notation.
+All probes use ordinary typed inputs; the counters are observation tools, not an int-only adapter implementation. The exact intermediate callable result is `@FxAdapterNextSignature`, using the current prefix pointer-type notation.
 
 ## Still to instantiate in the actual harness
 

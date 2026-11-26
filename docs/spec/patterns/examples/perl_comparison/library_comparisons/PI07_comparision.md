@@ -22,7 +22,7 @@ Perl использует собственный regex engine для распо�
 ```lmx
 RxTextViewMake:
     private:
-        char[]: source
+        []char: source
         int: profile
     return: @
     make:
@@ -33,7 +33,7 @@ RxTextViewMake:
         return: out
 
 RxPrepare:
-    private: TextView@: source
+    private: @TextView: source
     required: source
     return: @
     make:
@@ -42,7 +42,7 @@ RxPrepare:
         return: prepared
 
 RxByteText:
-    private: char[]: source
+    private: []char: source
     required: source
     return: @
     byteText:
@@ -60,7 +60,7 @@ RxLiteral:
         return: RxPrimitiveMake\make(RxLiteralProbe\probe; value)
 
 RxSameAs:
-    private: char[]: name
+    private: []char: name
     required: name
     return: @
     sameAs:
@@ -70,7 +70,7 @@ RxSameAs:
 
 RxPartsConfig:
     @: originalParts 0
-    @[]: parts []
+    []@: parts []
 
 RxPartsPrepare:
     private: @: patterns
@@ -78,7 +78,7 @@ RxPartsPrepare:
     prepare:
         throws: copy(FxThrows\pattern)
         private: @: info FxSeqInfo\get(source := patterns)
-        private: @[]: parts []
+        private: []@: parts []
         sys\resize(parts; length(patterns))
         private: int: i 0
         while: i < length(patterns)
@@ -138,12 +138,12 @@ RxRepeated:
         return: RxPatternFactory\make(RxRepeatOpen\open; config)
 
 RxCaptureConfig:
-    char[]: name ""
+    []char: name ""
     @: pattern 0
 
 RxCapture:
     private:
-        char[]: name
+        []char: name
         @: pattern
     required: name pattern
     return: @
@@ -157,14 +157,14 @@ RxCapture:
 RxLogicalArguments:
     private:
         @: left
-        @[]: right
+        []@: right
     required: right
     return: @
     collect:
         private: int: extra 0
         if: left != nil
             extra := 1
-        private: @[]: out []
+        private: []@: out []
         sys\resize(out; length(right) + extra)
         if: extra != 0
             out[0] := left
@@ -178,7 +178,7 @@ RxThenOperand:
     private:
         @: left
         int: depth 0
-        @[]: right
+        []@: right
     required: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("+")
@@ -194,7 +194,7 @@ RxRepeatOperands:
     private:
         @: left
         int: depth 0
-        @[]: right
+        []@: right
     required: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("*")
@@ -231,8 +231,8 @@ RxRepeatOperands:
 
 RxSelectAt:
     private:
-        RxPreparedSource@: source
-        Pattern@: pattern
+        @RxPreparedSource: source
+        @Pattern: pattern
         int: position
         int: whole 0
         int: nonEmpty 0
@@ -274,8 +274,8 @@ RxFindState:
 
 RxFindStateMake:
     private:
-        RxPreparedSource@: source
-        Pattern@: pattern
+        @RxPreparedSource: source
+        @Pattern: pattern
     return: @
     make:
         private: @: out (copy(RxFindState))
@@ -352,7 +352,7 @@ RxMatches:
         return: found\present
 
 RxMatchedValue:
-    private: Match@: result
+    private: @Match: result
     required: result
     return: @
     matchedValue:
@@ -360,8 +360,8 @@ RxMatchedValue:
 
 RxLastCapture:
     private:
-        Match@: result
-        char[]: name
+        @Match: result
+        []char: name
     required: result name
     return: @
     lastCapture:
@@ -373,8 +373,8 @@ RxLastCapture:
 
 RxCaptureValue:
     private:
-        Match@: result
-        char[]: name
+        @Match: result
+        []char: name
     required: result name
     return: @
     captureValue:
@@ -389,7 +389,7 @@ RxReplace:
     private:
         @: source
         @: pattern
-        RxReplacementInput@: replacement
+        @RxReplacementInput: replacement
     required: source pattern replacement
     return: @
     replace:
@@ -423,7 +423,7 @@ RxSplit:
         private: @: prepared RxPrepareSource\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
         private: @: state RxFindStateMake\make(prepared; ready)
-        private: @[]: parts []
+        private: []@: parts []
         private: int: copiedUntil 0
         private: @: selected RxFindNext\step(state := state)
         while: selected\present != 0
@@ -466,8 +466,8 @@ RxReplacementCallable:
 
 RxReplacementValue:
     private:
-        RxReplacementInput@: replacement
-        Match@: matched
+        @RxReplacementInput: replacement
+        @Match: matched
     required: replacement matched
     return: @
     make:
@@ -475,7 +475,7 @@ RxReplacementValue:
         private: @: result replacement\literal
         if: replacement\operation != 0
             result := FxApply\apply(replacement\operation; FxOne\make(matched))
-        private: RxPreparedSource@: source matched\private\prepared
+        private: @RxPreparedSource: source matched\private\prepared
         private: @: validate source\domain\literalUnits
         validate(value := result; profile := source\profile)
         return: result

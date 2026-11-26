@@ -22,7 +22,7 @@ FxSeqRange:
         throws: FxKernelFailure FxTypeToken SequenceSize SequenceStep
         if: step = 0
             throw: SequenceStep()
-        private: @: out FxSeqAllocate\make(int[]; 0)
+        private: @: out FxSeqAllocate\make([]int; 0)
         if: step > 0 && start >= stop
             return: out
         if: step < 0 && start <= stop
@@ -102,7 +102,7 @@ FxSeqCompress:
         private: int: count length(source)
         if: length(mask) != count
             throw: FxShape()
-        private: @: flags FxSeqAllocate\make(int[]; count)
+        private: @: flags FxSeqAllocate\make([]int; count)
         private: int: accepted 0
         private: int: i 0
         # Validate every mask value before constructing the selected result.
@@ -132,7 +132,7 @@ FxSeqConcat:
         throws: copy(FxThrows\sequence)
         FxSeqInfo\get(parts)
         private: int: count length(parts)
-        private: int: arrayType @[]
+        private: int: arrayType []@
         private: int: elementType 0
         private: int: allDense 1
         private: int: i 0
@@ -148,7 +148,7 @@ FxSeqConcat:
                 allDense := 0
             i += 1
         if: count = 0 || allDense = 0
-            arrayType := @[]
+            arrayType := []@
         private: @: out FxSeqAllocate\make(arrayType; 0)
         private: @: outInfo FxSeqInfo\get(out)
         private: int: total 0
@@ -180,7 +180,7 @@ FxTranspose:
         throws: FxKernelFailure FxShape FxTypeToken ReceiverIndex SequenceSize
         FxSeqInfo\get(rows)
         private: int: height length(rows)
-        private: @: result FxSeqAllocate\make(@[]; 0)
+        private: @: result FxSeqAllocate\make([]@; 0)
         if: height = 0
             return: result
         private: @: first FxSeqRead\read(rows; 0)
@@ -198,7 +198,7 @@ FxTranspose:
         sys\resize(result; width)
         private: int: j 0
         while: j < width
-            private: @: column FxSeqAllocate\make(@[]; height)
+            private: @: column FxSeqAllocate\make([]@; height)
             i := 0
             while: i < height
                 private: @: row FxSeqRead\read(rows; i)

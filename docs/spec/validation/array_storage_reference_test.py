@@ -156,7 +156,7 @@ class StorageContracts(unittest.TestCase):
 
     def test_exact_author_unequal_three_three_four_typed_form_is_diagnostic(self):
         graph = rows(((1, 2, 3), (1, 2, 4), (1, 2, 3, 4)),
-                     "int[][]: [[a b c] [a b d] [a b c d]]")
+                     "[][]int: [[a b c] [a b d] [a b c d]]")
         calls = []
         def obtain(value, context):
             calls.append(value)

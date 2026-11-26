@@ -61,12 +61,12 @@ FxRecordConstructor :: (@: value; return: @)
 
 FxRecordAdapterState:
     @: record 0
-    FxRecordConstructor@: constructor
+    @FxRecordConstructor: constructor
 
 FxRecordAdapter:
     private:
         @: typeToken
-        FxRecordConstructor@: constructor 0
+        @FxRecordConstructor: constructor 0
     required: typeToken
     return: @
     make:
@@ -82,7 +82,7 @@ FxRecordAdapter:
         state\record := FxRecordOperands\record
         private: @: resultType FxKernel\normalizeType(FxTypeTokens\reference[0])
         private: @: failures FxCaptureFailures\names()
-        private: char[]: body "return: (p0 node\\private\\state\\record)\n"
+        private: []char: body "return: (p0 node\\private\\state\\record)\n"
         if: constructor != 0
             state\constructor := constructor
             private: @: shape FxKernel\signature(constructor)
@@ -114,7 +114,7 @@ FxCaptureOne:
 
 `required: p0` находится в настоящем DATA полученной функции. Поэтому отсутствие аргумента отвергается; переданные `0`, пустая строка, пустая Structure и нулевая ссылка остаются полноценными переданными значениями. Служебное `state` принадлежит построенному владельцу и не становится вторым пользовательским параметром.
 
-При подключённом конструкторе выход берётся из его действительного `shape\resultType`. Поэтому адаптер `some` сохраняет `FxMaybe@`, а адаптеры `ok`/`err` — `FxResult@`; они не стираются до общего `@`. Только режим отдельного захвата возвращает обычную ссылку на запись.
+При подключённом конструкторе выход берётся из его действительного `shape\resultType`. Поэтому адаптер `some` сохраняет `@FxMaybe`, а адаптеры `ok`/`err` — `@FxResult`; они не стираются до общего `@`. Только режим отдельного захвата возвращает обычную ссылку на запись.
 
 ### 3.3. Подключение к публичным `some`, `ok`, `err`
 
@@ -149,10 +149,10 @@ FxCaptureOne:
 
 | Определения в `containers.lmx` | Требование результата |
 | --- | --- |
-| `FxSome`, `FxNone`, `FxBind` | `return: FxMaybe@` |
-| `FxOk`, `FxErr`, `FxBindResult` | `return: FxResult@` |
+| `FxSome`, `FxNone`, `FxBind` | `return: @FxMaybe` |
+| `FxOk`, `FxErr`, `FxBindResult` | `return: @FxResult` |
 
-При приёме типизированной записи результата `FxApply` в этих двух bind-телах использовать соответственно `private: FxMaybe@: result \record` и `private: FxResult@: result \record`. Это одна обычная загрузка настоящего результата `R`: для ссылочного `R` получается ссылочное значение, для структурного `R` — целая Structure, принимаемая по её дескриптору. Ни рекурсивного раскрытия, ни нового `unwrap` не требуется. Такой же приём применён в существующем [FxWrap](patterns/LMX_Fn_Receivers/src/generic_runtime.lmx), формирующем `return: \fx_answer` для точного результата.
+При приёме типизированной записи результата `FxApply` в этих двух bind-телах использовать соответственно `private: @FxMaybe: result \record` и `private: @FxResult: result \record`. Это одна обычная загрузка настоящего результата `R`: для ссылочного `R` получается ссылочное значение, для структурного `R` — целая Structure, принимаемая по её дескриптору. Ни рекурсивного раскрытия, ни нового `unwrap` не требуется. Такой же приём применён в существующем [FxWrap](patterns/LMX_Fn_Receivers/src/generic_runtime.lmx), формирующем `return: \fx_answer` для точного результата.
 
 ### 4.2. Полный код операторных форм
 
@@ -160,14 +160,14 @@ FxCaptureOne:
 
 ```lmx
 FxMaybeActive:
-    private: FxMaybe@: input
+    private: @FxMaybe: input
     required: input
     return: int
     active:
         return: input\present
 
 FxResultActive:
-    private: FxResult@: input
+    private: @FxResult: input
     required: input
     return: int
     active:
@@ -176,7 +176,7 @@ FxResultActive:
 FxBindChain:
     private:
         @: current
-        @[]: steps
+        []@: steps
         @: step
         @: active
     required: current steps step active
@@ -194,25 +194,25 @@ FxBindChain:
         return: current
 
 FxBindOperandTail:
-    private: @[]: right
+    private: []@: right
     required: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("+")
 
 FxMaybeBindOperand:
-    private: FxMaybe@@: left
+    private: @@FxMaybe: left
     copy: FxBindOperandTail
     required: left
-    return: FxMaybe@
+    return: @FxMaybe
     bind:
         throws: copy(FxThrows\call) FxArity
         return: FxBindChain\run(\left; right; FxBind\bind; FxMaybeActive\active)
 
 FxResultBindOperand:
-    private: FxResult@@: left
+    private: @@FxResult: left
     copy: FxBindOperandTail
     required: left
-    return: FxResult@
+    return: @FxResult
     bind:
         throws: copy(FxThrows\call) FxArity
         return: FxBindChain\run(\left; right; FxBindResult\bind; FxResultActive\active)
@@ -229,12 +229,12 @@ MonadBindings:
 
 | Форма | Вход выбранного объявления |
 | --- | --- |
-| `bind(m; f)` для Maybe | `FxMaybe@: input`, обычный `next`. |
-| `m bind f` для Maybe | `FxMaybe@@: left`, подготовленный вектор `right`. |
-| `bind(r; f)` для Result | `FxResult@: input`, обычный `next`. |
-| `r bind f` для Result | `FxResult@@: left`, подготовленный вектор `right`. |
+| `bind(m; f)` для Maybe | `@FxMaybe: input`, обычный `next`. |
+| `m bind f` для Maybe | `@@FxMaybe: left`, подготовленный вектор `right`. |
+| `bind(r; f)` для Result | `@FxResult: input`, обычный `next`. |
+| `r bind f` для Result | `@@FxResult: left`, подготовленный вектор `right`. |
 
-`@@` здесь относится к настоящему ссылочному значению: ссылка на подготовленную запись значения `FxMaybe@` имеет уровень `FxMaybe@@`; одна загрузка `\left` возвращает исходную ссылку. Это не новая обязательная упаковка произвольной Structure. Настоящий Array/Structure-valued результат сохраняет собственный дескриптор и не получает выдуманный дополнительный уровень. Основание — [хранение операндов](LMX_semantics.en.md#operand-storage) и [варианты записи значения](L2_spec_en.md#value-record).
+`@@` здесь относится к настоящему ссылочному значению: ссылка на подготовленную запись значения `@FxMaybe` имеет уровень `@@FxMaybe`; одна загрузка `\left` возвращает исходную ссылку. Это не новая обязательная упаковка произвольной Structure. Настоящий Array/Structure-valued результат сохраняет собственный дескриптор и не получает выдуманный дополнительный уровень. Основание — [хранение операндов](LMX_semantics.en.md#operand-storage) и [варианты записи значения](L2_spec_en.md#value-record).
 
 Сохранение истинного `R` обязательно проверить на интерпретируемом и native-путях. Нельзя одновременно стирать ссылочный результат до дескриптора и рассчитывать на различение перегрузок по глубине ссылки.
 
@@ -256,7 +256,7 @@ MonadBindings:
 
 Последовательностный вход — `FxListBind\bind` с внутренним общим алгоритмом `FxSeqBind\bind`. Его обход и соединение не дублируются.
 
-Обычный Array-вход возвращает фактический `@[]` существующего алгоритма. Это целая последовательность значений; вложенные Arrays не раскрываются глубже одного уровня связывания.
+Обычный Array-вход возвращает фактический `[]@` существующего алгоритма. Это целая последовательность значений; вложенные Arrays не раскрываются глубже одного уровня связывания.
 
 ```lmx
 FxListBind:
@@ -264,7 +264,7 @@ FxListBind:
         []: input
         @: next
     required: input next
-    return: @[]
+    return: []@
     bind:
         throws: copy(FxThrows\traversal)
         private: @: result FxSeqBind\bind(items := input; next := next)
@@ -278,7 +278,7 @@ ArrayBinding:
 
 `ArrayBinding` показывает отдельное операндное представление с настоящим владельцем и точным результатом. После подключения общей публикации доступны `bind(xs; f)` и `xs bind f` в выбранном последовательностном контракте. Квалифицированное `xs ArrayBinding\bind f` пригодно для проверки конкретного представления; оно не заменяет требование завершить общий публичный вход.
 
-Нельзя при пустом Array возвращать исходный плотный контейнер вместо установленного нового `@[]` результата. Остановка None/Err и пустая последовательность имеют разные договоры, поэтому Array не пропускается через `FxMaybeActive`.
+Нельзя при пустом Array возвращать исходный плотный контейнер вместо установленного нового `[]@` результата. Остановка None/Err и пустая последовательность имеют разные договоры, поэтому Array не пропускается через `FxMaybeActive`.
 
 
 ## 5. Типичная обвязка уже находится в библиотеке
@@ -317,7 +317,7 @@ ArrayBinding:
 ```lmx
 Example:
     int: x
-    return: FxMaybe@
+    return: @FxMaybe
     half:
         throws: FxRecordArity
         if: x % 2 = 0

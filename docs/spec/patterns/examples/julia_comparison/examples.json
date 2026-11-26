@@ -89,7 +89,7 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int: start\n    int: stop\n    int: step\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(sys\\resize\\throws) SequenceStep SequenceSize\n        if: step = 0\n            throw: SequenceStep()\n        int[]: out []\n        @: info FxSeqInfo\\get(out)\n        bigint: value start\n        while: (step > 0 && value < stop) || (step < 0 && value > stop)\n            if: length(out) = info\\maxLength\n                throw: SequenceSize()\n            int: at length(out)\n            sys\\resize(out; at + 1)\n            out[at] := value\n            value += step\n        return: out\n",
+          "code": "Example:\n    int: start\n    int: stop\n    int: step\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(sys\\resize\\throws) SequenceStep SequenceSize\n        if: step = 0\n            throw: SequenceStep()\n        []int: out []\n        @: info FxSeqInfo\\get(out)\n        bigint: value start\n        while: (step > 0 && value < stop) || (step < 0 && value > stop)\n            if: length(out) = info\\maxLength\n                throw: SequenceSize()\n            int: at length(out)\n            sys\\resize(out; at + 1)\n            out[at] := value\n            value += step\n        return: out\n",
           "source_file": "source/lmx/procedural/J01.lm3",
           "contract_id": "J01",
           "runtime_execution": "NOT_RUN",
@@ -98,7 +98,7 @@
             "characters_with_whitespace": 606,
             "nonblank_lines": 20,
             "utf8_bytes": 606,
-            "sha256": "63d3313593cd608c374ba8cb477f2c8860277bac4f16e77249e72ddc0ca1138f"
+            "sha256": "c0f73d5d7520f7d2d969b3d8f231fe858bc5ce85af2b1b4076585965eb3d9d0a"
           },
           "core_functions": [
             "copy"
@@ -431,7 +431,7 @@
         10,
         30
       ],
-      "lmx": "Example:\n    @: xs\n    int[]: mask\n    return: @\n    run:\n        throws: copy(compress\\throws)\n        return: compress(xs; mask)\n",
+      "lmx": "Example:\n    @: xs\n    []int: mask\n    return: @\n    run:\n        throws: copy(compress\\throws)\n        return: compress(xs; mask)\n",
       "foreign": "function example(xs, mask)\n    length(xs) == length(mask) || throw(DimensionMismatch(\"mask\"))\n    xs[mask .!= 0]\nend\n",
       "core_functions": [
         "compress"
@@ -482,7 +482,7 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    @: xs\n    int[]: mask\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxSeqRead\\read\\throws) copy(FxSeqPush\\append\\throws) FxShape\n        if: length(xs) != length(mask)\n            throw: FxShape()\n        @: info FxSeqInfo\\get(xs)\n        @: out FxSeqAllocate\\make(info\\arrayType; 0)\n        int: i 0\n        while: i < length(xs)\n            if: mask[i] != 0\n                FxSeqPush\\append(out; FxSeqRead\\read(xs; i))\n            i += 1\n        return: out\n",
+          "code": "Example:\n    @: xs\n    []int: mask\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxSeqRead\\read\\throws) copy(FxSeqPush\\append\\throws) FxShape\n        if: length(xs) != length(mask)\n            throw: FxShape()\n        @: info FxSeqInfo\\get(xs)\n        @: out FxSeqAllocate\\make(info\\arrayType; 0)\n        int: i 0\n        while: i < length(xs)\n            if: mask[i] != 0\n                FxSeqPush\\append(out; FxSeqRead\\read(xs; i))\n            i += 1\n        return: out\n",
           "source_file": "source/lmx/procedural/J04.lm3",
           "contract_id": "J04",
           "runtime_execution": "NOT_RUN",
@@ -491,7 +491,7 @@
             "characters_with_whitespace": 530,
             "nonblank_lines": 16,
             "utf8_bytes": 530,
-            "sha256": "3243042a0ddba1a0e00d6f5155100311f023ddd45989e85d38d64ffa09c311c8"
+            "sha256": "601d5a64057d782a7e6c94cb136f488e9fbbca7cbd7aa108ce2ae031c41f896f"
           },
           "core_functions": [
             "copy"
@@ -504,7 +504,7 @@
           ]
         },
         "functional": {
-          "code": "Example:\n    @: xs\n    int[]: mask\n    return: @\n    run:\n        throws: copy(compress\\throws)\n        return: compress(xs; mask)\n",
+          "code": "Example:\n    @: xs\n    []int: mask\n    return: @\n    run:\n        throws: copy(compress\\throws)\n        return: compress(xs; mask)\n",
           "source_file": "source/lmx/J04.lm3",
           "contract_id": "J04",
           "runtime_execution": "NOT_RUN",
@@ -513,7 +513,7 @@
             "characters_with_whitespace": 131,
             "nonblank_lines": 7,
             "utf8_bytes": 131,
-            "sha256": "d111363913fb9ae550cbf9dbbfc0c06f5d491c0efbfcb8e01f2284d4a205ad29"
+            "sha256": "0b13e21b3f1a7008e0e64ae02d9214c9965aba3655ef96dadc90337bb025c257"
           },
           "core_functions": [
             "compress"
@@ -545,7 +545,7 @@
         "baseline": 5
       },
       "expected": 5,
-      "lmx": "Example:\n    int[]: xs\n    int: baseline\n    return: int\n    run:\n        throws: copy(sum\\throws)\n        @: delta xs - baseline\n        return: \\sum(delta * delta)\n",
+      "lmx": "Example:\n    []int: xs\n    int: baseline\n    return: int\n    run:\n        throws: copy(sum\\throws)\n        @: delta xs - baseline\n        return: \\sum(delta * delta)\n",
       "foreign": "function example(xs, baseline)\n    delta = xs .- baseline\n    sum(delta .* delta)\nend\n",
       "core_functions": [
         "sum"
@@ -604,7 +604,7 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: xs\n    int: baseline\n    return: int\n    run:\n        int: total 0\n        int: i 0\n        while: i < length(xs)\n            int: delta xs[i] - baseline\n            total += delta * delta\n            i += 1\n        return: total\n",
+          "code": "Example:\n    []int: xs\n    int: baseline\n    return: int\n    run:\n        int: total 0\n        int: i 0\n        while: i < length(xs)\n            int: delta xs[i] - baseline\n            total += delta * delta\n            i += 1\n        return: total\n",
           "source_file": "source/lmx/procedural/J05.lm3",
           "contract_id": "J05",
           "runtime_execution": "NOT_RUN",
@@ -614,31 +614,31 @@
           "low_level_operations": [
             "sys\\resize"
           ],
-          "source_sha256": "80c15348338f591a07db8e8ba0ce518a0a947a6811734dac0060eb5fdaea869b",
+          "source_sha256": "c802bce18dc012bbd01bf9e14059c92da3fb09b90c0580bd684eede27f4fe480",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 133,
             "characters_with_whitespace": 250,
             "nonblank_lines": 12,
             "utf8_bytes": 250,
-            "sha256": "80c15348338f591a07db8e8ba0ce518a0a947a6811734dac0060eb5fdaea869b"
+            "sha256": "c802bce18dc012bbd01bf9e14059c92da3fb09b90c0580bd684eede27f4fe480"
           }
         },
         "functional": {
-          "code": "Example:\n    int[]: xs\n    int: baseline\n    return: int\n    run:\n        throws: copy(sum\\throws)\n        @: delta xs - baseline\n        return: \\sum(delta * delta)\n",
+          "code": "Example:\n    []int: xs\n    int: baseline\n    return: int\n    run:\n        throws: copy(sum\\throws)\n        @: delta xs - baseline\n        return: \\sum(delta * delta)\n",
           "source_file": "source/lmx/J05.lm3",
           "contract_id": "J05",
           "runtime_execution": "NOT_RUN",
           "core_functions": [],
           "low_level_operations": [],
-          "source_sha256": "7782e7d8283a8f886095e9dd780720dd40e1b4ba80526ca9ca386100ed993e8f",
+          "source_sha256": "752a618750ac86a377f255f962bbeab4e3e050b3e7f4946719b557981f002207",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 107,
             "characters_with_whitespace": 166,
             "nonblank_lines": 8,
             "utf8_bytes": 166,
-            "sha256": "7782e7d8283a8f886095e9dd780720dd40e1b4ba80526ca9ca386100ed993e8f"
+            "sha256": "752a618750ac86a377f255f962bbeab4e3e050b3e7f4946719b557981f002207"
           }
         }
       },
@@ -693,7 +693,7 @@
         1,
         5
       ],
-      "lmx": "Example:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(compress\\throws) copy(unique\\throws)\n        return: unique(compress(xs; xs % 2 != 0))\n",
+      "lmx": "Example:\n    []int: xs\n    return: @\n    run:\n        throws: copy(compress\\throws) copy(unique\\throws)\n        return: unique(compress(xs; xs % 2 != 0))\n",
       "foreign": "function example(xs)\n    routed = filter(isodd, xs)\n    unique(routed)\nend\n",
       "core_functions": [
         "compress",
@@ -756,7 +756,7 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        int[]: out []\n        int: i 0\n        while: i < length(xs)\n            if: xs[i] % 2 != 0\n                int: j 0\n                while: j < length(out) && out[j] != xs[i]\n                    j += 1\n                if: j = length(out)\n                    FxSeqPush\\append(out; (xs[i] record))\n            ---\n            i += 1\n        return: out\n",
+          "code": "Example:\n    []int: xs\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        []int: out []\n        int: i 0\n        while: i < length(xs)\n            if: xs[i] % 2 != 0\n                int: j 0\n                while: j < length(out) && out[j] != xs[i]\n                    j += 1\n                if: j = length(out)\n                    FxSeqPush\\append(out; (xs[i] record))\n            ---\n            i += 1\n        return: out\n",
           "source_file": "source/lmx/procedural/J06.lm3",
           "contract_id": "J06",
           "runtime_execution": "NOT_RUN",
@@ -767,18 +767,18 @@
           "low_level_operations": [
             "FxSeqPush\\append"
           ],
-          "source_sha256": "30ae0011ebb6b42b90250c973e51475456d1dc8bf33d2ccfe454bb9000293c18",
+          "source_sha256": "1b7a8bfada407ff5ebd3c494155ad0f63db7e02e15bf438da747b1e7a4c97a92",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 243,
             "characters_with_whitespace": 471,
             "nonblank_lines": 17,
             "utf8_bytes": 471,
-            "sha256": "30ae0011ebb6b42b90250c973e51475456d1dc8bf33d2ccfe454bb9000293c18"
+            "sha256": "1b7a8bfada407ff5ebd3c494155ad0f63db7e02e15bf438da747b1e7a4c97a92"
           }
         },
         "functional": {
-          "code": "Example:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(compress\\throws) copy(unique\\throws)\n        return: unique(compress(xs; xs % 2 != 0))\n",
+          "code": "Example:\n    []int: xs\n    return: @\n    run:\n        throws: copy(compress\\throws) copy(unique\\throws)\n        return: unique(compress(xs; xs % 2 != 0))\n",
           "source_file": "source/lmx/J06.lm3",
           "contract_id": "J06",
           "runtime_execution": "NOT_RUN",
@@ -786,14 +786,14 @@
             "compress"
           ],
           "low_level_operations": [],
-          "source_sha256": "5d4af91081b2c39be78ecab4a8509db4627297c95658866e246118b3905299e1",
+          "source_sha256": "ae2a0bcbe70a5d2df725de661e7ee7b0dbd7a3321e53fb4fb3bdde730833eaca",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 110,
             "characters_with_whitespace": 154,
             "nonblank_lines": 6,
             "utf8_bytes": 154,
-            "sha256": "5d4af91081b2c39be78ecab4a8509db4627297c95658866e246118b3905299e1"
+            "sha256": "ae2a0bcbe70a5d2df725de661e7ee7b0dbd7a3321e53fb4fb3bdde730833eaca"
           }
         }
       },
@@ -844,7 +844,7 @@
         "seed": 10
       },
       "expected": 2,
-      "lmx": "BudgetStep:\n    int: balance\n    int: amount\n    return: int\n    apply:\n        int: next balance - amount\n        if: next < 0\n            return: 0\n        return: next\n\nExample:\n    int[]: xs\n    int: seed\n    return: int\n    run:\n        throws: copy(foldl\\throws) copy(record\\throws)\n        return: \\foldl(xs; (seed record); BudgetStep\\apply)\n",
+      "lmx": "BudgetStep:\n    int: balance\n    int: amount\n    return: int\n    apply:\n        int: next balance - amount\n        if: next < 0\n            return: 0\n        return: next\n\nExample:\n    []int: xs\n    int: seed\n    return: int\n    run:\n        throws: copy(foldl\\throws) copy(record\\throws)\n        return: \\foldl(xs; (seed record); BudgetStep\\apply)\n",
       "foreign": "function example(xs, seed)\n    debit(balance, amount) = max(balance - amount, 0)\n    foldl(debit, xs; init=seed)\nend\n",
       "core_functions": [
         "foldl",
@@ -905,24 +905,24 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: xs\n    int: seed\n    return: int\n    run:\n        int: balance seed\n        int: i 0\n        while: i < length(xs)\n            balance -= xs[i]\n            if: balance < 0\n                balance := 0\n            i += 1\n        return: balance\n",
+          "code": "Example:\n    []int: xs\n    int: seed\n    return: int\n    run:\n        int: balance seed\n        int: i 0\n        while: i < length(xs)\n            balance -= xs[i]\n            if: balance < 0\n                balance := 0\n            i += 1\n        return: balance\n",
           "source_file": "source/lmx/procedural/J07.lm3",
           "contract_id": "J07",
           "runtime_execution": "NOT_RUN",
           "core_functions": [],
           "low_level_operations": [],
-          "source_sha256": "925b6f172fe651448456f3c23bd06461f78c98e8af4929c59503a49534b28eaf",
+          "source_sha256": "7710e03d7aa85470f1b012ddf09e0145d54464047b2950ec77944bd2d5e1ae3e",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 131,
             "characters_with_whitespace": 264,
             "nonblank_lines": 13,
             "utf8_bytes": 264,
-            "sha256": "925b6f172fe651448456f3c23bd06461f78c98e8af4929c59503a49534b28eaf"
+            "sha256": "7710e03d7aa85470f1b012ddf09e0145d54464047b2950ec77944bd2d5e1ae3e"
           }
         },
         "functional": {
-          "code": "BudgetStep:\n    int: balance\n    int: amount\n    return: int\n    apply:\n        int: next balance - amount\n        if: next < 0\n            return: 0\n        return: next\n\nExample:\n    int[]: xs\n    int: seed\n    return: int\n    run:\n        throws: copy(foldl\\throws) copy(record\\throws)\n        return: \\foldl(xs; (seed record); BudgetStep\\apply)\n",
+          "code": "BudgetStep:\n    int: balance\n    int: amount\n    return: int\n    apply:\n        int: next balance - amount\n        if: next < 0\n            return: 0\n        return: next\n\nExample:\n    []int: xs\n    int: seed\n    return: int\n    run:\n        throws: copy(foldl\\throws) copy(record\\throws)\n        return: \\foldl(xs; (seed record); BudgetStep\\apply)\n",
           "source_file": "source/lmx/J07.lm3",
           "contract_id": "J07",
           "runtime_execution": "NOT_RUN",
@@ -931,14 +931,14 @@
             "record"
           ],
           "low_level_operations": [],
-          "source_sha256": "ad5617e910a166b6fed120ca95dd8b70f22f8eaa3c5745d813464d6de292be3f",
+          "source_sha256": "1af035009e94b70573a57e76494dec7aab95c557d3d91dc286e5d846799a598d",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 227,
             "characters_with_whitespace": 349,
             "nonblank_lines": 16,
             "utf8_bytes": 349,
-            "sha256": "ad5617e910a166b6fed120ca95dd8b70f22f8eaa3c5745d813464d6de292be3f"
+            "sha256": "1af035009e94b70573a57e76494dec7aab95c557d3d91dc286e5d846799a598d"
           }
         }
       },
@@ -988,7 +988,7 @@
         -1,
         -6
       ],
-      "lmx": "Negative:\n    int: value\n    return: int\n    accepts:\n        return: value < 0\n\nExample:\n    int[]: xs\n    int: seed\n    return: @\n    run:\n        throws: copy(scanl\\throws) copy(record\\throws) copy(filter\\throws)\n        return: filter(scanl(xs; (seed record); `+`); Negative\\accepts)\n",
+      "lmx": "Negative:\n    int: value\n    return: int\n    accepts:\n        return: value < 0\n\nExample:\n    []int: xs\n    int: seed\n    return: @\n    run:\n        throws: copy(scanl\\throws) copy(record\\throws) copy(filter\\throws)\n        return: filter(scanl(xs; (seed record); `+`); Negative\\accepts)\n",
       "foreign": "function example(xs, seed)\n    balances = [seed; accumulate(+, xs; init=seed)]\n    filter(<(0), balances)\nend\n",
       "core_functions": [
         "scanl",
@@ -1051,7 +1051,7 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: xs\n    int: seed\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        @[]: out []\n        int: balance seed\n        int: i 0\n        while: 1\n            if: balance < 0\n                FxSeqPush\\append(out; (balance record))\n            if: i = length(xs)\n                break\n            balance += xs[i]\n            i += 1\n        return: out\n",
+          "code": "Example:\n    []int: xs\n    int: seed\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        []@: out []\n        int: balance seed\n        int: i 0\n        while: 1\n            if: balance < 0\n                FxSeqPush\\append(out; (balance record))\n            if: i = length(xs)\n                break\n            balance += xs[i]\n            i += 1\n        return: out\n",
           "source_file": "source/lmx/procedural/J08.lm3",
           "contract_id": "J08",
           "runtime_execution": "NOT_RUN",
@@ -1062,18 +1062,18 @@
           "low_level_operations": [
             "FxSeqPush\\append"
           ],
-          "source_sha256": "207a50e65cd520234601a8abf2f2dfca81f2cf53825277375d96724a341750a7",
+          "source_sha256": "272259bf6604e02cd7ddf3175f4fe1db5693178edd97a7b152fbfda5ddaa80bd",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 225,
             "characters_with_whitespace": 411,
             "nonblank_lines": 17,
             "utf8_bytes": 411,
-            "sha256": "207a50e65cd520234601a8abf2f2dfca81f2cf53825277375d96724a341750a7"
+            "sha256": "272259bf6604e02cd7ddf3175f4fe1db5693178edd97a7b152fbfda5ddaa80bd"
           }
         },
         "functional": {
-          "code": "Negative:\n    int: value\n    return: int\n    accepts:\n        return: value < 0\n\nExample:\n    int[]: xs\n    int: seed\n    return: @\n    run:\n        throws: copy(scanl\\throws) copy(record\\throws) copy(filter\\throws)\n        return: filter(scanl(xs; (seed record); `+`); Negative\\accepts)\n",
+          "code": "Negative:\n    int: value\n    return: int\n    accepts:\n        return: value < 0\n\nExample:\n    []int: xs\n    int: seed\n    return: @\n    run:\n        throws: copy(scanl\\throws) copy(record\\throws) copy(filter\\throws)\n        return: filter(scanl(xs; (seed record); `+`); Negative\\accepts)\n",
           "source_file": "source/lmx/J08.lm3",
           "contract_id": "J08",
           "runtime_execution": "NOT_RUN",
@@ -1082,14 +1082,14 @@
             "record"
           ],
           "low_level_operations": [],
-          "source_sha256": "0864558dd3c0478c4cfbb44f2677cfb45ed8da70a1a0e1f20ee006ea9d5c46b1",
+          "source_sha256": "429798787d85d57c46bf02701502c99d586e70654822aeb45cda6c5806c272d6",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 207,
             "characters_with_whitespace": 288,
             "nonblank_lines": 12,
             "utf8_bytes": 288,
-            "sha256": "0864558dd3c0478c4cfbb44f2677cfb45ed8da70a1a0e1f20ee006ea9d5c46b1"
+            "sha256": "429798787d85d57c46bf02701502c99d586e70654822aeb45cda6c5806c272d6"
           }
         }
       },
@@ -1142,7 +1142,7 @@
         ]
       },
       "expected": 2,
-      "lmx": "Shortage:\n    int: required\n    int: available\n    return: int\n    value:\n        int: gap required - available\n        if: gap > 0\n            return: gap\n        return: 0\n\nExample:\n    int[]: left\n    int[]: right\n    return: int\n    run:\n        throws: copy(zipWith\\throws) copy(sum\\throws)\n        return: \\sum(zipWith(left; right; Shortage\\value))\n",
+      "lmx": "Shortage:\n    int: required\n    int: available\n    return: int\n    value:\n        int: gap required - available\n        if: gap > 0\n            return: gap\n        return: 0\n\nExample:\n    []int: left\n    []int: right\n    return: int\n    run:\n        throws: copy(zipWith\\throws) copy(sum\\throws)\n        return: \\sum(zipWith(left; right; Shortage\\value))\n",
       "foreign": "function example(left, right)\n    shortages = [max(required - available, 0) for (required, available) in zip(left, right)]\n    sum(shortages)\nend\n",
       "core_functions": [
         "zipWith",
@@ -1213,7 +1213,7 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: left\n    int[]: right\n    return: int\n    run:\n        int: total 0\n        int: i 0\n        while: i < length(left) && i < length(right)\n            int: gap left[i] - right[i]\n            if: gap > 0\n                total += gap\n            i += 1\n        return: total\n",
+          "code": "Example:\n    []int: left\n    []int: right\n    return: int\n    run:\n        int: total 0\n        int: i 0\n        while: i < length(left) && i < length(right)\n            int: gap left[i] - right[i]\n            if: gap > 0\n                total += gap\n            i += 1\n        return: total\n",
           "source_file": "source/lmx/procedural/J09.lm3",
           "contract_id": "J09",
           "runtime_execution": "NOT_RUN",
@@ -1225,18 +1225,18 @@
             "FxSeqPush\\append",
             "FxSeqRead\\read"
           ],
-          "source_sha256": "335a8c7c981fc973309ca847ea17992af5a64410bab3945054f7a1b21bd6e7d4",
+          "source_sha256": "43e4eb19db1a76950a5c734764f28ea736d782613b3382d3862e20ce063d231b",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 153,
             "characters_with_whitespace": 292,
             "nonblank_lines": 13,
             "utf8_bytes": 292,
-            "sha256": "335a8c7c981fc973309ca847ea17992af5a64410bab3945054f7a1b21bd6e7d4"
+            "sha256": "43e4eb19db1a76950a5c734764f28ea736d782613b3382d3862e20ce063d231b"
           }
         },
         "functional": {
-          "code": "Shortage:\n    int: required\n    int: available\n    return: int\n    value:\n        int: gap required - available\n        if: gap > 0\n            return: gap\n        return: 0\n\nExample:\n    int[]: left\n    int[]: right\n    return: int\n    run:\n        throws: copy(zipWith\\throws) copy(sum\\throws)\n        return: \\sum(zipWith(left; right; Shortage\\value))\n",
+          "code": "Shortage:\n    int: required\n    int: available\n    return: int\n    value:\n        int: gap required - available\n        if: gap > 0\n            return: gap\n        return: 0\n\nExample:\n    []int: left\n    []int: right\n    return: int\n    run:\n        throws: copy(zipWith\\throws) copy(sum\\throws)\n        return: \\sum(zipWith(left; right; Shortage\\value))\n",
           "source_file": "source/lmx/J09.lm3",
           "contract_id": "J09",
           "runtime_execution": "NOT_RUN",
@@ -1244,14 +1244,14 @@
             "zip"
           ],
           "low_level_operations": [],
-          "source_sha256": "566b402c600f66a5b3c42f518abdefd7e39778bc3eb4190368a535005ffdfbdf",
+          "source_sha256": "095a110c08ee40d93a30f79e267c05e77cb95142fb5a21dbfa0388e01fe74632",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 234,
             "characters_with_whitespace": 355,
             "nonblank_lines": 16,
             "utf8_bytes": 355,
-            "sha256": "566b402c600f66a5b3c42f518abdefd7e39778bc3eb4190368a535005ffdfbdf"
+            "sha256": "095a110c08ee40d93a30f79e267c05e77cb95142fb5a21dbfa0388e01fe74632"
           }
         }
       },
@@ -1316,7 +1316,7 @@
         29,
         42
       ],
-      "lmx": "Example:\n    int[]: left\n    int[]: right\n    int: limit\n    return: @\n    run:\n        throws: copy(compress\\throws) copy(fuse\\throws) SequenceSize\n        if: length(left) != length(right)\n            throw: SequenceSize()\n        @: scores fuse(2 .* left .+ right .* right)\n        return: compress(scores; scores .>= limit)\n",
+      "lmx": "Example:\n    []int: left\n    []int: right\n    int: limit\n    return: @\n    run:\n        throws: copy(compress\\throws) copy(fuse\\throws) SequenceSize\n        if: length(left) != length(right)\n            throw: SequenceSize()\n        @: scores fuse(2 .* left .+ right .* right)\n        return: compress(scores; scores .>= limit)\n",
       "foreign": "function example(left, right, limit)\n    length(left) == length(right) || throw(DimensionMismatch(\"scores\"))\n    scores = 2 .* left .+ right .* right\n    scores[scores .>= limit]\nend\n",
       "core_functions": [
         "compress"
@@ -1382,7 +1382,7 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: left\n    int[]: right\n    int: limit\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws) SequenceSize\n        if: length(left) != length(right)\n            throw: SequenceSize()\n        int[]: out []\n        int: i 0\n        while: i < length(left)\n            int: score 2 * left[i] + right[i] * right[i]\n            if: score >= limit\n                FxSeqPush\\append(out; (score record))\n            i += 1\n        return: out\n",
+          "code": "Example:\n    []int: left\n    []int: right\n    int: limit\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws) SequenceSize\n        if: length(left) != length(right)\n            throw: SequenceSize()\n        []int: out []\n        int: i 0\n        while: i < length(left)\n            int: score 2 * left[i] + right[i] * right[i]\n            if: score >= limit\n                FxSeqPush\\append(out; (score record))\n            i += 1\n        return: out\n",
           "source_file": "source/lmx/procedural/J10.lm3",
           "contract_id": "J10",
           "runtime_execution": "NOT_RUN",
@@ -1392,31 +1392,31 @@
           "low_level_operations": [
             "sys\\resize"
           ],
-          "source_sha256": "9b71379e12082af1137ccc6cdd82495a1ea25ba30e98e939b65e94fb7435e2d2",
+          "source_sha256": "24732eabd08e7fff97f27e7472e5578a41b4c6dc6c84ea344f963dc6fc437427",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 304,
             "characters_with_whitespace": 487,
             "nonblank_lines": 17,
             "utf8_bytes": 487,
-            "sha256": "9b71379e12082af1137ccc6cdd82495a1ea25ba30e98e939b65e94fb7435e2d2"
+            "sha256": "24732eabd08e7fff97f27e7472e5578a41b4c6dc6c84ea344f963dc6fc437427"
           }
         },
         "functional": {
-          "code": "Example:\n    int[]: left\n    int[]: right\n    int: limit\n    return: @\n    run:\n        throws: copy(compress\\throws) copy(fuse\\throws) SequenceSize\n        if: length(left) != length(right)\n            throw: SequenceSize()\n        @: scores fuse(2 .* left .+ right .* right)\n        return: compress(scores; scores .>= limit)\n",
+          "code": "Example:\n    []int: left\n    []int: right\n    int: limit\n    return: @\n    run:\n        throws: copy(compress\\throws) copy(fuse\\throws) SequenceSize\n        if: length(left) != length(right)\n            throw: SequenceSize()\n        @: scores fuse(2 .* left .+ right .* right)\n        return: compress(scores; scores .>= limit)\n",
           "source_file": "source/lmx/J10.lm3",
           "contract_id": "J10",
           "runtime_execution": "NOT_RUN",
           "core_functions": [],
           "low_level_operations": [],
-          "source_sha256": "ed0dddee116fc3e95cc43e6cb48649a31dc31ac778fdc7791daa1db9a13f9bd4",
+          "source_sha256": "76b1c7b3cc76bca22b58e110b6909419de614773ca40e0a8c81855aaf4545075",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 230,
             "characters_with_whitespace": 328,
             "nonblank_lines": 11,
             "utf8_bytes": 328,
-            "sha256": "ed0dddee116fc3e95cc43e6cb48649a31dc31ac778fdc7791daa1db9a13f9bd4"
+            "sha256": "76b1c7b3cc76bca22b58e110b6909419de614773ca40e0a8c81855aaf4545075"
           }
         }
       },
@@ -1473,7 +1473,7 @@
         2,
         3
       ],
-      "lmx": "Neighborhood:\n    int: x\n    return: @\n    expand:\n        return: (x - 1; x; x + 1)\n\nNonnegative:\n    int: value\n    return: int\n    accepts:\n        return: value >= 0\n\nExample:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(FxListBind\\bind\\throws) copy(filter\\throws) copy(unique\\throws)\n        return: unique(filter(bind(xs; Neighborhood\\expand); Nonnegative\\accepts))\n",
+      "lmx": "Neighborhood:\n    int: x\n    return: @\n    expand:\n        return: (x - 1; x; x + 1)\n\nNonnegative:\n    int: value\n    return: int\n    accepts:\n        return: value >= 0\n\nExample:\n    []int: xs\n    return: @\n    run:\n        throws: copy(FxListBind\\bind\\throws) copy(filter\\throws) copy(unique\\throws)\n        return: unique(filter(bind(xs; Neighborhood\\expand); Nonnegative\\accepts))\n",
       "foreign": "function example(xs)\n    candidates = collect(Iterators.flatmap(x -> (x-1, x, x+1), xs))\n    unique(filter(>=(0), candidates))\nend\n",
       "core_functions": [
         "bind",
@@ -1542,7 +1542,7 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        @[]: out []\n        int: i 0\n        while: i < length(xs)\n            int: offset -1\n            while: offset <= 1\n                int: value xs[i] + offset\n                if: value >= 0\n                    int: j 0\n                    while: j < length(out) && \\out[j] != value\n                        j += 1\n                    if: j = length(out)\n                        FxSeqPush\\append(out; (value record))\n                ---\n                offset += 1\n            i += 1\n        return: out\n",
+          "code": "Example:\n    []int: xs\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        []@: out []\n        int: i 0\n        while: i < length(xs)\n            int: offset -1\n            while: offset <= 1\n                int: value xs[i] + offset\n                if: value >= 0\n                    int: j 0\n                    while: j < length(out) && \\out[j] != value\n                        j += 1\n                    if: j = length(out)\n                        FxSeqPush\\append(out; (value record))\n                ---\n                offset += 1\n            i += 1\n        return: out\n",
           "source_file": "source/lmx/procedural/J11.lm3",
           "contract_id": "J11",
           "runtime_execution": "NOT_RUN",
@@ -1556,18 +1556,18 @@
           "core_families": {
             "bind": "Array"
           },
-          "source_sha256": "5423fc5056a0fec2074613628d313d8f3746cee4137642e43b44c538ee706b81",
+          "source_sha256": "4b8bb39b6c45346a9da20036bf09f27c641b9eb1bf54b7bbcfb83176769314a2",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 297,
             "characters_with_whitespace": 622,
             "nonblank_lines": 21,
             "utf8_bytes": 622,
-            "sha256": "5423fc5056a0fec2074613628d313d8f3746cee4137642e43b44c538ee706b81"
+            "sha256": "4b8bb39b6c45346a9da20036bf09f27c641b9eb1bf54b7bbcfb83176769314a2"
           }
         },
         "functional": {
-          "code": "Neighborhood:\n    int: x\n    return: @\n    expand:\n        return: (x - 1; x; x + 1)\n\nNonnegative:\n    int: value\n    return: int\n    accepts:\n        return: value >= 0\n\nExample:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(FxListBind\\bind\\throws) copy(filter\\throws) copy(unique\\throws)\n        return: unique(filter(bind(xs; Neighborhood\\expand); Nonnegative\\accepts))\n",
+          "code": "Neighborhood:\n    int: x\n    return: @\n    expand:\n        return: (x - 1; x; x + 1)\n\nNonnegative:\n    int: value\n    return: int\n    accepts:\n        return: value >= 0\n\nExample:\n    []int: xs\n    return: @\n    run:\n        throws: copy(FxListBind\\bind\\throws) copy(filter\\throws) copy(unique\\throws)\n        return: unique(filter(bind(xs; Neighborhood\\expand); Nonnegative\\accepts))\n",
           "source_file": "source/lmx/J11.lm3",
           "contract_id": "J11",
           "runtime_execution": "NOT_RUN",
@@ -1578,14 +1578,14 @@
           "core_families": {
             "bind": "Array"
           },
-          "source_sha256": "ab6e433d0d009e1421101ed2a179dc295968ceefa3f5df6f68f260973804e614",
+          "source_sha256": "65add297dd59068b3de390ea2075a0c9539d55722e599859e377d1328476cb43",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 277,
             "characters_with_whitespace": 385,
             "nonblank_lines": 16,
             "utf8_bytes": 385,
-            "sha256": "ab6e433d0d009e1421101ed2a179dc295968ceefa3f5df6f68f260973804e614"
+            "sha256": "65add297dd59068b3de390ea2075a0c9539d55722e599859e377d1328476cb43"
           }
         }
       },
@@ -1644,7 +1644,7 @@
           4
         ]
       },
-      "lmx": "Parity:\n    int: value\n    return: int\n    key:\n        return: value % 2 != 0\n\n\nExample:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(groupBy\\throws) copy(unique\\throws)\n        return: groupBy(unique(xs); Parity\\key)\n",
+      "lmx": "Parity:\n    int: value\n    return: int\n    key:\n        return: value % 2 != 0\n\n\nExample:\n    []int: xs\n    return: @\n    run:\n        throws: copy(groupBy\\throws) copy(unique\\throws)\n        return: groupBy(unique(xs); Parity\\key)\n",
       "foreign": "using SplitApplyCombine: group\nfunction example(xs)\n    distinct = unique(xs)\n    group(isodd, distinct)\nend\n",
       "core_functions": [
         "unique",
@@ -1699,7 +1699,7 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        @[]: out []\n        int: i 0\n        while: i < length(xs)\n            int: prior 0\n            while: prior < i && xs[prior] != xs[i]\n                prior += 1\n            if: prior = i\n                int: key xs[i] % 2 != 0\n                int: j 0\n                while: j < length(out) && \\out[j]\\key != key\n                    j += 1\n                if: j = length(out)\n                    @: group (copy(FxGroup))\n                    group\\key := (key record)\n                    group\\items := (copy(()))\n                    FxSeqPush\\append(out; group)\n                FxSeqPush\\append(out[j]\\items; (xs[i] record))\n            i += 1\n        return: out\n",
+          "code": "Example:\n    []int: xs\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        []@: out []\n        int: i 0\n        while: i < length(xs)\n            int: prior 0\n            while: prior < i && xs[prior] != xs[i]\n                prior += 1\n            if: prior = i\n                int: key xs[i] % 2 != 0\n                int: j 0\n                while: j < length(out) && \\out[j]\\key != key\n                    j += 1\n                if: j = length(out)\n                    @: group (copy(FxGroup))\n                    group\\key := (key record)\n                    group\\items := (copy(()))\n                    FxSeqPush\\append(out; group)\n                FxSeqPush\\append(out[j]\\items; (xs[i] record))\n            i += 1\n        return: out\n",
           "source_file": "source/lmx/procedural/J12.lm3",
           "contract_id": "J12",
           "runtime_execution": "NOT_RUN",
@@ -1710,18 +1710,18 @@
           "low_level_operations": [
             "FxSeqPush\\append"
           ],
-          "source_sha256": "769deaf73c15ee9d6dd59577b75ccd8628639e00a1dc6451343ac746d134a05a",
+          "source_sha256": "8bb5f1d99b32276537cd1af62e811d3b72d330cd4715897f9423ddb09075cd52",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 407,
             "characters_with_whitespace": 785,
             "nonblank_lines": 24,
             "utf8_bytes": 785,
-            "sha256": "769deaf73c15ee9d6dd59577b75ccd8628639e00a1dc6451343ac746d134a05a"
+            "sha256": "8bb5f1d99b32276537cd1af62e811d3b72d330cd4715897f9423ddb09075cd52"
           }
         },
         "functional": {
-          "code": "Parity:\n    int: value\n    return: int\n    key:\n        return: value % 2 != 0\n\n\nExample:\n    int[]: xs\n    return: @\n    run:\n        throws: copy(groupBy\\throws) copy(unique\\throws)\n        return: groupBy(unique(xs); Parity\\key)\n",
+          "code": "Parity:\n    int: value\n    return: int\n    key:\n        return: value % 2 != 0\n\n\nExample:\n    []int: xs\n    return: @\n    run:\n        throws: copy(groupBy\\throws) copy(unique\\throws)\n        return: groupBy(unique(xs); Parity\\key)\n",
           "source_file": "source/lmx/J12.lm3",
           "contract_id": "J12",
           "runtime_execution": "NOT_RUN",
@@ -1729,14 +1729,14 @@
             "groupBy"
           ],
           "low_level_operations": [],
-          "source_sha256": "ce9670fd3aaf07819a21f186d012101ce053a379b86e93bf717d94a543fb24a9",
+          "source_sha256": "8e7f1eabb8e6b3a5fe6681cbbc924faba02b4366d5ccb6c94f63128f3908a412",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 158,
             "characters_with_whitespace": 232,
             "nonblank_lines": 11,
             "utf8_bytes": 232,
-            "sha256": "ce9670fd3aaf07819a21f186d012101ce053a379b86e93bf717d94a543fb24a9"
+            "sha256": "8e7f1eabb8e6b3a5fe6681cbbc924faba02b4366d5ccb6c94f63128f3908a412"
           }
         }
       },
@@ -1794,7 +1794,7 @@
         "limit": 5
       },
       "expected": true,
-      "lmx": "Consecutive:\n    int: i\n    return: int\n    accepts:\n        return: xs[i - 1] > limit && xs[i] > limit\n\nExample:\n    int[]: xs\n    int: limit\n    return: int\n    run:\n        throws: copy(FxSeqRange\\range\\throws) copy(any\\throws)\n        return: any(range(1; length(xs); 1); Consecutive\\accepts)\n",
+      "lmx": "Consecutive:\n    int: i\n    return: int\n    accepts:\n        return: xs[i - 1] > limit && xs[i] > limit\n\nExample:\n    []int: xs\n    int: limit\n    return: int\n    run:\n        throws: copy(FxSeqRange\\range\\throws) copy(any\\throws)\n        return: any(range(1; length(xs); 1); Consecutive\\accepts)\n",
       "foreign": "function example(xs, limit)\n    positions = 2:length(xs)\n    any(i -> xs[i-1] > limit && xs[i] > limit, positions)\nend\n",
       "core_functions": [
         "range",
@@ -1864,24 +1864,24 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: xs\n    int: limit\n    return: int\n    run:\n        int: i 1\n        while: i < length(xs)\n            if: xs[i - 1] > limit && xs[i] > limit\n                return: 1\n            i += 1\n        return: 0\n",
+          "code": "Example:\n    []int: xs\n    int: limit\n    return: int\n    run:\n        int: i 1\n        while: i < length(xs)\n            if: xs[i - 1] > limit && xs[i] > limit\n                return: 1\n            i += 1\n        return: 0\n",
           "source_file": "source/lmx/procedural/J13.lm3",
           "contract_id": "J13",
           "runtime_execution": "NOT_RUN",
           "core_functions": [],
           "low_level_operations": [],
-          "source_sha256": "0f3cd405799744fbf201c0a860beff5165b6391b8830d781a9179c221dbf7502",
+          "source_sha256": "30ef7e0711c4a58f668a441018dc397db87d3a32cbe0f6ba1cccaf773c77b9ae",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 112,
             "characters_with_whitespace": 224,
             "nonblank_lines": 11,
             "utf8_bytes": 224,
-            "sha256": "0f3cd405799744fbf201c0a860beff5165b6391b8830d781a9179c221dbf7502"
+            "sha256": "30ef7e0711c4a58f668a441018dc397db87d3a32cbe0f6ba1cccaf773c77b9ae"
           }
         },
         "functional": {
-          "code": "Consecutive:\n    int: i\n    return: int\n    accepts:\n        return: xs[i - 1] > limit && xs[i] > limit\n\nExample:\n    int[]: xs\n    int: limit\n    return: int\n    run:\n        throws: copy(FxSeqRange\\range\\throws) copy(any\\throws)\n        return: any(range(1; length(xs); 1); Consecutive\\accepts)\n",
+          "code": "Consecutive:\n    int: i\n    return: int\n    accepts:\n        return: xs[i - 1] > limit && xs[i] > limit\n\nExample:\n    []int: xs\n    int: limit\n    return: int\n    run:\n        throws: copy(FxSeqRange\\range\\throws) copy(any\\throws)\n        return: any(range(1; length(xs); 1); Consecutive\\accepts)\n",
           "source_file": "source/lmx/J13.lm3",
           "contract_id": "J13",
           "runtime_execution": "NOT_RUN",
@@ -1889,14 +1889,14 @@
             "any"
           ],
           "low_level_operations": [],
-          "source_sha256": "1d8fbcaaf00caf606976161cea528bf0d7527125847b0c411bdc765dafa73f43",
+          "source_sha256": "ae42a0ed3092df4e2345a28b707c6d41ae80919a66d15ddde21c188489f09906",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 212,
             "characters_with_whitespace": 297,
             "nonblank_lines": 12,
             "utf8_bytes": 297,
-            "sha256": "1d8fbcaaf00caf606976161cea528bf0d7527125847b0c411bdc765dafa73f43"
+            "sha256": "ae42a0ed3092df4e2345a28b707c6d41ae80919a66d15ddde21c188489f09906"
           }
         }
       },
@@ -1945,7 +1945,7 @@
         ]
       },
       "expected": true,
-      "lmx": "Fits:\n    int: i\n    return: int\n    accepts:\n        return: required[i] > 0 && required[i] <= available[i]\n\nExample:\n    int[]: required\n    int[]: available\n    return: int\n    run:\n        throws: copy(FxSeqRange\\range\\throws) copy(all\\throws)\n        if: length(required) != length(available)\n            return: 0\n        return: all(range(0; length(required); 1); Fits\\accepts)\n",
+      "lmx": "Fits:\n    int: i\n    return: int\n    accepts:\n        return: required[i] > 0 && required[i] <= available[i]\n\nExample:\n    []int: required\n    []int: available\n    return: int\n    run:\n        throws: copy(FxSeqRange\\range\\throws) copy(all\\throws)\n        if: length(required) != length(available)\n            return: 0\n        return: all(range(0; length(required); 1); Fits\\accepts)\n",
       "foreign": "function example(required, available)\n    length(required) == length(available) || return false\n    all(i -> 0 < required[i] <= available[i], eachindex(required))\nend\n",
       "core_functions": [
         "range",
@@ -2021,24 +2021,24 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: required\n    int[]: available\n    return: int\n    run:\n        if: length(required) != length(available)\n            return: 0\n        int: i 0\n        while: i < length(required)\n            if: required[i] <= 0 || required[i] > available[i]\n                return: 0\n            i += 1\n        return: 1\n",
+          "code": "Example:\n    []int: required\n    []int: available\n    return: int\n    run:\n        if: length(required) != length(available)\n            return: 0\n        int: i 0\n        while: i < length(required)\n            if: required[i] <= 0 || required[i] > available[i]\n                return: 0\n            i += 1\n        return: 1\n",
           "source_file": "source/lmx/procedural/J14.lm3",
           "contract_id": "J14",
           "runtime_execution": "NOT_RUN",
           "core_functions": [],
           "low_level_operations": [],
-          "source_sha256": "ca4e9903d81c6df006a46f763a88fe82756677d8b05e6a35d1d08260972bf6ba",
+          "source_sha256": "feaeb9dce0a92cf0b691748f2d53eac6df3ddc39af277b709bc2dc6e4f6b5363",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 190,
             "characters_with_whitespace": 326,
             "nonblank_lines": 13,
             "utf8_bytes": 326,
-            "sha256": "ca4e9903d81c6df006a46f763a88fe82756677d8b05e6a35d1d08260972bf6ba"
+            "sha256": "feaeb9dce0a92cf0b691748f2d53eac6df3ddc39af277b709bc2dc6e4f6b5363"
           }
         },
         "functional": {
-          "code": "Fits:\n    int: i\n    return: int\n    accepts:\n        return: required[i] > 0 && required[i] <= available[i]\n\nExample:\n    int[]: required\n    int[]: available\n    return: int\n    run:\n        throws: copy(FxSeqRange\\range\\throws) copy(all\\throws)\n        if: length(required) != length(available)\n            return: 0\n        return: all(range(0; length(required); 1); Fits\\accepts)\n",
+          "code": "Fits:\n    int: i\n    return: int\n    accepts:\n        return: required[i] > 0 && required[i] <= available[i]\n\nExample:\n    []int: required\n    []int: available\n    return: int\n    run:\n        throws: copy(FxSeqRange\\range\\throws) copy(all\\throws)\n        if: length(required) != length(available)\n            return: 0\n        return: all(range(0; length(required); 1); Fits\\accepts)\n",
           "source_file": "source/lmx/J14.lm3",
           "contract_id": "J14",
           "runtime_execution": "NOT_RUN",
@@ -2046,14 +2046,14 @@
             "all"
           ],
           "low_level_operations": [],
-          "source_sha256": "6c520fb2ef0036447621b92ce654ca212fd012da53849fe4d93b5a54f2ec456c",
+          "source_sha256": "75269c7a72468431ca59b98b0e538b4229509057ac6ef8450b460c4cf990093c",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 276,
             "characters_with_whitespace": 385,
             "nonblank_lines": 14,
             "utf8_bytes": 385,
-            "sha256": "6c520fb2ef0036447621b92ce654ca212fd012da53849fe4d93b5a54f2ec456c"
+            "sha256": "75269c7a72468431ca59b98b0e538b4229509057ac6ef8450b460c4cf990093c"
           }
         }
       },
@@ -2100,7 +2100,7 @@
         "present": true,
         "value": 1
       },
-      "lmx": "Above:\n    int: value\n    return: int\n    accepts:\n        return: value > limit\n\nExample:\n    int[]: xs\n    int: limit\n    return: @\n    run:\n        throws: copy(index\\throws)\n        return: index(xs; Above\\accepts)\n",
+      "lmx": "Above:\n    int: value\n    return: int\n    accepts:\n        return: value > limit\n\nExample:\n    []int: xs\n    int: limit\n    return: @\n    run:\n        throws: copy(index\\throws)\n        return: index(xs; Above\\accepts)\n",
       "foreign": "function example(xs, limit)\n    found = findfirst(x -> x > limit, xs)\n    isnothing(found) ? nothing : found - 1\nend\n",
       "core_functions": [
         "index"
@@ -2164,7 +2164,7 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: xs\n    int: limit\n    return: @\n    run:\n        throws: copy(some\\throws) copy(none\\throws)\n        int: i 0\n        while: i < length(xs)\n            if: xs[i] > limit\n                return: some(i)\n            i += 1\n        return: none()\n",
+          "code": "Example:\n    []int: xs\n    int: limit\n    return: @\n    run:\n        throws: copy(some\\throws) copy(none\\throws)\n        int: i 0\n        while: i < length(xs)\n            if: xs[i] > limit\n                return: some(i)\n            i += 1\n        return: none()\n",
           "source_file": "source/lmx/procedural/J15.lm3",
           "contract_id": "J15",
           "runtime_execution": "NOT_RUN",
@@ -2173,7 +2173,7 @@
             "characters_with_whitespace": 264,
             "nonblank_lines": 12,
             "utf8_bytes": 264,
-            "sha256": "6f0e8a122fc84ce3c96aa5eecb00ebb1bfb360256736739f0f696ff9c561af13"
+            "sha256": "fc97d176ac80b04521a274da724826b55283be4fc3fe4d4da12a2c36a37f2056"
           },
           "core_functions": [
             "copy",
@@ -2183,7 +2183,7 @@
           "low_level_operations": []
         },
         "functional": {
-          "code": "Above:\n    int: value\n    return: int\n    accepts:\n        return: value > limit\n\nExample:\n    int[]: xs\n    int: limit\n    return: @\n    run:\n        throws: copy(index\\throws)\n        return: index(xs; Above\\accepts)\n",
+          "code": "Above:\n    int: value\n    return: int\n    accepts:\n        return: value > limit\n\nExample:\n    []int: xs\n    int: limit\n    return: @\n    run:\n        throws: copy(index\\throws)\n        return: index(xs; Above\\accepts)\n",
           "source_file": "source/lmx/J15.lm3",
           "contract_id": "J15",
           "runtime_execution": "NOT_RUN",
@@ -2192,7 +2192,7 @@
             "characters_with_whitespace": 219,
             "nonblank_lines": 12,
             "utf8_bytes": 219,
-            "sha256": "14fefda6f855e0ffd8c8a1ee6bf78fbd61f7a41a7907e02682192b4619216332"
+            "sha256": "0bd2db7dd002cca5d135e8585633174c61a415d077b1a325e2d61c03103c12d5"
           },
           "core_functions": [
             "index"
@@ -2227,7 +2227,7 @@
         "hi": 12
       },
       "expected": 600,
-      "lmx": "Example:\n    int[]: xs\n    int: lo\n    int: hi\n    return: int\n    run:\n        throws: copy(sum\\throws)\n        int: n length(xs)\n        if: n = 0\n            return: 0\n        int: accepted \\sum((xs >= lo) * (xs <= hi))\n        int: scaled 1000 * accepted\n        return: (scaled - scaled % n) / n\n",
+      "lmx": "Example:\n    []int: xs\n    int: lo\n    int: hi\n    return: int\n    run:\n        throws: copy(sum\\throws)\n        int: n length(xs)\n        if: n = 0\n            return: 0\n        int: accepted \\sum((xs >= lo) * (xs <= hi))\n        int: scaled 1000 * accepted\n        return: (scaled - scaled % n) / n\n",
       "foreign": "function example(xs, lo, hi)\n    isempty(xs) && return 0\n    accepted = count(x -> lo <= x <= hi, xs)\n    1000 * accepted ÷ length(xs)\nend\n",
       "core_functions": [
         "sum"
@@ -2300,37 +2300,37 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: xs\n    int: lo\n    int: hi\n    return: int\n    run:\n        int: n length(xs)\n        if: n = 0\n            return: 0\n        int: accepted 0\n        int: i 0\n        while: i < n\n            if: xs[i] >= lo && xs[i] <= hi\n                accepted += 1\n            i += 1\n        int: scaled 1000 * accepted\n        return: (scaled - scaled % n) / n\n",
+          "code": "Example:\n    []int: xs\n    int: lo\n    int: hi\n    return: int\n    run:\n        int: n length(xs)\n        if: n = 0\n            return: 0\n        int: accepted 0\n        int: i 0\n        while: i < n\n            if: xs[i] >= lo && xs[i] <= hi\n                accepted += 1\n            i += 1\n        int: scaled 1000 * accepted\n        return: (scaled - scaled % n) / n\n",
           "source_file": "source/lmx/procedural/J16.lm3",
           "contract_id": "J16",
           "runtime_execution": "NOT_RUN",
           "core_functions": [],
           "low_level_operations": [],
-          "source_sha256": "a6f994be783f025440acedf43654576a6bab9ea0519b983f21826fb75cb50672",
+          "source_sha256": "34f76cc43a43764f76f3bb44964ebdc30f5e007ba914da1b821292fee464aac9",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 186,
             "characters_with_whitespace": 370,
             "nonblank_lines": 17,
             "utf8_bytes": 370,
-            "sha256": "a6f994be783f025440acedf43654576a6bab9ea0519b983f21826fb75cb50672"
+            "sha256": "34f76cc43a43764f76f3bb44964ebdc30f5e007ba914da1b821292fee464aac9"
           }
         },
         "functional": {
-          "code": "Example:\n    int[]: xs\n    int: lo\n    int: hi\n    return: int\n    run:\n        throws: copy(sum\\throws)\n        int: n length(xs)\n        if: n = 0\n            return: 0\n        int: accepted \\sum((xs >= lo) * (xs <= hi))\n        int: scaled 1000 * accepted\n        return: (scaled - scaled % n) / n\n",
+          "code": "Example:\n    []int: xs\n    int: lo\n    int: hi\n    return: int\n    run:\n        throws: copy(sum\\throws)\n        int: n length(xs)\n        if: n = 0\n            return: 0\n        int: accepted \\sum((xs >= lo) * (xs <= hi))\n        int: scaled 1000 * accepted\n        return: (scaled - scaled % n) / n\n",
           "source_file": "source/lmx/J16.lm3",
           "contract_id": "J16",
           "runtime_execution": "NOT_RUN",
           "core_functions": [],
           "low_level_operations": [],
-          "source_sha256": "4bd24945a9e5ad3b0bc1fc3c95bf5b86e227ec11846f48d5d804cb8516213ae1",
+          "source_sha256": "f97340eb0def29ca3c744461492311eaf9062cde588aa1eff9db27c16dec10bd",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 178,
             "characters_with_whitespace": 301,
             "nonblank_lines": 13,
             "utf8_bytes": 301,
-            "sha256": "4bd24945a9e5ad3b0bc1fc3c95bf5b86e227ec11846f48d5d804cb8516213ae1"
+            "sha256": "f97340eb0def29ca3c744461492311eaf9062cde588aa1eff9db27c16dec10bd"
           }
         }
       },
@@ -2475,7 +2475,7 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    @: target\n    @: values\n    int: capacity\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqSize\\sum\\throws) copy(FxSeqAdmit\\admit\\throws) copy(FxSeqRead\\read\\throws) copy(FxKernel\\arrayWrite\\throws) copy(sys\\resize\\throws)\n        @: info FxSeqInfo\\get(target)\n        FxSeqInfo\\get(values)\n        int: oldSize length(target)\n        int: added length(values)\n        int: newSize FxSeqSize\\sum(oldSize; added; info\\maxLength)\n        @[]: ready []\n        sys\\resize(ready; added)\n        int: i 0\n        while: i < added\n            ready[i] := FxSeqAdmit\\admit(target; FxSeqRead\\read(values; i))\n            i += 1\n        sys\\resize(target; newSize)\n        i := 0\n        while: i < added\n            FxKernel\\arrayWrite(target; oldSize + i; ready[i])\n            i += 1\n        int: drop length(target) - capacity\n        if: drop > 0\n            i := 0\n            while: i < capacity\n                FxKernel\\arrayWrite(target; i; FxSeqRead\\read(target; drop + i))\n                i += 1\n            sys\\resize(target; capacity)\n        return: target\n",
+          "code": "Example:\n    @: target\n    @: values\n    int: capacity\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqSize\\sum\\throws) copy(FxSeqAdmit\\admit\\throws) copy(FxSeqRead\\read\\throws) copy(FxKernel\\arrayWrite\\throws) copy(sys\\resize\\throws)\n        @: info FxSeqInfo\\get(target)\n        FxSeqInfo\\get(values)\n        int: oldSize length(target)\n        int: added length(values)\n        int: newSize FxSeqSize\\sum(oldSize; added; info\\maxLength)\n        []@: ready []\n        sys\\resize(ready; added)\n        int: i 0\n        while: i < added\n            ready[i] := FxSeqAdmit\\admit(target; FxSeqRead\\read(values; i))\n            i += 1\n        sys\\resize(target; newSize)\n        i := 0\n        while: i < added\n            FxKernel\\arrayWrite(target; oldSize + i; ready[i])\n            i += 1\n        int: drop length(target) - capacity\n        if: drop > 0\n            i := 0\n            while: i < capacity\n                FxKernel\\arrayWrite(target; i; FxSeqRead\\read(target; drop + i))\n                i += 1\n            sys\\resize(target; capacity)\n        return: target\n",
           "source_file": "source/lmx/procedural/J17.lm3",
           "contract_id": "J17",
           "runtime_execution": "NOT_RUN",
@@ -2490,14 +2490,14 @@
             "FxSeqSize\\sum",
             "sys\\resize"
           ],
-          "source_sha256": "aa089f18d9b180f65d17100b60a4f65a57f87dce145eb2d8b139abf2ec35085d",
+          "source_sha256": "a39d442b8a6b1c853085d9fa16768a8bd37e0882f8c7c742c43ae8230e5df865",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 740,
             "characters_with_whitespace": 1102,
             "nonblank_lines": 31,
             "utf8_bytes": 1102,
-            "sha256": "aa089f18d9b180f65d17100b60a4f65a57f87dce145eb2d8b139abf2ec35085d"
+            "sha256": "a39d442b8a6b1c853085d9fa16768a8bd37e0882f8c7c742c43ae8230e5df865"
           }
         },
         "functional": {
@@ -2810,7 +2810,7 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    @: rows\n    int: baseline\n    return: @\n    run:\n        throws: copy(FxSeqRead\\read\\throws) copy(FxSeqInfo\\get\\throws) copy(sys\\resize\\throws) copy(record\\throws) FxShape\n        @[]: out []\n        if: length(rows) = 0\n            return: out\n        @: first FxSeqRead\\read(rows; 0)\n        int: width length(first)\n        int: i 0\n        while: i < length(rows)\n            @: row FxSeqRead\\read(rows; i)\n            FxSeqInfo\\get(row)\n            if: length(row) != width\n                throw: FxShape()\n            i += 1\n        sys\\resize(out; width)\n        int: j 0\n        while: j < width\n            int: total 0\n            i := 0\n            while: i < length(rows)\n                @: row FxSeqRead\\read(rows; i)\n                total += \\FxSeqRead\\read(row; j) - baseline\n                i += 1\n            out[j] := (total record)\n            j += 1\n        return: out\n",
+          "code": "Example:\n    @: rows\n    int: baseline\n    return: @\n    run:\n        throws: copy(FxSeqRead\\read\\throws) copy(FxSeqInfo\\get\\throws) copy(sys\\resize\\throws) copy(record\\throws) FxShape\n        []@: out []\n        if: length(rows) = 0\n            return: out\n        @: first FxSeqRead\\read(rows; 0)\n        int: width length(first)\n        int: i 0\n        while: i < length(rows)\n            @: row FxSeqRead\\read(rows; i)\n            FxSeqInfo\\get(row)\n            if: length(row) != width\n                throw: FxShape()\n            i += 1\n        sys\\resize(out; width)\n        int: j 0\n        while: j < width\n            int: total 0\n            i := 0\n            while: i < length(rows)\n                @: row FxSeqRead\\read(rows; i)\n                total += \\FxSeqRead\\read(row; j) - baseline\n                i += 1\n            out[j] := (total record)\n            j += 1\n        return: out\n",
           "source_file": "source/lmx/procedural/J19.lm3",
           "contract_id": "J19",
           "runtime_execution": "NOT_RUN",
@@ -2823,14 +2823,14 @@
             "FxSeqRead\\read",
             "sys\\resize"
           ],
-          "source_sha256": "812536625e1fa938fda718d9555179dee2fd4ac69b5e7aa163312d7ad2dcdc7e",
+          "source_sha256": "212770553af27948b217a2e2e2932e18248db3d5cb7fae3bdf7a7cc1ab501475",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 523,
             "characters_with_whitespace": 903,
             "nonblank_lines": 30,
             "utf8_bytes": 903,
-            "sha256": "812536625e1fa938fda718d9555179dee2fd4ac69b5e7aa163312d7ad2dcdc7e"
+            "sha256": "212770553af27948b217a2e2e2932e18248db3d5cb7fae3bdf7a7cc1ab501475"
           }
         },
         "functional": {
@@ -3221,7 +3221,7 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    @: batches\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxSeqRead\\read\\throws) copy(FxSeqStore\\write\\throws) copy(sys\\resize\\throws) copy(FxValueSame\\test\\throws) SequenceSize\n        FxSeqInfo\\get(batches)\n        int: kind @[]\n        int: uniform 1\n        bigint: count 0\n        int: i 0\n        while: i < length(batches)\n            @: part FxSeqRead\\read(batches; i)\n            @: info FxSeqInfo\\get(part)\n            if: i = 0\n                kind := info\\arrayType\n            if: info\\dense = 0 || info\\arrayType != kind\n                uniform := 0\n            count += length(part)\n            i += 1\n        if: uniform = 0\n            kind := @[]\n        @: out FxSeqAllocate\\make(kind; 0)\n        @: info FxSeqInfo\\get(out)\n        if: count > info\\maxLength\n            throw: SequenceSize()\n        int: size count\n        sys\\resize(out; size)\n        int: at 0\n        i := 0\n        while: i < length(batches)\n            @: part FxSeqRead\\read(batches; i)\n            int: j 0\n            while: j < length(part)\n                @: item FxSeqRead\\read(part; j)\n                int: k 0\n                while: k < at && FxValueSame\\test(FxSeqRead\\read(out; k); item; 0) = 0\n                    k += 1\n                if: k = at\n                    FxSeqStore\\write(out; at; item)\n                    at += 1\n                j += 1\n            i += 1\n        sys\\resize(out; at)\n        return: out\n",
+          "code": "Example:\n    @: batches\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxSeqRead\\read\\throws) copy(FxSeqStore\\write\\throws) copy(sys\\resize\\throws) copy(FxValueSame\\test\\throws) SequenceSize\n        FxSeqInfo\\get(batches)\n        int: kind []@\n        int: uniform 1\n        bigint: count 0\n        int: i 0\n        while: i < length(batches)\n            @: part FxSeqRead\\read(batches; i)\n            @: info FxSeqInfo\\get(part)\n            if: i = 0\n                kind := info\\arrayType\n            if: info\\dense = 0 || info\\arrayType != kind\n                uniform := 0\n            count += length(part)\n            i += 1\n        if: uniform = 0\n            kind := []@\n        @: out FxSeqAllocate\\make(kind; 0)\n        @: info FxSeqInfo\\get(out)\n        if: count > info\\maxLength\n            throw: SequenceSize()\n        int: size count\n        sys\\resize(out; size)\n        int: at 0\n        i := 0\n        while: i < length(batches)\n            @: part FxSeqRead\\read(batches; i)\n            int: j 0\n            while: j < length(part)\n                @: item FxSeqRead\\read(part; j)\n                int: k 0\n                while: k < at && FxValueSame\\test(FxSeqRead\\read(out; k); item; 0) = 0\n                    k += 1\n                if: k = at\n                    FxSeqStore\\write(out; at; item)\n                    at += 1\n                j += 1\n            i += 1\n        sys\\resize(out; at)\n        return: out\n",
           "source_file": "source/lmx/procedural/J21.lm3",
           "contract_id": "J21",
           "runtime_execution": "NOT_RUN",
@@ -3232,14 +3232,14 @@
           "low_level_operations": [
             "FxSeqPush\\append"
           ],
-          "source_sha256": "210e241d40585f0f078f7b4f04ac10228186c8d5d6b604fda09f985bf5966ded",
+          "source_sha256": "4148194ea080e5b433550a743a2faca977ed9673df1195be39a439c7127d27a6",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 870,
             "characters_with_whitespace": 1491,
             "nonblank_lines": 44,
             "utf8_bytes": 1491,
-            "sha256": "210e241d40585f0f078f7b4f04ac10228186c8d5d6b604fda09f985bf5966ded"
+            "sha256": "4148194ea080e5b433550a743a2faca977ed9673df1195be39a439c7127d27a6"
           }
         },
         "functional": {
@@ -3304,7 +3304,7 @@
         "text": "invoice42-ref-09123"
       },
       "expected": "9123",
-      "lmx": "Example:\n    char[]: text\n    return: char[]\n    run:\n        throws: copy(compress\\throws) copy(last\\throws)\n        char[]: digits \\compress(text; (text >= '0') * (text <= '9'))\n        return: \\last(digits; 4)\n",
+      "lmx": "Example:\n    []char: text\n    return: []char\n    run:\n        throws: copy(compress\\throws) copy(last\\throws)\n        []char: digits \\compress(text; (text >= '0') * (text <= '9'))\n        return: \\last(digits; 4)\n",
       "foreign": "function example(text)\n    digits = filter(c -> '0' <= c <= '9', text)\n    last(digits, 4)\nend\n",
       "core_functions": [
         "compress",
@@ -3362,7 +3362,7 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    char[]: text\n    return: char[]\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws) copy(sys\\resize\\throws)\n        char[]: out []\n        int: i 0\n        while: i < length(text)\n            if: text[i] >= '0' && text[i] <= '9'\n                FxSeqPush\\append(out; (text[i] record))\n            i += 1\n        int: drop length(out) - 4\n        if: drop > 0\n            i := 0\n            while: i < 4\n                out[i] := out[drop + i]\n                i += 1\n            sys\\resize(out; 4)\n        return: out\n",
+          "code": "Example:\n    []char: text\n    return: []char\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws) copy(sys\\resize\\throws)\n        []char: out []\n        int: i 0\n        while: i < length(text)\n            if: text[i] >= '0' && text[i] <= '9'\n                FxSeqPush\\append(out; (text[i] record))\n            i += 1\n        int: drop length(out) - 4\n        if: drop > 0\n            i := 0\n            while: i < 4\n                out[i] := out[drop + i]\n                i += 1\n            sys\\resize(out; 4)\n        return: out\n",
           "source_file": "source/lmx/procedural/J22.lm3",
           "contract_id": "J22",
           "runtime_execution": "NOT_RUN",
@@ -3373,18 +3373,18 @@
           "low_level_operations": [
             "FxSeqPush\\append"
           ],
-          "source_sha256": "397511581db8a8c7fa7b9f481d336bf295fd0863f0625e7c6fab39e9d12f81e8",
+          "source_sha256": "23799ae525e1d8ed0dbd1179bb81c491203d9cc34c72b1b33222bd40bc752d33",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 315,
             "characters_with_whitespace": 553,
             "nonblank_lines": 19,
             "utf8_bytes": 553,
-            "sha256": "397511581db8a8c7fa7b9f481d336bf295fd0863f0625e7c6fab39e9d12f81e8"
+            "sha256": "23799ae525e1d8ed0dbd1179bb81c491203d9cc34c72b1b33222bd40bc752d33"
           }
         },
         "functional": {
-          "code": "Example:\n    char[]: text\n    return: char[]\n    run:\n        throws: copy(compress\\throws) copy(last\\throws)\n        char[]: digits \\compress(text; (text >= '0') * (text <= '9'))\n        return: \\last(digits; 4)\n",
+          "code": "Example:\n    []char: text\n    return: []char\n    run:\n        throws: copy(compress\\throws) copy(last\\throws)\n        []char: digits \\compress(text; (text >= '0') * (text <= '9'))\n        return: \\last(digits; 4)\n",
           "source_file": "source/lmx/J22.lm3",
           "contract_id": "J22",
           "runtime_execution": "NOT_RUN",
@@ -3392,14 +3392,14 @@
             "compress"
           ],
           "low_level_operations": [],
-          "source_sha256": "0030d6ab1ade7d4937449cd9c8902d3761465c87a822d86de97a7801e69fbfc4",
+          "source_sha256": "81dcd743b3b6fdd73ef41156adb23b805b5a6ac13c29725462ec931f7d5bf167",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 155,
             "characters_with_whitespace": 213,
             "nonblank_lines": 7,
             "utf8_bytes": 213,
-            "sha256": "0030d6ab1ade7d4937449cd9c8902d3761465c87a822d86de97a7801e69fbfc4"
+            "sha256": "81dcd743b3b6fdd73ef41156adb23b805b5a6ac13c29725462ec931f7d5bf167"
           }
         }
       },
@@ -3526,7 +3526,7 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    @: parts\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxSeqRead\\read\\throws) copy(FxSeqStore\\write\\throws) copy(sys\\resize\\throws) SequenceSize\n        FxSeqInfo\\get(parts)\n        int: kind @[]\n        int: uniform 1\n        bigint: count 0\n        int: i 0\n        while: i < length(parts)\n            @: part FxSeqRead\\read(parts; i)\n            @: info FxSeqInfo\\get(part)\n            if: i = 0\n                kind := info\\arrayType\n            if: info\\dense = 0 || info\\arrayType != kind\n                uniform := 0\n            count += length(part)\n            i += 1\n        if: uniform = 0\n            kind := @[]\n        @: out FxSeqAllocate\\make(kind; 0)\n        @: info FxSeqInfo\\get(out)\n        if: count > info\\maxLength\n            throw: SequenceSize()\n        int: size count\n        sys\\resize(out; size)\n        int: at 0\n        i := length(parts) - 1\n        while: i >= 0\n            @: part FxSeqRead\\read(parts; i)\n            int: j length(part) - 1\n            while: j >= 0\n                FxSeqStore\\write(out; at; FxSeqRead\\read(part; j))\n                at += 1\n                j -= 1\n            i -= 1\n        return: out\n",
+          "code": "Example:\n    @: parts\n    return: @\n    run:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqAllocate\\make\\throws) copy(FxSeqRead\\read\\throws) copy(FxSeqStore\\write\\throws) copy(sys\\resize\\throws) SequenceSize\n        FxSeqInfo\\get(parts)\n        int: kind []@\n        int: uniform 1\n        bigint: count 0\n        int: i 0\n        while: i < length(parts)\n            @: part FxSeqRead\\read(parts; i)\n            @: info FxSeqInfo\\get(part)\n            if: i = 0\n                kind := info\\arrayType\n            if: info\\dense = 0 || info\\arrayType != kind\n                uniform := 0\n            count += length(part)\n            i += 1\n        if: uniform = 0\n            kind := []@\n        @: out FxSeqAllocate\\make(kind; 0)\n        @: info FxSeqInfo\\get(out)\n        if: count > info\\maxLength\n            throw: SequenceSize()\n        int: size count\n        sys\\resize(out; size)\n        int: at 0\n        i := length(parts) - 1\n        while: i >= 0\n            @: part FxSeqRead\\read(parts; i)\n            int: j length(part) - 1\n            while: j >= 0\n                FxSeqStore\\write(out; at; FxSeqRead\\read(part; j))\n                at += 1\n                j -= 1\n            i -= 1\n        return: out\n",
           "source_file": "source/lmx/procedural/J23.lm3",
           "contract_id": "J23",
           "runtime_execution": "NOT_RUN",
@@ -3540,14 +3540,14 @@
             "FxSeqStore\\write",
             "sys\\resize"
           ],
-          "source_sha256": "b6eacd8ca7376ba99e2445888c9bdb2347e2e0a1a50e5a0280d7dfe59dd13f84",
+          "source_sha256": "651dde7ec8b8c07e8ffbbe4f5497150bab173ee774df81a0dde87e2424b0757e",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 730,
             "characters_with_whitespace": 1228,
             "nonblank_lines": 38,
             "utf8_bytes": 1228,
-            "sha256": "b6eacd8ca7376ba99e2445888c9bdb2347e2e0a1a50e5a0280d7dfe59dd13f84"
+            "sha256": "651dde7ec8b8c07e8ffbbe4f5497150bab173ee774df81a0dde87e2424b0757e"
           }
         },
         "functional": {
@@ -3641,7 +3641,7 @@
           3
         ]
       ],
-      "lmx": "Example:\n    int[]: left\n    int[]: right\n    int: budget\n    return: @\n    Row:\n        int: x\n        return: @\n        Pair:\n            int: y\n            return: @\n            make:\n                return: (x; y)\n        ---\n        expand:\n            throws: copy(map\\throws) copy(compress\\throws)\n            return: map(compress(right; x + right <= budget); Pair\\make)\n    ---\n    run:\n        throws: copy(FxListBind\\bind\\throws) copy(Example\\Row\\expand\\throws)\n        return: bind(left; Row\\expand)\n",
+      "lmx": "Example:\n    []int: left\n    []int: right\n    int: budget\n    return: @\n    Row:\n        int: x\n        return: @\n        Pair:\n            int: y\n            return: @\n            make:\n                return: (x; y)\n        ---\n        expand:\n            throws: copy(map\\throws) copy(compress\\throws)\n            return: map(compress(right; x + right <= budget); Pair\\make)\n    ---\n    run:\n        throws: copy(FxListBind\\bind\\throws) copy(Example\\Row\\expand\\throws)\n        return: bind(left; Row\\expand)\n",
       "foreign": "function example(left, right, budget)\n    [(x, y) for x in left for y in right if x + y <= budget]\nend\n",
       "core_functions": [
         "map",
@@ -3737,7 +3737,7 @@
       },
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    int[]: left\n    int[]: right\n    int: budget\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        @[]: out []\n        int: i 0\n        while: i < length(left)\n            int: j 0\n            while: j < length(right)\n                if: left[i] + right[j] <= budget\n                    FxSeqPush\\append(out; ((left[i]; right[j]) record))\n                j += 1\n            i += 1\n        return: out\n",
+          "code": "Example:\n    []int: left\n    []int: right\n    int: budget\n    return: @\n    run:\n        throws: copy(FxSeqPush\\append\\throws) copy(record\\throws)\n        []@: out []\n        int: i 0\n        while: i < length(left)\n            int: j 0\n            while: j < length(right)\n                if: left[i] + right[j] <= budget\n                    FxSeqPush\\append(out; ((left[i]; right[j]) record))\n                j += 1\n            i += 1\n        return: out\n",
           "source_file": "source/lmx/procedural/J24.lm3",
           "contract_id": "J24",
           "runtime_execution": "NOT_RUN",
@@ -3751,18 +3751,18 @@
           "core_families": {
             "bind": "Array"
           },
-          "source_sha256": "8584f8cd93bdac0351b9cbdcc0aeddf450438d7e08f2f4e55ab5f5b21f096e01",
+          "source_sha256": "ddde38e2ebeecb121ffd1e81d9dbc0967e1a4c3857d76fbf42659215d2822e11",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 261,
             "characters_with_whitespace": 457,
             "nonblank_lines": 17,
             "utf8_bytes": 457,
-            "sha256": "8584f8cd93bdac0351b9cbdcc0aeddf450438d7e08f2f4e55ab5f5b21f096e01"
+            "sha256": "ddde38e2ebeecb121ffd1e81d9dbc0967e1a4c3857d76fbf42659215d2822e11"
           }
         },
         "functional": {
-          "code": "Example:\n    int[]: left\n    int[]: right\n    int: budget\n    return: @\n    Row:\n        int: x\n        return: @\n        Pair:\n            int: y\n            return: @\n            make:\n                return: (x; y)\n        ---\n        expand:\n            throws: copy(map\\throws) copy(compress\\throws)\n            return: map(compress(right; x + right <= budget); Pair\\make)\n    ---\n    run:\n        throws: copy(FxListBind\\bind\\throws) copy(Example\\Row\\expand\\throws)\n        return: bind(left; Row\\expand)\n",
+          "code": "Example:\n    []int: left\n    []int: right\n    int: budget\n    return: @\n    Row:\n        int: x\n        return: @\n        Pair:\n            int: y\n            return: @\n            make:\n                return: (x; y)\n        ---\n        expand:\n            throws: copy(map\\throws) copy(compress\\throws)\n            return: map(compress(right; x + right <= budget); Pair\\make)\n    ---\n    run:\n        throws: copy(FxListBind\\bind\\throws) copy(Example\\Row\\expand\\throws)\n        return: bind(left; Row\\expand)\n",
           "source_file": "source/lmx/J24.lm3",
           "contract_id": "J24",
           "runtime_execution": "NOT_RUN",
@@ -3774,14 +3774,14 @@
           "core_families": {
             "bind": "Array"
           },
-          "source_sha256": "1c05e420713b04965be5756828d047d39460662c6ab1d0ef50a7dec3f5274212",
+          "source_sha256": "9bc19e3ff32c0faf1e3d2320da060a61ebc7a3b6424cc04375e12f9e9c4e5c7e",
           "parser_execution": "NOT_RUN",
           "metrics": {
             "characters": 307,
             "characters_with_whitespace": 511,
             "nonblank_lines": 21,
             "utf8_bytes": 511,
-            "sha256": "1c05e420713b04965be5756828d047d39460662c6ab1d0ef50a7dec3f5274212"
+            "sha256": "9bc19e3ff32c0faf1e3d2320da060a61ebc7a3b6424cc04375e12f9e9c4e5c7e"
           }
         }
       },
@@ -4309,7 +4309,7 @@
       "foreign_sha256": "8c01f79aaa2992014f673ecf5f1ce78b67d2cbe7c9b5136961e83af60a99e40f",
       "lmx_variants": {
         "procedural": {
-          "code": "Example:\n    @: values\n    @: next\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        int: n length(values)\n        int[]: same []\n        sys\\resize(same; n)\n        int: i n - 1\n        while: i > 0\n            same[i] := values[i] = values[i - 1]\n            values[i] := values[i - 1]\n            i -= 1\n        if: n > 0\n            same[0] := values[0] = next\n            values[0] := next\n        return: same\n",
+          "code": "Example:\n    @: values\n    @: next\n    return: @\n    run:\n        throws: copy(sys\\resize\\throws)\n        int: n length(values)\n        []int: same []\n        sys\\resize(same; n)\n        int: i n - 1\n        while: i > 0\n            same[i] := values[i] = values[i - 1]\n            values[i] := values[i - 1]\n            i -= 1\n        if: n > 0\n            same[0] := values[0] = next\n            values[0] := next\n        return: same\n",
           "source_file": "source/lmx/procedural/J27.lm3",
           "contract_id": "J27",
           "runtime_execution": "NOT_RUN",
@@ -4318,10 +4318,10 @@
             "characters_with_whitespace": 437,
             "nonblank_lines": 18,
             "utf8_bytes": 437,
-            "sha256": "19fed4aa31302db2982604ce3329f21a54453a05809c23a1acc8032a8c162ccb"
+            "sha256": "5e8321a3c27f56def9fcc405a27f4a089570d5286ba16e9d4ec9adc149edb814"
           },
           "parser_execution": "NOT_RUN",
-          "source_sha256": "19fed4aa31302db2982604ce3329f21a54453a05809c23a1acc8032a8c162ccb"
+          "source_sha256": "5e8321a3c27f56def9fcc405a27f4a089570d5286ba16e9d4ec9adc149edb814"
         },
         "functional": {
           "code": "Example:\n    @: values\n    @: next\n    return: @\n    run:\n        throws: copy(slice\\throws) copy(`:=`\\throws) copy(`=`\\throws)\n        @: before values[:]\n        values[1:] .: values[:-1]\n        if: length(values) > 0\n            values[0] := next\n        return: values .= before\n",
@@ -4367,8 +4367,8 @@
         "count",
         "record"
       ],
-      "lmx": "FxMap:\n    private:\n        @: items\n        @: transform\n    required: items transform\n    return: @\n    map:\n        throws: copy(FxThrows\\traversal)\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: result FxSeqAllocate\\make(@[]; count)\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            result[i] := FxApply\\apply(transform; FxOne\\make(item))\n            i += 1\n        return: result\n\nFxFilter:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: @\n    filter:\n        throws: copy(FxThrows\\traversal)\n        private: @: info FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: result FxSeqAllocate\\make(info\\arrayType; count)\n        private: int: used 0\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: @: flagRecord FxApply\\apply(accepts; FxOne\\make(item))\n            # Keep filter's established ordinary int-result admission channel.\n            private: int: flag \\flagRecord\n            if: flag != 0\n                FxKernel\\arrayWrite(target := result; index := used; value := item)\n                used += 1\n            i += 1\n        sys\\resize(result; used)\n        return: result\n\nFxFold:\n    private:\n        @: items\n        @: seed\n        @: step\n    required: items seed step\n    return: @\n    fold:\n        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: accumulator seed\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            accumulator := FxApply\\apply(step; FxTwo\\make(accumulator; item))\n            i += 1\n        return: accumulator\n\nFxScan:\n    private:\n        @: items\n        @: seed\n        @: step\n    required: items seed step\n    return: @\n    scan:\n        throws: copy(FxThrows\\traversal)\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: result FxSeqAllocate\\make(@[]; 0)\n        private: @: info FxSeqInfo\\get(result)\n        private: int: total FxSeqSize\\sum(count; 1; info\\maxLength)\n        sys\\resize(result; total)\n        private: @: accumulator seed\n        result[0] := accumulator\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            accumulator := FxApply\\apply(step; FxTwo\\make(accumulator; item))\n            result[i + 1] := accumulator\n            i += 1\n        return: result\n\nFxPair:\n    @: first 0\n    @: second 0\n\nFxZip:\n    private:\n        @: first\n        @: second\n    required: first second\n    return: @\n    zip:\n        throws: copy(FxThrows\\sequence)\n        FxSeqInfo\\get(first)\n        FxSeqInfo\\get(second)\n        private: int: count length(first)\n        if: length(second) < count\n            count := length(second)\n        private: @: result FxSeqAllocate\\make(@[]; count)\n        private: int: i 0\n        while: i < count\n            private: @: pair (copy(FxPair))\n            pair\\first := FxSeqRead\\read(first; i)\n            pair\\second := FxSeqRead\\read(second; i)\n            result[i] := pair\n            i += 1\n        return: result\n\nFxZipWith:\n    private:\n        @: first\n        @: second\n        @: combine\n    required: first second combine\n    return: @\n    zipWith:\n        throws: copy(FxThrows\\traversal)\n        FxSeqInfo\\get(first)\n        FxSeqInfo\\get(second)\n        private: int: count length(first)\n        if: length(second) < count\n            count := length(second)\n        private: @: result FxSeqAllocate\\make(@[]; count)\n        private: int: i 0\n        while: i < count\n            private: @: leftValue FxSeqRead\\read(first; i)\n            private: @: rightValue FxSeqRead\\read(second; i)\n            result[i] := FxApply\\apply(combine; FxTwo\\make(leftValue; rightValue))\n            i += 1\n        return: result\n\nFxListBind:\n    private:\n        []: input\n        @: next\n    required: input next\n    return: @[]\n    bind:\n        throws: copy(FxThrows\\traversal)\n        private: @: result FxSeqBind\\bind(items := input; next := next)\n        return: \\result\n\nFxSeqBind:\n    private:\n        @: items\n        @: next\n    required: items next\n    return: @\n    bind:\n        throws: copy(FxThrows\\traversal)\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: out FxSeqAllocate\\make(@[]; 0)\n        private: @: info FxSeqInfo\\get(out)\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: @: part FxApply\\apply(next; FxOne\\make(item))\n            FxSeqInfo\\get(part)\n            private: int: before length(out)\n            private: int: added length(part)\n            private: int: after FxSeqSize\\sum(before; added; info\\maxLength)\n            sys\\resize(out; after)\n            private: int: j 0\n            while: j < added\n                out[before + j] := FxSeqRead\\read(part; j)\n                j += 1\n            i += 1\n        return: out\n\nFxSeqAny:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: int\n    any:\n        throws: copy(FxThrows\\predicate)\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: @: value FxApply\\apply(accepts; FxOne\\make(item))\n            if: FxSeqPredicate\\truth(value) != 0\n                return: 1\n            i += 1\n        return: 0\n\nFxSeqAll:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: int\n    all:\n        throws: copy(FxThrows\\predicate)\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: @: value FxApply\\apply(accepts; FxOne\\make(item))\n            if: FxSeqPredicate\\truth(value) = 0\n                return: 0\n            i += 1\n        return: 1\n\nFxSeqIndex:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: @\n    index:\n        throws: FxCallFailure FxKernelFailure FxPredicate FxRecordArity FxTypeToken ReceiverIndex\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: @: value FxApply\\apply(accepts; FxOne\\make(item))\n            if: FxSeqPredicate\\truth(value) != 0\n                return: FxSome\\some(value := (i FxRecordOperands\\record))\n            i += 1\n        return: FxNone\\none()\n\nFxSeqCount:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: int\n    count:\n        throws: copy(FxThrows\\predicate)\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: int: matched 0\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: @: value FxApply\\apply(accepts; FxOne\\make(item))\n            if: FxSeqPredicate\\truth(value) != 0\n                matched += 1\n            i += 1\n        return: matched\n\nFxRecordOperands:\n    copy: FxPreparedOperands\n    const: int: PRIORITY sys\\priority(\"+\")\n    required: left right\n    return: @\n    record:\n        throws: FxRecordArity\n        if: length(right) != 0\n            throw: FxRecordArity()\n        return: left\n\nFxMaybe:\n    int: present 0\n    @: value 0\n\nFxSome:\n    private: @: value\n    required: value\n    return: FxMaybe@\n    some:\n        private: @: result (copy(FxMaybe))\n        result\\present := 1\n        result\\value := value\n        return: result\n\nFxNone:\n    return: FxMaybe@\n    none:\n        return: (copy(FxMaybe))\n",
-      "foreign": "module JuliaOrderedReference\nexport mapValues, filterValues, foldValues, scanValues, zipValues, zipWithValues,\n       flatMapValues, anyValues, allValues, indexValue, countValues, recordValue\n\n# Scoped reference algorithms, not copies of Base and not imported by clients.\n# Finite one-based vectors; callbacks may throw, but must not mutate the inputs.\n# A logical LMX int predicate corresponds here to Bool or machine Int.\nfunction truth(value)\n    (value isa Bool || value isa Int) || throw(ArgumentError(\"predicate result\"))\n    value != 0\nend\nfunction vectorInput(xs::AbstractVector)\n    Base.require_one_based_indexing(xs)\n    xs\nend\nfunction extraLength(old::Int, added::Int)\n    added <= typemax(Int) - old || throw(OverflowError(\"sequence length\"))\n    old + added\nend\nrecordValue(value) = value\nfunction mapValues(f, xs::AbstractVector)\n    vectorInput(xs)\n    result = Vector{Any}(undef, length(xs))\n    for i in eachindex(xs)\n        result[i] = f(xs[i])\n    end\n    result\nend\nfunction filterValues(f, xs::AbstractVector)\n    vectorInput(xs)\n    result = Vector{eltype(xs)}(undef, length(xs))\n    used = 0\n    for i in eachindex(xs)\n        value = xs[i]\n        if truth(f(value))\n            used += 1\n            result[used] = value\n        end\n    end\n    resize!(result, used)\nend\n# Julia String is a different storage profile; iterate characters and rebuild.\nfilterValues(f, text::AbstractString) = String(filterValues(f, collect(text)))\nfunction foldValues(f, seed, xs::AbstractVector)\n    vectorInput(xs)\n    accumulator = seed\n    for i in eachindex(xs)\n        accumulator = f(accumulator, xs[i])\n    end\n    accumulator\nend\nfunction scanValues(f, seed, xs::AbstractVector)\n    vectorInput(xs)\n    result = Vector{Any}(undef, extraLength(length(xs), 1))\n    result[1] = seed\n    accumulator = seed\n    for i in eachindex(xs)\n        accumulator = f(accumulator, xs[i])\n        result[i + 1] = accumulator\n    end\n    result\nend\nfunction zipValues(xs::AbstractVector, ys::AbstractVector)\n    vectorInput(xs); vectorInput(ys)\n    result = Vector{Any}(undef, min(length(xs), length(ys)))\n    for i in eachindex(result)\n        result[i] = (xs[i], ys[i])\n    end\n    result\nend\nfunction zipWithValues(f, xs::AbstractVector, ys::AbstractVector)\n    vectorInput(xs); vectorInput(ys)\n    result = Vector{Any}(undef, min(length(xs), length(ys)))\n    for i in eachindex(result)\n        result[i] = f(xs[i], ys[i])\n    end\n    result\nend\nfunction flatMapValues(f, xs::AbstractVector)\n    vectorInput(xs)\n    result = Any[]\n    for i in eachindex(xs)\n        part = f(xs[i])\n        (part isa AbstractVector || part isa Tuple) ||\n            throw(ArgumentError(\"callback must return a sequence\"))\n        part isa AbstractVector && vectorInput(part)\n        before = length(result)\n        resize!(result, extraLength(before, length(part)))\n        for j in eachindex(part)\n            result[before + j] = part[j]\n        end\n    end\n    result\nend\nfunction anyValues(f, xs::AbstractVector)\n    vectorInput(xs)\n    for i in eachindex(xs)\n        truth(f(xs[i])) && return true\n    end\n    false\nend\nfunction allValues(f, xs::AbstractVector)\n    vectorInput(xs)\n    for i in eachindex(xs)\n        truth(f(xs[i])) || return false\n    end\n    true\nend\nfunction indexValue(f, xs::AbstractVector)\n    vectorInput(xs)\n    for i in eachindex(xs)\n        truth(f(xs[i])) && return i - 1\n    end\n    nothing\nend\nfunction countValues(f, xs::AbstractVector)\n    vectorInput(xs)\n    found = 0\n    for i in eachindex(xs)\n        if truth(f(xs[i]))\n            found += 1\n        end\n    end\n    found\nend\nend\n",
+      "lmx": "FxMap:\n    private:\n        @: items\n        @: transform\n    required: items transform\n    return: @\n    map:\n        throws: copy(FxThrows\\traversal)\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: result FxSeqAllocate\\make([]@; count)\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            result[i] := FxApply\\apply(transform; FxOne\\make(item))\n            i += 1\n        return: result\n\nFxFilter:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: @\n    filter:\n        throws: copy(FxThrows\\traversal)\n        private: @: info FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: result FxSeqAllocate\\make(info\\arrayType; count)\n        private: int: used 0\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: @: flagRecord FxApply\\apply(accepts; FxOne\\make(item))\n            # Keep filter's established ordinary int-result admission channel.\n            private: int: flag \\flagRecord\n            if: flag != 0\n                FxKernel\\arrayWrite(target := result; index := used; value := item)\n                used += 1\n            i += 1\n        sys\\resize(result; used)\n        return: result\n\nFxFold:\n    private:\n        @: items\n        @: seed\n        @: step\n    required: items seed step\n    return: @\n    fold:\n        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: accumulator seed\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            accumulator := FxApply\\apply(step; FxTwo\\make(accumulator; item))\n            i += 1\n        return: accumulator\n\nFxScan:\n    private:\n        @: items\n        @: seed\n        @: step\n    required: items seed step\n    return: @\n    scan:\n        throws: copy(FxThrows\\traversal)\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: result FxSeqAllocate\\make([]@; 0)\n        private: @: info FxSeqInfo\\get(result)\n        private: int: total FxSeqSize\\sum(count; 1; info\\maxLength)\n        sys\\resize(result; total)\n        private: @: accumulator seed\n        result[0] := accumulator\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            accumulator := FxApply\\apply(step; FxTwo\\make(accumulator; item))\n            result[i + 1] := accumulator\n            i += 1\n        return: result\n\nFxPair:\n    @: first 0\n    @: second 0\n\nFxZip:\n    private:\n        @: first\n        @: second\n    required: first second\n    return: @\n    zip:\n        throws: copy(FxThrows\\sequence)\n        FxSeqInfo\\get(first)\n        FxSeqInfo\\get(second)\n        private: int: count length(first)\n        if: length(second) < count\n            count := length(second)\n        private: @: result FxSeqAllocate\\make([]@; count)\n        private: int: i 0\n        while: i < count\n            private: @: pair (copy(FxPair))\n            pair\\first := FxSeqRead\\read(first; i)\n            pair\\second := FxSeqRead\\read(second; i)\n            result[i] := pair\n            i += 1\n        return: result\n\nFxZipWith:\n    private:\n        @: first\n        @: second\n        @: combine\n    required: first second combine\n    return: @\n    zipWith:\n        throws: copy(FxThrows\\traversal)\n        FxSeqInfo\\get(first)\n        FxSeqInfo\\get(second)\n        private: int: count length(first)\n        if: length(second) < count\n            count := length(second)\n        private: @: result FxSeqAllocate\\make([]@; count)\n        private: int: i 0\n        while: i < count\n            private: @: leftValue FxSeqRead\\read(first; i)\n            private: @: rightValue FxSeqRead\\read(second; i)\n            result[i] := FxApply\\apply(combine; FxTwo\\make(leftValue; rightValue))\n            i += 1\n        return: result\n\nFxListBind:\n    private:\n        []: input\n        @: next\n    required: input next\n    return: []@\n    bind:\n        throws: copy(FxThrows\\traversal)\n        private: @: result FxSeqBind\\bind(items := input; next := next)\n        return: \\result\n\nFxSeqBind:\n    private:\n        @: items\n        @: next\n    required: items next\n    return: @\n    bind:\n        throws: copy(FxThrows\\traversal)\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: out FxSeqAllocate\\make([]@; 0)\n        private: @: info FxSeqInfo\\get(out)\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: @: part FxApply\\apply(next; FxOne\\make(item))\n            FxSeqInfo\\get(part)\n            private: int: before length(out)\n            private: int: added length(part)\n            private: int: after FxSeqSize\\sum(before; added; info\\maxLength)\n            sys\\resize(out; after)\n            private: int: j 0\n            while: j < added\n                out[before + j] := FxSeqRead\\read(part; j)\n                j += 1\n            i += 1\n        return: out\n\nFxSeqAny:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: int\n    any:\n        throws: copy(FxThrows\\predicate)\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: @: value FxApply\\apply(accepts; FxOne\\make(item))\n            if: FxSeqPredicate\\truth(value) != 0\n                return: 1\n            i += 1\n        return: 0\n\nFxSeqAll:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: int\n    all:\n        throws: copy(FxThrows\\predicate)\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: @: value FxApply\\apply(accepts; FxOne\\make(item))\n            if: FxSeqPredicate\\truth(value) = 0\n                return: 0\n            i += 1\n        return: 1\n\nFxSeqIndex:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: @\n    index:\n        throws: FxCallFailure FxKernelFailure FxPredicate FxRecordArity FxTypeToken ReceiverIndex\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: @: value FxApply\\apply(accepts; FxOne\\make(item))\n            if: FxSeqPredicate\\truth(value) != 0\n                return: FxSome\\some(value := (i FxRecordOperands\\record))\n            i += 1\n        return: FxNone\\none()\n\nFxSeqCount:\n    private:\n        @: items\n        @: accepts\n    required: items accepts\n    return: int\n    count:\n        throws: copy(FxThrows\\predicate)\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: int: matched 0\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: @: value FxApply\\apply(accepts; FxOne\\make(item))\n            if: FxSeqPredicate\\truth(value) != 0\n                matched += 1\n            i += 1\n        return: matched\n\nFxRecordOperands:\n    copy: FxPreparedOperands\n    const: int: PRIORITY sys\\priority(\"+\")\n    required: left right\n    return: @\n    record:\n        throws: FxRecordArity\n        if: length(right) != 0\n            throw: FxRecordArity()\n        return: left\n\nFxMaybe:\n    int: present 0\n    @: value 0\n\nFxSome:\n    private: @: value\n    required: value\n    return: @FxMaybe\n    some:\n        private: @: result (copy(FxMaybe))\n        result\\present := 1\n        result\\value := value\n        return: result\n\nFxNone:\n    return: @FxMaybe\n    none:\n        return: (copy(FxMaybe))\n",
+      "foreign": "module JuliaOrderedReference\nexport mapValues, filterValues, foldValues, scanValues, zipValues, zipWithValues,\n       flatMapValues, anyValues, allValues, indexValue, countValues, recordValue\n\n# Scoped reference algorithms, not copies of Base and not imported by clients.\n# Finite one-based vectors; callbacks may throw, but must not mutate the inputs.\n# A logical LMX int predicate corresponds here to Bool or machine Int.\nfunction truth(value)\n    (value isa Bool || value isa Int) || throw(ArgumentError(\"predicate result\"))\n    value != 0\nend\nfunction vectorInput(xs::AbstractVector)\n    Base.require_one_based_indexing(xs)\n    xs\nend\nfunction extraLength(old::Int, added::Int)\n    added <= typemax(Int) - old || throw(OverflowError(\"sequence length\"))\n    old + added\nend\nrecordValue(value) = value\nfunction mapValues(f, xs::AbstractVector)\n    vectorInput(xs)\n    result = Vector{Any}(undef, length(xs))\n    for i in eachindex(xs)\n        result[i] = f(xs[i])\n    end\n    result\nend\nfunction filterValues(f, xs::AbstractVector)\n    vectorInput(xs)\n    result = Vector{eltype(xs)}(undef, length(xs))\n    used = 0\n    for i in eachindex(xs)\n        value = xs[i]\n        if truth(f(value))\n            used += 1\n            result[used] = value\n        end\n    end\n    resize!(result, used)\nend\n# Julia String is a different storage profile; iterate characters and rebuild.\nfilterValues(f, text::AbstractString) = String(filterValues(f, collect(text)))\nfunction foldValues(f, seed, xs::AbstractVector)\n    vectorInput(xs)\n    accumulator = seed\n    for i in eachindex(xs)\n        accumulator = f(accumulator, xs[i])\n    end\n    accumulator\nend\nfunction scanValues(f, seed, xs::AbstractVector)\n    vectorInput(xs)\n    result = Vector{Any}(undef, extraLength(length(xs), 1))\n    result[1] = seed\n    accumulator = seed\n    for i in eachindex(xs)\n        accumulator = f(accumulator, xs[i])\n        result[i + 1] = accumulator\n    end\n    result\nend\nfunction zipValues(xs::AbstractVector, ys::AbstractVector)\n    vectorInput(xs); vectorInput(ys)\n    result = Vector{Any}(undef, min(length(xs), length(ys)))\n    for i in eachindex(result)\n        result[i] = (xs[i], ys[i])\n    end\n    result\nend\nfunction zipWithValues(f, xs::AbstractVector, ys::AbstractVector)\n    vectorInput(xs); vectorInput(ys)\n    result = Vector{Any}(undef, min(length(xs), length(ys)))\n    for i in eachindex(result)\n        result[i] = f(xs[i], ys[i])\n    end\n    result\nend\nfunction flatMapValues(f, xs::AbstractVector)\n    vectorInput(xs)\n    result = []Any\n    for i in eachindex(xs)\n        part = f(xs[i])\n        (part isa AbstractVector || part isa Tuple) ||\n            throw(ArgumentError(\"callback must return a sequence\"))\n        part isa AbstractVector && vectorInput(part)\n        before = length(result)\n        resize!(result, extraLength(before, length(part)))\n        for j in eachindex(part)\n            result[before + j] = part[j]\n        end\n    end\n    result\nend\nfunction anyValues(f, xs::AbstractVector)\n    vectorInput(xs)\n    for i in eachindex(xs)\n        truth(f(xs[i])) && return true\n    end\n    false\nend\nfunction allValues(f, xs::AbstractVector)\n    vectorInput(xs)\n    for i in eachindex(xs)\n        truth(f(xs[i])) || return false\n    end\n    true\nend\nfunction indexValue(f, xs::AbstractVector)\n    vectorInput(xs)\n    for i in eachindex(xs)\n        truth(f(xs[i])) && return i - 1\n    end\n    nothing\nend\nfunction countValues(f, xs::AbstractVector)\n    vectorInput(xs)\n    found = 0\n    for i in eachindex(xs)\n        if truth(f(xs[i]))\n            found += 1\n        end\n    end\n    found\nend\nend\n",
       "contract": "Конечные последовательности, произвольные типы полезных значений, упорядоченные callbacks в одной Message. map/bind/scan/zip возвращают записи значений; filter сохраняет исходный профиль. Предикаты возвращают int LMX, Bool/Int Julia. Ошибка callback распространяется; callback не изменяет входную последовательность. Частичный результат не выдаётся. index различает отсутствие и индекс 0. record сохраняет принятое значение, а не копирует граф.",
       "sources": [
         "https://docs.julialang.org/en/v1/base/collections/",
@@ -4497,8 +4497,8 @@
         "concat",
         "transpose"
       ],
-      "lmx": "FxSeqRange:\n    private:\n        int: start\n        int: stop\n        int: step 1\n    required: start stop\n    return: @\n    range:\n        throws: FxKernelFailure FxTypeToken SequenceSize SequenceStep\n        if: step = 0\n            throw: SequenceStep()\n        private: @: out FxSeqAllocate\\make(int[]; 0)\n        if: step > 0 && start >= stop\n            return: out\n        if: step < 0 && start <= stop\n            return: out\n        # Use the existing exact-integer numeric profile only for preflight.\n        # This handles MIN_INT/-1 and ranges spanning both signs without a\n        # wrapped subtraction, fixed word width, or an overflowing abs(step).\n        private: bigint: first start\n        private: bigint: last stop\n        private: bigint: stride step\n        private: bigint: distance last - first\n        if: stride < 0\n            distance := first - last\n            stride := -stride\n        private: bigint: wideCount (distance - 1) / stride + 1\n        private: @: info FxSeqInfo\\get(out)\n        if: wideCount > info\\maxLength\n            throw: SequenceSize()\n        private: int: count wideCount\n        sys\\resize(out; count)\n        private: int: current start\n        private: int: i 0\n        while: i < count\n            out[i] := current\n            i += 1\n            # Do not compute the nonexistent value after the final element.\n            if: i < count\n                current += step\n        ---\n        return: out\n\nFxSeqSlice:\n    private:\n        @: source\n        int: begin\n        int: end\n    required: source begin end\n    return: @\n    slice:\n        throws: copy(FxThrows\\sequence)\n        private: int: count FxSeqBounds\\count(source; begin; end)\n        private: @: info FxSeqInfo\\get(source)\n        private: @: out FxSeqAllocate\\make(info\\arrayType; count)\n        private: int: i 0\n        while: i < count\n            private: @: value FxSeqRead\\read(source; begin + i)\n            FxKernel\\arrayWrite(target := out; index := i; value := value)\n            i += 1\n        return: out\n\nFxSeqReverse:\n    private: @: source\n    required: source\n    return: @\n    reverse:\n        throws: copy(FxThrows\\sequence)\n        private: @: info FxSeqInfo\\get(source)\n        private: int: count length(source)\n        private: @: out FxSeqAllocate\\make(info\\arrayType; count)\n        private: int: i 0\n        while: i < count\n            private: @: value FxSeqRead\\read(source; count - 1 - i)\n            FxKernel\\arrayWrite(target := out; index := i; value := value)\n            i += 1\n        return: out\n\nFxSeqCompress:\n    private:\n        @: source\n        @: mask\n    required: source mask\n    return: @\n    compress:\n        throws: FxKernelFailure FxShape FxTypeToken ReceiverIndex SequenceElement SequenceSize\n        private: @: info FxSeqInfo\\get(source)\n        FxSeqInfo\\get(mask)\n        private: int: count length(source)\n        if: length(mask) != count\n            throw: FxShape()\n        private: @: flags FxSeqAllocate\\make(int[]; count)\n        private: int: accepted 0\n        private: int: i 0\n        # Validate every mask value before constructing the selected result.\n        while: i < count\n            private: @: value FxSeqRead\\read(mask; i)\n            private: int: flag FxSeqInteger\\read(value)\n            flags[i] := flag\n            if: flag != 0\n                accepted += 1\n            i += 1\n        private: @: out FxSeqAllocate\\make(info\\arrayType; accepted)\n        private: int: written 0\n        i := 0\n        while: i < count\n            if: flags[i] != 0\n                private: @: value FxSeqRead\\read(source; i)\n                FxKernel\\arrayWrite(target := out; index := written; value := value)\n                written += 1\n            i += 1\n        return: out\n\nFxSeqConcat:\n    private: @: parts\n    required: parts\n    return: @\n    concat:\n        throws: copy(FxThrows\\sequence)\n        FxSeqInfo\\get(parts)\n        private: int: count length(parts)\n        private: int: arrayType @[]\n        private: int: elementType 0\n        private: int: allDense 1\n        private: int: i 0\n        # Inspect all parts, including empty dense parts. Comparison uses\n        # canonical full element codes from the common type resolver.\n        while: i < count\n            private: @: part FxSeqRead\\read(parts; i)\n            private: @: info FxSeqInfo\\get(part)\n            if: i = 0\n                arrayType := info\\arrayType\n                elementType := info\\elementType\n            if: info\\dense = 0 || info\\elementType != elementType\n                allDense := 0\n            i += 1\n        if: count = 0 || allDense = 0\n            arrayType := @[]\n        private: @: out FxSeqAllocate\\make(arrayType; 0)\n        private: @: outInfo FxSeqInfo\\get(out)\n        private: int: total 0\n        i := 0\n        while: i < count\n            private: @: part FxSeqRead\\read(parts; i)\n            total := FxSeqSize\\sum(total; length(part); outInfo\\maxLength)\n            i += 1\n        sys\\resize(out; total)\n        private: int: at 0\n        i := 0\n        while: i < count\n            private: @: part FxSeqRead\\read(parts; i)\n            private: int: partSize length(part)\n            private: int: j 0\n            while: j < partSize\n                private: @: value FxSeqRead\\read(part; j)\n                FxKernel\\arrayWrite(target := out; index := at; value := value)\n                at += 1\n                j += 1\n            i += 1\n        return: out\n\nFxTranspose:\n    private: @: rows\n    required: rows\n    return: @\n    transpose:\n        throws: FxKernelFailure FxShape FxTypeToken ReceiverIndex SequenceSize\n        FxSeqInfo\\get(rows)\n        private: int: height length(rows)\n        private: @: result FxSeqAllocate\\make(@[]; 0)\n        if: height = 0\n            return: result\n        private: @: first FxSeqRead\\read(rows; 0)\n        FxSeqInfo\\get(first)\n        private: int: width length(first)\n        private: int: i 0\n        while: i < height\n            private: @: row FxSeqRead\\read(rows; i)\n            FxSeqInfo\\get(row)\n            if: length(row) != width\n                throw: FxShape()\n            i += 1\n        private: @: resultInfo FxSeqInfo\\get(result)\n        FxSeqSize\\sum(0; width; resultInfo\\maxLength)\n        sys\\resize(result; width)\n        private: int: j 0\n        while: j < width\n            private: @: column FxSeqAllocate\\make(@[]; height)\n            i := 0\n            while: i < height\n                private: @: row FxSeqRead\\read(rows; i)\n                column[i] := FxSeqRead\\read(row; j)\n                i += 1\n            result[j] := column\n            j += 1\n        return: result\n",
-      "foreign": "module JuliaArrayReference\nexport rangeValues, sliceValues, reverseValues, compressValues, concatValues,\n       transposeRows\n\n# One-based finite vectors; user-visible slice positions are zero based.\nfunction vectorInput(xs::AbstractVector)\n    Base.require_one_based_indexing(xs)\n    xs\nend\nfunction bounds(xs::AbstractVector, lo::Int, hi::Int)\n    vectorInput(xs)\n    0 <= lo <= hi <= length(xs) || throw(BoundsError(xs, lo:hi))\n    hi - lo\nend\nfunction checkedLength(old::Int, added::Int)\n    added <= typemax(Int) - old || throw(OverflowError(\"sequence length\"))\n    old + added\nend\nfunction rangeValues(start::Int, stop::Int, step::Int=1)\n    step != 0 || throw(ArgumentError(\"zero step\"))\n    (step > 0 ? start >= stop : start <= stop) && return Int[]\n    distance = step > 0 ? big(stop) - big(start) : big(start) - big(stop)\n    wideCount = div(distance - 1, abs(big(step))) + 1\n    wideCount <= typemax(Int) || throw(OverflowError(\"sequence length\"))\n    result = Vector{Int}(undef, Int(wideCount))\n    current = start\n    for i in eachindex(result)\n        result[i] = current\n        i < length(result) && (current += step)\n    end\n    result\nend\nfunction sliceValues(xs::AbstractVector, lo::Int, hi::Int)\n    count = bounds(xs, lo, hi)\n    result = Vector{eltype(xs)}(undef, count)\n    for i in eachindex(result)\n        result[i] = xs[lo + i]\n    end\n    result\nend\nfunction reverseValues(xs::AbstractVector)\n    vectorInput(xs)\n    result = Vector{eltype(xs)}(undef, length(xs))\n    for i in eachindex(result)\n        result[i] = xs[length(xs) - (i - 1)]\n    end\n    result\nend\nfunction compressValues(xs::AbstractVector, mask::AbstractVector)\n    vectorInput(xs); vectorInput(mask)\n    length(xs) == length(mask) || throw(DimensionMismatch(\"mask\"))\n    flags = Vector{Int}(undef, length(mask))\n    accepted = 0\n    for i in eachindex(mask)\n        value = mask[i]\n        value isa Int || throw(ArgumentError(\"mask element\"))\n        flags[i] = value\n        value != 0 && (accepted += 1)\n    end\n    result = Vector{eltype(xs)}(undef, accepted)\n    written = 0\n    for i in eachindex(xs)\n        if flags[i] != 0\n            written += 1\n            result[written] = xs[i]\n        end\n    end\n    result\nend\nfunction concatValues(parts::AbstractVector)\n    vectorInput(parts)\n    elementType = Any\n    sameType = !isempty(parts)\n    for i in eachindex(parts)\n        part = vectorInput(parts[i])\n        if i == 1\n            elementType = eltype(part)\n        elseif eltype(part) !== elementType\n            sameType = false\n        end\n    end\n    sameType || (elementType = Any)\n    total = 0\n    for part in parts\n        total = checkedLength(total, length(part))\n    end\n    result = Vector{elementType}(undef, total)\n    at = 0\n    for part in parts\n        for value in part\n            at += 1\n            result[at] = value\n        end\n    end\n    result\nend\nfunction transposeRows(rows::AbstractVector)\n    vectorInput(rows)\n    isempty(rows) && return Any[]\n    width = length(vectorInput(rows[1]))\n    for row in rows\n        vectorInput(row)\n        length(row) == width || throw(DimensionMismatch(\"ragged rows\"))\n    end\n    result = Vector{Any}(undef, width)\n    for column in 1:width\n        values = Vector{Any}(undef, length(rows))\n        for row in eachindex(rows)\n            values[row] = rows[row][column]\n        end\n        result[column] = values\n    end\n    result\nend\nend\n",
+      "lmx": "FxSeqRange:\n    private:\n        int: start\n        int: stop\n        int: step 1\n    required: start stop\n    return: @\n    range:\n        throws: FxKernelFailure FxTypeToken SequenceSize SequenceStep\n        if: step = 0\n            throw: SequenceStep()\n        private: @: out FxSeqAllocate\\make([]int; 0)\n        if: step > 0 && start >= stop\n            return: out\n        if: step < 0 && start <= stop\n            return: out\n        # Use the existing exact-integer numeric profile only for preflight.\n        # This handles MIN_INT/-1 and ranges spanning both signs without a\n        # wrapped subtraction, fixed word width, or an overflowing abs(step).\n        private: bigint: first start\n        private: bigint: last stop\n        private: bigint: stride step\n        private: bigint: distance last - first\n        if: stride < 0\n            distance := first - last\n            stride := -stride\n        private: bigint: wideCount (distance - 1) / stride + 1\n        private: @: info FxSeqInfo\\get(out)\n        if: wideCount > info\\maxLength\n            throw: SequenceSize()\n        private: int: count wideCount\n        sys\\resize(out; count)\n        private: int: current start\n        private: int: i 0\n        while: i < count\n            out[i] := current\n            i += 1\n            # Do not compute the nonexistent value after the final element.\n            if: i < count\n                current += step\n        ---\n        return: out\n\nFxSeqSlice:\n    private:\n        @: source\n        int: begin\n        int: end\n    required: source begin end\n    return: @\n    slice:\n        throws: copy(FxThrows\\sequence)\n        private: int: count FxSeqBounds\\count(source; begin; end)\n        private: @: info FxSeqInfo\\get(source)\n        private: @: out FxSeqAllocate\\make(info\\arrayType; count)\n        private: int: i 0\n        while: i < count\n            private: @: value FxSeqRead\\read(source; begin + i)\n            FxKernel\\arrayWrite(target := out; index := i; value := value)\n            i += 1\n        return: out\n\nFxSeqReverse:\n    private: @: source\n    required: source\n    return: @\n    reverse:\n        throws: copy(FxThrows\\sequence)\n        private: @: info FxSeqInfo\\get(source)\n        private: int: count length(source)\n        private: @: out FxSeqAllocate\\make(info\\arrayType; count)\n        private: int: i 0\n        while: i < count\n            private: @: value FxSeqRead\\read(source; count - 1 - i)\n            FxKernel\\arrayWrite(target := out; index := i; value := value)\n            i += 1\n        return: out\n\nFxSeqCompress:\n    private:\n        @: source\n        @: mask\n    required: source mask\n    return: @\n    compress:\n        throws: FxKernelFailure FxShape FxTypeToken ReceiverIndex SequenceElement SequenceSize\n        private: @: info FxSeqInfo\\get(source)\n        FxSeqInfo\\get(mask)\n        private: int: count length(source)\n        if: length(mask) != count\n            throw: FxShape()\n        private: @: flags FxSeqAllocate\\make([]int; count)\n        private: int: accepted 0\n        private: int: i 0\n        # Validate every mask value before constructing the selected result.\n        while: i < count\n            private: @: value FxSeqRead\\read(mask; i)\n            private: int: flag FxSeqInteger\\read(value)\n            flags[i] := flag\n            if: flag != 0\n                accepted += 1\n            i += 1\n        private: @: out FxSeqAllocate\\make(info\\arrayType; accepted)\n        private: int: written 0\n        i := 0\n        while: i < count\n            if: flags[i] != 0\n                private: @: value FxSeqRead\\read(source; i)\n                FxKernel\\arrayWrite(target := out; index := written; value := value)\n                written += 1\n            i += 1\n        return: out\n\nFxSeqConcat:\n    private: @: parts\n    required: parts\n    return: @\n    concat:\n        throws: copy(FxThrows\\sequence)\n        FxSeqInfo\\get(parts)\n        private: int: count length(parts)\n        private: int: arrayType []@\n        private: int: elementType 0\n        private: int: allDense 1\n        private: int: i 0\n        # Inspect all parts, including empty dense parts. Comparison uses\n        # canonical full element codes from the common type resolver.\n        while: i < count\n            private: @: part FxSeqRead\\read(parts; i)\n            private: @: info FxSeqInfo\\get(part)\n            if: i = 0\n                arrayType := info\\arrayType\n                elementType := info\\elementType\n            if: info\\dense = 0 || info\\elementType != elementType\n                allDense := 0\n            i += 1\n        if: count = 0 || allDense = 0\n            arrayType := []@\n        private: @: out FxSeqAllocate\\make(arrayType; 0)\n        private: @: outInfo FxSeqInfo\\get(out)\n        private: int: total 0\n        i := 0\n        while: i < count\n            private: @: part FxSeqRead\\read(parts; i)\n            total := FxSeqSize\\sum(total; length(part); outInfo\\maxLength)\n            i += 1\n        sys\\resize(out; total)\n        private: int: at 0\n        i := 0\n        while: i < count\n            private: @: part FxSeqRead\\read(parts; i)\n            private: int: partSize length(part)\n            private: int: j 0\n            while: j < partSize\n                private: @: value FxSeqRead\\read(part; j)\n                FxKernel\\arrayWrite(target := out; index := at; value := value)\n                at += 1\n                j += 1\n            i += 1\n        return: out\n\nFxTranspose:\n    private: @: rows\n    required: rows\n    return: @\n    transpose:\n        throws: FxKernelFailure FxShape FxTypeToken ReceiverIndex SequenceSize\n        FxSeqInfo\\get(rows)\n        private: int: height length(rows)\n        private: @: result FxSeqAllocate\\make([]@; 0)\n        if: height = 0\n            return: result\n        private: @: first FxSeqRead\\read(rows; 0)\n        FxSeqInfo\\get(first)\n        private: int: width length(first)\n        private: int: i 0\n        while: i < height\n            private: @: row FxSeqRead\\read(rows; i)\n            FxSeqInfo\\get(row)\n            if: length(row) != width\n                throw: FxShape()\n            i += 1\n        private: @: resultInfo FxSeqInfo\\get(result)\n        FxSeqSize\\sum(0; width; resultInfo\\maxLength)\n        sys\\resize(result; width)\n        private: int: j 0\n        while: j < width\n            private: @: column FxSeqAllocate\\make([]@; height)\n            i := 0\n            while: i < height\n                private: @: row FxSeqRead\\read(rows; i)\n                column[i] := FxSeqRead\\read(row; j)\n                i += 1\n            result[j] := column\n            j += 1\n        return: result\n",
+      "foreign": "module JuliaArrayReference\nexport rangeValues, sliceValues, reverseValues, compressValues, concatValues,\n       transposeRows\n\n# One-based finite vectors; user-visible slice positions are zero based.\nfunction vectorInput(xs::AbstractVector)\n    Base.require_one_based_indexing(xs)\n    xs\nend\nfunction bounds(xs::AbstractVector, lo::Int, hi::Int)\n    vectorInput(xs)\n    0 <= lo <= hi <= length(xs) || throw(BoundsError(xs, lo:hi))\n    hi - lo\nend\nfunction checkedLength(old::Int, added::Int)\n    added <= typemax(Int) - old || throw(OverflowError(\"sequence length\"))\n    old + added\nend\nfunction rangeValues(start::Int, stop::Int, step::Int=1)\n    step != 0 || throw(ArgumentError(\"zero step\"))\n    (step > 0 ? start >= stop : start <= stop) && return []Int\n    distance = step > 0 ? big(stop) - big(start) : big(start) - big(stop)\n    wideCount = div(distance - 1, abs(big(step))) + 1\n    wideCount <= typemax(Int) || throw(OverflowError(\"sequence length\"))\n    result = Vector{Int}(undef, Int(wideCount))\n    current = start\n    for i in eachindex(result)\n        result[i] = current\n        i < length(result) && (current += step)\n    end\n    result\nend\nfunction sliceValues(xs::AbstractVector, lo::Int, hi::Int)\n    count = bounds(xs, lo, hi)\n    result = Vector{eltype(xs)}(undef, count)\n    for i in eachindex(result)\n        result[i] = xs[lo + i]\n    end\n    result\nend\nfunction reverseValues(xs::AbstractVector)\n    vectorInput(xs)\n    result = Vector{eltype(xs)}(undef, length(xs))\n    for i in eachindex(result)\n        result[i] = xs[length(xs) - (i - 1)]\n    end\n    result\nend\nfunction compressValues(xs::AbstractVector, mask::AbstractVector)\n    vectorInput(xs); vectorInput(mask)\n    length(xs) == length(mask) || throw(DimensionMismatch(\"mask\"))\n    flags = Vector{Int}(undef, length(mask))\n    accepted = 0\n    for i in eachindex(mask)\n        value = mask[i]\n        value isa Int || throw(ArgumentError(\"mask element\"))\n        flags[i] = value\n        value != 0 && (accepted += 1)\n    end\n    result = Vector{eltype(xs)}(undef, accepted)\n    written = 0\n    for i in eachindex(xs)\n        if flags[i] != 0\n            written += 1\n            result[written] = xs[i]\n        end\n    end\n    result\nend\nfunction concatValues(parts::AbstractVector)\n    vectorInput(parts)\n    elementType = Any\n    sameType = !isempty(parts)\n    for i in eachindex(parts)\n        part = vectorInput(parts[i])\n        if i == 1\n            elementType = eltype(part)\n        elseif eltype(part) !== elementType\n            sameType = false\n        end\n    end\n    sameType || (elementType = Any)\n    total = 0\n    for part in parts\n        total = checkedLength(total, length(part))\n    end\n    result = Vector{elementType}(undef, total)\n    at = 0\n    for part in parts\n        for value in part\n            at += 1\n            result[at] = value\n        end\n    end\n    result\nend\nfunction transposeRows(rows::AbstractVector)\n    vectorInput(rows)\n    isempty(rows) && return []Any\n    width = length(vectorInput(rows[1]))\n    for row in rows\n        vectorInput(row)\n        length(row) == width || throw(DimensionMismatch(\"ragged rows\"))\n    end\n    result = Vector{Any}(undef, width)\n    for column in 1:width\n        values = Vector{Any}(undef, length(rows))\n        for row in eachindex(rows)\n            values[row] = rows[row][column]\n        end\n        result[column] = values\n    end\n    result\nend\nend\n",
       "contract": "Полные конечные одномерные массивы и прямоугольные массивы строк. Диапазоны и срезы полуоткрыты и используют нулевые позиции. Предусмотрены пустые входы, отрицательный шаг, отказ на нулевом шаге, проверка размеров и несовместимой формы. Копируются внешние позиции, ссылочные цели сохраняются. concat не делает рекурсивного flatten. Julia reference принимает обычные one-based AbstractVector, а не все возможные AbstractArray/OffsetArray.",
       "sources": [
         "https://docs.julialang.org/en/v1/base/arrays/",
@@ -4564,7 +4564,7 @@
         "splice",
         "replaceRange"
       ],
-      "lmx": "FxSeqReplaceRange:\n    private:\n        @: target\n        int: begin\n        int: end\n        @: values\n    required: target begin end values\n    return: @\n    replaceRange:\n        throws: copy(FxThrows\\mutation)\n        private: @: info FxSeqInfo\\get(target)\n        FxSeqInfo\\get(values)\n        private: int: removed FxSeqBounds\\count(target; begin; end)\n        private: int: oldSize length(target)\n        private: int: added length(values)\n        private: int: retained oldSize - removed\n        private: int: newSize FxSeqSize\\sum(retained; added; info\\maxLength)\n        private: @: stage FxSeqAllocate\\make(info\\arrayType; added)\n        private: int: i 0\n        # This conservative overlap-safe path buffers only the inserted range.\n        # Dense preparation keeps dense T storage; @[] keeps direct references.\n        # No hidden user converter or initializer is called by arrayAdmit.\n        # Full ordinary admission belongs here, never in the commit loop.\n        while: i < added\n            private: @: sourceValue FxSeqRead\\read(values; i)\n            private: @: ready FxSeqAdmit\\admit(target; sourceValue)\n            FxKernel\\arrayWrite(target := stage; index := i; value := ready)\n            i += 1\n        # Capacity can change while descriptor identity is retained. Resource\n        # failure is ordinary; no general transactional promise is introduced.\n        sys\\reserve(target; newSize)\n        if: newSize > oldSize\n            private: int: shift newSize - oldSize\n            sys\\resize(target; newSize)\n            i := oldSize\n            # Move the tail backwards before inserting, like a typed memmove.\n            while: i > end\n                i -= 1\n                private: @: value FxSeqRead\\read(target; i)\n                FxKernel\\arrayWrite(target := target; index := i + shift; value := value)\n        ---\n        else:\n            private: int: destination begin + added\n            i := end\n            # For shrink/equal length the forward order does not overwrite a\n            # source tail element that has not yet been read.\n            while: i < oldSize\n                private: @: value FxSeqRead\\read(target; i)\n                FxKernel\\arrayWrite(target := target; index := destination; value := value)\n                destination += 1\n                i += 1\n            sys\\resize(target; newSize)\n        i := 0\n        while: i < added\n            private: @: value FxSeqRead\\read(stage; i)\n            FxKernel\\arrayWrite(target := target; index := begin + i; value := value)\n            i += 1\n        return: target\n\nFxSeqSplice:\n    private:\n        @: target\n        int: begin\n        int: end\n        @: values\n    required: target begin end values\n    return: @\n    splice:\n        throws: copy(FxThrows\\mutation)\n        # Snapshot the removed range before reserve, resize, or any target\n        # write. Slice preserves the complete physical element profile and\n        # copies outer slots only: referenced targets remain shared.\n        private: @: removed FxSeqSlice\\slice(target; begin; end)\n        # The common replacement path prepares all inserted values before\n        # commit, including values = target and other overlapping sources.\n        # Failure during preparation leaves target's contents unchanged.\n        FxSeqReplaceRange\\replaceRange(target; begin; end; values)\n        return: removed\n\nFxSeqAppend:\n    private:\n        @: target\n        @: values\n    required: target values\n    return: @\n    append:\n        throws: copy(FxThrows\\mutation)\n        FxSeqInfo\\get(target)\n        private: int: end length(target)\n        return: FxSeqReplaceRange\\replaceRange(target; end; end; values)\n",
+      "lmx": "FxSeqReplaceRange:\n    private:\n        @: target\n        int: begin\n        int: end\n        @: values\n    required: target begin end values\n    return: @\n    replaceRange:\n        throws: copy(FxThrows\\mutation)\n        private: @: info FxSeqInfo\\get(target)\n        FxSeqInfo\\get(values)\n        private: int: removed FxSeqBounds\\count(target; begin; end)\n        private: int: oldSize length(target)\n        private: int: added length(values)\n        private: int: retained oldSize - removed\n        private: int: newSize FxSeqSize\\sum(retained; added; info\\maxLength)\n        private: @: stage FxSeqAllocate\\make(info\\arrayType; added)\n        private: int: i 0\n        # This conservative overlap-safe path buffers only the inserted range.\n        # Dense preparation keeps dense T storage; []@ keeps direct references.\n        # No hidden user converter or initializer is called by arrayAdmit.\n        # Full ordinary admission belongs here, never in the commit loop.\n        while: i < added\n            private: @: sourceValue FxSeqRead\\read(values; i)\n            private: @: ready FxSeqAdmit\\admit(target; sourceValue)\n            FxKernel\\arrayWrite(target := stage; index := i; value := ready)\n            i += 1\n        # Capacity can change while descriptor identity is retained. Resource\n        # failure is ordinary; no general transactional promise is introduced.\n        sys\\reserve(target; newSize)\n        if: newSize > oldSize\n            private: int: shift newSize - oldSize\n            sys\\resize(target; newSize)\n            i := oldSize\n            # Move the tail backwards before inserting, like a typed memmove.\n            while: i > end\n                i -= 1\n                private: @: value FxSeqRead\\read(target; i)\n                FxKernel\\arrayWrite(target := target; index := i + shift; value := value)\n        ---\n        else:\n            private: int: destination begin + added\n            i := end\n            # For shrink/equal length the forward order does not overwrite a\n            # source tail element that has not yet been read.\n            while: i < oldSize\n                private: @: value FxSeqRead\\read(target; i)\n                FxKernel\\arrayWrite(target := target; index := destination; value := value)\n                destination += 1\n                i += 1\n            sys\\resize(target; newSize)\n        i := 0\n        while: i < added\n            private: @: value FxSeqRead\\read(stage; i)\n            FxKernel\\arrayWrite(target := target; index := begin + i; value := value)\n            i += 1\n        return: target\n\nFxSeqSplice:\n    private:\n        @: target\n        int: begin\n        int: end\n        @: values\n    required: target begin end values\n    return: @\n    splice:\n        throws: copy(FxThrows\\mutation)\n        # Snapshot the removed range before reserve, resize, or any target\n        # write. Slice preserves the complete physical element profile and\n        # copies outer slots only: referenced targets remain shared.\n        private: @: removed FxSeqSlice\\slice(target; begin; end)\n        # The common replacement path prepares all inserted values before\n        # commit, including values = target and other overlapping sources.\n        # Failure during preparation leaves target's contents unchanged.\n        FxSeqReplaceRange\\replaceRange(target; begin; end; values)\n        return: removed\n\nFxSeqAppend:\n    private:\n        @: target\n        @: values\n    required: target values\n    return: @\n    append:\n        throws: copy(FxThrows\\mutation)\n        FxSeqInfo\\get(target)\n        private: int: end length(target)\n        return: FxSeqReplaceRange\\replaceRange(target; end; end; values)\n",
       "foreign": "module JuliaMutationReference\nusing ..JuliaArrayReference: bounds, sliceValues, vectorInput, checkedLength\nexport replaceRange!, spliceValues!, appendValues!\n\n# Full scoped mutation algorithm. It also handles overlapping source values.\n# Ordinary element admission happens in stage before the first target write.\n# Allocation/runtime failures are propagated, not presented as a transaction.\nfunction replaceRange!(target::Vector{T}, lo::Int, hi::Int,\n                       values::AbstractVector) where T\n    removed = bounds(target, lo, hi)\n    vectorInput(values)\n    oldSize = length(target)\n    added = length(values)\n    newSize = checkedLength(oldSize - removed, added)\n    stage = Vector{T}(undef, added)\n    for i in eachindex(values)\n        stage[i] = values[i]\n    end\n    sizehint!(target, newSize)\n    if newSize > oldSize\n        shift = newSize - oldSize\n        resize!(target, newSize)\n        i = oldSize\n        while i > hi\n            target[i + shift] = target[i]\n            i -= 1\n        end\n    else\n        destination = lo + added + 1\n        for i in hi + 1:oldSize\n            target[destination] = target[i]\n            destination += 1\n        end\n        resize!(target, newSize)\n    end\n    for i in eachindex(stage)\n        target[lo + i] = stage[i]\n    end\n    target\nend\nfunction spliceValues!(target::Vector, lo::Int, hi::Int,\n                       values::AbstractVector)\n    removed = sliceValues(target, lo, hi)\n    replaceRange!(target, lo, hi, values)\n    removed\nend\nfunction appendValues!(target::Vector, values::AbstractVector)\n    position = length(target)\n    replaceRange!(target, position, position, values)\nend\nend\n",
       "contract": "Один общий алгоритм replaceRange, splice возвращает удалённые элементы, append возвращает исходный target. Обе reference-реализации полностью подготавливают вставку до первой записи, в том числе при перекрытии. Обычное принятие типа и исчерпание ресурсов остаются правилами respective runtime; обещания общей транзакции нет. Сравнение клиентов J17/J18 ограничено совместимыми неперекрывающимися входами, поскольку Base.splice! предупреждает о разделяемой памяти.",
       "sources": [
@@ -4618,8 +4618,8 @@
         "unique",
         "groupBy"
       ],
-      "lmx": "FxSort:\n    private:\n        @: items\n        @: compare\n    required: items compare\n    return: @\n    sort:\n        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize\n        private: @: info FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: current FxSeqSlice\\slice(items; 0; count)\n        if: count < 2\n            return: current\n        private: @: scratch FxSeqAllocate\\make(info\\arrayType; count)\n        private: int: width 1\n        while: width < count\n            private: int: start 0\n            while: start < count\n                private: int: middle count\n                if: width < count - start\n                    middle := start + width\n                private: int: end count\n                if: width < count - middle\n                    end := middle + width\n                private: int: left start\n                private: int: right middle\n                private: int: at start\n                while: at < end\n                    private: int: takeLeft 0\n                    if: right = end\n                        takeLeft := 1\n                    else:\n                        if: left < middle\n                            private: @: a FxSeqRead\\read(current; left)\n                            private: @: b FxSeqRead\\read(current; right)\n                            private: @: answer FxApply\\apply(compare; FxTwo\\make(a; b))\n                            private: int: order FxSeqInteger\\read(answer)\n                            takeLeft := order <= 0\n                    ---\n                    private: @: selected 0\n                    if: takeLeft != 0\n                        selected := FxSeqRead\\read(current; left)\n                        left += 1\n                    else:\n                        selected := FxSeqRead\\read(current; right)\n                        right += 1\n                    FxSeqStore\\write(scratch; at; selected)\n                    at += 1\n                start := end\n            private: @: previous current\n            current := scratch\n            scratch := previous\n            # Guard before doubling: count bounds the array length and bytes.\n            if: width > count - width\n                width := count\n            else:\n                width += width\n        ---\n        return: current\n\nFxUnique:\n    private:\n        @: items\n        @: same 0\n    required: items\n    return: @\n    unique:\n        throws: copy(FxThrows\\predicate) SequenceElement SequenceSize\n        private: @: info FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: result FxSeqAllocate\\make(info\\arrayType; count)\n        private: int: used 0\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: int: duplicate 0\n            private: int: j 0\n            while: j < used\n                private: @: previous FxSeqRead\\read(result; j)\n                if: FxValueSame\\test(previous; item; same) != 0\n                    duplicate := 1\n                    break\n                j += 1\n            if: duplicate = 0\n                FxSeqStore\\write(result; used; item)\n                used += 1\n            i += 1\n        sys\\resize(result; used)\n        return: result\n\nFxGroup:\n    @: key 0\n    @: items 0\n\nFxGroupBy:\n    private:\n        @: items\n        @: keyOf 0\n        @: sameKey 0\n    required: items\n    return: @\n    groupBy:\n        throws: copy(FxThrows\\predicate) SequenceElement SequenceSize\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: result FxSeqAllocate\\make(@[]; 0)\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: @: key FxProjectValue\\get(item; keyOf)\n            private: @: group 0\n            private: int: j 0\n            while: j < length(result)\n                private: FxGroup@: candidate result[j]\n                private: int: flag FxValueSame\\test(candidate\\key; key; sameKey)\n                if: flag != 0\n                    group := candidate\n                    break\n                j += 1\n            if: group = 0\n                group := (copy(FxGroup))\n                group\\key := key\n                group\\items := FxSeqAllocate\\make(@[]; 0)\n                FxSeqPush\\append(result; group)\n            FxSeqPush\\append(group\\items; item)\n            i += 1\n        return: result\n",
-      "foreign": "module JuliaOrderGroupReference\nusing ..JuliaOrderedReference: truth, vectorInput\nexport sortValues, uniqueValues, groupValues\n\n# Explicit callbacks support arbitrary values; no hash/string conversion.\n# Ordering and equality keys must not mutate while the operation is running.\nfunction orderValue(answer)\n    answer isa Int || throw(ArgumentError(\"comparator result\"))\n    answer\nend\nfunction sortValues(compare, items::AbstractVector)\n    vectorInput(items)\n    count = length(items)\n    current = Vector{eltype(items)}(undef, count)\n    for i in eachindex(items)\n        current[i] = items[i]\n    end\n    count < 2 && return current\n    scratch = similar(current)\n    width = 1\n    while width < count\n        start = 0\n        while start < count\n            middle = width < count - start ? start + width : count\n            stop = width < count - middle ? middle + width : count\n            left, right = start, middle\n            for at in start + 1:stop\n                takeLeft = right == stop\n                if !takeLeft && left < middle\n                    takeLeft = orderValue(compare(current[left + 1],\n                                                  current[right + 1])) <= 0\n                end\n                if takeLeft\n                    left += 1\n                    scratch[at] = current[left]\n                else\n                    right += 1\n                    scratch[at] = current[right]\n                end\n            end\n            start = stop\n        end\n        current, scratch = scratch, current\n        width = width > count - width ? count : width + width\n    end\n    current\nend\nfunction uniqueValues(same, items::AbstractVector)\n    vectorInput(items)\n    result = Vector{eltype(items)}(undef, length(items))\n    used = 0\n    for item in items\n        duplicate = false\n        for j in 1:used\n            if truth(same(result[j], item))\n                duplicate = true\n                break\n            end\n        end\n        if !duplicate\n            used += 1\n            result[used] = item\n        end\n    end\n    resize!(result, used)\nend\nfunction groupValues(keyOf, sameKey, items::AbstractVector)\n    vectorInput(items)\n    groups = Any[]\n    for item in items\n        key = keyOf(item)\n        found = 0\n        for j in eachindex(groups)\n            if truth(sameKey(groups[j].key, key))\n                found = j\n                break\n            end\n        end\n        if found == 0\n            push!(groups, (key=key, items=Any[]))\n            found = length(groups)\n        end\n        push!(groups[found].items, item)\n    end\n    groups\nend\nend\n",
+      "lmx": "FxSort:\n    private:\n        @: items\n        @: compare\n    required: items compare\n    return: @\n    sort:\n        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize\n        private: @: info FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: current FxSeqSlice\\slice(items; 0; count)\n        if: count < 2\n            return: current\n        private: @: scratch FxSeqAllocate\\make(info\\arrayType; count)\n        private: int: width 1\n        while: width < count\n            private: int: start 0\n            while: start < count\n                private: int: middle count\n                if: width < count - start\n                    middle := start + width\n                private: int: end count\n                if: width < count - middle\n                    end := middle + width\n                private: int: left start\n                private: int: right middle\n                private: int: at start\n                while: at < end\n                    private: int: takeLeft 0\n                    if: right = end\n                        takeLeft := 1\n                    else:\n                        if: left < middle\n                            private: @: a FxSeqRead\\read(current; left)\n                            private: @: b FxSeqRead\\read(current; right)\n                            private: @: answer FxApply\\apply(compare; FxTwo\\make(a; b))\n                            private: int: order FxSeqInteger\\read(answer)\n                            takeLeft := order <= 0\n                    ---\n                    private: @: selected 0\n                    if: takeLeft != 0\n                        selected := FxSeqRead\\read(current; left)\n                        left += 1\n                    else:\n                        selected := FxSeqRead\\read(current; right)\n                        right += 1\n                    FxSeqStore\\write(scratch; at; selected)\n                    at += 1\n                start := end\n            private: @: previous current\n            current := scratch\n            scratch := previous\n            # Guard before doubling: count bounds the array length and bytes.\n            if: width > count - width\n                width := count\n            else:\n                width += width\n        ---\n        return: current\n\nFxUnique:\n    private:\n        @: items\n        @: same 0\n    required: items\n    return: @\n    unique:\n        throws: copy(FxThrows\\predicate) SequenceElement SequenceSize\n        private: @: info FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: result FxSeqAllocate\\make(info\\arrayType; count)\n        private: int: used 0\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: int: duplicate 0\n            private: int: j 0\n            while: j < used\n                private: @: previous FxSeqRead\\read(result; j)\n                if: FxValueSame\\test(previous; item; same) != 0\n                    duplicate := 1\n                    break\n                j += 1\n            if: duplicate = 0\n                FxSeqStore\\write(result; used; item)\n                used += 1\n            i += 1\n        sys\\resize(result; used)\n        return: result\n\nFxGroup:\n    @: key 0\n    @: items 0\n\nFxGroupBy:\n    private:\n        @: items\n        @: keyOf 0\n        @: sameKey 0\n    required: items\n    return: @\n    groupBy:\n        throws: copy(FxThrows\\predicate) SequenceElement SequenceSize\n        FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: result FxSeqAllocate\\make([]@; 0)\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: @: key FxProjectValue\\get(item; keyOf)\n            private: @: group 0\n            private: int: j 0\n            while: j < length(result)\n                private: @FxGroup: candidate result[j]\n                private: int: flag FxValueSame\\test(candidate\\key; key; sameKey)\n                if: flag != 0\n                    group := candidate\n                    break\n                j += 1\n            if: group = 0\n                group := (copy(FxGroup))\n                group\\key := key\n                group\\items := FxSeqAllocate\\make([]@; 0)\n                FxSeqPush\\append(result; group)\n            FxSeqPush\\append(group\\items; item)\n            i += 1\n        return: result\n",
+      "foreign": "module JuliaOrderGroupReference\nusing ..JuliaOrderedReference: truth, vectorInput\nexport sortValues, uniqueValues, groupValues\n\n# Explicit callbacks support arbitrary values; no hash/string conversion.\n# Ordering and equality keys must not mutate while the operation is running.\nfunction orderValue(answer)\n    answer isa Int || throw(ArgumentError(\"comparator result\"))\n    answer\nend\nfunction sortValues(compare, items::AbstractVector)\n    vectorInput(items)\n    count = length(items)\n    current = Vector{eltype(items)}(undef, count)\n    for i in eachindex(items)\n        current[i] = items[i]\n    end\n    count < 2 && return current\n    scratch = similar(current)\n    width = 1\n    while width < count\n        start = 0\n        while start < count\n            middle = width < count - start ? start + width : count\n            stop = width < count - middle ? middle + width : count\n            left, right = start, middle\n            for at in start + 1:stop\n                takeLeft = right == stop\n                if !takeLeft && left < middle\n                    takeLeft = orderValue(compare(current[left + 1],\n                                                  current[right + 1])) <= 0\n                end\n                if takeLeft\n                    left += 1\n                    scratch[at] = current[left]\n                else\n                    right += 1\n                    scratch[at] = current[right]\n                end\n            end\n            start = stop\n        end\n        current, scratch = scratch, current\n        width = width > count - width ? count : width + width\n    end\n    current\nend\nfunction uniqueValues(same, items::AbstractVector)\n    vectorInput(items)\n    result = Vector{eltype(items)}(undef, length(items))\n    used = 0\n    for item in items\n        duplicate = false\n        for j in 1:used\n            if truth(same(result[j], item))\n                duplicate = true\n                break\n            end\n        end\n        if !duplicate\n            used += 1\n            result[used] = item\n        end\n    end\n    resize!(result, used)\nend\nfunction groupValues(keyOf, sameKey, items::AbstractVector)\n    vectorInput(items)\n    groups = []Any\n    for item in items\n        key = keyOf(item)\n        found = 0\n        for j in eachindex(groups)\n            if truth(sameKey(groups[j].key, key))\n                found = j\n                break\n            end\n        end\n        if found == 0\n            push!(groups, (key=key, items=[]Any))\n            found = length(groups)\n        end\n        push!(groups[found].items, item)\n    end\n    groups\nend\nend\n",
       "contract": "Общие типы элементов и ключей. Устойчивая bottom-up merge sort с целочисленным трёхсторонним comparator; unique оставляет первое появление по общему равенству по умолчанию или явному same; groupBy вызывает keyOf один раз на элемент и сохраняет порядок внутри групп. Пустые входы и неверные ответы comparator/predicate обработаны. Источник и ключи callbacks не меняют. Generic unique/groupBy используют поиск без hash; их асимптотика не приравнивается к оптимизированным Base.unique/SplitApplyCombine.group.",
       "sources": [
         "https://docs.julialang.org/en/v1/base/sort/",

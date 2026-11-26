@@ -30,7 +30,7 @@ Buffers:
     @: next
 
 BufferMake:
-    int[]: cells
+    []int: cells
     int: steps
     return: @
     make:
@@ -42,8 +42,8 @@ BufferMake:
             if: cells[i] != 0 && cells[i] != 1
                 throw: InvalidCell()
             i += 1
-        int[]: current [copy(cells)]
-        int[]: next []
+        []int: current [copy(cells)]
+        []int: next []
         sys\resize(next; length(cells))
         @: state (copy(Buffers))
         state\current := current
@@ -51,7 +51,7 @@ BufferMake:
         return: state
 
 Ring:
-    Buffers@: state
+    @Buffers: state
     int: index
     return: int
     value:
@@ -65,7 +65,7 @@ Ring:
         return: (source[left] + source[right]) % 2
 
 Publish:
-    Buffers@: state
+    @Buffers: state
     return: @
     swap:
         (state\current state\next) .: state\next state\current
@@ -78,7 +78,7 @@ Publish:
 
 ```lmx
 Evolve:
-    int[]: cells
+    []int: cells
     int: steps
     return: @
     run:
@@ -101,7 +101,7 @@ Evolve:
 
 ```lmx
 Fill:
-    Buffers@: state
+    @Buffers: state
     int: index
     return: @
     cell:
@@ -109,7 +109,7 @@ Fill:
         return: state
 
 Generation:
-    Buffers@: state
+    @Buffers: state
     int: tick
     return: @
     advance:
@@ -118,7 +118,7 @@ Generation:
         return: Publish\swap(state)
 
 Evolve:
-    int[]: cells
+    []int: cells
     int: steps
     return: @
     run:

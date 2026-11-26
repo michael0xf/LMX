@@ -31,7 +31,7 @@ FxSeqReplaceRange:
         private: @: stage FxSeqAllocate\make(info\arrayType; added)
         private: int: i 0
         # This conservative overlap-safe path buffers only the inserted range.
-        # Dense preparation keeps dense T storage; @[] keeps direct references.
+        # Dense preparation keeps dense T storage; []@ keeps direct references.
         # No hidden user converter or initializer is called by arrayAdmit.
         # Full ordinary admission belongs here, never in the commit loop.
         while: i < added

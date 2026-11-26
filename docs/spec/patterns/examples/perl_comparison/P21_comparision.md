@@ -33,13 +33,13 @@
 
 ```lmx
 Example:
-    char[]: text
-    return: char[]
+    []char: text
+    return: []char
     run:
         throws: copy(sys\resize\throws)
-        char[]: from "ACGT"
-        char[]: to "TGCA"
-        char[]: out []
+        []char: from "ACGT"
+        []char: to "TGCA"
+        []char: out []
         sys\resize(out; length(text))
         int: i 0
         while: i < length(text)
@@ -61,8 +61,8 @@ Example:
 
 ```lmx
 Example:
-    char[]: text
-    return: char[]
+    []char: text
+    return: []char
     run:
         throws: copy(translate\throws) copy(reverse\throws)
         return: \reverse(translate(text; "ACGT"; "TGCA"))

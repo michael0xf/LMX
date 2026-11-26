@@ -14,7 +14,7 @@ FxSeqIndices:
         FxSeqInfo\get(indices)
         private: int: total length(source)
         private: int: count length(indices)
-        private: @: checked FxSeqAllocate\make(int[]; count)
+        private: @: checked FxSeqAllocate\make([]int; count)
         private: int: i 0
         while: i < count
             private: @: value FxSeqRead\read(indices; i)
@@ -30,7 +30,7 @@ FxSeqIndices:
 FxSeqSelection:
     private:
         @: source
-        int[]: positions
+        []int: positions
     required: source positions
     return: @
     copySelected:
@@ -67,7 +67,7 @@ FxSeqOmit:
         private: @: positions FxSeqIndices\check(source; indices)
         private: @: info FxSeqInfo\get(source)
         private: int: count length(source)
-        private: @: excluded FxSeqAllocate\make(int[]; count)
+        private: @: excluded FxSeqAllocate\make([]int; count)
         private: int: i 0
         while: i < count
             excluded[i] := 0
@@ -102,7 +102,7 @@ FxSeqReorder:
         if: length(permutation) != count
             throw: ReceiverPermutation()
         private: @: positions FxSeqIndices\check(source; permutation)
-        private: @: seen FxSeqAllocate\make(int[]; count)
+        private: @: seen FxSeqAllocate\make([]int; count)
         private: int: i 0
         while: i < count
             seen[i] := 0
@@ -146,7 +146,7 @@ FxSeqBind:
         throws: copy(FxThrows\traversal)
         FxSeqInfo\get(items)
         private: int: count length(items)
-        private: @: out FxSeqAllocate\make(@[]; 0)
+        private: @: out FxSeqAllocate\make([]@; 0)
         private: @: info FxSeqInfo\get(out)
         private: int: i 0
         while: i < count

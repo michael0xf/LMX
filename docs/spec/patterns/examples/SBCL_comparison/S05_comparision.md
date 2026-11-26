@@ -81,7 +81,7 @@
 
 ```lmx
 Query:
-    int[]: items
+    []int: items
     int: wanted
     return: @
     run:
@@ -93,7 +93,7 @@ Query:
         return: (1 - wanted; i)
 
 Example:
-    int[]: items
+    []int: items
     return: @
     run:
         return: (copy(Query\run(items; 1)) copy(Query\run(items; 0)))
@@ -114,7 +114,7 @@ Probe:
             return: value > 0
 
 Example:
-    int[]: items
+    []int: items
     return: @
     run:
         throws: copy(any\throws) copy(all\throws)

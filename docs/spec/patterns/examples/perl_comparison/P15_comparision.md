@@ -53,7 +53,7 @@ Ascii:
         return: (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z')
 
 Identifier:
-    char[]: text
+    []char: text
     return: int
     test:
         if: length(text) = 0 || Ascii\letter(text[0]) = 0
@@ -88,7 +88,7 @@ Example:
 
 ```lmx
 Identifier:
-    char[]: text
+    []char: text
     return: int
     test:
         throws: copy(byteText\throws) copy(atLeast\throws) copy(RxThenOperand\then\throws) copy(matches\throws)

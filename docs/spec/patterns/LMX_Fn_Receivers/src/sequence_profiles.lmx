@@ -13,7 +13,7 @@ FxProfileRange:
         @: start
         @: stop
         @: step
-        FxRangeProfile@: profile
+        @FxRangeProfile: profile
     required: start stop step profile
     return: @
     range:
@@ -69,15 +69,15 @@ FxProfileParse:
         return: FxCodecApply\apply(source; profile; arguments)
 
 # These exact public text representations supply defaults only for text. They
-# delegate to the single generic algorithm and preserve the actual char[] R.
+# delegate to the single generic algorithm and preserve the actual []char R.
 FxTextTrim:
     private:
-        char[]: text
-        char[]: chars " \t\r\n\v\f"
+        []char: text
+        []char: chars " \t\r\n\v\f"
         @: predicate 0
         @: same 0
     required: text
-    return: char[]
+    return: []char
     trim:
         throws: copy(FxThrows\predicate) FxShape SequenceSize
         return: \FxSequenceTrim\trim(text; chars; 0; predicate; same)
@@ -90,11 +90,11 @@ FxTextTrim:
 
 FxTextPad:
     private:
-        char[]: text
+        []char: text
         int: width
-        char[]: fill " "
+        []char: fill " "
     required: text width
-    return: char[]
+    return: []char
     padLeft:
         throws: copy(FxThrows\sequence)
         return: \FxSequencePad\pad(text; width; fill; 0)
@@ -105,20 +105,20 @@ FxTextPad:
 FxTextJoin:
     private:
         @: parts
-        char[]: separator ""
+        []char: separator ""
     required: parts
-    return: char[]
+    return: []char
     join:
         throws: copy(FxThrows\mutation)
         return: \FxStdJoin\join(parts; separator)
 
 FxTextCycle:
     private:
-        char[]: items
+        []char: items
         int: count
         int: rejectNegative 0
     required: items count
-    return: char[]
+    return: []char
     cycle:
         throws: copy(FxThrows\sequence)
         return: \FxStdCycle\cycle(items; count; rejectNegative)

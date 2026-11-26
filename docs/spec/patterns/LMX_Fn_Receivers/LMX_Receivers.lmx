@@ -1,7 +1,7 @@
 # LMX: ОБЩИЕ ПРЯМЫЕ РЕСИВЕРЫ И КОНТЕЙНЕРЫ
 # Редакция 2026-11-26. Собрано из src/ и явно запускаемых examples/.
 # DATA-описания ядра; старые Int-специализации сюда не входят.
-# 215 вызовных имён и отдельно готовые Pattern/config/type значения. Каждая Structure — @[].
+# 215 вызовных имён и отдельно готовые Pattern/config/type значения. Каждая Structure — []@.
 # FxKernel: 8 исходных границ + 5 фаз вызова + 4 доступа к Array + AE01 + AR01 + PD01.
 # Это проект интеграции; реальное ядро и LMX-fixtures здесь не исполнялись.
 # Name :: DATA и -> строят одинаковый позиционный тип, кроме сохранённого отношения именованной сигнатуры с call.
@@ -24,7 +24,7 @@ FxKernelCallableAPI :: (@: contract; @: labels; @: bodyGraph; @: state; @: failu
 
 FxKernelAttemptAPI :: (@: operation; @: args; @: failures; return: @)
 
-FxKernelRaiseAPI :: (char[]: name; @: payload)
+FxKernelRaiseAPI :: ([]char: name; @: payload)
 
 FxKernelFieldNamesAPI :: (@: source; return: @)
 
@@ -61,8 +61,8 @@ FxKernelOperandDepthContextAPI :: (@: frame; @: arguments; return: @)
 # type with no payload read, and returns an internal @ to a canonical int code
 # record. Existing type descriptions preserve full Structure/callable/Array
 # models; no new public boxed Type value is introduced.
-# T[] and T@ are postfix constructors producing ordinary int type codes.
-# []: variable is AnyArray, @[]: variable is the actual Structure/@[] requirement.
+# []T and @T are postfix constructors producing ordinary int type codes.
+# []: variable is AnyArray, []@: variable is the actual Structure/[]@ requirement.
 # signatureData creates ordinary declarations, without universal required/private.
 # callable publishes ordinary owner -> DATA -> CODE with genuine parent links.
 # Its policy maps external positions to real source declarations, keeps bound
@@ -116,7 +116,7 @@ FxKernelOperandDepthContextAPI :: (@: frame; @: arguments; return: @)
 # A frame reference neither extends lifetime nor authorizes execution twice.
 #
 # fieldNames and renameFields use the existing owning-field name association.
-# An anonymous field is represented by uninit:char[], distinct from empty string.
+# An anonymous field is represented by uninit:[]char, distinct from empty string.
 # Detailed narrow-hook and lifetime contracts: ../KERNEL_REQUIREMENTS.md.
 
 # Common physical Array access used by sequence algorithms and Regex.
@@ -131,11 +131,11 @@ FxKernelArrayWriteAPI :: (@: target; int: index; @: value)
 # arrayInfo -> {arrayType,elementType,elementBits,dense,maxLength}, all int.
 # Canonical codes preserve full models and pointer levels; maxLength bounds the
 # actual index AND byte-size arithmetic, not currently available free memory.
-# arrayRead returns a direct stored @[] value or a stable dense-T record using
+# arrayRead returns a direct stored []@ value or a stable dense-T record using
 # the actual stride. It never executes a saved graph form or preboxes all input.
 # arrayAdmit performs the permitted full target-element admission before commit.
 # arrayWrite writes an already admitted value without repeating tests/converters.
-# Direct reference replacement for @[] is not matching the old slot's type.
+# Direct reference replacement for []@ is not matching the old slot's type.
 # Descriptor identity, parent, ordinary bounds/lifetime and failure channels stay.
 # Full contracts: ../SEQUENCES_IMPLEMENTATION.md, section 4.
 
@@ -319,14 +319,14 @@ RxPhysicalTypes:
         return: result
 
 # types(S): плотный Array<int>, новый массив на каждый вызов.
-# int[]: result [] использует обычный конструктор типизированного пустого
+# []int: result [] использует обычный конструктор типизированного пустого
 # массива; конкретный синтаксис, как и весь этот файл, ещё не прогнан ядром.
 # Никакого изменения типа обычной Structure через sys\resize здесь нет.
 RxTypes:
     private: @: source
-    return: int[]
+    return: []int
     types:
-        private: int[]: result []
+        private: []int: result []
         sys\resize(result; length(source))
         private: int: i 0
         while: i < length(source)
@@ -334,15 +334,15 @@ RxTypes:
             i += 1
         return: result
 
-# Точная плотная форма результата int[]: с явно переданным готовым буфером.
+# Точная плотная форма результата []int: с явно переданным готовым буфером.
 # types(source := S; output := buffer) изменяет buffer и возвращает тот же
 # массив. S также Structure/Array<@>. Новый тип массива не выводится из () .
 # Вариант позволяет переиспользовать буфер и не выделять новый при каждом вызове.
 RxTypesInto:
     private:
         @: source
-        int[]: output
-    return: int[]
+        []int: output
+    return: []int
     types:
         sys\resize(output; length(source))
         private: int: i 0
@@ -639,7 +639,7 @@ FxArgumentObservation:
     int: declaration 0
     int: ownPlace 0
     int: transparentPlace 0
-    char[]: state ""
+    []char: state ""
     @: requirement 0
     @: value
 
@@ -693,8 +693,8 @@ FxForwardEngine:
 # Все захваченные зависимости — явные поля state; private не даёт им становиться
 # случайными динамическими входами исходного callable.
 #
-# prefix is any ready Array: Structure/@[] supplies stored value records;
-# dense T[] supplies one actual through its real typed access. It is never
+# prefix is any ready Array: Structure/[]@ supplies stored value records;
+# dense []T supplies one actual through its real typed access. It is never
 # reinterpreted as a pointer array. Примитивы принимаются
 # и сохраняются по значению; ссылочные значения сохраняют цель. copy(prefix)
 # для этого НЕ используется, поскольку он глубоко копировал бы цели ссылок.
@@ -716,7 +716,7 @@ FxPreparedOperands:
     private:
         @: left
         int: depth 0
-        @[]: right
+        []@: right
     const: int: PASS_ARGS_AS_IS 0
 
 # Whole-value operand profiles admit depth 0 during semantic preparation.
@@ -766,12 +766,12 @@ FxStageFailures:
 
 # Конкатенация LMX-строк. Вспомогательные процедуры тоже написаны на LMX.
 # Binary string concatenation keeps its contract and delegates storage work to
-# the single generic concat algorithm; equal char[] parts yield fresh char[].
+# the single generic concat algorithm; equal []char parts yield fresh []char.
 FxConcat:
     private:
-        char[]: first
-        char[]: second
-    return: char[]
+        []char: first
+        []char: second
+    return: []char
     concat:
         throws: copy(FxThrows\sequence)
         private: @: out FxSeqConcat\concat(parts := (first; second))
@@ -779,7 +779,7 @@ FxConcat:
 
 FxDecimal:
     private: int: number
-    return: char[]
+    return: []char
     decimal:
         throws: copy(FxThrows\selection)
         if: number < 0
@@ -790,10 +790,10 @@ FxDecimal:
 # Отдельное точное имя пригодится клиентам строителя для произвольных labels.
 # Его вход — допустимое имя без NUL; это ограничение exact identifier в грамматике.
 FxExactIdentifier:
-    private: char[]: name
-    return: char[]
+    private: []char: name
+    return: []char
     quote:
-        private: char[]: out []
+        private: []char: out []
         private: int: extra 0
         private: int: i 0
         while: i < length(name)
@@ -833,7 +833,7 @@ FxLabels:
 # is generic and uses begin/end. Keep this checked adapter, not a second loop.
 FxSlice:
     private:
-        @[]: values
+        []@: values
         int: start
         int: count
     return: @
@@ -864,7 +864,7 @@ FxSignatures:
 FxBuild:
     private:
         @: contract
-        char[]: bodyText
+        []char: bodyText
         @: state
         @: failures
         @: policy 0
@@ -884,12 +884,12 @@ FxRecordConstructor :: (@: value; return: @)
 
 FxRecordAdapterState:
     @: record 0
-    FxRecordConstructor@: constructor
+    @FxRecordConstructor: constructor
 
 FxRecordAdapter:
     private:
         @: typeToken
-        FxRecordConstructor@: constructor 0
+        @FxRecordConstructor: constructor 0
     required: typeToken
     return: @
     make:
@@ -905,7 +905,7 @@ FxRecordAdapter:
         state\record := FxRecordOperands\record
         private: @: resultType FxKernel\normalizeType(FxTypeTokens\reference[0])
         private: @: failures FxCaptureFailures\names()
-        private: char[]: body "return: (p0 node\\private\\state\\record)\n"
+        private: []char: body "return: (p0 node\\private\\state\\record)\n"
         if: constructor != 0
             state\constructor := constructor
             private: @: shape FxKernel\signature(constructor)
@@ -1147,7 +1147,7 @@ FxSignatureOperand:
 
 FxToTypes:
     private:
-        @[]: inputs
+        []@: inputs
         @: result
     required: inputs result
     return: @
@@ -1160,7 +1160,7 @@ FxToTypes:
         )
 
 FxToTokens:
-    private: @[]: tokens
+    private: []@: tokens
     required: tokens
     return: @
     `->`:
@@ -1168,7 +1168,7 @@ FxToTokens:
         if: length(tokens) = 0
             throw: FxArity()
         private: int: last length(tokens) - 1
-        private: @[]: inputs FxSeqSlice\slice(tokens; 0; last)
+        private: []@: inputs FxSeqSlice\slice(tokens; 0; last)
         return: FxToTypes\`->`(inputs := inputs; result := tokens[last])
 
 FxToOperand:
@@ -1259,7 +1259,7 @@ FxTwo:
         return: out
 
 # Fresh reference concatenation is retained, even if a caller supplies dense
-# parts. The explicit empty @[] part selects concat's mixed/reference profile;
+# parts. The explicit empty []@ part selects concat's mixed/reference profile;
 # this adds no user data element and introduces no second copying algorithm.
 FxAppend:
     private:
@@ -1319,7 +1319,7 @@ FxWrap:
         private: @: state (copy(FxEngineState))
         state\engine := engine
         state\payload := payload
-        private: char[]: text "private: @: fx_frame FxKernel\\currentCall(node)\nprivate: @: fx_engine node\\private\\state\\engine\nprivate: @: fx_answer fx_engine(state := node\\private\\state\\payload; frame := fx_frame)\n"
+        private: []char: text "private: @: fx_frame FxKernel\\currentCall(node)\nprivate: @: fx_engine node\\private\\state\\engine\nprivate: @: fx_answer fx_engine(state := node\\private\\state\\payload; frame := fx_frame)\n"
         if: info\hasResult != 0
             text := FxConcat\concat(text; "return: \\fx_answer\n")
         else:
@@ -1334,7 +1334,7 @@ FxWrap:
 FxOutcome:
     int: ok 0
     @: value 0
-    char[]: failure ""
+    []char: failure ""
     @: payload 0
 
 FxTry:
@@ -1359,7 +1359,7 @@ FxFailures:
 
 # One comparison body, bound to the caller's real typed Array places.
 # unitSource/unitPart are ordinary non-private dynamic places declared by
-# each caller as char[] or int[]; no @[] cast or scalar dereference occurs.
+# each caller as []char or []int; no []@ cast or scalar dereference occurs.
 # Internal exact name comparison, not a new public text operation.
 # Public literal equality is matches(byteText(first); second).
 # Отфильтрована внутренняя ПОЙМАННАЯ оболочка engine; исходные target failures
@@ -1367,7 +1367,7 @@ FxFailures:
 FxFailureFilter:
     private:
         @: names
-        char[]: excluded
+        []char: excluded
     return: @
     without:
         private: @: out (copy(()))
@@ -1375,7 +1375,7 @@ FxFailureFilter:
         private: int: used 0
         private: int: i 0
         while: i < length(names)
-            private: char[]: name \names[i]
+            private: []char: name \names[i]
             if: FxEqualFields\equalFields(name; excluded) = 0
                 out[used] := names[i]
                 used += 1
@@ -1496,7 +1496,7 @@ FxMaybe:
 FxSome:
     private: @: value
     required: value
-    return: FxMaybe@
+    return: @FxMaybe
     some:
         private: @: result (copy(FxMaybe))
         result\present := 1
@@ -1504,22 +1504,22 @@ FxSome:
         return: result
 
 FxNone:
-    return: FxMaybe@
+    return: @FxMaybe
     none:
         return: (copy(FxMaybe))
 
 FxBind:
     private:
-        FxMaybe@: input
+        @FxMaybe: input
         @: next
     required: input next
-    return: FxMaybe@
+    return: @FxMaybe
     bind:
         throws: copy(FxThrows\call)
         if: input\present = 0
             return: input
         private: @: record FxApply\apply(next; FxOne\make(input\value))
-        private: FxMaybe@: result \record
+        private: @FxMaybe: result \record
         return: result
 
 # Result также не фиксирует тип полезного значения или причины неуспеха.
@@ -1533,7 +1533,7 @@ FxResult:
 FxOk:
     private: @: value
     required: value
-    return: FxResult@
+    return: @FxResult
     ok:
         private: @: result (copy(FxResult))
         result\ok := 1
@@ -1543,7 +1543,7 @@ FxOk:
 FxErr:
     private: @: reason
     required: reason
-    return: FxResult@
+    return: @FxResult
     err:
         private: @: result (copy(FxResult))
         result\reason := reason
@@ -1551,16 +1551,16 @@ FxErr:
 
 FxBindResult:
     private:
-        FxResult@: input
+        @FxResult: input
         @: next
     required: input next
-    return: FxResult@
+    return: @FxResult
     bind:
         throws: copy(FxThrows\call)
         if: input\ok = 0
             return: input
         private: @: record FxApply\apply(next; FxOne\make(input\value))
-        private: FxResult@: result \record
+        private: @FxResult: result \record
         return: result
 
 # List — последовательность записей, а не неизменяемый связный список.
@@ -1584,7 +1584,7 @@ FxListBind:
         []: input
         @: next
     required: input next
-    return: @[]
+    return: []@
     bind:
         throws: copy(FxThrows\traversal)
         private: @: result FxSeqBind\bind(items := input; next := next)
@@ -1604,7 +1604,7 @@ FxBounce:
 FxDone:
     private: @: value
     required: value
-    return: FxBounce@
+    return: @FxBounce
     done:
         private: @: result (copy(FxBounce))
         result\done := 1
@@ -1624,7 +1624,7 @@ FxMore:
         return: result
 
 FxTrampoline:
-    private: FxBounce@: current
+    private: @FxBounce: current
     return: @
     trampoline:
         throws: copy(FxThrows\call)
@@ -1639,14 +1639,14 @@ FxTrampoline:
 # Public role/family selection is specified in ../../../MONADIC_OPERATIONS.md.
 
 FxMaybeActive:
-    private: FxMaybe@: input
+    private: @FxMaybe: input
     required: input
     return: int
     active:
         return: input\present
 
 FxResultActive:
-    private: FxResult@: input
+    private: @FxResult: input
     required: input
     return: int
     active:
@@ -1655,7 +1655,7 @@ FxResultActive:
 FxBindChain:
     private:
         @: current
-        @[]: steps
+        []@: steps
         @: step
         @: active
     required: current steps step active
@@ -1675,25 +1675,25 @@ FxBindChain:
 FxBindOperandTail:
     private:
         int: depth 0
-        @[]: right
+        []@: right
     required: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("+")
 
 FxMaybeBindOperand:
-    private: FxMaybe@@: left
+    private: @@FxMaybe: left
     copy: FxBindOperandTail
     required: left
-    return: FxMaybe@
+    return: @FxMaybe
     bind:
         throws: copy(FxThrows\call) FxArity
         return: FxBindChain\run(\left; right; FxBind\bind; FxMaybeActive\active)
 
 FxResultBindOperand:
-    private: FxResult@@: left
+    private: @@FxResult: left
     copy: FxBindOperandTail
     required: left
-    return: FxResult@
+    return: @FxResult
     bind:
         throws: copy(FxThrows\call) FxArity
         return: FxBindChain\run(\left; right; FxBindResult\bind; FxResultActive\active)
@@ -1706,7 +1706,7 @@ ArrayBinding:
 
 # SOURCE: src/sequences_core.lmx
 # UNIVERSAL ARRAY ACCESS. These are common value/layout helpers, not a new
-# Sequence object. A Structure already is @[]; dense T[] keeps its real stride.
+# Sequence object. A Structure already is []@; dense []T keeps its real stride.
 # Only arrayInfo/arrayRead/arrayAdmit/arrayWrite are narrow kernel boundaries.
 # All sequence algorithms are ordinary LMX in this package.
 # No helper executes a selected graph field or applies callable W/E to it.
@@ -1793,7 +1793,7 @@ FxSeqBounds:
 # Ordinary admission of one value to the actual target's full requirement.
 # No hidden user converter or initializer is introduced. Required value checks
 # stay in this preparation phase; the later prepared write cannot repeat them.
-# @[] accepts the direct value reference, independently of former slot content.
+# []@ accepts the direct value reference, independently of former slot content.
 FxSeqAdmit:
     private:
         @: target
@@ -1841,7 +1841,7 @@ FxSeqRecords:
         throws: copy(FxThrows\sequence)
         FxSeqInfo\get(source)
         private: int: count length(source)
-        private: @: out FxSeqAllocate\make(@[]; count)
+        private: @: out FxSeqAllocate\make([]@; count)
         private: int: i 0
         while: i < count
             out[i] := FxSeqRead\read(source; i)
@@ -1941,7 +1941,7 @@ FxArrayInputsAt:
     return: @
     at:
         throws: copy(FxThrows\sequencefixture)
-        private: @: values FxSeqAllocate\make(@[]; length(context\inputs))
+        private: @: values FxSeqAllocate\make([]@; length(context\inputs))
         private: int: j 0
         while: j < length(context\inputs)
             private: @: input context\inputs[j]
@@ -2080,7 +2080,7 @@ FxArraySnapshot:
     capture:
         throws: copy(FxThrows\sequencefixture)
         FxSeqInfo\get(source)
-        private: @: out FxSeqAllocate\make(@[]; length(source))
+        private: @: out FxSeqAllocate\make([]@; length(source))
         private: int: i 0
         while: i < length(source)
             private: @: value FxSeqRead\read(source; i)
@@ -2177,9 +2177,9 @@ FxArrayDepthAssignPrepared:
     return: @
     assign:
         throws: copy(FxThrows\sequencefixture)
-        private: @: entries FxSeqAllocate\make(@[]; 0)
+        private: @: entries FxSeqAllocate\make([]@; 0)
         FxArrayDepthCollect\collect(context; target; depth; source; entries)
-        private: @: values FxArrayBuild\build(entries; @[]; length(entries); FxArrayWriteValue\at)
+        private: @: values FxArrayBuild\build(entries; []@; length(entries); FxArrayWriteValue\at)
         private: @: linear FxApply\apply(operation := context\linearize; args := (context; target; entries))
         return: FxArrayAssignPrepared\assign(linear; values)
 
@@ -2268,7 +2268,7 @@ FxSeqIndices:
         FxSeqInfo\get(indices)
         private: int: total length(source)
         private: int: count length(indices)
-        private: @: checked FxSeqAllocate\make(int[]; count)
+        private: @: checked FxSeqAllocate\make([]int; count)
         private: int: i 0
         while: i < count
             private: @: value FxSeqRead\read(indices; i)
@@ -2284,7 +2284,7 @@ FxSeqIndices:
 FxSeqSelection:
     private:
         @: source
-        int[]: positions
+        []int: positions
     required: source positions
     return: @
     copySelected:
@@ -2321,7 +2321,7 @@ FxSeqOmit:
         private: @: positions FxSeqIndices\check(source; indices)
         private: @: info FxSeqInfo\get(source)
         private: int: count length(source)
-        private: @: excluded FxSeqAllocate\make(int[]; count)
+        private: @: excluded FxSeqAllocate\make([]int; count)
         private: int: i 0
         while: i < count
             excluded[i] := 0
@@ -2356,7 +2356,7 @@ FxSeqReorder:
         if: length(permutation) != count
             throw: ReceiverPermutation()
         private: @: positions FxSeqIndices\check(source; permutation)
-        private: @: seen FxSeqAllocate\make(int[]; count)
+        private: @: seen FxSeqAllocate\make([]int; count)
         private: int: i 0
         while: i < count
             seen[i] := 0
@@ -2400,7 +2400,7 @@ FxSeqBind:
         throws: copy(FxThrows\traversal)
         FxSeqInfo\get(items)
         private: int: count length(items)
-        private: @: out FxSeqAllocate\make(@[]; 0)
+        private: @: out FxSeqAllocate\make([]@; 0)
         private: @: info FxSeqInfo\get(out)
         private: int: i 0
         while: i < count
@@ -2433,7 +2433,7 @@ FxSeqRange:
         throws: FxKernelFailure FxTypeToken SequenceSize SequenceStep
         if: step = 0
             throw: SequenceStep()
-        private: @: out FxSeqAllocate\make(int[]; 0)
+        private: @: out FxSeqAllocate\make([]int; 0)
         if: step > 0 && start >= stop
             return: out
         if: step < 0 && start <= stop
@@ -2508,7 +2508,7 @@ FxSeqConcat:
         throws: copy(FxThrows\sequence)
         FxSeqInfo\get(parts)
         private: int: count length(parts)
-        private: int: arrayType @[]
+        private: int: arrayType []@
         private: int: elementType 0
         private: int: allDense 1
         private: int: i 0
@@ -2524,7 +2524,7 @@ FxSeqConcat:
                 allDense := 0
             i += 1
         if: count = 0 || allDense = 0
-            arrayType := @[]
+            arrayType := []@
         private: @: out FxSeqAllocate\make(arrayType; 0)
         private: @: outInfo FxSeqInfo\get(out)
         private: int: total 0
@@ -2561,7 +2561,7 @@ FxSeqCompress:
         private: int: count length(source)
         if: length(mask) != count
             throw: FxShape()
-        private: @: flags FxSeqAllocate\make(int[]; count)
+        private: @: flags FxSeqAllocate\make([]int; count)
         private: int: accepted 0
         private: int: i 0
         # Validate every mask value before constructing the selected result.
@@ -2686,7 +2686,7 @@ FxSeqReplaceRange:
         private: @: stage FxSeqAllocate\make(info\arrayType; added)
         private: int: i 0
         # This conservative overlap-safe path buffers only the inserted range.
-        # Dense preparation keeps dense T storage; @[] keeps direct references.
+        # Dense preparation keeps dense T storage; []@ keeps direct references.
         # No hidden user converter or initializer is called by arrayAdmit.
         # Full ordinary admission belongs here, never in the commit loop.
         while: i < added
@@ -2777,7 +2777,7 @@ FxSeqDeleteAt:
     return: @
     deleteAt:
         throws: copy(FxThrows\mutation)
-        private: @: empty FxSeqAllocate\make(@[]; 0)
+        private: @: empty FxSeqAllocate\make([]@; 0)
         return: FxSeqReplaceRange\replaceRange(target; begin; end; empty)
 
 # SOURCE: src/fill.lmx
@@ -2836,8 +2836,8 @@ FxSeqLast:
 
 # SOURCE: src/collections.lmx
 # UNIVERSAL SEQUENTIAL COLLECTIONS.
-# items/source/rows are direct @ references to any admitted Array: dense T[]
-# or the ordinary Structure/@[]. FxSeqRead uses the actual layout, never void**
+# items/source/rows are direct @ references to any admitted Array: dense []T
+# or the ordinary Structure/[]@. FxSeqRead uses the actual layout, never void**
 # reinterpretation. One selected element is one prepared actual, including a
 # whole Structure. Callbacks retain their own defaults, required/private and R.
 # Calls are ordered in one Message. A callback must not change source slots or
@@ -2853,7 +2853,7 @@ FxMap:
         throws: copy(FxThrows\traversal)
         FxSeqInfo\get(items)
         private: int: count length(items)
-        private: @: result FxSeqAllocate\make(@[]; count)
+        private: @: result FxSeqAllocate\make([]@; count)
         private: int: i 0
         while: i < count
             private: @: item FxSeqRead\read(items; i)
@@ -2922,7 +2922,7 @@ FxZip:
         private: int: count length(first)
         if: length(second) < count
             count := length(second)
-        private: @: result FxSeqAllocate\make(@[]; count)
+        private: @: result FxSeqAllocate\make([]@; count)
         private: int: i 0
         while: i < count
             private: @: pair (copy(FxPair))
@@ -2946,7 +2946,7 @@ FxZipWith:
         private: int: count length(first)
         if: length(second) < count
             count := length(second)
-        private: @: result FxSeqAllocate\make(@[]; count)
+        private: @: result FxSeqAllocate\make([]@; count)
         private: int: i 0
         while: i < count
             private: @: leftValue FxSeqRead\read(first; i)
@@ -2966,7 +2966,7 @@ FxScan:
         throws: copy(FxThrows\traversal)
         FxSeqInfo\get(items)
         private: int: count length(items)
-        private: @: result FxSeqAllocate\make(@[]; 0)
+        private: @: result FxSeqAllocate\make([]@; 0)
         private: @: info FxSeqInfo\get(result)
         private: int: total FxSeqSize\sum(count; 1; info\maxLength)
         sys\resize(result; total)
@@ -2990,12 +2990,12 @@ FxTraverse:
         throws: copy(FxThrows\traversal)
         FxSeqInfo\get(items)
         private: int: count length(items)
-        private: @: result FxSeqAllocate\make(@[]; count)
+        private: @: result FxSeqAllocate\make([]@; count)
         private: int: i 0
         while: i < count
             private: @: item FxSeqRead\read(items; i)
             private: @: record FxApply\apply(next; FxOne\make(item))
-            private: FxMaybe@: answer record
+            private: @FxMaybe: answer record
             if: answer\present = 0
                 return: answer
             result[i] := answer\value
@@ -3012,7 +3012,7 @@ FxTranspose:
         throws: FxKernelFailure FxShape FxTypeToken ReceiverIndex SequenceSize
         FxSeqInfo\get(rows)
         private: int: height length(rows)
-        private: @: result FxSeqAllocate\make(@[]; 0)
+        private: @: result FxSeqAllocate\make([]@; 0)
         if: height = 0
             return: result
         private: @: first FxSeqRead\read(rows; 0)
@@ -3030,7 +3030,7 @@ FxTranspose:
         sys\resize(result; width)
         private: int: j 0
         while: j < width
-            private: @: column FxSeqAllocate\make(@[]; height)
+            private: @: column FxSeqAllocate\make([]@; height)
             i := 0
             while: i < height
                 private: @: row FxSeqRead\read(rows; i)
@@ -3055,7 +3055,7 @@ FxGroupBy:
         throws: copy(FxThrows\predicate) SequenceElement SequenceSize
         FxSeqInfo\get(items)
         private: int: count length(items)
-        private: @: result FxSeqAllocate\make(@[]; 0)
+        private: @: result FxSeqAllocate\make([]@; 0)
         private: int: i 0
         while: i < count
             private: @: item FxSeqRead\read(items; i)
@@ -3063,7 +3063,7 @@ FxGroupBy:
             private: @: group 0
             private: int: j 0
             while: j < length(result)
-                private: FxGroup@: candidate result[j]
+                private: @FxGroup: candidate result[j]
                 private: int: flag FxValueSame\test(candidate\key; key; sameKey)
                 if: flag != 0
                     group := candidate
@@ -3072,7 +3072,7 @@ FxGroupBy:
             if: group = 0
                 group := (copy(FxGroup))
                 group\key := key
-                group\items := FxSeqAllocate\make(@[]; 0)
+                group\items := FxSeqAllocate\make([]@; 0)
                 FxSeqPush\append(result; group)
             FxSeqPush\append(group\items; item)
             i += 1
@@ -3161,8 +3161,8 @@ independent: RxSlotPatch:
 # Изменённые значения остаются ссылками на after: глубокая неизменяемость не обещана.
 # Пример: after заменяет только поле 2 -> одна запись (2,after[2]).
 RxDiff:
-    @[]: before
-    @[]: after
+    []@: before
+    []@: after
     return: @
     diff:
         @: patch (copy(RxSlotPatch))
@@ -3208,8 +3208,8 @@ RxDiff:
 # предшествует построению результата. Подменённая база даёт ReceiverPatchBase.
 # Пример: patch(A; diff(A; B)) имеет длину B и те же ссылки по всем позициям.
 RxPatch:
-    @[]: source
-    RxSlotPatch@: change
+    []@: source
+    @RxSlotPatch: change
     return: @
     patch:
         throws: ReceiverPatchBase ReceiverPatchFormat
@@ -3401,7 +3401,7 @@ FxMemoEngine:
         private: @: key FxFrameSnapshot\snapshot(frame)
         private: int: i 0
         while: i < length(state\entries)
-            private: FxMemoEntry@: entry state\entries[i]
+            private: @FxMemoEntry: entry state\entries[i]
             if: FxValueSame\test(entry\key; key; state\sameKey) != 0
                 return: entry\value
             i += 1
@@ -3795,7 +3795,7 @@ FxRetry:
 # carries its eventual result. No second asynchronous bracket engine is needed.
 # Merely posting work from action and returning does NOT extend resource lifetime.
 # A timeout is not cancellation. Ordinary stop exits run registered finally blocks.
-# Allocate the cleanup argument vector before acquisition. Its one @[] slot is
+# Allocate the cleanup argument vector before acquisition. Its one []@ slot is
 # filled by an ordinary reference store, which has no admission/allocation step.
 # Register finally after successful acquisition, as in the ordinary Around
 # example. Provider return/lifetime rules add no atomic/mask primitive.
@@ -3860,7 +3860,7 @@ FxTraceState:
     @: sink 0
 
 FxTraceEvent:
-    char[]: phase ""
+    []char: phase ""
     @: args 0
     @: value 0
     int: hasValue 0
@@ -3868,7 +3868,7 @@ FxTraceEvent:
 FxTraceEmit:
     private:
         @: sink
-        char[]: phase
+        []char: phase
         @: args
         @: value
         int: hasValue
@@ -4094,7 +4094,7 @@ FxRetryBuild:
 # SOURCE: src/coreComparisonGroups.lmx
 # DIRECT CORE OPERATIONS EXTRACTED FROM THE IMPLEMENTATION COMPARISONS.
 # No example-local import is required. These bodies use the existing typed
-# record/call/Array access contracts; a Structure is already an @[] sequence.
+# record/call/Array access contracts; a Structure is already an []@ sequence.
 
 FxFindFirst:
     private:
@@ -4230,7 +4230,7 @@ FxAllOf:
 # These internal bridge failures have the explicitly empty () payload.
 # User failures retain their original name and typed payload in FxOutcome.
 FxRetryEmptyFailure:
-    private: char[]: name
+    private: []char: name
     return: @
     make:
         private: @: outcome (copy(FxOutcome))
@@ -4239,7 +4239,7 @@ FxRetryEmptyFailure:
         return: outcome
 
 FxRetryPostResult:
-    char[]: kind ""
+    []char: kind ""
     int: attempts 0
     @: outcome 0
 
@@ -4283,7 +4283,7 @@ FxRetryPostJob:
                 Events\failed("FxTypeToken")
     ---
     Events:
-        char[]: failure
+        []char: failure
         failed:
             private: @: job parent(node)
             job\private\pending -= 1
@@ -4318,7 +4318,7 @@ FxRetryPostJob:
             return: job\private\finalResult
     ---
     Completion:
-        char[]: kind
+        []char: kind
         @: outcome
         finish:
             private: @: job parent(node)
@@ -4603,7 +4603,7 @@ FxIterateUntilStop:
 
 # SOURCE: src/corePerlExamples.lmx
 # Generic ordered operations shared by the Perl and Julia comparison suites.
-# Every Structure is already an @[] sequence. Dense Arrays keep their real
+# Every Structure is already an []@ sequence. Dense Arrays keep their real
 # profile through the common array helpers; there is no int-only element path.
 # Callbacks execute in one Message and must not mutate the source sequence or
 # the ordering/equality keys during traversal. External callback effects are
@@ -4714,35 +4714,35 @@ FxUnique:
 TextView:
     @: prepare RxTextPrepareSource\make
     int: profile
-    char[]: source
+    []char: source
 
 # Explicit per-operation text index. It is ordinary data, never executable
 # source or a second graph of the program. view is the original public view.
 RxPreparedText:
-    TextView@: view 0
+    @TextView: view 0
     int: profile
-    char[]: source
-    int[]: units
-    int[]: byteOffsets
+    []char: source
+    []int: units
+    []int: byteOffsets
 
 Span:
     @: source
     int: begin
     int: end
-    private: RxPreparedSource@: prepared
+    private: @RxPreparedSource: prepared
 
 Match:
     @: source
     int: begin
     int: end
     @: captures
-    private: RxPreparedSource@: prepared
+    private: @RxPreparedSource: prepared
 
-Pattern :: (RxPreparedSource@: source; int: position; @: captures; return: @)
+Pattern :: (@RxPreparedSource: source; int: position; @: captures; return: @)
 
 RxPredicate :: (int: unit; return: int)
 
-RxReplacementArgument :: (Match@: matched)
+RxReplacementArgument :: (@Match: matched)
 
 # The actual replacement callable supplies its own exact result requirement.
 
@@ -4784,14 +4784,14 @@ RxCandidateMake:
 # allocates a new link; no already published link or Match is ever rewritten.
 RxCaptureEntry:
     @: previous 0
-    char[]: name ""
+    []char: name ""
     int: begin 0
     int: end 0
 
 RxCaptureAdd:
     private:
         @: previous
-        char[]: name
+        []char: name
         int: begin
         int: end
     return: @
@@ -4806,7 +4806,7 @@ RxCaptureAdd:
 RxCaptureLatest:
     private:
         @: captures
-        char[]: name
+        []char: name
     return: @
     find:
         private: @: cursor captures
@@ -4824,7 +4824,7 @@ RxPatternOwner:
         @: config 0
     Call:
         private:
-            RxPreparedSource@: source
+            @RxPreparedSource: source
             int: position
             @: captures
         required: source position captures
@@ -4891,8 +4891,8 @@ RxNormalize:
 
 RxOpen:
     private:
-        Pattern@: pattern
-        RxPreparedSource@: source
+        @Pattern: pattern
+        @RxPreparedSource: source
         int: position
         @: captures
     return: @
@@ -4905,7 +4905,7 @@ RxOpen:
 
 RxSpanMake:
     private:
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: begin
         int: end
     return: @
@@ -4919,7 +4919,7 @@ RxSpanMake:
 
 RxMatchMake:
     private:
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: begin
         @: candidate
     return: @
@@ -4945,7 +4945,7 @@ RxMatchMake:
 
 RxOctet:
     private:
-        char[]: source
+        []char: source
         int: index
     return: int
     read:
@@ -4956,7 +4956,7 @@ RxOctet:
 
 RxTextBuild:
     private:
-        char[]: source
+        []char: source
         int: profile
     return: @
     make:
@@ -4966,8 +4966,8 @@ RxTextBuild:
             throw: PatternEncoding()
         if: profile != 0 && profile != 1
             throw: PatternArgument()
-        private: int[]: units []
-        private: int[]: offsets []
+        private: []int: units []
+        private: []int: offsets []
         # Exact upper bounds: an octet cannot create more than one scalar.
         private: @: unitInfo FxSeqInfo\get(source := units)
         private: int: unitCapacity FxSeqSize\sum(0; length(source); unitInfo\maxLength)
@@ -5034,7 +5034,7 @@ RxTextBuild:
 # Repeated searches prepare their own current index. No change watcher is used.
 RxTextViewMake:
     private:
-        char[]: source
+        []char: source
         int: profile
     return: @
     make:
@@ -5045,7 +5045,7 @@ RxTextViewMake:
         return: out
 
 RxPrepare:
-    private: TextView@: source
+    private: @TextView: source
     required: source
     return: @
     make:
@@ -5054,14 +5054,14 @@ RxPrepare:
         return: prepared
 
 RxUtf8Text:
-    private: char[]: source
+    private: []char: source
     required: source
     return: @
     utf8Text:
         return: RxTextViewMake\make(source := source; profile := 0)
 
 RxByteText:
-    private: char[]: source
+    private: []char: source
     required: source
     return: @
     byteText:
@@ -5069,10 +5069,10 @@ RxByteText:
 
 RxTextSlice:
     private:
-        RxPreparedText@: source
+        @RxPreparedText: source
         int: begin
         int: end
-    return: char[]
+    return: []char
     copyText:
         throws: copy(FxThrows\pattern)
         if: begin < 0 || end < begin || end > length(source\units)
@@ -5090,7 +5090,7 @@ RxSourceDomain:
 RxPreparedSource:
     @: view 0
     @: units 0
-    RxSourceDomain@: domain 0
+    @RxSourceDomain: domain 0
     @: profile 0
 
 ArrayView:
@@ -5114,7 +5114,7 @@ RxSourceMake:
     private:
         @: view
         @: units
-        RxSourceDomain@: domain
+        @RxSourceDomain: domain
         @: profile
     required: view units domain profile
     return: @
@@ -5140,12 +5140,12 @@ RxArrayLiteralUnits:
 RxTextLiteralUnits:
     private:
         @: value
-        RxPreparedText@: profile
+        @RxPreparedText: profile
     required: value profile
     return: @
     make:
         throws: copy(FxThrows\pattern)
-        private: char[]: text \value
+        private: []char: text \value
         private: @: prepared RxTextBuild\make(text; profile\profile)
         return: prepared\units
 
@@ -5160,7 +5160,7 @@ RxTextDomain:
     @: slice RxTextSourceSlice\copyValue
 
 RxArrayPrepare:
-    private: ArrayView@: source
+    private: @ArrayView: source
     required: source
     return: @
     make:
@@ -5174,7 +5174,7 @@ RxArrayPrepare:
         )
 
 RxTextPrepareSource:
-    private: TextView@: source
+    private: @TextView: source
     required: source
     return: @
     make:
@@ -5205,7 +5205,7 @@ RxArrayRangeUnit:
 RxTextRangeUnit:
     private:
         @: value
-        RxPreparedText@: profile
+        @RxPreparedText: profile
     required: value profile
     return: @
     get:
@@ -5217,7 +5217,7 @@ RxTextRangeUnit:
 
 RxArraySourceSlice:
     private:
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: begin
         int: end
     required: source begin end
@@ -5228,21 +5228,21 @@ RxArraySourceSlice:
 
 RxTextSourceSlice:
     private:
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: begin
         int: end
     required: source begin end
     return: @
     copyValue:
         throws: copy(FxThrows\pattern)
-        private: RxPreparedText@: text source\profile
+        private: @RxPreparedText: text source\profile
         if: begin < 0 || end < begin || end > length(text\units)
             throw: PatternPosition()
         return: FxSeqSlice\slice(text\source; text\byteOffsets[begin]; text\byteOffsets[end])
 
 RxSourceSlice:
     private:
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: begin
         int: end
     required: source begin end
@@ -5256,7 +5256,7 @@ RxSourceAppend:
     private:
         @: target
         @: fragment
-        RxPreparedSource@: source
+        @RxPreparedSource: source
     required: target fragment source
     append:
         throws: copy(FxThrows\pattern)
@@ -5267,7 +5267,7 @@ RxSourceAppend:
 RxSourceAppendSpan:
     private:
         @: target
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: begin
         int: end
     required: target source begin end
@@ -5307,8 +5307,8 @@ RxReplacementCallable:
 
 RxReplacementValue:
     private:
-        RxReplacementInput@: replacement
-        Match@: matched
+        @RxReplacementInput: replacement
+        @Match: matched
     required: replacement matched
     return: @
     make:
@@ -5316,7 +5316,7 @@ RxReplacementValue:
         private: @: result replacement\literal
         if: replacement\operation != 0
             result := FxApply\apply(replacement\operation; FxOne\make(matched))
-        private: RxPreparedSource@: source matched\private\prepared
+        private: @RxPreparedSource: source matched\private\prepared
         private: @: validate source\domain\literalUnits
         validate(value := result; profile := source\profile)
         return: result
@@ -5352,7 +5352,7 @@ RxPrimitiveMake:
 RxPrimitiveOpen:
     private:
         @: config
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: @
@@ -5388,7 +5388,7 @@ RxLiteral:
 RxLiteralProbe:
     private:
         @: payload
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: int
@@ -5430,8 +5430,8 @@ RxMembers:
 
 RxClassProbe:
     private:
-        RxClassConfig@: payload
-        RxPreparedSource@: source
+        @RxClassConfig: payload
+        @RxPreparedSource: source
         int: position
         @: captures
     return: int
@@ -5468,8 +5468,8 @@ RxWithin:
 
 RxWithinProbe:
     private:
-        RxWithinConfig@: payload
-        RxPreparedSource@: source
+        @RxWithinConfig: payload
+        @RxPreparedSource: source
         int: position
         @: captures
     return: int
@@ -5504,7 +5504,7 @@ RxSatisfy:
 RxPredicateProbe:
     private:
         @: payload
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: int
@@ -5529,7 +5529,7 @@ RxBoundaryOf:
 RxBoundaryProbe:
     private:
         @: payload
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: int
@@ -5546,10 +5546,10 @@ RxBoundaryProbe:
         return: -1
 
 RxNameConfig:
-    char[]: name ""
+    []char: name ""
 
 RxSameAs:
-    private: char[]: name
+    private: []char: name
     required: name
     return: @
     sameAs:
@@ -5559,8 +5559,8 @@ RxSameAs:
 
 RxSameAsProbe:
     private:
-        RxNameConfig@: payload
-        RxPreparedSource@: source
+        @RxNameConfig: payload
+        @RxPreparedSource: source
         int: position
         @: captures
     return: int
@@ -5580,7 +5580,7 @@ RxSameAsProbe:
 RxEmptyProbe:
     private:
         @: payload
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: int
@@ -5590,7 +5590,7 @@ RxEmptyProbe:
 RxNeverProbe:
     private:
         @: payload
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: int
@@ -5600,7 +5600,7 @@ RxNeverProbe:
 RxAnyProbe:
     private:
         @: payload
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: int
@@ -5612,12 +5612,12 @@ RxAnyProbe:
 RxLineCharProbe:
     private:
         @: payload
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: int
     probe:
-        private: RxPreparedText@: profile source\profile
+        private: @RxPreparedText: profile source\profile
         if: position = length(source\units)
             return: -1
         private: int: unit source\units[position]
@@ -5628,12 +5628,12 @@ RxLineCharProbe:
 RxLineBreakProbe:
     private:
         @: payload
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: int
     probe:
-        private: RxPreparedText@: profile source\profile
+        private: @RxPreparedText: profile source\profile
         if: position = length(source\units)
             return: -1
         private: int: unit source\units[position]
@@ -5654,7 +5654,7 @@ RxLineBreakProbe:
 RxStartProbe:
     private:
         @: payload
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: int
@@ -5666,7 +5666,7 @@ RxStartProbe:
 RxEndProbe:
     private:
         @: payload
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: int
@@ -5678,12 +5678,12 @@ RxEndProbe:
 RxLineStartProbe:
     private:
         @: payload
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: int
     probe:
-        private: RxPreparedText@: profile source\profile
+        private: @RxPreparedText: profile source\profile
         if: position = 0
             return: position
         private: int: before source\units[position - 1]
@@ -5700,12 +5700,12 @@ RxLineStartProbe:
 RxLineEndProbe:
     private:
         @: payload
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: int
     probe:
-        private: RxPreparedText@: profile source\profile
+        private: @RxPreparedText: profile source\profile
         if: position = length(source\units)
             return: position
         private: int: after source\units[position]
@@ -5754,7 +5754,7 @@ RxElement:
 RxElementProbe:
     private:
         @: payload
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: int
@@ -5776,7 +5776,7 @@ RxReadyEmptyPatternConfig:
 RxReadyEmptyPattern:
     Call:
         private:
-            RxPreparedSource@: source
+            @RxPreparedSource: source
             int: position
             @: captures
         required: source position captures
@@ -5793,7 +5793,7 @@ RxReadyNeverPatternConfig:
 RxReadyNeverPattern:
     Call:
         private:
-            RxPreparedSource@: source
+            @RxPreparedSource: source
             int: position
             @: captures
         required: source position captures
@@ -5810,7 +5810,7 @@ RxReadyAnyElementConfig:
 RxReadyAnyElement:
     Call:
         private:
-            RxPreparedSource@: source
+            @RxPreparedSource: source
             int: position
             @: captures
         required: source position captures
@@ -5827,7 +5827,7 @@ RxReadyLineCharConfig:
 RxReadyLineChar:
     Call:
         private:
-            RxPreparedSource@: source
+            @RxPreparedSource: source
             int: position
             @: captures
         required: source position captures
@@ -5844,7 +5844,7 @@ RxReadyLineBreakConfig:
 RxReadyLineBreak:
     Call:
         private:
-            RxPreparedSource@: source
+            @RxPreparedSource: source
             int: position
             @: captures
         required: source position captures
@@ -5861,7 +5861,7 @@ RxReadyStartConfig:
 RxReadyStart:
     Call:
         private:
-            RxPreparedSource@: source
+            @RxPreparedSource: source
             int: position
             @: captures
         required: source position captures
@@ -5878,7 +5878,7 @@ RxReadyEndConfig:
 RxReadyEnd:
     Call:
         private:
-            RxPreparedSource@: source
+            @RxPreparedSource: source
             int: position
             @: captures
         required: source position captures
@@ -5895,7 +5895,7 @@ RxReadyLineStartConfig:
 RxReadyLineStart:
     Call:
         private:
-            RxPreparedSource@: source
+            @RxPreparedSource: source
             int: position
             @: captures
         required: source position captures
@@ -5912,7 +5912,7 @@ RxReadyLineEndConfig:
 RxReadyLineEnd:
     Call:
         private:
-            RxPreparedSource@: source
+            @RxPreparedSource: source
             int: position
             @: captures
         required: source position captures
@@ -5929,7 +5929,7 @@ RxReadyAsciiDigitConfig:
 RxReadyAsciiDigit:
     Call:
         private:
-            RxPreparedSource@: source
+            @RxPreparedSource: source
             int: position
             @: captures
         required: source position captures
@@ -5946,7 +5946,7 @@ RxReadyAsciiLetterConfig:
 RxReadyAsciiLetter:
     Call:
         private:
-            RxPreparedSource@: source
+            @RxPreparedSource: source
             int: position
             @: captures
         required: source position captures
@@ -5963,7 +5963,7 @@ RxReadyAsciiWordConfig:
 RxReadyAsciiWord:
     Call:
         private:
-            RxPreparedSource@: source
+            @RxPreparedSource: source
             int: position
             @: captures
         required: source position captures
@@ -5980,7 +5980,7 @@ RxReadyAsciiSpaceConfig:
 RxReadyAsciiSpace:
     Call:
         private:
-            RxPreparedSource@: source
+            @RxPreparedSource: source
             int: position
             @: captures
         required: source position captures
@@ -5997,7 +5997,7 @@ RxReadyWordBoundaryConfig:
 RxReadyWordBoundary:
     Call:
         private:
-            RxPreparedSource@: source
+            @RxPreparedSource: source
             int: position
             @: captures
         required: source position captures
@@ -6013,7 +6013,7 @@ const: @: wordBoundary RxReadyWordBoundary\Call\open
 
 RxPartsConfig:
     @: originalParts 0
-    @[]: parts []
+    []@: parts []
 
 RxPartsPrepare:
     private: @: patterns
@@ -6021,7 +6021,7 @@ RxPartsPrepare:
     prepare:
         throws: copy(FxThrows\pattern)
         private: @: info FxSeqInfo\get(source := patterns)
-        private: @[]: parts []
+        private: []@: parts []
         sys\resize(parts; length(patterns))
         private: int: i 0
         while: i < length(patterns)
@@ -6071,7 +6071,7 @@ RxSequenceFrame:
 
 RxSequenceFrameMake:
     private:
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         @: parts
         int: index
         @: candidate
@@ -6087,7 +6087,7 @@ RxSequenceFrameMake:
 RxSequenceOpen:
     private:
         @: config
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: @
@@ -6127,7 +6127,7 @@ RxChoiceState:
 RxChoiceOpen:
     private:
         @: config
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: @
@@ -6220,7 +6220,7 @@ RxRepeatFrameMake:
 RxRepeatOpen:
     private:
         @: config
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: @
@@ -6286,7 +6286,7 @@ RxAtomicState:
 RxAtomicOpen:
     private:
         @: config
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: @
@@ -6306,12 +6306,12 @@ RxAtomicStep:
         return: cursor()
 
 RxCaptureConfig:
-    char[]: name ""
+    []char: name ""
     @: pattern 0
 
 RxCapture:
     private:
-        char[]: name
+        []char: name
         @: pattern
     required: name pattern
     return: @
@@ -6323,14 +6323,14 @@ RxCapture:
         return: RxPatternFactory\make(RxCaptureOpen\open; config)
 
 RxCaptureState:
-    char[]: name ""
+    []char: name ""
     int: begin 0
     @: cursor 0
 
 RxCaptureOpen:
     private:
         @: config
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: @
@@ -6361,7 +6361,7 @@ RxLookConfig:
 RxLookProbe:
     private:
         @: payload
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: position
         @: captures
     return: int
@@ -6445,8 +6445,8 @@ RxNotBehind:
 
 RxSelectAt:
     private:
-        RxPreparedSource@: source
-        Pattern@: pattern
+        @RxPreparedSource: source
+        @Pattern: pattern
         int: position
         int: whole 0
         int: nonEmpty 0
@@ -6501,8 +6501,8 @@ RxFindState:
 
 RxFindStateMake:
     private:
-        RxPreparedSource@: source
-        Pattern@: pattern
+        @RxPreparedSource: source
+        @Pattern: pattern
     return: @
     make:
         private: @: out (copy(RxFindState))
@@ -6637,14 +6637,14 @@ RxMatches:
         return: found\present
 
 RxMatchedSpan:
-    private: Match@: result
+    private: @Match: result
     required: result
     return: @
     matchedSpan:
         return: RxSpanMake\make(result\private\prepared; result\begin; result\end)
 
 RxMatchedValue:
-    private: Match@: result
+    private: @Match: result
     required: result
     return: @
     matchedValue:
@@ -6652,8 +6652,8 @@ RxMatchedValue:
 
 RxCaptureSpans:
     private:
-        Match@: result
-        char[]: name
+        @Match: result
+        []char: name
     required: result name
     return: @
     captureSpans:
@@ -6663,7 +6663,7 @@ RxCaptureSpans:
             if: FxEqualFields\equalFields(cursor\name; name) != 0
                 count += 1
             cursor := cursor\previous
-        private: @[]: spans []
+        private: []@: spans []
         sys\resize(spans; count)
         cursor := result\captures
         while: cursor != 0
@@ -6675,8 +6675,8 @@ RxCaptureSpans:
 
 RxLastCapture:
     private:
-        Match@: result
-        char[]: name
+        @Match: result
+        []char: name
     required: result name
     return: @
     lastCapture:
@@ -6688,8 +6688,8 @@ RxLastCapture:
 
 RxCaptureValue:
     private:
-        Match@: result
-        char[]: name
+        @Match: result
+        []char: name
     required: result name
     return: @
     captureValue:
@@ -6702,13 +6702,13 @@ RxCaptureValue:
 
 RxCaptureValues:
     private:
-        Match@: result
-        char[]: name
+        @Match: result
+        []char: name
     required: result name
     return: @
     captureValues:
         private: @: spans RxCaptureSpans\captureSpans(result; name)
-        private: @[]: texts []
+        private: []@: texts []
         sys\resize(texts; length(spans))
         private: int: i 0
         while: i < length(spans)
@@ -6722,7 +6722,7 @@ RxReplaceFirst:
     private:
         @: source
         @: pattern
-        RxReplacementInput@: replacement
+        @RxReplacementInput: replacement
     required: source pattern replacement
     return: @
     replaceFirst:
@@ -6746,7 +6746,7 @@ RxReplace:
     private:
         @: source
         @: pattern
-        RxReplacementInput@: replacement
+        @RxReplacementInput: replacement
     required: source pattern replacement
     return: @
     replace:
@@ -6780,7 +6780,7 @@ RxSplit:
         private: @: prepared RxPrepareSource\make(source := source)
         private: @: ready RxNormalize\make(value := pattern)
         private: @: state RxFindStateMake\make(prepared; ready)
-        private: @[]: parts []
+        private: []@: parts []
         private: int: copiedUntil 0
         private: @: selected RxFindNext\step(state := state)
         while: selected\present != 0
@@ -6805,14 +6805,14 @@ RxSplit:
 RxLogicalArguments:
     private:
         @: left
-        @[]: right
+        []@: right
     required: right
     return: @
     collect:
         private: int: extra 0
         if: left != nil
             extra := 1
-        private: @[]: out []
+        private: []@: out []
         sys\resize(out; length(right) + extra)
         if: extra != 0
             out[0] := left
@@ -6826,7 +6826,7 @@ RxThenOperand:
     private:
         @: left
         int: depth 0
-        @[]: right
+        []@: right
     required: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("+")
@@ -6842,7 +6842,7 @@ RxRepeatOperands:
     private:
         @: left
         int: depth 0
-        @[]: right
+        []@: right
     required: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("*")
@@ -6888,7 +6888,7 @@ RxAlternativeDispatchResult:
 RxAlternativeDispatch:
     private:
         @: left
-        @[]: right
+        []@: right
     required: right
     return: @
     probe:
@@ -7027,7 +7027,7 @@ FxStdEnumerate:
     enumerate:
         throws: copy(FxThrows\sequencefixture)
         FxSeqInfo\get(items)
-        private: @: out FxSeqAllocate\make(@[]; length(items))
+        private: @: out FxSeqAllocate\make([]@; length(items))
         private: bigint: cursor start
         private: int: i 0
         while: i < length(items)
@@ -7055,7 +7055,7 @@ FxStdWindows:
         FxSeqInfo\get(items)
         if: width <= 0 || step <= 0
             throw: SequenceStep()
-        private: @: out FxSeqAllocate\make(@[]; 0)
+        private: @: out FxSeqAllocate\make([]@; 0)
         private: int: at 0
         while: at < length(items)
             private: int: remaining length(items) - at
@@ -7138,11 +7138,11 @@ FxStdUnzip:
     unzip:
         throws: copy(FxThrows\sequence)
         FxSeqInfo\get(pairs)
-        private: @: first FxSeqAllocate\make(@[]; length(pairs))
-        private: @: second FxSeqAllocate\make(@[]; length(pairs))
+        private: @: first FxSeqAllocate\make([]@; length(pairs))
+        private: @: second FxSeqAllocate\make([]@; length(pairs))
         private: int: i 0
         while: i < length(pairs)
-            private: FxPair@: pair FxSeqRead\read(pairs; i)
+            private: @FxPair: pair FxSeqRead\read(pairs; i)
             first[i] := pair\first
             second[i] := pair\second
             i += 1
@@ -7178,11 +7178,11 @@ FxStdMaybeMapEngine:
     run:
         throws: copy(FxThrows\traversal) SequenceElement
         FxSeqInfo\get(items)
-        private: @: out FxSeqAllocate\make(@[]; 0)
+        private: @: out FxSeqAllocate\make([]@; 0)
         private: int: i 0
         while: i < length(items)
             private: @: packed FxApply\apply(transform; FxOne\make(FxSeqRead\read(items; i)))
-            private: FxMaybe@: answer packed
+            private: @FxMaybe: answer packed
             if: answer\present != 0
                 if: firstOnly != 0
                     return: answer
@@ -7226,7 +7226,7 @@ FxStdMapAccumEngine:
         throws: copy(FxThrows\traversal)
         FxSeqInfo\get(items)
         private: int: count length(items)
-        private: @: out FxSeqAllocate\make(@[]; count)
+        private: @: out FxSeqAllocate\make([]@; count)
         private: @: accumulator seed
         private: int: i 0
         while: i < count
@@ -7234,7 +7234,7 @@ FxStdMapAccumEngine:
             if: fromRight != 0
                 at := count - 1 - i
             private: @: packed FxApply\apply(step; FxTwo\make(accumulator; FxSeqRead\read(items; at)))
-            private: FxPair@: answer packed
+            private: @FxPair: answer packed
             accumulator := answer\first
             out[at] := answer\second
             i += 1
@@ -7266,7 +7266,7 @@ FxStdGroupAdjacent:
     groupAdjacent:
         throws: copy(FxThrows\sequencefixture)
         FxSeqInfo\get(items)
-        private: @: out FxSeqAllocate\make(@[]; 0)
+        private: @: out FxSeqAllocate\make([]@; 0)
         private: @: previous 0
         private: @: group 0
         private: int: begin 0
@@ -7300,7 +7300,7 @@ FxStdReplicate:
         private: int: size count
         if: size < 0
             size := 0
-        private: @: out FxSeqAllocate\make(@[]; size)
+        private: @: out FxSeqAllocate\make([]@; size)
         private: int: i 0
         while: i < size
             out[i] := value
@@ -7334,7 +7334,7 @@ FxStdStarMap:
     starmap:
         throws: copy(FxThrows\traversal)
         FxSeqInfo\get(rows)
-        private: @: out FxSeqAllocate\make(@[]; length(rows))
+        private: @: out FxSeqAllocate\make([]@; length(rows))
         private: int: i 0
         while: i < length(rows)
             private: @: row FxSeqRead\read(rows; i)
@@ -7356,7 +7356,7 @@ FxStdZipLongest:
         private: int: count length(first)
         if: length(second) > count
             count := length(second)
-        private: @: out FxSeqAllocate\make(@[]; count)
+        private: @: out FxSeqAllocate\make([]@; count)
         private: int: i 0
         while: i < count
             private: @: a fill
@@ -7382,7 +7382,7 @@ FxStdCollect:
         throws: copy(FxThrows\mutation) FxCallFailure
         if: limit < -1
             throw: SequenceSize()
-        private: @: out FxSeqAllocate\make(@[]; 0)
+        private: @: out FxSeqAllocate\make([]@; 0)
         while: limit = -1 || length(out) < limit
             private: @: outcome FxTry\attempt(next; ())
             if: outcome\ok = 0
@@ -7482,7 +7482,7 @@ FxStdSubset:
 
 FxMapOption:
     private:
-        FxMaybe@: input
+        @FxMaybe: input
         @: transform
     required: input transform
     return: @
@@ -7495,7 +7495,7 @@ FxMapOption:
 
 FxFilterOption:
     private:
-        FxMaybe@: input
+        @FxMaybe: input
         @: accepts
     required: input accepts
     return: @
@@ -7512,7 +7512,7 @@ FxFilterOption:
 # chosen payload record, not another Maybe. orElseGet is the lazy counterpart.
 FxOrElse:
     private:
-        FxMaybe@: input
+        @FxMaybe: input
         @: fallback
     required: input fallback
     return: @
@@ -7523,7 +7523,7 @@ FxOrElse:
 
 FxOrElseGet:
     private:
-        FxMaybe@: input
+        @FxMaybe: input
         @: fallback
     required: input fallback
     return: @
@@ -7537,7 +7537,7 @@ FxOrElseGet:
 # distinct from Java's payload-returning orElse/orElseGet.
 FxOrElseOption:
     private:
-        FxMaybe@: input
+        @FxMaybe: input
         @: fallback
     required: input fallback
     return: @
@@ -7546,14 +7546,14 @@ FxOrElseOption:
         if: input\present != 0
             return: input
         private: @: record FxApply\apply(fallback; ())
-        private: FxMaybe@: result record
+        private: @FxMaybe: result record
         return: result
 
 # Both branches reuse the two operations above; no second optional dispatch
 # algorithm is embedded in this eliminator.
 FxFoldOption:
     private:
-        FxMaybe@: input
+        @FxMaybe: input
         @: whenEmpty
         @: whenPresent
     required: input whenEmpty whenPresent
@@ -7564,18 +7564,18 @@ FxFoldOption:
         return: FxOrElseGet\orElseGet(mapped; whenEmpty)
 
 FxFlattenOption:
-    private: FxMaybe@: input
+    private: @FxMaybe: input
     required: input
     return: @
     flattenOption:
         if: input\present = 0
             return: input
-        private: FxMaybe@: result input\value
+        private: @FxMaybe: result input\value
         return: result
 
 FxMapResult:
     private:
-        FxResult@: input
+        @FxResult: input
         @: transform
     required: input transform
     return: @
@@ -7588,7 +7588,7 @@ FxMapResult:
 
 FxMapErr:
     private:
-        FxResult@: input
+        @FxResult: input
         @: transform
     required: input transform
     return: @
@@ -7603,7 +7603,7 @@ FxMapErr:
 # the returned Result in a second err or mistake its result record for data.
 FxOrElseResult:
     private:
-        FxResult@: input
+        @FxResult: input
         @: fallback
     required: input fallback
     return: @
@@ -7612,12 +7612,12 @@ FxOrElseResult:
         if: input\ok != 0
             return: input
         private: @: record FxApply\apply(fallback; FxOne\make(input\reason))
-        private: FxResult@: result record
+        private: @FxResult: result record
         return: result
 
 FxFoldResult:
     private:
-        FxResult@: input
+        @FxResult: input
         @: onError
         @: onSuccess
     required: input onError onSuccess
@@ -7671,7 +7671,7 @@ FxTap:
 FxFieldArguments:
     private:
         @: source
-        char[]: label
+        []char: label
         int: occurrence
     required: source label occurrence
 
@@ -7686,7 +7686,7 @@ FxFindField:
         private: int: i 0
         private: int: matched 0
         while: i < length(labels)
-            private: char[]: candidate \labels[i]
+            private: []char: candidate \labels[i]
             if: candidate != nil
                 if: FxEqualFields\equalFields(candidate; label) != 0
                     if: matched = occurrence
@@ -7701,7 +7701,7 @@ FxHasField:
     return: int
     hasField:
         throws: copy(FxThrows\sequence) FxIndex
-        private: FxMaybe@: found FxFindField\findField(source; label; occurrence)
+        private: @FxMaybe: found FxFindField\findField(source; label; occurrence)
         return: found\present
 
 FxGetField:
@@ -7709,7 +7709,7 @@ FxGetField:
     return: @
     getField:
         throws: copy(FxThrows\sequence) FxIndex
-        private: FxMaybe@: found FxFindField\findField(source; label; occurrence)
+        private: @FxMaybe: found FxFindField\findField(source; label; occurrence)
         if: found\present = 0
             throw: FxIndex()
         return: found\value
@@ -7980,7 +7980,7 @@ FxSubstitute:
 FxOperandInputTypes:
     @: left
     int: depth
-    @[]: right
+    []@: right
 
 FxOperandValueEngine:
     private:
@@ -8019,7 +8019,7 @@ FxAsOperand:
         private: @: noResult FxKernel\normalizeType(void)
         private: @: inputs FxKernel\signatureData(inputTypes; noResult; ("left"; "depth"; "right"))
         private: @: output FxKernel\signatureData((); source\resultType; ())
-        private: char[]: properties FxConcat\concat("const: int: PASS_ARGS_AS_IS 0\nconst: int: PRIORITY "; FxFormat\format(priority))
+        private: []char: properties FxConcat\concat("const: int: PASS_ARGS_AS_IS 0\nconst: int: PRIORITY "; FxFormat\format(priority))
         private: @: readyProperties sys\fromLmx(properties)
         private: @: data (
             private: copy(inputs)
@@ -8342,17 +8342,17 @@ FxFormat:
     private:
         bigint: value
         int: base 10
-    return: char[]
+    return: []char
     format:
         throws: copy(FxThrows\selection)
         if: base < 2 || base > 36
             throw: FxIndex()
-        private: char[]: digits "0123456789abcdefghijklmnopqrstuvwxyz"
+        private: []char: digits "0123456789abcdefghijklmnopqrstuvwxyz"
         private: bigint: magnitude value
         private: int: negative value < 0
         if: negative != 0
             magnitude := -magnitude
-        private: char[]: out []
+        private: []char: out []
         private: @: info FxSeqInfo\get(out)
         while: 1
             private: int: digit magnitude % base
@@ -8369,14 +8369,14 @@ FxFormat:
 
 FxParse:
     private:
-        char[]: text
+        []char: text
         int: base 10
     return: bigint
     parse:
         throws: NumericDomain copy(FxThrows\predicate) FxShape FxRecordArity
         if: base < 2 || base > 36 || length(text) = 0
             throw: NumericDomain()
-        private: char[]: digits "0123456789abcdefghijklmnopqrstuvwxyz"
+        private: []char: digits "0123456789abcdefghijklmnopqrstuvwxyz"
         private: int: at 0
         private: int: negative 0
         if: text[0] = '-' || text[0] = '+'
@@ -8606,7 +8606,7 @@ FxProfileRange:
         @: start
         @: stop
         @: step
-        FxRangeProfile@: profile
+        @FxRangeProfile: profile
     required: start stop step profile
     return: @
     range:
@@ -8662,15 +8662,15 @@ FxProfileParse:
         return: FxCodecApply\apply(source; profile; arguments)
 
 # These exact public text representations supply defaults only for text. They
-# delegate to the single generic algorithm and preserve the actual char[] R.
+# delegate to the single generic algorithm and preserve the actual []char R.
 FxTextTrim:
     private:
-        char[]: text
-        char[]: chars " \t\r\n\v\f"
+        []char: text
+        []char: chars " \t\r\n\v\f"
         @: predicate 0
         @: same 0
     required: text
-    return: char[]
+    return: []char
     trim:
         throws: copy(FxThrows\predicate) FxShape SequenceSize
         return: \FxSequenceTrim\trim(text; chars; 0; predicate; same)
@@ -8683,11 +8683,11 @@ FxTextTrim:
 
 FxTextPad:
     private:
-        char[]: text
+        []char: text
         int: width
-        char[]: fill " "
+        []char: fill " "
     required: text width
-    return: char[]
+    return: []char
     padLeft:
         throws: copy(FxThrows\sequence)
         return: \FxSequencePad\pad(text; width; fill; 0)
@@ -8698,20 +8698,20 @@ FxTextPad:
 FxTextJoin:
     private:
         @: parts
-        char[]: separator ""
+        []char: separator ""
     required: parts
-    return: char[]
+    return: []char
     join:
         throws: copy(FxThrows\mutation)
         return: \FxStdJoin\join(parts; separator)
 
 FxTextCycle:
     private:
-        char[]: items
+        []char: items
         int: count
         int: rejectNegative 0
     required: items count
-    return: char[]
+    return: []char
     cycle:
         throws: copy(FxThrows\sequence)
         return: \FxStdCycle\cycle(items; count; rejectNegative)
@@ -10281,7 +10281,7 @@ FxMixedTarget:
     private:
         int: number
         double: scale
-        char[]: text
+        []char: text
     return: double
     evaluate:
         throws: copy(FxThrows\fixture)
@@ -10302,7 +10302,7 @@ FxMixedTarget:
 FxProcedureTarget:
     private:
         int: count
-        char[]: label
+        []char: label
     run:
         throws: copy(FxThrows\fixture)
         FxGenericCounter\calls += count + length(label)
@@ -10317,10 +10317,10 @@ FxNullaryTarget:
 FxPairTarget:
     private:
         int: count
-        char[]: label
+        []char: label
     return:
         int: number
-        char[]: text
+        []char: text
     create:
         throws: copy(FxThrows\fixture)
         return: count label
@@ -10393,7 +10393,7 @@ FxGenericExamples:
         @: pair FxLambda\lambda(operation := FxPairTarget\create)
         @: pairLast pair(p0 := 7)
         int: pairNumber 0
-        char[]: pairText ""
+        []char: pairText ""
         @: pairValue pairLast(p0 := "seven")
         (pairNumber pairText) .: copy(pairValue)
         sys\assert(pairNumber = 7)
@@ -10533,9 +10533,9 @@ FxFnReadyCodesExample:
         @: info FxKernel\signature(subject := made)
         sys\assert(length(info\inputTypes) = 3)
         sys\assert(info\hasResult = 1)
-        made@: selected FxFnMixedTarget\run
+        @made: selected FxFnMixedTarget\run
         sys\assert(selected(p0 := 7; p1 := 1.5; p2 := FxFnReadySamples) = 7)
-        FxFnExpectedMixed@: oldStyle FxFnMixedTarget\run
+        @FxFnExpectedMixed: oldStyle FxFnMixedTarget\run
         sys\assert(oldStyle(p0 := 9; p1 := 2.0; p2 := FxFnReadySamples) = 9)
         return: 1
 
@@ -10550,7 +10550,7 @@ FxFnUninitExample:
         int: integralTag sys\typeof(FxFnUninitSamples\integral[0])
         int: realTag sys\typeof(FxFnUninitSamples\real[0])
         int: referenceTag sys\typeof(FxFnUninitSamples\reference[0])
-        @[]: tokens []
+        []@: tokens []
         sys\resize(tokens; 3)
         tokens[0] := FxFnUninitSamples\integral[0]
         tokens[1] := FxFnUninitSamples\real[0]
@@ -10559,7 +10559,7 @@ FxFnUninitExample:
         @: info FxKernel\signature(subject := made)
         sys\assert(length(info\inputTypes) = 3)
         sys\assert(info\hasResult = 1)
-        made@: selected FxFnMixedTarget\run
+        @made: selected FxFnMixedTarget\run
         sys\assert(selected(p0 := 11; p1 := 3.0; p2 := FxFnReadySamples) = 11)
         sys\assert(sys\typeof(FxFnUninitSamples\integral[0]) = integralTag)
         sys\assert(sys\typeof(FxFnUninitSamples\real[0]) = realTag)
@@ -10586,13 +10586,13 @@ FxFnProcedureExample:
         FxFnProcedureState\calls := 0
         @: original FxKernel\signature(subject := FxFnProcedureTarget\run)
         sys\assert(original\hasResult = 0)
-        @[]: tokens []
+        []@: tokens []
         @: made FxToTypes\`->`(inputs := tokens; result := original\resultType)
         @: info FxKernel\signature(subject := made)
         sys\assert(length(info\inputTypes) = 0)
         sys\assert(info\hasResult = 0)
         sys\assert(FxFnProcedureState\calls = 0)
-        made@: selected FxFnProcedureTarget\run
+        @made: selected FxFnProcedureTarget\run
         selected()
         sys\assert(FxFnProcedureState\calls = 1)
         return: 1
@@ -10669,9 +10669,9 @@ FxFnAndAssignmentExamples:
 # Передача описания сигнатуры в call не получает новую семантику исполнения.
 # Имена формалов специально НЕ p0/p1/p2 и не имена исходного callable.
 
-FxLegacyMixedContract :: (int: amount; double: factor; char[]: suffix; return: double)
+FxLegacyMixedContract :: (int: amount; double: factor; []char: suffix; return: double)
 
-FxLegacyProcedureContract :: (int: amount; char[]: suffix)
+FxLegacyProcedureContract :: (int: amount; []char: suffix)
 
 FxLegacyNullaryContract :: (return: double)
 
@@ -10683,25 +10683,25 @@ FxFnEquivalenceExamples:
         private: @: originalInfo FxKernel\signature(subject := FxMixedTarget\evaluate)
         private: @: tokenContract FxToTypes\`->`(inputs := originalInfo\inputTypes; result := originalInfo\resultType)
         # Новое fn-требование принимает callable с прежним именованным DATA.
-        private: tokenContract@: acceptsNamed FxMixedTarget\evaluate
+        private: @tokenContract: acceptsNamed FxMixedTarget\evaluate
         sys\assert(acceptsNamed(p0 := 2; p1 := 1.5; p2 := "abc") = 6.0)
         # Именованная сигнатура принимает callable, созданный общим type builder.
         private: @: generated FxPartial\partial(FxMixedTarget\evaluate; prefix := empty)
-        private: FxLegacyMixedContract@: acceptsGenerated generated
+        private: @FxLegacyMixedContract: acceptsGenerated generated
         sys\assert(acceptsGenerated(amount := 2; factor := 1.5; suffix := "abc") = 6.0)
         # Оба описания передаются одному общему introspection/construction API.
         private: @: legacyInfo FxKernel\signature(subject := FxLegacyMixedContract)
         private: @: tokenInfo FxKernel\signature(subject := tokenContract)
         sys\assert(length(legacyInfo\inputTypes) = length(tokenInfo\inputTypes))
         sys\assert(legacyInfo\hasResult = tokenInfo\hasResult)
-        private: tokenContract@: generatedForToken generated
+        private: @tokenContract: generatedForToken generated
         sys\assert(generatedForToken(p0 := 1; p1 := 2.0; p2 := "x") = 3.0)
         # void остаётся отсутствием return, не @0, int0 или пустой Structure.
         private: @: procedureInfo FxKernel\signature(subject := FxProcedureTarget\run)
         private: @: procedureType FxToTypes\`->`(inputs := procedureInfo\inputTypes; result := procedureInfo\resultType)
-        private: procedureType@: newAcceptsOldProcedure FxProcedureTarget\run
+        private: @procedureType: newAcceptsOldProcedure FxProcedureTarget\run
         private: @: generatedProcedure FxPartial\partial(FxProcedureTarget\run; prefix := empty)
-        private: FxLegacyProcedureContract@: oldAcceptsNewProcedure generatedProcedure
+        private: @FxLegacyProcedureContract: oldAcceptsNewProcedure generatedProcedure
         private: int: before FxGenericCounter\calls
         newAcceptsOldProcedure(p0 := 2; p1 := "x")
         oldAcceptsNewProcedure(amount := 3; suffix := "xy")
@@ -10709,9 +10709,9 @@ FxFnEquivalenceExamples:
         # Нулевая арность не подменяется одним фиктивным void-параметром.
         private: @: nullaryInfo FxKernel\signature(subject := FxNullaryTarget\value)
         private: @: nullaryType FxToTypes\`->`(inputs := empty; result := nullaryInfo\resultType)
-        private: nullaryType@: typedNullary FxNullaryTarget\value
+        private: @nullaryType: typedNullary FxNullaryTarget\value
         private: @: generatedNullary FxPartial\partial(FxNullaryTarget\value; prefix := empty)
-        private: FxLegacyNullaryContract@: legacyNullary generatedNullary
+        private: @FxLegacyNullaryContract: legacyNullary generatedNullary
         sys\assert(typedNullary() = 2.5)
         sys\assert(legacyNullary() = 2.5)
         return: 1
@@ -10730,7 +10730,7 @@ FxFnEquivalenceExamples:
 # Сами коллекции, Maybe, Bounce и wrappers хранят type/value записи.
 
 FxTextLength:
-    private: char[]: value
+    private: []char: value
     return: int
     measure:
         throws: copy(FxThrows\lazyfixture)
@@ -10744,7 +10744,7 @@ FxDoubleStep:
         return: value + 0.5
 
 FxStringMaybe:
-    private: char[]: value
+    private: []char: value
     return: @
     accept:
         throws: copy(FxThrows\lazyfixture)
@@ -10771,13 +10771,13 @@ FxValueGenericExamples:
         sys\assert(\doubles[0] = 2.0 && \doubles[1] = 3.0)
         private: @: maybe FxSome\some(value := ("abc" FxRecordOperands\record))
         private: @: bound FxBind\bind(maybe; FxStringMaybe\accept)
-        private: char[]: text \bound\value
+        private: []char: text \bound\value
         sys\assert(bound\present = 1 && length(text) = 3)
         private: @: absent FxBind\bind(FxNone\none(); FxStringMaybe\accept)
         sys\assert(absent\present = 0)
         private: @: terminal FxDone\done(value := ("answer" FxRecordOperands\record))
         private: @: terminalRecord FxTrampoline\trampoline(current := terminal)
-        private: char[]: terminalText \terminalRecord
+        private: []char: terminalText \terminalRecord
         sys\assert(length(terminalText) = 6)
         private: @: lazyValue FxLazy\lazy(operation := FxNullaryTarget\value)
         private: int: before FxGenericCounter\calls
@@ -10848,7 +10848,7 @@ FxSeqProbeDuplicate:
     return: @
     run:
         throws: copy(FxThrows\fixture)
-        return: (int[]: [value value])
+        return: ([]int: [value value])
 
 FxSeqProbeKey:
     int: value
@@ -10876,13 +10876,13 @@ FxSeqProbeNumeric:
     return: int
     run:
         throws: copy(FxThrows\sequencefixture)
-        private: int[]: input [1 2 3]
+        private: []int: input [1 2 3]
         private: @: mapped FxMap\map(input; FxSeqProbeScale\run)
         FxSeqProbeEqualInts\check(mapped; (3; 6; 9))
-        sys\assert(sys\typeof(mapped) = @[])
+        sys\assert(sys\typeof(mapped) = []@)
         private: @: filtered FxFilter\filter(input; FxSeqProbeOdd\run)
         FxSeqProbeEqualInts\check(filtered; (1; 3))
-        sys\assert(sys\typeof(filtered) = int[])
+        sys\assert(sys\typeof(filtered) = []int)
         private: @: total FxFold\fold(input; (10 FxRecordOperands\record); FxSeqProbeSubtract\run)
         sys\assert(\total = 4)
         private: @: states FxScan\scan(input; (10 FxRecordOperands\record); FxSeqProbeSubtract\run)
@@ -10897,11 +10897,11 @@ FxSeqProbeNumeric:
         FxSeqProbeEqualInts\check(FxSeqOmit\omit(input; (1; 1)); (1; 3))
         FxSeqProbeEqualInts\check(FxSeqReorder\reorder(input; (2; 0; 1)); (3; 1; 2))
         FxSeqProbeEqualInts\check(FxSeqCompress\compress(input; (0; -2; 1)); (2; 3))
-        private: @: denseConcat FxSeqConcat\concat(parts := (input; (int[]: [])))
-        sys\assert(sys\typeof(denseConcat) = int[])
+        private: @: denseConcat FxSeqConcat\concat(parts := (input; ([]int: [])))
+        sys\assert(sys\typeof(denseConcat) = []int)
         FxSeqProbeEqualInts\check(denseConcat; input)
         private: @: mixedConcat FxSeqConcat\concat(parts := (input; (4; 5)))
-        sys\assert(sys\typeof(mixedConcat) = @[])
+        sys\assert(sys\typeof(mixedConcat) = []@)
         FxSeqProbeEqualInts\check(mixedConcat; (1; 2; 3; 4; 5))
         private: @: listed FxSeqList\list(input)
         input[0] := 100
@@ -10910,16 +10910,16 @@ FxSeqProbeNumeric:
         FxSeqProbeEqualInts\check(flattened; (1; 1; 2; 2))
         private: @: zipped FxZip\zip(first := (1; 2; 3); second := (10; 20))
         sys\assert(length(zipped) = 2)
-        private: FxPair@: pair zipped[1]
+        private: @FxPair: pair zipped[1]
         sys\assert(\pair\first = 2 && \pair\second = 20)
         private: @: traversed FxTraverse\traverse((1; 2); FxSeqProbeSome\run)
         sys\assert(traversed\present = 1)
         FxSeqProbeEqualInts\check(traversed\value; (1; 2))
         private: @: groups FxGroupBy\groupBy((1; 2; 3; 4); FxSeqProbeKey\run; FxSeqProbeSameKey\run)
         sys\assert(length(groups) = 2)
-        private: FxGroup@: firstGroup groups[0]
+        private: @FxGroup: firstGroup groups[0]
         FxSeqProbeEqualInts\check(firstGroup\items; (1; 3))
-        private: @: columns FxTranspose\transpose(rows := ((int[]: [1 2]); (3; 4)))
+        private: @: columns FxTranspose\transpose(rows := (([]int: [1 2]); (3; 4)))
         FxSeqProbeEqualInts\check(columns[0]; (1; 3))
         FxSeqProbeEqualInts\check(columns[1]; (2; 4))
         return: 1
@@ -10936,7 +10936,7 @@ FxSeqProbeQueries:
             FxRecordArity
             FxTypeToken
             ReceiverIndex
-        private: int[]: input [2 4 5 8]
+        private: []int: input [2 4 5 8]
         FxSeqProbeLog\calls := 0
         sys\assert(FxSeqAny\any(input; FxSeqProbeOdd\run) = 1)
         sys\assert(FxSeqProbeLog\calls = 3)
@@ -10950,7 +10950,7 @@ FxSeqProbeQueries:
         FxSeqProbeLog\calls := 0
         sys\assert(FxSeqCount\count(input; FxSeqProbeOdd\run) = 1)
         sys\assert(FxSeqProbeLog\calls = 4)
-        private: int[]: empty []
+        private: []int: empty []
         sys\assert(FxSeqAny\any(empty; FxSeqProbeOdd\run) = 0)
         sys\assert(FxSeqAll\all(empty; FxSeqProbeOdd\run) = 1)
         sys\assert(FxSeqCount\count(empty; FxSeqProbeOdd\run) = 0)
@@ -10965,7 +10965,7 @@ FxSeqProbeMutation:
     return: int
     run:
         throws: copy(FxThrows\mutationfixture)
-        private: int[]: values [1 2 3 4]
+        private: []int: values [1 2 3 4]
         private: @: alias values
         private: @: replaced FxSeqReplaceRange\replaceRange(values; 1; 3; (9; 8; 7))
         replaced[0] := 11
@@ -10980,7 +10980,7 @@ FxSeqProbeMutation:
         FxSeqInsert\insert(values; 0; (10; 20))
         FxSeqDeleteAt\deleteAt(values; 2; 12)
         FxSeqProbeEqualInts\check(values; (10; 20))
-        private: int[]: overlap [1 2 3 4]
+        private: []int: overlap [1 2 3 4]
         FxSeqReplaceRange\replaceRange(overlap; 1; 3; overlap)
         FxSeqProbeEqualInts\check(overlap; (1; 1; 2; 3; 4; 4))
         private: @: nodeValue (int: width 7)
@@ -11001,13 +11001,13 @@ FxSeqProbeSpliceDense:
     return: int
     run:
         throws: copy(FxThrows\mutationfixture)
-        private: int[]: values [1 2 3 4]
+        private: []int: values [1 2 3 4]
         private: @: alias values
         private: @: removed FxSeqSplice\splice(values; 1; 3; (9; 8; 7))
         alias[0] := 10
         sys\assert(values[0] = 10 && length(alias) = 5)
         alias[0] := 1
-        sys\assert(sys\typeof(removed) = int[])
+        sys\assert(sys\typeof(removed) = []int)
         FxSeqProbeEqualInts\check(removed; (2; 3))
         FxSeqProbeEqualInts\check(values; (1; 9; 8; 7; 4))
         removed[0] := 200
@@ -11015,17 +11015,17 @@ FxSeqProbeSpliceDense:
         values[2] := 80
         FxSeqProbeEqualInts\check(removed; (200; 3))
         # Both inserted and removed values must come from the original target.
-        private: int[]: overlap [1 2 3 4]
+        private: []int: overlap [1 2 3 4]
         private: @: oldMiddle FxSeqSplice\splice(overlap; 1; 3; overlap)
         FxSeqProbeEqualInts\check(oldMiddle; (2; 3))
         FxSeqProbeEqualInts\check(overlap; (1; 1; 2; 3; 4; 4))
-        private: char[]: text "abcd"
+        private: []char: text "abcd"
         private: @: textAlias text
-        private: char[]: removedText FxSeqSplice\splice(text; 1; 3; "XY")
+        private: []char: removedText FxSeqSplice\splice(text; 1; 3; "XY")
         textAlias[0] := 'A'
         sys\assert(text[0] = 'A')
         textAlias[0] := 'a'
-        sys\assert(sys\typeof(removedText) = char[])
+        sys\assert(sys\typeof(removedText) = []char)
         sys\assert(length(removedText) = 2 && removedText[0] = 'b' && removedText[1] = 'c')
         sys\assert(length(text) = 4 && text[0] = 'a' && text[1] = 'X' && text[2] = 'Y' && text[3] = 'd')
         removedText[0] := 'z'
@@ -11045,7 +11045,7 @@ FxSeqProbeSpliceReferences:
         alias[1] := second
         sys\assert(values[1]\width = 2 && length(alias) = 4)
         alias[1] := third
-        sys\assert(sys\typeof(removed) = @[] && length(removed) = 1)
+        sys\assert(sys\typeof(removed) = []@ && length(removed) = 1)
         sys\assert(removed[0]\width = 2)
         sys\assert(length(values) = 4 && values[0]\width = 1 && values[1]\width = 3 && values[2]\width = 1 && values[3]\width = 3)
         # Referenced objects remain shared; only the outer result slots are new.
@@ -11068,13 +11068,13 @@ FxSeqProbeSpliceTypedReferences:
         private: int: first 10
         private: int: second 20
         private: int: third 30
-        private: int@: firstRef @first
-        private: int@: secondRef @second
-        private: int@: thirdRef @third
-        private: int@[]: values [firstRef secondRef thirdRef]
-        private: int@[]: inserted [firstRef]
-        private: int@[]: removed FxSeqSplice\splice(values; 1; 2; inserted)
-        sys\assert(sys\typeof(removed) = int@[])
+        private: @int: firstRef @first
+        private: @int: secondRef @second
+        private: @int: thirdRef @third
+        private: []@int: values [firstRef secondRef thirdRef]
+        private: []@int: inserted [firstRef]
+        private: []@int: removed FxSeqSplice\splice(values; 1; 2; inserted)
+        sys\assert(sys\typeof(removed) = []@int)
         sys\assert(length(removed) = 1 && \removed[0] = 20)
         sys\assert(length(values) = 3 && \values[0] = 10 && \values[1] = 10 && \values[2] = 30)
         second := 21
@@ -11087,10 +11087,10 @@ FxSeqProbeSpliceEmpty:
     return: int
     run:
         throws: copy(FxThrows\mutationfixture)
-        private: int[]: values [1 2]
+        private: []int: values [1 2]
         private: @: alias values
         private: @: emptyCut FxSeqSplice\splice(values; 1; 1; (7))
-        sys\assert(length(emptyCut) = 0 && sys\typeof(emptyCut) = int[])
+        sys\assert(length(emptyCut) = 0 && sys\typeof(emptyCut) = []int)
         FxSeqAppend\append(emptyCut; (8))
         sys\assert(length(emptyCut) = 1 && emptyCut[0] = 8 && length(values) = 3)
         alias[0] := 10
@@ -11101,7 +11101,7 @@ FxSeqProbeSpliceEmpty:
         FxSeqProbeEqualInts\check(entire; (1; 7; 2))
         sys\assert(length(values) = 0 && length(alias) = 0)
         private: @: emptyAgain FxSeqSplice\splice(values; 0; 0; ())
-        sys\assert(length(emptyAgain) = 0 && sys\typeof(emptyAgain) = int[])
+        sys\assert(length(emptyAgain) = 0 && sys\typeof(emptyAgain) = []int)
         FxSeqAppend\append(emptyAgain; (9))
         sys\assert(length(values) = 0 && length(alias) = 0 && emptyAgain[0] = 9)
         return: 1
@@ -11110,7 +11110,7 @@ FxSeqProbeSpliceBadInsert:
     return: int
     run:
         throws: copy(FxThrows\mutationfixture)
-        private: int[]: values [1 2 3]
+        private: []int: values [1 2 3]
         private: @: alias values
         # A valid first inserted value must not commit before the bad second.
         FxSeqSplice\splice(values; 0; 2; (7; "bad"))
@@ -11130,7 +11130,7 @@ FxSeqProbeSpliceBadBounds:
     return: int
     run:
         throws: copy(FxThrows\mutationfixture)
-        private: char[]: values "abc"
+        private: []char: values "abc"
         private: @: alias values
         FxSeqSplice\splice(values; begin; end; "X")
         return: 0
@@ -11154,7 +11154,7 @@ FxSeqProbeBadMask:
             ReceiverIndex
             SequenceElement
             SequenceSize
-        private: int[]: values [1 2]
+        private: []int: values [1 2]
         FxSeqCompress\compress(values; (1; "not-an-int"))
         return: 0
         catch: SequenceElement ()
@@ -11165,7 +11165,7 @@ FxSeqProbeBadInsert:
     return: int
     run:
         throws: copy(FxThrows\mutationfixture)
-        private: int[]: values [1 2]
+        private: []int: values [1 2]
         FxSeqReplaceRange\replaceRange(values; 0; 1; (7; "bad"))
         return: 0
         catch: SequenceElement ()
@@ -11189,7 +11189,7 @@ FxSeqProbeRangeBoundary:
     return: int
     run:
         throws: copy(FxThrows\rangefixture)
-        private: int[]: values FxSeqRange\range(maxInt - 1; maxInt; 2)
+        private: []int: values FxSeqRange\range(maxInt - 1; maxInt; 2)
         sys\assert(length(values) = 1 && values[0] = maxInt - 1)
         return: 1
 
@@ -11320,17 +11320,17 @@ FxAdapterEqualKeys:
     same:
         return: \first[0] = \second[0]
 
-FxAdapterNextSignature :: (char[]: text; return: double)
+FxAdapterNextSignature :: ([]char: text; return: double)
 
 FxAdapterNextA:
-    char[]: text "default"
+    []char: text "default"
     return: double
     value:
         FxAdapterJournal\stages += 1
         return: 2.5
 
 FxAdapterNextB:
-    char[]: otherText
+    []char: otherText
     return: double
     value:
         FxAdapterJournal\stages += 1
@@ -11338,14 +11338,14 @@ FxAdapterNextB:
 
 FxAdapterExactChain:
     int: select 0
-    return: FxAdapterNextSignature@
+    return: @FxAdapterNextSignature
     next:
         FxAdapterJournal\stages += 1
         if: select = 0
             return: FxAdapterNextA\value
         return: FxAdapterNextB\value
 
-FxAdapterFlatSignature :: (int: select; char[]: text; return: double)
+FxAdapterFlatSignature :: (int: select; []char: text; return: double)
 
 FxAdapterFinalSignature :: (return: int)
 
@@ -11357,12 +11357,12 @@ FxAdapterFinal:
 
 FxAdapterCallableResult:
     int: ignored
-    return: FxAdapterFinalSignature@
+    return: @FxAdapterFinalSignature
     value:
         FxAdapterJournal\stages += 1
         return: FxAdapterFinal\value
 
-FxAdapterCallableFlat :: (int: ignored; return: FxAdapterFinalSignature@)
+FxAdapterCallableFlat :: (int: ignored; return: @FxAdapterFinalSignature)
 
 FxAdapterExamples:
     return: int

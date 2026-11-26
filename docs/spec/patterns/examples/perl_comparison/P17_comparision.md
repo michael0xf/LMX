@@ -46,12 +46,12 @@ Ascii:
         return: (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z')
 
 Example:
-    char[]: text
+    []char: text
     int: minimum
     return: @
     run:
         throws: copy(sys\resize\throws) copy(FxSeqPush\append\throws) copy(record\throws)
-        @[]: out []
+        []@: out []
         int: skipped 0
         int: i 0
         while: i < length(text)
@@ -63,7 +63,7 @@ Example:
             if: i > begin && i - begin < minimum
                 skipped += 1
             if: i > begin && i - begin >= minimum
-                char[]: word []
+                []char: word []
                 sys\resize(word; i - begin)
                 int: j 0
                 while: j < length(word)
@@ -80,13 +80,13 @@ Example:
 
 ```lmx
 LongWord:
-    char[]: word
+    []char: word
     return: int
     test:
         return: length(word) >= minimum
 
 Example:
-    char[]: text
+    []char: text
     int: minimum
     return: @
     run:

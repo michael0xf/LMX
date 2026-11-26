@@ -493,7 +493,7 @@ The whole of M11.5г, root-frame work, computed ordinary declarations,
 M11.7/8 and M13/M14 remain OPEN. Witness 377 (original reference: `../steps/witnesses/m11-ordinary-nested-20261114/notes.md`).
 
 **Previous state, 2026-11-14, slice 376: accepted `9039fa89`.** After accepted receiving-context 374
-and physical reference code 375, the historical typed-reference form (current spelling `int@: p`) without a candidate preallocated wrapper8/cell5 before observations. This historical allocation behavior is superseded by the current zero-payload uninitialized contract.
+and physical reference code 375, the historical typed-reference form (current spelling `@int: p`) without a candidate preallocated wrapper8/cell5 before observations. This historical allocation behavior is superseded by the current zero-payload uninitialized contract.
 A required formal8 uses reference-expression context3 and an independent admitted cell5 without reading signature
 payload. Frontend/dump and the single-address-map serializer are aligned; a type-only merge field is retained
 while its computed neighbor runs. Source04: 669, private36 in three modes and AFTER42/mutation24 passed.
@@ -646,7 +646,7 @@ The author's decision of 2026-11-10 (book (original reference: `LMX_semantics.en
 the form `receiver: arguments`, and a field written "name: type: value" (`a: int: 5`) is withdrawn. The slices below
 are described as they ran: with the field of a `merge` operand in the former form, which the translators still
 accept; under the norm it is written `(int: a 5)`. The same holds for the name that holds the result of a `merge`
-(`pack: merge(...)`) and for a formal or field whose intended requirement is Q. In current notation the result reference is `@: pack merge(...)` and the uninitialized typed formal is `Q@: q`; `@: q Q` instead initializes a universal reference from the actual Q value. The historical fixture migration was tracked in M9 and M11.
+(`pack: merge(...)`) and for a formal or field whose intended requirement is Q. In current notation the result reference is `@: pack merge(...)` and the uninitialized typed formal is `@Q: q`; `@: q Q` instead initializes a universal reference from the actual Q value. The historical fixture migration was tracked in M9 and M11.
 
 The author's decisions of 2026-11-18 on the two kinds of receivers and on choosing the declaration by the call
 (semantics (original reference: `LMX_semantics.en.md#two-kinds-of-receivers`),
@@ -1112,7 +1112,7 @@ The whole of M11.5г, root-frame work, computed ordinary declarations, M11.7/8, 
 Witness 377 (original reference: `../steps/witnesses/m11-ordinary-nested-20261114/notes.md`).
 
 **Previous state, 2026-11-14, slice 376 -- accepted `9039fa89`.** The historical typed-reference form
-(current spelling `int@: p`) without a candidate preallocated wrapper8/cell5 before index/typeof/path; a required formal8 receives an independent
+(current spelling `@int: p`) without a candidate preallocated wrapper8/cell5 before index/typeof/path; a required formal8 receives an independent
 reference cell through common admission. Source04: 669; runtime02/graph03, five pure cases, private36 in three modes,
 AFTER42/mutation24 passed. Actual native TypeOnly with physical8 in method.code was confirmed by GDB trace03
 in the private pipeline with a normal exit. Whole bootstrap01 quick passed: genuine G1/G2, nine smoke rows each,
@@ -1129,7 +1129,7 @@ binds a retained raw `@` Frame with a candidate: three fields for an int referen
 Admission does not run the initializer. Reading or launching that place before a working write refuses with 5;
 the first write creates a working typed reference, and normal flush publishes it through the existing slot.
 Existing initialized cells and wrappers retain their contract. The historical uninitialized typed-reference form
-(current spelling `int@: p`) was OPEN in this slice:
+(current spelling `@int: p`) was OPEN in this slice:
 it requires kind5 and already allocated wrapper8/cell5; the form currently refuses explicitly with 5,
 is never treated as kind6 and does not allocate storage lazily. This is not refusal based on uninit:T contents.
 Runtime02/graph01 passed six pure-interpreter cases: places 41/13/30/23 with calls0; read and head -- 5
@@ -1317,7 +1317,7 @@ the copy `calls` = 3, `last` = 67 and `f` 0 and 0; `x: 4`, `x(1; 2)` give answer
 The next graph52/tool29/rt40 (original reference: `../steps/witnesses/clean-production-20261109/notes.md`), after Codex's review of 330 — the
 first production input of the clean path, the machine module `src/l2src/lmx_schedule.lm2` (whose L1 F now writes in
 build-runtime). With the existing command `G run`, graph50 stopped at construction (`graph: build answered 2`): the
-builder did not take the typed reference formal (current spelling `T@: s`). The historical builder then represented such a formal by its former three-field `[@, name, T]` Frame, named by field 1 (book :436), and printed it. The current postfix form `T@: name` instead preserves the complete TYPE head followed by the NAME; the C-door declarations `include:`/`predef:` are state words (`w_include`,
+builder did not take the typed reference formal (current spelling `@T: s`). The historical builder then represented such a formal by its former three-field `[@, name, T]` Frame, named by field 1 (book :436), and printed it. The current prefix form `@T: name` instead preserves the complete TYPE head followed by the NAME; the C-door declarations `include:`/`predef:` are state words (`w_include`,
 `w_predef`), their statements stay in the root and stand (the root runs nothing for them; the machine output will read
 them). The graph of `lmx_schedule` is built whole and prints the same before and after its root runs; so do `l2_libc`,
 `lmx_clock`, `os_native_path` and `tools/text`. The machine export from the clean graph (F's input instead of P0) is the
@@ -1340,7 +1340,7 @@ head that is a known place that is no Structure (an `int` place, a reference pla
 path `owner\field:` -- is refused: answer 8 of the interpreter, a stop of R0 in a program (since slice 356 a reference place to an ordinary Structure at the root and in a body launches it -- below; on a path `owner\field:` and for a place that refers to neither a callable nor a Structure the refusal stays); the translator names `:=` in
 its message and emits the refusal at the statement. A declaration of a Structure inside a running body and a repeated
 declaration through a path are not executed by the slice (5). The fields of a written operand of `merge` are declared
-by receivers -- in current notation `int: name value`, `int@: name value`; a field `name: tail` there is a description of a structure (5).
+by receivers -- in current notation `int: name value`, `@int: name value`; a field `name: tail` there is a description of a structure (5).
 The author's example `Struct2: a b c`, `Struct1: q w e r t`, `Struct1: Struct2` gives the dump `Struct2: a b c` and
 `Struct1: (Struct2 a b c)`. 99 graph-check runs × interp/native/forced PASS. The L3 lowering, the L2 machine path and
 the walker still accept the colon assignment -- section M7 of the plan. The author's
@@ -1384,7 +1384,7 @@ lifts a `merge` written as an argument of a call into a hidden declaration (`lm_
 statement whether it declares, and the reading of a declaration asks the places of the current method and keeps its
 answer for the node (`lm_compiler_declaration`; a repeated `@` receiver takes the requirement of the earlier
 declaration of its name). From the second registration round on the current method stayed the one the collection had
-ended with -- the last method of the unit -- and a typed reference declaration (current spelling `int@: p @x`) in any other method was read as a repeat of the place
+ended with -- the last method of the unit -- and a typed reference declaration (current spelling `@int: p @x`) in any other method was read as a repeat of the place
 `p` of that method with two values: "a declaration takes one value". The refusal showed when the pointer of the same
 name in the last method stood nearer to the start of its file than the declaration to the start of its own, that is
 through a program part; that is how it was found -- by adding a part to the tool. The pass now reads every method as

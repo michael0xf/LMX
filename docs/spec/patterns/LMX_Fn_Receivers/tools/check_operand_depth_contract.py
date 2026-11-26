@@ -89,7 +89,7 @@ def main():
                 '2': 'scalar componentwise products'},
             'One flat rank-2 Array; depth does not count allocated row containers')
     require('Structure and reference indexing use ordinary contracts',
-            'Structure is @[]' in axis.get('structure', '') and
+            'Structure is []@' in axis.get('structure', '') and
             r'struct[i]\[j]' in axis.get('structure', ''),
             'No separate array-of-arrays kind is introduced')
     for row in definitions['operations']:

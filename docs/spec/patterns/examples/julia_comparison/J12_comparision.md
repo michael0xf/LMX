@@ -49,11 +49,11 @@
 
 ```lmx
 Example:
-    int[]: xs
+    []int: xs
     return: @
     run:
         throws: copy(FxSeqPush\append\throws) copy(record\throws)
-        @[]: out []
+        []@: out []
         int: i 0
         while: i < length(xs)
             int: prior 0
@@ -87,7 +87,7 @@ Parity:
 
 
 Example:
-    int[]: xs
+    []int: xs
     return: @
     run:
         throws: copy(groupBy\throws) copy(unique\throws)

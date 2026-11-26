@@ -1,6 +1,6 @@
 # DIRECT CORE OPERATIONS EXTRACTED FROM THE IMPLEMENTATION COMPARISONS.
 # No example-local import is required. These bodies use the existing typed
-# record/call/Array access contracts; a Structure is already an @[] sequence.
+# record/call/Array access contracts; a Structure is already an []@ sequence.
 
 FxFindFirst:
     private:
@@ -136,7 +136,7 @@ FxAllOf:
 # These internal bridge failures have the explicitly empty () payload.
 # User failures retain their original name and typed payload in FxOutcome.
 FxRetryEmptyFailure:
-    private: char[]: name
+    private: []char: name
     return: @
     make:
         private: @: outcome (copy(FxOutcome))
@@ -145,7 +145,7 @@ FxRetryEmptyFailure:
         return: outcome
 
 FxRetryPostResult:
-    char[]: kind ""
+    []char: kind ""
     int: attempts 0
     @: outcome 0
 
@@ -189,7 +189,7 @@ FxRetryPostJob:
                 Events\failed("FxTypeToken")
     ---
     Events:
-        char[]: failure
+        []char: failure
         failed:
             private: @: job parent(node)
             job\private\pending -= 1
@@ -224,7 +224,7 @@ FxRetryPostJob:
             return: job\private\finalResult
     ---
     Completion:
-        char[]: kind
+        []char: kind
         @: outcome
         finish:
             private: @: job parent(node)

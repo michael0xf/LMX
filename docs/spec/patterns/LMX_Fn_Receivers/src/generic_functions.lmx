@@ -10,8 +10,8 @@
 # Все захваченные зависимости — явные поля state; private не даёт им становиться
 # случайными динамическими входами исходного callable.
 #
-# prefix is any ready Array: Structure/@[] supplies stored value records;
-# dense T[] supplies one actual through its real typed access. It is never
+# prefix is any ready Array: Structure/[]@ supplies stored value records;
+# dense []T supplies one actual through its real typed access. It is never
 # reinterpreted as a pointer array. Примитивы принимаются
 # и сохраняются по значению; ссылочные значения сохраняют цель. copy(prefix)
 # для этого НЕ используется, поскольку он глубоко копировал бы цели ссылок.
@@ -33,7 +33,7 @@ FxPreparedOperands:
     private:
         @: left
         int: depth 0
-        @[]: right
+        []@: right
     const: int: PASS_ARGS_AS_IS 0
 
 # Whole-value operand profiles admit depth 0 during semantic preparation.
@@ -83,12 +83,12 @@ FxStageFailures:
 
 # Конкатенация LMX-строк. Вспомогательные процедуры тоже написаны на LMX.
 # Binary string concatenation keeps its contract and delegates storage work to
-# the single generic concat algorithm; equal char[] parts yield fresh char[].
+# the single generic concat algorithm; equal []char parts yield fresh []char.
 FxConcat:
     private:
-        char[]: first
-        char[]: second
-    return: char[]
+        []char: first
+        []char: second
+    return: []char
     concat:
         throws: copy(FxThrows\sequence)
         private: @: out FxSeqConcat\concat(parts := (first; second))
@@ -96,7 +96,7 @@ FxConcat:
 
 FxDecimal:
     private: int: number
-    return: char[]
+    return: []char
     decimal:
         throws: copy(FxThrows\selection)
         if: number < 0
@@ -107,10 +107,10 @@ FxDecimal:
 # Отдельное точное имя пригодится клиентам строителя для произвольных labels.
 # Его вход — допустимое имя без NUL; это ограничение exact identifier в грамматике.
 FxExactIdentifier:
-    private: char[]: name
-    return: char[]
+    private: []char: name
+    return: []char
     quote:
-        private: char[]: out []
+        private: []char: out []
         private: int: extra 0
         private: int: i 0
         while: i < length(name)
@@ -150,7 +150,7 @@ FxLabels:
 # is generic and uses begin/end. Keep this checked adapter, not a second loop.
 FxSlice:
     private:
-        @[]: values
+        []@: values
         int: start
         int: count
     return: @
@@ -181,7 +181,7 @@ FxSignatures:
 FxBuild:
     private:
         @: contract
-        char[]: bodyText
+        []char: bodyText
         @: state
         @: failures
         @: policy 0
@@ -201,12 +201,12 @@ FxRecordConstructor :: (@: value; return: @)
 
 FxRecordAdapterState:
     @: record 0
-    FxRecordConstructor@: constructor
+    @FxRecordConstructor: constructor
 
 FxRecordAdapter:
     private:
         @: typeToken
-        FxRecordConstructor@: constructor 0
+        @FxRecordConstructor: constructor 0
     required: typeToken
     return: @
     make:
@@ -222,7 +222,7 @@ FxRecordAdapter:
         state\record := FxRecordOperands\record
         private: @: resultType FxKernel\normalizeType(FxTypeTokens\reference[0])
         private: @: failures FxCaptureFailures\names()
-        private: char[]: body "return: (p0 node\\private\\state\\record)\n"
+        private: []char: body "return: (p0 node\\private\\state\\record)\n"
         if: constructor != 0
             state\constructor := constructor
             private: @: shape FxKernel\signature(constructor)

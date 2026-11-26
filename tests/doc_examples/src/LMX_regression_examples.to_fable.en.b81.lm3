@@ -1,0 +1,28 @@
+UnaryNumber :: (int: input; return: int)
+
+Increment:
+    int: value
+    return: int
+    apply:
+        return: value + 1
+
+Decrement:
+    int: argument
+    return: int
+    apply:
+        return: argument - 1
+
+Checker:
+    @: candidate
+    return: int
+    at_zero:
+        return: candidate(0) = 1
+
+BehaviorProbe:
+    return: int
+    run:
+        @UnaryNumber: first Increment\apply
+        @UnaryNumber: second Decrement\apply
+        int: good Checker\at_zero(candidate := first)
+        int: bad Checker\at_zero(candidate := second)
+        return: good * 10 + bad

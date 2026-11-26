@@ -1,7 +1,7 @@
 # Присваивание: `:=`, `.:` и сравнение `.=`
 
 Фикстуры предыдущей редакции: 17 положительных и 6 отрицательных.
-Для TypeRef ABI случаи 021, 022 и negative/023 требуют `int[2][2]` вместо `int[][]`:
+Для TypeRef ABI случаи 021, 022 и negative/023 требуют `[2][2]int` вместо `[][]int`:
 границы строк не сохраняют оси; готовый вход с заданным TYPE сохраняет его при допуске.
 Production P0, translator и LMX runtime — **NOT_RUN**; нового `Main` нет.
 
@@ -125,8 +125,8 @@ ReferenceRebinding:
     return: @
     run:
         throws: copy(`:=`\throws) ReceiverIndex
-        int[]: source [1 2 3]
-        int[]: other [7 8 9]
+        []int: source [1 2 3]
+        []int: other [7 8 9]
         @: selected source
         @: original selected
         selected := other
@@ -147,8 +147,8 @@ ElementAssignmentIdentity:
     return: @
     run:
         throws: copy(`:=`\throws) copy(`:=`\throws) ReceiverIndex
-        int[]: values [1 2 3]
-        int[]: other [7 8 9]
+        []int: values [1 2 3]
+        []int: other [7 8 9]
         @: alias values
         values .: other
         alias[1] := 80
@@ -188,7 +188,7 @@ ScalarFill:
     return: @
     run:
         throws: copy(`:=`\throws) copy(`:=`\throws) ReceiverIndex
-        int[]: values [3 4 5]
+        []int: values [3 4 5]
         values .: 7
         values[1] := 8
         return: values
@@ -209,7 +209,7 @@ CompoundUpdates:
         throws: copy(`+=`\throws) copy(`+=`\throws)
         int: offset 10
         offset += 2
-        int[]: values [1 3 5]
+        []int: values [1 3 5]
         values .+= offset
         return: values
 ```
@@ -227,7 +227,7 @@ OverlapShift:
     return: @
     run:
         throws: copy(slice\throws) copy(`:=`\throws)
-        int[]: values [0 1 2 3 4]
+        []int: values [0 1 2 3 4]
         values[1:] .: values[:-1]
         return: values
 ```
@@ -245,7 +245,7 @@ ReversePlaces:
     return: @
     run:
         throws: copy(slice\throws) copy(`:=`\throws)
-        int[]: values [1 2 3 4]
+        []int: values [1 2 3 4]
         values[::-1] .: values
         return: values
 ```
@@ -262,7 +262,7 @@ make возвращает одно значение Array. Группировщ�
 ValuesProducer:
     return: @
     make:
-        int[]: values [20 30 10]
+        []int: values [20 30 10]
         return: values
 
 ReturnedArray:
@@ -312,8 +312,8 @@ ConditionalAssignment:
     return: @
     run:
         throws: copy(`?:`\throws) copy(`:=`\throws)
-        int[]: values [1 2 3]
-        int[]: replacement [7 8 9]
+        []int: values [1 2 3]
+        []int: replacement [7 8 9]
         values .: (chooseFill ? 5 : replacement)
         return: values
 ```
@@ -353,8 +353,8 @@ ComparisonAndAssignment:
     return: @
     run:
         throws: copy(`=`\throws) copy(`:=`\throws)
-        int[]: left [1 2 3]
-        int[]: right [1 8 3]
+        []int: left [1 2 3]
+        []int: right [1 8 3]
         @: before left .= right
         left .: right
         @: after left .= right
@@ -367,14 +367,14 @@ ComparisonAndAssignment:
 
 Ожидание: `{"value": [[[3, 4], [1, 2]], [1, 2], [3, 4]]}`.
 
-Справа удерживаются все четыре исходных числа до любых записей. first/second сохраняют ссылки на прежние обычные Structure, чьи поля обменялись. Затем .(0): меняет только ссылку selected. Внешний @[] содержит две Structure как целые обычные значения; специальный вид массива массивов не вводится. Для плоских размерных данных применяются сохранённые логические оси, показанные отдельно.
+Справа удерживаются все четыре исходных числа до любых записей. first/second сохраняют ссылки на прежние обычные Structure, чьи поля обменялись. Затем .(0): меняет только ссылку selected. Внешний []@ содержит две Structure как целые обычные значения; специальный вид массива массивов не вводится. Для плоских размерных данных применяются сохранённые логические оси, показанные отдельно.
 
 ```lmx
 NestedPlaces:
     return: @
     run:
         throws: copy(`:=`\throws) ReceiverIndex
-        @[]: values [(1 2) (3 4)]
+        []@: values [(1 2) (3 4)]
         @: first values[0]
         @: second values[1]
         values .(2): (second first)
@@ -399,7 +399,7 @@ DynamicDepth:
     return: @
     run:
         throws: copy(`*`\throws) copy(`+`\throws)
-        @[]: rows [(1 2) (3 4)]
+        []@: rows [(1 2) (3 4)]
         return: rows .(1 + extra)* 10
 ```
 
@@ -416,7 +416,7 @@ FlatRowPlaces:
     return: @
     run:
         throws: copy(`:=`\throws) copy(`+=`\throws) copy(slice\throws) ReceiverIndex
-        int[][]: values [1 2; 3 4]
+        [][]int: values [1 2; 3 4]
         @: alias values
         values .: [values[1][:] values[0][:]]
         values .(2)+= 10
@@ -436,7 +436,7 @@ FlatFusedPlaces:
     return: @
     run:
         throws: copy(`:=`\throws) copy(fuse\throws) copy(`*`\throws) copy(`+`\throws)
-        int[][]: values [[1 2] [3 4]]
+        [][]int: values [[1 2] [3 4]]
         @: alias values
         values .(2): fuse(values .(2)* 2 .(2)+ 1)
         return: (values; alias)
@@ -461,8 +461,8 @@ ShapeMismatch:
     return: @
     run:
         throws: copy(`?:`\throws) copy(`:=`\throws)
-        int[]: one [9]
-        int[]: two [7 8]
+        []int: one [9]
+        []int: two [7 8]
         values .: (useSingleton ? one : two)
         return: values
 ```
@@ -471,11 +471,11 @@ ShapeMismatch:
 
 [Полный исходник](negative/015_admission_before_writes.lm3); вызов `AdmissionBeforeWrites\run(values)`.
 
-Входы: `[{"values": [1, 2, 3], "actual_array_requirement": "int[]"}]`.
+Входы: `[{"values": [1, 2, 3], "actual_array_requirement": "[]int"}]`.
 
 Ожидание: `{"failure": "ordinary int target admission", "target_after_failure": [1, 2, 3]}`.
 
-Проверяемый профиль: values — int[] длины 3, строка "bad" не допускается его типом и явного конвертера нет. Число элементов верно, но второй элемент не проходит admission. Даже первый элемент назначения остаётся 1.
+Проверяемый профиль: values — []int длины 3, строка "bad" не допускается его типом и явного конвертера нет. Число элементов верно, но второй элемент не проходит admission. Даже первый элемент назначения остаётся 1.
 
 ```lmx
 AdmissionBeforeWrites:
@@ -521,8 +521,8 @@ DepthMismatch:
     return: @
     run:
         throws: copy(`*`\throws)
-        @[]: nested [(1 2) (3 4)]
-        int[]: flat [10 20]
+        []@: nested [(1 2) (3 4)]
+        []int: flat [10 20]
         return: nested .(2)* flat
 ```
 
@@ -532,14 +532,14 @@ DepthMismatch:
 
 Ожидание: `{"diagnostic": "requested depth exceeds available logical axes", "catchable_lmx_exception": false}`.
 
-values объявлен int[] и имеет ранг 1 со скалярными элементами. depth=2 запрашивает отсутствующую ось; исходный scalar 1 её не создаёт. У настоящего int[][] с сохранённым рангом 2 depth=2, напротив, допустим и выбирает клетки.
+values объявлен []int и имеет ранг 1 со скалярными элементами. depth=2 запрашивает отсутствующую ось; исходный scalar 1 её не создаёт. У настоящего [][]int с сохранённым рангом 2 depth=2, напротив, допустим и выбирает клетки.
 
 ```lmx
 ExcessDepth:
     return: @
     run:
         throws: copy(`+`\throws)
-        int[]: values [1 2 3]
+        []int: values [1 2 3]
         return: values .(2)+ 1
 ```
 
@@ -556,7 +556,7 @@ ScalarToRow:
     return: @
     run:
         throws: copy(`:=`\throws)
-        int[][]: values [1 2; 3 4]
+        [][]int: values [1 2; 3 4]
         values .: 9
         return: values
 ```

@@ -89,7 +89,7 @@ The callee still has its own places and admission. Under the required provider c
 
 ## 5. Partial, permutation, curry and fix
 
-`partial` first admits each written ready prefix element under its real Ti. It accepts dense Arrays and Structure/@[] input through normal typed element access; a dense backing is never cast to pointer storage. The residual policy maps the remaining positions, and the engine enters the selected full source call. Empty partial preserves the ordinary mapped call; a full prefix still returns a delayed nullary callable. Neither invokes F during construction.
+`partial` first admits each written ready prefix element under its real Ti. It accepts dense Arrays and Structure/[]@ input through normal typed element access; a dense backing is never cast to pointer storage. The residual policy maps the remaining positions, and the engine enters the selected full source call. Empty partial preserves the ordinary mapped call; a full prefix still returns a delayed nullary callable. Neither invokes F during construction.
 
 `flip` constructs the complete permutation and uses `permute`. `permute` moves requirements and source declaration policy together. It does not materialize all actuals simply to reorder them.
 
@@ -121,7 +121,7 @@ Events expose no live frame/cell capability, so retaining a passive event cannot
 
 ## 8. Shared algorithms and other clients
 
-The former independent `FxConcat`, `FxAppend` and `FxSlice` loops now delegate to the common sequence algorithms. `FxConcat` retains two char[] inputs and a char[] result; `FxAppend` retains a fresh reference-array result by supplying an explicit empty @[] part to generic concat; `FxSlice` retains its reference-vector start/count contract and checked conversion to public slice's begin/end. This unifies implementation without mechanically renaming the private helpers or changing public slice. Their old bodies remain in the historical snapshot.
+The former independent `FxConcat`, `FxAppend` and `FxSlice` loops now delegate to the common sequence algorithms. `FxConcat` retains two []char inputs and a []char result; `FxAppend` retains a fresh reference-array result by supplying an explicit empty []@ part to generic concat; `FxSlice` retains its reference-vector start/count contract and checked conversion to public slice's begin/end. This unifies implementation without mechanically renaming the private helpers or changing public slice. Their old bodies remain in the historical snapshot.
 
 ### Other clients and bounds
 

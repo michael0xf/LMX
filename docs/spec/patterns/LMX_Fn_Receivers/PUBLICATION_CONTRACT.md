@@ -53,7 +53,7 @@ FxPreparedOperands:
     private:
         @: left
         int: depth 0
-        @[]: right
+        []@: right
     const: int: PASS_ARGS_AS_IS 0
 ```
 
@@ -127,7 +127,7 @@ one prefix dot. The explicit depth expression is evaluated once, only when that
 receiver demands it. No new callable names are registered for depth values.
 In ordinary code tokenization, `.(` always starts an operator/function depth
 modifier; it is not a decimal point. Protected lexical modes remain opaque.
-Array indices and type postfix forms keep their own brackets.
+Array indices and type prefix forms keep their own brackets.
 The receiver spelling uses the quoted **base** name and a named `depth` actual
 of that selected outer operand profile. This is not a reserved identifier: an
 original ordinary function may have its own user input named `depth`; that input
@@ -201,7 +201,7 @@ on corresponding components. Thus `a .* b` is the row-dot profile in that
 matrix example; `a .(2)* b` is its complete scalar componentwise product.
 For rank-1 vectors, `a .* b` already reaches the scalar components.
 
-A Structure is an `@[]`. A reference stored in it may refer to another Array:
+A Structure is an `[]@`. A reference stored in it may refer to another Array:
 `struct[i]\[j]` first selects that reference and then performs ordinary indexed
 access through it. This uses the existing reference and Array contracts, not a
 separate array-of-arrays entity or a second definition of dimension depth.
@@ -241,10 +241,10 @@ The actor context has explicit input routes for:
 
 | Public input | Internal operation | Result |
 | --- | --- | --- |
-| `some(x)` | `FxRecordAdapter\make(T; FxSome\some)` | exact `FxMaybe@` |
-| `ok(x)` | `FxRecordAdapter\make(T; FxOk\ok)` | exact `FxResult@` |
-| `err(x)` | `FxRecordAdapter\make(T; FxErr\err)` | exact `FxResult@` |
-| `done(x)` | `FxRecordAdapter\make(T; FxDone\done)` | exact `FxBounce@` |
+| `some(x)` | `FxRecordAdapter\make(T; FxSome\some)` | exact `@FxMaybe` |
+| `ok(x)` | `FxRecordAdapter\make(T; FxOk\ok)` | exact `@FxResult` |
+| `err(x)` | `FxRecordAdapter\make(T; FxErr\err)` | exact `@FxResult` |
+| `done(x)` | `FxRecordAdapter\make(T; FxDone\done)` | exact `@FxBounce` |
 | `type(x)` | shared value capture, then `FxValueType\type` | canonical TypeRef (`@`), direct type description |
 | `literal(x)` / `element(x)` | shared whole-value capture, then their existing constructors | Pattern reference |
 | `arrayView(xs)` | whole Array record, then `RxArrayView\arrayView` | Array view |
@@ -348,7 +348,7 @@ projected arguments without signature-specific opening or a second adaptation.
 
 `type(x)` obtains the canonical TypeRef of the actual typed value. Mere admission
 to another model does not replace that descriptor or record all past semantic
-checks. `types(source)` returns @[] TypeRef references for the physical fields.
+checks. `types(source)` returns []@ TypeRef references for the physical fields.
 These operations and `return` remain distinct contracts.
 
 The four attached update forms have canonical variant names `++var`,

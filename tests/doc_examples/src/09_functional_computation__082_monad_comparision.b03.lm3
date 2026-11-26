@@ -1,0 +1,14 @@
+Example:
+    int: x
+    return: @FxMaybe
+    half:
+        throws: FxRecordArity
+        if: x % 2 = 0
+            return: some(x / 2)
+        return: none()
+    run:
+        throws: copy(half\throws)
+        @: result half(x)
+        if: result\present = 0
+            return: result
+        return: half(\result\value)

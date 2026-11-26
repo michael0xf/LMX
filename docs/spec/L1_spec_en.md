@@ -28,8 +28,8 @@ the prefix so both pointer and payload are aligned. Uninit has only TypeRef,
 no payload. Dense elements and native locals have no individual record prefix.
 [L2 physical layout and C illustration](L2_spec_en.md#value-record).
 
-Equivalent `int[][]` and `int[](2)` share TypeRef; `int[]` lengths 2 and 3 share it;
-`int[2][3]` and `int[3][2]` differ. Initializer rows and reserve cannot specialize
+Equivalent `[][]int` and `[](2)int` share TypeRef; `[]int` lengths 2 and 3 share it;
+`[2][3]int` and `[3][2]int` differ. Initializer rows and reserve cannot specialize
 TYPE. Metadata contains only written/evaluated constraints; unknown dimensions
 remain unknown unless TYPE plus current length determines them. Every initialized
 Array has the same primary Lmx layout. Capacity=length means no second descriptor,
@@ -390,15 +390,15 @@ L1 retains the target platform's C99 representation and numeric semantics. An L1
 
 | L1 | C99 |
 | --- | --- |
-| `int@: p` | `int *p` |
-| `char@@: pp` | `char **pp` |
+| `@int: p` | `int *p` |
+| `@@char: pp` | `char **pp` |
 | `p := @x` | `p = &x` |
 | `\p` | `*p` |
 | `\p := value` | `(*p) = value` |
 | `p\field` | `p->field` |
 | `a[i] := value` | `a[i] = value` |
 
-The table states the target unified spelling; transitional hand-written L1 may still need declaration-order migration. An addressable target needs valid C storage. `value\field` is a pointer step; by-value C aggregate access needs an explicit C form. `const: char@: p` lowers to `const char *p` and protects the characters, not the pointer cell. This is not L3 deep immutability.
+The table states the target unified spelling; transitional hand-written L1 may still need declaration-order migration. An addressable target needs valid C storage. `value\field` is a pointer step; by-value C aggregate access needs an explicit C form. `const: @char: p` lowers to `const char *p` and protects the characters, not the pointer cell. This is not L3 deep immutability.
 
 Ordinary Array indexing has no from-end interpretation: `array[-1]` is not a valid way to select the last element. Negative relative offsets should be expressed through a suitable pointer, for example `\(p - 1)`, under its ordinary lifetime/allocation contract. L3 and interpreted L2 apply the existing final-element bounds check. Native L2 omits those automatic checks; their absence does not make an invalid Array access valid. A statically known invalid Array index may be diagnosed during preparation, without adding a native runtime sign/bounds check. A negative slice bound is different: `array[-1:]` selects the last element through the [slice contract](TERNARY_AND_SLICES.en.md#negative-index). Reads, writes and address-taking retain one common address calculation; no per-coordinate bounds checks or hidden row descriptors are added.
 
@@ -441,4 +441,4 @@ mechanism. See [L2 integration](L2_spec_en.md#functional-receiver-abi) and the
 <a id="unified-20261122"></a>
 ## Lowering of current derived types
 
-Lowering consumes the complete head and resolved full type from the same common path as interpretation. It may specialize actual dense layouts or direct calls when proven, while preserving dynamic admission, missing actuals, computed defaults, declared exits, and the source graph. T[] and T@ are TypeRef-valued type constructors, not alternate prefixes. No payload is read from uninit:T, and an accepted array requirement does not change its actual stride. See [the current unified contract](CORE_SEQUENCES_REGEX.en.md).
+Lowering consumes the complete head and resolved full type from the same common path as interpretation. It may specialize actual dense layouts or direct calls when proven, while preserving dynamic admission, missing actuals, computed defaults, declared exits, and the source graph. []T and @T are TypeRef-valued type constructors, not alternate prefixes. No payload is read from uninit:T, and an accepted array requirement does not change its actual stride. See [the current unified contract](CORE_SEQUENCES_REGEX.en.md).

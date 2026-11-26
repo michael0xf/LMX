@@ -43,12 +43,12 @@
 
 ```lmx
 Example:
-    int[]: xs
+    []int: xs
     int: seed
     return: @
     run:
         throws: copy(FxSeqPush\append\throws) copy(record\throws)
-        @[]: out []
+        []@: out []
         int: balance seed
         int: i 0
         while: 1
@@ -73,7 +73,7 @@ Negative:
         return: value < 0
 
 Example:
-    int[]: xs
+    []int: xs
     int: seed
     return: @
     run:

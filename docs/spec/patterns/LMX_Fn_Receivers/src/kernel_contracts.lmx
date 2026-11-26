@@ -13,7 +13,7 @@ FxKernelCallableAPI :: (@: contract; @: labels; @: bodyGraph; @: state; @: failu
 
 FxKernelAttemptAPI :: (@: operation; @: args; @: failures; return: @)
 
-FxKernelRaiseAPI :: (char[]: name; @: payload)
+FxKernelRaiseAPI :: ([]char: name; @: payload)
 
 FxKernelFieldNamesAPI :: (@: source; return: @)
 
@@ -50,8 +50,8 @@ FxKernelOperandDepthContextAPI :: (@: frame; @: arguments; return: @)
 # type with no payload read, and returns an internal @ to a canonical int code
 # record. Existing type descriptions preserve full Structure/callable/Array
 # models; no new public boxed Type value is introduced.
-# T[] and T@ are postfix constructors producing ordinary int type codes.
-# []: variable is AnyArray, @[]: variable is the actual Structure/@[] requirement.
+# []T and @T are postfix constructors producing ordinary int type codes.
+# []: variable is AnyArray, []@: variable is the actual Structure/[]@ requirement.
 # signatureData creates ordinary declarations, without universal required/private.
 # callable publishes ordinary owner -> DATA -> CODE with genuine parent links.
 # Its policy maps external positions to real source declarations, keeps bound
@@ -105,7 +105,7 @@ FxKernelOperandDepthContextAPI :: (@: frame; @: arguments; return: @)
 # A frame reference neither extends lifetime nor authorizes execution twice.
 #
 # fieldNames and renameFields use the existing owning-field name association.
-# An anonymous field is represented by uninit:char[], distinct from empty string.
+# An anonymous field is represented by uninit:[]char, distinct from empty string.
 # Detailed narrow-hook and lifetime contracts: ../KERNEL_REQUIREMENTS.md.
 
 # Common physical Array access used by sequence algorithms and Regex.
@@ -120,10 +120,10 @@ FxKernelArrayWriteAPI :: (@: target; int: index; @: value)
 # arrayInfo -> {arrayType,elementType,elementBits,dense,maxLength}, all int.
 # Canonical codes preserve full models and pointer levels; maxLength bounds the
 # actual index AND byte-size arithmetic, not currently available free memory.
-# arrayRead returns a direct stored @[] value or a stable dense-T record using
+# arrayRead returns a direct stored []@ value or a stable dense-T record using
 # the actual stride. It never executes a saved graph form or preboxes all input.
 # arrayAdmit performs the permitted full target-element admission before commit.
 # arrayWrite writes an already admitted value without repeating tests/converters.
-# Direct reference replacement for @[] is not matching the old slot's type.
+# Direct reference replacement for []@ is not matching the old slot's type.
 # Descriptor identity, parent, ordinary bounds/lifetime and failure channels stay.
 # Full contracts: ../SEQUENCES_IMPLEMENTATION.md, section 4.

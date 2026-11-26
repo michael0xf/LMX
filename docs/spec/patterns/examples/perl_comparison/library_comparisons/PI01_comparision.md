@@ -30,7 +30,7 @@ FxMap:
         throws: copy(FxThrows\traversal)
         FxSeqInfo\get(items)
         private: int: count length(items)
-        private: @: result FxSeqAllocate\make(@[]; count)
+        private: @: result FxSeqAllocate\make([]@; count)
         private: int: i 0
         while: i < count
             private: @: item FxSeqRead\read(items; i)
@@ -93,7 +93,7 @@ FxScan:
         throws: copy(FxThrows\traversal)
         FxSeqInfo\get(items)
         private: int: count length(items)
-        private: @: result FxSeqAllocate\make(@[]; 0)
+        private: @: result FxSeqAllocate\make([]@; 0)
         private: @: info FxSeqInfo\get(result)
         private: int: total FxSeqSize\sum(count; 1; info\maxLength)
         sys\resize(result; total)
@@ -155,7 +155,7 @@ FxSeqBind:
         throws: copy(FxThrows\traversal)
         FxSeqInfo\get(items)
         private: int: count length(items)
-        private: @: out FxSeqAllocate\make(@[]; 0)
+        private: @: out FxSeqAllocate\make([]@; 0)
         private: @: info FxSeqInfo\get(out)
         private: int: i 0
         while: i < count

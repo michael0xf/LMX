@@ -1,0 +1,22 @@
+Example:
+    @: items
+    return: @
+    run:
+        throws: copy(FxSeqInfo\get\throws) copy(FxSeqRead\read\throws) copy(FxSeqPush\append\throws) copy(record\throws)
+        FxSeqInfo\get(items)
+        []@: out []
+        int: i 0
+        while: i < length(items)
+            @: held FxSeqRead\read(items; i)
+            @: event \held
+            int: key event\kind
+            int: j 0
+            while: j < length(out) && \out[j]\[0] != key
+                j += 1
+            if: j = length(out)
+                @: group (copy(()))
+                FxSeqPush\append(out; ((key; group) record))
+            @: group \out[j]\[1]
+            FxSeqPush\append(group; held)
+            i += 1
+        return: out

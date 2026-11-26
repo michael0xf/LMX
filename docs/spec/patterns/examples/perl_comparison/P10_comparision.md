@@ -53,11 +53,11 @@
 
 ```lmx
 Example:
-    int[]: items
+    []int: items
     return: @
     run:
         throws: copy(FxSeqPush\append\throws) copy(record\throws)
-        @[]: out []
+        []@: out []
         int: i 0
         while: i < length(items)
             int: j 0
@@ -78,13 +78,13 @@ Example:
 
 ```lmx
 Frequency:
-    FxGroup@: group
+    @FxGroup: group
     return: @
     row:
         return: (\group\key; length(group\items))
 
 Example:
-    int[]: items
+    []int: items
     return: @
     run:
         throws: copy(map\throws) copy(groupBy\throws)

@@ -9,12 +9,12 @@ not used as a source of truth.
 **Status:** concrete LMX algorithms and prepared source fixtures. The source
 checks described below are not an LMX parser, an execution test, or evidence
 that a native implementation exists. The actual kernel must supply the four
-common array-access boundaries and the ordinary postfix type machinery.
+common array-access boundaries and the ordinary prefix type machinery.
 
 ## 1. What was unified
 
 Universal sequence parameters are `@` references to existing values. A
-Structure already is the ordinary `@[]`; a dense `T[]` retains its actual
+Structure already is the ordinary `[]@`; a dense `[]T` retains its actual
 element layout. No new List/Sequence wrapper, conversion receiver, or user
 requirement to call `records` before an operation is introduced.
 
@@ -71,10 +71,10 @@ library. The sequence API additions have these 14 callable forms:
 
 | Public receiver | Implementation | Main result |
 | --- | --- | --- |
-| `range(start; stop; step := 1)` | `FxSeqRange\range` | Dense `int[]`, exclusive stop |
+| `range(start; stop; step := 1)` | `FxSeqRange\range` | Dense `[]int`, exclusive stop |
 | `slice(source; begin; end)` | `FxSeqSlice\slice` | New container of the source's element-storage profile |
 | `reverse(source)` | `FxSeqReverse\reverse` | Same profile, reverse physical order |
-| `concat(parts)` | `FxSeqConcat\concat` | Dense T only when every part is dense with the same complete T; otherwise `@[]` |
+| `concat(parts)` | `FxSeqConcat\concat` | Dense T only when every part is dense with the same complete T; otherwise `[]@` |
 | `compress(source; mask)` | `FxSeqCompress\compress` | Same profile; zero excludes, nonzero int includes |
 | `any(items; accepts)` | `FxSeqAny\any` | int 0/1, stops at first true |
 | `all(items; accepts)` | `FxSeqAll\all` | int 0/1, stops at first false |
@@ -128,7 +128,7 @@ ordinary metadata value with these fields:
 
 | Field | Meaning |
 | --- | --- |
-| `@: arrayType` | Canonical TypeRef of the **linear** result array requirement with the source's complete element requirement; `@[]` for ordinary Structures |
+| `@: arrayType` | Canonical TypeRef of the **linear** result array requirement with the source's complete element requirement; `[]@` for ordinary Structures |
 | `@: elementType` | Canonical full element requirement, retaining nested models, callable requirements, and arbitrary pointer depth |
 | `int: elementBits` | Actual physical element width from layout; Regex may use it to require an 8-bit `char` substrate |
 | `int: dense` | Nonzero for dense typed storage, zero for ordinary Structure/reference storage |
@@ -146,7 +146,7 @@ shape descriptions merely from length.
 ### `FxKernel\arrayRead(source; index)`
 
 Check an L3 physical index and obtain exactly one ready typed value. For an
-ordinary `@[]`, return its stored value reference directly. For dense T, read
+ordinary `[]@`, return its stored value reference directly. For dense T, read
 with the source's actual stride and full requirement; prepare an ordinary
 addressable value only when transport or lifetime requires it. An escaping
 primitive must not reference a dead C local or pretend that a raw dense
@@ -165,7 +165,7 @@ channels. Reading a graph element never executes its saved form.
 ### `FxKernel\arrayAdmit(target; value)`
 
 Prepare one value for the **actual** target's complete element requirement.
-For `@[]`, return the direct supplied reference; do not require the former
+For `[]@`, return the direct supplied reference; do not require the former
 slot's type, name, or model. For dense T, perform ordinary admissibility and
 permitted built-in representation preparation. No hidden user converter or
 initializer is invented. Required value checks remain part of this preparation
@@ -182,7 +182,7 @@ has obtained the value from the same complete source profile or from
 `arrayAdmit`. Perform the ordinary reached index/lifetime checks; do not run
 converters, callbacks, initializers, or full admission tests again.
 
-For `@[]`, replace the physical stored reference directly. For dense T, write
+For `[]@`, replace the physical stored reference directly. For dense T, write
 T, without treating the storage as `void**`. Descriptor identity and parent
 links do not change. The boundary implements a one-slot write, not a hidden
 range-replacement engine or an unchecked reinterpretation API.
@@ -197,8 +197,8 @@ range-replacement engine or an unchecked reinterpretation API.
 as a declaration head, constructs its empty value with `(arrayType: [])`,
 checks `maxLength`, and uses existing `sys\resize`. This existing helper is
 restricted to a linear requirement without a fixed length. A nonempty fixed
-requirement such as `int[2][3]` cannot first construct an empty value and resize
-it, nor can a completed generic `int[]` be secretly retagged. Such results must
+requirement such as `[2][3]int` cannot first construct an empty value and resize
+it, nor can a completed generic `[]int` be secretly retagged. Such results must
 be prepared by the common constructor/allocation boundary immediately under
 their complete evaluated requirement, with the required backing/count and
 initialization checked before publication. The old source prototype needs that
@@ -222,10 +222,10 @@ both signs without a fixed machine-width constant. An implementation may
 replace that preflight with a proven equivalent bounded multiword calculation;
 it must not replace it with overflowing native subtraction or `abs(MIN_INT)`.
 
-Postfix types use the shared interner: `T[]`, `T[N]`, `T@`, and arbitrary finite depths
+Prefix types use the shared interner: `[]T`, `[N]T`, `@T`, and arbitrary finite depths
 are not privately implemented by collections. `[]: pending` remains any-array
-uninit, distinct from `@[]: pending` and from an initialized empty array.
-Unconstrained element compatibility keeps the directed `A[] satisfies B[]`
+uninit, distinct from `[]@: pending` and from an initialized empty array.
+Unconstrained element compatibility keeps the directed `[]A satisfies []B`
 contract; rank and explicit extents additionally obey the
 [complete Array requirement](../../ARRAY_STORAGE.en.md#array-profiles).
 Admission does not change the actual source stride, retag an existing value or
@@ -235,16 +235,16 @@ permit writing B bytes into A storage.
 
 | Family | Storage/result behavior |
 | --- | --- |
-| map/scanl/zip/zipWith/bind/list | New ordinary `@[]`; arbitrary result types retained |
+| map/scanl/zip/zipWith/bind/list | New ordinary `[]@`; arbitrary result types retained |
 | filter/slice/reverse/select/compress/omit/reorder | New outer container preserving the source's physical element profile |
 | foldl | Last accumulator reference; empty input returns the original seed |
 | scanl | Seed followed by every returned state; no automatic deep snapshots |
 | zip/zipWith | Stop at the shorter input; zip pairs retain `first` and `second` fields |
-| transpose | First validate equal row lengths; result columns are ordinary `@[]` |
-| traverse | Existing Maybe; stop at first none; success contains `@[]` |
+| transpose | First validate equal row lengths; result columns are ordinary `[]@` |
+| traverse | Existing Maybe; stop at first none; success contains `[]@` |
 | groupBy | Stable groups with key/items; one selected keyOf call per element, or the item itself; optional sameKey uses shared equality by default |
 | project | Select followed by one ordinary copy operation and one shared copy map |
-| concat | Same complete dense T in all parts gives dense T; all other valid combinations give `@[]` |
+| concat | Same complete dense T in all parts gives dense T; all other valid combinations give `[]@` |
 | replaceRange/append/insert/deleteAt | Mutate the existing target and return that same target |
 | splice | Mutate the existing target and return a new outer container of the values removed from its pre-write `[begin,end)` |
 
@@ -301,9 +301,9 @@ does not independently reimplement admission, capacity, tail movement, or
 overlap handling.
 
 The removed values are read before reserve, resize, or any target write. A
-dense `T[]` yields a dense result with the same complete element requirement,
+dense `[]T` yields a dense result with the same complete element requirement,
 including `char`, pointer types, and nested requirements. A Structure yields
-ordinary `@[]` with the original direct value references. Neither path is
+ordinary `[]@` with the original direct value references. Neither path is
 limited to integers, boxes a complete dense source, nor copies the referenced
 object graph. Result slots are independent; referenced objects remain shared.
 The new container does not retain an index view into the changing target.
@@ -355,7 +355,7 @@ one-copy project sharing.
 
 The new splice probes cover its removed-value return independently of target
 content, fresh result slots, same target descriptor, dense int/char profiles,
-dense typed references `int@[]`, direct Structure references, reference sharing,
+dense typed references `[]@int`, direct Structure references, reference sharing,
 self-overlap for dense and reference inputs, empty/full ranges, and failure
 before target mutation. Invalid insertion is tested with a valid first value
 followed by an incompatible value; invalid bounds cover a negative beginning,

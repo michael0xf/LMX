@@ -23,7 +23,7 @@ bridge; this is documented, not disguised as an already executed implementation.
 V02 calls core between; Haskell uses Data.Ix.inRange. All eleven ASCII/invalid-input
 cases remain. The Pattern matcher is a distinct approach, not a substitute for the
 inclusive-range comparison. H07 raw/prepared occurrence tests remain distinct from
-lazy value caching. All typed heads retain current T@/T[] syntax.
+lazy value caching. All typed heads retain current @T/[]T syntax.
 
 ## Individual decisions
 

@@ -35,7 +35,7 @@ FxTwo:
         return: out
 
 # Fresh reference concatenation is retained, even if a caller supplies dense
-# parts. The explicit empty @[] part selects concat's mixed/reference profile;
+# parts. The explicit empty []@ part selects concat's mixed/reference profile;
 # this adds no user data element and introduces no second copying algorithm.
 FxAppend:
     private:
@@ -95,7 +95,7 @@ FxWrap:
         private: @: state (copy(FxEngineState))
         state\engine := engine
         state\payload := payload
-        private: char[]: text "private: @: fx_frame FxKernel\\currentCall(node)\nprivate: @: fx_engine node\\private\\state\\engine\nprivate: @: fx_answer fx_engine(state := node\\private\\state\\payload; frame := fx_frame)\n"
+        private: []char: text "private: @: fx_frame FxKernel\\currentCall(node)\nprivate: @: fx_engine node\\private\\state\\engine\nprivate: @: fx_answer fx_engine(state := node\\private\\state\\payload; frame := fx_frame)\n"
         if: info\hasResult != 0
             text := FxConcat\concat(text; "return: \\fx_answer\n")
         else:
@@ -110,7 +110,7 @@ FxWrap:
 FxOutcome:
     int: ok 0
     @: value 0
-    char[]: failure ""
+    []char: failure ""
     @: payload 0
 
 FxTry:
@@ -135,7 +135,7 @@ FxFailures:
 
 # One comparison body, bound to the caller's real typed Array places.
 # unitSource/unitPart are ordinary non-private dynamic places declared by
-# each caller as char[] or int[]; no @[] cast or scalar dereference occurs.
+# each caller as []char or []int; no []@ cast or scalar dereference occurs.
 # Internal exact name comparison, not a new public text operation.
 # Public literal equality is matches(byteText(first); second).
 # Отфильтрована внутренняя ПОЙМАННАЯ оболочка engine; исходные target failures
@@ -143,7 +143,7 @@ FxFailures:
 FxFailureFilter:
     private:
         @: names
-        char[]: excluded
+        []char: excluded
     return: @
     without:
         private: @: out (copy(()))
@@ -151,7 +151,7 @@ FxFailureFilter:
         private: int: used 0
         private: int: i 0
         while: i < length(names)
-            private: char[]: name \names[i]
+            private: []char: name \names[i]
             if: FxEqualFields\equalFields(name; excluded) = 0
                 out[used] := names[i]
                 used += 1

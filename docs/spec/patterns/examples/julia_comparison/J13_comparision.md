@@ -40,7 +40,7 @@
 
 ```lmx
 Example:
-    int[]: xs
+    []int: xs
     int: limit
     return: int
     run:
@@ -64,7 +64,7 @@ Consecutive:
         return: xs[i - 1] > limit && xs[i] > limit
 
 Example:
-    int[]: xs
+    []int: xs
     int: limit
     return: int
     run:

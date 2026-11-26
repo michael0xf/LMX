@@ -116,20 +116,20 @@ int: x 5       # int with value 5
 Typed requirements are written before the colon. These are again independent examples; the two Model initializer positions refer to the existing Model value, preserving its identity:
 
 ```lmx
-Model@: p
-int@: left
+@Model: p
+@int: left
 
-Model[]: arr
-int[]: values
+[]Model: arr
+[]int: values
 
-Model[]: arr [Model Model]
-Model[]: [Model Model]
+[]Model: arr [Model Model]
+[]Model: [Model Model]
 
-int[]: values [1 2 3]
-int[]: [1 2 3]
+[]int: values [1 2 3]
+[]int: [1 2 3]
 ```
 
-A square initializer is valid for both named and anonymous arrays. The anonymous forms yield one array without inventing a variable name; an omitted initializer preserves uninitialized absence. The requirement, including compositions such as `int@[]`, `int[]@`, `int[][]` and `int@@`, stays in the complete left head. Generic `@: ptr Model` above still initializes a universal reference from a value and is not a hidden typed declaration. See the [eight positive forms and complete composition matrix](TYPE_DECLARATION_FORMS.md).
+A square initializer is valid for both named and anonymous arrays. The anonymous forms yield one array without inventing a variable name; an omitted initializer preserves uninitialized absence. The requirement, including compositions such as `[]@int`, `@[]int`, `[][]int` and `@@int`, stays in the complete left head. Generic `@: ptr Model` above still initializes a universal reference from a value and is not a hidden typed declaration. See the [eight positive forms and complete composition matrix](TYPE_DECLARATION_FORMS.md).
 
 
 <a id="sized-array-declarations"></a>
@@ -138,55 +138,55 @@ A square initializer is valid for both named and anonymous arrays. The anonymous
 These independent declarations produce the same ordered payload, with distinct written type requirements:
 
 ```lmx
-int[][3]: var [1 2 3    4 5 6]
-int[][]: var [1 2 3;    4 5 6]
-int[][]: var [[1 2 3]  [4 5 6]]
-int[][3]: var [1 2 3
+[][3]int: var [1 2 3    4 5 6]
+[][]int: var [1 2 3;    4 5 6]
+[][]int: var [[1 2 3]  [4 5 6]]
+[][3]int: var [1 2 3
               4 5 6]
 ```
 
 These examples produce the same ordered flat payload, but their complete
-left requirements are different: `int[][3]` retains width 3 and derives the
-other extent as `6 / 3`, whereas `int[][]` leaves both sizes unspecified.
+left requirements are different: `[][3]int` retains width 3 and derives the
+other extent as `6 / 3`, whereas `[][]int` leaves both sizes unspecified.
 Explicit row boundaries validate rectangular input and flatten it; they do not
 become persistent shape metadata or specialize TYPE. To retain shape `[2,3]`
-write `int[2][3]`. `int[][]` and `int[](2)` are the same normalized type, while
-`int[2][3]` and `int[3][2]` are different types even at the same total length.
+write `[2][3]int`. `[][]int` and `[](2)int` are the same normalized type, while
+`[2][3]int` and `[3][2]int` are different types even at the same total length.
 An ordinary newline within the bounded initializer is whitespace: it adds no
 row or declaration boundary. Omitting the name yields an anonymous initialized
 value of the same written requirement; an omitted initializer remains typed
 absence and allocates no elements.
 
 A flat initializer is valid even when several axes remain unspecified:
-`int[][]: [1 2 3 4 5 6]` stores six elements without guessing `[2,3]` or `[3,2]`.
+`[][]int: [1 2 3 4 5 6]` stores six elements without guessing `[2,3]` or `[3,2]`.
 Only an operation requiring undetermined axes diagnoses missing shape; flat
 operations remain available. One unknown axis is derivable from length divided
-exactly by the positive product of specified axes. `int[][3]: [1 2 3 4 5]`
+exactly by the positive product of specified axes. `[][3]int: [1 2 3 4 5]`
 is invalid, as are contradictory explicit rows, violated written extents and
 negative or noninteger extent results. No zero padding or truncation repairs
-such a mismatch. `int[0][]: []` and `int[][0]: []` are valid incomplete zero
-shapes: the other extent is not guessed. `int[2][0]: []` is fully specified.
+such a mismatch. `[0][]int: []` and `[][0]int: []` are valid incomplete zero
+shapes: the other extent is not guessed. `[2][0]int: []` is fully specified.
 See [shape consumption](ARRAY_STORAGE.en.md#shape-inference).
 
 ```lmx
-int[][N]: [1 2 3 4 5 6]
-int[2][5]: [[1 2 3 4 5] [1 2 3 4 5]]
-Struct[2][5]: [[a b c d e] [e d c b a]]
-Struct[2]: [a b]
-Struct[2]: var [a b]
-Struct[]: var [a b]
+[][N]int: [1 2 3 4 5 6]
+[2][5]int: [[1 2 3 4 5] [1 2 3 4 5]]
+[2][5]Struct: [[a b c d e] [e d c b a]]
+[2]Struct: [a b]
+[2]Struct: var [a b]
+[]Struct: var [a b]
 ```
 
 Struct denotes the element requirement; a through e are admitted existing
-values. `Struct[2]` means “Array of Struct of length 2”; its anonymous initializer
-creates that value, while the NAME form initializes var. `Struct[]` retains an
-unspecified length. `Struct[2]: var` without an initializer still declares typed
+values. `[2]Struct` means “Array of Struct of length 2”; its anonymous initializer
+creates that value, while the NAME form initializes var. `[]Struct` retains an
+unspecified length. `[2]Struct: var` without an initializer still declares typed
 absence and allocates no elements.
 
-N may be a full ordinary expression, for example `int[][width + 1]` or
-`int[rows()][cols()]`; the complete content of `[...]` uses the common parser.
+N may be a full ordinary expression, for example `[][width + 1]int` or
+`[rows()][cols()]int`; the complete content of `[...]` uses the common parser.
 The extent itself has VALUE role inside the outer TYPE requirement:
-`int[][sizes[axis]]` uses an ordinary index, and `int[][length(row)]` uses an
+`[][sizes[axis]]int` uses an ordinary index, and `[][length(row)]int` uses an
 ordinary call. Neither inner form adds an Array axis. The TYPE consumer obtains
 each written result once in order. An extent is
 nonnegative; negative, noninteger or absent results are errors. Actual rows
@@ -204,8 +204,8 @@ value. The atomic `:=` never declares a sized type. Here Struct is consumed as
 an indexed value; in the earlier declarations it is consumed as a full TYPE
 requirement. Role selection precedes evaluation, without trial index execution.
 
-`T[N]` contributes one axis of size N; `T[](N)` contributes N unspecified
-axes; `T@(N)` contributes N pointer levels. Rank and pointer-depth counts remain
+`[N]T` contributes one axis of size N; `[](N)T` contributes N unspecified
+axes; `@(N)T` contributes N pointer levels. Rank and pointer-depth counts remain
 positive, while an extent may be zero. Canonical normalization stores the full
 left requirement in a shared immutable system TYPE Structure. Equal requirements
 reuse its TypeRef; initializer lengths/rows, variable names and reserve are not
@@ -254,9 +254,9 @@ Structure and `Array<@>` are interchangeable; numeric `Array<T>` stores T
 in one flat backing. All Arrays use the same length/capacity mechanism. Their
 canonical TypeRef is determined by the normalized complete left requirement,
 including declared rank and explicit extents. Initializer rows check and flatten
-input but do not turn unknown axes into persistent type metadata. Thus `int[]`
-with length two and three has the same type, `int[][]` equals `int[](2)`, and
-`int[2][3]` differs from `int[3][2]`.
+input but do not turn unknown axes into persistent type metadata. Thus `[]int`
+with length two and three has the same type, `[][]int` equals `[](2)int`, and
+`[2][3]int` differs from `[3][2]int`.
 
 `sys\resize(S,n)` respects that original type and its explicit size constraints;
 `sys\reserve(S,n)` changes reserve only. Neither creates a new type for reserve
@@ -468,10 +468,10 @@ SumContext:
     sum:
         return: lhs + rhs
 
-SumSignature@: sumPtr SumContext\sum
+@SumSignature: sumPtr SumContext\sum
 ~~~
 
-The typed head `SumSignature@` supplies the requirement; its two fields are the reference name
+The typed head `@SumSignature` supplies the requirement; its two fields are the reference name
 and actual candidate. The ordinary universal-reference initializer `@: p Model` instead
 initially refers to Model itself; it does not select a separate implementation.
 
@@ -491,7 +491,7 @@ The map does not rename the candidate or give its own formal names a second publ
 For mixed types, order matters:
 
 ~~~lmx
-SelectSignature :: (int: count; char[]: text; return: int)
+SelectSignature :: (int: count; []char: text; return: int)
 ~~~
 
 A candidate with inputs int then `Array<char>` can match even with different names. A candidate with `Array<char>`
@@ -504,18 +504,18 @@ The contrast with an ordinary minimal model is explicit:
 
 ~~~lmx
 PrioritiesTemplate:
-    char[]: name
+    []char: name
     return: int
 
 PrioritySignature :: PrioritiesTemplate
 
 PriorityProvider:
-    char[]: query
+    []char: query
     return: int
     lookup:
         return: sys\priority(query)
 
-PrioritySignature@: priorityCall PriorityProvider\lookup
+@PrioritySignature: priorityCall PriorityProvider\lookup
 ~~~
 
 PrioritySignature accepts lookup by its one `Array<char>` input and int result. In executable context,
@@ -1059,7 +1059,7 @@ Library:
     int: counter 0
     Settings:
         int: width 2
-    PrioritySignature :: (char[]: name; return: int)
+    PrioritySignature :: ([]char: name; return: int)
 
 Other:
     Tool:
@@ -1258,7 +1258,7 @@ DATA matches the explicit structural header:
 operand_template:
     @: left
     int: depth
-    @[]: right
+    []@: right
     const: int: PASS_ARGS_AS_IS
     const: int: PRIORITY
 ~~~
@@ -1273,9 +1273,9 @@ A numeric specialization can require int targets and an int result:
 
 ~~~lmx
 int_operand_template:
-    int@: left
+    @int: left
     int: depth
-    int@[]: right
+    []@int: right
     const: int: PASS_ARGS_AS_IS
     const: int: PRIORITY
     return: int
@@ -1287,7 +1287,7 @@ but that is a separate field-stream operation. Any method body explicitly includ
 model's requirement; extra implementation fields absent from the model are not.
 
 Fn remains a distinct positional contract. For example,
-`TripleSignature :: (@: first; int: level; @[]: rest; return: int)`
+`TripleSignature :: (@: first; int: level; []@: rest; return: int)`
 can match inputs named lhs/level/rhs by position. It does not establish operand discovery, for which the names left,
 depth, right, `PASS_ARGS_AS_IS`, and `PRIORITY` are significant. Through such a fn reference, public labels map to positions;
 hidden binding still uses the real candidate's names and DATA.
@@ -1313,9 +1313,9 @@ The complete prepared-value example is:
 
 ~~~lmx
 operands:
-    int@: left
+    @int: left
     int: depth
-    int@[]: right
+    []@int: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("+")
     return: int
@@ -1350,13 +1350,13 @@ would instead return a reference with no hidden extra dereference. The logical r
 
 Raw mode uses the same grouping rules but supplies original occurrences without evaluating them. They may be
 names, literals, calls, assignments, or groups. General raw code therefore uses unconstrained references, not
-`int@: left` as a promise that an unevaluated Structure will eventually become int.
+`@int: left` as a promise that an unevaluated Structure will eventually become int.
 
 ~~~lmx
 raw_operands:
     @: left
     int: depth
-    @[]: right
+    []@: right
     const: int: PASS_ARGS_AS_IS 1
     const: int: PRIORITY sys\priority("+")
     return: int
@@ -1426,7 +1426,7 @@ their normal unescaped content; an empty exact identifier yields an empty Array.
 They do not invoke its body or register its name. Equal string contents give equal lookup behavior without
 requiring canonical-string address identity. The "+" query selects the addition priority, not a contextually
 guessed unary priority. Missing or ambiguous operands cause ordinary resolution errors, rather than a fictitious
-priority. The named signature is `PrioritySignature :: (char[]: name; return: int)`, distinct from the ordinary
+priority. The named signature is `PrioritySignature :: ([]char: name; return: int)`, distinct from the ordinary
 PrioritiesTemplate explained [above](#fn-signature).
 
 The [operand observations](LMX_semantics.en.md#operand-observations) give the full acceptance matrix for these
@@ -1552,13 +1552,13 @@ the new value. `var` is the sole argument slot in the operation name; exact
 receiver remains unquoted in its ordinary use.
 
 ```lmx
-int[]: values [1 2 3]
+[]int: values [1 2 3]
 @: selected compress(source := values; mask := values > 1)
 @: joined concat(parts := (values; values))
 @: found index(items := values; accepts := Positive\run)
 ```
 
-Here Positive\run is an ordinary predicate declared by the example's caller. Found is Maybe, not an index sentinel. Values has dense int storage; selection retains that storage profile. `[]: pending` is uninitialized, while `int[]: []` is a ready empty value. `int@[]` and `int[]@` differ. Use `@node\x`, not the compact declaration `@(node\x)`, for the address of a graph field. [Full examples and contracts](CORE_SEQUENCES_REGEX.en.md).
+Here Positive\run is an ordinary predicate declared by the example's caller. Found is Maybe, not an index sentinel. Values has dense int storage; selection retains that storage profile. `[]: pending` is uninitialized, while `[]int: []` is a ready empty value. `[]@int` and `@[]int` differ. Use `@node\x`, not the compact declaration `@(node\x)`, for the address of a graph field. [Full examples and contracts](CORE_SEQUENCES_REGEX.en.md).
 
 ```lmx
 wholeMatch(utf8Text("AB-09"); (then (within("A"; "Z") times 2) "-" (asciiDigit times 2)))

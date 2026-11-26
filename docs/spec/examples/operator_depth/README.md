@@ -63,9 +63,9 @@ Example:
     return: @
     run:
         throws: copy(`+`\throws)
-        int[]: first [1 2]
-        int[]: second [3 4]
-        @[]: rows [first second]
+        []int: first [1 2]
+        []int: second [3 4]
+        []@: rows [first second]
         return: rows .(2)+ 10
 ```
 
@@ -94,7 +94,7 @@ Example:
 DepthProbe:
     @: left
     int: depth 0
-    @[]: right
+    []@: right
     const:
         int: PASS_ARGS_AS_IS 0
         int: PRIORITY sys\priority("+")
@@ -115,7 +115,7 @@ Example:
         DepthSource\calls := 0
         int: infix 5 .(DepthSource\get())DepthProbe\apply 6
         int: prefix (.(1 + 9)DepthProbe\apply 5 6)
-        @[]: arguments [6]
+        []@: arguments [6]
         int: receiver DepthProbe\apply(left := 5; depth := 10; right := arguments)
         return: (infix prefix receiver DepthSource\calls)
 ```
@@ -129,9 +129,9 @@ Example:
     return: @
     run:
         throws: copy(`+`\throws)
-        int[]: first [1 2]
-        int[]: second [3 4]
-        @[]: rows [first second]
+        []int: first [1 2]
+        []int: second [3 4]
+        []@: rows [first second]
         return: `+`(rows; 10; depth := 2)
 ```
 

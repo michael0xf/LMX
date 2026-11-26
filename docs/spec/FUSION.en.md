@@ -161,7 +161,7 @@ to the next operation, but is not a hidden per-Array descriptor.
 `FxSeqAllocate(arrayType; count)` is the existing unsized linear helper; count
 does not recover axes. A fixed shaped result must use common construction
 immediately under its complete evaluated type, with valid count and initialized
-backing before publication. Empty-value-plus-resize and retagging a ready `T[]`
+backing before publication. Empty-value-plus-resize and retagging a ready `[]T`
 are not substitutes; this is a required migration of the old source prototype.
 At capacity=length there is no secondary descriptor. Real reserve uses an
 optional capacity entry and never changes TypeRef merely for that reserve.

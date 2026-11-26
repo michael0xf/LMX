@@ -46,10 +46,10 @@ BreadthFirst:
     run:
         throws: copy(AlgorithmArray\make\throws) copy(FxSeqAllocate\make\throws) copy(FxApply\apply\throws) ReceiverIndex
         int: n length(graph)
-        @: distance AlgorithmArray\make(int[]; n; (-1 record))
+        @: distance AlgorithmArray\make([]int; n; (-1 record))
         if: n = 0
             return: distance
-        @: queue FxSeqAllocate\make(int[]; n)
+        @: queue FxSeqAllocate\make([]int; n)
         queue[0] := start
         distance[start] := 0
         int: head 0

@@ -84,7 +84,7 @@ def build():
     for i,row in enumerate(ROWS,1):
         lines.append(f"    entry{i:03}:")
         for key in ["name","family","receiver","expression_form","depth_input","depth_syntax","implementation","source","contract","precedence","status","production_binding"]:
-            lines.append(f"        char[]: {key} {json.dumps(row[key],ensure_ascii=False)}")
+            lines.append(f"        []char: {key} {json.dumps(row[key],ensure_ascii=False)}")
         lines.append(f"        int: exampleDepth {row['example_depth']}")
         lines.append("        int: executed 0")
     (OUT/"array_expression_forms.lmx").write_text("\n".join(lines)+"\n")

@@ -79,8 +79,8 @@ print       и `print`       — одно имя print
 | `` `@name` `` | Одно имя `@name`, без выделения `@` и `name`. |
 | `ns\op` | Путь. |
 | `` `ns\op` `` | Одно буквальное имя с backslash. |
-| `Model@` | Составное TYPE-выражение. |
-| `` `Model@` `` | Одно буквальное имя. |
+| `@Model` | Составное TYPE-выражение. |
+| `` `@Model` `` | Одно буквальное имя. |
 | `a+b` | Выражение из нескольких токенов. |
 | `` `a+b` `` | Одно имя. |
 | `` ns\`+`(a; b) `` | Вызов точного имени `+` через путь `ns`. |
@@ -201,8 +201,8 @@ Resize:
 | `throws` | Конечный список NAME/DATA и field streams; имена не вычисляются как значения. |
 | `required`, `private` | Admission/живое место и двусторонняя граница связывания; сохранить DATA/CODE-контекст. |
 | `const`, `immutable`, `independent` как qualifications | Construction и полные требования до публикации; без раннего запуска initializer. |
-| `T:`, `@:`, `T@:`, `[]:`, `T[]:`, `T[N]:` | TYPE head, NAME места, VALUE/сохранённый initializer; declaration actual остаётся DATA. |
-| `T@`, `T[]`, `T[N]`, `nil: T` | TYPE → TYPE/typed absence. Не смешивать с адресацией и индексированием. |
+| `T:`, `@:`, `@T:`, `[]:`, `[]T:`, `[N]T:` | TYPE head, NAME места, VALUE/сохранённый initializer; declaration actual остаётся DATA. |
+| `@T`, `[]T`, `[N]T`, `nil: T` | TYPE → TYPE/typed absence. Не смешивать с адресацией и индексированием. |
 | `Name :: DATA` | Все аргументы DATA, включая NAME; одно описание раскрывается самим `::` в список деклараций без изменения внешних actuals. Expression производителя имеет роль CODE; собственные роли аргументов сохраняются по [контракту ресивера](LMX_semantics.ru.md#signature-description-consumption). Не возвращать удалённый `fn`. |
 | `call`, `C(args)`, `C: args` | Один resolver, W/E, actual mapping; настоящий `parent(C)`. |
 | `copy`, `merge`, `import` | CODE-источники во всех позициях; FIELD STREAM. Не заворачивать поток в один Array. |
@@ -993,6 +993,6 @@ P0. Отдельный числовой parser не вводится. После
 прежнее описание depth в графе и не ищут скобки в исходной строке. `1.5`,
 `.5`, `1.` и `1.+2` сохраняют прежнее числовое чтение; содержимое строк,
 комментариев и точных имён не раскрывается. Квадратные Array-формы и
-`int[](N)`/`int@(N)` не затронуты. Квадратная запись модификатора не является
+`[](N)int`/`@(N)int` не затронуты. Квадратная запись модификатора не является
 alias. [Полный алгоритм P0](LMX_grammar.ru.md#conditional-slice-grammar).
 Production P0/LMX execution этих границ — **NOT_RUN**.

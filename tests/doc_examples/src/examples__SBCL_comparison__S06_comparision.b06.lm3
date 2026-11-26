@@ -1,0 +1,19 @@
+Example:
+    []int: items
+    return: @
+    run:
+        throws: copy(sys\resize\throws)
+        []int: accepted []
+        sys\resize(accepted; length(items))
+        int: total 0
+        int: used 0
+        int: bad -1
+        while: used < length(items)
+            if: items[used] < 0
+                bad := used
+                break
+            accepted[used] := items[used]
+            total += items[used]
+            used += 1
+        sys\resize(accepted; used)
+        return: (accepted; total; bad)

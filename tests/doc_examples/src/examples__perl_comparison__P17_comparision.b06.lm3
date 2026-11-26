@@ -1,0 +1,15 @@
+LongWord:
+    []char: word
+    return: int
+    test:
+        return: length(word) >= minimum
+
+Example:
+    []char: text
+    int: minimum
+    return: @
+    run:
+        throws: copy(byteText\throws) copy(atLeast\throws) copy(eachMatch\throws) copy(collect\throws) copy(map\throws) copy(matchedValue\throws) copy(filter\throws)
+        @: words map(collect(eachMatch(byteText(text); (asciiLetter atLeast 1))); matchedValue)
+        @: selected filter(words; LongWord\test)
+        return: (selected; length(words) - length(selected))

@@ -51,7 +51,7 @@ contains exactly the normalized complete LEFT requirement; it does not acquire
 extra axes or sizes from an initializer. Only a reserve beyond length needs a
 compact capacity entry. Capacity equal to length means no secondary descriptor,
 including for nD Arrays ([§6.1](#array-capacity)).
-In L2 order the primary fields remain `Lmx@: parent`, `size_t: length`, `@: storage`.
+In L2 order the primary fields remain `@Lmx: parent`, `size_t: length`, `@: storage`.
 These are `Lmx *`, `size_t`, and `void *`; the typed requirement is in the head,
 not an initializer naming a type. A reference points to the header's start.
 Immediately before it is a TypeRef: the direct address of the canonical system
@@ -124,8 +124,8 @@ selects the current launch's data (the parent of the executed Structure), includ
 
 ```text
 (
-    Lmx@@: parent
-    size_t@: length
+    @@Lmx: parent
+    @size_t: length
     @@: storage
 )
 ```
@@ -157,9 +157,9 @@ The no-argument form retains its current-DATA/object contract.
 The description exposes the complete normalized LEFT requirement, its storage
 contract, declared rank and explicit axis constraints, derivation rules and
 compatibility. It contains no initializer-specific dimensions or reserve amount.
-For `int[]`, a current extent comes from the object's length. For `int[][3]`, one
+For `[]int`, a current extent comes from the object's length. For `[][3]int`, one
 missing extent can be derived from length and 3 when the quotient is integral.
-For `int[][]`, two missing extents stay unknown even if row syntax was used to
+For `[][]int`, two missing extents stay unknown even if row syntax was used to
 initialize the value. Reading a description does not invent zeros or factors.
 
 `sys\capacity(obj)` reports the actual instance capacity through the common
@@ -270,10 +270,10 @@ Structure requirements have distinct descriptions; an already published ordinary
 Structure cannot become immutable by relabeling. There is no separate executable-fn
 or sub storage category, nor an embedded VoidArray.
 
-The normalized complete LEFT determines TypeRef. Equivalent `int[][]` and
-`int[](2)` share it; `int[]` arrays of lengths 2 and 3 share it; `int[2][3]` and
-`int[3][2]` do not. Names, initializer rows, actual length and reserve are not
-interning parameters. Explicit `int[N]` evaluates N once and reuses the canonical
+The normalized complete LEFT determines TypeRef. Equivalent `[][]int` and
+`[](2)int` share it; `[]int` arrays of lengths 2 and 3 share it; `[2][3]int` and
+`[3][2]int` do not. Names, initializer rows, actual length and reserve are not
+interning parameters. Explicit `[N]int` evaluates N once and reuses the canonical
 description for the resolved requirement. Type descriptions have a finite
 bootstrapped meta-description; their own type references may form ordinary graph
 cycles. Stable references remain valid while any live record, saved TYPE value
@@ -373,28 +373,28 @@ length without allocation; all Array types use this common policy. Reserve chang
 neither TypeRef nor its immutable description. There is no reserve-specific type.
 
 TYPE metadata contains declared rank and explicitly specified dimensions only.
-Equal complete requirements share one description: `int[][]` equals `int[](2)`,
-but `int[2][3]` differs from `int[3][2]` and `int[][3]` differs from `int[][]`.
-All use one flat C backing. `int[]` gets its current extent from length; one missing
+Equal complete requirements share one description: `[][]int` equals `[](2)int`,
+but `[2][3]int` differs from `[3][2]int` and `[][3]int` differs from `[][]int`.
+All use one flat C backing. `[]int` gets its current extent from length; one missing
 axis can be derived from length divided by a positive product of known extents
 when exact. Multiple missing axes stay unknown. A full zero shape such as
-`int[2][0][3]` is retained by its written TYPE; length zero cannot recreate it.
-`int[0][]: []` and `int[][0]: []` are valid with incomplete shape, while
-`int[2][0]: []` has fully known dimensions. No source rows or per-object shape
+`[2][0][3]int` is retained by its written TYPE; length zero cannot recreate it.
+`[0][]int: []` and `[][0]int: []` are valid with incomplete shape, while
+`[2][0]int: []` has fully known dimensions. No source rows or per-object shape
 record fill the missing dimensions after construction.
 
 Explicit initializer rows are checked for rectangularity, then flattened in order.
-`int[][]: [1 2 3; 4 5 6]` validates two rows of three but retains TYPE `int[][]`,
-with two unknown extents. `int[][]: [1 2 3 4 5 6]` is also valid flat storage.
-`int[][3]: [1 2 3 4 5 6]` has different TYPE information: its missing extent is
+`[][]int: [1 2 3; 4 5 6]` validates two rows of three but retains TYPE `[][]int`,
+with two unknown extents. `[][]int: [1 2 3 4 5 6]` is also valid flat storage.
+`[][3]int: [1 2 3 4 5 6]` has different TYPE information: its missing extent is
 uniquely 2. These values may contain the same ordered data without having the same
-type. `int[][3]: [1 2 3 4 5]` is invalid. Contradictory explicit rows, negative or
+type. `[][3]int: [1 2 3 4 5]` is invalid. Contradictory explicit rows, negative or
 noninteger size expressions and impossible length/products are errors. Missing
 shape is an error only at an operation needing information that TYPE plus length
 cannot determine; ordinary flat operations remain available.
 
 The common parser handles every full `[sizeExpression]`; the TYPE consumer obtains
-it once in lexical order. `T[](N)` repeats unspecified axes, and `T@(N)` repeats
+it once in lexical order. `[](N)T` repeats unspecified axes, and `@(N)T` repeats
 pointer levels. A declaration without an initializer stays uninit and allocates no
 Array or capacity entry. VALUE/PLACE indexing and indexed callable receiver heads
 retain their roles: `Struct[2]:= [a b]` is assignment, not a declaration colon.
@@ -596,10 +596,10 @@ SumContext:
     sum:
         return: first + second
 
-SumSignature@: sumPtr SumContext\sum
+@SumSignature: sumPtr SumContext\sum
 ```
 
-The head `SumSignature@` supplies the named requirement; its two arguments are the
+The head `@SumSignature` supplies the named requirement; its two arguments are the
 reference name and the candidate.
 `@: p Model` retains its ordinary two-argument meaning: it initially refers to Model itself; it
 does not choose a separate implementation. `sumPtr(a := 2; b := 3)` supplies 2 and 3 to the first
@@ -1107,14 +1107,14 @@ and dereferenced writes are not assignment through a bare Structure or function 
 and are not prohibited by that rule.
 
 A reference place is declared with the name first among the receiver's arguments:
-`@: p 0`, `@: p Model`, `Model@: p 0`, or `Model@: p Other`. The first argument is a
+`@: p 0`, `@: p Model`, `@Model: p 0`, or `@Model: p Other`. The first argument is a
 place-name atom and is not invoked; a supplied initializer uses the resolved receiver's ordinary
 contract. A two-argument `@: p Model` initially refers to Model itself. A full requirement
-belongs in the typed head `Model@`; `Model@: p Other` supplies its candidate and
-`Model@: p 0` supplies an initialized null. The former three-argument requirement/candidate
+belongs in the typed head `@Model`; `@Model: p Other` supplies its candidate and
+`@Model: p 0` supplies an initialized null. The former three-argument requirement/candidate
 form is withdrawn.
 
-A nested `@: p Model: Other` is not the typed declaration `Model@: p Other`. In a CODE-consuming
+A nested `@: p Model: Other` is not the typed declaration `@Model: p Other`. In a CODE-consuming
 position, `Model: Other` is an ordinary call if Model resolves to a callable; it is not an
 alternate notation for requirement plus candidate. Anonymous Structure values and bare references
 are not calls. A place-declaration receiver supplied as a CODE argument is preserved as DATA
@@ -1202,7 +1202,7 @@ is the selected method's actual parent, checked against an ordinary structural h
 operand_template:
     @: left
     int: depth
-    @[]: right
+    []@: right
     const: int: PASS_ARGS_AS_IS
     const: int: PRIORITY
 ```
@@ -1277,7 +1277,7 @@ remains one Array in a call.
 
 `sys\priority(name)` consumes a character Array's content and returns the selected available
 operand's ordinary int priority, without executing its body or operand arguments. Its descriptive
-signature is `PrioritySignature :: (char[]: name; return: int)`. It uses the same visibility and
+signature is `PrioritySignature :: ([]char: name; return: int)`. It uses the same visibility and
 properties as expression analysis, rather than restricting lookup to fields of sys. Equal string
 contents give equal lookup behavior even at different addresses; canonical identifier comparisons
 remain pointer comparisons after this explicit name-resolution boundary. Unknown or ambiguous
@@ -1343,7 +1343,7 @@ See [the unified type contract](CORE_SEQUENCES_REGEX.en.md#types) and the
 <a id="array-expression-forms"></a>
 ### Array expression forms and evaluation
 
-The [common Array expression contract](ARRAY_EXPRESSIONS.en.md) applies to L2 as well: actual Array operands select the admitted matrix/array profile, `.*` means componentwise multiplication, `.=` compares components, and `.:` assigns components. A Structure is the freely typed Array `@[]`. Dotted forms share the scalar form's precedence; the lazy conditional `? :` sits below logical OR and above assignment and associates right. [Slices](TERNARY_AND_SLICES.en.md) and [fuse](FUSION.en.md) use the same source graph and namespace. Native lowering does not introduce a second program graph or bypass scalar admission contracts by silently switching to `int`.
+The [common Array expression contract](ARRAY_EXPRESSIONS.en.md) applies to L2 as well: actual Array operands select the admitted matrix/array profile, `.*` means componentwise multiplication, `.=` compares components, and `.:` assigns components. A Structure is the freely typed Array `[]@`. Dotted forms share the scalar form's precedence; the lazy conditional `? :` sits below logical OR and above assignment and associates right. [Slices](TERNARY_AND_SLICES.en.md) and [fuse](FUSION.en.md) use the same source graph and namespace. Native lowering does not introduce a second program graph or bypass scalar admission contracts by silently switching to `int`.
 
 <a id="operand-depth"></a>
 ### Operand depth in interpretation and native calls

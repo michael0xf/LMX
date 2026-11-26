@@ -41,8 +41,8 @@
 
 ```lmx
 Example:
-    int[]: left
-    int[]: right
+    []int: left
+    []int: right
     return: int
     run:
         int: total 0
@@ -71,8 +71,8 @@ Shortage:
         return: 0
 
 Example:
-    int[]: left
-    int[]: right
+    []int: left
+    []int: right
     return: int
     run:
         throws: copy(zipWith\throws) copy(sum\throws)

@@ -15,7 +15,7 @@
 | [009_conditional_bound.lm3](009_conditional_bound.lm3), `flag` | 1 → `[1 3 5]`; 0 → `[2 4]` |
 | [010_slice_zero_step.lm3](010_slice_zero_step.lm3) | `SequenceStep`; исходный массив не изменён |
 
-Табличные квадратные группы обозначают ожидаемые значения Array, не новую нетипизированную форму инициализатора в LMX. В источниках массивы объявляются `int[]: nums [...]`. Тернарные ветви остаются RAW до выбора; потенциальные исходы всё равно входят в `throws` метода. Список исходов копируется из выбранного общего семейства, не перечисляется повторно вручную.
+Табличные квадратные группы обозначают ожидаемые значения Array, не новую нетипизированную форму инициализатора в LMX. В источниках массивы объявляются `[]int: nums [...]`. Тернарные ветви остаются RAW до выбора; потенциальные исходы всё равно входят в `throws` метода. Список исходов копируется из выбранного общего семейства, не перечисляется повторно вручную.
 
 Отрицательный скалярный индекс `nums[-1]` не включён в положительные исходники: это недопустимый Array-доступ, проверяемый также при интерпретации L2. Нативное L2 не обязано добавлять bounds-check и от этого не придаёт такому доступу смысл последнего элемента. Пример 007 показывает требуемую указательную операцию вместо отрицательного Array-индекса.
 
@@ -34,7 +34,7 @@ AuthorSlices:
     return: @
     run:
         throws: copy(slice\throws)
-        int[]: nums [0 1 2 3 4 5 6]
+        []int: nums [0 1 2 3 4 5 6]
         return: (nums[::2]; nums[::-1]; nums[-3:]; nums[:-2]; nums[5:1:-1])
 ```
 
@@ -45,7 +45,7 @@ SliceOmission:
     return: @
     run:
         throws: copy(slice\throws)
-        int[]: nums [0 1 2 3 4 5 6]
+        []int: nums [0 1 2 3 4 5 6]
         return: (nums[::-1]; nums[:-1:-1]; nums[100:-100:-2])
 ```
 
@@ -88,7 +88,7 @@ OverlapReverse:
     return: @
     run:
         throws: copy(slice\throws) copy(`:=`\throws)
-        int[]: nums [0 1 2 3 4 5 6]
+        []int: nums [0 1 2 3 4 5 6]
         nums[::-1] .: nums
         return: nums
 ```
@@ -113,9 +113,9 @@ GroupRotation:
 PointerNeighbor:
     return: int
     run:
-        int[]: values [10 20 30]
+        []int: values [10 20 30]
         L2:
-            int@: p @values[1]
+            @int: p @values[1]
             return: \(p - 1)
 ```
 
@@ -138,7 +138,7 @@ ConditionalBound:
     return: @
     run:
         throws: copy(slice\throws)
-        int[]: nums [0 1 2 3 4 5 6]
+        []int: nums [0 1 2 3 4 5 6]
         return: nums[flag ? 1 : 2:6:2]
 ```
 
@@ -149,7 +149,7 @@ ZeroSliceStep:
     return: @
     run:
         throws: copy(slice\throws)
-        int[]: nums [0 1 2]
+        []int: nums [0 1 2]
         return: nums[::0]
 ```
 

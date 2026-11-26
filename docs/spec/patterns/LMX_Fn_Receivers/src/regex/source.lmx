@@ -8,7 +8,7 @@ RxSourceDomain:
 RxPreparedSource:
     @: view 0
     @: units 0
-    RxSourceDomain@: domain 0
+    @RxSourceDomain: domain 0
     @: profile 0
 
 ArrayView:
@@ -32,7 +32,7 @@ RxSourceMake:
     private:
         @: view
         @: units
-        RxSourceDomain@: domain
+        @RxSourceDomain: domain
         @: profile
     required: view units domain profile
     return: @
@@ -58,12 +58,12 @@ RxArrayLiteralUnits:
 RxTextLiteralUnits:
     private:
         @: value
-        RxPreparedText@: profile
+        @RxPreparedText: profile
     required: value profile
     return: @
     make:
         throws: copy(FxThrows\pattern)
-        private: char[]: text \value
+        private: []char: text \value
         private: @: prepared RxTextBuild\make(text; profile\profile)
         return: prepared\units
 
@@ -78,7 +78,7 @@ RxTextDomain:
     @: slice RxTextSourceSlice\copyValue
 
 RxArrayPrepare:
-    private: ArrayView@: source
+    private: @ArrayView: source
     required: source
     return: @
     make:
@@ -92,7 +92,7 @@ RxArrayPrepare:
         )
 
 RxTextPrepareSource:
-    private: TextView@: source
+    private: @TextView: source
     required: source
     return: @
     make:
@@ -123,7 +123,7 @@ RxArrayRangeUnit:
 RxTextRangeUnit:
     private:
         @: value
-        RxPreparedText@: profile
+        @RxPreparedText: profile
     required: value profile
     return: @
     get:
@@ -135,7 +135,7 @@ RxTextRangeUnit:
 
 RxArraySourceSlice:
     private:
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: begin
         int: end
     required: source begin end
@@ -146,21 +146,21 @@ RxArraySourceSlice:
 
 RxTextSourceSlice:
     private:
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: begin
         int: end
     required: source begin end
     return: @
     copyValue:
         throws: copy(FxThrows\pattern)
-        private: RxPreparedText@: text source\profile
+        private: @RxPreparedText: text source\profile
         if: begin < 0 || end < begin || end > length(text\units)
             throw: PatternPosition()
         return: FxSeqSlice\slice(text\source; text\byteOffsets[begin]; text\byteOffsets[end])
 
 RxSourceSlice:
     private:
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: begin
         int: end
     required: source begin end
@@ -174,7 +174,7 @@ RxSourceAppend:
     private:
         @: target
         @: fragment
-        RxPreparedSource@: source
+        @RxPreparedSource: source
     required: target fragment source
     append:
         throws: copy(FxThrows\pattern)
@@ -185,7 +185,7 @@ RxSourceAppend:
 RxSourceAppendSpan:
     private:
         @: target
-        RxPreparedSource@: source
+        @RxPreparedSource: source
         int: begin
         int: end
     required: target source begin end
@@ -225,8 +225,8 @@ RxReplacementCallable:
 
 RxReplacementValue:
     private:
-        RxReplacementInput@: replacement
-        Match@: matched
+        @RxReplacementInput: replacement
+        @Match: matched
     required: replacement matched
     return: @
     make:
@@ -234,7 +234,7 @@ RxReplacementValue:
         private: @: result replacement\literal
         if: replacement\operation != 0
             result := FxApply\apply(replacement\operation; FxOne\make(matched))
-        private: RxPreparedSource@: source matched\private\prepared
+        private: @RxPreparedSource: source matched\private\prepared
         private: @: validate source\domain\literalUnits
         validate(value := result; profile := source\profile)
         return: result

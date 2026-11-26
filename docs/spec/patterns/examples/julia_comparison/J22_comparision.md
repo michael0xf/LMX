@@ -33,11 +33,11 @@
 
 ```lmx
 Example:
-    char[]: text
-    return: char[]
+    []char: text
+    return: []char
     run:
         throws: copy(FxSeqPush\append\throws) copy(record\throws) copy(sys\resize\throws)
-        char[]: out []
+        []char: out []
         int: i 0
         while: i < length(text)
             if: text[i] >= '0' && text[i] <= '9'
@@ -59,11 +59,11 @@ Example:
 
 ```lmx
 Example:
-    char[]: text
-    return: char[]
+    []char: text
+    return: []char
     run:
         throws: copy(compress\throws) copy(last\throws)
-        char[]: digits \compress(text; (text >= '0') * (text <= '9'))
+        []char: digits \compress(text; (text >= '0') * (text <= '9'))
         return: \last(digits; 4)
 ```
 

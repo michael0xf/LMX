@@ -43,7 +43,7 @@ Ascii:
         return: (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z')
 
 Example:
-    char[]: text
+    []char: text
     return: @
     run:
         throws: copy(sys\resize\throws)
@@ -55,8 +55,8 @@ Example:
         int: begin at + 1
         if: begin = length(text)
             return: (0; ""; "")
-        char[]: key []
-        char[]: value []
+        []char: key []
+        []char: value []
         sys\resize(key; at)
         sys\resize(value; length(text) - begin)
         int: i 0
@@ -78,7 +78,7 @@ Example:
 
 ```lmx
 Example:
-    char[]: text
+    []char: text
     return: @
     run:
         throws: copy(byteText\throws) copy(atLeast\throws) copy(capture\throws) copy(RxThenOperand\then\throws) copy(wholeMatch\throws) copy(captureValue\throws)

@@ -379,7 +379,7 @@ Backend:
 Checks:
     return: int
     demo:
-        PairSignature@: chosen Backend\encode
+        @PairSignature: chosen Backend\encode
         return: chosen(left := 2; right := 7)
 ```
 Expect **27**, not 72. The signature's `left` is external position 1, which maps to candidate `right`; signature `right` maps to candidate `left`. A direct `Backend\encode(left := 2; right := 7)` returns **72** because it uses the candidate's own labels.
@@ -402,7 +402,7 @@ Backend:
 Checks:
     return: int
     demo:
-        ValueSignature@: chosen Backend\read
+        @ValueSignature: chosen Backend\read
         int: a chosen()
         int: b chosen(publicValue := 0)
         return: a * 10 + b
@@ -416,25 +416,25 @@ Variant with `required: int: actualValue` and no default: signature compatibilit
 ### B-12 — Type order matters; optional positions do not vanish
 
 ```lmx
-SelectionSignature :: (int: count; char[]: text; return: int)
+SelectionSignature :: (int: count; []char: text; return: int)
 
 Compatible:
     int: n
-    char[]: s
+    []char: s
     return: int
     choose:
         return: n
 
 Reordered:
-    char[]: text
+    []char: text
     int: count
     return: int
     choose:
         return: count
 ```
-- Accept `SelectionSignature@: selected Compatible\choose`.
+- Accept `@SelectionSignature: selected Compatible\choose`.
 - `selected(text := "abc"; count := 6)` returns 6.
-- Reject `SelectionSignature@: selected Reordered\choose`: the candidate type order is `Array<char>, int`.
+- Reject `@SelectionSignature: selected Reordered\choose`: the candidate type order is `Array<char>, int`.
 - Direct `Reordered\choose(count := 6; text := "abc")` remains valid and returns 6.
 - Reject candidates with one fewer declared input, including a missing optional input, or a different presence/type of result.
 
@@ -606,13 +606,13 @@ Library:
         apply:
             return: n * 3
     ---
-    TransformSignature@: selected Transform\apply
+    @TransformSignature: selected Transform\apply
 
 Use:
     import: Library
     return: int
     demo:
-        TransformSignature@: chosen Transform\apply
+        @TransformSignature: chosen Transform\apply
         return: chosen(4) + factor
 ```
 Expect **15**. `factor`, `Inputs`, `TransformSignature` and `Transform` become imported names. `mutableValue` and `selected` do not. Nested `n`, `return` and `apply` are not lifted into `Use`; the actual parent of the chosen callable remains `Library\Transform`. This is namespace import, not graph copying or parent replacement.
@@ -664,7 +664,7 @@ Scrambled:
 CoordinateProbe:
     return: int
     run:
-        CoordinateModel@: view Scrambled
+        @CoordinateModel: view Scrambled
         int: before view\x * 10 + view\y
         view\x := 9
         return: before * 100 + view\x * 10 + view\y
@@ -713,8 +713,8 @@ Checker:
 BehaviorProbe:
     return: int
     run:
-        UnaryNumber@: first Increment\apply
-        UnaryNumber@: second Decrement\apply
+        @UnaryNumber: first Increment\apply
+        @UnaryNumber: second Decrement\apply
         int: good Checker\at_zero(candidate := first)
         int: bad Checker\at_zero(candidate := second)
         return: good * 10 + bad
@@ -907,9 +907,9 @@ These cases follow the current operand contract: the Expression grouper produces
 
 ```lmx
 numeric_ops:
-    int@: left
+    @int: left
     int: depth 0
-    int@[]: right
+    []@int: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("+")
     return: int
@@ -941,9 +941,9 @@ Source: [operand discovery](../LMX_semantics.en.md#operand-receiver); [prepared 
 
 ```lmx
 several_ops:
-    int@: left
+    @int: left
     int: depth 0
-    int@[]: right
+    []@int: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("+")
     return: int
@@ -1025,9 +1025,9 @@ meter:
         return: node\calls
 
 prepared_ops:
-    int@: left
+    @int: left
     int: depth 0
-    int@[]: right
+    []@int: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("+")
     return: int
@@ -1037,7 +1037,7 @@ prepared_ops:
 raw_ops:
     @: left
     int: depth 0
-    @[]: right
+    []@: right
     const: int: PASS_ARGS_AS_IS 1
     const: int: PRIORITY sys\priority("+")
     return: int
@@ -1079,7 +1079,7 @@ meter:
 selection_ops:
     @: left
     int: depth 0
-    @[]: right
+    []@: right
     const: int: PASS_ARGS_AS_IS 1
     const: int: PRIORITY sys\priority("+")
     return: int
@@ -1116,7 +1116,7 @@ helpers:
 origin_ops:
     @: left
     int: depth 0
-    @[]: right
+    []@: right
     const: int: PASS_ARGS_AS_IS 1
     const: int: PRIORITY sys\priority("+")
     int: n 700
@@ -1148,9 +1148,9 @@ Source: [`sys\eval` and the source context](../LMX_semantics.en.md#expression-ev
 
 ```lmx
 reference_ops:
-    int@: left
+    @int: left
     int: depth 0
-    int@[]: right
+    []@int: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("+")
     return: @
@@ -1455,7 +1455,7 @@ Start with a working copy of OP01. Apply one mutation per independent fixture:
 Separate positive fn test:
 
 ```lmx
-OperandPair :: (@: first; @[]: rest; return: int)
+OperandPair :: (@: first; []@: rest; return: int)
 ```
 A candidate whose input types are `@`, then `Array<@>`, whose real names are
 `lhs/rhs`, and whose result is `int`, may satisfy this positional requirement.
@@ -1519,7 +1519,7 @@ The requirement is exactly two uppercase ASCII letters, a hyphen and two decimal
 
 ```lmx
 TicketCode:
-    char[]: candidate
+    []char: candidate
     return: int
     accepts:
         if: length(candidate) != 5
@@ -1551,7 +1551,7 @@ TicketCode:
 
 Fixtures use the ASCII target text profile. The structural interface of these strings is the same; their contents produce different checker verdicts. `satisfies` establishing a suitable character-array input does not by itself establish the required character values. This checker is checked through direct ordinary calls in this suite; its association with automatic `test` scheduling is a separate case below.
 
-**Basis:** the example of [the positional branch of `satisfies`](../LMX_semantics.en.md#fn-satisfies) uses `char[]:`; [G] §6 gives character constants and string rules; [S] §§7–8 distinguishes interface checks and concrete value tests; [S] §17 gives `length` and indexing.
+**Basis:** the example of [the positional branch of `satisfies`](../LMX_semantics.en.md#fn-satisfies) uses `[]char:`; [G] §6 gives character constants and string rules; [S] §§7–8 distinguishes interface checks and concrete value tests; [S] §17 gives `length` and indexing.
 
 ### V02. A mock is an ordinary dependency of the actual candidate
 

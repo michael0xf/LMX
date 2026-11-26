@@ -48,7 +48,7 @@
 ```lmx
 Example:
     @: xs
-    int[]: mask
+    []int: mask
     return: @
     run:
         throws: copy(FxSeqInfo\get\throws) copy(FxSeqAllocate\make\throws) copy(FxSeqRead\read\throws) copy(FxSeqPush\append\throws) FxShape
@@ -71,7 +71,7 @@ Example:
 ```lmx
 Example:
     @: xs
-    int[]: mask
+    []int: mask
     return: @
     run:
         throws: copy(compress\throws)

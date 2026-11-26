@@ -44,11 +44,11 @@
 
 ```lmx
 Example:
-    int[]: items
+    []int: items
     return: @
     run:
         throws: copy(sys\resize\throws)
-        int[]: out []
+        []int: out []
         sys\resize(out; length(items))
         int: total 0
         int: i 0
@@ -65,7 +65,7 @@ Example:
 
 ```lmx
 Example:
-    int[]: items
+    []int: items
     return: @
     run:
         @: calibrated items * 3

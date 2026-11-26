@@ -3,13 +3,13 @@
 Replacer:
     int: calls 0
     Apply:
-        private: Match@: matched
-        return: char[]
+        private: @Match: matched
+        return: []char
         replace:
             private: @: owner parent()
             owner\calls += 1
             return: "abc"
 
 @: pattern (then (literal("a") | "ab") "c")
-char[]: result replace(utf8Text("abcabc"); pattern; Replacer\Apply\replace)
+[]char: result replace(utf8Text("abcabc"); pattern; Replacer\Apply\replace)
 (result; Replacer\calls)

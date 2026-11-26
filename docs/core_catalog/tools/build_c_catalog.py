@@ -38,7 +38,7 @@ def load_plan(path):
             item = {}
             if mode == "rules": rules.append(item)
         else:
-            m = re.fullmatch(r"            char\[\]: (\w+) (\".*\")", line)
+            m = re.fullmatch(r"            \[\]char: (\w+) (\".*\")", line)
             if m and item is not None:
                 item[m[1]] = json.loads(m[2])
                 if m[1] == "component" and mode == "components": components[item["component"]] = item
@@ -72,20 +72,20 @@ def arg_model(param, primary):
     # exact callback_type_refs. A same-named typedef in another library must
     # never turn an ordinary argument into a callback.
     if param.get("callback") or "(*" in t.replace(" ", ""):
-        return "BridgeData\\Callback@", "callback_trampoline", "callback_contract_required"
+        return "@BridgeData\\Callback", "callback_trampoline", "callback_contract_required"
     if param.get("variadic") or name == "..." or t == "...":
-        return "@[]", "finite_typed_varargs", "specialize_before_publication"
+        return "[]@", "finite_typed_varargs", "specialize_before_publication"
     if param.get("semantic_role") in ("native_resource_id", "native_resource_output"):
-        return "BridgeData\\Resource@", param["semantic_role"], "owner_bound_" + param.get("resource_backend", "native") + "_" + param.get("resource_kind", "handle")
+        return "@BridgeData\\Resource", param["semantic_role"], "owner_bound_" + param.get("resource_backend", "native") + "_" + param.get("resource_kind", "handle")
     if param.get("semantic_role") == "native_resource_vector":
-        return "@[]", "native_resource_vector", "checked_count_and_owner_bound_" + param.get("resource_backend", "native") + "_handles"
+        return "[]@", "native_resource_vector", "checked_count_and_owner_bound_" + param.get("resource_backend", "native") + "_handles"
     if re.search(r"\bMPI_(?:Comm|Info|Datatype|Request|File|Group|Op|Win|Session)\b", t):
-        return "BridgeData\\Resource@", "mpi_resource", "exact_MPI_kind_backend_ABI_owner_thread_support_and_collective_contract"
+        return "@BridgeData\\Resource", "mpi_resource", "exact_MPI_kind_backend_ABI_owner_thread_support_and_collective_contract"
     if re.search(r"\bhid_t\b", t):
-        return "BridgeData\\Resource@", "hdf5_resource", "exact_HDF5_identifier_kind_owner_lifetime_and_predefined_id_policy"
+        return "@BridgeData\\Resource", "hdf5_resource", "exact_HDF5_identifier_kind_owner_lifetime_and_predefined_id_policy"
     if re.search(r"\b(?:MPI_Offset|MPI_Aint|MPI_Count|hsize_t|hssize_t)\b", t):
         if "*" in t or param.get("array"):
-            return "BridgeData\\Buffer@", "checked_native_integer_span", "resolve_native_width_rank_count_units_and_overflow_no_typedef_cast"
+            return "@BridgeData\\Buffer", "checked_native_integer_span", "resolve_native_width_rank_count_units_and_overflow_no_typedef_cast"
         return "@", "checked_native_integer", "resolve_native_width_sign_offset_units_and_overflow"
     if not param.get("pointer") and not param.get("array") and t in SCALAR:
         return SCALAR[t], "exact_scalar", "c_width_preserved"
@@ -100,23 +100,23 @@ def arg_model(param, primary):
     if re.search(r"\bbfdec_t\b", t):
         return "@", "decimal_backend", "convert_to_canonical_decimal_no_second_decimal_type"
     if re.search(r"\b(?:utf8_t|utf16_t|utf32_t)\b", t) and ("*" in t or param.get("array")):
-        return "BridgeData\\Buffer@", "checked_span", "unicode_code_unit_width_and_output_length_required"
+        return "@BridgeData\\Buffer", "checked_span", "unicode_code_unit_width_and_output_length_required"
     if re.search(r"\b(?:Bytef?|charf|voidpf?)\b", t):
-        return "BridgeData\\Buffer@", "checked_span", "zlib_byte_storage_not_opaque_resource"
+        return "@BridgeData\\Buffer", "checked_span", "zlib_byte_storage_not_opaque_resource"
     if re.search(r"\b(?:uIntf?|uLongf?|z_size_t|z_off_t|z_off64_t)\b", t):
         if "*" in t:
-            return "BridgeData\\ScalarCell@", "checked_scalar_output", "zlib_inout_count_copy_back_only_after_success"
+            return "@BridgeData\\ScalarCell", "checked_scalar_output", "zlib_inout_count_copy_back_only_after_success"
         return "@", "checked_integer", "resolve_zlib_native_width_then_choose_existing_integer"
     if re.search(r"\b(?:liquid_float_complex|liquid_double_complex|kiss_fft_cpx)\b", t):
-        return ("BridgeData\\ComplexBuffer@", "complex_buffer", "explicit_interleaved_or_planar_layout") if "*" in t or param.get("array") else ("BridgeData\\Complex@", "complex_components", "no_implicit_abi_equivalence")
+        return ("@BridgeData\\ComplexBuffer", "complex_buffer", "explicit_interleaved_or_planar_layout") if "*" in t or param.get("array") else ("@BridgeData\\Complex", "complex_components", "no_implicit_abi_equivalence")
     if "*" in t or param.get("pointer") or param.get("array"):
         if re.search(r"\bchar\b", t) and "const" in (param.get("c_type") or "") and t.count("*") == 1:
-            return "char[]", "text_or_bytes", "review_length_encoding_nul_and_retention"
+            return "[]char", "text_or_bytes", "review_length_encoding_nul_and_retention"
         if re.search(r"\b(?:char|void|u?int[0-9]+_t|float|double|unsigned|short|int)\b", t) or param.get("array"):
-            return "BridgeData\\Buffer@", "checked_span", "review_element_type_shape_direction_and_lifetime"
-        return "BridgeData\\Resource@", "typed_resource", "review_owner_native_type_generation_and_close"
+            return "@BridgeData\\Buffer", "checked_span", "review_element_type_shape_direction_and_lifetime"
+        return "@BridgeData\\Resource", "typed_resource", "review_owner_native_type_generation_and_close"
     if "complex" in t or "_Complex" in t:
-        return "BridgeData\\Complex@", "complex_components", "no_double_or_struct_pointer_cast"
+        return "@BridgeData\\Complex", "complex_components", "no_double_or_struct_pointer_cast"
     return "@", "typed_native_value", "resolve_typedef_enum_or_by_value_record"
 
 
@@ -438,7 +438,7 @@ class Component:
                  "# Reader/schema: ../CATALOG_FORMAT.ru.md. No publication or runtime proof.",
                  "C99Catalog_" + self.ci + ":", "    int: schemaVersion 2",
                  "    int: tableChunkSize " + str(TABLE_CHUNK_SIZE),
-                 "    char[]: componentId " + q(self.cid),
+                 "    []char: componentId " + q(self.cid),
                  "    @: component " + native(pack(self.info)),
                  "    @: models C99Schema\\Models", "    Columns:"]
         for table, cols in TABLE_COLUMNS.items(): lines.append("        @: " + table + " " + native(cols))
@@ -518,7 +518,7 @@ def read_component(path, models):
     for lineno, line in enumerate(text.splitlines(), 1):
         m = re.fullmatch(r"    ([A-Za-z]+):", line)
         if m: table = m[1]; continue
-        m = re.fullmatch(r"        (?:char\[\]|int\[\]|@): (\w+) (.*)", line)
+        m = re.fullmatch(r"        (?:\[\]char|\[\]int|@): (\w+) (.*)", line)
         if not m: continue
         if table == "Columns":
             if m[1] in TABLE_COLUMNS and NativeReader(m[2]).read() != TABLE_COLUMNS[m[1]]:
@@ -586,8 +586,8 @@ def binding_text(component):
     if headers: lines += ["L2:"] + ["    include: " + q('"' + h + '"') for h in headers] + [""]
     if shims:
         root = "C99Catalog_" + component.ci
-        lines += ["C99Calls_" + component.ci + ":", "    private: BridgeData\\CallRequest@: request",
-                  "    required: request", "    return: BridgeData\\CallResult@"]
+        lines += ["C99Calls_" + component.ci + ":", "    private: @BridgeData\\CallRequest: request",
+                  "    required: request", "    return: @BridgeData\\CallResult"]
         for e in shims:
             lines += ["    " + e["id"] + ":", "        throws: BridgeLowerError", "        L2:",
                       "            @: f BridgeLower\\open(request, " + root + ", " + root + "\\Entries\\" + e["id"] + ")",
@@ -638,7 +638,7 @@ def source_coverage_text(data):
         rows.append((components.add(header["component"]), header["path"][len(prefix):],
                      targets.add(tuple(header["targets"])), header["sha256"],
                      header["bytes"], header["raw_declarations"], header["function_macros"]))
-    lines = ["", "C99SourceCoverage:", "    char[]: sourceRoot " + q(data["source_root"]),
+    lines = ["", "C99SourceCoverage:", "    []char: sourceRoot " + q(data["source_root"]),
              "    int: tableChunkSize " + str(TABLE_CHUNK_SIZE),
              "    @: columns " + native(("component", "path", "targets", "sha256", "bytes", "rawDeclarations", "functionMacros")),
              "    @: components " + native(tuple(components.rows)),
@@ -651,7 +651,7 @@ def source_coverage_text(data):
 def read_source_coverage(root):
     text = (root / "catalog/schema.lmx").read_text().split("\nC99SourceCoverage:\n", 1)[1]
     def field(name):
-        m = re.search(r'^    (?:@|char\[\]): ' + name + r' (.*)$', text, re.M)
+        m = re.search(r'^    (?:@|\[\]char): ' + name + r' (.*)$', text, re.M)
         if not m: raise ValueError("Missing source coverage field " + name)
         return NativeReader(m[1]).read()
     prefix, components, targets = field("sourceRoot") + "/", field("components"), field("targets")
@@ -736,11 +736,11 @@ def projections(out, components, extra_summary=None):
     # Publication rows are derived from canonical Entries and Paths; only the
     # collision exceptions are repeated here. Bootstrap is an explicit task.
     pub = ["# Descriptor recipe, not an installer. Expand from canonical Entries.", "C99PublicationPlan:",
-           "    char[]: source \"catalog/*.lmx\"", "    char[]: eligible \"Profiles.callable = 1; publication still requires review\"",
-           "    char[]: ordinaryPath \"Placements.package + backslash + Entries.symbol\"",
-           "    char[]: directMethod \"C99Direct_<entry-id>\\\\invoke\"",
-           "    char[]: shimMethod \"C99Calls_<component-id>\\\\<entry-id>\"",
-           "    char[]: status \"proposal_only; runtime NOT_RUN\"", "    @: exceptionColumns (\"id\"; \"publicationPath\")", "    Exceptions:"]
+           "    []char: source \"catalog/*.lmx\"", "    []char: eligible \"Profiles.callable = 1; publication still requires review\"",
+           "    []char: ordinaryPath \"Placements.package + backslash + Entries.symbol\"",
+           "    []char: directMethod \"C99Direct_<entry-id>\\\\invoke\"",
+           "    []char: shimMethod \"C99Calls_<component-id>\\\\<entry-id>\"",
+           "    []char: status \"proposal_only; runtime NOT_RUN\"", "    @: exceptionColumns (\"id\"; \"publicationPath\")", "    Exceptions:"]
     for path in sorted(collisions):
         for row in collisions[path]: pub.append("        @: " + row["id"] + " " + native((row["id"], row["publicationPath"])))
     write(out / "publication.lmx", "\n".join(pub) + "\n")
@@ -789,7 +789,7 @@ FORMAT_RU = '''# Компактный C-каталог в обычных LMX-с�
 
 ## Методы и C-переход
 
-В [bindings/](bindings/) находятся реальные отдельные CODE-методы с собственным `c.*` вызовом. Для сложных ABI все методы компонента имеют одного настоящего DATA-родителя `C99Calls_<component>` с единственным `BridgeData\\CallRequest@: request`. Его `arguments` содержат позиционные значения конкретного API; структура, количество, C-типы, модели и все проверки берутся из конкретной строки Entries. Это общий переносимый договор запроса; он не делает произвольный массив C-аргументами без проверки.
+В [bindings/](bindings/) находятся реальные отдельные CODE-методы с собственным `c.*` вызовом. Для сложных ABI все методы компонента имеют одного настоящего DATA-родителя `C99Calls_<component>` с единственным `@BridgeData\\CallRequest: request`. Его `arguments` содержат позиционные значения конкретного API; структура, количество, C-типы, модели и все проверки берутся из конкретной строки Entries. Это общий переносимый договор запроса; он не делает произвольный массив C-аргументами без проверки.
 
 Метод вызывает `BridgeLower\\open(request, componentCatalog, entry)`. Затем регистрируется `finally` с `BridgeLower\\release`, выполняется конкретный `c.lmx_bridge_<symbol>_<id>` и сохраняется результат через `finish`. Open/finish/release остаются явными [требованиями интеграции](bridge/lowering_contract.lmx); запрос не преобразуется в C-frame простым cast.
 
@@ -882,14 +882,14 @@ def run_import(args):
         write(out / "bindings" / (component.ci + ".lm3"), binding_text(component))
         components.append(component)
     schema = ["# Shared metadata models and policy; no runtime registration.", "C99Schema:",
-              "    int: version 2", "    char[]: inventorySha256 " + q(inventory_sha256),
-              "    char[]: sourceManifestSha256 " + q(data.get("source_manifest_sha256", "")),
+              "    int: version 2", "    []char: inventorySha256 " + q(inventory_sha256),
+              "    []char: sourceManifestSha256 " + q(data.get("source_manifest_sha256", "")),
               "    @: modelColumns (\"lmxType\"; \"converter\"; \"requirement\")",
               "    @: statuses " + native(tuple(STATUS)),
-              "    char[]: publication \"proposal_only\"", "    char[]: runtimeAcceptance \"NOT_RUN\"",
-              "    char[]: ownership \"review every argument/result; pin borrowed storage for full call interval\"",
-              "    char[]: actorTransfer \"retain references to independent immutable definitions; mutable invocation data and native resources keep explicit owners\"",
-              "    char[]: errors \"preserve native status then map explicitly\"", "    Models:"]
+              "    []char: publication \"proposal_only\"", "    []char: runtimeAcceptance \"NOT_RUN\"",
+              "    []char: ownership \"review every argument/result; pin borrowed storage for full call interval\"",
+              "    []char: actorTransfer \"retain references to independent immutable definitions; mutable invocation data and native resources keep explicit owners\"",
+              "    []char: errors \"preserve native status then map explicitly\"", "    Models:"]
     schema += ["        @: m" + str(i) + " " + native(row) for i, row in enumerate(models.rows)]
     write(out / "catalog/schema.lmx", "\n".join(schema) + "\n" + source_coverage_text(data))
     write(out / "CATALOG_FORMAT.ru.md", FORMAT_RU)

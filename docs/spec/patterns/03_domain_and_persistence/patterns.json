@@ -30,14 +30,14 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "Repository:\n    @[]: rows\n    int: id\n    return: @\n    Match:\n        @: row\n        return: int\n        accepts:\n            return: row\\id = id\n    ---\n    find:\n        throws: copy(FxThrows\\predicate)\n        @: found findFirst(rows; Match\\accepts)\n        if: found\\present != 0\n            return: \\found\\value\n        @: missing 0\n        return: missing\n",
+          "code": "Repository:\n    []@: rows\n    int: id\n    return: @\n    Match:\n        @: row\n        return: int\n        accepts:\n            return: row\\id = id\n    ---\n    find:\n        throws: copy(FxThrows\\predicate)\n        @: found findFirst(rows; Match\\accepts)\n        if: found\\present != 0\n            return: \\found\\value\n        @: missing 0\n        return: missing\n",
           "notes_ru": "findFirst выполняет единственный общий поиск; локальный Match задаёт только доменное равенство id. Свободный id берётся из действующего вызова Repository через обычную динамическую связь. Общий поиск не ограничен типом ключа. Maybe явно преобразуется в прежний договор клиента: исходная ссылка при успехе и нулевая ссылка при отсутствии. Тело обхода в клиенте не повторяется.",
           "notes_en": "findFirst performs the shared search; local Match supplies only the domain id predicate. Its free id keeps the current Repository dynamic binding. The generic search does not restrict the key type. The client explicitly converts Maybe to its established result: the original reference or a null reference, with no copied traversal.",
           "metrics": {
             "characters": 215,
             "nonblank_lines": 17,
             "utf8_bytes": 363,
-            "sha256": "3d0baa9e023c0258f5edd896b191407c0358277db40eaeb16dbd13c1aff8a6f4"
+            "sha256": "5df0f931f803bec0a04391490dd699ae82089df1de3f42870c889a98eba8585d"
           }
         },
         {
@@ -279,7 +279,7 @@
         },
         {
           "language": "C#",
-          "code": "public sealed record Account(int Id, int Cents);\npublic interface IRows {\n    int[] Read(int id);\n    void Write(int id, int cents);\n}\npublic sealed class Mapper(IRows rows) {\n    public Account Load(int id) {\n        int[] row = rows.Read(id);\n        return new Account(row[0],row[1]);\n    }\n    public Account Save(Account value) {\n        rows.Write(value.Id,value.Cents);\n        return value;\n    }\n}\n",
+          "code": "public sealed record Account(int Id, int Cents);\npublic interface IRows {\n    []int Read(int id);\n    void Write(int id, int cents);\n}\npublic sealed class Mapper(IRows rows) {\n    public Account Load(int id) {\n        []int row = rows.Read(id);\n        return new Account(row[0],row[1]);\n    }\n    public Account Save(Account value) {\n        rows.Write(value.Id,value.Cents);\n        return value;\n    }\n}\n",
           "notes_ru": "Пример одной таблицы и двух целых колонок. Nullability, миграции схемы, отношения и SQL-драйвер требуют отдельного адаптера.",
           "notes_en": "One table and two integer columns only. Nulls, schema changes, relationships and the SQL driver need an adapter.",
           "metrics": {
@@ -767,14 +767,14 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "OrderTable:\n    @[]: rows\n    return: int\n    total:\n        int: result 0\n        int: i 0\n        while: i < length(rows)\n            @: row rows[i]\n            result += row\\quantity * row\\price\n            i += 1\n        return: result\n",
+          "code": "OrderTable:\n    []@: rows\n    return: int\n    total:\n        int: result 0\n        int: i 0\n        while: i < length(rows)\n            @: row rows[i]\n            result += row\\quantity * row\\price\n            i += 1\n        return: result\n",
           "notes_ru": "rows — массив структур quantity/price. Один метод обслуживает весь набор, не создавая доменный объект на каждую строку.",
           "notes_en": "rows is an Array of quantity/price Structures. One module owns the operation over the table.",
           "metrics": {
             "characters": 131,
             "nonblank_lines": 11,
             "utf8_bytes": 240,
-            "sha256": "3c69481976530d82bbd2520b71e2cb395e053eac4ab84ee9c822e12eb861908b"
+            "sha256": "d99f5b0a99a739a8da7ab4e5568e9c516345f1deb9b12f235b27eeb4d1231e36"
           }
         },
         {

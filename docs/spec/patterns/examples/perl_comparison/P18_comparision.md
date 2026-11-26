@@ -38,13 +38,13 @@
 
 ```lmx
 Example:
-    char[]: text
-    char[]: needle
-    char[]: replacement
+    []char: text
+    []char: needle
+    []char: replacement
     return: @
     run:
         throws: copy(FxSeqPush\append\throws) copy(record\throws)
-        char[]: out []
+        []char: out []
         int: changed 0
         int: i 0
         while: 1
@@ -76,21 +76,21 @@ Example:
 
 ```lmx
 CountedReplacement:
-    Match@: matched
-    return: char[]
+    @Match: matched
+    return: []char
     make:
         changed += 1
         return: replacement
 
 Example:
-    char[]: text
-    char[]: needle
-    char[]: replacement
+    []char: text
+    []char: needle
+    []char: replacement
     return: @
     run:
         throws: copy(byteText\throws) copy(replace\throws)
         int: changed 0
-        char[]: out replace(byteText(text); needle; CountedReplacement\make)
+        []char: out replace(byteText(text); needle; CountedReplacement\make)
         return: (out; changed)
 ```
 

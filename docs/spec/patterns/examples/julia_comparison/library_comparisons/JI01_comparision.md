@@ -21,7 +21,7 @@ FxMap:
         throws: copy(FxThrows\traversal)
         FxSeqInfo\get(items)
         private: int: count length(items)
-        private: @: result FxSeqAllocate\make(@[]; count)
+        private: @: result FxSeqAllocate\make([]@; count)
         private: int: i 0
         while: i < count
             private: @: item FxSeqRead\read(items; i)
@@ -84,7 +84,7 @@ FxScan:
         throws: copy(FxThrows\traversal)
         FxSeqInfo\get(items)
         private: int: count length(items)
-        private: @: result FxSeqAllocate\make(@[]; 0)
+        private: @: result FxSeqAllocate\make([]@; 0)
         private: @: info FxSeqInfo\get(result)
         private: int: total FxSeqSize\sum(count; 1; info\maxLength)
         sys\resize(result; total)
@@ -115,7 +115,7 @@ FxZip:
         private: int: count length(first)
         if: length(second) < count
             count := length(second)
-        private: @: result FxSeqAllocate\make(@[]; count)
+        private: @: result FxSeqAllocate\make([]@; count)
         private: int: i 0
         while: i < count
             private: @: pair (copy(FxPair))
@@ -139,7 +139,7 @@ FxZipWith:
         private: int: count length(first)
         if: length(second) < count
             count := length(second)
-        private: @: result FxSeqAllocate\make(@[]; count)
+        private: @: result FxSeqAllocate\make([]@; count)
         private: int: i 0
         while: i < count
             private: @: leftValue FxSeqRead\read(first; i)
@@ -153,7 +153,7 @@ FxListBind:
         []: input
         @: next
     required: input next
-    return: @[]
+    return: []@
     bind:
         throws: copy(FxThrows\traversal)
         private: @: result FxSeqBind\bind(items := input; next := next)
@@ -169,7 +169,7 @@ FxSeqBind:
         throws: copy(FxThrows\traversal)
         FxSeqInfo\get(items)
         private: int: count length(items)
-        private: @: out FxSeqAllocate\make(@[]; 0)
+        private: @: out FxSeqAllocate\make([]@; 0)
         private: @: info FxSeqInfo\get(out)
         private: int: i 0
         while: i < count
@@ -282,7 +282,7 @@ FxMaybe:
 FxSome:
     private: @: value
     required: value
-    return: FxMaybe@
+    return: @FxMaybe
     some:
         private: @: result (copy(FxMaybe))
         result\present := 1
@@ -290,7 +290,7 @@ FxSome:
         return: result
 
 FxNone:
-    return: FxMaybe@
+    return: @FxMaybe
     none:
         return: (copy(FxMaybe))
 ```

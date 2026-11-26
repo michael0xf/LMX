@@ -56,7 +56,7 @@ including null, and whole Arrays are captured through their true records.
 | Function / operand | Contract | LMX source |
 | --- | --- | --- |
 | `type(value)` / `value type` | Capture one whole value through its true typed record and return its canonical `sys\typeof` TypeRef; distinct from field-vector types and TYPE-token signature composition | [operation_forms.lmx](patterns/LMX_Fn_Receivers/src/operation_forms.lmx) |
-| `types(source)` | canonical field TypeRef references; @[] by the current language contract | [reflection.lmx](patterns/LMX_Fn_Receivers/src/reflection.lmx) |
+| `types(source)` | canonical field TypeRef references; []@ by the current language contract | [reflection.lmx](patterns/LMX_Fn_Receivers/src/reflection.lmx) |
 | `names(source)` | physical canonical names; anonymous entries retain typed absence | [reflection_bridges.lmx](patterns/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
 | `signature(operation)` | ordinary positional signature description | [reflection_bridges.lmx](patterns/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
 | `select(source; indices)` | actual-type selection preserving dense/reference profile | [structures.lmx](patterns/LMX_Fn_Receivers/src/structures.lmx) |
@@ -159,10 +159,10 @@ one whole TYPE candidate. No special TYPE-tail constructor rule is added.
 | Function / operand | Contract | LMX source |
 | --- | --- | --- |
 | `bind(input; next)` | Maybe of any typed record; next gets actual payload value | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
-| `some(value)` | Maybe present with one whole value captured adaptively, including null; exact FxMaybe@ result | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `some(value)` | Maybe present with one whole value captured adaptively, including null; exact @FxMaybe result | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
 | `none()` | Maybe absence, distinct from present empty/null value | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
-| `ok(value)` | Result success capturing one whole typed value; exact FxResult@ result | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
-| `err(reason)` | Result failure capturing one whole typed reason; exact FxResult@ result | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `ok(value)` | Result success capturing one whole typed value; exact @FxResult result | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
+| `err(reason)` | Result failure capturing one whole typed reason; exact @FxResult result | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
 | `bind(input; next)` | typed Result success chain, failure kept | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
 | `list(values)` | universal sequence input, shallow copied reference vector | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
 | `bind(items; next)` | universal sequence bind, no artificial list.items box | [containers.lmx](patterns/LMX_Fn_Receivers/src/containers.lmx) |
@@ -260,7 +260,7 @@ materialized as `matchedValue` / `captureValue` / `captureValues`.
 | `windows(items; width=2; step=1; partial=0)` | Positive width/step; full windows by default. partial permits one last nonempty short window. No suffix after a window reaches the end. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
 | `chunks(items; size; strict=0)` | Nonoverlapping chunks, final short chunk permitted unless strict; invalid size fails before iteration. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
 | `intersperse(items; separatorRecord)` | Insert an admitted separator between items; empty and singleton inputs do not admit an unused separator. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
-| `join(parts; separator)`; text: `join(parts; separator="")` | Separate sequence parts and concatenate using one generic algorithm; empty parts returns a fresh empty sequence of separator profile. The text publication supplies only the empty-text default and exact `char[]` result | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx), [sequence_profiles.lmx](patterns/LMX_Fn_Receivers/src/sequence_profiles.lmx) |
+| `join(parts; separator)`; text: `join(parts; separator="")` | Separate sequence parts and concatenate using one generic algorithm; empty parts returns a fresh empty sequence of separator profile. The text publication supplies only the empty-text default and exact `[]char` result | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx), [sequence_profiles.lmx](patterns/LMX_Fn_Receivers/src/sequence_profiles.lmx) |
 | `unzip(pairs)` | Reverse the existing zip FxPair protocol; empty input returns two fresh empty record Arrays. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
 | `foldr(items; seedRecord; step)` | Strict finite right fold; step(item,accumulator), right-to-left callback order. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
 | `scanr(items; seedRecord; step)` | Right scan includes the seed at the final position; right-to-left callbacks. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
@@ -271,7 +271,7 @@ materialized as `matchedValue` / `captureValue` / `captureValues`.
 | `mapAccumR(items; seedRecord; step)` | Same stateful transform, callbacks right-to-left, outputs at original positions. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
 | `groupAdjacent(items; keyOf; sameKey)` | Consecutive equal-key runs; keyOf once per item and sameKey once per adjacent pair. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
 | `replicate(valueRecord; count)` | Finite copies of one ready value record; negative count gives empty; reference values retain one target. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
-| `cycle(items; count; rejectNegative=0)` | One generic finite repetition algorithm; nonpositive count gives empty, or negative count raises SequenceSize when rejectNegative is selected. Preflight result size; text publication preserves the exact `char[]` result | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx), [sequence_profiles.lmx](patterns/LMX_Fn_Receivers/src/sequence_profiles.lmx) |
+| `cycle(items; count; rejectNegative=0)` | One generic finite repetition algorithm; nonpositive count gives empty, or negative count raises SequenceSize when rejectNegative is selected. Preflight result size; text publication preserves the exact `[]char` result | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx), [sequence_profiles.lmx](patterns/LMX_Fn_Receivers/src/sequence_profiles.lmx) |
 | `starmap(rows; operation)` | Each ready row becomes one actual vector; one typed callback result per row. No source graph field is executed while reading it. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
 | `zipLongest(first; second; fillRecord)` | Two sequences padded to the longer length with the explicit complete fill value record. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |
 | `collect(next; limit=-1)` | Nullary producer through the existing call bridge until its Stop(), or finite limit; other declared failures retain their name and payload inside FxCallFailure. | [coreStandardFunctional.lmx](patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx) |

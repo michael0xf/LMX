@@ -1,0 +1,15 @@
+Example:
+    []int: deltas
+    int: initial
+    return: @
+    run:
+        throws: copy(FxSeqPush\append\throws) copy(record\throws)
+        []@: out []
+        int: total initial
+        FxSeqPush\append(out; (total record))
+        int: i 0
+        while: i < length(deltas)
+            total += deltas[i]
+            FxSeqPush\append(out; (total record))
+            i += 1
+        return: out

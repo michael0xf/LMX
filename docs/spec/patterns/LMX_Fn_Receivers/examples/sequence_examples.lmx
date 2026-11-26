@@ -56,7 +56,7 @@ FxSeqProbeDuplicate:
     return: @
     run:
         throws: copy(FxThrows\fixture)
-        return: (int[]: [value value])
+        return: ([]int: [value value])
 
 FxSeqProbeKey:
     int: value
@@ -84,13 +84,13 @@ FxSeqProbeNumeric:
     return: int
     run:
         throws: copy(FxThrows\sequencefixture)
-        private: int[]: input [1 2 3]
+        private: []int: input [1 2 3]
         private: @: mapped FxMap\map(input; FxSeqProbeScale\run)
         FxSeqProbeEqualInts\check(mapped; (3; 6; 9))
-        sys\assert(sys\typeof(mapped) = @[])
+        sys\assert(sys\typeof(mapped) = []@)
         private: @: filtered FxFilter\filter(input; FxSeqProbeOdd\run)
         FxSeqProbeEqualInts\check(filtered; (1; 3))
-        sys\assert(sys\typeof(filtered) = int[])
+        sys\assert(sys\typeof(filtered) = []int)
         private: @: total FxFold\fold(input; (10 FxRecordOperands\record); FxSeqProbeSubtract\run)
         sys\assert(\total = 4)
         private: @: states FxScan\scan(input; (10 FxRecordOperands\record); FxSeqProbeSubtract\run)
@@ -105,11 +105,11 @@ FxSeqProbeNumeric:
         FxSeqProbeEqualInts\check(FxSeqOmit\omit(input; (1; 1)); (1; 3))
         FxSeqProbeEqualInts\check(FxSeqReorder\reorder(input; (2; 0; 1)); (3; 1; 2))
         FxSeqProbeEqualInts\check(FxSeqCompress\compress(input; (0; -2; 1)); (2; 3))
-        private: @: denseConcat FxSeqConcat\concat(parts := (input; (int[]: [])))
-        sys\assert(sys\typeof(denseConcat) = int[])
+        private: @: denseConcat FxSeqConcat\concat(parts := (input; ([]int: [])))
+        sys\assert(sys\typeof(denseConcat) = []int)
         FxSeqProbeEqualInts\check(denseConcat; input)
         private: @: mixedConcat FxSeqConcat\concat(parts := (input; (4; 5)))
-        sys\assert(sys\typeof(mixedConcat) = @[])
+        sys\assert(sys\typeof(mixedConcat) = []@)
         FxSeqProbeEqualInts\check(mixedConcat; (1; 2; 3; 4; 5))
         private: @: listed FxSeqList\list(input)
         input[0] := 100
@@ -118,16 +118,16 @@ FxSeqProbeNumeric:
         FxSeqProbeEqualInts\check(flattened; (1; 1; 2; 2))
         private: @: zipped FxZip\zip(first := (1; 2; 3); second := (10; 20))
         sys\assert(length(zipped) = 2)
-        private: FxPair@: pair zipped[1]
+        private: @FxPair: pair zipped[1]
         sys\assert(\pair\first = 2 && \pair\second = 20)
         private: @: traversed FxTraverse\traverse((1; 2); FxSeqProbeSome\run)
         sys\assert(traversed\present = 1)
         FxSeqProbeEqualInts\check(traversed\value; (1; 2))
         private: @: groups FxGroupBy\groupBy((1; 2; 3; 4); FxSeqProbeKey\run; FxSeqProbeSameKey\run)
         sys\assert(length(groups) = 2)
-        private: FxGroup@: firstGroup groups[0]
+        private: @FxGroup: firstGroup groups[0]
         FxSeqProbeEqualInts\check(firstGroup\items; (1; 3))
-        private: @: columns FxTranspose\transpose(rows := ((int[]: [1 2]); (3; 4)))
+        private: @: columns FxTranspose\transpose(rows := (([]int: [1 2]); (3; 4)))
         FxSeqProbeEqualInts\check(columns[0]; (1; 3))
         FxSeqProbeEqualInts\check(columns[1]; (2; 4))
         return: 1
@@ -144,7 +144,7 @@ FxSeqProbeQueries:
             FxRecordArity
             FxTypeToken
             ReceiverIndex
-        private: int[]: input [2 4 5 8]
+        private: []int: input [2 4 5 8]
         FxSeqProbeLog\calls := 0
         sys\assert(FxSeqAny\any(input; FxSeqProbeOdd\run) = 1)
         sys\assert(FxSeqProbeLog\calls = 3)
@@ -158,7 +158,7 @@ FxSeqProbeQueries:
         FxSeqProbeLog\calls := 0
         sys\assert(FxSeqCount\count(input; FxSeqProbeOdd\run) = 1)
         sys\assert(FxSeqProbeLog\calls = 4)
-        private: int[]: empty []
+        private: []int: empty []
         sys\assert(FxSeqAny\any(empty; FxSeqProbeOdd\run) = 0)
         sys\assert(FxSeqAll\all(empty; FxSeqProbeOdd\run) = 1)
         sys\assert(FxSeqCount\count(empty; FxSeqProbeOdd\run) = 0)
@@ -173,7 +173,7 @@ FxSeqProbeMutation:
     return: int
     run:
         throws: copy(FxThrows\mutationfixture)
-        private: int[]: values [1 2 3 4]
+        private: []int: values [1 2 3 4]
         private: @: alias values
         private: @: replaced FxSeqReplaceRange\replaceRange(values; 1; 3; (9; 8; 7))
         replaced[0] := 11
@@ -188,7 +188,7 @@ FxSeqProbeMutation:
         FxSeqInsert\insert(values; 0; (10; 20))
         FxSeqDeleteAt\deleteAt(values; 2; 12)
         FxSeqProbeEqualInts\check(values; (10; 20))
-        private: int[]: overlap [1 2 3 4]
+        private: []int: overlap [1 2 3 4]
         FxSeqReplaceRange\replaceRange(overlap; 1; 3; overlap)
         FxSeqProbeEqualInts\check(overlap; (1; 1; 2; 3; 4; 4))
         private: @: nodeValue (int: width 7)
@@ -209,13 +209,13 @@ FxSeqProbeSpliceDense:
     return: int
     run:
         throws: copy(FxThrows\mutationfixture)
-        private: int[]: values [1 2 3 4]
+        private: []int: values [1 2 3 4]
         private: @: alias values
         private: @: removed FxSeqSplice\splice(values; 1; 3; (9; 8; 7))
         alias[0] := 10
         sys\assert(values[0] = 10 && length(alias) = 5)
         alias[0] := 1
-        sys\assert(sys\typeof(removed) = int[])
+        sys\assert(sys\typeof(removed) = []int)
         FxSeqProbeEqualInts\check(removed; (2; 3))
         FxSeqProbeEqualInts\check(values; (1; 9; 8; 7; 4))
         removed[0] := 200
@@ -223,17 +223,17 @@ FxSeqProbeSpliceDense:
         values[2] := 80
         FxSeqProbeEqualInts\check(removed; (200; 3))
         # Both inserted and removed values must come from the original target.
-        private: int[]: overlap [1 2 3 4]
+        private: []int: overlap [1 2 3 4]
         private: @: oldMiddle FxSeqSplice\splice(overlap; 1; 3; overlap)
         FxSeqProbeEqualInts\check(oldMiddle; (2; 3))
         FxSeqProbeEqualInts\check(overlap; (1; 1; 2; 3; 4; 4))
-        private: char[]: text "abcd"
+        private: []char: text "abcd"
         private: @: textAlias text
-        private: char[]: removedText FxSeqSplice\splice(text; 1; 3; "XY")
+        private: []char: removedText FxSeqSplice\splice(text; 1; 3; "XY")
         textAlias[0] := 'A'
         sys\assert(text[0] = 'A')
         textAlias[0] := 'a'
-        sys\assert(sys\typeof(removedText) = char[])
+        sys\assert(sys\typeof(removedText) = []char)
         sys\assert(length(removedText) = 2 && removedText[0] = 'b' && removedText[1] = 'c')
         sys\assert(length(text) = 4 && text[0] = 'a' && text[1] = 'X' && text[2] = 'Y' && text[3] = 'd')
         removedText[0] := 'z'
@@ -253,7 +253,7 @@ FxSeqProbeSpliceReferences:
         alias[1] := second
         sys\assert(values[1]\width = 2 && length(alias) = 4)
         alias[1] := third
-        sys\assert(sys\typeof(removed) = @[] && length(removed) = 1)
+        sys\assert(sys\typeof(removed) = []@ && length(removed) = 1)
         sys\assert(removed[0]\width = 2)
         sys\assert(length(values) = 4 && values[0]\width = 1 && values[1]\width = 3 && values[2]\width = 1 && values[3]\width = 3)
         # Referenced objects remain shared; only the outer result slots are new.
@@ -276,13 +276,13 @@ FxSeqProbeSpliceTypedReferences:
         private: int: first 10
         private: int: second 20
         private: int: third 30
-        private: int@: firstRef @first
-        private: int@: secondRef @second
-        private: int@: thirdRef @third
-        private: int@[]: values [firstRef secondRef thirdRef]
-        private: int@[]: inserted [firstRef]
-        private: int@[]: removed FxSeqSplice\splice(values; 1; 2; inserted)
-        sys\assert(sys\typeof(removed) = int@[])
+        private: @int: firstRef @first
+        private: @int: secondRef @second
+        private: @int: thirdRef @third
+        private: []@int: values [firstRef secondRef thirdRef]
+        private: []@int: inserted [firstRef]
+        private: []@int: removed FxSeqSplice\splice(values; 1; 2; inserted)
+        sys\assert(sys\typeof(removed) = []@int)
         sys\assert(length(removed) = 1 && \removed[0] = 20)
         sys\assert(length(values) = 3 && \values[0] = 10 && \values[1] = 10 && \values[2] = 30)
         second := 21
@@ -295,10 +295,10 @@ FxSeqProbeSpliceEmpty:
     return: int
     run:
         throws: copy(FxThrows\mutationfixture)
-        private: int[]: values [1 2]
+        private: []int: values [1 2]
         private: @: alias values
         private: @: emptyCut FxSeqSplice\splice(values; 1; 1; (7))
-        sys\assert(length(emptyCut) = 0 && sys\typeof(emptyCut) = int[])
+        sys\assert(length(emptyCut) = 0 && sys\typeof(emptyCut) = []int)
         FxSeqAppend\append(emptyCut; (8))
         sys\assert(length(emptyCut) = 1 && emptyCut[0] = 8 && length(values) = 3)
         alias[0] := 10
@@ -309,7 +309,7 @@ FxSeqProbeSpliceEmpty:
         FxSeqProbeEqualInts\check(entire; (1; 7; 2))
         sys\assert(length(values) = 0 && length(alias) = 0)
         private: @: emptyAgain FxSeqSplice\splice(values; 0; 0; ())
-        sys\assert(length(emptyAgain) = 0 && sys\typeof(emptyAgain) = int[])
+        sys\assert(length(emptyAgain) = 0 && sys\typeof(emptyAgain) = []int)
         FxSeqAppend\append(emptyAgain; (9))
         sys\assert(length(values) = 0 && length(alias) = 0 && emptyAgain[0] = 9)
         return: 1
@@ -318,7 +318,7 @@ FxSeqProbeSpliceBadInsert:
     return: int
     run:
         throws: copy(FxThrows\mutationfixture)
-        private: int[]: values [1 2 3]
+        private: []int: values [1 2 3]
         private: @: alias values
         # A valid first inserted value must not commit before the bad second.
         FxSeqSplice\splice(values; 0; 2; (7; "bad"))
@@ -338,7 +338,7 @@ FxSeqProbeSpliceBadBounds:
     return: int
     run:
         throws: copy(FxThrows\mutationfixture)
-        private: char[]: values "abc"
+        private: []char: values "abc"
         private: @: alias values
         FxSeqSplice\splice(values; begin; end; "X")
         return: 0
@@ -362,7 +362,7 @@ FxSeqProbeBadMask:
             ReceiverIndex
             SequenceElement
             SequenceSize
-        private: int[]: values [1 2]
+        private: []int: values [1 2]
         FxSeqCompress\compress(values; (1; "not-an-int"))
         return: 0
         catch: SequenceElement ()
@@ -373,7 +373,7 @@ FxSeqProbeBadInsert:
     return: int
     run:
         throws: copy(FxThrows\mutationfixture)
-        private: int[]: values [1 2]
+        private: []int: values [1 2]
         FxSeqReplaceRange\replaceRange(values; 0; 1; (7; "bad"))
         return: 0
         catch: SequenceElement ()
@@ -397,7 +397,7 @@ FxSeqProbeRangeBoundary:
     return: int
     run:
         throws: copy(FxThrows\rangefixture)
-        private: int[]: values FxSeqRange\range(maxInt - 1; maxInt; 2)
+        private: []int: values FxSeqRange\range(maxInt - 1; maxInt; 2)
         sys\assert(length(values) = 1 && values[0] = maxInt - 1)
         return: 1
 

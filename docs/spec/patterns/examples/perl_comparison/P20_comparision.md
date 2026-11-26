@@ -52,7 +52,7 @@ Ascii:
         return: (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z')
 
 WordPair:
-    char[]: text
+    []char: text
     return: int
     test:
         int: at 0
@@ -72,13 +72,13 @@ Example:
     return: @
     run:
         throws: copy(FxSeqRead\read\throws) copy(sys\resize\throws) copy(FxSeqPush\append\throws) copy(record\throws)
-        @[]: out []
+        []@: out []
         int: i 0
         while: i < length(lines)
             @: value FxSeqRead\read(lines; i)
-            char[]: text \value
+            []char: text \value
             if: WordPair\test(text) != 0
-                char[]: word []
+                []char: word []
                 sys\resize(word; (length(text) - 1) / 2)
                 int: j 0
                 while: j < length(word)
@@ -95,8 +95,8 @@ Example:
 
 ```lmx
 RepeatedWord:
-    char[]: text
-    return: FxMaybe@
+    []char: text
+    return: @FxMaybe
     parse:
         throws: copy(byteText\throws) copy(atLeast\throws) copy(capture\throws) copy(sameAs\throws) copy(RxThenOperand\then\throws) copy(wholeMatch\throws) copy(captureValue\throws)
         @: parsed wholeMatch(byteText(text); (then capture("word"; (asciiLetter atLeast 1)) " " sameAs("word")))

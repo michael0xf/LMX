@@ -14,7 +14,7 @@
 
 ```lmx
 RouterMessage:
-    @[]: targets
+    []@: targets
     @: transport
     int: id
     return: @

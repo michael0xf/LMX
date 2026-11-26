@@ -42,8 +42,8 @@
 
 ```lmx
 Example:
-    int[]: required
-    int[]: available
+    []int: required
+    []int: available
     return: int
     run:
         if: length(required) != length(available)
@@ -68,8 +68,8 @@ Fits:
         return: required[i] > 0 && required[i] <= available[i]
 
 Example:
-    int[]: required
-    int[]: available
+    []int: required
+    []int: available
     return: int
     run:
         throws: copy(FxSeqRange\range\throws) copy(all\throws)

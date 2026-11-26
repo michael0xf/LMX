@@ -20,7 +20,7 @@ FxMaybe:
 FxSome:
     private: @: value
     required: value
-    return: FxMaybe@
+    return: @FxMaybe
     some:
         private: @: result (copy(FxMaybe))
         result\present := 1
@@ -28,22 +28,22 @@ FxSome:
         return: result
 
 FxNone:
-    return: FxMaybe@
+    return: @FxMaybe
     none:
         return: (copy(FxMaybe))
 
 FxBind:
     private:
-        FxMaybe@: input
+        @FxMaybe: input
         @: next
     required: input next
-    return: FxMaybe@
+    return: @FxMaybe
     bind:
         throws: copy(FxThrows\call)
         if: input\present = 0
             return: input
         private: @: record FxApply\apply(next; FxOne\make(input\value))
-        private: FxMaybe@: result \record
+        private: @FxMaybe: result \record
         return: result
 ```
 

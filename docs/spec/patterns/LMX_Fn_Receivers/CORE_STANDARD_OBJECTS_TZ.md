@@ -14,7 +14,7 @@ this archive; the cases below and in
   without reading nonexistent payload bytes. A ready null pointer and zero are
   initialized values.
 - [Zero-payload uninitialized records](../../LMX_semantics.en.md#uninit-zero-payload):
-  an anonymous field name from `fieldNames` remains `uninit:char[]`; it must not
+  an anonymous field name from `fieldNames` remains `uninit:[]char`; it must not
   acquire an empty-string or null-pointer sentinel.
 - [Explicit paths do not execute](../../LMX_semantics.en.md#path-reads-no-execution):
   obtaining a graph field returns its record, including a computed declaration,

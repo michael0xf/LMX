@@ -53,8 +53,8 @@ class CloserNormalization(unittest.TestCase):
         self.check_case('Root:\n    Item:\n        int: x 1\n    end: Wrong\n', 0)
 
     def test_literals_are_payload(self):
-        self.check_case('Root:\n    char[]: text "--- end: Root"\n', 0)
-        self.check_case('Root:\n    char[]: text """\n---\nend: Root\n"""\n', 0)
+        self.check_case('Root:\n    []char: text "--- end: Root"\n', 0)
+        self.check_case('Root:\n    []char: text """\n---\nend: Root\n"""\n', 0)
         self.check_case('Root:\n    `name\n---\nend: Root`: 1\n', 0)
 
     def test_raw_block_and_comment_are_payload(self):

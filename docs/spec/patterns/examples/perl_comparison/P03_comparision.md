@@ -42,7 +42,7 @@
 
 ```lmx
 Example:
-    int[]: items
+    []int: items
     int: initial
     return: @
     run:
@@ -60,7 +60,7 @@ Example:
 
 ```lmx
 Example:
-    int[]: items
+    []int: items
     int: initial
     return: @
     run:

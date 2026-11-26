@@ -86,9 +86,9 @@ class OwnerDataExtraction(unittest.TestCase):
     def test_real_catalogue_has_no_code_as_input(self):
         rows = json.loads((ROOT / 'catalog.json').read_text())
         expected = {
-            r'RxRepeatOperands\optional': ['@: left', 'int: depth 0', '@[]: right'],
+            r'RxRepeatOperands\optional': ['@: left', 'int: depth 0', '[]@: right'],
             r'FxStdCut\drop': ['@: items', 'int: count'],
-            r'FxTextTrim\trimEnd': ['char[]: text', 'char[]: chars " \\t\\r\\n\\v\\f"',
+            r'FxTextTrim\trimEnd': ['[]char: text', '[]char: chars " \\t\\r\\n\\v\\f"',
                                      '@: predicate 0', '@: same 0'],
         }
         seen = set()

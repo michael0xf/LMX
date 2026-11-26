@@ -10,10 +10,10 @@ Array/Structure без новых полей Lmx. Старые host-провер
 
 ## Готовый rank-three вход
 
-В 001, 002 и 005 вход `int[][][]: arr` принимает готовое значение,
-сконструированное как `int[2][2][2]`, с плоским storage `[1,2,3,4,5,6,7,8]`.
+В 001, 002 и 005 вход `[][][]int: arr` принимает готовое значение,
+сконструированное как `[2][2][2]int`, с плоским storage `[1,2,3,4,5,6,7,8]`.
 При допуске готового значения к общему rank-three входу его более полный
-TypeRef сохраняется. Само `int[][][]` без такого входного описания не
+TypeRef сохраняется. Само `[][][]int` без такого входного описания не
 восстанавливает оси по старому инициализатору. Корень загружается обычным способом;
 для наблюдения затем явно запрашивается `Example\run`.
 
@@ -24,7 +24,7 @@ TypeRef сохраняется. Само `int[][][]` без такого вхо�
 | 003 | `[1,21,0]` | Один whole child в [arr2], его идентичность и пустое VALUE |
 | 004 | `[21,21,21]` | Обычные именные и индексные пути к одному полю |
 | 005 | `[8,6,16,16]` | Axis depth=3, новый результат с shape[2,2,2], неизменный источник |
-| 006 | Две пары одинаковых плоских потоков; у всех TYPE int[][] с неизвестными размерами осей | Обе формы проверяют строки и уплощают их, не сохраняя границы |
+| 006 | Две пары одинаковых плоских потоков; у всех TYPE [][]int с неизвестными размерами осей | Обе формы проверяют строки и уплощают их, не сохраняя границы |
 | 009 | `[3,3,3,4,4,4]` | Обычные DATA-поля не требуют прямоугольности; квадратные/круглые формы равны |
 
 Плоский потребитель читает исходные T/length/storage. Он не меняет rank на 1
@@ -43,19 +43,19 @@ TypeRef сохраняется. Само `int[][][]` без такого вхо�
 
 При `a=1`, `b=2`, `c=3`, `d=4` обе строки ниже создают один и тот же плоский
 массив длины 9, rank=2. Написанные строки имеют форму 3×3, но размеры
-не сохраняются в TYPE `int[][]`:
+не сохраняются в TYPE `[][]int`:
 
 ```lmx
-int[][]: [a b c; a b d; a b c]
-int[][]: [[a b c] [a b d] [a b c]]
+[][]int: [a b c; a b d; a b c]
+[][]int: [[a b c] [a b d] [a b c]]
 ```
 
 Числовая пара также равнозначна: rank=2, storage `[1,2,3,4,5,6]`; размеры
-осей остаются неизвестными. Чтобы сохранить именно 3×2, нужен тип `int[3][2]`.
+осей остаются неизвестными. Чтобы сохранить именно 3×2, нужен тип `[3][2]int`.
 
 ```lmx
-int[][]: [1 2; 3 4; 5 6]
-int[][]: [[1 2] [3 4] [5 6]]
+[][]int: [1 2; 3 4; 5 6]
+[][]int: [[1 2] [3 4] [5 6]]
 ```
 
 Следующие две записи **ошибочны**: длины строк равны 3, 4 и 5. В обеих
@@ -63,8 +63,8 @@ int[][]: [[1 2] [3 4] [5 6]]
 segmentation, отдельные row Arrays или дополнительные поля графа.
 
 ```lmx
-int[][]: [a b c; a b c d; a b c d e]
-int[][]: [[a b c] [a b c d] [a b c d e]]
+[][]int: [a b c; a b c d; a b c d e]
+[][]int: [[a b c] [a b c d] [a b c d e]]
 ```
 
 Полные отрицательные исходники лежат в `negative/`. Вложенные row groups
@@ -79,7 +79,7 @@ int[][]: [[a b c] [a b c d] [a b c d e]]
 Следующий typed rank-конструктор ошибочен: длины строк 3/3/4 различаются.
 
 ```lmx
-int[][]: [[a b c] [a b d] [a b c d]]
+[][]int: [[a b c] [a b d] [a b c d]]
 ```
 
 Однако обе обычные DATA-формы корректны и равнозначны:
@@ -121,7 +121,7 @@ once/order, защищённые внутренние разделители, н
 
 ```lmx
 Example:
-    int[][][]: arr
+    [][][]int: arr
     return: @
     run:
         throws: copy(slice\throws)
@@ -135,7 +135,7 @@ Example:
 
 ```lmx
 Example:
-    int[][][]: arr
+    [][][]int: arr
     return: int
     run:
         arr[5] := 42
@@ -150,7 +150,7 @@ Example:
 Example:
     return: @
     run:
-        int[]: arr2 [10 20]
+        []int: arr2 [10 20]
         @: wrapper [arr2]
         @: empty []
         arr2[1] := 21
@@ -187,7 +187,7 @@ Example:
 
 ```lmx
 Example:
-    int[][][]: arr
+    [][][]int: arr
     return: @
     run:
         throws: copy(`+`\throws)
@@ -207,10 +207,10 @@ Example:
     int: d 4
     return: @
     run:
-        @: semicolon (int[][]: [a b c; a b d; a b c])
-        @: grouped (int[][]: [[a b c] [a b d] [a b c]])
-        @: numericSemicolon (int[][]: [1 2; 3 4; 5 6])
-        @: numericGrouped (int[][]: [[1 2] [3 4] [5 6]])
+        @: semicolon ([][]int: [a b c; a b d; a b c])
+        @: grouped ([][]int: [[a b c] [a b d] [a b c]])
+        @: numericSemicolon ([][]int: [1 2; 3 4; 5 6])
+        @: numericGrouped ([][]int: [[1 2] [3 4] [5 6]])
         return: (semicolon grouped numericSemicolon numericGrouped)
 ```
 
@@ -230,7 +230,7 @@ Example:
         Struct: (a b c) (a b d) (a b c d)
     return: @
     run:
-        return: (length(Square\Struct) length(Square\Struct[0]) length(Square\Struct[1]) length(Square\Struct[2]) Square\Struct[2]\[3] Round\Struct[2]\[3])
+        return: (length(Square\Struct) length([0]Square\Struct) length([1]Square\Struct) length([2]Square\Struct) [2]Square\Struct\[3] [2]Round\Struct\[3])
 ```
 
 ### 007_unequal_semicolon_rows.lm3
@@ -246,7 +246,7 @@ Example:
     int: e 5
     return: @
     run:
-        return: (int[][]: [a b c; a b c d; a b c d e])
+        return: ([][]int: [a b c; a b c d; a b c d e])
 ```
 
 ### 008_unequal_grouped_rows.lm3
@@ -262,7 +262,7 @@ Example:
     int: e 5
     return: @
     run:
-        return: (int[][]: [[a b c] [a b c d] [a b c d e]])
+        return: ([][]int: [[a b c] [a b c d] [a b c d e]])
 ```
 
 ### 010_unequal_three_three_four.lm3
@@ -277,7 +277,7 @@ Example:
     int: d 4
     return: @
     run:
-        return: (int[][]: [[a b c] [a b d] [a b c d]])
+        return: ([][]int: [[a b c] [a b d] [a b c d]])
 ```
 
 <!-- generated-source-blocks:end -->

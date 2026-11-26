@@ -1,0 +1,19 @@
+Example:
+    []char: text
+    return: []char
+    run:
+        throws: copy(FxSeqPush\append\throws) copy(record\throws) copy(sys\resize\throws)
+        []char: out []
+        int: i 0
+        while: i < length(text)
+            if: text[i] >= '0' && text[i] <= '9'
+                FxSeqPush\append(out; (text[i] record))
+            i += 1
+        int: drop length(out) - 4
+        if: drop > 0
+            i := 0
+            while: i < 4
+                out[i] := out[drop + i]
+                i += 1
+            sys\resize(out; 4)
+        return: out

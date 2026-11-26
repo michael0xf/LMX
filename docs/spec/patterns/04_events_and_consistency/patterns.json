@@ -110,7 +110,7 @@
         },
         {
           "language": "Java",
-          "code": "interface EventStore {\n    int[] read();\n    boolean append(int expected,int delta);\n}\nfinal class EventAccount {\n    private final EventStore store;\n    EventAccount(EventStore store) { this.store=store; }\n    int balance() {\n        int result=0;\n        for (int delta:store.read()) result+=delta;\n        return result;\n    }\n    int append(int expected,int delta) {\n        if (!store.append(expected,delta)) throw new IllegalStateException(\"conflict\");\n        return balance();\n    }\n}\n",
+          "code": "interface EventStore {\n    []int read();\n    boolean append(int expected,int delta);\n}\nfinal class EventAccount {\n    private final EventStore store;\n    EventAccount(EventStore store) { this.store=store; }\n    int balance() {\n        int result=0;\n        for (int delta:store.read()) result+=delta;\n        return result;\n    }\n    int append(int expected,int delta) {\n        if (!store.append(expected,delta)) throw new IllegalStateException(\"conflict\");\n        return balance();\n    }\n}\n",
           "notes_ru": "Листинг использует один поток событий без snapshots и schema evolution. Crash durability, checksums и transaction log реализует store. HTTP admission не означает durable append.",
           "notes_en": "One stream only, without snapshots or schema evolution. The store provides durability, checksums and transaction logging. HTTP admission is not durable append.",
           "metrics": {
@@ -364,14 +364,14 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "RouterMessage:\n    @[]: targets\n    @: transport\n    int: id\n    return: @\n    get:\n        throws: Shard\n        if: id < 0 || length(targets) = 0\n            throw: Shard()\n        int: index id % length(targets)\n        return: transport\\get(targets[index]; id)\n",
+          "code": "RouterMessage:\n    []@: targets\n    @: transport\n    int: id\n    return: @\n    get:\n        throws: Shard\n        if: id < 0 || length(targets) = 0\n            throw: Shard()\n        int: index id % length(targets)\n        return: transport\\get(targets[index]; id)\n",
           "notes_ru": "RouterMessage владеет таблицей targets и получает запросы. transport.get(target,id) — синхронный профиль документированного HTTP транспорта: target содержит endpoint+route, результат получен после Message intake/исполнения на шарде. Это отдельный явно переданный адаптер, не builtin HTTP singleton.",
           "notes_en": "RouterMessage owns targets. transport.get(target,id) is an explicitly supplied synchronous adapter to the documented HTTP profile; target contains endpoint and route, and the result follows remote Message execution.",
           "metrics": {
             "characters": 171,
             "nonblank_lines": 11,
             "utf8_bytes": 265,
-            "sha256": "55bb65f37a4dd3d57f72c309b4366744ca9f88053d284faa542f1c514a4a8ae1"
+            "sha256": "d45a68402eaa544a698db01e3adb0c07892c05b63d0dc4ae32583fd1bd23a9f1"
           }
         },
         {
@@ -502,14 +502,14 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "independent: TicketData:\n    int: key 0\n    int: size 0\n\nSenderMessage:\n    @: blobs\n    @: transport\n    char[]: payload\n    send:\n        int: key blobs\\put(payload)\n        @: ticket (copy(TicketData))\n        ticket\\key := key\n        ticket\\size := length(payload)\n        transport\\publish(ticket := ticket)\n\nConsumerMessage:\n    @: blobs\n    @: consume\n    @: ticket\n    receivePayload:\n        throws: Payload\n        @: payload blobs\\get(ticket\\key)\n        if: length(payload) != ticket\\size\n            throw: Payload()\n        consume(payload := payload)\n",
+          "code": "independent: TicketData:\n    int: key 0\n    int: size 0\n\nSenderMessage:\n    @: blobs\n    @: transport\n    []char: payload\n    send:\n        int: key blobs\\put(payload)\n        @: ticket (copy(TicketData))\n        ticket\\key := key\n        ticket\\size := length(payload)\n        transport\\publish(ticket := ticket)\n\nConsumerMessage:\n    @: blobs\n    @: consume\n    @: ticket\n    receivePayload:\n        throws: Payload\n        @: payload blobs\\get(ticket\\key)\n        if: length(payload) != ticket\\size\n            throw: Payload()\n        consume(payload := payload)\n",
           "notes_ru": "SenderMessage и ConsumerMessage — разные владельцы. blobs.put/get — явное внешнее blob-хранилище; transport.publish(ticket) использует Message/post либо описанный HTTP application/lmx. Key — переносимый идентификатор, не адрес арены. Полный payload не входит в Message. Имена формалов этих портов закреплены в примере: atomic(body: @), save(account: @), publish(event: @) или publish(ticket: @), consume(payload: @) по соответствующему листингу. Явно именованная передача сохраняет callback/контейнер целиком и исключает неоднозначность W/E. TicketData имеет independent-корень; sender копирует готовые primitive leaves и явно записывает key/size до publish. Получатель получает значения, а не initializer, ссылающийся на завершившийся sender frame.",
           "notes_en": "SenderMessage and ConsumerMessage are separate owners. blobs.put/get is explicit external storage; publish uses Message/post or the documented application/lmx HTTP profile. Key is portable, never an arena address; the body is not in the Message. Relevant port formal names are fixed by this example: atomic(body: @), save(account: @), publish(event: @) or publish(ticket: @), and consume(payload: @), as applicable. Explicit naming passes the whole callback/container and removes W/E ambiguity. TicketData has an independent root; the sender copies ready primitive leaves and explicitly writes key/size before publish. The receiver obtains values, not an initializer referring to an expired sender frame.",
           "metrics": {
             "characters": 388,
             "nonblank_lines": 23,
             "utf8_bytes": 567,
-            "sha256": "0e7131b7b30c746329fef905f8223bd743217c7bfb6c86f0fe561fe37f8e55c1"
+            "sha256": "59b756539cc360fd6001cc4f5c98df0f6f2636bdac154753ea2d6b8dc4156bb9"
           }
         },
         {

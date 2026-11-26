@@ -398,12 +398,12 @@ class Sync:
         for i, line in enumerate(lines):
             if re.fullmatch(r'    entry\d+:\s*', line):
                 row += 1
-            match = re.fullmatch(r'(        )(char\[\]|int): (\w+) (.*?)(\r?\n)?', line)
+            match = re.fullmatch(r'(        )(\[\]char|char\[\]|int): (\w+) (.*?)(\r?\n)?', line)
             if not match or row not in changes or match[3] not in changes[row]:
                 continue
             key = match[3]
             value = changes[row][key]
-            encoded = json.dumps(str(value), ensure_ascii=False) if match[2] == 'char[]' else str(int(value))
+            encoded = json.dumps(str(value), ensure_ascii=False) if match[2] != 'int' else str(int(value))
             lines[i] = f'{match[1]}{match[2]}: {key} {encoded}' + (match[5] or '')
             seen.add((row, key))
         expected = {(i, key) for i, values in changes.items() for key in values}
@@ -438,7 +438,10 @@ class Sync:
                 # never re-create the catalogue or infer new membership.
                 self.read(self.docs / 'spec/LMX_semantics.en.md')
                 for profile in module.profile_role_rows(self.project):
-                    key = tuple(profile.get(k, '') for k in ('role', 'package', 'source'))
+                    # The generator writes str(Path), which has backslashes on
+                    # Windows; the records keep POSIX paths.
+                    key = tuple(profile.get(k, '').replace('\\', '/') if k == 'source' else profile.get(k, '')
+                                for k in ('role', 'package', 'source'))
                     if key in profile_lines:
                         raise ValueError('Ambiguous profile-role source anchor: ' + repr(key))
                     profile_lines[key] = profile['sourceLine']

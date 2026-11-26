@@ -12,7 +12,7 @@
 прямо говорит, что старые семантические строки `bigint real decimal` не были
 импортированы автоматически; таблица машинных значений находится в строках
 19–50. По [semantics §19](../../spec/LMX_semantics.en.md#mathematics), строки
-2684–2695, семейства доступны через выбранные конструкторы, описания и операции,
+3005–3016, семейства доступны через выбранные конструкторы, описания и операции,
 а библиотека является реализацией. Настоящие числа не сводятся к C `double`.
 
 ## Выбор общей модели
@@ -22,7 +22,7 @@
 | `bigint` | LibTomMath из исходного комплекта | IMath даёт независимую реализацию больших целых и точных дробей; LibBF также имеет целочисленные операции. Общая семантика, отдельные native объекты. |
 | `decimal` | MPDecimal из исходного комплекта | decNumber и LibBF `bfdec_t`. MPDecimal/decNumber умеют работать с явным decimal context; нормализованный `bfdec_t` не подменяет договор сохранения quantum. |
 | `real` | LibBF 2025-06-03, MIT | Произвольная выбранная точность и округление; конечный ресурсный бюджет. Экспериментальная LibTomFloat — независимый backend с другим проверяемым профилем. Binary64/SoftFloat остаются фиксированными форматами. |
-| `rational` | Обычная Structure `{numerator, denominator}` над bigint | IMath `mp_rat`; возможна независимая реализация парой LibTomMath. Ненулевой знаменатель, нормализация знака и gcd. Новый физический код пока не нужен. |
+| `rational` | Обычная Structure `{numerator, denominator}` над bigint | IMath `mp_rat`; возможна независимая реализация парой LibTomMath. Ненулевой знаменатель, нормализация знака и gcd. Новый физический тип пока не нужен. |
 | `complex` | Обычная Structure с двумя значениями одного scalar profile | C99 complex, KissFFT/PFFFT, cglm и другие native формы требуют pack/unpack. Для массивов используется `ComplexBuffer`. |
 | Fixed-point | Существующий `i32` + явный Q16.16 profile | libfixmath и libfixmatrix; rounding/overflow/saturation определены интерфейсом. Не вводится новый тип на каждую библиотеку. |
 | Binary16/32/64/80/128 | Фиксированные слова или Array + формат | SoftFloat и FP16 дают программные операции/конверсию. Сериализация хранит определённый порядок байтов и правила специальных значений. |
@@ -76,13 +76,18 @@ temporary C strings, extent Tensor и PCM16↔float. Эти функции по�
 ## Физический record и отсутствие значения
 
 Основание: [L2 value record](../../spec/L2_spec_en.md#value-record), строки
-164–195; [kernel arena](../../spec/kernel-implementation.en.md#arena), строки
-134–184. Код занимает четыре байта. Payload выровнен по своему C типу и минимум
-по четырём байтам; padding лежит **между** records, не между кодом и payload.
-Обычное чтение кода и значения типизированное и выровненное. Прежнее толкование
-«любой payload достаточно выровнять по 4» для восьмибайтового `double` неверно.
+210–287; [kernel arena](../../spec/kernel-implementation.en.md#arena), строки
+133–206; [TypeRef](../../TYPE_REFERENCES_CHANGE.md), §3. Непосредственно перед
+payload лежит TypeRef — прямой адрес канонической неизменяемой системной
+Structure полного типа. Её размер — размер реально хранимой ссылки, а не
+фиксированные четыре байта. Payload выровнен и по своему типу, и по TypeRef;
+padding допустим до префикса и между records, но не между TypeRef и payload.
+Обычное чтение TypeRef и значения типизированное и выровненное.
 
-Для `uninit:T` выделяется только код, payload отсутствует. В примере внутренний
+Для `uninit:T` запись содержит только TypeRef на описание отсутствия, payload
+отсутствует. Прототип этой папки следует прежнему int-code ABI (см. границу
+редакций выше): физический `int`-код в `p-4` и code-only `uninit:T`. Это точка
+миграции, а не реализация TypeRef. В примере внутренний
 служебный `LmxRefRecord` имеет `value == NULL` для отсутствующего payload.
 Это handle аллокатора, не новый публичный ABI ссылок LMX. Заполнение отсутствующего
 поля заменяет графовый фрагмент обычным порядком; адрес будущего T заранее не
@@ -94,7 +99,7 @@ temporary C strings, extent Tensor и PCM16↔float. Эти функции по�
 учитывать finalization этой памяти, включая rollback. Привязка к библиотеке
 не превращает каждую Structure, изображение, формат или decimal precision
 в новый фундаментальный тип ([semantics](../../spec/LMX_semantics.en.md#values),
-строка 224).
+строка 275).
 
 ## Реестр, имена и настоящий граф
 
@@ -105,10 +110,10 @@ temporary C strings, extent Tensor и PCM16↔float. Эти функции по�
 в учебном validator служит диагностике дубликатов этого массива; она не
 переопределяет распознавание LMX слов или dispatch.
 
-Физический код и имя независимы. `real` и `uninit:real` получают допустимые
-коды штатного type-контракта; числа 701–704/1701–1704 в тесте — только локальные
-демонстрационные значения. Alias разрешает прежнее описание, а не создаёт
-второй physical type. Нельзя определять dtype через диапазон адресов арены,
+Описание типа и имя независимы. `real` и `uninit:real` получают TypeRef на
+канонические описания штатного type-контракта; числа 701–704/1701–1704 в тесте
+прототипа — только локальные демонстрационные коды прежнего int-code ABI. Alias
+разрешает прежнее описание, а не создаёт второе описание типа. Нельзя определять dtype через диапазон адресов арены,
 название C библиотеки или состав полей Structure.
 
 Спецификация требует единственный clean graph, локальный R0 и отсутствие
@@ -125,7 +130,7 @@ static C DATA mirror ([semantics](../../spec/LMX_semantics.en.md#graph-and-metho
 explicit typed clone reference-кода; он не меняет правило общих пакетов.
 
 Copy/merge обычного копируемого графа используют **одну штатную source→copy map на всю операцию**;
-см. [kernel copy](../../spec/kernel-implementation.en.md), строки 921–936.
+см. [kernel copy](../../spec/kernel-implementation.en.md), строки 996–1011.
 Физический primitive clone вызывается, когда обычный обход создаёт новый
 числовой record. Повторные ссылки на исходное значение должны получить ссылку
 на уже созданную копию. Сам `lmx_ref_record_copy` этого общего графового обхода
@@ -139,7 +144,7 @@ chunks. GC/обычное завершение вызывает destructor ро�
 только для воспроизводимой демонстрации конструктора и rollback.
 
 Attach переносит chunks без движения records и не меняет лексические parents
-([kernel](../../spec/kernel-implementation.en.md#arena), строки 175–184).
+([kernel](../../spec/kernel-implementation.en.md#arena), строки 192–206).
 Для `real` вместе с ними надо передать владение provider service context либо
 сохранить его как зависимость принимающей арены. Нельзя завершить context до
 его последних `bf_t`. Receiver после attach может владеть несколькими такими
@@ -169,17 +174,17 @@ codec и штатное восстановление names/links; этот пр�
 | Шаг | Где смотреть | Что реализовать относительно нынешней спецификации |
 |---|---|---|
 | Машинное описание | [primitive.lm2](../../../selfbuild/src/l2src/primitive.lm2), строки 12–50 | Согласованные строки семантического семейства и его native binding; реальные size/alignment, explicit conversion keys. |
-| Type/absence | [lmx_types.lm2](../../../selfbuild/src/l2src/lmx_types.lm2) | Коды physical leaf/uninit leaf, typeof, constructor и typed access. Не переносить устаревшее pool-based определение типа. |
+| Type/absence | [lmx_types.lm2](../../../selfbuild/src/l2src/lmx_types.lm2) | TypeRef для physical leaf/uninit leaf вместо int-кодов, typeof, constructor и typed access. Не переносить устаревшее pool-based определение типа. |
 | Constructor/lifetime | [lmx_value_owned.lm2](../../../selfbuild/src/l2src/lmx_value_owned.lm2), строки 153–221; [arena](../../../selfbuild/src/l2src/lmx_arena.lm2) | Подключить typed init/clone/drop к действительному единому record stream, rollback и GC. Старые ветви служат местами поиска, не нормой нового layout. |
 | Copy/merge | [lmx_graph_copy_owned.lm2](../../../selfbuild/src/l2src/lmx_graph_copy_owned.lm2), строки 1–4, 156–192 | Вызывать primitive clone из общего source→copy обхода, сохраняя names, identity и cycles; real использует destination context. |
-| L2/native ABI | [kernel scalar carrier](../../spec/kernel-implementation.en.md#primitive-storage), строки 361–372 | Точный typed carrier и статус выполнения. Сложный native `bf_t` не передаётся by-value через выдуманный foreign-struct ABI. |
+| L2/native ABI | [kernel scalar carrier](../../spec/kernel-implementation.en.md#primitive-storage), строки 436–447 | Точный typed carrier и статус выполнения. Сложный native `bf_t` не передаётся by-value через выдуманный foreign-struct ABI. |
 | L3 call | [numeric boundary](../../spec/LMX_semantics.en.md#mathematics) и [общие модели](../types/README.ru.md) | Обычный callable с DATA/parent, явными precision/ownership/error contracts; C вызов только через L2/native реализацию. |
-| Array | [Array contract](../../spec/L2_spec_en.md#method-array) | Для dense `real[]` нужны корректные element init/copy/drop и resize/rollback. Reference проверяет scalar records; dense arrays пока не заявлены готовыми. |
+| Array | [Array contract](../../spec/L2_spec_en.md#method-array) | Для dense `[]real` нужны корректные element init/copy/drop и resize/rollback. Reference проверяет scalar records; dense arrays пока не заявлены готовыми. |
 
 Результаты suitability checking не запускают конверсию сами. При потреблении
 вызывается явно выбранный конвертер, а не скрытая цепочка по паре C типов
 ([semantics §5–6](../../spec/LMX_semantics.en.md#conversion-context), строки
-284–322). До завершения этих шагов каталожные LMX строки являются планом,
+335–380). До завершения этих шагов каталожные LMX строки являются планом,
 который агент должен реализовать и проверить актуальным компилятором.
 
 ## Офлайн сборка и наблюдавшиеся результаты

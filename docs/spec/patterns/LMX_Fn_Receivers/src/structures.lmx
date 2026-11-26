@@ -80,8 +80,8 @@ independent: RxSlotPatch:
 # Изменённые значения остаются ссылками на after: глубокая неизменяемость не обещана.
 # Пример: after заменяет только поле 2 -> одна запись (2,after[2]).
 RxDiff:
-    @[]: before
-    @[]: after
+    []@: before
+    []@: after
     return: @
     diff:
         @: patch (copy(RxSlotPatch))
@@ -127,8 +127,8 @@ RxDiff:
 # предшествует построению результата. Подменённая база даёт ReceiverPatchBase.
 # Пример: patch(A; diff(A; B)) имеет длину B и те же ссылки по всем позициям.
 RxPatch:
-    @[]: source
-    RxSlotPatch@: change
+    []@: source
+    @RxSlotPatch: change
     return: @
     patch:
         throws: ReceiverPatchBase ReceiverPatchFormat

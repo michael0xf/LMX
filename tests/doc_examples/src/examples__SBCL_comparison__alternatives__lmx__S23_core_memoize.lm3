@@ -1,0 +1,26 @@
+State:
+    int: calls 0
+
+Square:
+    int: value
+    return: int
+    run:
+        State\calls += 1
+        return: value * value
+
+Keys:
+    @: first
+    @: second
+    return: int
+    same:
+        return: \first[0] = \second[0]
+
+Example:
+    []int: items
+    return: @
+    run:
+        throws: copy(FxThrows\sequencefixture)
+        State\calls := 0
+        @: cached memoize(Square\run; Keys\same)
+        @: result map(items; cached)
+        return: (result; State\calls)

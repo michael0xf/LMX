@@ -1,0 +1,22 @@
+Example:
+    []int: items
+    int: start
+    int: end
+    []int: replacement
+    return: @
+    run:
+        throws: copy(sys\resize\throws)
+        []int: result []
+        sys\resize(result; length(items))
+        int: changed 0
+        int: delta 0
+        int: i 0
+        while: i < length(items)
+            int: value items[i]
+            if: i >= start && i < end
+                value := replacement[i - start]
+            result[i] := value
+            changed += (value != items[i])
+            delta += value - items[i]
+            i += 1
+        return: (result; changed; delta)

@@ -14,7 +14,7 @@
 
 ```lmx
 FxRetryEmptyFailure:
-    private: char[]: name
+    private: []char: name
     return: @
     make:
         private: @: outcome (copy(FxOutcome))
@@ -23,7 +23,7 @@ FxRetryEmptyFailure:
         return: outcome
 
 FxRetryPostResult:
-    char[]: kind ""
+    []char: kind ""
     int: attempts 0
     @: outcome 0
 
@@ -67,7 +67,7 @@ FxRetryPostJob:
                 Events\failed("FxTypeToken")
     ---
     Events:
-        char[]: failure
+        []char: failure
         failed:
             private: @: job parent(node)
             job\private\pending -= 1
@@ -102,7 +102,7 @@ FxRetryPostJob:
             return: job\private\finalResult
     ---
     Completion:
-        char[]: kind
+        []char: kind
         @: outcome
         finish:
             private: @: job parent(node)

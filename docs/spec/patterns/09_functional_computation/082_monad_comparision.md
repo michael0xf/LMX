@@ -19,7 +19,7 @@ Maybe: явная проверка промежуточного результа
 ```lmx
 Example:
     int: x
-    return: FxMaybe@
+    return: @FxMaybe
     half:
         throws: FxRecordArity
         if: x % 2 = 0
@@ -40,7 +40,7 @@ Example:
 ```lmx
 Example:
     int: x
-    return: FxMaybe@
+    return: @FxMaybe
     half:
         throws: FxRecordArity
         if: x % 2 = 0

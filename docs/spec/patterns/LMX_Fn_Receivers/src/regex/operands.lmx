@@ -9,14 +9,14 @@
 RxLogicalArguments:
     private:
         @: left
-        @[]: right
+        []@: right
     required: right
     return: @
     collect:
         private: int: extra 0
         if: left != nil
             extra := 1
-        private: @[]: out []
+        private: []@: out []
         sys\resize(out; length(right) + extra)
         if: extra != 0
             out[0] := left
@@ -30,7 +30,7 @@ RxThenOperand:
     private:
         @: left
         int: depth 0
-        @[]: right
+        []@: right
     required: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("+")
@@ -46,7 +46,7 @@ RxRepeatOperands:
     private:
         @: left
         int: depth 0
-        @[]: right
+        []@: right
     required: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("*")
@@ -92,7 +92,7 @@ RxAlternativeDispatchResult:
 RxAlternativeDispatch:
     private:
         @: left
-        @[]: right
+        []@: right
     required: right
     return: @
     probe:

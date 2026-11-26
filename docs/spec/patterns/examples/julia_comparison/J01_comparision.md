@@ -48,7 +48,7 @@ Example:
         throws: copy(FxSeqInfo\get\throws) copy(sys\resize\throws) SequenceStep SequenceSize
         if: step = 0
             throw: SequenceStep()
-        int[]: out []
+        []int: out []
         @: info FxSeqInfo\get(out)
         bigint: value start
         while: (step > 0 && value < stop) || (step < 0 && value > stop)

@@ -1727,7 +1727,9 @@ raw_operands:
 <a id="group-assign"></a>
 #### Групповое позиционное присваивание
 
-Слева от `.:` может быть безымянная Structure хотя бы одного PLACE:
+Группу мест заполняют из результата вызова записью `(a b c) .: f()`.
+Операнд `.:` выбирает глубину 1 операции `:=`. Слева от `.:` может быть
+безымянная Structure хотя бы одного PLACE:
 `(a b c) .: (c a b)` присваивает по позиции. [Общий группировщик и подготовка
 применения](#expression-structural-grouping) выделяют последовательность RHS
 текущего уровня и передают целую левую последовательность PLACE **одним**
@@ -1751,7 +1753,7 @@ actual операнда. Группировщик не строит левый A
 | `(a b) .: (copy(Pair))` | Те же два поля через явный коллектор |
 | `(a b) .: (((x y)))` | Два значения `x`, `y` для двух целей |
 | `(a b c) .: (((x y)))` | Два значения против трёх целей; отказ до первой записи |
-| `(a b c) .: myFn()` | Одно возвращённое значение Array передаётся методу целиком; .: потребляет его непосредственные элементы |
+| `(a b c) .: f()` | Одно возвращённое значение Array передаётся методу целиком; .: потребляет его непосредственные элементы |
 
 Две формы `copy` эквивалентны для этого последовательностного договора,
 если `Pair` даёт два допустимых поля. Внешний коллектор необязателен.
@@ -2794,7 +2796,9 @@ The compound assignments `+=`, `-=`, `*=`, `/=`, `%=`, `<<=`, `>>=`, `&=`, `^=`,
 <a id="group-assign"></a>
 #### Group positional assignment
 
-The left side of `.:` may be an unnamed Structure of at least one PLACE:
+Use `(a b c) .: f()` to assign a call result to a group of places.
+The operand `.:` selects depth 1 of `:=`. Its left side may be an unnamed
+Structure of at least one PLACE:
 `(a b c) .: (c a b)` assigns by position. The [common grouper and application
 adapter](#expression-structural-grouping) expose the current-level RHS sequence
 and deliver the whole left PLACE sequence as **one** operand actual.
@@ -2818,7 +2822,7 @@ preserved; an explicit path does not make an undeclared bare name visible.
 | `(a b) .: (copy(Pair))` | The same two fields through the explicit collector |
 | `(a b) .: (((x y)))` | Values `x`, `y` for two targets |
 | `(a b c) .: (((x y)))` | Two values for three targets; refusal before the first write |
-| `(a b c) .: myFn()` | One returned Array value reaches the method intact; `.:` consumes its immediate elements |
+| `(a b c) .: f()` | One returned Array value reaches the method intact; `.:` consumes its immediate elements |
 
 The two `copy` forms are equivalent for this sequence-consuming assignment
 when `Pair` supplies the two admitted fields. The outer collector is optional;

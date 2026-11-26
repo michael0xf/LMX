@@ -1518,7 +1518,9 @@ The compound assignments `+=`, `-=`, `*=`, `/=`, `%=`, `<<=`, `>>=`, `&=`, `^=`,
 <a id="group-assign"></a>
 #### Group positional assignment
 
-The left side of `.:` may be an unnamed Structure of at least one PLACE:
+Use `(a b c) .: f()` to assign a call result to a group of places.
+The operand `.:` selects depth 1 of `:=`. Its left side may be an unnamed
+Structure of at least one PLACE:
 `(a b c) .: (c a b)` assigns by position. The [common grouper and application
 adapter](#expression-structural-grouping) expose the current-level RHS sequence
 and deliver the whole left PLACE sequence as **one** operand actual.
@@ -1542,7 +1544,7 @@ preserved; an explicit path does not make an undeclared bare name visible.
 | `(a b) .: (copy(Pair))` | The same two fields through the explicit collector |
 | `(a b) .: (((x y)))` | Values `x`, `y` for two targets |
 | `(a b c) .: (((x y)))` | Two values for three targets; refusal before the first write |
-| `(a b c) .: myFn()` | One returned Array value reaches the method intact; `.:` consumes its immediate elements |
+| `(a b c) .: f()` | One returned Array value reaches the method intact; `.:` consumes its immediate elements |
 
 The two `copy` forms are equivalent for this sequence-consuming assignment
 when `Pair` supplies the two admitted fields. The outer collector is optional;

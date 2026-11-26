@@ -11,3 +11,10 @@
 > Даже если для []int нет capacity и его структура одна, все равно у него есть _общий для таких массивов служебный дескриптор описывающий данный тип_
 
 [Формы TYPE](../docs/spec/TYPE_DECLARATION_FORMS.md) · [Договор TypeRef](../docs/TYPE_REFERENCES_CHANGE.md) · [Примеры сигнатур](../docs/spec/ARROW_EXAMPLES.md).
+
+<a id="grouped-place-assignment"></a>
+## Присваивание группе мест
+
+> Старое присвоение группе уже дает матричную фигню (a b c) := f() , нужно (a b c) .: f()
+
+[Семантика](../docs/spec/LMX_semantics.ru.md#group-assign) · [План 21.12](../next_core_tasks_v3.md#grouped-place-assignment-plan).

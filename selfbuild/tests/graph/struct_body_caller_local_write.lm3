@@ -1,0 +1,16 @@
+# Entry Main. The body of an ordinary Structure changes a local the caller has already reached: Main declares
+# `int: b 5` (there is no same-named DATA), `Add\add` writes `b := 1` by the bare name, and Main reads b right after
+# the return: `Log\seen` 1. The path without actuals; the same on the sets S1 and S2.
+# Norm: the book #structural-call (the scope of the caller is not limited by the new frame); #call-frame.
+Log:
+    int: seen 0
+end: Log
+Add:
+    add:
+        b := 1
+    end: add
+end: Add
+Main:
+    int: b 5
+    Add\add()
+    Log\seen := b

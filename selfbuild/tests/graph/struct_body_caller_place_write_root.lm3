@@ -1,0 +1,15 @@
+# The root R0 without an entry: the root code executes by itself, the Structures are root-code records (`@: Name (...)`),
+# and the written call stands after the reached declarations. `b := 1` in `Add\add` changes the root place b of the
+# same root activation; `Log\seen` 1; the file DATA keeps its written value, `b` 0. The same on the sets S1 and S2.
+# Norm: the book #root-activation; #structural-call (the scope of the caller is not limited by the new frame).
+@: Log (
+    int: seen 0
+)
+int: b 0
+@: Add (
+    add:
+        b := 1
+    end: add
+)
+Add\add()
+Log\seen := b

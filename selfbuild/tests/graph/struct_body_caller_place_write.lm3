@@ -1,0 +1,16 @@
+# Entry Main. The body of an ordinary Structure writes the caller's place by its bare name: the entry Main is open
+# over the file DATA, `b` declared `int: b 0` is a live place of that entry, and `b := 1` in `Add\add` changes it.
+# After the return Main reads b: `Log\seen` 1; the file DATA keeps its written value, `b` 0 in the dump.
+# Norm: the book #structural-call (the scope of the caller is not limited by the new frame); #call-frame.
+Log:
+    int: seen 0
+end: Log
+int: b 0
+Add:
+    add:
+        b := 1
+    end: add
+end: Add
+Main:
+    Add\add()
+    Log\seen := b

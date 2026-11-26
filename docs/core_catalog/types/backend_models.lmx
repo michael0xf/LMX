@@ -1190,3 +1190,435 @@ BackendModels:
         char[]: source "third_party/lmx_c99_compact/SOURCES.json"
         char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
 #
+    component_133:
+        char[]: component "storage_extra:littlefs"
+        char[]: profile "filesystem"
+        char[]: models "Resource Buffer Callback Time Error"
+        char[]: converters "resource span cString callback time"
+        char[]: policy "Flash geometry and read/program/erase/sync callbacks belong to the owner. Mount/file lifetime, bounded paths, short I/O and sync policy are explicit."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_134:
+        char[]: component "storage_extra:fatfs"
+        char[]: profile "filesystem"
+        char[]: models "Resource Buffer Callback Time Error"
+        char[]: converters "resource span cString callback time"
+        char[]: policy "FAT/exFAT uses UTF-8 paths, block counts and code-page rules. disk_* are application hooks; optional absent APIs remain profile contracts."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_135:
+        char[]: component "storage_extra:spiffs"
+        char[]: profile "filesystem"
+        char[]: models "Resource Buffer Callback Error"
+        char[]: converters "resource span cString callback"
+        char[]: policy "Flat flash names and geometry are explicit. The selected cache-free profile is distinct from optional cached declarations."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_136:
+        char[]: component "storage_extra:heatshrink"
+        char[]: profile "compression"
+        char[]: models "Encoded Buffer Resource Error"
+        char[]: converters "span resource numericNarrow"
+        char[]: policy "Streaming compression keeps window/lookahead/framing explicit; sink/poll/finish may consume partial data and require a bounded owner workspace."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_137:
+        char[]: component "storage_extra:qcbor"
+        char[]: profile "binary_values"
+        char[]: models "ParseNode DbValue Buffer Tensor Resource Error"
+        char[]: converters "span textBackend database numericNarrow resource"
+        char[]: policy "CBOR tags, integer width, absent/null and nesting budget stay explicit. Bigfloat/decimal tags encode values but do not implement arithmetic primitives."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_138:
+        char[]: component "storage_extra:tinycbor"
+        char[]: profile "binary_values"
+        char[]: models "ParseNode DbValue Buffer Tensor Resource Error"
+        char[]: converters "span textBackend database numericNarrow resource"
+        char[]: policy "Share canonical LMX values with QCBOR through encoded bytes and checked conversions; iterator/native-context structs are not interchangeable."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_139:
+        char[]: component "storage_extra:flashdb"
+        char[]: profile "flash_records"
+        char[]: models "Resource Buffer DbValue Time Callback Error"
+        char[]: converters "resource span database time callback"
+        char[]: policy "Native KV/time-series sector format; LMX defines value semantics. Database context, sector geometry, FILE/FAL backend and typed locking callbacks remain owner-bound."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_140:
+        char[]: component "control_extra:fusion"
+        char[]: profile "inertial_orientation"
+        char[]: models "Tensor Vector3 Time Duration Resource Error"
+        char[]: converters "tensorLayout tensorBackend numericNarrow time coordinates resource"
+        char[]: policy "IMU axes, unit scales, quaternion order, sample interval and coordinate convention are explicit. No implicit reinterpretation of native Fusion structs."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_141:
+        char[]: component "control_extra:fixkalman"
+        char[]: profile "fixed_filter"
+        char[]: models "Tensor Quantization Resource Error"
+        char[]: converters "tensorLayout tensorBackend fixedPoint numericNarrow resource"
+        char[]: policy "Q16.16 matrix dimensions and error/status are checked. Upstream static work matrices require serialization even for distinct filter instances."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_142:
+        char[]: component "control_extra:pid"
+        char[]: profile "controller"
+        char[]: models "Resource ScalarCell Duration NumericStatus Error"
+        char[]: converters "resource numericNarrow time"
+        char[]: policy "PID state has an explicit owner; time step, units, output bounds and derivative filtering are part of the contract. Selected build-view derivative-sign correction is preserved."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_143:
+        char[]: component "control_extra:libcanard"
+        char[]: profile "can_transport"
+        char[]: models "Packet Buffer Resource Callback Time Duration Error"
+        char[]: converters "span resource callback time numericNarrow"
+        char[]: policy "CAN frame and Cyphal transfer are different records. Transfer IDs, MTU, allocator/free pairing, deadlines and multi-interface queue ownership are explicit."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_144:
+        char[]: component "control_extra:nanomodbus"
+        char[]: profile "device_protocol"
+        char[]: models "Packet Buffer Resource Callback Duration Error"
+        char[]: converters "span resource callback time numericNarrow"
+        char[]: policy "RTU/TCP framing, unit address, register/coil lengths and 16-bit register byte order are checked. Read/write callbacks may report partial I/O/timeouts."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_145:
+        char[]: component "control_extra:coremqtt"
+        char[]: profile "message_protocol"
+        char[]: models "Resource Buffer Packet Callback Time Duration KeyValue Error"
+        char[]: converters "resource span cString callback time"
+        char[]: policy "MQTT session, packet IDs, QoS state, bounded property lists and transport buffers belong to one owner. Retained callback views must be copied or pinned for their documented lifetime."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_146:
+        char[]: component "control_extra:lwip"
+        char[]: profile "ip_stack"
+        char[]: models "Resource Packet NetworkAddress Buffer Callback Time Duration Error"
+        char[]: converters "resource span networkAddress callback time"
+        char[]: policy "NO_SYS raw IPv4/IPv6 stack: one serialized owner, timers and pbuf reference counts; socket/netconn/ALTCP declarations are outside the selected profile."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_147:
+        char[]: component "knowledge_extra:pcre2"
+        char[]: profile "pattern_engine"
+        char[]: models "Buffer Resource Callback Error"
+        char[]: converters "textBackend span resource callback numericNarrow"
+        char[]: policy "Only selected 8-bit Unicode profile and POSIX facade. Offsets count code units; capture views retain subject lifetime. No JIT execution; 16/32-bit contracts remain unavailable profiles."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_148:
+        char[]: component "knowledge_extra:liblbfgs"
+        char[]: profile "optimization"
+        char[]: models "Tensor Callback Resource NumericStatus Error"
+        char[]: converters "tensorLayout tensorBackend callback numericNarrow resource"
+        char[]: policy "Objective/gradient callbacks are synchronous exact signatures. Vector length, alignment, scalar precision, convergence and cancellation statuses are explicit."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_149:
+        char[]: component "knowledge_extra:libdmtx"
+        char[]: profile "barcode"
+        char[]: models "Image Tensor Buffer Resource Error"
+        char[]: converters "imageBackend tensorLayout span resource"
+        char[]: policy "Data Matrix ECC200 pixels, stride/orientation/color layout and output bytes are explicit. Decode budget and native image/region/message lifetimes are preserved."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_150:
+        char[]: component "knowledge_extra:libtiff"
+        char[]: profile "image_container"
+        char[]: models "Image Encoded Tensor Buffer Resource Callback Error"
+        char[]: converters "imageBackend tensorLayout span resource callback numericNarrow"
+        char[]: policy "TIFF/BigTIFF directory/tag types, endian, planar layout, sample depth and codec profile are explicit. Varargs tags require fixed typed adapters, not arbitrary L3 varargs."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_151:
+        char[]: component "knowledge_extra:libxls"
+        char[]: profile "spreadsheet"
+        char[]: models "DbRows DbRow DbValue Buffer Resource Error"
+        char[]: converters "database textBackend span resource"
+        char[]: policy "BIFF/OLE XLS read-only; cells/formula cached values and UTF-16 text are copied before workbook close. Older code pages without iconv remain a limitation."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_152:
+        char[]: component "knowledge_extra:matio"
+        char[]: profile "scientific_container"
+        char[]: models "Tensor Hyperslab ComplexBuffer DbValue Resource Buffer Error"
+        char[]: converters "scientificSelection tensorLayout tensorBackend database span resource"
+        char[]: policy "MAT4/5 arrays and the configured MAT7.3/HDF5 profile preserve sparse/complex layout, dimension products and native allocation. Format support follows the actual target; no native struct cast to shared Tensor."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_153:
+        char[]: component "science_extra:liblsoda"
+        char[]: profile "ode_solver"
+        char[]: models "Tensor Callback Resource Time Duration NumericStatus Error"
+        char[]: converters "tensorLayout tensorBackend callback time numericNarrow resource"
+        char[]: policy "Explicit solver context, O(n^2) dense-Jacobian work space and synchronous derivative callback. Time units, tolerance vectors and restart/status are preserved."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_154:
+        char[]: component "science_extra:erfa"
+        char[]: profile "astronomy"
+        char[]: models "Vector3 Tensor Time CivilTime OrbitState NumericStatus Error"
+        char[]: converters "coordinates time tensorLayout numericNarrow"
+        char[]: policy "Preserve reference frames, radians, epochs and split Julian dates to avoid precision loss. Leap-second table updates require serialization; EOP/observations are separate data."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_155:
+        char[]: component "pdf_extra:pdfio"
+        char[]: profile "document_container"
+        char[]: models "Resource ParseNode Buffer Image Time Callback Error"
+        char[]: converters "resource span textBackend imageBackend time callback"
+        char[]: policy "PDF file owns objects/pages/streams; copying pages between files needs explicit destination owner. No renderer implied. Encrypted CreationDate has a retained known-failure contract."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_156:
+        char[]: component "bundles_extra:gb"
+        char[]: profile "portable_runtime"
+        char[]: models "Resource Buffer Tensor Callback Time Duration Error"
+        char[]: converters "resource span cString tensorBackend callback time numericNarrow"
+        char[]: policy "Allocator procedures, arena lifetime, strings, file objects and thread state have exact contracts. gb.h and gb_ini.h are selected; standalone duplicate string API and C11-only math/GL headers are not separate C99 implementations."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_157:
+        char[]: component "bundles_extra:ea_libc"
+        char[]: profile "namespaced_c_runtime"
+        char[]: models "Buffer ScalarCell Resource Callback Time CivilTime Error"
+        char[]: converters "span cString numericNarrow resource callback time"
+        char[]: policy "Only the lmx_ea_* facade is a delivered public target. This does not replace the host C runtime. The curated permissive implementation excludes APSL material and does not advertise unimplemented upstream headers."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_158:
+        char[]: component "bundles_extra:cute_c2"
+        char[]: profile "collision_2d"
+        char[]: models "Tensor Vector3 Resource Error"
+        char[]: converters "tensorLayout tensorBackend numericNarrow resource"
+        char[]: policy "Shape kind, 2D coordinates, transform and time-of-impact units are explicit. Native shape unions and contact manifolds use typed pack/unpack, not a shared pointer cast."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_159:
+        char[]: component "bundles_extra:cute_tiled"
+        char[]: profile "tilemap_format"
+        char[]: models "ParseNode DbValue Buffer Resource Error"
+        char[]: converters "textBackend span resource cString"
+        char[]: policy "Tiled JSON is an external map format. The map owns linked arrays, strings, layers and properties; they must be copied or held until all consumers finish. This adds no alternate LMX configuration mechanism."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_160:
+        char[]: component "bundles_extra:cute_aseprite"
+        char[]: profile "sprite_format"
+        char[]: models "Image Tensor Buffer Time Resource Error"
+        char[]: converters "imageBackend tensorLayout span time resource"
+        char[]: policy "Aseprite layers, frames, palettes and animation duration are explicit. Native decode ownership and image limits apply before constructing common LMX frames."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_161:
+        char[]: component "bundles_extra:cute_png"
+        char[]: profile "image_codec"
+        char[]: models "Image Encoded Buffer Resource Error"
+        char[]: converters "imageBackend span resource"
+        char[]: policy "PNG pixels, palette, dimensions and row layout use the shared Image model. Compression output and decode allocations are released by their matching native owner."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_162:
+        char[]: component "bundles_extra:cute_spritebatch"
+        char[]: profile "sprite_batch"
+        char[]: models "Image Tensor Resource Callback Error"
+        char[]: converters "imageBackend tensorBackend resource callback"
+        char[]: policy "Texture callbacks, atlas allocation, sprite identifiers and graphics-context ownership are explicit. CPU batch construction does not choose a GPU API or make its native texture identifiers portable."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_163:
+        char[]: component "bundles_extra:cute_sync"
+        char[]: profile "synchronization"
+        char[]: models "Resource Callback Duration Error"
+        char[]: converters "resource callback time"
+        char[]: policy "Mutex/condition/semaphore and threadpool handles retain their owner. Shared package CODE does not imply that work contexts or native synchronization handles may be used without their protocol."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_164:
+        char[]: component "bundles_extra:cute_net"
+        char[]: profile "reliable_datagrams"
+        char[]: models "Packet NetworkAddress Buffer Resource Callback Time Duration Secret Error"
+        char[]: converters "span networkAddress resource callback time secret"
+        char[]: policy "Transport connection state, packet bounds, sequence and crypto context belong to one serialized owner. Local network use remains possible without an Internet service; native protocol state is not graph-serializable."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_165:
+        char[]: component "bundles_extra:cute_sound"
+        char[]: profile "audio_mixer"
+        char[]: models "Audio Encoded Buffer Resource Callback Duration Error"
+        char[]: converters "pcmToFloat floatToPcm span resource callback time"
+        char[]: policy "Mixer and SDL audio backend retain sample buffers and live voices. Callback thread rules, stop/completion, channel format and latency are separate from immutable package sharing."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_166:
+        char[]: component "netsurf_extra:libwapcaplet"
+        char[]: profile "interned_strings"
+        char[]: models "Buffer Resource Error"
+        char[]: converters "textBackend cString span resource"
+        char[]: policy "Interned strings preserve explicit reference counts and byte lengths. Pointer identity is local to the library instance; LMX string values do not expose or serialize that pointer."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_167:
+        char[]: component "netsurf_extra:libparserutils"
+        char[]: profile "text_input"
+        char[]: models "Buffer Resource Callback Error"
+        char[]: converters "textBackend span cString resource callback"
+        char[]: policy "Streaming input, charset conversion and buffer ownership are bounded. Encoding labels, replacement policy and partial sequences remain explicit."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_168:
+        char[]: component "netsurf_extra:libhubbub"
+        char[]: profile "html_parser"
+        char[]: models "ParseNode DbValue Buffer Resource Callback Error"
+        char[]: converters "textBackend span resource callback"
+        char[]: policy "HTML tokenization/tree building uses bounded parser state and typed callbacks. Tree ownership and insertion semantics stay explicit; this is a format parser, not a browser application."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_169:
+        char[]: component "netsurf_extra:libdom"
+        char[]: profile "document_tree"
+        char[]: models "ParseNode DbValue Buffer Resource Callback Error"
+        char[]: converters "textBackend span resource callback"
+        char[]: policy "DOM nodes, documents, event listeners and interned strings preserve reference counts and owner lifetimes. HTML and selected Expat XML bindings are explicit; no browser event loop or script runtime is implied."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_170:
+        char[]: component "netsurf_extra:libcss"
+        char[]: profile "stylesheet_engine"
+        char[]: models "ParseNode DbValue Buffer Resource Callback Error"
+        char[]: converters "textBackend span resource callback numericNarrow"
+        char[]: policy "Stylesheets, selectors and computed values are a document-specific engine. CSS units, fixed-point values, inheritance and selector callbacks have typed contracts; they do not become an LMX interpreter."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_171:
+        char[]: component "netsurf_extra:libsvgtiny"
+        char[]: profile "vector_format"
+        char[]: models "Image Tensor ParseNode Buffer Resource Error"
+        char[]: converters "imageBackend tensorBackend textBackend span resource"
+        char[]: policy "SVG parsing yields vector paths and paint data under a bounded document owner. Viewport, coordinates, supported subset and path command layout are explicit; no raster output is promised by parse alone."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_172:
+        char[]: component "netsurf_extra:libnsbmp"
+        char[]: profile "image_codec"
+        char[]: models "Image Encoded Buffer Resource Callback Error"
+        char[]: converters "imageBackend span resource callback"
+        char[]: policy "BMP/ICO decode and bitmap callbacks preserve pixel format, row order, allocation limits and native ownership."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_173:
+        char[]: component "netsurf_extra:libnsgif"
+        char[]: profile "image_codec"
+        char[]: models "Image Encoded Buffer Resource Callback Duration Error"
+        char[]: converters "imageBackend span resource callback time"
+        char[]: policy "GIF frame disposal, transparency, palette and timing are explicit. Decode buffers and callback-created bitmap objects remain owned until frame consumers finish."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_174:
+        char[]: component "platform_extra:apr"
+        char[]: profile "portable_runtime"
+        char[]: models "Resource Buffer Callback Time Duration NetworkAddress Error"
+        char[]: converters "resource span cString callback time networkAddress numericNarrow"
+        char[]: policy "Pools, files, sockets and threads preserve APR ownership, cleanup and parent-pool lifetimes. Global initialization is process-wide. Skiplist remains unavailable in the strict-C99 profile; selected APR IPv6 and DSO support are enabled, with explicit native capability checks."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_175:
+        char[]: component "platform_extra:apr_util"
+        char[]: profile "portable_utilities"
+        char[]: models "Resource Buffer ParseNode DbValue KeyValue Callback Error"
+        char[]: converters "resource span cString callback textBackend database secret"
+        char[]: policy "Pool-owned XML, URI, hash, DBM and utility results retain their pool. Selected Expat and SDBM providers are explicit; absent DBD/LDAP/crypto drivers are not implied by an abstract declaration."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_176:
+        char[]: component "platform_extra:sdl3"
+        char[]: profile "multimedia_platform"
+        char[]: models "Resource Image Audio Tensor Buffer Callback Time Duration Error"
+        char[]: converters "resource span imageBackend pcmToFloat floatToPcm tensorBackend callback time numericNarrow"
+        char[]: policy "Backend availability follows the configured SDL driver set. Video/event main-thread rules, GPU ownership, audio callback threads and cancellation remain explicit; native SDL structs are packed rather than cast from LMX data."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_177:
+        char[]: component "scientific_formats:hdf5"
+        char[]: profile "scientific_container"
+        char[]: models "Tensor Hyperslab Image DbRows ComplexBuffer DbValue Resource Buffer Callback MpiContext Error"
+        char[]: converters "scientificSelection tensorLayout tensorBackend imageBackend database span resource callback mpiResource"
+        char[]: policy "HDF5 core and high-level APIs share exact-kind file/dataset/datatype/dataspace/property-list resources. Selected MPI support and optional drivers follow the C99 profile; all HDF5 calls require one process-wide serialized owner because native thread-safety is disabled. HL images/tables/scales reuse Image/DbRows/Tensor rather than introducing primitives."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_178:
+        char[]: component "scientific_formats:pnetcdf"
+        char[]: profile "parallel_array_io"
+        char[]: models "Tensor Hyperslab Resource Buffer MpiContext Error"
+        char[]: converters "scientificSelection tensorLayout tensorBackend span resource mpiResource"
+        char[]: policy "PnetCDF is an MPI-dependent parallel array I/O backend. Collective ordering, independent mode, count/offset widths and pending request lifetimes are explicit. Same-process actor references may share owner-bound MPI resources; handles are not serialized across processes."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_179:
+        char[]: component "scientific_formats:netcdf"
+        char[]: profile "scientific_container"
+        char[]: models "Tensor Hyperslab DbValue Resource Buffer MpiContext Error"
+        char[]: converters "scientificSelection tensorLayout tensorBackend database span resource mpiResource"
+        char[]: policy "netCDF C dimensions, variables, groups and attributes use native-ID resources with explicit dataset owners. Classic/netCDF-4/remote/parallel capabilities follow the configured dispatch drivers, not merely header presence."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#
+    component_180:
+        char[]: component "scientific_formats:libxml2"
+        char[]: profile "document_parser"
+        char[]: models "ParseNode DbValue Buffer Resource Callback Error"
+        char[]: converters "textBackend span cString resource callback"
+        char[]: policy "C XML/HTML parsing and selected schema/XPath facilities serve external document formats, including netCDF DAP4. Parser/reader/writer/tree/context lifetimes, namespaces, encodings and resource budgets remain explicit; no alternate LMX configuration runtime is introduced."
+        char[]: source "third_party/lmx_c99_compact/SOURCES.json"
+        char[]: status "DESIGN_REQUIRES_PER_API_REVIEW"
+#

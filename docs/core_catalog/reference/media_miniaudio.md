@@ -3,7 +3,7 @@
 [Первичный LMX-каталог](../catalog/media_miniaudio.lmx) · [Тела LMX](../bindings/media_miniaudio.lm3) · [Формат и shim по запросу](../CATALOG_FORMAT.ru.md)
 
 Версия: `0.11.26`.
-Записей: **3675**; кандидатов вызова: **934**; scalar prototypes: **0**.
+Записей: **3775**; кандидатов вызова: **934**; scalar prototypes: **0**.
 
 Пакеты: `audio`.
 CMake: `LMX::miniaudio`.
@@ -11,7 +11,7 @@ CMake: `LMX::miniaudio`.
 | Категория | Записи |
 |---|---:|
 | alias | 9 |
-| callback | 302 |
+| callback | 402 |
 | function | 1297 |
 | function_macro | 332 |
 | static_header_function | 1052 |

@@ -194,7 +194,11 @@ def params_from(tokens):
                 if preceding and not (len(preceding)==1 and preceding[0] in ('struct','union','enum')):
                     name=v;name_index=j
         ctype=render([t for j,t in enumerate(part) if j!=name_index])
-        is_callback=bool(re.search(r'\(\s*\*',raw) or re.search(r'\b[A-Za-z_]\w*\s*\(',raw))
+        # Annotation macros such as SDL_OUT_Z_CAP(n) are not function-pointer
+        # arguments. Recognize the actual declarator and resolve named callback
+        # typedefs later within their component.
+        is_callback=bool(re.search(r'\(\s*(?:[A-Za-z_]\w*\s+)*\*[^)]*\)\s*\(',raw)
+                         or (name and re.search(r'\b'+re.escape(name)+r'\s*\(',raw)))
         out.append({'name':name or f'arg{i+1}','c_type':ctype,'declaration':raw,'name_in_source':name is not None,'pointer':('*' in raw) or is_callback,'array':('[' in raw),'callback':is_callback})
     return out
 
@@ -208,13 +212,31 @@ def scan_decl(tokens,text,body=False):
         nesting.append(level)
         if v=='(':level+=1
         elif v==')':level=max(0,level-1)
-    for i in range(len(tokens)-5):
-        if nesting[i]==0 and vals[i]=='(' and vals[i+1]=='*' and re.fullmatch(r'[A-Za-z_]\w*',vals[i+2]) and vals[i+3]==')' and vals[i+4]=='(':
-            depth=1;j=i+5
-            while j<len(tokens) and depth:
-                depth+=(vals[j]=='(')-(vals[j]==')');j+=1
-            if depth:return None
-            return dict(name=vals[i+2],kind='callback',return_type=render(tokens[:i]).replace('typedef ','',1),parameters=params_from(tokens[i+5:j-1]),signature=render(tokens),offset=tokens[i+2][1],body=body)
+    for i in range(len(tokens)-4):
+        if nesting[i]!=0 or vals[i]!='(':continue
+        depth=1;close=i+1
+        while close<len(tokens) and depth:
+            depth+=(vals[close]=='(')-(vals[close]==')');close+=1
+        close-=1
+        if depth or close+1>=len(tokens) or vals[close+1]!='(':continue
+        # Calling-convention tokens may precede the star: (SDLCALL *cb).
+        # A function typedef may omit it entirely: typedef int (cb)(...).
+        # APIENTRYP and similar platform macros may themselves expand to '*'.
+        inside=vals[i+1:close];is_typedef='typedef' in vals[:i]
+        if '*' not in inside and not is_typedef:continue
+        indices=[k for k in range(i+1,close) if re.fullmatch(r'[A-Za-z_]\w*',vals[k]) and vals[k] not in TYPE_WORDS]
+        if not indices:continue
+        if '*' in inside:
+            star=max(k for k in range(i+1,close) if vals[k]=='*')
+            indices=[k for k in indices if k>star]
+            if not indices:continue
+            ni=indices[0]
+        else:ni=indices[-1]
+        depth=1;j=close+2
+        while j<len(tokens) and depth:
+            depth+=(vals[j]=='(')-(vals[j]==')');j+=1
+        if depth:return None
+        return dict(name=vals[ni],kind='callback',return_type=render(tokens[:i]).replace('typedef ','',1),parameters=params_from(tokens[close+2:j-1]),signature=render(tokens),offset=tokens[ni][1],body=body)
     pairs=[];stack=[]
     for i,v in enumerate(vals):
         if v=='(':stack.append(i)
@@ -317,7 +339,7 @@ def main():
             if not any(p.is_file() for p in r.glob(pattern)):
                 diagnostics.append({'operation':'public_surface_resolution','component':cid,'severity':'missing_declared_surface','pattern':pattern})
         headers=sorted({p for pattern in patterns for p in r.glob(pattern) if p.is_file()})
-        component=dict(comp);component['targets']=[x if x.startswith('LMX::') else 'LMX::'+x for x in target_names];component['surface_patterns']=patterns;component['headers']=[PREFIX+p.relative_to(r).as_posix() for p in headers];component['source_validation']='source_census_only_not_link_test';components.append(component)
+        component=dict(comp);component['targets']=[x if '::' in x else 'LMX::'+x for x in target_names];component['surface_patterns']=patterns;component['headers']=[PREFIX+p.relative_to(r).as_posix() for p in headers];component['source_validation']='source_census_only_not_link_test';components.append(component)
         cached={path:path.read_text(errors='replace') for path in headers}
         macro_cache={path:list(macro_records(raw)) for path,raw in cached.items()}
         component_macros[cid]={m['name'] for ms in macro_cache.values() for m in ms}
@@ -379,7 +401,7 @@ def main():
         e['symbol_kinds']=sorted({v.get('classification',e['classification']) for v in e['declarations']})
         if e['classification'] in callable_kinds+('function_macro','template'):
             public=[v for v in e['declarations'] if not in_implementation(v)
-                    and not any(x.strip()=='if 0' for x in v.get('conditions') or [])
+                    and not any(disabled_condition(x) for x in v.get('conditions') or [])
                     and v.get('availability') not in ('internal_header_surface','disabled_example','unexpanded_declarator_template')]
             if not public and e['availability'] not in ('internal_header_surface','disabled_example','unexpanded_declarator_template'):
                 e['availability']='implementation_helper'
@@ -415,7 +437,7 @@ def main():
         if source_relative in header_overrides:e['canonical_header']=header_overrides[source_relative]
         if e['abi_symbol']!=e['name'] and e['availability']!='upstream_symbol_renamed':
             e['notes'].append('Collection ABI namespace rewrite: '+e['name']+' -> '+e['abi_symbol']+'. Use the generated public header from the CMake target.')
-        if e['name'] in comp.get('declared_unimplemented',[]):
+        if e['name'] in comp.get('declared_unimplemented',[]) and e['availability'] not in ('implementation_helper','internal_header_surface','disabled_example'):
             e['availability']='declared_without_implementation'
             e['notes'].append('Retained public declaration has no implementation in this pinned source/build; keep as a contract stub, never enable a native-call branch.')
         e['return_type_original']=e.get('return_type')
@@ -431,15 +453,38 @@ def main():
         elif e['classification']=='alias':e['ffi_disposition']='canonical_symbol_alias'
         elif e['classification']=='template':e['ffi_disposition']='typed_template_instantiation' if e.get('macro_role')=='generic_code_generator' else 'metadata_only_declaration_template'
         elif e['classification']=='function_macro':e['ffi_disposition']='typed_macro_shim' if e.get('macro_role')=='runtime_operation' else 'metadata_only_non_runtime_macro'
+        elif e['component'] in ('scientific_formats:hdf5','scientific_formats:netcdf','scientific_formats:pnetcdf'):
+            e['ffi_disposition']='typed_scientific_resource_bridge'
         elif any(p.get('variadic') for p in e.get('parameters',[])):e['ffi_disposition']='fixed_signature_varargs_adapter'
         elif e['classification'] in ('static_inline','static_header_function'):e['ffi_disposition']='addressable_C_shim'
         else:e['ffi_disposition']='typed_L2_shim_then_L3_wrapper'
         e['variant_count']=len(e['declarations']);entries.append(e)
+    # Numeric C IDs can represent live resources. Preserve the native signature
+    # while giving the proposed LMX boundary an owner-bound resource model.
+    for e in entries:
+        if e['component'] not in ('scientific_formats:netcdf','scientific_formats:pnetcdf'):continue
+        for params in [e.get('parameters',[])]+[v.get('parameters') or [] for v in e['declarations']]:
+            for p in params:
+                name=p.get('name','')
+                if name in {'ncid','ncid1','ncid2','ncid_in','ncid_out','src_ncid','dst_ncid','parent_ncid','grpid','grp_ncid','rootid','hid'}:
+                    p['semantic_role']='native_resource_output' if p.get('pointer') else 'native_resource_id'
+                    p['resource_kind']='cdf_header' if name=='hid' else 'dataset_file_or_group'
+                    p['resource_backend']=e['component']
+                elif name in {'ncidp','grpidp','new_ncid','new_ncidp','hidp'}:
+                    p['semantic_role']='native_resource_output'
+                    p['resource_kind']='cdf_header' if name=='hidp' else 'dataset_file_or_group'
+                    p['resource_backend']=e['component']
+                elif name=='ncids':
+                    p['semantic_role']='native_resource_vector'
+                    p['resource_kind']='dataset_file_or_group'
+                    p['resource_backend']=e['component']
+        if e.get('pub_candidate'):
+            e['notes'].append('C integer file/group IDs are owner-bound resources at the LMX boundary. Validate child variable/dimension/type IDs against that file/group; do not expose a process-global ncid as an unrestricted scalar capability.')
     # A callback typedef hides the pointer syntax at its use site. Resolve these
     # references from declarations, rather than treating the typedef as a scalar
     # or opaque resource. Callback struct fields themselves are not typedefs.
     callback_types={(e['component'],e['name']):e['id'] for e in entries
-                    if e['classification']=='callback' and re.search(r'\btypedef\b',e['signature'])}
+                    if e['classification']=='callback' and e['name'] not in TYPE_WORDS and re.search(r'\btypedef\b',e['signature'])}
     for e in entries:
         refs=set()
         for params in [e.get('parameters',[])]+[v.get('parameters') or [] for v in e['declarations']]:
@@ -472,12 +517,16 @@ def canonical_header(rel):
     return Path(rel).name
 
 def clean_return_type(value):
-    value=re.sub(r'\b(?:BSON_EXPORT|MONGOC_EXPORT|CJSON_PUBLIC|XMLPARSEAPI)\s*\(\s*([^()]+?)\s*\)',r'\1',value)
+    value=re.sub(r'\b(?:BSON_EXPORT|MONGOC_EXPORT|CJSON_PUBLIC|XMLPARSEAPI|APR_DECLARE|APR_DECLARE_NONSTD|APU_DECLARE|APU_DECLARE_NONSTD)\s*\(\s*([^()]+?)\s*\)',r'\1',value)
     value=re.sub(r'\b(?:extern|static|inline|__inline|__inline__|__forceinline|typedef)\b',' ',value)
     value=re.sub(r'\b(?:CURL_EXTERN|CURL_CALL|ZEXTERN|ZEXPORT|ZEXPORTVA|SQLITE_API|SQLITE_DEPRECATED|SQLITE_EXPERIMENTAL|LIBSSH2_API|LIBSSH2_DEPRECATED|BSON_BEGIN_DECLS|MONGOC_BEGIN_DECLS|MPD_PRAGMA|WAI_FUNCSPEC|CGLM_INLINE|CGLM_EXPORT|MA_API|MA_API_PRIVATE|DRWAV_API|DRMP3_API|DRFLAC_API|DRWAV_PRIVATE|DRMP3_PRIVATE|DRFLAC_PRIVATE|NK_API|NK_LIB|NK_PRIVATE|NK_INTERN|STBIDEF|STBIRDEF|STBTT_DEF|STBRP_DEF|STBIWDEF|STBSP__PUBLICDEC|STBSP__PUBLICDEF|SOKOL_API_DECL|SOKOL_API_IMPL|SOKOL_GFX_API_DECL|SOKOL_GL_API_DECL|MPACK_INLINE|MPACK_STATIC_INLINE|MPACK_INLINE_SPEED|MPACK_SPEED|MPACK_EXTERN_C_BEGIN|MPACK_SILENCE_WARNINGS_BEGIN|MTDEF|OLIVECDEF|UTF8_NULLABLE|UTF8_PURE|UTF8_CONST|utf8_constexpr14|UTF8_RESTRICT|YAML_DECLARE|SPNG_API|LZ4LIB_API|LZ4FLIB_API|ZSTDLIB_API|ZDICTLIB_API|WEBP_EXTERN|DECLSPEC|CALLBACK|__stdcall|__cdecl|SQLITE_VEC_API)\b',' ',value)
     value=re.sub(r'__attribute(?:__)?\s*\(\s*\([^)]*\)\s*\)',' ',value)
     value=re.sub(r'\b[A-Z][A-Z_0-9]*(?:_API|_EXPORT|_EXPORT_SYMBOL|_PUBLIC|_DECL|_EXTERN|_CALL)\b',' ',value)
+    value=re.sub(r'\b(?:SDL_DECLSPEC|SDLMAIN_DECLSPEC|SDLCALL|APR_THREAD_FUNC|GB_DEF|GB_EXTERN|gb_inline|gb_no_inline|H5_DLL|H5_HLDLL|H5_DLLVAR|XMLPUBFUN|XMLPUBVAR|XMLCALL|EXTERNL|OPTEXPORT)\b',' ',value)
     return normalize(value)
+
+def disabled_condition(value):
+    return bool(re.fullmatch(r'if\s+\(?\s*0\s*\)?',clean_comments(value).strip()))
 
 def classify(e,short,rel,declared_macros=()):
     name=e['name'];kind=e['classification'];notes=[];avail='declared_source_profile_not_link_checked'
@@ -497,9 +546,9 @@ def classify(e,short,rel,declared_macros=()):
     elif kind=='callback':
         e['unresolved']=False;avail='callback_contract';notes.append('Callback type/slot, not an exported callable.')
     else:e['unresolved']=bool(re.search(r'\b[A-Z][A-Z_0-9]*\s*\(',e['return_type'] or ''))
-    private=name.startswith(('_','stb__','stbi__','stbir__','stbtt__','ma__','mt__','glm__')) or any(x in rel for x in ('/priv/','-private.h','_private.h','/sse2/','/simd/')) or any(x in (e.get('return_type') or '') for x in ('DRWAV_PRIVATE','DRMP3_PRIVATE','DRFLAC_PRIVATE','NK_LIB','NK_INTERN','NK_PRIVATE'))
+    private=name.startswith(('_','stb__','stbi__','stbir__','stbtt__','ma__','mt__','glm__','gb__','lwc__')) or any(x in rel for x in ('/priv/','-private.h','_private.h','/sse2/','/simd/')) or any(x in (e.get('return_type') or '') for x in ('DRWAV_PRIVATE','DRMP3_PRIVATE','DRFLAC_PRIVATE','NK_LIB','NK_INTERN','NK_PRIVATE'))
     if private:avail='internal_header_surface';notes.append('Internal helper or private header surface; keep out of direct L3 publication.')
-    if any(x.strip()=='if 0' for x in e.get('conditions',[])) or name in ('main','dummy','my_stbtt_initfont'):
+    if any(disabled_condition(x) for x in e.get('conditions',[])) or name in ('main','dummy','my_stbtt_initfont'):
         avail='disabled_example';notes.append('Disabled/example code region, not library API.')
     if kind in ('function','static_inline') and re.search(r'\b(?:STB_SPRINTF_DECORATE|H3_EXPORT|CGLM_STRUCTAPI|_c_MEMB|i_extern|CURL_EXTERN)\s*\(',e['signature']) and name in ('STB_SPRINTF_DECORATE','STBSP__ATTRIBUTE_FORMAT','H3_EXPORT','CGLM_STRUCTAPI','_c_MEMB'):
         e['classification']='template';e['unresolved']=True;avail='unexpanded_declarator_template';notes.append('Macro-built function name; concrete expansions are separate entries when available.')
@@ -539,6 +588,88 @@ def classify(e,short,rel,declared_macros=()):
         avail='outside_selected_portable_profile';notes.append('The retained upstream 128-bit-state API requires a compiler extension and is disabled in the generated portable C99 header; keep the source contract, do not assume this target links it.')
     if short=='softfloat':
         notes.append('Selected C99 build enables SOFTFLOAT_FAST_INT64 with INLINE_LEVEL=0; rounding/exception/tininess state is process-global (THREAD_LOCAL empty), requiring a serialized owner adapter.')
+    if short=='pcre2':
+        if re.search(r'_(?:16|32)$',name):
+            avail='outside_selected_profile';notes.append('The delivered PCRE2 profile builds only the 8-bit library and POSIX facade. The header also declares 16/32-bit families; preserve their contracts without claiming those implementations are linked.')
+        if 'jit_' in name:
+            notes.append('JIT is disabled in this profile. Upstream may provide an error-returning JIT stub; presence of an exported name does not make JIT execution available.')
+    if short=='lwip':
+        disabled_headers={'api.h','netbuf.h','netdb.h','netifapi.h','sockets.h','tcpip.h','altcp.h','altcp_tcp.h','altcp_tls.h','stats.h','snmp.h'}
+        if Path(rel).name in disabled_headers:
+            avail='outside_selected_profile';notes.append('Selected lwIP NO_SYS=1 raw stack disables socket/netconn/threaded TCPIP/ALTCP/SNMP/statistics layers. Retained source declaration is a separate feature profile, not a callable promise for this build.')
+        if name in ('sys_now','sys_jiffies'):
+            avail='application_implementation_required';notes.append('Platform time hook supplied by the owner/port; no library-owned wall clock is invented.')
+        notes.append('All raw-stack calls and timers have one serialized owner; shared immutable LMX definitions do not make lwIP globals thread-safe.')
+    if short=='fatfs':
+        if name in {'f_chdir','f_chdrive','f_getcwd','f_forward','f_gets','f_putc','f_puts','f_printf','f_setcp','get_fattime','ff_memalloc','ff_memfree','ff_mutex_create','ff_mutex_delete','ff_mutex_take','ff_mutex_give'}:
+            avail='outside_selected_profile';notes.append('The selected FF_FS_RPATH=0, FF_USE_STRFUNC=0, FF_USE_FORWARD=0, fixed code page, stack LFN, non-RTOS and fixed-date profile omits this optional entry.')
+        if name.startswith('disk_'):
+            avail='application_implementation_required';notes.append('Block-device operation must be supplied by the application/board port; the FatFs library does not itself implement a device.')
+    if short=='spiffs' and name=='SPIFFS_buffer_bytes_for_cache':
+        avail='outside_selected_profile';notes.append('The selected strict-C99 SPIFFS profile disables its optional cache.')
+    if short=='apr':
+        if name.startswith('apr_skiplist_') or Path(rel).name=='apr_skiplist.h':
+            avail='outside_selected_profile';notes.append('The retained APR skiplist source orders function pointers, which is outside ISO C99. This collection excludes that translation unit from its strict-C99 target; the header remains an explicit unavailable contract.')
+        if name.startswith('apr_dso_') or Path(rel).name=='apr_dso.h':
+            notes.append('APR DSO support is enabled in the selected native profile. Dynamic library loading remains an explicit owner-side capability; sharing package CODE does not grant arbitrary native code-loading authority.')
+        if 'pool' in name or Path(rel).name in ('apr_pools.h','apr_allocator.h'):
+            notes.append('APR pools own descendants and borrowed allocations. Pool clear/destroy invalidates dependent native views; a shared immutable LMX package definition does not make a mutable pool universally accessible.')
+    if short=='apr_util':
+        if Path(rel).name.startswith('apr_ldap') or Path(rel).name=='apr_crypto.h':
+            avail='outside_selected_profile';notes.append('The selected APR-Util profile has no LDAP or external crypto driver. The retained abstract contract must not be exposed as a working backend without enabling and testing its dependency.')
+        if Path(rel).name=='apr_dbd.h':
+            notes.append('APR-Util DBD abstraction is retained but no external DBD driver is selected. An exported dispatcher is not proof that a requested database provider can be opened.')
+    if short=='sdl3':
+        header=Path(rel).name
+        if header=='SDL_stdinc.h' and not name.startswith('SDL_') and kind in ('function','static_inline','static_header_function'):
+            avail='internal_header_surface';notes.append('Host-runtime or static-analyzer declaration inside SDL stdinc, not a public function implemented by the SDL library. Use the corresponding SDL_* contract where present.')
+        if header.startswith(('SDL_opengl','SDL_opengles')) or header=='SDL_egl.h':
+            if kind in ('function','static_inline','static_header_function') and not name.startswith('SDL_'):
+                avail='not_built_in_target_graphics_api';notes.append('This retained graphics interoperability header declares driver entry points, not definitions supplied by the SDL3 target. A typed context-bound GL/EGL procedure resolver or explicitly linked graphics provider is required; no direct native-call branch is emitted for this declaration.')
+        if header.startswith('SDL_test'):
+            avail='outside_selected_profile';notes.append('SDLTest declarations belong to the optional test support library, not the selected production SDL3-static target.')
+        if header=='SDL_main_impl.h':
+            avail='implementation_helper';notes.append('Application entry-point glue supplied by SDL headers; not a reusable production library entry.')
+        if name in ('SDL_main','SDL_AppInit','SDL_AppIterate','SDL_AppEvent','SDL_AppQuit'):
+            avail='application_implementation_required';notes.append('This entry is implemented by the application/actor host and invoked by SDL startup glue; it is not a function provided by the SDL3 static library.')
+        if header in ('SDL_gpu.h','SDL_vulkan.h'):
+            notes.append('The selected native build disables GPU/Vulkan backends. Public dispatch functions or error-returning stubs may still be exported; a symbol match does not establish that a requested device/backend can be created.')
+        if header in ('SDL_video.h','SDL_events.h','SDL_render.h','SDL_dialog.h','SDL_tray.h'):
+            notes.append('SDL video/event/UI thread and context requirements remain part of the per-API adapter contract; sharing immutable package CODE does not bypass them.')
+    if short=='gb':
+        if any(re.search(r'\bGB_PLATFORM\b',c) and not c.startswith('ifndef') for c in e.get('conditions',[])):
+            avail='outside_selected_profile';notes.append('GB_PLATFORM window/input/OpenGL backend is disabled in the selected gb core target; retain the original header contract without claiming its implementation.')
+        if name.startswith('gb_dll_'):
+            notes.append('Dynamic loader access is an explicit native capability and platform-specific operation; the presence of a loader API does not grant arbitrary L3 code-loading authority.')
+    if short=='cute_net' and (name=='cn_run_tests' or any('CUTE_NET_TESTS' in c for c in e.get('conditions',[]))):
+        avail='outside_selected_profile';notes.append('CUTE_NET_TESTS belongs only to the dedicated upstream test executable, not the production library ABI.')
+    if short=='cute_sound':
+        if name in ('cs_load_ogg','cs_read_mem_ogg','cs_load_ogg_rw','cs_load_wav_rw'):
+            avail='outside_selected_profile';notes.append('The selected scalar WAV + SDL3 mixer profile has no stb_vorbis OGG implementation and no SDL2 RWops adapter. The source declarations remain separate optional contracts.')
+        notes.append('Cute sound uses a process-global current mixer context. Owner serialization and audio callback lifetime are required; sharing immutable package definitions does not create independent native mixer state.')
+    if short=='ea_libc':
+        if name in ('lmx_ea_rand','lmx_ea_srand','lmx_ea_strtok'):
+            notes.append('This selected libc algorithm uses process-global mutable state. Use an explicitly serialized owner, or the rand_r/strtok_r stateful alternative when applicable.')
+        if name in ('lmx_ea_strtoll','lmx_ea_strtoull'):
+            notes.append('Curated implementation saturates on overflow without errno; an L3 exact conversion requires separate range/grammar validation and may not infer success only from the return value.')
+    if short=='matio':
+        notes.append('MAT format support follows the configured matio target, including its optional HDF5 dependency for MAT7.3. The source declaration alone does not prove that a requested file version or filter can be opened; dimension products, class types and native ownership require a typed adapter.')
+    if short=='hdf5':
+        notes.append('The selected HDF5 target includes core, high-level APIs and MPI support; each file/dataset/datatype/dataspace/property-list identifier has an exact kind and lifetime. Native HDF5 thread-safety is not enabled, so all HDF5 calls in a process require one serialized owner/executor or equivalent process-wide exclusion, not independent per-file locks.')
+        if name.startswith('H5M'):
+            notes.append('H5M map API is retained, but native VOL map capability is not implied. Query the selected connector capability and propagate unsupported-operation results.')
+        if name.startswith(('H5FD','H5Pset_fapl_')):
+            notes.append('Optional virtual-file drivers are selected by generated H5pubconf and dependency configuration. Header presence or a stub symbol does not establish driver availability.')
+    if short=='pnetcdf':
+        notes.append('Parallel-netCDF CDF-1/CDF-2/netCDF-5(CDF-5) calls require the same MPI ABI at build and runtime. Collective ordering, file mode, MPI_Offset/count width and outstanding request buffer lifetime need explicit owner-side admission.')
+    if short=='netcdf' and Path(rel).name in ('ncjson.h','ncproplist.h'):
+        if name in ('NCJdump','NCJtotext') or any(c.startswith('ifndef NETCDF_JSON_H') for c in e.get('conditions',[])):
+            avail='outside_selected_header_facade';notes.append('This internal source-header branch is omitted from the installed NETCDF_JSON_H single-header facade. The retained contract is not a declaration available from canonical netcdf_json.h.')
+        elif kind in ('function','static_inline','static_header_function'):
+            e['classification']='static_header_function'
+            notes.append('The installed public facade concatenates this declaration header with its retained libdispatch C implementation and selects OPTEXPORT static. Use a typed addressable shim including the generated netcdf_json.h/netcdf_proplist.h, not a guessed external symbol declaration.')
+    if short=='pdfio' and name in ('pdfioFileGetCreationDate','pdfioDictGetDate'):
+        notes.append('Known failing encrypted CreationDate regression is retained in extensions/pdf_extra/KNOWN_LIMITATIONS.md; ordinary/encrypted date behavior must not be conflated.')
     if short=='cminpack' and name=='__cminpack_func__':
         e['classification']='template';e['unresolved']=True;avail='unexpanded_declarator_template';notes.append('Type/name template; default double-profile named functions are recovered by preprocessing.')
     if short=='sqlite_vec':notes.append('Only extension initialization is C API; vector operations are SQL registrations.')
@@ -560,7 +691,7 @@ def classify(e,short,rel,declared_macros=()):
             if '&' in (p.get('c_type') or ''):p['c_type']=p['c_type'].replace('&','*');p['declaration']=p['declaration'].replace('&','*');p['pointer']=True
         notes.append('C99 public signature follows extensions/media/cmake/generate_views.py reference-to-pointer rewrite.')
     if private:avail='internal_header_surface'
-    if any(x.strip()=='if 0' for x in e.get('conditions',[])) or name in ('main','dummy','my_stbtt_initfont'):avail='disabled_example'
+    if any(disabled_condition(x) for x in e.get('conditions',[])) or name in ('main','dummy','my_stbtt_initfont'):avail='disabled_example'
     e['availability']=avail;e['notes']=notes
 
 def supplement_isolated_headers(r,out,entries,headers,diagnostics,component_macros):

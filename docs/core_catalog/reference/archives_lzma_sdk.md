@@ -3,7 +3,7 @@
 [Первичный LMX-каталог](../catalog/archives_lzma_sdk.lmx) · [Тела LMX](../bindings/archives_lzma_sdk.lm3) · [Формат и shim по запросу](../CATALOG_FORMAT.ru.md)
 
 Версия: `26.06`.
-Записей: **520**; кандидатов вызова: **306**; scalar prototypes: **5**.
+Записей: **521**; кандидатов вызова: **306**; scalar prototypes: **5**.
 
 Пакеты: `archive`.
 CMake: `LMX::lzma_sdk`.
@@ -11,7 +11,7 @@ CMake: `LMX::lzma_sdk`.
 | Категория | Записи |
 |---|---:|
 | alias | 3 |
-| callback | 38 |
+| callback | 39 |
 | function | 306 |
 | function_macro | 169 |
 | template | 4 |

@@ -1,14 +1,14 @@
 {
-  "schema_version": 1,
-  "date_utc": "2026-11-25",
-  "scope": "Capability audit of external representations in the inherited 132-component catalog and accepted storage, knowledge and PDF additions; not a function-complete API inventory.",
+  "schema_version": 2,
+  "date_utc": "2026-11-26",
+  "scope": "Overview of external format capabilities in the accepted collection; full function inventory and profile contracts live in docs/core_catalog.",
   "evidence_root": "third_party/lmx_c99_compact",
   "basis": [
     "SOURCES.json identifiers",
     "selected CMake sources and compile definitions",
     "retained primary public headers and source documentation"
   ],
-  "reading_rule": "direction describes compiled capability; header_instantiation and retained_source_only are explicit exceptions. Read/write are not symmetric unless actual APIs and selected build support both.",
+  "reading_rule": "Read/write flags indicate a compiled provider capability; individual verification reports identify which exact scenarios ran. Examples of API names are pointers, not a complete inventory. Source-only and required macro instantiations are explicit.",
   "application_boundary": "LMX owns application data semantics. YAML/TOML/INI are only foreign-file compatibility when an external consumer requires them. Database/medium formats are lower I/O layers, not a proposed extra object/settings architecture.",
   "rows": [
     {
@@ -32,13 +32,7 @@
           "evidence_path": "vendor/jsmn/jsmn.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "jsmn_parse",
-              "path": "vendor/jsmn/jsmn.h",
-              "line": 99
-            }
-          ]
+          "api_catalog_component": "systems:jsmn"
         },
         {
           "component": "systems:cjson",
@@ -52,18 +46,7 @@
           "evidence_path": "vendor/cjson/cJSON.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "cJSON_Parse",
-              "path": "vendor/cjson/cJSON.h",
-              "line": 152
-            },
-            {
-              "symbol": "cJSON_Print",
-              "path": "vendor/cjson/cJSON.h",
-              "line": 152
-            }
-          ]
+          "api_catalog_component": "systems:cjson"
         },
         {
           "component": "acoustic:jansson",
@@ -77,18 +60,7 @@
           "evidence_path": "vendor/jansson/src/jansson.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "json_loads",
-              "path": "vendor/jansson/src/jansson.h",
-              "line": 366
-            },
-            {
-              "symbol": "json_dumps",
-              "path": "vendor/jansson/src/jansson.h",
-              "line": 394
-            }
-          ]
+          "api_catalog_component": "acoustic:jansson"
         }
       ],
       "use_ru": "Извлечь данные из JSON; создать JSON для другого потребителя.",
@@ -120,13 +92,7 @@
           "evidence_path": "vendor/yxml/yxml.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "yxml_parse",
-              "path": "vendor/yxml/yxml.h",
-              "line": 88
-            }
-          ]
+          "api_catalog_component": "documents:yxml"
         },
         {
           "component": "documents:ezxml",
@@ -140,18 +106,7 @@
           "evidence_path": "vendor/ezxml/ezxml.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "ezxml_parse_str",
-              "path": "vendor/ezxml/ezxml.h",
-              "line": 60
-            },
-            {
-              "symbol": "ezxml_toxml",
-              "path": "vendor/ezxml/ezxml.h",
-              "line": 106
-            }
-          ]
+          "api_catalog_component": "documents:ezxml"
         },
         {
           "component": "xlsxio:expat",
@@ -163,20 +118,30 @@
           "evidence_path": "vendor/expat/lib/expat.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "XML_Parse",
-              "path": "vendor/expat/lib/expat.h",
-              "line": 697
-            }
-          ]
+          "api_catalog_component": "xlsxio:expat"
+        },
+        {
+          "component": "scientific_formats:libxml2",
+          "target": "LMX::libxml2",
+          "read_api": [
+            "xmlReadMemory"
+          ],
+          "write_api": [
+            "xmlSaveToBuffer"
+          ],
+          "evidence_path": "vendor/libxml2/include/libxml/parser.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_catalog_component": "scientific_formats:libxml2",
+          "verification_report": "extensions/scientific_netcdf/libxml2_VERIFICATION.json"
         }
       ],
-      "use_ru": "Читать XML-обмен и XML-части контейнеров; создавать XML через ezxml.",
+      "use_ru": "Читать XML-обмен и XML-части контейнеров; создавать XML через ezxml/libxml2; выполнять XPath и XML Schema validation в libxml2.",
       "limitations_ru": [
         "yxml and Expat are event parsers, not writers.",
         "ezxml constructs/modifies an in-memory tree and serializes it; representation is not a byte-preserving document editor.",
-        "Selected Expat profile enables namespace, DTD and general-entity facilities; external entity handling is application policy."
+        "Selected Expat profile enables namespace, DTD and general-entity facilities; external entity handling is application policy.",
+        "libxml2 provider is also a real dependency of the selected DAP4 build; XML reader/writer/schema facilities are subject to that provider profile."
       ],
       "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
       "build_evidence": [
@@ -205,13 +170,7 @@
           "evidence_path": "vendor/gumbo/src/gumbo.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "gumbo_parse",
-              "path": "vendor/gumbo/src/gumbo.h",
-              "line": 32
-            }
-          ]
+          "api_catalog_component": "documents:gumbo"
         },
         {
           "component": "documents:md4c",
@@ -223,19 +182,40 @@
           "evidence_path": "vendor/md4c/src/md4c-html.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "md_html",
-              "path": "vendor/md4c/src/md4c-html.h",
-              "line": 46
-            }
-          ]
+          "api_catalog_component": "documents:md4c"
+        },
+        {
+          "component": "netsurf_extra:libhubbub",
+          "target": "LMX::hubbub",
+          "read_api": [
+            "hubbub_parser_parse_chunk"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/libhubbub/include/hubbub/parser.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_catalog_component": "netsurf_extra:libhubbub",
+          "verification_report": "extensions/netsurf_extra/VERIFICATION.json"
+        },
+        {
+          "component": "netsurf_extra:libdom",
+          "target": "LMX::dom",
+          "read_api": [
+            "dom_hubbub_parser_parse_chunk"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/libdom/bindings/hubbub/parser.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_catalog_component": "netsurf_extra:libdom",
+          "verification_report": "extensions/netsurf_extra/VERIFICATION.json"
         }
       ],
       "use_ru": "Извлечь структуру и текст HTML; получить HTML из Markdown.",
       "limitations_ru": [
         "Gumbo parses an HTML tree; no CSS layout, JavaScript execution, browsing or page rendering.",
-        "md_html creates HTML from Markdown; it is not a general HTML DOM serializer."
+        "md_html creates HTML from Markdown; it is not a general HTML DOM serializer.",
+        "NetSurf HTML/DOM and CSS modules do not add a general browser application, JavaScript runtime or page-layout engine."
       ],
       "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
       "build_evidence": [
@@ -263,13 +243,7 @@
           "evidence_path": "vendor/md4c/src/md4c.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "md_parse",
-              "path": "vendor/md4c/src/md4c.h",
-              "line": 442
-            }
-          ]
+          "api_catalog_component": "documents:md4c"
         }
       ],
       "use_ru": "Разобрать технические заметки и передать события в LMX.",
@@ -303,18 +277,7 @@
           "evidence_path": "vendor/pdfgen/pdfgen.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "pdf_create",
-              "path": "vendor/pdfgen/pdfgen.h",
-              "line": 44
-            },
-            {
-              "symbol": "pdf_save",
-              "path": "vendor/pdfgen/pdfgen.h",
-              "line": 49
-            }
-          ]
+          "api_catalog_component": "documents:pdfgen"
         },
         {
           "component": "pdf_extra:pdfio",
@@ -331,7 +294,8 @@
             "pdfioStreamWrite"
           ],
           "evidence_path": "vendor/pdfio/pdfio.h",
-          "availability": "compiled"
+          "availability": "compiled",
+          "api_catalog_component": "pdf_extra:pdfio"
         }
       ],
       "use_ru": "Создать PDF, прочитать объекты/страницы/потоки, перенести страницу между файлами.",
@@ -367,18 +331,7 @@
           "evidence_path": "vendor/xlsxio/include/xlsxio_read.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "xlsxioread_open",
-              "path": "vendor/xlsxio/include/xlsxio_read.h",
-              "line": 102
-            },
-            {
-              "symbol": "xlsxiowrite_open",
-              "path": "vendor/xlsxio/include/xlsxio_write.h",
-              "line": 88
-            }
-          ]
+          "api_catalog_component": "xlsxio:xlsxio"
         }
       ],
       "use_ru": "Извлечь значения ячеек/листов и создать простой XLSX.",
@@ -413,13 +366,7 @@
           "evidence_path": "vendor/tomlc99/toml.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "toml_parse",
-              "path": "vendor/tomlc99/toml.h",
-              "line": 55
-            }
-          ]
+          "api_catalog_component": "documents:tomlc99"
         }
       ],
       "use_ru": "Прочитать существующий внешний TOML.",
@@ -456,28 +403,7 @@
           "evidence_path": "vendor/libyaml/include/yaml.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "yaml_parser_parse",
-              "path": "vendor/libyaml/include/yaml.h",
-              "line": 1398
-            },
-            {
-              "symbol": "yaml_parser_load",
-              "path": "vendor/libyaml/include/yaml.h",
-              "line": 1398
-            },
-            {
-              "symbol": "yaml_emitter_emit",
-              "path": "vendor/libyaml/include/yaml.h",
-              "line": 1956
-            },
-            {
-              "symbol": "yaml_emitter_dump",
-              "path": "vendor/libyaml/include/yaml.h",
-              "line": 1961
-            }
-          ]
+          "api_catalog_component": "documents:libyaml"
         }
       ],
       "use_ru": "Читать и создавать YAML для внешних инструментов.",
@@ -511,13 +437,21 @@
           "evidence_path": "vendor/inih/ini.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "ini_parse",
-              "path": "vendor/inih/ini.h",
-              "line": 82
-            }
-          ]
+          "api_catalog_component": "text_hash_extra:inih"
+        },
+        {
+          "component": "bundles_extra:gb",
+          "target": "LMX::gb",
+          "read_api": [
+            "gb_ini_parse",
+            "gb_ini_parse_file"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/gb/gb_ini.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_catalog_component": "bundles_extra:gb",
+          "verification_report": "extensions/bundles_extra/VERIFICATION.json"
         }
       ],
       "use_ru": "Прочитать INI прибора или внешнего приложения.",
@@ -550,18 +484,7 @@
           "evidence_path": "vendor/stb/stb_image.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "stbi_load",
-              "path": "vendor/stb/stb_image.h",
-              "line": 143
-            },
-            {
-              "symbol": "stbi_write_png",
-              "path": "vendor/stb/stb_herringbone_wang_tile.h",
-              "line": 140
-            }
-          ]
+          "api_catalog_component": "base:stb"
         },
         {
           "component": "graphics:lodepng",
@@ -575,18 +498,7 @@
           "evidence_path": "vendor/lodepng/lodepng.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "lodepng_decode32",
-              "path": "vendor/lodepng/lodepng.h",
-              "line": 156
-            },
-            {
-              "symbol": "lodepng_encode32",
-              "path": "vendor/lodepng/lodepng.h",
-              "line": 213
-            }
-          ]
+          "api_catalog_component": "graphics:lodepng"
         },
         {
           "component": "graphics:libspng",
@@ -600,18 +512,7 @@
           "evidence_path": "vendor/libspng/spng/spng.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "spng_decode_image",
-              "path": "vendor/libspng/spng/spng.h",
-              "line": 466
-            },
-            {
-              "symbol": "spng_encode_image",
-              "path": "vendor/libspng/spng/spng.h",
-              "line": 477
-            }
-          ]
+          "api_catalog_component": "graphics:libspng"
         },
         {
           "component": "graphics:tpng",
@@ -623,13 +524,22 @@
           "evidence_path": "vendor/tpng/tpng.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "tpng_get_rgba",
-              "path": "vendor/tpng/tpng.h",
-              "line": 45
-            }
-          ]
+          "api_catalog_component": "graphics:tpng"
+        },
+        {
+          "component": "bundles_extra:cute_png",
+          "target": "LMX::cute_png",
+          "read_api": [
+            "cp_load_png_mem"
+          ],
+          "write_api": [
+            "cp_save_png_to_memory"
+          ],
+          "evidence_path": "vendor/cute_headers/cute_png.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_catalog_component": "bundles_extra:cute_png",
+          "verification_report": "extensions/bundles_extra/VERIFICATION.json"
         }
       ],
       "use_ru": "Читать и создавать lossless raster images, с независимыми PNG реализациями.",
@@ -666,18 +576,7 @@
           "evidence_path": "vendor/stb/stb_image.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "stbi_load",
-              "path": "vendor/stb/stb_image.h",
-              "line": 143
-            },
-            {
-              "symbol": "stbi_write_jpg",
-              "path": "vendor/stb/stb_image_write.h",
-              "line": 50
-            }
-          ]
+          "api_catalog_component": "base:stb"
         },
         {
           "component": "graphics:tjpgdec",
@@ -690,18 +589,7 @@
           "evidence_path": "vendor/tjpgdec/src/tjpgd.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "jd_prepare",
-              "path": "vendor/tjpgdec/src/tjpgd.h",
-              "line": 94
-            },
-            {
-              "symbol": "jd_decomp",
-              "path": "vendor/tjpgdec/src/tjpgd.h",
-              "line": 95
-            }
-          ]
+          "api_catalog_component": "graphics:tjpgdec"
         },
         {
           "component": "graphics:nanojpeg",
@@ -713,13 +601,7 @@
           "evidence_path": "vendor/nanojpeg/nanojpeg.c",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "njDecode",
-              "path": "vendor/nanojpeg/nanojpeg.c",
-              "line": 116
-            }
-          ]
+          "api_catalog_component": "graphics:nanojpeg"
         }
       ],
       "use_ru": "Извлечь RGB/grayscale из фотографий и создавать baseline JPEG.",
@@ -755,18 +637,7 @@
           "evidence_path": "vendor/gifdec/gifdec.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "gd_open_gif",
-              "path": "vendor/gifdec/gifdec.h",
-              "line": 45
-            },
-            {
-              "symbol": "gd_get_frame",
-              "path": "vendor/gifdec/gifdec.h",
-              "line": 46
-            }
-          ]
+          "api_catalog_component": "graphics:gifdec"
         },
         {
           "component": "graphics:msf_gif",
@@ -780,23 +651,7 @@
           "evidence_path": "vendor/msf_gif/msf_gif.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "msf_gif_begin",
-              "path": "vendor/msf_gif/msf_gif.h",
-              "line": 18
-            },
-            {
-              "symbol": "msf_gif_frame",
-              "path": "vendor/msf_gif/msf_gif.h",
-              "line": 19
-            },
-            {
-              "symbol": "msf_gif_end",
-              "path": "vendor/msf_gif/msf_gif.h",
-              "line": 22
-            }
-          ]
+          "api_catalog_component": "graphics:msf_gif"
         },
         {
           "component": "media:jo_gif",
@@ -810,23 +665,7 @@
           "evidence_path": "vendor/jo_gif/jo_gif.cpp",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "jo_gif_start",
-              "path": "vendor/jo_gif/jo_gif.cpp",
-              "line": 11
-            },
-            {
-              "symbol": "jo_gif_frame",
-              "path": "vendor/jo_gif/jo_gif.cpp",
-              "line": 12
-            },
-            {
-              "symbol": "jo_gif_end",
-              "path": "vendor/jo_gif/jo_gif.cpp",
-              "line": 15
-            }
-          ]
+          "api_catalog_component": "media:jo_gif"
         },
         {
           "component": "base:stb",
@@ -838,13 +677,21 @@
           "evidence_path": "vendor/stb/stb_image.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "stbi_load_gif_from_memory",
-              "path": "vendor/stb/stb_image.h",
-              "line": 475
-            }
-          ]
+          "api_catalog_component": "base:stb"
+        },
+        {
+          "component": "netsurf_extra:libnsgif",
+          "target": "LMX::nsgif",
+          "read_api": [
+            "nsgif_data_scan",
+            "nsgif_frame_decode"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/libnsgif/include/nsgif.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_catalog_component": "netsurf_extra:libnsgif",
+          "verification_report": "extensions/netsurf_extra/VERIFICATION.json"
         }
       ],
       "use_ru": "Читать и создавать простую анимацию/инструкции GIF.",
@@ -881,18 +728,7 @@
           "evidence_path": "vendor/qoi/qoi.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "qoi_decode",
-              "path": "vendor/qoi/qoi.h",
-              "line": 45
-            },
-            {
-              "symbol": "qoi_encode",
-              "path": "vendor/qoi/qoi.h",
-              "line": 47
-            }
-          ]
+          "api_catalog_component": "graphics:qoi"
         }
       ],
       "use_ru": "Простой компактный кодек RGB/RGBA.",
@@ -928,18 +764,7 @@
           "evidence_path": "vendor/libwebp/src/webp/decode.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "WebPDecodeRGBA",
-              "path": "vendor/libwebp/src/webp/decode.h",
-              "line": 61
-            },
-            {
-              "symbol": "WebPEncodeRGBA",
-              "path": "vendor/libwebp/src/webp/encode.h",
-              "line": 57
-            }
-          ]
+          "api_catalog_component": "media:libwebp"
         },
         {
           "component": "media:libwebp",
@@ -952,18 +777,7 @@
           "evidence_path": "vendor/libwebp/src/webp/demux.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "WebPDemux",
-              "path": "vendor/libwebp/src/webp/demux.h",
-              "line": 16
-            },
-            {
-              "symbol": "WebPAnimDecoderNew",
-              "path": "vendor/libwebp/src/webp/demux.h",
-              "line": 234
-            }
-          ]
+          "api_catalog_component": "media:libwebp"
         },
         {
           "component": "media:libwebp",
@@ -976,18 +790,7 @@
           "evidence_path": "vendor/libwebp/src/webp/mux.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "WebPMuxNew",
-              "path": "vendor/libwebp/src/webp/mux.h",
-              "line": 37
-            },
-            {
-              "symbol": "WebPAnimEncoderNew",
-              "path": "vendor/libwebp/src/webp/mux.h",
-              "line": 414
-            }
-          ]
+          "api_catalog_component": "media:libwebp"
         }
       ],
       "use_ru": "Читать и создавать WebP и собирать/разбирать анимированный контейнер.",
@@ -1028,33 +831,23 @@
           "evidence_path": "vendor/stb/stb_image.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "stbi_load",
-              "path": "vendor/stb/stb_image.h",
-              "line": 143
-            },
-            {
-              "symbol": "stbi_loadf",
-              "path": "vendor/stb/stb_image.h",
-              "line": 306
-            },
-            {
-              "symbol": "stbi_write_bmp",
-              "path": "vendor/stb/stb_image_write.h",
-              "line": 48
-            },
-            {
-              "symbol": "stbi_write_tga",
-              "path": "vendor/stb/stb_image_write.h",
-              "line": 49
-            },
-            {
-              "symbol": "stbi_write_hdr",
-              "path": "vendor/stb/stb_image_write.h",
-              "line": 51
-            }
-          ]
+          "api_catalog_component": "base:stb"
+        },
+        {
+          "component": "netsurf_extra:libnsbmp",
+          "target": "LMX::nsbmp",
+          "read_api": [
+            "bmp_analyse",
+            "bmp_decode"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/libnsbmp/include/libnsbmp.h",
+          "availability": "compiled",
+          "formats": [
+            "BMP"
+          ],
+          "api_catalog_component": "netsurf_extra:libnsbmp",
+          "verification_report": "extensions/netsurf_extra/VERIFICATION.json"
         }
       ],
       "use_ru": "Читать и писать простые растровые форматы.",
@@ -1087,13 +880,7 @@
           "evidence_path": "vendor/stb/stb_image.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "stbi_load",
-              "path": "vendor/stb/stb_image.h",
-              "line": 143
-            }
-          ]
+          "api_catalog_component": "base:stb"
         }
       ],
       "use_ru": "Извлечь итоговое растровое изображение из старых файлов.",
@@ -1127,18 +914,7 @@
           "evidence_path": "vendor/stb/stb_truetype.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "stbtt_InitFont",
-              "path": "vendor/stb/stb_truetype.h",
-              "line": 120
-            },
-            {
-              "symbol": "stbtt_GetCodepointBitmap",
-              "path": "vendor/stb/stb_truetype.h",
-              "line": 125
-            }
-          ]
+          "api_catalog_component": "base:stb"
         }
       ],
       "use_ru": "Прочитать метрики/контуры и растеризовать glyphs.",
@@ -1174,23 +950,7 @@
           "evidence_path": "vendor/stb/stb_dxt.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "stb_compress_dxt_block",
-              "path": "vendor/stb/stb_dxt.h",
-              "line": 6
-            },
-            {
-              "symbol": "stb_compress_bc4_block",
-              "path": "vendor/stb/stb_dxt.h",
-              "line": 60
-            },
-            {
-              "symbol": "stb_compress_bc5_block",
-              "path": "vendor/stb/stb_dxt.h",
-              "line": 61
-            }
-          ]
+          "api_catalog_component": "base:stb"
         }
       ],
       "use_ru": "Создать сжатые texture blocks для внешнего потребителя.",
@@ -1226,28 +986,7 @@
           "evidence_path": "vendor/dr_libs/dr_wav.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "drwav_init_file",
-              "path": "vendor/dr_libs/dr_wav.h",
-              "line": 24
-            },
-            {
-              "symbol": "drwav_read_pcm_frames_f32",
-              "path": "vendor/dr_libs/dr_wav.h",
-              "line": 92
-            },
-            {
-              "symbol": "drwav_init_file_write",
-              "path": "vendor/dr_libs/dr_wav.h",
-              "line": 66
-            },
-            {
-              "symbol": "drwav_write_pcm_frames",
-              "path": "vendor/dr_libs/dr_wav.h",
-              "line": 66
-            }
-          ]
+          "api_catalog_component": "media:dr_wav"
         },
         {
           "component": "media:miniaudio",
@@ -1263,24 +1002,30 @@
           "formats": [
             "WAV"
           ],
-          "api_evidence": [
-            {
-              "symbol": "ma_decoder_init_file",
-              "path": "vendor/miniaudio/miniaudio.h",
-              "line": 2523
-            },
-            {
-              "symbol": "ma_encoder_init_file",
-              "path": "vendor/miniaudio/miniaudio.h",
-              "line": 2669
-            }
-          ]
+          "api_catalog_component": "media:miniaudio"
+        },
+        {
+          "component": "bundles_extra:cute_sound",
+          "target": "LMX::cute_sound",
+          "read_api": [
+            "cs_read_mem_wav",
+            "cs_load_wav"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/cute_headers/cute_sound.h",
+          "availability": "compiled",
+          "formats": [
+            "PCM/IEEE-float WAV mono/stereo"
+          ],
+          "api_catalog_component": "bundles_extra:cute_sound",
+          "verification_report": "extensions/bundles_extra/VERIFICATION.json"
         }
       ],
       "use_ru": "Читать PCM и некоторые WAV encodings, создавать звуковые записи WAV.",
       "limitations_ru": [
         "dr_wav writer does not encode compressed WAV formats.",
-        "miniaudio encoder supports WAV only; format enums or custom backend hooks do not imply built-in MP3/FLAC encoders."
+        "miniaudio encoder supports WAV only; format enums or custom backend hooks do not imply built-in MP3/FLAC encoders.",
+        "cute_sound profile supplies a WAV reader and SDL3 scalar playback, not a WAV writer; its focused runtime test uses PCM16 and SDL dummy audio."
       ],
       "verification": "Source/header/CMake audit; no new comprehensive format-conformance test suite executed for this matrix.",
       "build_evidence": [
@@ -1309,13 +1054,7 @@
           "evidence_path": "vendor/dr_libs/dr_wav.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "drwav_init_file",
-              "path": "vendor/dr_libs/dr_wav.h",
-              "line": 24
-            }
-          ]
+          "api_catalog_component": "media:dr_wav"
         }
       ],
       "use_ru": "Извлечь аудиоданные из big-endian старых файлов.",
@@ -1350,18 +1089,7 @@
           "evidence_path": "vendor/dr_libs/dr_mp3.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "drmp3_init_file",
-              "path": "vendor/dr_libs/dr_mp3.h",
-              "line": 26
-            },
-            {
-              "symbol": "drmp3_read_pcm_frames_f32",
-              "path": "vendor/dr_libs/dr_mp3.h",
-              "line": 32
-            }
-          ]
+          "api_catalog_component": "media:dr_mp3"
         },
         {
           "component": "media:minimp3",
@@ -1373,13 +1101,7 @@
           "evidence_path": "vendor/minimp3/minimp3.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "mp3dec_decode_frame",
-              "path": "vendor/minimp3/minimp3.h",
-              "line": 36
-            }
-          ]
+          "api_catalog_component": "media:minimp3"
         },
         {
           "component": "media:miniaudio",
@@ -1391,13 +1113,7 @@
           "evidence_path": "vendor/miniaudio/miniaudio.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "ma_decoder_init_file",
-              "path": "vendor/miniaudio/miniaudio.h",
-              "line": 2523
-            }
-          ]
+          "api_catalog_component": "media:miniaudio"
         }
       ],
       "use_ru": "Превратить MP3 в PCM.",
@@ -1432,18 +1148,7 @@
           "evidence_path": "vendor/dr_libs/dr_flac.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "drflac_open_file",
-              "path": "vendor/dr_libs/dr_flac.h",
-              "line": 23
-            },
-            {
-              "symbol": "drflac_read_pcm_frames_s32",
-              "path": "vendor/dr_libs/dr_flac.h",
-              "line": 29
-            }
-          ]
+          "api_catalog_component": "media:dr_flac"
         },
         {
           "component": "media:miniaudio",
@@ -1457,13 +1162,7 @@
           "formats": [
             "native FLAC"
           ],
-          "api_evidence": [
-            {
-              "symbol": "ma_decoder_init_file",
-              "path": "vendor/miniaudio/miniaudio.h",
-              "line": 2523
-            }
-          ]
+          "api_catalog_component": "media:miniaudio"
         }
       ],
       "use_ru": "Извлечь lossless PCM и поддерживаемые metadata.",
@@ -1498,18 +1197,7 @@
           "evidence_path": "vendor/stb/stb_vorbis.c",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "stb_vorbis_open_filename",
-              "path": "vendor/stb/stb_vorbis.c",
-              "line": 306
-            },
-            {
-              "symbol": "stb_vorbis_decode_filename",
-              "path": "vendor/stb/stb_vorbis.c",
-              "line": 290
-            }
-          ]
+          "api_catalog_component": "base:stb"
         }
       ],
       "use_ru": "Прочитать Ogg Vorbis.",
@@ -1539,13 +1227,7 @@
           "evidence_path": "vendor/jo_mp1/jo_mp1.cpp",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "jo_read_mp1",
-              "path": "vendor/jo_mp1/jo_mp1.cpp",
-              "line": 9
-            }
-          ]
+          "api_catalog_component": "media:jo_mp1"
         }
       ],
       "use_ru": "Декодировать старые MPEG Layer I потоки.",
@@ -1578,13 +1260,7 @@
           "evidence_path": "vendor/pl_mpeg/pl_mpeg.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "plm_audio_decode",
-              "path": "vendor/pl_mpeg/pl_mpeg.h",
-              "line": 805
-            }
-          ]
+          "api_catalog_component": "media:pl_mpeg"
         }
       ],
       "use_ru": "Декодировать MP2 audio из MPEG-PS или elementary stream.",
@@ -1618,18 +1294,7 @@
           "evidence_path": "vendor/tinysoundfont/tsf.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "tsf_load_filename",
-              "path": "vendor/tinysoundfont/tsf.h",
-              "line": 65
-            },
-            {
-              "symbol": "tsf_render_float",
-              "path": "vendor/tinysoundfont/tsf.h",
-              "line": 191
-            }
-          ]
+          "api_catalog_component": "media:TinySoundFont"
         }
       ],
       "use_ru": "Использовать сохранённый банк инструментов и синтезировать звук.",
@@ -1663,13 +1328,7 @@
           "evidence_path": "vendor/tinysoundfont/tml.h",
           "availability": "retained_source_only",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "tml_load_filename",
-              "path": "vendor/tinysoundfont/tml.h",
-              "line": 117
-            }
-          ]
+          "api_catalog_component": "media:TinySoundFont"
         }
       ],
       "use_ru": "Исходный задел для MIDI reader, не готовый compiled API.",
@@ -1703,13 +1362,7 @@
           "evidence_path": "vendor/pl_mpeg/pl_mpeg.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "plm_video_decode",
-              "path": "vendor/pl_mpeg/pl_mpeg.h",
-              "line": 735
-            }
-          ]
+          "api_catalog_component": "media:pl_mpeg"
         },
         {
           "component": "media:jo_mpeg",
@@ -1721,13 +1374,7 @@
           "evidence_path": "vendor/jo_mpeg/jo_mpeg.cpp",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "jo_write_mpeg",
-              "path": "vendor/jo_mpeg/jo_mpeg.cpp",
-              "line": 16
-            }
-          ]
+          "api_catalog_component": "media:jo_mpeg"
         }
       ],
       "use_ru": "Декодировать MPEG-1 и создавать простые video sequences.",
@@ -1761,13 +1408,7 @@
           "evidence_path": "vendor/pl_mpeg/pl_mpeg.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "plm_demux_decode",
-              "path": "vendor/pl_mpeg/pl_mpeg.h",
-              "line": 665
-            }
-          ]
+          "api_catalog_component": "media:pl_mpeg"
         }
       ],
       "use_ru": "Извлечь video/audio packets и декодировать поддерживаемые streams.",
@@ -1801,13 +1442,7 @@
           "evidence_path": "vendor/h264bsd/src/h264bsd_decoder.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "h264bsdDecode",
-              "path": "vendor/h264bsd/src/h264bsd_decoder.h",
-              "line": 65
-            }
-          ]
+          "api_catalog_component": "media:h264bsd"
         },
         {
           "component": "media:minih264",
@@ -1819,13 +1454,7 @@
           "evidence_path": "vendor/minih264/minih264e.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "H264E_encode",
-              "path": "vendor/minih264/minih264e.h",
-              "line": 291
-            }
-          ]
+          "api_catalog_component": "media:minih264"
         }
       ],
       "use_ru": "Читать поддерживаемый H.264 и кодировать raw YUV frames.",
@@ -1861,18 +1490,7 @@
           "evidence_path": "vendor/nestegg/include/nestegg/nestegg.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "nestegg_init",
-              "path": "vendor/nestegg/include/nestegg/nestegg.h",
-              "line": 30
-            },
-            {
-              "symbol": "nestegg_read_packet",
-              "path": "vendor/nestegg/include/nestegg/nestegg.h",
-              "line": 33
-            }
-          ]
+          "api_catalog_component": "media:nestegg"
         }
       ],
       "use_ru": "Извлечь дорожки и compressed packets из поддерживаемого WebM.",
@@ -1908,18 +1526,7 @@
           "evidence_path": "vendor/miniz/miniz_zip.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "mz_zip_reader_init_file",
-              "path": "vendor/miniz/miniz_zip.h",
-              "line": 223
-            },
-            {
-              "symbol": "mz_zip_writer_init_file",
-              "path": "vendor/miniz/miniz_zip.h",
-              "line": 369
-            }
-          ]
+          "api_catalog_component": "systems:miniz"
         },
         {
           "component": "archives:kuba_zip",
@@ -1934,23 +1541,7 @@
           "evidence_path": "vendor/kuba_zip/src/zip.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "zip_open",
-              "path": "vendor/kuba_zip/src/zip.h",
-              "line": 159
-            },
-            {
-              "symbol": "zip_entry_read",
-              "path": "vendor/kuba_zip/src/zip.h",
-              "line": 433
-            },
-            {
-              "symbol": "zip_entry_write",
-              "path": "vendor/kuba_zip/src/zip.h",
-              "line": 401
-            }
-          ]
+          "api_catalog_component": "archives:kuba_zip"
         },
         {
           "component": "xlsxio:minizip",
@@ -1964,18 +1555,7 @@
           "evidence_path": "vendor/zlib/contrib/minizip/unzip.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "unzOpen",
-              "path": "vendor/zlib/contrib/minizip/unzip.h",
-              "line": 167
-            },
-            {
-              "symbol": "zipOpen",
-              "path": "vendor/zlib/contrib/minizip/zip.h",
-              "line": 117
-            }
-          ]
+          "api_catalog_component": "xlsxio:minizip"
         }
       ],
       "use_ru": "Извлечь и создать ZIP, в том числе для OOXML packages.",
@@ -2015,28 +1595,7 @@
           "evidence_path": "vendor/microtar/src/microtar.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "mtar_read_header",
-              "path": "vendor/microtar/src/microtar.h",
-              "line": 72
-            },
-            {
-              "symbol": "mtar_read_data",
-              "path": "vendor/microtar/src/microtar.h",
-              "line": 73
-            },
-            {
-              "symbol": "mtar_write_header",
-              "path": "vendor/microtar/src/microtar.h",
-              "line": 75
-            },
-            {
-              "symbol": "mtar_write_data",
-              "path": "vendor/microtar/src/microtar.h",
-              "line": 78
-            }
-          ]
+          "api_catalog_component": "systems:microtar"
         }
       ],
       "use_ru": "Извлечь и создать простой tar archive.",
@@ -2073,28 +1632,7 @@
           "evidence_path": "vendor/zlib/zlib.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "inflate",
-              "path": "vendor/zlib/zlib.h",
-              "line": 107
-            },
-            {
-              "symbol": "gzread",
-              "path": "vendor/zlib/zlib.h",
-              "line": 895
-            },
-            {
-              "symbol": "deflate",
-              "path": "vendor/zlib/zlib.h",
-              "line": 28
-            },
-            {
-              "symbol": "gzwrite",
-              "path": "vendor/zlib/zlib.h",
-              "line": 1526
-            }
-          ]
+          "api_catalog_component": "base:zlib"
         },
         {
           "component": "systems:miniz",
@@ -2111,18 +1649,7 @@
             "raw DEFLATE",
             "zlib stream"
           ],
-          "api_evidence": [
-            {
-              "symbol": "mz_inflate",
-              "path": "vendor/miniz/miniz.h",
-              "line": 434
-            },
-            {
-              "symbol": "mz_deflate",
-              "path": "vendor/miniz/miniz.h",
-              "line": 369
-            }
-          ]
+          "api_catalog_component": "systems:miniz"
         }
       ],
       "use_ru": "Распаковывать и создавать standard compressed streams.",
@@ -2156,18 +1683,7 @@
           "evidence_path": "vendor/lz4/lib/lz4.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "LZ4_decompress_safe",
-              "path": "vendor/lz4/lib/lz4.h",
-              "line": 67
-            },
-            {
-              "symbol": "LZ4_compress_default",
-              "path": "vendor/lz4/lib/lz4.h",
-              "line": 181
-            }
-          ]
+          "api_catalog_component": "systems:lz4"
         },
         {
           "component": "systems:lz4",
@@ -2181,18 +1697,7 @@
           "evidence_path": "vendor/lz4/lib/lz4frame.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "LZ4F_decompress",
-              "path": "vendor/lz4/lib/lz4frame.h",
-              "line": 525
-            },
-            {
-              "symbol": "LZ4F_compressFrame",
-              "path": "vendor/lz4/lib/lz4frame.h",
-              "line": 241
-            }
-          ]
+          "api_catalog_component": "systems:lz4"
         }
       ],
       "use_ru": "Быстрое сжатие/распаковка block и framed data.",
@@ -2224,18 +1729,7 @@
           "evidence_path": "vendor/zstd/lib/zstd.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "ZSTD_decompress",
-              "path": "vendor/zstd/lib/zstd.h",
-              "line": 164
-            },
-            {
-              "symbol": "ZSTD_compress",
-              "path": "vendor/zstd/lib/zstd.h",
-              "line": 154
-            }
-          ]
+          "api_catalog_component": "archives:zstd"
         }
       ],
       "use_ru": "Читать и создавать zstd streams и использовать словари.",
@@ -2272,18 +1766,7 @@
           "evidence_path": "vendor/lzma_sdk/C/7z.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "SzArEx_Open",
-              "path": "vendor/lzma_sdk/C/7z.h",
-              "line": 189
-            },
-            {
-              "symbol": "SzArEx_Extract",
-              "path": "vendor/lzma_sdk/C/7z.h",
-              "line": 156
-            }
-          ]
+          "api_catalog_component": "archives:lzma_sdk"
         },
         {
           "component": "archives:lzma_sdk",
@@ -2295,13 +1778,7 @@
           "evidence_path": "vendor/lzma_sdk/C/LzmaDec.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "LzmaDecode",
-              "path": "vendor/lzma_sdk/C/LzmaDec.h",
-              "line": 211
-            }
-          ]
+          "api_catalog_component": "archives:lzma_sdk"
         }
       ],
       "use_ru": "Извлечь поддерживаемые 7z и декодировать raw LZMA/LZMA2.",
@@ -2337,18 +1814,7 @@
           "evidence_path": "vendor/heatshrink/heatshrink_encoder.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "heatshrink_decoder_sink",
-              "path": "vendor/heatshrink/heatshrink_decoder.h",
-              "line": 87
-            },
-            {
-              "symbol": "heatshrink_encoder_sink",
-              "path": "vendor/heatshrink/heatshrink_encoder.h",
-              "line": 96
-            }
-          ]
+          "api_catalog_component": "storage_extra:heatshrink"
         }
       ],
       "use_ru": "Компактный streaming codec для малой памяти.",
@@ -2384,18 +1850,7 @@
           "evidence_path": "vendor/cmp/cmp.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "cmp_read_object",
-              "path": "vendor/cmp/cmp.h",
-              "line": 324
-            },
-            {
-              "symbol": "cmp_write_object",
-              "path": "vendor/cmp/cmp.h",
-              "line": 237
-            }
-          ]
+          "api_catalog_component": "archives:cmp"
         },
         {
           "component": "archives:mpack",
@@ -2409,18 +1864,7 @@
           "evidence_path": "vendor/mpack/src/mpack/mpack.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "mpack_read_tag",
-              "path": "vendor/mpack/src/mpack/mpack-reader.h",
-              "line": 270
-            },
-            {
-              "symbol": "mpack_write_tag",
-              "path": "vendor/mpack/src/mpack/mpack-writer.h",
-              "line": 548
-            }
-          ]
+          "api_catalog_component": "archives:mpack"
         }
       ],
       "use_ru": "Читать и создавать typed MessagePack с двумя API.",
@@ -2455,18 +1899,7 @@
           "evidence_path": "vendor/nanopb/pb_decode.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "pb_decode",
-              "path": "vendor/nanopb/pb_decode.h",
-              "line": 1
-            },
-            {
-              "symbol": "pb_encode",
-              "path": "vendor/nanopb/pb.h",
-              "line": 2
-            }
-          ]
+          "api_catalog_component": "archives:nanopb"
         }
       ],
       "use_ru": "Обмен данными с schema-defined devices/services.",
@@ -2502,18 +1935,7 @@
           "evidence_path": "vendor/qcbor/inc/qcbor/qcbor_decode.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "QCBORDecode_GetNext",
-              "path": "vendor/qcbor/inc/qcbor/qcbor_decode.h",
-              "line": 66
-            },
-            {
-              "symbol": "QCBOREncode_Finish",
-              "path": "vendor/qcbor/inc/qcbor/qcbor_encode.h",
-              "line": 190
-            }
-          ]
+          "api_catalog_component": "storage_extra:qcbor"
         },
         {
           "component": "storage_extra:tinycbor",
@@ -2527,18 +1949,7 @@
           "evidence_path": "vendor/tinycbor/src/cbor.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "cbor_parser_init",
-              "path": "vendor/tinycbor/src/cbor.h",
-              "line": 355
-            },
-            {
-              "symbol": "cbor_encoder_init",
-              "path": "vendor/tinycbor/src/cbor.h",
-              "line": 241
-            }
-          ]
+          "api_catalog_component": "storage_extra:tinycbor"
         }
       ],
       "use_ru": "Читать и создавать self-describing typed binary values.",
@@ -2577,28 +1988,7 @@
           "evidence_path": "vendor/mongo_c_driver/src/libbson/src/bson/bson.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "bson_new_from_data",
-              "path": "vendor/mongo_c_driver/src/libbson/src/bson/bson.h",
-              "line": 222
-            },
-            {
-              "symbol": "bson_new_from_json",
-              "path": "vendor/mongo_c_driver/src/libbson/src/bson/bson.h",
-              "line": 168
-            },
-            {
-              "symbol": "bson_append_int32",
-              "path": "vendor/mongo_c_driver/src/libbson/src/bson/bson.h",
-              "line": 122
-            },
-            {
-              "symbol": "bson_as_canonical_extended_json",
-              "path": "vendor/mongo_c_driver/src/libbson/src/bson/bson.h",
-              "line": 478
-            }
-          ]
+          "api_catalog_component": "databases:mongo_c_driver"
         }
       ],
       "use_ru": "Извлечь и создать BSON documents, преобразовать поддерживаемый Extended JSON.",
@@ -2633,23 +2023,7 @@
           "evidence_path": "vendor/cgltf/cgltf.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "cgltf_parse",
-              "path": "vendor/cgltf/cgltf.h",
-              "line": 17
-            },
-            {
-              "symbol": "cgltf_load_buffers",
-              "path": "vendor/cgltf/cgltf.h",
-              "line": 37
-            },
-            {
-              "symbol": "cgltf_write_file",
-              "path": "vendor/cgltf/cgltf_write.h",
-              "line": 17
-            }
-          ]
+          "api_catalog_component": "documents:cgltf"
         }
       ],
       "use_ru": "Прочитать scene/mesh/material metadata и buffers; создать glTF/GLB.",
@@ -2685,13 +2059,7 @@
           "evidence_path": "vendor/fast_obj/fast_obj.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "fast_obj_read",
-              "path": "vendor/fast_obj/fast_obj.h",
-              "line": 175
-            }
-          ]
+          "api_catalog_component": "documents:fast_obj"
         }
       ],
       "use_ru": "Извлечь mesh geometry, indices и material references.",
@@ -2731,38 +2099,7 @@
           "evidence_path": "vendor/shapelib/shapefil.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "SHPOpen",
-              "path": "vendor/shapelib/shapefil.h",
-              "line": 273
-            },
-            {
-              "symbol": "SHPReadObject",
-              "path": "vendor/shapelib/shapefil.h",
-              "line": 286
-            },
-            {
-              "symbol": "DBFOpen",
-              "path": "vendor/shapelib/shapefil.h",
-              "line": 491
-            },
-            {
-              "symbol": "SHPCreate",
-              "path": "vendor/shapelib/shapefil.h",
-              "line": 292
-            },
-            {
-              "symbol": "SHPWriteObject",
-              "path": "vendor/shapelib/shapefil.h",
-              "line": 300
-            },
-            {
-              "symbol": "DBFWriteStringAttribute",
-              "path": "vendor/shapelib/shapefil.h",
-              "line": 544
-            }
-          ]
+          "api_catalog_component": "geospatial:shapelib"
         }
       ],
       "use_ru": "Читать и создавать vector geometry и attribute tables.",
@@ -2794,18 +2131,7 @@
           "evidence_path": "vendor/minmea/minmea.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "minmea_parse_rmc",
-              "path": "vendor/minmea/minmea.h",
-              "line": 244
-            },
-            {
-              "symbol": "minmea_parse_gga",
-              "path": "vendor/minmea/minmea.h",
-              "line": 245
-            }
-          ]
+          "api_catalog_component": "geospatial:minmea"
         }
       ],
       "use_ru": "Извлечь GPS positions, time, satellites and navigation readings.",
@@ -2835,13 +2161,7 @@
           "evidence_path": "vendor/sgp4/src/c/TLE.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "parseLines",
-              "path": "vendor/sgp4/src/c/TLE.h",
-              "line": 28
-            }
-          ]
+          "api_catalog_component": "orbits:sgp4"
         }
       ],
       "use_ru": "Прочитать сохранённые TLE и вычислить orbital states.",
@@ -2872,13 +2192,7 @@
           "evidence_path": "vendor/klib/kseq.h",
           "availability": "header_instantiation",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "kseq_read",
-              "path": "vendor/klib/kseq.h",
-              "line": 178
-            }
-          ]
+          "api_catalog_component": "base:klib"
         }
       ],
       "use_ru": "Задел для последовательностей и quality scores; требуется C instantiation.",
@@ -2911,18 +2225,7 @@
           "evidence_path": "vendor/klib/bgzf.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "bgzf_read",
-              "path": "vendor/klib/bgzf.h",
-              "line": 102
-            },
-            {
-              "symbol": "bgzf_write",
-              "path": "vendor/klib/bgzf.h",
-              "line": 112
-            }
-          ]
+          "api_catalog_component": "base:klib"
         }
       ],
       "use_ru": "Читать и писать seekable blocked gzip для bioinformatics data.",
@@ -2955,18 +2258,7 @@
           "evidence_path": "vendor/klib/knhx.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "kn_parse",
-              "path": "vendor/klib/knhx.h",
-              "line": 28
-            },
-            {
-              "symbol": "kn_format",
-              "path": "vendor/klib/knhx.h",
-              "line": 29
-            }
-          ]
+          "api_catalog_component": "base:klib"
         }
       ],
       "use_ru": "Прочитать и сформировать phylogenetic tree notation.",
@@ -3000,28 +2292,7 @@
           "evidence_path": "vendor/sqlite3/sqlite3.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "sqlite3_open",
-              "path": "vendor/sqlite3/sqlite3.h",
-              "line": 267
-            },
-            {
-              "symbol": "sqlite3_prepare_v2",
-              "path": "vendor/sqlite3/sqlite3.h",
-              "line": 271
-            },
-            {
-              "symbol": "sqlite3_step",
-              "path": "vendor/sqlite3/sqlite3.h",
-              "line": 371
-            },
-            {
-              "symbol": "sqlite3_backup_init",
-              "path": "vendor/sqlite3/sqlite3.h",
-              "line": 9633
-            }
-          ]
+          "api_catalog_component": "base:sqlite3"
         }
       ],
       "use_ru": "Открыть внешний SQLite archive, извлечь rows и создать/backup database.",
@@ -3056,28 +2327,7 @@
           "evidence_path": "vendor/flashdb/inc/flashdb.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "fdb_kv_get_blob",
-              "path": "vendor/flashdb/inc/flashdb.h",
-              "line": 52
-            },
-            {
-              "symbol": "fdb_tsl_iter",
-              "path": "vendor/flashdb/inc/flashdb.h",
-              "line": 64
-            },
-            {
-              "symbol": "fdb_kv_set_blob",
-              "path": "vendor/flashdb/inc/flashdb.h",
-              "line": 51
-            },
-            {
-              "symbol": "fdb_tsl_append",
-              "path": "vendor/flashdb/inc/flashdb.h",
-              "line": 62
-            }
-          ]
+          "api_catalog_component": "storage_extra:flashdb"
         }
       ],
       "use_ru": "Читать и создавать sector journals/blobs/records в формате FlashDB.",
@@ -3119,28 +2369,7 @@
           "evidence_path": "vendor/fatfs/source/ff.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "f_mount",
-              "path": "vendor/fatfs/source/ff.h",
-              "line": 349
-            },
-            {
-              "symbol": "f_read",
-              "path": "vendor/fatfs/source/ff.h",
-              "line": 325
-            },
-            {
-              "symbol": "f_write",
-              "path": "vendor/fatfs/source/ff.h",
-              "line": 326
-            },
-            {
-              "symbol": "f_mkfs",
-              "path": "vendor/fatfs/source/ff.h",
-              "line": 279
-            }
-          ]
+          "api_catalog_component": "storage_extra:fatfs"
         }
       ],
       "use_ru": "Открыть, создать и изменять файлы на совместимых block media.",
@@ -3179,28 +2408,7 @@
           "evidence_path": "vendor/littlefs/lfs.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "lfs_mount",
-              "path": "vendor/littlefs/lfs.h",
-              "line": 495
-            },
-            {
-              "symbol": "lfs_file_read",
-              "path": "vendor/littlefs/lfs.h",
-              "line": 614
-            },
-            {
-              "symbol": "lfs_format",
-              "path": "vendor/littlefs/lfs.h",
-              "line": 484
-            },
-            {
-              "symbol": "lfs_file_write",
-              "path": "vendor/littlefs/lfs.h",
-              "line": 624
-            }
-          ]
+          "api_catalog_component": "storage_extra:littlefs"
         }
       ],
       "use_ru": "Доступ к hierarchical filesystem на NOR-like flash.",
@@ -3238,28 +2446,7 @@
           "evidence_path": "vendor/spiffs/src/spiffs.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "SPIFFS_mount",
-              "path": "vendor/spiffs/src/spiffs.h",
-              "line": 391
-            },
-            {
-              "symbol": "SPIFFS_read",
-              "path": "vendor/spiffs/src/spiffs.h",
-              "line": 461
-            },
-            {
-              "symbol": "SPIFFS_format",
-              "path": "vendor/spiffs/src/spiffs.h",
-              "line": 380
-            },
-            {
-              "symbol": "SPIFFS_write",
-              "path": "vendor/spiffs/src/spiffs.h",
-              "line": 471
-            }
-          ]
+          "api_catalog_component": "storage_extra:spiffs"
         }
       ],
       "use_ru": "Независимый доступ к flat flash filesystem, включая consistency check.",
@@ -3293,13 +2480,7 @@
           "evidence_path": "vendor/quirc/lib/quirc.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "quirc_decode",
-              "path": "vendor/quirc/lib/quirc.h",
-              "line": 168
-            }
-          ]
+          "api_catalog_component": "extras:quirc"
         },
         {
           "component": "extras:qrcodegen",
@@ -3312,18 +2493,7 @@
           "evidence_path": "vendor/qrcodegen/c/qrcodegen.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "qrcodegen_encodeBinary",
-              "path": "vendor/qrcodegen/c/qrcodegen.h",
-              "line": 45
-            },
-            {
-              "symbol": "qrcodegen_encodeText",
-              "path": "vendor/qrcodegen/c/qrcodegen.h",
-              "line": 45
-            }
-          ]
+          "api_catalog_component": "extras:qrcodegen"
         }
       ],
       "use_ru": "Прочитать QR с изображения и создать QR matrix.",
@@ -3358,18 +2528,7 @@
           "evidence_path": "vendor/mbedtls/include/mbedtls/x509_crt.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "mbedtls_x509_crt_parse",
-              "path": "vendor/mbedtls/include/mbedtls/x509_crt.h",
-              "line": 529
-            },
-            {
-              "symbol": "mbedtls_x509write_crt_pem",
-              "path": "vendor/mbedtls/include/mbedtls/x509_crt.h",
-              "line": 1196
-            }
-          ]
+          "api_catalog_component": "base:mbedtls"
         },
         {
           "component": "base:mbedtls",
@@ -3383,18 +2542,7 @@
           "evidence_path": "vendor/mbedtls/include/mbedtls/pk.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "mbedtls_pk_parse_key",
-              "path": "vendor/mbedtls/include/mbedtls/pk.h",
-              "line": 1116
-            },
-            {
-              "symbol": "mbedtls_pk_write_key_pem",
-              "path": "vendor/mbedtls/include/mbedtls/pk.h",
-              "line": 1260
-            }
-          ]
+          "api_catalog_component": "base:mbedtls"
         }
       ],
       "use_ru": "Прочитать сертификаты/ключи локальной инфраструктуры и сформировать поддерживаемые DER/PEM objects.",
@@ -3430,28 +2578,7 @@
           "evidence_path": "vendor/tinyspline/src/tinyspline.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "ts_bspline_parse_json",
-              "path": "vendor/tinyspline/src/tinyspline.h",
-              "line": 2572
-            },
-            {
-              "symbol": "ts_bspline_load",
-              "path": "vendor/tinyspline/src/tinyspline.h",
-              "line": 2629
-            },
-            {
-              "symbol": "ts_bspline_to_json",
-              "path": "vendor/tinyspline/src/tinyspline.h",
-              "line": 2538
-            },
-            {
-              "symbol": "ts_bspline_save",
-              "path": "vendor/tinyspline/src/tinyspline.h",
-              "line": 2593
-            }
-          ]
+          "api_catalog_component": "base:tinyspline"
         }
       ],
       "use_ru": "Обмен control points, knots, degree и другими spline parameters.",
@@ -3487,18 +2614,7 @@
           "formats": [
             "Genann text model"
           ],
-          "api_evidence": [
-            {
-              "symbol": "genann_read",
-              "path": "vendor/genann/genann.h",
-              "line": 77
-            },
-            {
-              "symbol": "genann_write",
-              "path": "vendor/genann/genann.h",
-              "line": 76
-            }
-          ]
+          "api_catalog_component": "genann:genann"
         },
         {
           "component": "kann:kann",
@@ -3514,18 +2630,7 @@
           "formats": [
             "KANN native model"
           ],
-          "api_evidence": [
-            {
-              "symbol": "kann_load",
-              "path": "vendor/kann/kann.h",
-              "line": 243
-            },
-            {
-              "symbol": "kann_save",
-              "path": "vendor/kann/kann.h",
-              "line": 241
-            }
-          ]
+          "api_catalog_component": "kann:kann"
         },
         {
           "component": "micro_mlp:tinn",
@@ -3541,18 +2646,7 @@
           "formats": [
             "Tinn native model"
           ],
-          "api_evidence": [
-            {
-              "symbol": "xtload",
-              "path": "vendor/tinn/Tinn.h",
-              "line": 36
-            },
-            {
-              "symbol": "xtsave",
-              "path": "vendor/tinn/Tinn.h",
-              "line": 34
-            }
-          ]
+          "api_catalog_component": "micro_mlp:tinn"
         }
       ],
       "use_ru": "Сохранить или восстановить небольшой model именно соответствующей библиотеки.",
@@ -3583,13 +2677,7 @@
           "evidence_path": "vendor/mint/mint.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "mt_model_load",
-              "path": "vendor/mint/mint.h",
-              "line": 381
-            }
-          ]
+          "api_catalog_component": "tensors:mint"
         }
       ],
       "use_ru": "Прочитать уже подготовленный model artifact Mint.",
@@ -3624,23 +2712,7 @@
           "evidence_path": "vendor/libtiff/libtiff/tiffio.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "TIFFOpen",
-              "path": "vendor/libtiff/libtiff/tiffio.h",
-              "line": 537
-            },
-            {
-              "symbol": "TIFFReadScanline",
-              "path": "vendor/libtiff/libtiff/tiffio.h",
-              "line": 465
-            },
-            {
-              "symbol": "TIFFWriteScanline",
-              "path": "vendor/libtiff/libtiff/tiffio.h",
-              "line": 467
-            }
-          ]
+          "api_catalog_component": "knowledge_extra:libtiff"
         }
       ],
       "use_ru": "Извлечь и создать multipage/scientific/fax raster TIFF.",
@@ -3677,18 +2749,7 @@
           "evidence_path": "vendor/libxls/include/xls.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "xls_open_file",
-              "path": "vendor/libxls/include/xls.h",
-              "line": 77
-            },
-            {
-              "symbol": "xls_parseWorkSheet",
-              "path": "vendor/libxls/include/xls.h",
-              "line": 73
-            }
-          ]
+          "api_catalog_component": "knowledge_extra:libxls"
         }
       ],
       "use_ru": "Извлечь sheets/cell values из старых XLS.",
@@ -3707,7 +2768,8 @@
       "domain": "science",
       "formats": [
         "MAT v4",
-        "MAT v5"
+        "MAT v5",
+        "MAT v7.3 (HDF5 profile)"
       ],
       "kind": "file",
       "compiled_read": true,
@@ -3727,37 +2789,39 @@
           ],
           "evidence_path": "vendor/matio/src/matio.h",
           "availability": "compiled",
-          "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "Mat_Open",
-              "path": "vendor/matio/src/matio.h",
-              "line": 277
-            },
-            {
-              "symbol": "Mat_VarRead",
-              "path": "vendor/matio/src/matio.h",
-              "line": 318
-            },
-            {
-              "symbol": "Mat_CreateVer",
-              "path": "vendor/matio/src/matio.h",
-              "line": 274
-            },
-            {
-              "symbol": "Mat_VarWrite",
-              "path": "vendor/matio/src/matio.h",
-              "line": 335
-            }
-          ]
+          "formats": [
+            "MAT v4",
+            "MAT v5"
+          ],
+          "api_catalog_component": "knowledge_extra:matio"
+        },
+        {
+          "component": "knowledge_extra:matio",
+          "target": "LMX::matio",
+          "read_api": [
+            "Mat_Open",
+            "Mat_VarRead"
+          ],
+          "write_api": [
+            "Mat_CreateVer",
+            "Mat_VarWrite"
+          ],
+          "evidence_path": "vendor/matio/src/matio.h",
+          "availability": "compiled",
+          "formats": [
+            "MAT v7.3"
+          ],
+          "api_catalog_component": "knowledge_extra:matio",
+          "verification_report": "extensions/knowledge_extra/MAT73_INTEGRATION.json"
         }
       ],
-      "use_ru": "Читать и создавать scientific matrix/array files MAT4/5.",
+      "use_ru": "Читать и создавать MAT4/5; выбранный HDF5 profile добавляет MAT7.3.",
       "limitations_ru": [
-        "MAT 7.3/HDF5 is disabled; compressed MAT5 uses zlib.",
-        "Compiled MCOS paths were not exercised by focused tests."
+        "Compressed MAT5 uses zlib; MAT7.3 uses the enabled HDF5 dependency.",
+        "MAT7.3 execution status is recorded separately from the previously verified MAT4/5 profile.",
+        "Compiled MCOS paths are not implied tested by ordinary dense-array roundtrips."
       ],
-      "verification": "Companion knowledge_extra VERIFICATION.json: retained strict C99 build and focused API test PASS; not an exhaustive format conformance claim.",
+      "verification": "MAT4/MAT5 checks and MAT73 dense/sparse/complex/struct compressed roundtrips PASS; see MAT73_INTEGRATION.json. MCOS conformance not claimed.",
       "build_evidence": [
         "extensions/knowledge_extra/CMakeLists.txt"
       ]
@@ -3785,18 +2849,7 @@
           "evidence_path": "vendor/libdmtx/dmtx.h",
           "availability": "compiled",
           "formats": null,
-          "api_evidence": [
-            {
-              "symbol": "dmtxDecodeMatrixRegion",
-              "path": "vendor/libdmtx/dmtx.h",
-              "line": 577
-            },
-            {
-              "symbol": "dmtxEncodeDataMatrix",
-              "path": "vendor/libdmtx/dmtx.h",
-              "line": 564
-            }
-          ]
+          "api_catalog_component": "knowledge_extra:libdmtx"
         }
       ],
       "use_ru": "Создать и прочитать ECC200 symbols, включая binary payload.",
@@ -3808,6 +2861,371 @@
       "build_evidence": [
         "extensions/knowledge_extra/CMakeLists.txt"
       ]
+    },
+    {
+      "id": "css",
+      "domain": "documents",
+      "formats": [
+        "CSS"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": false,
+      "direction": "read",
+      "providers": [
+        {
+          "component": "netsurf_extra:libcss",
+          "target": "LMX::css",
+          "read_api": [
+            "css_stylesheet_append_data"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/libcss/include/libcss/stylesheet.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_catalog_component": "netsurf_extra:libcss",
+          "verification_report": "extensions/netsurf_extra/VERIFICATION.json"
+        }
+      ],
+      "use_ru": "Разбирать CSS, выполнять selection/cascade и получать вычисленные свойства.",
+      "limitations_ru": [
+        "No layout/rasterizer or generic CSS writer is supplied."
+      ],
+      "verification": "See provider-specific reports and canonical core_catalog profile gates; no full-format conformance guarantee."
+    },
+    {
+      "id": "svg",
+      "domain": "images",
+      "formats": [
+        "SVG subset"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": false,
+      "direction": "read",
+      "providers": [
+        {
+          "component": "netsurf_extra:libsvgtiny",
+          "target": "LMX::svgtiny",
+          "read_api": [
+            "svgtiny_parse"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/libsvgtiny/include/svgtiny.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_catalog_component": "netsurf_extra:libsvgtiny",
+          "verification_report": "extensions/netsurf_extra/VERIFICATION.json"
+        }
+      ],
+      "use_ru": "Прочитать SVG в paths/text/shapes для собственного renderer.",
+      "limitations_ru": [
+        "Selected SVG subset; no complete SVG browser/rendering engine or writer."
+      ],
+      "verification": "See provider-specific reports and canonical core_catalog profile gates; no full-format conformance guarantee."
+    },
+    {
+      "id": "ico",
+      "domain": "images",
+      "formats": [
+        "ICO with DIB images"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": false,
+      "direction": "read",
+      "providers": [
+        {
+          "component": "netsurf_extra:libnsbmp",
+          "target": "LMX::nsbmp",
+          "read_api": [
+            "ico_analyse",
+            "ico_find",
+            "bmp_decode"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/libnsbmp/include/libnsbmp.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_catalog_component": "netsurf_extra:libnsbmp",
+          "verification_report": "extensions/netsurf_extra/VERIFICATION.json"
+        }
+      ],
+      "use_ru": "Разобрать ICO collection и получить pixels DIB изображения.",
+      "limitations_ru": [
+        "Embedded PNG ICO images and writing are not established by this BMP/DIB profile."
+      ],
+      "verification": "See provider-specific reports and canonical core_catalog profile gates; no full-format conformance guarantee."
+    },
+    {
+      "id": "tiled",
+      "domain": "graphics",
+      "formats": [
+        "Tiled JSON finite/infinite maps"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": false,
+      "direction": "read",
+      "providers": [
+        {
+          "component": "bundles_extra:cute_tiled",
+          "target": "LMX::cute_tiled",
+          "read_api": [
+            "cute_tiled_load_map_from_memory"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/cute_headers/cute_tiled.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_catalog_component": "bundles_extra:cute_tiled",
+          "verification_report": "extensions/bundles_extra/VERIFICATION.json"
+        }
+      ],
+      "use_ru": "Читать тайловые карты, слои, объекты и chunks.",
+      "limitations_ru": [
+        "No Tiled editor/writer; JSON is an external interchange representation."
+      ],
+      "verification": "See provider-specific reports and canonical core_catalog profile gates; no full-format conformance guarantee."
+    },
+    {
+      "id": "aseprite",
+      "domain": "images",
+      "formats": [
+        "Aseprite binary"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": false,
+      "direction": "read",
+      "providers": [
+        {
+          "component": "bundles_extra:cute_aseprite",
+          "target": "LMX::cute_aseprite",
+          "read_api": [
+            "cute_aseprite_load_from_memory"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/cute_headers/cute_aseprite.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_catalog_component": "bundles_extra:cute_aseprite",
+          "verification_report": "extensions/bundles_extra/VERIFICATION.json"
+        }
+      ],
+      "use_ru": "Получить frames/layers/cels/palettes из Aseprite.",
+      "limitations_ru": [
+        "No Aseprite writer or editor; focused test checks a small RGBA cel fixture."
+      ],
+      "verification": "See provider-specific reports and canonical core_catalog profile gates; no full-format conformance guarantee."
+    },
+    {
+      "id": "hdf5",
+      "domain": "science",
+      "formats": [
+        "HDF5"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "scientific_formats:hdf5",
+          "target": "LMX::hdf5",
+          "read_api": [
+            "H5Fopen",
+            "H5Dread"
+          ],
+          "write_api": [
+            "H5Fcreate",
+            "H5Dwrite"
+          ],
+          "evidence_path": "vendor/hdf5/src/H5Fpublic.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_catalog_component": "scientific_formats:hdf5",
+          "verification_report": "extensions/scientific_hdf5/VERIFICATION.json"
+        },
+        {
+          "component": "scientific_formats:hdf5",
+          "target": "LMX::hdf5_hl",
+          "read_api": [
+            "H5LTread_dataset"
+          ],
+          "write_api": [
+            "H5LTmake_dataset"
+          ],
+          "evidence_path": "vendor/hdf5/hl/src/hdf5_hl.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_catalog_component": "scientific_formats:hdf5",
+          "verification_report": "extensions/scientific_hdf5/VERIFICATION.json"
+        }
+      ],
+      "use_ru": "Читать и создавать hierarchical arrays, metadata, datatypes и HL representations.",
+      "limitations_ru": [
+        "Complete selected C HL modules retained; optional filters depend on backend and actual compiled dependencies.",
+        "Parallel profile uses external MPI; single-rank execution does not establish multi-rank execution."
+      ],
+      "verification": "See provider-specific reports and canonical core_catalog profile gates; no full-format conformance guarantee."
+    },
+    {
+      "id": "netcdf",
+      "domain": "science",
+      "formats": [
+        "CDF-1 classic",
+        "CDF-2 64-bit offset",
+        "CDF-5 64-bit data"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "scientific_formats:netcdf",
+          "target": "LMX::netcdf",
+          "read_api": [
+            "nc_open",
+            "nc_get_var_ulonglong"
+          ],
+          "write_api": [
+            "nc_create",
+            "nc_put_var_ulonglong"
+          ],
+          "evidence_path": "vendor/netcdf/include/netcdf.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_catalog_component": "scientific_formats:netcdf",
+          "verification_report": "extensions/scientific_netcdf/VERIFICATION.json"
+        },
+        {
+          "component": "scientific_formats:pnetcdf",
+          "target": "LMX::pnetcdf",
+          "read_api": [
+            "ncmpi_open",
+            "ncmpi_get_vara_ulonglong_all"
+          ],
+          "write_api": [
+            "ncmpi_create",
+            "ncmpi_put_vara_ulonglong_all"
+          ],
+          "evidence_path": "vendor/pnetcdf/src/include/pnetcdf.h.in",
+          "availability": "compiled",
+          "formats": null,
+          "api_catalog_component": "scientific_formats:pnetcdf",
+          "verification_report": "extensions/scientific_pnetcdf/VERIFICATION.json"
+        }
+      ],
+      "use_ru": "Читать и создавать classic научные массивы, включая точные uint64 CDF-5.",
+      "limitations_ru": [
+        "CDF-5 uses NC_64BIT_DATA and magic CDF 05. This format is distinct from the library release version.",
+        "PnetCDF has real MPI-IO CDF1/2/5 single-rank roundtrips; multi-rank execution is not claimed."
+      ],
+      "verification": "See provider-specific reports and canonical core_catalog profile gates; no full-format conformance guarantee."
+    },
+    {
+      "id": "netcdf4",
+      "domain": "science",
+      "formats": [
+        "netCDF-4 / HDF5"
+      ],
+      "kind": "file",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "scientific_formats:netcdf",
+          "target": "LMX::netcdf",
+          "read_api": [
+            "nc_open",
+            "nc_get_var"
+          ],
+          "write_api": [
+            "nc_create",
+            "nc_put_var"
+          ],
+          "evidence_path": "vendor/netcdf/include/netcdf.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_catalog_component": "scientific_formats:netcdf",
+          "verification_report": "extensions/scientific_netcdf/VERIFICATION.json"
+        }
+      ],
+      "use_ru": "Читать и создавать netCDF-4 через HDF5.",
+      "limitations_ru": [
+        "C99 HDF5 dependency and enabled netCDF4/parallel4 backend required; exact optional datatype/filter coverage follows that profile."
+      ],
+      "verification": "See provider-specific reports and canonical core_catalog profile gates; no full-format conformance guarantee."
+    },
+    {
+      "id": "nczarr",
+      "domain": "science",
+      "formats": [
+        "Directory NCZarr"
+      ],
+      "kind": "directory",
+      "compiled_read": true,
+      "compiled_write": true,
+      "direction": "both",
+      "providers": [
+        {
+          "component": "scientific_formats:netcdf",
+          "target": "LMX::netcdf",
+          "read_api": [
+            "nc_open"
+          ],
+          "write_api": [
+            "nc_create"
+          ],
+          "evidence_path": "vendor/netcdf/include/netcdf.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_catalog_component": "scientific_formats:netcdf",
+          "verification_report": "extensions/scientific_netcdf/VERIFICATION.json"
+        }
+      ],
+      "use_ru": "Работать с выбранным directory NCZarr backend.",
+      "limitations_ru": [
+        "S3 and ZIP backends are not selected by this profile; API declarations retain availability conditions."
+      ],
+      "verification": "See provider-specific reports and canonical core_catalog profile gates; no full-format conformance guarantee."
+    },
+    {
+      "id": "dap",
+      "domain": "science",
+      "formats": [
+        "DAP2",
+        "DAP4"
+      ],
+      "kind": "wire",
+      "compiled_read": true,
+      "compiled_write": false,
+      "direction": "read",
+      "providers": [
+        {
+          "component": "scientific_formats:netcdf",
+          "target": "LMX::netcdf",
+          "read_api": [
+            "nc_open",
+            "nc_get_var"
+          ],
+          "write_api": [],
+          "evidence_path": "vendor/netcdf/include/netcdf.h",
+          "availability": "compiled",
+          "formats": null,
+          "api_catalog_component": "scientific_formats:netcdf",
+          "verification_report": "extensions/scientific_netcdf/VERIFICATION.json"
+        }
+      ],
+      "use_ru": "Читать научные данные через существующие DAP interfaces.",
+      "limitations_ru": [
+        "Requires the selected protocol dependencies, endpoint and local/global connectivity as applicable. DAP4 uses libxml2.",
+        "Compiling a protocol backend does not certify an external service or require the global internet at runtime."
+      ],
+      "verification": "DAP2/DAP4 backends compile in the selected profile; external service execution is not implied. See provider report."
     }
   ],
   "gaps": [
@@ -3821,11 +3239,11 @@
     },
     {
       "area": "Scientific containers",
-      "status": "MAT4/5 are included. HDF5 and all netCDF profiles are excluded by explicit selection decisions; MAT7.3, NumPy NPY/NPZ and DICOM are not established by a verified target in this matrix."
+      "status": "HDF5, netCDF-C, PnetCDF and MAT7.3 are accepted; provider reports distinguish compiled/tested profiles. NumPy NPY/NPZ and DICOM are not established by this matrix."
     },
     {
       "area": "Modern image formats",
-      "status": "No selected AVIF/HEIF/JPEG XL/OpenEXR/SVG renderer identified. TIFF codec coverage is explicitly profile-limited."
+      "status": "SVG parsing into paths/text/shapes is provided by libsvgtiny. A complete SVG renderer, AVIF/HEIF/JPEG XL/OpenEXR codecs are not established; TIFF codecs remain profile-specific."
     },
     {
       "area": "Modern audio/video",
@@ -3870,8 +3288,9 @@
       "does_not_imply": "HTML rendering or a web browser."
     }
   ],
-  "audit_missing_evidence_paths": [],
-  "audit_no_symbol_found": [],
-  "compiled_entry_count": 62,
-  "source_only_entry_count": 2
+  "compiled_entry_count": 72,
+  "source_only_entry_count": 2,
+  "canonical_function_catalog": "../core_catalog/catalog_index.json",
+  "row_count": 74,
+  "pending_entry_count": 0
 }

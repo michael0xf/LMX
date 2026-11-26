@@ -112,7 +112,12 @@ static C DATA mirror ([semantics](../../spec/LMX_semantics.en.md#graph-and-metho
 
 ## Copy, merge, intern, attach и сериализация
 
-Copy/merge используют **одну штатную source→copy map на всю операцию**;
+Для `independent: immutable:` сохраняется ссылка на исходное значение/ветвь;
+новый numeric record и clone native payload при таком sharing не создаются.
+Ниже описан отдельный случай обычного копирования изменяемых значений и
+explicit typed clone reference-кода; он не меняет правило общих пакетов.
+
+Copy/merge обычного копируемого графа используют **одну штатную source→copy map на всю операцию**;
 см. [kernel copy](../../spec/kernel-implementation.en.md), строки 921–936.
 Физический primitive clone вызывается, когда обычный обход создаёт новый
 числовой record. Повторные ссылки на исходное значение должны получить ссылку
@@ -172,7 +177,7 @@ codec и штатное восстановление names/links; этот пр�
 
 ## Офлайн сборка и наблюдавшиеся результаты
 
-После наложения патча на проект из корня проекта:
+Команда из корня LMX:
 
 ```sh
 cmake -S docs/core_catalog/new_primitives -B build/numeric-reference \

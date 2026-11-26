@@ -3,7 +3,7 @@
 [Первичный LMX-каталог](../catalog/databases_mongo_c_driver.lmx) · [Тела LMX](../bindings/databases_mongo_c_driver.lm3) · [Формат и shim по запросу](../CATALOG_FORMAT.ru.md)
 
 Версия: `2.5.9`.
-Записей: **2410**; кандидатов вызова: **1258**; scalar prototypes: **2**.
+Записей: **2466**; кандидатов вызова: **1258**; scalar prototypes: **2**.
 
 Пакеты: `db\document`, `document\bson`.
 CMake: `LMX::bson`, `LMX::mongoc`.
@@ -11,7 +11,7 @@ CMake: `LMX::bson`, `LMX::mongoc`.
 | Категория | Записи |
 |---|---:|
 | alias | 1 |
-| callback | 38 |
+| callback | 94 |
 | function | 1991 |
 | function_macro | 247 |
 | static_inline | 123 |

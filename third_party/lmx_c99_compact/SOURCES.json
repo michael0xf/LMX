@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "scope": "155 selected C99 components: 132 inherited and 23 new capability libraries. General-purpose language VMs and application service frameworks are excluded.",
+  "scope": "180 components in the full current C99 collection; independent immutable graph code/data shared by reference; sources and API catalogue retained separately from runtime selection.",
   "archives": "Distribution archives are not bundled. Recorded hashes identify the archived originals; a repository URL alone is not a download of those bytes.",
   "notices": "Upstream source comments remain intact. Generated build views/adapters are separate from original vendor inputs. Alternative licenses remain alternatives, not cumulative obligations.",
   "integration_license": "LICENSE.integration (0BSD); embeddings has its own MIT license; third-party files retain their individual licenses.",
@@ -110,7 +110,7 @@
       ],
       "version": "snapshot 6b5799bae8a1",
       "commit": "6b5799bae8a1fe3792691ef4b72ae26434c3e799",
-      "license": "MIT OR public-domain dedication; оба варианта сохранены",
+      "license": "MIT OR public-domain dedication; \u043e\u0431\u0430 \u0432\u0430\u0440\u0438\u0430\u043d\u0442\u0430 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u044b",
       "urls": [
         "https://codeload.github.com/nothings/stb/tar.gz/6b5799bae8a1fe3792691ef4b72ae26434c3e799",
         "https://github.com/nothings/stb"
@@ -4566,14 +4566,16 @@
         "read/write MAT4 and MAT5",
         "zlib-compressed MAT5",
         "dense/sparse/complex arrays, cells, structures",
-        "MCOS reading code retained and compiled"
+        "MCOS reading code retained and compiled",
+        "read/write MAT7.3 through HDF5"
       ],
-      "profile": "HDF5/MAT7.3 OFF; Fortran/C++ tools excluded; extended sparse and MCOS ON. MCOS itself was not exercised. C-only adapter uses upstream configuration templates/checks; Linux _DEFAULT_SOURCE exposes endianness constants.",
+      "profile": "C99 with retained HDF5 core/HL: MAT4/MAT5 and MAT7.3 on; extended sparse and MCOS source on. Fortran/C++ tools excluded. Native Mat_* resources are owner-bound. Tests cover MAT73 dense/sparse/complex/struct, compressed writes, HDF5 signature/reopen.",
       "packages": [
         "data\\scientific\\mat"
       ],
       "dependencies": [
-        "base:zlib"
+        "base:zlib",
+        "scientific_formats:hdf5"
       ],
       "id": "knowledge_extra:matio",
       "paths": [
@@ -4792,6 +4794,2025 @@
         "Not a PDF renderer; not all filter/font/image/corpus combinations validated."
       ],
       "limitation_report": "extensions/pdf_extra/KNOWN_LIMITATIONS.md"
+    },
+    {
+      "id": "netsurf_extra:libwapcaplet",
+      "paths": [
+        "vendor/libwapcaplet"
+      ],
+      "version": "0.4.3",
+      "commit": "74e49210e9c56381c1e60aea309dc80074a54ede",
+      "license": "MIT",
+      "urls": [
+        "https://github.com/netsurf-browser/libwapcaplet/tree/74e49210e9c56381c1e60aea309dc80074a54ede"
+      ],
+      "licenses_notices": [
+        "vendor/libwapcaplet/COPYING"
+      ],
+      "source_archives": [
+        {
+          "url": "https://codeload.github.com/netsurf-browser/libwapcaplet/tar.gz/refs/heads/master",
+          "sha256": "d76768ccf6524dac88fc5b6279fcb93ca1e341f6f2d1547312d13efef29cf1c1",
+          "download_bytes": 32101,
+          "retained_in_delivery": false
+        }
+      ],
+      "public_headers": [
+        "vendor/libwapcaplet/include/libwapcaplet/libwapcaplet.h"
+      ],
+      "canonical_header_map": {
+        "vendor/libwapcaplet/include/libwapcaplet/libwapcaplet.h": "libwapcaplet/libwapcaplet.h"
+      },
+      "cmake_targets": [
+        "LMX::wapcaplet"
+      ],
+      "build_group": "extensions/netsurf_extra",
+      "purpose": "String interning and case-insensitive comparison",
+      "selected_profile": "Hosted ISO C99 static library; portable production C sources, with guarded build views where documented; no browser application or scripting VM",
+      "dependencies": [],
+      "validation": "Original and retained source builds with -std=c99 -pedantic-errors; offline integration checks in extensions/netsurf_extra/tests",
+      "vendor_modifications": [],
+      "build_view_adjustments_file": "extensions/netsurf_extra/C99_ADJUSTMENTS.json"
+    },
+    {
+      "id": "netsurf_extra:libparserutils",
+      "paths": [
+        "vendor/libparserutils"
+      ],
+      "version": "0.2.5",
+      "commit": "c9971265064b194505c6cd398dbdef8788725de7",
+      "license": "MIT",
+      "urls": [
+        "https://github.com/netsurf-browser/libparserutils/tree/c9971265064b194505c6cd398dbdef8788725de7"
+      ],
+      "licenses_notices": [
+        "vendor/libparserutils/COPYING"
+      ],
+      "source_archives": [
+        {
+          "url": "https://codeload.github.com/netsurf-browser/libparserutils/tar.gz/refs/heads/master",
+          "sha256": "9adb21ed3aa1118930eea1907cb35b81e2e00a9308c9093ca3167be98576b213",
+          "download_bytes": 75394,
+          "retained_in_delivery": false
+        }
+      ],
+      "public_headers": [
+        "vendor/libparserutils/include/parserutils/charset/codec.h",
+        "vendor/libparserutils/include/parserutils/charset/mibenum.h",
+        "vendor/libparserutils/include/parserutils/charset/utf16.h",
+        "vendor/libparserutils/include/parserutils/charset/utf8.h",
+        "vendor/libparserutils/include/parserutils/errors.h",
+        "vendor/libparserutils/include/parserutils/functypes.h",
+        "vendor/libparserutils/include/parserutils/input/inputstream.h",
+        "vendor/libparserutils/include/parserutils/parserutils.h",
+        "vendor/libparserutils/include/parserutils/types.h",
+        "vendor/libparserutils/include/parserutils/utils/buffer.h",
+        "vendor/libparserutils/include/parserutils/utils/stack.h",
+        "vendor/libparserutils/include/parserutils/utils/vector.h"
+      ],
+      "canonical_header_map": {
+        "vendor/libparserutils/include/parserutils/charset/codec.h": "parserutils/charset/codec.h",
+        "vendor/libparserutils/include/parserutils/charset/mibenum.h": "parserutils/charset/mibenum.h",
+        "vendor/libparserutils/include/parserutils/charset/utf16.h": "parserutils/charset/utf16.h",
+        "vendor/libparserutils/include/parserutils/charset/utf8.h": "parserutils/charset/utf8.h",
+        "vendor/libparserutils/include/parserutils/errors.h": "parserutils/errors.h",
+        "vendor/libparserutils/include/parserutils/functypes.h": "parserutils/functypes.h",
+        "vendor/libparserutils/include/parserutils/input/inputstream.h": "parserutils/input/inputstream.h",
+        "vendor/libparserutils/include/parserutils/parserutils.h": "parserutils/parserutils.h",
+        "vendor/libparserutils/include/parserutils/types.h": "parserutils/types.h",
+        "vendor/libparserutils/include/parserutils/utils/buffer.h": "parserutils/utils/buffer.h",
+        "vendor/libparserutils/include/parserutils/utils/stack.h": "parserutils/utils/stack.h",
+        "vendor/libparserutils/include/parserutils/utils/vector.h": "parserutils/utils/vector.h"
+      },
+      "cmake_targets": [
+        "LMX::parserutils"
+      ],
+      "build_group": "extensions/netsurf_extra",
+      "purpose": "Incremental character decoding and encoding, input streams and buffers",
+      "selected_profile": "Hosted ISO C99 static library; portable production C sources, with guarded build views where documented; no browser application or scripting VM",
+      "dependencies": [],
+      "validation": "Original and retained source builds with -std=c99 -pedantic-errors; offline integration checks in extensions/netsurf_extra/tests",
+      "vendor_modifications": [],
+      "build_view_adjustments_file": "extensions/netsurf_extra/C99_ADJUSTMENTS.json"
+    },
+    {
+      "id": "netsurf_extra:libhubbub",
+      "paths": [
+        "vendor/libhubbub"
+      ],
+      "version": "0.3.8",
+      "commit": "68989e60c786f1ee490db95c44769c368d135262",
+      "license": "MIT",
+      "urls": [
+        "https://github.com/netsurf-browser/libhubbub/tree/68989e60c786f1ee490db95c44769c368d135262"
+      ],
+      "licenses_notices": [
+        "vendor/libhubbub/COPYING"
+      ],
+      "source_archives": [
+        {
+          "url": "https://codeload.github.com/netsurf-browser/libhubbub/tar.gz/refs/heads/master",
+          "sha256": "2d04e61d08627e1ceed0ebef707f68235dcb805b8d52ed29eae347510643594c",
+          "download_bytes": 785627,
+          "retained_in_delivery": false
+        }
+      ],
+      "public_headers": [
+        "vendor/libhubbub/include/hubbub/errors.h",
+        "vendor/libhubbub/include/hubbub/functypes.h",
+        "vendor/libhubbub/include/hubbub/hubbub.h",
+        "vendor/libhubbub/include/hubbub/parser.h",
+        "vendor/libhubbub/include/hubbub/tree.h",
+        "vendor/libhubbub/include/hubbub/types.h"
+      ],
+      "canonical_header_map": {
+        "vendor/libhubbub/include/hubbub/errors.h": "hubbub/errors.h",
+        "vendor/libhubbub/include/hubbub/functypes.h": "hubbub/functypes.h",
+        "vendor/libhubbub/include/hubbub/hubbub.h": "hubbub/hubbub.h",
+        "vendor/libhubbub/include/hubbub/parser.h": "hubbub/parser.h",
+        "vendor/libhubbub/include/hubbub/tree.h": "hubbub/tree.h",
+        "vendor/libhubbub/include/hubbub/types.h": "hubbub/types.h"
+      },
+      "cmake_targets": [
+        "LMX::hubbub"
+      ],
+      "build_group": "extensions/netsurf_extra",
+      "purpose": "HTML5 tokenizer and tree construction engine",
+      "selected_profile": "Hosted ISO C99 static library; portable production C sources, with guarded build views where documented; no browser application or scripting VM",
+      "dependencies": [
+        "LMX::parserutils"
+      ],
+      "validation": "Original and retained source builds with -std=c99 -pedantic-errors; offline integration checks in extensions/netsurf_extra/tests",
+      "vendor_modifications": [],
+      "build_view_adjustments_file": "extensions/netsurf_extra/C99_ADJUSTMENTS.json"
+    },
+    {
+      "id": "netsurf_extra:libdom",
+      "paths": [
+        "vendor/libdom"
+      ],
+      "version": "0.4.2",
+      "commit": "e4150b65e4e77d6e028912c5cdae084b3a564c93",
+      "license": "MIT",
+      "urls": [
+        "https://github.com/netsurf-browser/libdom/tree/e4150b65e4e77d6e028912c5cdae084b3a564c93"
+      ],
+      "licenses_notices": [
+        "vendor/libdom/COPYING"
+      ],
+      "source_archives": [
+        {
+          "url": "https://codeload.github.com/netsurf-browser/libdom/tar.gz/refs/heads/master",
+          "sha256": "f9b6318f4581c970026ce0af92c9e6911e0004246c054650cb58a5d5bf46bd8f",
+          "download_bytes": 881108,
+          "retained_in_delivery": false
+        }
+      ],
+      "public_headers": [
+        "vendor/libdom/include/dom/core/attr.h",
+        "vendor/libdom/include/dom/core/cdatasection.h",
+        "vendor/libdom/include/dom/core/characterdata.h",
+        "vendor/libdom/include/dom/core/comment.h",
+        "vendor/libdom/include/dom/core/doc_fragment.h",
+        "vendor/libdom/include/dom/core/document.h",
+        "vendor/libdom/include/dom/core/document_type.h",
+        "vendor/libdom/include/dom/core/element.h",
+        "vendor/libdom/include/dom/core/entity_ref.h",
+        "vendor/libdom/include/dom/core/exceptions.h",
+        "vendor/libdom/include/dom/core/implementation.h",
+        "vendor/libdom/include/dom/core/namednodemap.h",
+        "vendor/libdom/include/dom/core/node.h",
+        "vendor/libdom/include/dom/core/nodelist.h",
+        "vendor/libdom/include/dom/core/pi.h",
+        "vendor/libdom/include/dom/core/string.h",
+        "vendor/libdom/include/dom/core/text.h",
+        "vendor/libdom/include/dom/core/tokenlist.h",
+        "vendor/libdom/include/dom/core/typeinfo.h",
+        "vendor/libdom/include/dom/dom.h",
+        "vendor/libdom/include/dom/events/custom_event.h",
+        "vendor/libdom/include/dom/events/document_event.h",
+        "vendor/libdom/include/dom/events/event.h",
+        "vendor/libdom/include/dom/events/event_listener.h",
+        "vendor/libdom/include/dom/events/event_target.h",
+        "vendor/libdom/include/dom/events/events.h",
+        "vendor/libdom/include/dom/events/keyboard_event.h",
+        "vendor/libdom/include/dom/events/mouse_event.h",
+        "vendor/libdom/include/dom/events/mouse_multi_wheel_event.h",
+        "vendor/libdom/include/dom/events/mouse_wheel_event.h",
+        "vendor/libdom/include/dom/events/mutation_event.h",
+        "vendor/libdom/include/dom/events/mutation_name_event.h",
+        "vendor/libdom/include/dom/events/text_event.h",
+        "vendor/libdom/include/dom/events/ui_event.h",
+        "vendor/libdom/include/dom/functypes.h",
+        "vendor/libdom/include/dom/html/html_anchor_element.h",
+        "vendor/libdom/include/dom/html/html_applet_element.h",
+        "vendor/libdom/include/dom/html/html_area_element.h",
+        "vendor/libdom/include/dom/html/html_base_element.h",
+        "vendor/libdom/include/dom/html/html_basefont_element.h",
+        "vendor/libdom/include/dom/html/html_body_element.h",
+        "vendor/libdom/include/dom/html/html_br_element.h",
+        "vendor/libdom/include/dom/html/html_button_element.h",
+        "vendor/libdom/include/dom/html/html_canvas_element.h",
+        "vendor/libdom/include/dom/html/html_collection.h",
+        "vendor/libdom/include/dom/html/html_directory_element.h",
+        "vendor/libdom/include/dom/html/html_div_element.h",
+        "vendor/libdom/include/dom/html/html_dlist_element.h",
+        "vendor/libdom/include/dom/html/html_document.h",
+        "vendor/libdom/include/dom/html/html_element.h",
+        "vendor/libdom/include/dom/html/html_elements.h",
+        "vendor/libdom/include/dom/html/html_fieldset_element.h",
+        "vendor/libdom/include/dom/html/html_font_element.h",
+        "vendor/libdom/include/dom/html/html_form_element.h",
+        "vendor/libdom/include/dom/html/html_frame_element.h",
+        "vendor/libdom/include/dom/html/html_frameset_element.h",
+        "vendor/libdom/include/dom/html/html_head_element.h",
+        "vendor/libdom/include/dom/html/html_heading_element.h",
+        "vendor/libdom/include/dom/html/html_hr_element.h",
+        "vendor/libdom/include/dom/html/html_html_element.h",
+        "vendor/libdom/include/dom/html/html_iframe_element.h",
+        "vendor/libdom/include/dom/html/html_image_element.h",
+        "vendor/libdom/include/dom/html/html_input_element.h",
+        "vendor/libdom/include/dom/html/html_isindex_element.h",
+        "vendor/libdom/include/dom/html/html_label_element.h",
+        "vendor/libdom/include/dom/html/html_legend_element.h",
+        "vendor/libdom/include/dom/html/html_li_element.h",
+        "vendor/libdom/include/dom/html/html_link_element.h",
+        "vendor/libdom/include/dom/html/html_map_element.h",
+        "vendor/libdom/include/dom/html/html_menu_element.h",
+        "vendor/libdom/include/dom/html/html_meta_element.h",
+        "vendor/libdom/include/dom/html/html_mod_element.h",
+        "vendor/libdom/include/dom/html/html_object_element.h",
+        "vendor/libdom/include/dom/html/html_olist_element.h",
+        "vendor/libdom/include/dom/html/html_opt_group_element.h",
+        "vendor/libdom/include/dom/html/html_option_element.h",
+        "vendor/libdom/include/dom/html/html_options_collection.h",
+        "vendor/libdom/include/dom/html/html_paragraph_element.h",
+        "vendor/libdom/include/dom/html/html_param_element.h",
+        "vendor/libdom/include/dom/html/html_pre_element.h",
+        "vendor/libdom/include/dom/html/html_quote_element.h",
+        "vendor/libdom/include/dom/html/html_script_element.h",
+        "vendor/libdom/include/dom/html/html_select_element.h",
+        "vendor/libdom/include/dom/html/html_style_element.h",
+        "vendor/libdom/include/dom/html/html_table_element.h",
+        "vendor/libdom/include/dom/html/html_tablecaption_element.h",
+        "vendor/libdom/include/dom/html/html_tablecell_element.h",
+        "vendor/libdom/include/dom/html/html_tablecol_element.h",
+        "vendor/libdom/include/dom/html/html_tablerow_element.h",
+        "vendor/libdom/include/dom/html/html_tablesection_element.h",
+        "vendor/libdom/include/dom/html/html_text_area_element.h",
+        "vendor/libdom/include/dom/html/html_title_element.h",
+        "vendor/libdom/include/dom/html/html_ulist_element.h",
+        "vendor/libdom/include/dom/inttypes.h",
+        "vendor/libdom/include/dom/walk.h",
+        "vendor/libdom/bindings/hubbub/errors.h",
+        "vendor/libdom/bindings/hubbub/parser.h",
+        "vendor/libdom/bindings/hubbub/utils.h",
+        "vendor/libdom/bindings/xml/utils.h",
+        "vendor/libdom/bindings/xml/xmlerror.h",
+        "vendor/libdom/bindings/xml/xmlparser.h"
+      ],
+      "canonical_header_map": {
+        "vendor/libdom/include/dom/core/attr.h": "dom/core/attr.h",
+        "vendor/libdom/include/dom/core/cdatasection.h": "dom/core/cdatasection.h",
+        "vendor/libdom/include/dom/core/characterdata.h": "dom/core/characterdata.h",
+        "vendor/libdom/include/dom/core/comment.h": "dom/core/comment.h",
+        "vendor/libdom/include/dom/core/doc_fragment.h": "dom/core/doc_fragment.h",
+        "vendor/libdom/include/dom/core/document.h": "dom/core/document.h",
+        "vendor/libdom/include/dom/core/document_type.h": "dom/core/document_type.h",
+        "vendor/libdom/include/dom/core/element.h": "dom/core/element.h",
+        "vendor/libdom/include/dom/core/entity_ref.h": "dom/core/entity_ref.h",
+        "vendor/libdom/include/dom/core/exceptions.h": "dom/core/exceptions.h",
+        "vendor/libdom/include/dom/core/implementation.h": "dom/core/implementation.h",
+        "vendor/libdom/include/dom/core/namednodemap.h": "dom/core/namednodemap.h",
+        "vendor/libdom/include/dom/core/node.h": "dom/core/node.h",
+        "vendor/libdom/include/dom/core/nodelist.h": "dom/core/nodelist.h",
+        "vendor/libdom/include/dom/core/pi.h": "dom/core/pi.h",
+        "vendor/libdom/include/dom/core/string.h": "dom/core/string.h",
+        "vendor/libdom/include/dom/core/text.h": "dom/core/text.h",
+        "vendor/libdom/include/dom/core/tokenlist.h": "dom/core/tokenlist.h",
+        "vendor/libdom/include/dom/core/typeinfo.h": "dom/core/typeinfo.h",
+        "vendor/libdom/include/dom/dom.h": "dom/dom.h",
+        "vendor/libdom/include/dom/events/custom_event.h": "dom/events/custom_event.h",
+        "vendor/libdom/include/dom/events/document_event.h": "dom/events/document_event.h",
+        "vendor/libdom/include/dom/events/event.h": "dom/events/event.h",
+        "vendor/libdom/include/dom/events/event_listener.h": "dom/events/event_listener.h",
+        "vendor/libdom/include/dom/events/event_target.h": "dom/events/event_target.h",
+        "vendor/libdom/include/dom/events/events.h": "dom/events/events.h",
+        "vendor/libdom/include/dom/events/keyboard_event.h": "dom/events/keyboard_event.h",
+        "vendor/libdom/include/dom/events/mouse_event.h": "dom/events/mouse_event.h",
+        "vendor/libdom/include/dom/events/mouse_multi_wheel_event.h": "dom/events/mouse_multi_wheel_event.h",
+        "vendor/libdom/include/dom/events/mouse_wheel_event.h": "dom/events/mouse_wheel_event.h",
+        "vendor/libdom/include/dom/events/mutation_event.h": "dom/events/mutation_event.h",
+        "vendor/libdom/include/dom/events/mutation_name_event.h": "dom/events/mutation_name_event.h",
+        "vendor/libdom/include/dom/events/text_event.h": "dom/events/text_event.h",
+        "vendor/libdom/include/dom/events/ui_event.h": "dom/events/ui_event.h",
+        "vendor/libdom/include/dom/functypes.h": "dom/functypes.h",
+        "vendor/libdom/include/dom/html/html_anchor_element.h": "dom/html/html_anchor_element.h",
+        "vendor/libdom/include/dom/html/html_applet_element.h": "dom/html/html_applet_element.h",
+        "vendor/libdom/include/dom/html/html_area_element.h": "dom/html/html_area_element.h",
+        "vendor/libdom/include/dom/html/html_base_element.h": "dom/html/html_base_element.h",
+        "vendor/libdom/include/dom/html/html_basefont_element.h": "dom/html/html_basefont_element.h",
+        "vendor/libdom/include/dom/html/html_body_element.h": "dom/html/html_body_element.h",
+        "vendor/libdom/include/dom/html/html_br_element.h": "dom/html/html_br_element.h",
+        "vendor/libdom/include/dom/html/html_button_element.h": "dom/html/html_button_element.h",
+        "vendor/libdom/include/dom/html/html_canvas_element.h": "dom/html/html_canvas_element.h",
+        "vendor/libdom/include/dom/html/html_collection.h": "dom/html/html_collection.h",
+        "vendor/libdom/include/dom/html/html_directory_element.h": "dom/html/html_directory_element.h",
+        "vendor/libdom/include/dom/html/html_div_element.h": "dom/html/html_div_element.h",
+        "vendor/libdom/include/dom/html/html_dlist_element.h": "dom/html/html_dlist_element.h",
+        "vendor/libdom/include/dom/html/html_document.h": "dom/html/html_document.h",
+        "vendor/libdom/include/dom/html/html_element.h": "dom/html/html_element.h",
+        "vendor/libdom/include/dom/html/html_elements.h": "dom/html/html_elements.h",
+        "vendor/libdom/include/dom/html/html_fieldset_element.h": "dom/html/html_fieldset_element.h",
+        "vendor/libdom/include/dom/html/html_font_element.h": "dom/html/html_font_element.h",
+        "vendor/libdom/include/dom/html/html_form_element.h": "dom/html/html_form_element.h",
+        "vendor/libdom/include/dom/html/html_frame_element.h": "dom/html/html_frame_element.h",
+        "vendor/libdom/include/dom/html/html_frameset_element.h": "dom/html/html_frameset_element.h",
+        "vendor/libdom/include/dom/html/html_head_element.h": "dom/html/html_head_element.h",
+        "vendor/libdom/include/dom/html/html_heading_element.h": "dom/html/html_heading_element.h",
+        "vendor/libdom/include/dom/html/html_hr_element.h": "dom/html/html_hr_element.h",
+        "vendor/libdom/include/dom/html/html_html_element.h": "dom/html/html_html_element.h",
+        "vendor/libdom/include/dom/html/html_iframe_element.h": "dom/html/html_iframe_element.h",
+        "vendor/libdom/include/dom/html/html_image_element.h": "dom/html/html_image_element.h",
+        "vendor/libdom/include/dom/html/html_input_element.h": "dom/html/html_input_element.h",
+        "vendor/libdom/include/dom/html/html_isindex_element.h": "dom/html/html_isindex_element.h",
+        "vendor/libdom/include/dom/html/html_label_element.h": "dom/html/html_label_element.h",
+        "vendor/libdom/include/dom/html/html_legend_element.h": "dom/html/html_legend_element.h",
+        "vendor/libdom/include/dom/html/html_li_element.h": "dom/html/html_li_element.h",
+        "vendor/libdom/include/dom/html/html_link_element.h": "dom/html/html_link_element.h",
+        "vendor/libdom/include/dom/html/html_map_element.h": "dom/html/html_map_element.h",
+        "vendor/libdom/include/dom/html/html_menu_element.h": "dom/html/html_menu_element.h",
+        "vendor/libdom/include/dom/html/html_meta_element.h": "dom/html/html_meta_element.h",
+        "vendor/libdom/include/dom/html/html_mod_element.h": "dom/html/html_mod_element.h",
+        "vendor/libdom/include/dom/html/html_object_element.h": "dom/html/html_object_element.h",
+        "vendor/libdom/include/dom/html/html_olist_element.h": "dom/html/html_olist_element.h",
+        "vendor/libdom/include/dom/html/html_opt_group_element.h": "dom/html/html_opt_group_element.h",
+        "vendor/libdom/include/dom/html/html_option_element.h": "dom/html/html_option_element.h",
+        "vendor/libdom/include/dom/html/html_options_collection.h": "dom/html/html_options_collection.h",
+        "vendor/libdom/include/dom/html/html_paragraph_element.h": "dom/html/html_paragraph_element.h",
+        "vendor/libdom/include/dom/html/html_param_element.h": "dom/html/html_param_element.h",
+        "vendor/libdom/include/dom/html/html_pre_element.h": "dom/html/html_pre_element.h",
+        "vendor/libdom/include/dom/html/html_quote_element.h": "dom/html/html_quote_element.h",
+        "vendor/libdom/include/dom/html/html_script_element.h": "dom/html/html_script_element.h",
+        "vendor/libdom/include/dom/html/html_select_element.h": "dom/html/html_select_element.h",
+        "vendor/libdom/include/dom/html/html_style_element.h": "dom/html/html_style_element.h",
+        "vendor/libdom/include/dom/html/html_table_element.h": "dom/html/html_table_element.h",
+        "vendor/libdom/include/dom/html/html_tablecaption_element.h": "dom/html/html_tablecaption_element.h",
+        "vendor/libdom/include/dom/html/html_tablecell_element.h": "dom/html/html_tablecell_element.h",
+        "vendor/libdom/include/dom/html/html_tablecol_element.h": "dom/html/html_tablecol_element.h",
+        "vendor/libdom/include/dom/html/html_tablerow_element.h": "dom/html/html_tablerow_element.h",
+        "vendor/libdom/include/dom/html/html_tablesection_element.h": "dom/html/html_tablesection_element.h",
+        "vendor/libdom/include/dom/html/html_text_area_element.h": "dom/html/html_text_area_element.h",
+        "vendor/libdom/include/dom/html/html_title_element.h": "dom/html/html_title_element.h",
+        "vendor/libdom/include/dom/html/html_ulist_element.h": "dom/html/html_ulist_element.h",
+        "vendor/libdom/include/dom/inttypes.h": "dom/inttypes.h",
+        "vendor/libdom/include/dom/walk.h": "dom/walk.h",
+        "vendor/libdom/bindings/hubbub/errors.h": "dom/bindings/hubbub/errors.h",
+        "vendor/libdom/bindings/hubbub/parser.h": "dom/bindings/hubbub/parser.h",
+        "vendor/libdom/bindings/hubbub/utils.h": "dom/bindings/hubbub/utils.h",
+        "vendor/libdom/bindings/xml/utils.h": "dom/bindings/xml/utils.h",
+        "vendor/libdom/bindings/xml/xmlerror.h": "dom/bindings/xml/xmlerror.h",
+        "vendor/libdom/bindings/xml/xmlparser.h": "dom/bindings/xml/xmlparser.h"
+      },
+      "cmake_targets": [
+        "LMX::dom"
+      ],
+      "build_group": "extensions/netsurf_extra",
+      "purpose": "DOM nodes, HTML element interfaces, events, mutation; HTML5 and XML parser bindings",
+      "selected_profile": "Hosted ISO C99 static library; portable production C sources, with guarded build views where documented; no browser application or scripting VM; Hubbub HTML binding and Expat XML binding; alternative libxml2 binding source retained but not compiled",
+      "dependencies": [
+        "LMX::hubbub",
+        "LMX::parserutils",
+        "LMX::wapcaplet",
+        "LMX::expat"
+      ],
+      "validation": "Original and retained source builds with -std=c99 -pedantic-errors; offline integration checks in extensions/netsurf_extra/tests",
+      "vendor_modifications": [],
+      "build_view_adjustments_file": "extensions/netsurf_extra/C99_ADJUSTMENTS.json"
+    },
+    {
+      "id": "netsurf_extra:libcss",
+      "paths": [
+        "vendor/libcss"
+      ],
+      "version": "0.9.2",
+      "commit": "0c4f51901a152ae551987aabdb7881c4f55cdc08",
+      "license": "MIT",
+      "urls": [
+        "https://github.com/netsurf-browser/libcss/tree/0c4f51901a152ae551987aabdb7881c4f55cdc08"
+      ],
+      "licenses_notices": [
+        "vendor/libcss/COPYING"
+      ],
+      "source_archives": [
+        {
+          "url": "https://codeload.github.com/netsurf-browser/libcss/tar.gz/refs/heads/master",
+          "sha256": "435fc14ec3db9d4ce33ce97022fed9057a7b524ec128955bfa2ffb937e82d88b",
+          "download_bytes": 562010,
+          "retained_in_delivery": false
+        }
+      ],
+      "public_headers": [
+        "vendor/libcss/include/libcss/computed.h",
+        "vendor/libcss/include/libcss/errors.h",
+        "vendor/libcss/include/libcss/font_face.h",
+        "vendor/libcss/include/libcss/fpmath.h",
+        "vendor/libcss/include/libcss/functypes.h",
+        "vendor/libcss/include/libcss/hint.h",
+        "vendor/libcss/include/libcss/libcss.h",
+        "vendor/libcss/include/libcss/properties.h",
+        "vendor/libcss/include/libcss/select.h",
+        "vendor/libcss/include/libcss/stylesheet.h",
+        "vendor/libcss/include/libcss/types.h",
+        "vendor/libcss/include/libcss/unit.h"
+      ],
+      "canonical_header_map": {
+        "vendor/libcss/include/libcss/computed.h": "libcss/computed.h",
+        "vendor/libcss/include/libcss/errors.h": "libcss/errors.h",
+        "vendor/libcss/include/libcss/font_face.h": "libcss/font_face.h",
+        "vendor/libcss/include/libcss/fpmath.h": "libcss/fpmath.h",
+        "vendor/libcss/include/libcss/functypes.h": "libcss/functypes.h",
+        "vendor/libcss/include/libcss/hint.h": "libcss/hint.h",
+        "vendor/libcss/include/libcss/libcss.h": "libcss/libcss.h",
+        "vendor/libcss/include/libcss/properties.h": "libcss/properties.h",
+        "vendor/libcss/include/libcss/select.h": "libcss/select.h",
+        "vendor/libcss/include/libcss/stylesheet.h": "libcss/stylesheet.h",
+        "vendor/libcss/include/libcss/types.h": "libcss/types.h",
+        "vendor/libcss/include/libcss/unit.h": "libcss/unit.h"
+      },
+      "cmake_targets": [
+        "LMX::css"
+      ],
+      "build_group": "extensions/netsurf_extra",
+      "purpose": "CSS parsing, selector matching, cascade, computed styles and units",
+      "selected_profile": "Hosted ISO C99 static library; portable production C sources, with guarded build views where documented; no browser application or scripting VM",
+      "dependencies": [
+        "LMX::parserutils",
+        "LMX::wapcaplet"
+      ],
+      "validation": "Original and retained source builds with -std=c99 -pedantic-errors; offline integration checks in extensions/netsurf_extra/tests",
+      "vendor_modifications": [],
+      "build_view_adjustments_file": "extensions/netsurf_extra/C99_ADJUSTMENTS.json"
+    },
+    {
+      "id": "netsurf_extra:libsvgtiny",
+      "paths": [
+        "vendor/libsvgtiny"
+      ],
+      "version": "0.1.8",
+      "commit": "848424e7328eb5bf1c96783250d322bc3edf1d57",
+      "license": "MIT",
+      "urls": [
+        "https://github.com/netsurf-browser/libsvgtiny/tree/848424e7328eb5bf1c96783250d322bc3edf1d57"
+      ],
+      "licenses_notices": [
+        "vendor/libsvgtiny/COPYING"
+      ],
+      "source_archives": [
+        {
+          "url": "https://codeload.github.com/netsurf-browser/libsvgtiny/tar.gz/refs/heads/master",
+          "sha256": "d3e524f9f8ff3b6ef07bc504d140f50581b7e89bcc4a053ed918b3aa256ddd93",
+          "download_bytes": 228354,
+          "retained_in_delivery": false
+        }
+      ],
+      "public_headers": [
+        "vendor/libsvgtiny/include/svgtiny.h"
+      ],
+      "canonical_header_map": {
+        "vendor/libsvgtiny/include/svgtiny.h": "svgtiny.h"
+      },
+      "cmake_targets": [
+        "LMX::svgtiny"
+      ],
+      "build_group": "extensions/netsurf_extra",
+      "purpose": "SVG parser producing paths, colours and text records",
+      "selected_profile": "Hosted ISO C99 static library; portable production C sources, with guarded build views where documented; no browser application or scripting VM",
+      "dependencies": [
+        "LMX::dom",
+        "LMX::wapcaplet",
+        "libm"
+      ],
+      "validation": "Original and retained source builds with -std=c99 -pedantic-errors; offline integration checks in extensions/netsurf_extra/tests",
+      "vendor_modifications": [],
+      "build_view_adjustments_file": "extensions/netsurf_extra/C99_ADJUSTMENTS.json",
+      "known_limitations": [
+        "SVG subset; exposes geometry and text, not a complete browser renderer"
+      ]
+    },
+    {
+      "id": "netsurf_extra:libnsbmp",
+      "paths": [
+        "vendor/libnsbmp"
+      ],
+      "version": "0.1.7",
+      "commit": "3406e7e0bfb5a8edc73af1cd4ae39553907514fb",
+      "license": "MIT",
+      "urls": [
+        "https://github.com/netsurf-browser/libnsbmp/tree/3406e7e0bfb5a8edc73af1cd4ae39553907514fb"
+      ],
+      "licenses_notices": [
+        "vendor/libnsbmp/COPYING"
+      ],
+      "source_archives": [
+        {
+          "url": "https://codeload.github.com/netsurf-browser/libnsbmp/tar.gz/refs/heads/master",
+          "sha256": "f884b1bbc887b8ade35a2dcc0740cc9f758c4758563766f38c473252600e2844",
+          "download_bytes": 1013938,
+          "retained_in_delivery": false
+        }
+      ],
+      "public_headers": [
+        "vendor/libnsbmp/include/libnsbmp.h"
+      ],
+      "canonical_header_map": {
+        "vendor/libnsbmp/include/libnsbmp.h": "libnsbmp.h"
+      },
+      "cmake_targets": [
+        "LMX::nsbmp"
+      ],
+      "build_group": "extensions/netsurf_extra",
+      "purpose": "BMP and ICO image decoders",
+      "selected_profile": "Hosted ISO C99 static library; portable production C sources, with guarded build views where documented; no browser application or scripting VM",
+      "dependencies": [],
+      "validation": "Original and retained source builds with -std=c99 -pedantic-errors; offline integration checks in extensions/netsurf_extra/tests",
+      "vendor_modifications": [],
+      "build_view_adjustments_file": "extensions/netsurf_extra/C99_ADJUSTMENTS.json"
+    },
+    {
+      "id": "netsurf_extra:libnsgif",
+      "paths": [
+        "vendor/libnsgif"
+      ],
+      "version": "1.0.0",
+      "commit": "b9e3b0aadce374cce45c34feb55ad73a3381ff98",
+      "license": "MIT",
+      "urls": [
+        "https://github.com/netsurf-browser/libnsgif/tree/b9e3b0aadce374cce45c34feb55ad73a3381ff98"
+      ],
+      "licenses_notices": [
+        "vendor/libnsgif/COPYING"
+      ],
+      "source_archives": [
+        {
+          "url": "https://codeload.github.com/netsurf-browser/libnsgif/tar.gz/refs/heads/master",
+          "sha256": "850ef806607699f7bd779347dd66cfcdb0b2e862f217dd40dba8ced748368e6f",
+          "download_bytes": 302798,
+          "retained_in_delivery": false
+        }
+      ],
+      "public_headers": [
+        "vendor/libnsgif/include/nsgif.h"
+      ],
+      "canonical_header_map": {
+        "vendor/libnsgif/include/nsgif.h": "nsgif.h"
+      },
+      "cmake_targets": [
+        "LMX::nsgif"
+      ],
+      "build_group": "extensions/netsurf_extra",
+      "purpose": "GIF decoder and animation control",
+      "selected_profile": "Hosted ISO C99 static library; portable production C sources, with guarded build views where documented; no browser application or scripting VM",
+      "dependencies": [],
+      "validation": "Original and retained source builds with -std=c99 -pedantic-errors; offline integration checks in extensions/netsurf_extra/tests",
+      "vendor_modifications": [],
+      "build_view_adjustments_file": "extensions/netsurf_extra/C99_ADJUSTMENTS.json"
+    },
+    {
+      "id": "bundles_extra:gb",
+      "paths": [
+        "vendor/gb"
+      ],
+      "version": "gb.h 0.33 + gb_ini.h 0.93",
+      "commit": "52a3a542ef6d398d541d5083aa878598189425ef",
+      "license": "Public domain",
+      "urls": [
+        "https://github.com/gingerBill/gb/tree/52a3a542ef6d398d541d5083aa878598189425ef",
+        "https://codeload.github.com/gingerBill/gb/tar.gz/52a3a542ef6d398d541d5083aa878598189425ef"
+      ],
+      "source_archives": [
+        {
+          "names": [
+            "gb-52a3a542ef6d398d541d5083aa878598189425ef.tar.gz"
+          ],
+          "sha256": "f63e47ae5a84c4ed43d38b99b6c99be50d0d6f588c8e2a5ded1efe1dbb854cd0"
+        }
+      ],
+      "public_headers": [
+        "vendor/gb/gb.h",
+        "vendor/gb/gb_ini.h"
+      ],
+      "canonical_header_map": {
+        "vendor/gb/gb.h": "gb.h",
+        "vendor/gb/gb_ini.h": "gb_ini.h"
+      },
+      "cmake_targets": [
+        "LMX::gb"
+      ],
+      "build_module": "extensions/bundles_extra",
+      "selected_profile": "gb.h core without GB_PLATFORM window/input backend; gb_ini.h foreign INI reader",
+      "availability": "compiled C99 static target; Linux x86_64 verification, other platforms not executed",
+      "licenses_notices": [
+        "vendor/gb/gb.h",
+        "vendor/gb/gb_ini.h",
+        "vendor/gb/README.md"
+      ],
+      "notes": [
+        "No JSON implementation exists in this gb snapshot.",
+        "gb_math.h and gb_gl.h omitted: anonymous C11 structures/unions or graphics-specific dependencies. gb_string.h is a standalone duplicate of the core string family.",
+        "The generated header build view repairs strict C99 syntax, thread callback forward declaration, dlsym conversion and multi-translation-unit INI helper linkage.",
+        "gb_inline overridden to external definitions in implementation unit to avoid forced-inline/PIC interposition errors.",
+        "Threading, clocks, filesystem and dynamic loading retain upstream platform branches; GB_PLATFORM functions are not in this profile."
+      ]
+    },
+    {
+      "id": "bundles_extra:cute_c2",
+      "paths": [
+        "vendor/cute_headers/cute_c2.h"
+      ],
+      "version": "1.10",
+      "commit": "476d688d8cdcaf1c3890a106a6421849a29ed988",
+      "license": "zlib (selected alternative; public-domain alternative also retained)",
+      "urls": [
+        "https://github.com/RandyGaul/cute_headers/tree/476d688d8cdcaf1c3890a106a6421849a29ed988",
+        "https://codeload.github.com/RandyGaul/cute_headers/tar.gz/476d688d8cdcaf1c3890a106a6421849a29ed988"
+      ],
+      "source_archives": [
+        {
+          "names": [
+            "cute_headers-476d688d8cdcaf1c3890a106a6421849a29ed988.tar.gz"
+          ],
+          "sha256": "4b46039a56d24a622465458050822546a712653161c67d25949ad330d97deddd"
+        }
+      ],
+      "public_headers": [
+        "vendor/cute_headers/cute_c2.h"
+      ],
+      "canonical_header_map": {
+        "vendor/cute_headers/cute_c2.h": "cute_c2.h"
+      },
+      "cmake_targets": [
+        "LMX::cute_c2"
+      ],
+      "build_module": "extensions/bundles_extra",
+      "selected_profile": "2D collision tests, manifolds, GJK, raycasts; scalar C99",
+      "availability": "compiled C99 static target; Linux x86_64 verification, other platforms not executed",
+      "licenses_notices": [
+        "vendor/cute_headers/LICENSE",
+        "vendor/cute_headers/cute_c2.h"
+      ],
+      "notes": []
+    },
+    {
+      "id": "bundles_extra:cute_tiled",
+      "paths": [
+        "vendor/cute_headers/cute_tiled.h"
+      ],
+      "version": "1.06",
+      "commit": "476d688d8cdcaf1c3890a106a6421849a29ed988",
+      "license": "zlib (selected alternative; public-domain alternative also retained)",
+      "urls": [
+        "https://github.com/RandyGaul/cute_headers/tree/476d688d8cdcaf1c3890a106a6421849a29ed988",
+        "https://codeload.github.com/RandyGaul/cute_headers/tar.gz/476d688d8cdcaf1c3890a106a6421849a29ed988"
+      ],
+      "source_archives": [
+        {
+          "names": [
+            "cute_headers-476d688d8cdcaf1c3890a106a6421849a29ed988.tar.gz"
+          ],
+          "sha256": "4b46039a56d24a622465458050822546a712653161c67d25949ad330d97deddd"
+        }
+      ],
+      "public_headers": [
+        "vendor/cute_headers/cute_tiled.h"
+      ],
+      "canonical_header_map": {
+        "vendor/cute_headers/cute_tiled.h": "cute_tiled.h"
+      },
+      "cmake_targets": [
+        "LMX::cute_tiled"
+      ],
+      "build_module": "extensions/bundles_extra",
+      "selected_profile": "Tiled JSON map reader including infinite-map chunks; no general LMX settings/configuration backend",
+      "availability": "compiled C99 static target; Linux x86_64 verification, other platforms not executed",
+      "licenses_notices": [
+        "vendor/cute_headers/LICENSE",
+        "vendor/cute_headers/cute_tiled.h"
+      ],
+      "notes": [
+        "C99 build view supplies missing cute_tiled_chunk_t forward typedef. JSON is read solely as the external Tiled interchange format."
+      ]
+    },
+    {
+      "id": "bundles_extra:cute_aseprite",
+      "paths": [
+        "vendor/cute_headers/cute_aseprite.h"
+      ],
+      "version": "1.04",
+      "commit": "476d688d8cdcaf1c3890a106a6421849a29ed988",
+      "license": "zlib (selected alternative; public-domain alternative also retained)",
+      "urls": [
+        "https://github.com/RandyGaul/cute_headers/tree/476d688d8cdcaf1c3890a106a6421849a29ed988",
+        "https://codeload.github.com/RandyGaul/cute_headers/tar.gz/476d688d8cdcaf1c3890a106a6421849a29ed988"
+      ],
+      "source_archives": [
+        {
+          "names": [
+            "cute_headers-476d688d8cdcaf1c3890a106a6421849a29ed988.tar.gz"
+          ],
+          "sha256": "4b46039a56d24a622465458050822546a712653161c67d25949ad330d97deddd"
+        }
+      ],
+      "public_headers": [
+        "vendor/cute_headers/cute_aseprite.h"
+      ],
+      "canonical_header_map": {
+        "vendor/cute_headers/cute_aseprite.h": "cute_aseprite.h"
+      },
+      "cmake_targets": [
+        "LMX::cute_aseprite"
+      ],
+      "build_module": "extensions/bundles_extra",
+      "selected_profile": "Aseprite binary reader, layer/frame/cel/palette/tag/user-data decoding; no renderer",
+      "availability": "compiled C99 static target; Linux x86_64 verification, other platforms not executed",
+      "licenses_notices": [
+        "vendor/cute_headers/LICENSE",
+        "vendor/cute_headers/cute_aseprite.h"
+      ],
+      "notes": []
+    },
+    {
+      "id": "bundles_extra:cute_png",
+      "paths": [
+        "vendor/cute_headers/cute_png.h"
+      ],
+      "version": "1.06",
+      "commit": "476d688d8cdcaf1c3890a106a6421849a29ed988",
+      "license": "zlib (selected alternative; public-domain alternative also retained)",
+      "urls": [
+        "https://github.com/RandyGaul/cute_headers/tree/476d688d8cdcaf1c3890a106a6421849a29ed988",
+        "https://codeload.github.com/RandyGaul/cute_headers/tar.gz/476d688d8cdcaf1c3890a106a6421849a29ed988"
+      ],
+      "source_archives": [
+        {
+          "names": [
+            "cute_headers-476d688d8cdcaf1c3890a106a6421849a29ed988.tar.gz"
+          ],
+          "sha256": "4b46039a56d24a622465458050822546a712653161c67d25949ad330d97deddd"
+        }
+      ],
+      "public_headers": [
+        "vendor/cute_headers/cute_png.h"
+      ],
+      "canonical_header_map": {
+        "vendor/cute_headers/cute_png.h": "cute_png.h"
+      },
+      "cmake_targets": [
+        "LMX::cute_png"
+      ],
+      "build_module": "extensions/bundles_extra",
+      "selected_profile": "PNG RGBA reader/writer and lossless in-memory/file conversion",
+      "availability": "compiled C99 static target; Linux x86_64 verification, other platforms not executed",
+      "licenses_notices": [
+        "vendor/cute_headers/LICENSE",
+        "vendor/cute_headers/cute_png.h"
+      ],
+      "notes": [
+        "C99 build view removes duplicate cp_lz77_state_t typedef."
+      ]
+    },
+    {
+      "id": "bundles_extra:cute_spritebatch",
+      "paths": [
+        "vendor/cute_headers/cute_spritebatch.h"
+      ],
+      "version": "1.08",
+      "commit": "476d688d8cdcaf1c3890a106a6421849a29ed988",
+      "license": "zlib (selected alternative; public-domain alternative also retained)",
+      "urls": [
+        "https://github.com/RandyGaul/cute_headers/tree/476d688d8cdcaf1c3890a106a6421849a29ed988",
+        "https://codeload.github.com/RandyGaul/cute_headers/tar.gz/476d688d8cdcaf1c3890a106a6421849a29ed988"
+      ],
+      "source_archives": [
+        {
+          "names": [
+            "cute_headers-476d688d8cdcaf1c3890a106a6421849a29ed988.tar.gz"
+          ],
+          "sha256": "4b46039a56d24a622465458050822546a712653161c67d25949ad330d97deddd"
+        }
+      ],
+      "public_headers": [
+        "vendor/cute_headers/cute_spritebatch.h"
+      ],
+      "canonical_header_map": {
+        "vendor/cute_headers/cute_spritebatch.h": "cute_spritebatch.h"
+      },
+      "cmake_targets": [
+        "LMX::cute_spritebatch"
+      ],
+      "build_module": "extensions/bundles_extra",
+      "selected_profile": "Texture atlas construction and sprite batching via caller callbacks; no OpenGL dependency",
+      "availability": "compiled C99 static target; Linux x86_64 verification, other platforms not executed",
+      "licenses_notices": [
+        "vendor/cute_headers/LICENSE",
+        "vendor/cute_headers/cute_spritebatch.h"
+      ],
+      "notes": [
+        "C99 implementation unit includes stdint.h and limits.h explicitly. Build view releases owned lonely/atlas texture handles at termination; premade atlas handles remain caller-owned."
+      ]
+    },
+    {
+      "id": "bundles_extra:cute_sync",
+      "paths": [
+        "vendor/cute_headers/cute_sync.h"
+      ],
+      "version": "1.02",
+      "commit": "476d688d8cdcaf1c3890a106a6421849a29ed988",
+      "license": "zlib (selected alternative; public-domain alternative also retained)",
+      "urls": [
+        "https://github.com/RandyGaul/cute_headers/tree/476d688d8cdcaf1c3890a106a6421849a29ed988",
+        "https://codeload.github.com/RandyGaul/cute_headers/tar.gz/476d688d8cdcaf1c3890a106a6421849a29ed988"
+      ],
+      "source_archives": [
+        {
+          "names": [
+            "cute_headers-476d688d8cdcaf1c3890a106a6421849a29ed988.tar.gz"
+          ],
+          "sha256": "4b46039a56d24a622465458050822546a712653161c67d25949ad330d97deddd"
+        }
+      ],
+      "public_headers": [
+        "vendor/cute_headers/cute_sync.h"
+      ],
+      "canonical_header_map": {
+        "vendor/cute_headers/cute_sync.h": "cute_sync.h"
+      },
+      "cmake_targets": [
+        "LMX::cute_sync"
+      ],
+      "build_module": "extensions/bundles_extra",
+      "selected_profile": "Native OS threading, mutex/condition/semaphore, atomics, rwlock and thread pool",
+      "availability": "compiled C99 static target; Linux x86_64 verification, other platforms not executed",
+      "licenses_notices": [
+        "vendor/cute_headers/LICENSE",
+        "vendor/cute_headers/cute_sync.h"
+      ],
+      "notes": [
+        "C99 build view replaces duplicate typedef and corrects POSIX integer/pointer CAS return comparisons (old value == expected). Native compiler/OS atomics are required; no C11 atomics assumption."
+      ]
+    },
+    {
+      "id": "bundles_extra:cute_net",
+      "paths": [
+        "vendor/cute_headers/cute_net.h"
+      ],
+      "version": "1.03",
+      "commit": "476d688d8cdcaf1c3890a106a6421849a29ed988",
+      "license": "zlib AND ISC AND MIT (zlib selected for cute code; embedded libhydrogen/STROBE notices retained)",
+      "urls": [
+        "https://github.com/RandyGaul/cute_headers/tree/476d688d8cdcaf1c3890a106a6421849a29ed988",
+        "https://codeload.github.com/RandyGaul/cute_headers/tar.gz/476d688d8cdcaf1c3890a106a6421849a29ed988"
+      ],
+      "source_archives": [
+        {
+          "names": [
+            "cute_headers-476d688d8cdcaf1c3890a106a6421849a29ed988.tar.gz"
+          ],
+          "sha256": "4b46039a56d24a622465458050822546a712653161c67d25949ad330d97deddd"
+        }
+      ],
+      "public_headers": [
+        "vendor/cute_headers/cute_net.h"
+      ],
+      "canonical_header_map": {
+        "vendor/cute_headers/cute_net.h": "cute_net.h"
+      },
+      "cmake_targets": [
+        "LMX::cute_net"
+      ],
+      "build_module": "extensions/bundles_extra",
+      "selected_profile": "UDP client/server transport, token authentication, reliable packets; embedded libhydrogen; no general language VM",
+      "availability": "compiled C99 static target; Linux x86_64 verification, other platforms not executed",
+      "licenses_notices": [
+        "vendor/cute_headers/LICENSE",
+        "vendor/cute_headers/cute_net.h",
+        "vendor/cute_headers/LIBHYDROGEN_LICENSE",
+        "vendor/cute_headers/STROBE_LICENSE"
+      ],
+      "notes": [
+        "Token creation/key generation require an operating-system cryptographic random source. Socket transport requires OS networking.",
+        "Embedded upstream test suite is separately compiled, so its test-only helpers are not exposed as production ABI."
+      ],
+      "declared_unimplemented": [
+        "cn_run_tests"
+      ]
+    },
+    {
+      "id": "bundles_extra:ea_libc",
+      "paths": [
+        "vendor/ea_libc",
+        "extensions/bundles_extra/include/lmx_ea_libc.h"
+      ],
+      "version": "snapshot 6f23cc0848d1",
+      "commit": "6f23cc0848d10d93b35c4ecafeff4d10f0b81795",
+      "license": "MIT AND BSD-2-Clause AND BSD-3-Clause AND ISC AND TCL",
+      "urls": [
+        "https://github.com/embeddedartistry/libc/tree/6f23cc0848d10d93b35c4ecafeff4d10f0b81795",
+        "https://codeload.github.com/embeddedartistry/libc/tar.gz/6f23cc0848d10d93b35c4ecafeff4d10f0b81795"
+      ],
+      "source_archives": [
+        {
+          "names": [
+            "ea_libc-6f23cc0848d10d93b35c4ecafeff4d10f0b81795.tar.gz"
+          ],
+          "sha256": "d257499668c232426179446b9d690bc6abfbb70815166dd29c8ab96a008f45e9"
+        }
+      ],
+      "public_headers": [
+        "extensions/bundles_extra/include/lmx_ea_libc.h"
+      ],
+      "canonical_header_map": {
+        "extensions/bundles_extra/include/lmx_ea_libc.h": "lmx_ea_libc.h"
+      },
+      "cmake_targets": [
+        "LMX::ea_libc"
+      ],
+      "build_module": "extensions/bundles_extra",
+      "selected_profile": "80 explicitly prefixed functions: ASCII/Unicode classification, memory/string algorithms, sorting/search, integer conversion, arithmetic, pseudo-random, two absolute-value math functions",
+      "availability": "compiled C99 static target; Linux x86_64 verification, other platforms not executed",
+      "licenses_notices": [
+        "vendor/ea_libc/LICENSE",
+        "vendor/ea_libc/UPSTREAM_LICENSES.md",
+        "vendor/ea_libc/src",
+        "vendor/ea_libc/TCL_LICENSE_TERMS"
+      ],
+      "notes": [
+        "This is a selected algorithm library, not a complete libc or replacement host runtime. Every public ABI symbol begins lmx_ea_.",
+        "APSL sources strcpy/strcat/strncpy/strncat/strtol/strtoul/atof are excluded; realloc excluded for unsafe old-allocation read; atoi/atol/atoll and all CRT/stdio/time/locale replacement surfaces omitted.",
+        "No gdtoa/openlibm/printf submodule or build-time fetch. malloc/free are provided by host/application.",
+        "Public wide character input uses explicitly fixed 32-bit lmx_ea_wint_t and lmx_ea_wchar_t, independent of host wchar_t width.",
+        "strtoll/strtoull saturate on overflow without errno. Valid bases are 0 or 2..36. ASCII alphabetic digit conversion in strtoull is repaired in the guarded build view.",
+        "rand/srand and strtok have process-global state; rand_r and strtok_r allow actor-owned state. Unicode tables have the version supplied by the pinned upstream source, not a promise of latest Unicode.",
+        "calloc multiplication-overflow threshold uses size_t instead of unsigned long for LLP64 portability. GNU aliasing optimizations are disabled for isolated renamed builds.",
+        "Guarded build view corrects signed Unicode range comparisons and supplementary-plane case direction, uses the distinct wide-table index in wcwidth, and replaces host wcschr use with an explicit 32-bit whitespace scan. Wide API input must be a valid Unicode scalar; retained tables are not a complete Unicode conformance guarantee."
+      ],
+      "abi_symbol_map": {
+        "isalnum": "lmx_ea_isalnum",
+        "isalpha": "lmx_ea_isalpha",
+        "isascii": "lmx_ea_isascii",
+        "isblank": "lmx_ea_isblank",
+        "iscntrl": "lmx_ea_iscntrl",
+        "isdigit": "lmx_ea_isdigit",
+        "isgraph": "lmx_ea_isgraph",
+        "islower": "lmx_ea_islower",
+        "isprint": "lmx_ea_isprint",
+        "ispunct": "lmx_ea_ispunct",
+        "isspace": "lmx_ea_isspace",
+        "isupper": "lmx_ea_isupper",
+        "isxdigit": "lmx_ea_isxdigit",
+        "toascii": "lmx_ea_toascii",
+        "tolower": "lmx_ea_tolower",
+        "toupper": "lmx_ea_toupper",
+        "memcpy": "lmx_ea_memcpy",
+        "memmove": "lmx_ea_memmove",
+        "memset": "lmx_ea_memset",
+        "memcmp": "lmx_ea_memcmp",
+        "memchr": "lmx_ea_memchr",
+        "memrchr": "lmx_ea_memrchr",
+        "memmem": "lmx_ea_memmem",
+        "strlen": "lmx_ea_strlen",
+        "strnlen": "lmx_ea_strnlen",
+        "strcmp": "lmx_ea_strcmp",
+        "strncmp": "lmx_ea_strncmp",
+        "strcoll": "lmx_ea_strcoll",
+        "strchr": "lmx_ea_strchr",
+        "strchrnul": "lmx_ea_strchrnul",
+        "strrchr": "lmx_ea_strrchr",
+        "strstr": "lmx_ea_strstr",
+        "strnstr": "lmx_ea_strnstr",
+        "strspn": "lmx_ea_strspn",
+        "strcspn": "lmx_ea_strcspn",
+        "strpbrk": "lmx_ea_strpbrk",
+        "strtok": "lmx_ea_strtok",
+        "strtok_r": "lmx_ea_strtok_r",
+        "strdup": "lmx_ea_strdup",
+        "strndup": "lmx_ea_strndup",
+        "calloc": "lmx_ea_calloc",
+        "bsearch": "lmx_ea_bsearch",
+        "qsort": "lmx_ea_qsort",
+        "qsort_r": "lmx_ea_qsort_r",
+        "heapsort": "lmx_ea_heapsort",
+        "heapsort_r": "lmx_ea_heapsort_r",
+        "abs": "lmx_ea_abs",
+        "labs": "lmx_ea_labs",
+        "llabs": "lmx_ea_llabs",
+        "imaxabs": "lmx_ea_imaxabs",
+        "div": "lmx_ea_div",
+        "ldiv": "lmx_ea_ldiv",
+        "lldiv": "lmx_ea_lldiv",
+        "imaxdiv": "lmx_ea_imaxdiv",
+        "strtoll": "lmx_ea_strtoll",
+        "strtoull": "lmx_ea_strtoull",
+        "rand": "lmx_ea_rand",
+        "rand_r": "lmx_ea_rand_r",
+        "srand": "lmx_ea_srand",
+        "fls": "lmx_ea_fls",
+        "flsl": "lmx_ea_flsl",
+        "flsll": "lmx_ea_flsll",
+        "fabsf": "lmx_ea_fabsf",
+        "fabs": "lmx_ea_fabs",
+        "iswalnum": "lmx_ea_iswalnum",
+        "iswalpha": "lmx_ea_iswalpha",
+        "iswblank": "lmx_ea_iswblank",
+        "iswcntrl": "lmx_ea_iswcntrl",
+        "iswdigit": "lmx_ea_iswdigit",
+        "iswgraph": "lmx_ea_iswgraph",
+        "iswlower": "lmx_ea_iswlower",
+        "iswprint": "lmx_ea_iswprint",
+        "iswpunct": "lmx_ea_iswpunct",
+        "iswspace": "lmx_ea_iswspace",
+        "iswupper": "lmx_ea_iswupper",
+        "iswxdigit": "lmx_ea_iswxdigit",
+        "towlower": "lmx_ea_towlower",
+        "towupper": "lmx_ea_towupper",
+        "wcwidth": "lmx_ea_wcwidth",
+        "wcswidth": "lmx_ea_wcswidth",
+        "__strchrnul": "lmx_ea_strchrnul",
+        "__memrchr": "lmx_ea_memrchr",
+        "__strtok_r": "lmx_ea_strtok_r",
+        "__towcase": "lmx_ea_towcase_internal"
+      },
+      "implemented_public_count": 80,
+      "source_selection_manifest": "extensions/bundles_extra/ea_sources.cmake"
+    },
+    {
+      "id": "bundles_extra:cute_sound",
+      "paths": [
+        "vendor/cute_headers/cute_sound.h"
+      ],
+      "version": "3.00",
+      "commit": "476d688d8cdcaf1c3890a106a6421849a29ed988",
+      "license": "zlib (selected alternative; public-domain alternative also retained)",
+      "urls": [
+        "https://github.com/RandyGaul/cute_headers/tree/476d688d8cdcaf1c3890a106a6421849a29ed988",
+        "https://codeload.github.com/RandyGaul/cute_headers/tar.gz/476d688d8cdcaf1c3890a106a6421849a29ed988"
+      ],
+      "source_archives": [
+        {
+          "names": [
+            "cute_headers-476d688d8cdcaf1c3890a106a6421849a29ed988.tar.gz"
+          ],
+          "sha256": "4b46039a56d24a622465458050822546a712653161c67d25949ad330d97deddd"
+        }
+      ],
+      "public_headers": [
+        "vendor/cute_headers/cute_sound.h"
+      ],
+      "canonical_header_map": {
+        "vendor/cute_headers/cute_sound.h": "cute_sound.h"
+      },
+      "cmake_targets": [
+        "LMX::cute_sound"
+      ],
+      "build_module": "extensions/bundles_extra",
+      "selected_profile": "SDL3-backed scalar audio mixer; PCM/IEEE float WAV memory/file reader, music and sound playback; no OGG or SDL2 RWops API",
+      "availability": "compiled C99 static target; Linux x86_64 verification; enabled when SDL3 target/package is supplied",
+      "dependencies": [
+        "platform_extra:sdl3"
+      ],
+      "licenses_notices": [
+        "vendor/cute_headers/LICENSE",
+        "vendor/cute_headers/cute_sound.h"
+      ],
+      "notes": [
+        "Use LMX_BUNDLES_WITH_SOUND=ON with LMX::sdl3, SDL3::SDL3-static or an SDL3 package; no second SDL copy and no build-time fetch.",
+        "Build view makes CUTE_SOUND_SCALAR_MODE authoritative by parenthesizing CPU feature checks, removes duplicate cs_audio_source_t typedef and two extra struct-member semicolons.",
+        "WAV decode metadata and dummy-audio device lifecycle test passed. Actual physical device output was not exercised.",
+        "OGG routines require external stb_vorbis inclusion and are not compiled in this profile; SDL2 RWops routines are also not compiled.",
+        "Audio context is global; serialization/ownership is required across LMX actors."
+      ]
+    },
+    {
+      "id": "platform_extra:apr",
+      "name": "apr",
+      "version": "1.7.6",
+      "upstream": {
+        "homepage": "https://apr.apache.org/",
+        "url": "https://archive.apache.org/dist/apr/apr-1.7.6.tar.gz",
+        "archive_sha256": "6a10e7f7430510600af25fabf466e1df61aaae910bf1dc5d10c44a4433ccc81d"
+      },
+      "source_url": "https://archive.apache.org/dist/apr/apr-1.7.6.tar.gz",
+      "license": "Apache-2.0; bundled permissive notices retained",
+      "vendor_path": "vendor/apr",
+      "public_headers": [
+        "vendor/apr/include/apr_allocator.h",
+        "vendor/apr/include/apr_atomic.h",
+        "vendor/apr/include/apr_cstr.h",
+        "vendor/apr/include/apr_dso.h",
+        "vendor/apr/include/apr_encode.h",
+        "vendor/apr/include/apr_env.h",
+        "vendor/apr/include/apr_errno.h",
+        "vendor/apr/include/apr_escape.h",
+        "vendor/apr/include/apr_file_info.h",
+        "vendor/apr/include/apr_file_io.h",
+        "vendor/apr/include/apr_fnmatch.h",
+        "vendor/apr/include/apr_general.h",
+        "vendor/apr/include/apr_getopt.h",
+        "vendor/apr/include/apr_global_mutex.h",
+        "vendor/apr/include/apr_hash.h",
+        "vendor/apr/include/apr_inherit.h",
+        "vendor/apr/include/apr_lib.h",
+        "vendor/apr/include/apr_mmap.h",
+        "vendor/apr/include/apr_network_io.h",
+        "vendor/apr/include/apr_perms_set.h",
+        "vendor/apr/include/apr_poll.h",
+        "vendor/apr/include/apr_pools.h",
+        "vendor/apr/include/apr_portable.h",
+        "vendor/apr/include/apr_proc_mutex.h",
+        "vendor/apr/include/apr_random.h",
+        "vendor/apr/include/apr_ring.h",
+        "vendor/apr/include/apr_shm.h",
+        "vendor/apr/include/apr_signal.h",
+        "vendor/apr/include/apr_skiplist.h",
+        "vendor/apr/include/apr_strings.h",
+        "vendor/apr/include/apr_support.h",
+        "vendor/apr/include/apr_tables.h",
+        "vendor/apr/include/apr_thread_cond.h",
+        "vendor/apr/include/apr_thread_mutex.h",
+        "vendor/apr/include/apr_thread_proc.h",
+        "vendor/apr/include/apr_thread_rwlock.h",
+        "vendor/apr/include/apr_time.h",
+        "vendor/apr/include/apr_user.h",
+        "vendor/apr/include/apr_version.h",
+        "vendor/apr/include/apr_want.h"
+      ],
+      "canonical_header_map": {
+        "vendor/apr/include/apr_allocator.h": "apr_allocator.h",
+        "vendor/apr/include/apr_atomic.h": "apr_atomic.h",
+        "vendor/apr/include/apr_cstr.h": "apr_cstr.h",
+        "vendor/apr/include/apr_dso.h": "apr_dso.h",
+        "vendor/apr/include/apr_encode.h": "apr_encode.h",
+        "vendor/apr/include/apr_env.h": "apr_env.h",
+        "vendor/apr/include/apr_errno.h": "apr_errno.h",
+        "vendor/apr/include/apr_escape.h": "apr_escape.h",
+        "vendor/apr/include/apr_file_info.h": "apr_file_info.h",
+        "vendor/apr/include/apr_file_io.h": "apr_file_io.h",
+        "vendor/apr/include/apr_fnmatch.h": "apr_fnmatch.h",
+        "vendor/apr/include/apr_general.h": "apr_general.h",
+        "vendor/apr/include/apr_getopt.h": "apr_getopt.h",
+        "vendor/apr/include/apr_global_mutex.h": "apr_global_mutex.h",
+        "vendor/apr/include/apr_hash.h": "apr_hash.h",
+        "vendor/apr/include/apr_inherit.h": "apr_inherit.h",
+        "vendor/apr/include/apr_lib.h": "apr_lib.h",
+        "vendor/apr/include/apr_mmap.h": "apr_mmap.h",
+        "vendor/apr/include/apr_network_io.h": "apr_network_io.h",
+        "vendor/apr/include/apr_perms_set.h": "apr_perms_set.h",
+        "vendor/apr/include/apr_poll.h": "apr_poll.h",
+        "vendor/apr/include/apr_pools.h": "apr_pools.h",
+        "vendor/apr/include/apr_portable.h": "apr_portable.h",
+        "vendor/apr/include/apr_proc_mutex.h": "apr_proc_mutex.h",
+        "vendor/apr/include/apr_random.h": "apr_random.h",
+        "vendor/apr/include/apr_ring.h": "apr_ring.h",
+        "vendor/apr/include/apr_shm.h": "apr_shm.h",
+        "vendor/apr/include/apr_signal.h": "apr_signal.h",
+        "vendor/apr/include/apr_skiplist.h": "apr_skiplist.h",
+        "vendor/apr/include/apr_strings.h": "apr_strings.h",
+        "vendor/apr/include/apr_support.h": "apr_support.h",
+        "vendor/apr/include/apr_tables.h": "apr_tables.h",
+        "vendor/apr/include/apr_thread_cond.h": "apr_thread_cond.h",
+        "vendor/apr/include/apr_thread_mutex.h": "apr_thread_mutex.h",
+        "vendor/apr/include/apr_thread_proc.h": "apr_thread_proc.h",
+        "vendor/apr/include/apr_thread_rwlock.h": "apr_thread_rwlock.h",
+        "vendor/apr/include/apr_time.h": "apr_time.h",
+        "vendor/apr/include/apr_user.h": "apr_user.h",
+        "vendor/apr/include/apr_version.h": "apr_version.h",
+        "vendor/apr/include/apr_want.h": "apr_want.h"
+      },
+      "cmake_targets": [
+        "LMX::apr"
+      ],
+      "dependencies": [
+        "host C/POSIX threads"
+      ],
+      "selected_profile": "POSIX static, threads, IPv6, mmap, shared memory; DSO enabled; skiplist retained but outside strict C99 selected profile",
+      "availability_notes": [
+        "apr_skiplist.h / apr_skiplist_*: outside_selected_profile because upstream orders function pointers via void*; all sources retained.",
+        "OS-specific APIs follow generated apr.h; no blanket all-platform test claim."
+      ],
+      "generated_public_headers": [
+        "apr.h (configure-generated)"
+      ],
+      "paths": [
+        "vendor/apr"
+      ],
+      "licenses_notices": [
+        "vendor/apr/LICENSE",
+        "vendor/apr/NOTICE",
+        "vendor/apr/build/config.guess",
+        "vendor/apr/build/config.sub",
+        "vendor/apr/build/ltmain.sh"
+      ],
+      "urls": [
+        "https://archive.apache.org/dist/apr/apr-1.7.6.tar.gz",
+        "https://apr.apache.org/"
+      ],
+      "build_group": "extensions/platform_extra"
+    },
+    {
+      "id": "platform_extra:apr_util",
+      "name": "apr-util",
+      "version": "1.6.6",
+      "upstream": {
+        "homepage": "https://apr.apache.org/",
+        "url": "https://downloads.apache.org/apr/apr-util-1.6.6.tar.gz",
+        "archive_sha256": "acd5f38440eda830e40c4fe35c2a6b8119493cfdba9c9d73d985c317beb4e4f8"
+      },
+      "source_url": "https://downloads.apache.org/apr/apr-util-1.6.6.tar.gz",
+      "license": "Apache-2.0; bundled permissive notices retained",
+      "vendor_path": "vendor/apr-util",
+      "public_headers": [
+        "vendor/apr-util/include/apr_anylock.h",
+        "vendor/apr-util/include/apr_base64.h",
+        "vendor/apr-util/include/apr_buckets.h",
+        "vendor/apr-util/include/apr_crypto.h",
+        "vendor/apr-util/include/apr_date.h",
+        "vendor/apr-util/include/apr_dbd.h",
+        "vendor/apr-util/include/apr_dbm.h",
+        "vendor/apr-util/include/apr_hooks.h",
+        "vendor/apr-util/include/apr_ldap_init.h",
+        "vendor/apr-util/include/apr_ldap_option.h",
+        "vendor/apr-util/include/apr_ldap_rebind.h",
+        "vendor/apr-util/include/apr_ldap_url.h",
+        "vendor/apr-util/include/apr_md4.h",
+        "vendor/apr-util/include/apr_md5.h",
+        "vendor/apr-util/include/apr_memcache.h",
+        "vendor/apr-util/include/apr_optional.h",
+        "vendor/apr-util/include/apr_optional_hooks.h",
+        "vendor/apr-util/include/apr_queue.h",
+        "vendor/apr-util/include/apr_redis.h",
+        "vendor/apr-util/include/apr_reslist.h",
+        "vendor/apr-util/include/apr_rmm.h",
+        "vendor/apr-util/include/apr_sdbm.h",
+        "vendor/apr-util/include/apr_sha1.h",
+        "vendor/apr-util/include/apr_siphash.h",
+        "vendor/apr-util/include/apr_strmatch.h",
+        "vendor/apr-util/include/apr_thread_pool.h",
+        "vendor/apr-util/include/apr_uri.h",
+        "vendor/apr-util/include/apr_uuid.h",
+        "vendor/apr-util/include/apr_xlate.h",
+        "vendor/apr-util/include/apr_xml.h",
+        "vendor/apr-util/include/apu_errno.h",
+        "vendor/apr-util/include/apu_version.h"
+      ],
+      "canonical_header_map": {
+        "vendor/apr-util/include/apr_anylock.h": "apr_anylock.h",
+        "vendor/apr-util/include/apr_base64.h": "apr_base64.h",
+        "vendor/apr-util/include/apr_buckets.h": "apr_buckets.h",
+        "vendor/apr-util/include/apr_crypto.h": "apr_crypto.h",
+        "vendor/apr-util/include/apr_date.h": "apr_date.h",
+        "vendor/apr-util/include/apr_dbd.h": "apr_dbd.h",
+        "vendor/apr-util/include/apr_dbm.h": "apr_dbm.h",
+        "vendor/apr-util/include/apr_hooks.h": "apr_hooks.h",
+        "vendor/apr-util/include/apr_ldap_init.h": "apr_ldap_init.h",
+        "vendor/apr-util/include/apr_ldap_option.h": "apr_ldap_option.h",
+        "vendor/apr-util/include/apr_ldap_rebind.h": "apr_ldap_rebind.h",
+        "vendor/apr-util/include/apr_ldap_url.h": "apr_ldap_url.h",
+        "vendor/apr-util/include/apr_md4.h": "apr_md4.h",
+        "vendor/apr-util/include/apr_md5.h": "apr_md5.h",
+        "vendor/apr-util/include/apr_memcache.h": "apr_memcache.h",
+        "vendor/apr-util/include/apr_optional.h": "apr_optional.h",
+        "vendor/apr-util/include/apr_optional_hooks.h": "apr_optional_hooks.h",
+        "vendor/apr-util/include/apr_queue.h": "apr_queue.h",
+        "vendor/apr-util/include/apr_redis.h": "apr_redis.h",
+        "vendor/apr-util/include/apr_reslist.h": "apr_reslist.h",
+        "vendor/apr-util/include/apr_rmm.h": "apr_rmm.h",
+        "vendor/apr-util/include/apr_sdbm.h": "apr_sdbm.h",
+        "vendor/apr-util/include/apr_sha1.h": "apr_sha1.h",
+        "vendor/apr-util/include/apr_siphash.h": "apr_siphash.h",
+        "vendor/apr-util/include/apr_strmatch.h": "apr_strmatch.h",
+        "vendor/apr-util/include/apr_thread_pool.h": "apr_thread_pool.h",
+        "vendor/apr-util/include/apr_uri.h": "apr_uri.h",
+        "vendor/apr-util/include/apr_uuid.h": "apr_uuid.h",
+        "vendor/apr-util/include/apr_xlate.h": "apr_xlate.h",
+        "vendor/apr-util/include/apr_xml.h": "apr_xml.h",
+        "vendor/apr-util/include/apu_errno.h": "apu_errno.h",
+        "vendor/apr-util/include/apu_version.h": "apu_version.h"
+      },
+      "cmake_targets": [
+        "LMX::apr_util"
+      ],
+      "dependencies": [
+        "apr",
+        "expat"
+      ],
+      "selected_profile": "POSIX static APR-util, Expat XML, SDBM, hashes, URI, pools/queue, built-in digest/base64; optional LDAP/SQL/external crypto drivers not enabled",
+      "availability_notes": [
+        "apr_crypto.h, apr_ldap*.h, external apr_dbd_* drivers: availability follows apu.h. Sources retained.",
+        "Typed optional callback registry adaptation in generated C99 view; upstream vendor bytes unchanged."
+      ],
+      "generated_public_headers": [
+        "apu.h (configure-generated)",
+        "apr_ldap.h (configure-generated)"
+      ],
+      "paths": [
+        "vendor/apr-util"
+      ],
+      "licenses_notices": [
+        "vendor/apr-util/LICENSE",
+        "vendor/apr-util/NOTICE",
+        "vendor/apr-util/build/config.guess",
+        "vendor/apr-util/build/config.sub"
+      ],
+      "urls": [
+        "https://downloads.apache.org/apr/apr-util-1.6.6.tar.gz",
+        "https://apr.apache.org/"
+      ],
+      "build_group": "extensions/platform_extra"
+    },
+    {
+      "id": "platform_extra:sdl3",
+      "name": "sdl3",
+      "version": "3.4.20",
+      "upstream": {
+        "homepage": "https://www.libsdl.org/",
+        "url": "https://www.libsdl.org/release/SDL3-3.4.20.tar.gz",
+        "archive_sha256": "f3bb06f55bed9557227a700af2ea62e49497ebdf58037732a731a5fb3ef8581f"
+      },
+      "source_url": "https://www.libsdl.org/release/SDL3-3.4.20.tar.gz",
+      "license": "Zlib; bundled permissive notices retained",
+      "vendor_path": "vendor/sdl3",
+      "public_headers": [
+        "vendor/sdl3/include/SDL3/SDL.h",
+        "vendor/sdl3/include/SDL3/SDL_assert.h",
+        "vendor/sdl3/include/SDL3/SDL_asyncio.h",
+        "vendor/sdl3/include/SDL3/SDL_atomic.h",
+        "vendor/sdl3/include/SDL3/SDL_audio.h",
+        "vendor/sdl3/include/SDL3/SDL_begin_code.h",
+        "vendor/sdl3/include/SDL3/SDL_bits.h",
+        "vendor/sdl3/include/SDL3/SDL_blendmode.h",
+        "vendor/sdl3/include/SDL3/SDL_camera.h",
+        "vendor/sdl3/include/SDL3/SDL_clipboard.h",
+        "vendor/sdl3/include/SDL3/SDL_close_code.h",
+        "vendor/sdl3/include/SDL3/SDL_copying.h",
+        "vendor/sdl3/include/SDL3/SDL_cpuinfo.h",
+        "vendor/sdl3/include/SDL3/SDL_dialog.h",
+        "vendor/sdl3/include/SDL3/SDL_dlopennote.h",
+        "vendor/sdl3/include/SDL3/SDL_egl.h",
+        "vendor/sdl3/include/SDL3/SDL_endian.h",
+        "vendor/sdl3/include/SDL3/SDL_error.h",
+        "vendor/sdl3/include/SDL3/SDL_events.h",
+        "vendor/sdl3/include/SDL3/SDL_filesystem.h",
+        "vendor/sdl3/include/SDL3/SDL_gamepad.h",
+        "vendor/sdl3/include/SDL3/SDL_gpu.h",
+        "vendor/sdl3/include/SDL3/SDL_guid.h",
+        "vendor/sdl3/include/SDL3/SDL_haptic.h",
+        "vendor/sdl3/include/SDL3/SDL_hidapi.h",
+        "vendor/sdl3/include/SDL3/SDL_hints.h",
+        "vendor/sdl3/include/SDL3/SDL_init.h",
+        "vendor/sdl3/include/SDL3/SDL_intrin.h",
+        "vendor/sdl3/include/SDL3/SDL_iostream.h",
+        "vendor/sdl3/include/SDL3/SDL_joystick.h",
+        "vendor/sdl3/include/SDL3/SDL_keyboard.h",
+        "vendor/sdl3/include/SDL3/SDL_keycode.h",
+        "vendor/sdl3/include/SDL3/SDL_loadso.h",
+        "vendor/sdl3/include/SDL3/SDL_locale.h",
+        "vendor/sdl3/include/SDL3/SDL_log.h",
+        "vendor/sdl3/include/SDL3/SDL_main.h",
+        "vendor/sdl3/include/SDL3/SDL_main_impl.h",
+        "vendor/sdl3/include/SDL3/SDL_messagebox.h",
+        "vendor/sdl3/include/SDL3/SDL_metal.h",
+        "vendor/sdl3/include/SDL3/SDL_misc.h",
+        "vendor/sdl3/include/SDL3/SDL_mouse.h",
+        "vendor/sdl3/include/SDL3/SDL_mutex.h",
+        "vendor/sdl3/include/SDL3/SDL_oldnames.h",
+        "vendor/sdl3/include/SDL3/SDL_opengl.h",
+        "vendor/sdl3/include/SDL3/SDL_opengl_glext.h",
+        "vendor/sdl3/include/SDL3/SDL_opengles.h",
+        "vendor/sdl3/include/SDL3/SDL_opengles2.h",
+        "vendor/sdl3/include/SDL3/SDL_opengles2_gl2.h",
+        "vendor/sdl3/include/SDL3/SDL_opengles2_gl2ext.h",
+        "vendor/sdl3/include/SDL3/SDL_opengles2_gl2platform.h",
+        "vendor/sdl3/include/SDL3/SDL_opengles2_khrplatform.h",
+        "vendor/sdl3/include/SDL3/SDL_pen.h",
+        "vendor/sdl3/include/SDL3/SDL_pixels.h",
+        "vendor/sdl3/include/SDL3/SDL_platform.h",
+        "vendor/sdl3/include/SDL3/SDL_platform_defines.h",
+        "vendor/sdl3/include/SDL3/SDL_power.h",
+        "vendor/sdl3/include/SDL3/SDL_process.h",
+        "vendor/sdl3/include/SDL3/SDL_properties.h",
+        "vendor/sdl3/include/SDL3/SDL_rect.h",
+        "vendor/sdl3/include/SDL3/SDL_render.h",
+        "vendor/sdl3/include/SDL3/SDL_revision.h",
+        "vendor/sdl3/include/SDL3/SDL_scancode.h",
+        "vendor/sdl3/include/SDL3/SDL_sensor.h",
+        "vendor/sdl3/include/SDL3/SDL_stdinc.h",
+        "vendor/sdl3/include/SDL3/SDL_storage.h",
+        "vendor/sdl3/include/SDL3/SDL_surface.h",
+        "vendor/sdl3/include/SDL3/SDL_system.h",
+        "vendor/sdl3/include/SDL3/SDL_test.h",
+        "vendor/sdl3/include/SDL3/SDL_test_assert.h",
+        "vendor/sdl3/include/SDL3/SDL_test_common.h",
+        "vendor/sdl3/include/SDL3/SDL_test_compare.h",
+        "vendor/sdl3/include/SDL3/SDL_test_crc32.h",
+        "vendor/sdl3/include/SDL3/SDL_test_font.h",
+        "vendor/sdl3/include/SDL3/SDL_test_fuzzer.h",
+        "vendor/sdl3/include/SDL3/SDL_test_harness.h",
+        "vendor/sdl3/include/SDL3/SDL_test_log.h",
+        "vendor/sdl3/include/SDL3/SDL_test_md5.h",
+        "vendor/sdl3/include/SDL3/SDL_test_memory.h",
+        "vendor/sdl3/include/SDL3/SDL_thread.h",
+        "vendor/sdl3/include/SDL3/SDL_time.h",
+        "vendor/sdl3/include/SDL3/SDL_timer.h",
+        "vendor/sdl3/include/SDL3/SDL_touch.h",
+        "vendor/sdl3/include/SDL3/SDL_tray.h",
+        "vendor/sdl3/include/SDL3/SDL_version.h",
+        "vendor/sdl3/include/SDL3/SDL_video.h",
+        "vendor/sdl3/include/SDL3/SDL_vulkan.h"
+      ],
+      "canonical_header_map": {
+        "vendor/sdl3/include/SDL3/SDL.h": "SDL3/SDL.h",
+        "vendor/sdl3/include/SDL3/SDL_assert.h": "SDL3/SDL_assert.h",
+        "vendor/sdl3/include/SDL3/SDL_asyncio.h": "SDL3/SDL_asyncio.h",
+        "vendor/sdl3/include/SDL3/SDL_atomic.h": "SDL3/SDL_atomic.h",
+        "vendor/sdl3/include/SDL3/SDL_audio.h": "SDL3/SDL_audio.h",
+        "vendor/sdl3/include/SDL3/SDL_begin_code.h": "SDL3/SDL_begin_code.h",
+        "vendor/sdl3/include/SDL3/SDL_bits.h": "SDL3/SDL_bits.h",
+        "vendor/sdl3/include/SDL3/SDL_blendmode.h": "SDL3/SDL_blendmode.h",
+        "vendor/sdl3/include/SDL3/SDL_camera.h": "SDL3/SDL_camera.h",
+        "vendor/sdl3/include/SDL3/SDL_clipboard.h": "SDL3/SDL_clipboard.h",
+        "vendor/sdl3/include/SDL3/SDL_close_code.h": "SDL3/SDL_close_code.h",
+        "vendor/sdl3/include/SDL3/SDL_copying.h": "SDL3/SDL_copying.h",
+        "vendor/sdl3/include/SDL3/SDL_cpuinfo.h": "SDL3/SDL_cpuinfo.h",
+        "vendor/sdl3/include/SDL3/SDL_dialog.h": "SDL3/SDL_dialog.h",
+        "vendor/sdl3/include/SDL3/SDL_dlopennote.h": "SDL3/SDL_dlopennote.h",
+        "vendor/sdl3/include/SDL3/SDL_egl.h": "SDL3/SDL_egl.h",
+        "vendor/sdl3/include/SDL3/SDL_endian.h": "SDL3/SDL_endian.h",
+        "vendor/sdl3/include/SDL3/SDL_error.h": "SDL3/SDL_error.h",
+        "vendor/sdl3/include/SDL3/SDL_events.h": "SDL3/SDL_events.h",
+        "vendor/sdl3/include/SDL3/SDL_filesystem.h": "SDL3/SDL_filesystem.h",
+        "vendor/sdl3/include/SDL3/SDL_gamepad.h": "SDL3/SDL_gamepad.h",
+        "vendor/sdl3/include/SDL3/SDL_gpu.h": "SDL3/SDL_gpu.h",
+        "vendor/sdl3/include/SDL3/SDL_guid.h": "SDL3/SDL_guid.h",
+        "vendor/sdl3/include/SDL3/SDL_haptic.h": "SDL3/SDL_haptic.h",
+        "vendor/sdl3/include/SDL3/SDL_hidapi.h": "SDL3/SDL_hidapi.h",
+        "vendor/sdl3/include/SDL3/SDL_hints.h": "SDL3/SDL_hints.h",
+        "vendor/sdl3/include/SDL3/SDL_init.h": "SDL3/SDL_init.h",
+        "vendor/sdl3/include/SDL3/SDL_intrin.h": "SDL3/SDL_intrin.h",
+        "vendor/sdl3/include/SDL3/SDL_iostream.h": "SDL3/SDL_iostream.h",
+        "vendor/sdl3/include/SDL3/SDL_joystick.h": "SDL3/SDL_joystick.h",
+        "vendor/sdl3/include/SDL3/SDL_keyboard.h": "SDL3/SDL_keyboard.h",
+        "vendor/sdl3/include/SDL3/SDL_keycode.h": "SDL3/SDL_keycode.h",
+        "vendor/sdl3/include/SDL3/SDL_loadso.h": "SDL3/SDL_loadso.h",
+        "vendor/sdl3/include/SDL3/SDL_locale.h": "SDL3/SDL_locale.h",
+        "vendor/sdl3/include/SDL3/SDL_log.h": "SDL3/SDL_log.h",
+        "vendor/sdl3/include/SDL3/SDL_main.h": "SDL3/SDL_main.h",
+        "vendor/sdl3/include/SDL3/SDL_main_impl.h": "SDL3/SDL_main_impl.h",
+        "vendor/sdl3/include/SDL3/SDL_messagebox.h": "SDL3/SDL_messagebox.h",
+        "vendor/sdl3/include/SDL3/SDL_metal.h": "SDL3/SDL_metal.h",
+        "vendor/sdl3/include/SDL3/SDL_misc.h": "SDL3/SDL_misc.h",
+        "vendor/sdl3/include/SDL3/SDL_mouse.h": "SDL3/SDL_mouse.h",
+        "vendor/sdl3/include/SDL3/SDL_mutex.h": "SDL3/SDL_mutex.h",
+        "vendor/sdl3/include/SDL3/SDL_oldnames.h": "SDL3/SDL_oldnames.h",
+        "vendor/sdl3/include/SDL3/SDL_opengl.h": "SDL3/SDL_opengl.h",
+        "vendor/sdl3/include/SDL3/SDL_opengl_glext.h": "SDL3/SDL_opengl_glext.h",
+        "vendor/sdl3/include/SDL3/SDL_opengles.h": "SDL3/SDL_opengles.h",
+        "vendor/sdl3/include/SDL3/SDL_opengles2.h": "SDL3/SDL_opengles2.h",
+        "vendor/sdl3/include/SDL3/SDL_opengles2_gl2.h": "SDL3/SDL_opengles2_gl2.h",
+        "vendor/sdl3/include/SDL3/SDL_opengles2_gl2ext.h": "SDL3/SDL_opengles2_gl2ext.h",
+        "vendor/sdl3/include/SDL3/SDL_opengles2_gl2platform.h": "SDL3/SDL_opengles2_gl2platform.h",
+        "vendor/sdl3/include/SDL3/SDL_opengles2_khrplatform.h": "SDL3/SDL_opengles2_khrplatform.h",
+        "vendor/sdl3/include/SDL3/SDL_pen.h": "SDL3/SDL_pen.h",
+        "vendor/sdl3/include/SDL3/SDL_pixels.h": "SDL3/SDL_pixels.h",
+        "vendor/sdl3/include/SDL3/SDL_platform.h": "SDL3/SDL_platform.h",
+        "vendor/sdl3/include/SDL3/SDL_platform_defines.h": "SDL3/SDL_platform_defines.h",
+        "vendor/sdl3/include/SDL3/SDL_power.h": "SDL3/SDL_power.h",
+        "vendor/sdl3/include/SDL3/SDL_process.h": "SDL3/SDL_process.h",
+        "vendor/sdl3/include/SDL3/SDL_properties.h": "SDL3/SDL_properties.h",
+        "vendor/sdl3/include/SDL3/SDL_rect.h": "SDL3/SDL_rect.h",
+        "vendor/sdl3/include/SDL3/SDL_render.h": "SDL3/SDL_render.h",
+        "vendor/sdl3/include/SDL3/SDL_revision.h": "SDL3/SDL_revision.h",
+        "vendor/sdl3/include/SDL3/SDL_scancode.h": "SDL3/SDL_scancode.h",
+        "vendor/sdl3/include/SDL3/SDL_sensor.h": "SDL3/SDL_sensor.h",
+        "vendor/sdl3/include/SDL3/SDL_stdinc.h": "SDL3/SDL_stdinc.h",
+        "vendor/sdl3/include/SDL3/SDL_storage.h": "SDL3/SDL_storage.h",
+        "vendor/sdl3/include/SDL3/SDL_surface.h": "SDL3/SDL_surface.h",
+        "vendor/sdl3/include/SDL3/SDL_system.h": "SDL3/SDL_system.h",
+        "vendor/sdl3/include/SDL3/SDL_test.h": "SDL3/SDL_test.h",
+        "vendor/sdl3/include/SDL3/SDL_test_assert.h": "SDL3/SDL_test_assert.h",
+        "vendor/sdl3/include/SDL3/SDL_test_common.h": "SDL3/SDL_test_common.h",
+        "vendor/sdl3/include/SDL3/SDL_test_compare.h": "SDL3/SDL_test_compare.h",
+        "vendor/sdl3/include/SDL3/SDL_test_crc32.h": "SDL3/SDL_test_crc32.h",
+        "vendor/sdl3/include/SDL3/SDL_test_font.h": "SDL3/SDL_test_font.h",
+        "vendor/sdl3/include/SDL3/SDL_test_fuzzer.h": "SDL3/SDL_test_fuzzer.h",
+        "vendor/sdl3/include/SDL3/SDL_test_harness.h": "SDL3/SDL_test_harness.h",
+        "vendor/sdl3/include/SDL3/SDL_test_log.h": "SDL3/SDL_test_log.h",
+        "vendor/sdl3/include/SDL3/SDL_test_md5.h": "SDL3/SDL_test_md5.h",
+        "vendor/sdl3/include/SDL3/SDL_test_memory.h": "SDL3/SDL_test_memory.h",
+        "vendor/sdl3/include/SDL3/SDL_thread.h": "SDL3/SDL_thread.h",
+        "vendor/sdl3/include/SDL3/SDL_time.h": "SDL3/SDL_time.h",
+        "vendor/sdl3/include/SDL3/SDL_timer.h": "SDL3/SDL_timer.h",
+        "vendor/sdl3/include/SDL3/SDL_touch.h": "SDL3/SDL_touch.h",
+        "vendor/sdl3/include/SDL3/SDL_tray.h": "SDL3/SDL_tray.h",
+        "vendor/sdl3/include/SDL3/SDL_version.h": "SDL3/SDL_version.h",
+        "vendor/sdl3/include/SDL3/SDL_video.h": "SDL3/SDL_video.h",
+        "vendor/sdl3/include/SDL3/SDL_vulkan.h": "SDL3/SDL_vulkan.h"
+      },
+      "cmake_targets": [
+        "LMX::sdl3",
+        "SDL3::SDL3-static"
+      ],
+      "dependencies": [
+        "host C/POSIX threads",
+        "optional X11/OpenGL system development files"
+      ],
+      "selected_profile": "Linux/POSIX static C99; X11+OpenGL if available, software/dummy video, dummy/disk audio, HIDAPI+Linux+virtual joystick, V4L2 camera, tray compiled; external ALSA/Pulse/PipeWire/Wayland/KMS/Vulkan/GPU drivers not enabled",
+      "availability_notes": [
+        "C public API retained in full; SDL_GPU/Vulkan backend operations unavailable in selected runtime.",
+        "Physical devices and Windows/macOS/mobile backends not runtime-tested; native platform glue may use Objective-C/C++/Java outside selected Linux C99 profile.",
+        "Object/function address bridges assume equal-size pointer representations and host POSIX loader ABI; compile-time guards; no pedantic diagnostic suppression.",
+        "Headless test coverage is BMP/IO, software blit/render, event/thread, qsort/bsearch, custom allocator callback, audio conversion.",
+        "Validated detected Linux video backends: dummy, offscreen, x11(dynamic); Xdbe/Xshape/Xsync; OpenGL renderer. Optional Xcursor/Xinput/Xfixes/Xrandr/Xscreensaver/Xtest disabled."
+      ],
+      "generated_public_headers": [],
+      "paths": [
+        "vendor/sdl3"
+      ],
+      "licenses_notices": [
+        "vendor/sdl3/LICENSE.txt",
+        "vendor/sdl3/include/SDL3/SDL_copying.h",
+        "vendor/sdl3/src/hidapi/LICENSE.txt",
+        "vendor/sdl3/src/hidapi/LICENSE-bsd.txt",
+        "vendor/sdl3/src/hidapi/LICENSE-orig.txt",
+        "vendor/sdl3/src/video/yuv2rgb/LICENSE"
+      ],
+      "urls": [
+        "https://www.libsdl.org/release/SDL3-3.4.20.tar.gz",
+        "https://www.libsdl.org/"
+      ],
+      "build_group": "extensions/platform_extra"
+    },
+    {
+      "id": "scientific_formats:hdf5",
+      "name": "HDF5 core and complete HL C",
+      "version": "2.3.0",
+      "source_url": "https://codeload.github.com/HDFGroup/hdf5/tar.gz/refs/tags/2.3.0",
+      "homepage": "https://github.com/HDFGroup/hdf5/releases/tag/2.3.0",
+      "archive_sha256": "573b08cf98e95254bf6782e5278f9a8fed32fb7d9d0d5cb94c984e2afd9ed8d9",
+      "license": "BSD-3-Clause; HL generated Bison parser skeleton with explicit exception",
+      "vendor_path": "vendor/hdf5",
+      "public_headers": [
+        "vendor/hdf5/src/H5ACpublic.h",
+        "vendor/hdf5/src/H5Apublic.h",
+        "vendor/hdf5/src/H5Cpublic.h",
+        "vendor/hdf5/hl/src/H5DOpublic.h",
+        "vendor/hdf5/hl/src/H5DSpublic.h",
+        "vendor/hdf5/src/H5Dpublic.h",
+        "vendor/hdf5/src/H5ESdevelop.h",
+        "vendor/hdf5/src/H5ESpublic.h",
+        "vendor/hdf5/src/H5Epubgen.h",
+        "vendor/hdf5/src/H5Epublic.h",
+        "vendor/hdf5/src/H5FDcore.h",
+        "vendor/hdf5/src/H5FDdevelop.h",
+        "vendor/hdf5/src/H5FDdirect.h",
+        "vendor/hdf5/src/H5FDfamily.h",
+        "vendor/hdf5/src/H5FDhdfs.h",
+        "vendor/hdf5/src/H5FDsubfiling/H5FDioc.h",
+        "vendor/hdf5/src/H5FDlog.h",
+        "vendor/hdf5/src/H5FDmirror.h",
+        "vendor/hdf5/src/H5FDmpi.h",
+        "vendor/hdf5/src/H5FDmpio.h",
+        "vendor/hdf5/src/H5FDmulti.h",
+        "vendor/hdf5/src/H5FDonion.h",
+        "vendor/hdf5/src/H5FDpublic.h",
+        "vendor/hdf5/src/H5FDros3.h",
+        "vendor/hdf5/src/H5FDsec2.h",
+        "vendor/hdf5/src/H5FDsplitter.h",
+        "vendor/hdf5/src/H5FDstdio.h",
+        "vendor/hdf5/src/H5FDsubfiling/H5FDsubfiling.h",
+        "vendor/hdf5/src/H5FDwindows.h",
+        "vendor/hdf5/src/H5Fpublic.h",
+        "vendor/hdf5/src/H5Gpublic.h",
+        "vendor/hdf5/hl/src/H5IMpublic.h",
+        "vendor/hdf5/src/H5Idevelop.h",
+        "vendor/hdf5/src/H5Ipublic.h",
+        "vendor/hdf5/hl/src/H5LDpublic.h",
+        "vendor/hdf5/hl/src/H5LTpublic.h",
+        "vendor/hdf5/src/H5Ldevelop.h",
+        "vendor/hdf5/src/H5Lpublic.h",
+        "vendor/hdf5/src/H5MMpublic.h",
+        "vendor/hdf5/src/H5Mpublic.h",
+        "vendor/hdf5/src/H5Opublic.h",
+        "vendor/hdf5/src/H5PLextern.h",
+        "vendor/hdf5/src/H5PLpublic.h",
+        "vendor/hdf5/hl/src/H5PTpublic.h",
+        "vendor/hdf5/src/H5Ppublic.h",
+        "vendor/hdf5/src/H5Rpublic.h",
+        "vendor/hdf5/src/H5Spublic.h",
+        "vendor/hdf5/hl/src/H5TBpublic.h",
+        "vendor/hdf5/src/H5TSdevelop.h",
+        "vendor/hdf5/src/H5TSpublic.h",
+        "vendor/hdf5/src/H5Tdevelop.h",
+        "vendor/hdf5/src/H5Tpublic.h",
+        "vendor/hdf5/src/H5VLconnector.h",
+        "vendor/hdf5/src/H5VLconnector_passthru.h",
+        "vendor/hdf5/src/H5VLnative.h",
+        "vendor/hdf5/src/H5VLpassthru.h",
+        "vendor/hdf5/src/H5VLpublic.h",
+        "vendor/hdf5/src/H5Zdevelop.h",
+        "vendor/hdf5/src/H5Zpublic.h",
+        "vendor/hdf5/src/H5api_adpt.h",
+        "vendor/hdf5/src/H5overflow.h",
+        "vendor/hdf5/src/H5public.h",
+        "vendor/hdf5/src/H5version.h",
+        "vendor/hdf5/src/hdf5.h",
+        "vendor/hdf5/hl/src/hdf5_hl.h"
+      ],
+      "canonical_header_map": {
+        "vendor/hdf5/src/H5ACpublic.h": "H5ACpublic.h",
+        "vendor/hdf5/src/H5Apublic.h": "H5Apublic.h",
+        "vendor/hdf5/src/H5Cpublic.h": "H5Cpublic.h",
+        "vendor/hdf5/hl/src/H5DOpublic.h": "H5DOpublic.h",
+        "vendor/hdf5/hl/src/H5DSpublic.h": "H5DSpublic.h",
+        "vendor/hdf5/src/H5Dpublic.h": "H5Dpublic.h",
+        "vendor/hdf5/src/H5ESdevelop.h": "H5ESdevelop.h",
+        "vendor/hdf5/src/H5ESpublic.h": "H5ESpublic.h",
+        "vendor/hdf5/src/H5Epubgen.h": "H5Epubgen.h",
+        "vendor/hdf5/src/H5Epublic.h": "H5Epublic.h",
+        "vendor/hdf5/src/H5FDcore.h": "H5FDcore.h",
+        "vendor/hdf5/src/H5FDdevelop.h": "H5FDdevelop.h",
+        "vendor/hdf5/src/H5FDdirect.h": "H5FDdirect.h",
+        "vendor/hdf5/src/H5FDfamily.h": "H5FDfamily.h",
+        "vendor/hdf5/src/H5FDhdfs.h": "H5FDhdfs.h",
+        "vendor/hdf5/src/H5FDsubfiling/H5FDioc.h": "H5FDioc.h",
+        "vendor/hdf5/src/H5FDlog.h": "H5FDlog.h",
+        "vendor/hdf5/src/H5FDmirror.h": "H5FDmirror.h",
+        "vendor/hdf5/src/H5FDmpi.h": "H5FDmpi.h",
+        "vendor/hdf5/src/H5FDmpio.h": "H5FDmpio.h",
+        "vendor/hdf5/src/H5FDmulti.h": "H5FDmulti.h",
+        "vendor/hdf5/src/H5FDonion.h": "H5FDonion.h",
+        "vendor/hdf5/src/H5FDpublic.h": "H5FDpublic.h",
+        "vendor/hdf5/src/H5FDros3.h": "H5FDros3.h",
+        "vendor/hdf5/src/H5FDsec2.h": "H5FDsec2.h",
+        "vendor/hdf5/src/H5FDsplitter.h": "H5FDsplitter.h",
+        "vendor/hdf5/src/H5FDstdio.h": "H5FDstdio.h",
+        "vendor/hdf5/src/H5FDsubfiling/H5FDsubfiling.h": "H5FDsubfiling.h",
+        "vendor/hdf5/src/H5FDwindows.h": "H5FDwindows.h",
+        "vendor/hdf5/src/H5Fpublic.h": "H5Fpublic.h",
+        "vendor/hdf5/src/H5Gpublic.h": "H5Gpublic.h",
+        "vendor/hdf5/hl/src/H5IMpublic.h": "H5IMpublic.h",
+        "vendor/hdf5/src/H5Idevelop.h": "H5Idevelop.h",
+        "vendor/hdf5/src/H5Ipublic.h": "H5Ipublic.h",
+        "vendor/hdf5/hl/src/H5LDpublic.h": "H5LDpublic.h",
+        "vendor/hdf5/hl/src/H5LTpublic.h": "H5LTpublic.h",
+        "vendor/hdf5/src/H5Ldevelop.h": "H5Ldevelop.h",
+        "vendor/hdf5/src/H5Lpublic.h": "H5Lpublic.h",
+        "vendor/hdf5/src/H5MMpublic.h": "H5MMpublic.h",
+        "vendor/hdf5/src/H5Mpublic.h": "H5Mpublic.h",
+        "vendor/hdf5/src/H5Opublic.h": "H5Opublic.h",
+        "vendor/hdf5/src/H5PLextern.h": "H5PLextern.h",
+        "vendor/hdf5/src/H5PLpublic.h": "H5PLpublic.h",
+        "vendor/hdf5/hl/src/H5PTpublic.h": "H5PTpublic.h",
+        "vendor/hdf5/src/H5Ppublic.h": "H5Ppublic.h",
+        "vendor/hdf5/src/H5Rpublic.h": "H5Rpublic.h",
+        "vendor/hdf5/src/H5Spublic.h": "H5Spublic.h",
+        "vendor/hdf5/hl/src/H5TBpublic.h": "H5TBpublic.h",
+        "vendor/hdf5/src/H5TSdevelop.h": "H5TSdevelop.h",
+        "vendor/hdf5/src/H5TSpublic.h": "H5TSpublic.h",
+        "vendor/hdf5/src/H5Tdevelop.h": "H5Tdevelop.h",
+        "vendor/hdf5/src/H5Tpublic.h": "H5Tpublic.h",
+        "vendor/hdf5/src/H5VLconnector.h": "H5VLconnector.h",
+        "vendor/hdf5/src/H5VLconnector_passthru.h": "H5VLconnector_passthru.h",
+        "vendor/hdf5/src/H5VLnative.h": "H5VLnative.h",
+        "vendor/hdf5/src/H5VLpassthru.h": "H5VLpassthru.h",
+        "vendor/hdf5/src/H5VLpublic.h": "H5VLpublic.h",
+        "vendor/hdf5/src/H5Zdevelop.h": "H5Zdevelop.h",
+        "vendor/hdf5/src/H5Zpublic.h": "H5Zpublic.h",
+        "vendor/hdf5/src/H5api_adpt.h": "H5api_adpt.h",
+        "vendor/hdf5/src/H5overflow.h": "H5overflow.h",
+        "vendor/hdf5/src/H5public.h": "H5public.h",
+        "vendor/hdf5/src/H5version.h": "H5version.h",
+        "vendor/hdf5/src/hdf5.h": "hdf5.h",
+        "vendor/hdf5/hl/src/hdf5_hl.h": "hdf5_hl.h"
+      },
+      "generated_public_headers": [
+        "H5pubconf.h"
+      ],
+      "cmake_targets": [
+        "LMX::hdf5",
+        "LMX::hdf5_hl",
+        "LMX::scientific_hdf5"
+      ],
+      "dependencies": [
+        "zlib (reuse LMX::zlib)",
+        "MPI C (parallel profile)",
+        "POSIX/Windows threads",
+        "host math/dynamic loader"
+      ],
+      "selected_profile": "Static C99 core + full HL (H5LT H5DO H5DS H5IM H5PT H5TB H5LD), MPI parallel, pthread atomic emulation, zlib, C99 complex, map/deprecated API; float16 and C++/Fortran/Java bindings disabled",
+      "availability_notes": [
+        "Parallel profile defines H5_HAVE_PARALLEL; LMX_HDF5_PARALLEL=OFF builds same C code collection without MPI I/O entry points.",
+        "HDF5_ENABLE_THREADSAFE=OFF because upstream rejects thread-safe plus HL without unsupported override; LMX must serialize library calls across actors. Pthread primitives are compiled; that is not concurrent-call safety.",
+        "H5M map API included; actual map operations depend on a supporting VOL connector, native connector is not claimed to implement maps.",
+        "Optional HDFS/ROS3/direct/mirror/subfiling driver sources are preserved; external VOL/filter packages are not bundled. Driver availability follows generated H5pubconf.h; provider-backed APIs additionally require an installed provider.",
+        "HDF5_ENABLE_PLUGIN_SUPPORT=OFF means no external hdf5_plugins package; H5PL loader APIs are still compiled.",
+        "MPI runtime test limited to one rank; no claim of multi-rank communication in restricted host."
+      ],
+      "paths": [
+        "vendor/hdf5"
+      ],
+      "licenses_notices": [
+        "vendor/hdf5/LICENSE",
+        "vendor/hdf5/hl/src/H5LTparse.c",
+        "vendor/hdf5/hl/src/H5LTparse.h"
+      ],
+      "urls": [
+        "https://codeload.github.com/HDFGroup/hdf5/tar.gz/refs/tags/2.3.0",
+        "https://github.com/HDFGroup/hdf5/releases/tag/2.3.0"
+      ],
+      "build_group": "extensions/scientific_hdf5"
+    },
+    {
+      "id": "scientific_formats:pnetcdf",
+      "paths": [
+        "vendor/pnetcdf"
+      ],
+      "version": "1.15.1",
+      "commit": null,
+      "license": "NetCDF-style permissive PnetCDF license AND MIT AND Unicode data notice (embedded utf8proc)",
+      "urls": [
+        "https://parallel-netcdf.github.io/Release/pnetcdf-1.15.1.tar.gz",
+        "https://parallel-netcdf.github.io/"
+      ],
+      "licenses_notices": [
+        "vendor/pnetcdf/COPYRIGHT",
+        "vendor/pnetcdf/COPYING",
+        "vendor/pnetcdf/src/drivers/common/utf8proc.h",
+        "vendor/pnetcdf/src/drivers/common/UTF8PROC_LICENSE.md"
+      ],
+      "source_archives": [
+        {
+          "names": [
+            "pnetcdf-1.15.1.tar.gz"
+          ],
+          "sha256": "169c6adab08ba49154f14261225992601c573971b823c2066008a8ff57973f8a"
+        }
+      ],
+      "public_headers": [
+        "vendor/pnetcdf/src/include/pnetcdf.h.in"
+      ],
+      "canonical_header_map": {
+        "vendor/pnetcdf/src/include/pnetcdf.h.in": "pnetcdf.h"
+      },
+      "cmake_targets": [
+        "LMX::pnetcdf"
+      ],
+      "build_module": "extensions/scientific_pnetcdf",
+      "selected_profile": "Production C API with MPI-IO, CDF-1 classic, CDF-2 64-bit offset, CDF-5 64-bit data; C++/Fortran/GIO/ADIOS/netCDF4/burst/subfiling disabled",
+      "availability": "compiled C99 static target; original and trimmed sources verified with real one-rank MPI-IO CDF-1/2/5 roundtrip; multi-rank execution not verified",
+      "dependencies": [
+        "External MPI C implementation with MPI-IO; not bundled"
+      ],
+      "notes": [
+        "CDF-5 is the 64-bit data format selected by NC_64BIT_DATA, with CDF\\005 magic, including NC_INT64/NC_UINT64. It is not an HDF5-backed format or a separate netCDF library version.",
+        "Production public header is generated by configure from pnetcdf.h.in in the build/install include directory. The template contains all C API names; MPI headers and host ABI are not vendored.",
+        "The same MPI installation must supply compile-time types and runtime. Collective operations and request lifetimes need explicit communicator ownership in LMX wrappers.",
+        "The standalone portable CMake adapter requires a POSIX configure/make environment and an m4 build tool. No source fetching or regeneration from the internet.",
+        "A guarded source-view edit removes a semantically empty object/function pointer comparison from ncmpi_inq_libvers; version objects and public ABI remain intact.",
+        "The retained CDF roundtrip source supports arbitrary rank count; one-rank execution is available here, multi-rank execution is separately gated and must not be inferred.",
+        "Two upstream-declared ubyte attribute aliases missing from the archive are supplied by src/ubyte_aliases.c as direct calls to uchar implementations; all 915 ncmpi declarations now have linkable definitions.",
+        "PNETCDF_RELAX_COORD_BOUND=1 and PNETCDF_ERANGE_FILL=1; LMX_PNETCDF_INSTALL_PREFIX exports the generated prefix and lmx_pnetcdf_build is the ExternalProject dependency.",
+        "The adapter uses retained release configure with --disable-maintainer-mode. Unused GPL Autoconf Archive ax_* macro sources are omitted; their exception applies to configure output, not raw macro redistribution. Numeric-conversion M4 inputs remain."
+      ],
+      "implemented_public_count": 924,
+      "implemented_public_groups": {
+        "ncmpi": 915,
+        "cdl_hdr": 9
+      }
+    },
+    {
+      "id": "scientific_formats:libxml2",
+      "paths": [
+        "vendor/libxml2"
+      ],
+      "version": "2.15.4",
+      "license": "MIT",
+      "urls": [
+        "https://gitlab.gnome.org/GNOME/libxml2/-/tree/v2.15.4",
+        "https://download.gnome.org/sources/libxml2/2.15/"
+      ],
+      "licenses_notices": [
+        "vendor/libxml2/Copyright"
+      ],
+      "source_archives": [
+        {
+          "url": "https://download.gnome.org/sources/libxml2/2.15/libxml2-2.15.4.tar.xz",
+          "sha256": "98087fd181d9070724f3fbc65c7377db03038eb92bd882374daff44940138821",
+          "download_bytes": 3177444,
+          "retained_in_delivery": false
+        }
+      ],
+      "public_headers": [
+        "vendor/libxml2/include/libxml/HTMLparser.h",
+        "vendor/libxml2/include/libxml/HTMLtree.h",
+        "vendor/libxml2/include/libxml/SAX.h",
+        "vendor/libxml2/include/libxml/SAX2.h",
+        "vendor/libxml2/include/libxml/c14n.h",
+        "vendor/libxml2/include/libxml/catalog.h",
+        "vendor/libxml2/include/libxml/chvalid.h",
+        "vendor/libxml2/include/libxml/debugXML.h",
+        "vendor/libxml2/include/libxml/dict.h",
+        "vendor/libxml2/include/libxml/encoding.h",
+        "vendor/libxml2/include/libxml/entities.h",
+        "vendor/libxml2/include/libxml/globals.h",
+        "vendor/libxml2/include/libxml/hash.h",
+        "vendor/libxml2/include/libxml/list.h",
+        "vendor/libxml2/include/libxml/nanoftp.h",
+        "vendor/libxml2/include/libxml/nanohttp.h",
+        "vendor/libxml2/include/libxml/parser.h",
+        "vendor/libxml2/include/libxml/parserInternals.h",
+        "vendor/libxml2/include/libxml/pattern.h",
+        "vendor/libxml2/include/libxml/relaxng.h",
+        "vendor/libxml2/include/libxml/schemasInternals.h",
+        "vendor/libxml2/include/libxml/schematron.h",
+        "vendor/libxml2/include/libxml/threads.h",
+        "vendor/libxml2/include/libxml/tree.h",
+        "vendor/libxml2/include/libxml/uri.h",
+        "vendor/libxml2/include/libxml/valid.h",
+        "vendor/libxml2/include/libxml/xinclude.h",
+        "vendor/libxml2/include/libxml/xlink.h",
+        "vendor/libxml2/include/libxml/xmlIO.h",
+        "vendor/libxml2/include/libxml/xmlautomata.h",
+        "vendor/libxml2/include/libxml/xmlerror.h",
+        "vendor/libxml2/include/libxml/xmlexports.h",
+        "vendor/libxml2/include/libxml/xmlmemory.h",
+        "vendor/libxml2/include/libxml/xmlmodule.h",
+        "vendor/libxml2/include/libxml/xmlreader.h",
+        "vendor/libxml2/include/libxml/xmlregexp.h",
+        "vendor/libxml2/include/libxml/xmlsave.h",
+        "vendor/libxml2/include/libxml/xmlschemas.h",
+        "vendor/libxml2/include/libxml/xmlschemastypes.h",
+        "vendor/libxml2/include/libxml/xmlstring.h",
+        "vendor/libxml2/include/libxml/xmlunicode.h",
+        "vendor/libxml2/include/libxml/xmlwriter.h",
+        "vendor/libxml2/include/libxml/xpath.h",
+        "vendor/libxml2/include/libxml/xpathInternals.h",
+        "vendor/libxml2/include/libxml/xpointer.h",
+        "vendor/libxml2/include/libxml/xmlversion.h.in"
+      ],
+      "canonical_header_map": {
+        "vendor/libxml2/include/libxml/HTMLparser.h": "libxml/HTMLparser.h",
+        "vendor/libxml2/include/libxml/HTMLtree.h": "libxml/HTMLtree.h",
+        "vendor/libxml2/include/libxml/SAX.h": "libxml/SAX.h",
+        "vendor/libxml2/include/libxml/SAX2.h": "libxml/SAX2.h",
+        "vendor/libxml2/include/libxml/c14n.h": "libxml/c14n.h",
+        "vendor/libxml2/include/libxml/catalog.h": "libxml/catalog.h",
+        "vendor/libxml2/include/libxml/chvalid.h": "libxml/chvalid.h",
+        "vendor/libxml2/include/libxml/debugXML.h": "libxml/debugXML.h",
+        "vendor/libxml2/include/libxml/dict.h": "libxml/dict.h",
+        "vendor/libxml2/include/libxml/encoding.h": "libxml/encoding.h",
+        "vendor/libxml2/include/libxml/entities.h": "libxml/entities.h",
+        "vendor/libxml2/include/libxml/globals.h": "libxml/globals.h",
+        "vendor/libxml2/include/libxml/hash.h": "libxml/hash.h",
+        "vendor/libxml2/include/libxml/list.h": "libxml/list.h",
+        "vendor/libxml2/include/libxml/nanoftp.h": "libxml/nanoftp.h",
+        "vendor/libxml2/include/libxml/nanohttp.h": "libxml/nanohttp.h",
+        "vendor/libxml2/include/libxml/parser.h": "libxml/parser.h",
+        "vendor/libxml2/include/libxml/parserInternals.h": "libxml/parserInternals.h",
+        "vendor/libxml2/include/libxml/pattern.h": "libxml/pattern.h",
+        "vendor/libxml2/include/libxml/relaxng.h": "libxml/relaxng.h",
+        "vendor/libxml2/include/libxml/schemasInternals.h": "libxml/schemasInternals.h",
+        "vendor/libxml2/include/libxml/schematron.h": "libxml/schematron.h",
+        "vendor/libxml2/include/libxml/threads.h": "libxml/threads.h",
+        "vendor/libxml2/include/libxml/tree.h": "libxml/tree.h",
+        "vendor/libxml2/include/libxml/uri.h": "libxml/uri.h",
+        "vendor/libxml2/include/libxml/valid.h": "libxml/valid.h",
+        "vendor/libxml2/include/libxml/xinclude.h": "libxml/xinclude.h",
+        "vendor/libxml2/include/libxml/xlink.h": "libxml/xlink.h",
+        "vendor/libxml2/include/libxml/xmlIO.h": "libxml/xmlIO.h",
+        "vendor/libxml2/include/libxml/xmlautomata.h": "libxml/xmlautomata.h",
+        "vendor/libxml2/include/libxml/xmlerror.h": "libxml/xmlerror.h",
+        "vendor/libxml2/include/libxml/xmlexports.h": "libxml/xmlexports.h",
+        "vendor/libxml2/include/libxml/xmlmemory.h": "libxml/xmlmemory.h",
+        "vendor/libxml2/include/libxml/xmlmodule.h": "libxml/xmlmodule.h",
+        "vendor/libxml2/include/libxml/xmlreader.h": "libxml/xmlreader.h",
+        "vendor/libxml2/include/libxml/xmlregexp.h": "libxml/xmlregexp.h",
+        "vendor/libxml2/include/libxml/xmlsave.h": "libxml/xmlsave.h",
+        "vendor/libxml2/include/libxml/xmlschemas.h": "libxml/xmlschemas.h",
+        "vendor/libxml2/include/libxml/xmlschemastypes.h": "libxml/xmlschemastypes.h",
+        "vendor/libxml2/include/libxml/xmlstring.h": "libxml/xmlstring.h",
+        "vendor/libxml2/include/libxml/xmlunicode.h": "libxml/xmlunicode.h",
+        "vendor/libxml2/include/libxml/xmlwriter.h": "libxml/xmlwriter.h",
+        "vendor/libxml2/include/libxml/xpath.h": "libxml/xpath.h",
+        "vendor/libxml2/include/libxml/xpathInternals.h": "libxml/xpathInternals.h",
+        "vendor/libxml2/include/libxml/xpointer.h": "libxml/xpointer.h",
+        "vendor/libxml2/include/libxml/xmlversion.h.in": "libxml/xmlversion.h"
+      },
+      "cmake_targets": [
+        "LMX::libxml2"
+      ],
+      "build_group": "extensions/scientific_netcdf",
+      "packages": [
+        "data\\xml"
+      ],
+      "purpose": "C XML/HTML parsing and writing; namespaces, XPath, XML Schema, Relax NG, Schematron; C backend for netCDF DAP4.",
+      "selected_profile": "Static ISO C99 build view; CMake C_STANDARD 11 changed to99. Legacy and Schematron on, thread support on; optional TLS off; no Python bindings or C++ XML backend.",
+      "dependencies": [
+        "base:zlib",
+        "system:Threads",
+        "system:dl",
+        "system:math"
+      ],
+      "validation": "Original and retained strict ISO C99 builds and local XML/XPath/writer/schema round trips; see libxml2_VERIFICATION.json.",
+      "vendor_modifications": [],
+      "build_view_adjustments_file": "extensions/scientific_netcdf/prepare_libxml2.cmake",
+      "known_limitations": [
+        "Not all feature combinations or operating systems were built. Network-independent tests use XML_PARSE_NONET."
+      ]
+    },
+    {
+      "id": "scientific_formats:netcdf",
+      "paths": [
+        "vendor/netcdf"
+      ],
+      "version": "4.10.1",
+      "license": "UCAR/Unidata permissive AND MIT AND Unicode-DFS-2015 AND Zlib AND bzip2-1.0.6 (retained embedded C components)",
+      "urls": [
+        "https://github.com/Unidata/netcdf-c/tree/v4.10.1",
+        "https://docs.unidata.ucar.edu/netcdf-c/current/"
+      ],
+      "licenses_notices": [
+        "vendor/netcdf/COPYRIGHT",
+        "vendor/netcdf/libdispatch/utf8proc.c",
+        "vendor/netcdf/libdispatch/utf8proc.h",
+        "extensions/scientific_netcdf/notices/UTF8PROC_LICENSE.md",
+        "extensions/scientific_netcdf/notices/UTF8PROC_NOTICE.md",
+        "vendor/netcdf/libncxml/license.txt",
+        "vendor/netcdf/libncpoco/COPYRIGHT",
+        "vendor/netcdf/plugins/BZIP2_LICENSE"
+      ],
+      "source_archives": [
+        {
+          "url": "https://codeload.github.com/Unidata/netcdf-c/tar.gz/refs/tags/v4.10.1",
+          "sha256": "33c27231c478c3b35da7c7758fbdd02da1fe407abcb16ddfe195f69d164f930d",
+          "download_bytes": 25714348,
+          "retained_in_delivery": false
+        }
+      ],
+      "public_headers": [
+        "vendor/netcdf/include/netcdf.h",
+        "vendor/netcdf/include/netcdf_mem.h",
+        "vendor/netcdf/include/netcdf_aux.h",
+        "vendor/netcdf/include/netcdf_filter.h",
+        "vendor/netcdf/include/netcdf_filter_build.h",
+        "vendor/netcdf/include/netcdf_vutils.h",
+        "vendor/netcdf/include/netcdf_par.h",
+        "vendor/netcdf/include/netcdf_dispatch.h.in",
+        "vendor/netcdf/include/netcdf_meta.h.in",
+        "vendor/netcdf/include/ncjson.h",
+        "vendor/netcdf/include/ncproplist.h"
+      ],
+      "canonical_header_map": {
+        "vendor/netcdf/include/netcdf.h": "netcdf.h",
+        "vendor/netcdf/include/netcdf_mem.h": "netcdf_mem.h",
+        "vendor/netcdf/include/netcdf_aux.h": "netcdf_aux.h",
+        "vendor/netcdf/include/netcdf_filter.h": "netcdf_filter.h",
+        "vendor/netcdf/include/netcdf_filter_build.h": "netcdf_filter_build.h",
+        "vendor/netcdf/include/netcdf_vutils.h": "netcdf_vutils.h",
+        "vendor/netcdf/include/netcdf_par.h": "netcdf_par.h",
+        "vendor/netcdf/include/netcdf_dispatch.h.in": "netcdf_dispatch.h",
+        "vendor/netcdf/include/netcdf_meta.h.in": "netcdf_meta.h",
+        "vendor/netcdf/include/ncjson.h": "netcdf_json.h",
+        "vendor/netcdf/include/ncproplist.h": "netcdf_proplist.h"
+      },
+      "cmake_targets": [
+        "LMX::netcdf"
+      ],
+      "build_group": "extensions/scientific_netcdf",
+      "packages": [
+        "data\\scientific\\netcdf"
+      ],
+      "purpose": "Scientific multidimensional data: CDF1/2/5, netCDF-4/HDF5, parallel I/O, DAP2/4, NCZarr and diskless arrays.",
+      "format_aliases": {
+        "netCDF-5": "CDF-5 / 64-bit data / NC_CDF5 / NC_FORMAT_CDF5"
+      },
+      "selected_profile": "Static ISO C99 C library: CDF1/2/5 + HDF5 core/HL + MPI/PnetCDF + DAP2/4/libxml2 + byte range + directory NCZarr + diskless/mmap. S3, HDF4, NCZarr ZIP and optional external filter dependencies are outside the compiled profile; their available C backend sources are retained.",
+      "dependencies": [
+        "scientific_formats:hdf5",
+        "scientific_formats:pnetcdf",
+        "scientific_formats:libxml2",
+        "base:curl",
+        "base:zlib",
+        "system:MPI"
+      ],
+      "validation": "Original and retained strict C99 builds; generated fixture roundtrips and bidirectional CDF5 interoperability. See VERIFICATION.json.",
+      "vendor_modifications": [],
+      "build_view_adjustments_file": "extensions/scientific_netcdf/netcdf_C99_ADJUSTMENTS.json",
+      "known_limitations": [
+        "ncid is a backend-owned resource handle, not a portable integer identity.",
+        "Remote DAP services are not required by or validated in offline tests.",
+        "MPI one-rank I/O is validated; multi-rank execution is blocked by this host IPC environment, not replaced with a serial stub.",
+        "The netCDF-5 name is a documented format alias, not evidence of an independent netCDF-C 5.x release."
+      ]
     }
   ],
   "prebuilt_dependencies": [
@@ -4905,5 +6926,14 @@
     "MIT_TEXT_NOT_STANDALONE_UPSTREAM": "The upstream source expressly declares MIT and an author but supplies no standalone full MIT text. Exact declarations are retained and licenses/MIT.txt supplies the standard permission/warranty text; no copyright holder/date was invented.",
     "BUILD_CMAKE_BSD_DECLARATION_ONLY": "Expat's unchanged CMake sources declare KDE BSD buildsystem licensing separately from the MIT library; no standalone full KDE buildsystem text was found in the archived release.",
     "additions_2026_11_25": "The additions retain selected production source, platform code, short documentation, licenses and test/example source; full download snapshots and build products are excluded. See ../../docs/core_catalog/README.ru.md."
+  },
+  "current_validation": {
+    "date": "2026-11-26",
+    "native_component_count": 180,
+    "selected_native_build": "PASS",
+    "ctest_total": 138,
+    "ctest_passed": 138,
+    "report": "../../docs/c99_archive/VERIFICATION_2026-11-26.json",
+    "lmx_runtime": "guidance and catalog only; not implemented/tested as a complete L3 core"
   }
 }

@@ -1,0 +1,43 @@
+{
+  "date": "2026-11-26",
+  "compiler": "GCC 14.2.0",
+  "cmake": "4.4.5",
+  "language": "C99",
+  "flags": "-std=c99 -pedantic-errors; upstream ordinary warning policy preserved; no local pedantic suppression",
+  "full_original_sources_with_two_adaptations": {
+    "build": "PASS",
+    "core_and_all_hl_format_test": "PASS",
+    "real_collective_mpi_io_single_rank": "PASS"
+  },
+  "trimmed_sources": {
+    "build": "PASS",
+    "ctest": "2/2 PASS"
+  },
+  "primary_profile": {
+    "core": "all C production sources selected by upstream build",
+    "HL": "all seven C API modules, generated parser and lexer included",
+    "MPI": "enabled, MPICH C interface4.1",
+    "threads": "pthread primitives enabled; HDF5 global thread safety OFF as upstream requires for supported HL",
+    "atomic_model": "upstream mutex emulation, HAVE_STDATOMIC_H=0",
+    "complex": "C99 complex enabled",
+    "float16": "nonstandard datatype disabled",
+    "deprecated_api": "enabled",
+    "map_api": "enabled, backend capability required",
+    "external_filter_plugins_package": "not selected; H5PL core loader remains present",
+    "zlib": "system1.3.1 in standalone proof; integrated LMX::zlib reuse configured"
+  },
+  "serial_option": "LMX_HDF5_PARALLEL=OFF provided, not separately rebuilt in this report",
+  "runtime_env_for_restricted_host": {
+    "UCX_TLS": "self",
+    "UCX_VFS_ENABLE": "n",
+    "HWLOC_COMPONENTS": "-linux"
+  },
+  "mpi_runtime_notes": [
+    "mpiexec.hydra -launcher fork -n1 completed with data verified",
+    "host UCX can emit missing /sys/class/net diagnostic while returning success",
+    "multi-rank execution blocked by host constraints reported by parent; no multi-rank claim"
+  ],
+  "tests_generate_own_data": true,
+  "binary_fixtures_in_vendor": false,
+  "physical_device_or_other_platform_validation": false
+}

@@ -6,13 +6,14 @@
 внешним потребителем; они не предлагаются как дополнительная система
 настроек LMX.
 
-Проверены состав исходных 132 компонентов, семь добавлений `storage_extra`
-и четыре относящихся к форматам добавления `knowledge_extra` и PDFio. В
-[FORMAT_MATRIX.json](FORMAT_MATRIX.json) — **64 позиции**, API, CMake targets,
-ограничения, ссылки на локальные исходники и номера строк с API declarations.
-62 позиции имеют собранный API; отдельно отмечены MIDI source-only и
-FASTA/FASTQ с требуемой macro instantiation. Это проверка по source/header/CMake,
-а не утверждение о проведении полного conformance testing всех форматов.
+В [FORMAT_MATRIX.json](FORMAT_MATRIX.json) — **74 позиции** внешних
+представлений, примеры API, targets, условия доступности и ссылки на первичные
+отчёты. Учтены новые NetSurf/cute readers и научные HDF5/netCDF/PnetCDF/MAT7.3
+profiles. Полный function census находится в
+[core_catalog](../core_catalog/README.ru.md); номера строк заголовков здесь
+не дублируются. MIDI source-only и FASTA/FASTQ с требуемой macro instantiation
+отмечены отдельно. Собранный API и предметная проверка конкретного сценария
+не означают полный conformance test всех вариантов формата.
 
 В таблицах **Ч** означает чтение, **З** — запись. Наличие обеих стрелок не
 обещает сохранение всех metadata, стилей и расширений при roundtrip.
@@ -22,15 +23,16 @@ FASTA/FASTQ с требуемой macro instantiation. Это проверка �
 | Формат | Направление и библиотека | Что можно получить или создать |
 |---|---|---|
 | JSON | Ч: jsmn; Ч/З: cJSON, Jansson | Tokens либо tree values, JSON output. jsmn оставляет интерпретацию чисел LMX; cJSON хранит numbers как `double`. |
-| XML | Ч: yxml, Expat; Ч/З: ezxml | Потоковые события или дерево и XML serialization. |
-| HTML | Ч: Gumbo; З из Markdown: md4c-html | Структура/текст HTML; генерация HTML из Markdown. CSS layout и JavaScript не входят. |
+| XML | Ч: yxml, Expat; Ч/З: ezxml, libxml2 | Потоковые события, дерево, serialization; libxml2 также даёт XPath и проверку XML Schema. |
+| HTML | Ч: Gumbo, Hubbub/DOM, libxml2; З из Markdown: md4c-html | HTML parsing, repair и DOM operations; генерация HTML из Markdown. Готовый browser layout и JavaScript не добавляются. |
+| CSS | Ч: libcss | Parsing, selectors/cascade и computed values; layout и CSS writer не входят. |
 | Markdown | Ч: md4c | События блоков, spans и текста; generic Markdown writer отсутствует. |
 | PDF | З: PDFGen; Ч/З: PDFio | Создание страниц, чтение/запись объектов, metadata и streams, копирование страниц. Рендеринг и общий layout/text extractor отсутствуют. |
 | XLSX | Ч/З: XLSXIO | Чтение sheets/cells и создание простого spreadsheet; без Excel formula engine и полного сохранения оформления. |
 | XLS | Ч: libxls | BIFF/OLE worksheets и значения; без записи, пересчёта формул и XLSX. |
 | TOML | Ч: tomlc99 | Импорт внешнего TOML; writer не собран. |
 | YAML | Ч/З: libyaml | Parser/events/documents и emitter; tags/schema не задают автоматически типы LMX. |
-| INI | Ч: inih | Разбор выбранного INI dialect; writer отсутствует. |
+| INI | Ч: inih, gb_ini | Два внешних INI readers; writer отсутствует. |
 
 Практически значимые ограничения:
 
@@ -52,13 +54,17 @@ FASTA/FASTQ с требуемой macro instantiation. Это проверка �
 
 | Формат | Чтение | Запись | Граница возможностей |
 |---|---|---|---|
-| PNG | stb_image, LodePNG, libspng, tpng | stb_image_write, LodePNG, libspng | **libspng здесь собран в обоих направлениях**; tpng — только RGBA reader. APNG не обещан. |
+| PNG | stb_image, LodePNG, libspng, tpng, cute_png | stb_image_write, LodePNG, libspng, cute_png | **libspng здесь собран в обоих направлениях**; tpng — только RGBA reader. APNG не обещан. |
 | JPEG | stb_image; tjpgdec и NanoJPEG | stb_image_write | stb читает progressive; маленькие alternatives — baseline; writer — baseline. NanoJPEG не читает CMYK, Exif/JFIF metadata и lossless JPEG. |
-| GIF | gifdec, stb | msf_gif, jo_gif | Есть animation APIs. jo_gif игнорирует входную alpha; palette quantization ограничивает цвета. |
+| GIF | gifdec, stb, libnsgif | msf_gif, jo_gif | Есть animation APIs. jo_gif игнорирует входную alpha; palette quantization ограничивает цвета. |
 | QOI | qoi | qoi | Lossless RGB/RGBA; простой raster codec. |
 | WebP | libwebp + demux | libwebp + mux | Lossy/lossless images и animation container APIs; не произвольный WebM video decoder. |
 | TIFF/BigTIFF | libtiff | libtiff | Обе endian формы. Поддержка зависит от compiled codecs; ограничения ниже. |
-| BMP/TGA/Radiance HDR | stb | stb | Простой raster I/O; Radiance RGBE не OpenEXR. |
+| BMP/TGA/Radiance HDR | stb; BMP также libnsbmp | stb | Простой raster I/O; Radiance RGBE не OpenEXR. |
+| ICO | libnsbmp | — | DIB/BMP icon payload; PNG-compressed ICO не заявлен. |
+| SVG | libsvgtiny | — | Разбор поддержанного SVG subset в paths, text и shapes; полный SVG renderer не входит. |
+| Aseprite | cute_aseprite | — | Frames, layers, cels и pixels; writer не входит. |
+| Tiled JSON | cute_tiled | — | Tile maps, включая finite/infinite chunks; writer не входит. |
 | PSD/PIC/binary PPM-PGM | stb | — | PSD только composite, без Photoshop layers; PNM не означает все ASCII variants. |
 | TTF/OTF-CFF/TTC | stb_truetype | — | Метрики/контуры/rasterization; не font writer и не полный shaping/layout engine. |
 | BC1/BC3/BC4/BC5 | — | stb_dxt | Texture blocks; готовый DDS/KTX container writer не следует из этого API. |
@@ -78,7 +84,7 @@ ZSTD, WebP и PixarLog отключены**. Deflate/AdobeDeflate включен
 
 | Представление | Реальные направления | Что ещё потребуется |
 |---|---|---|
-| WAV/RIFF, W64, RF64 | Ч/З: dr_wav; WAV Ч/З также miniaudio | dr_wav не кодирует compressed WAV; miniaudio encoder пишет WAV, не MP3/FLAC. |
+| WAV/RIFF, W64, RF64 | Ч/З: dr_wav; WAV Ч/З также miniaudio; WAV Ч: cute_sound | dr_wav не кодирует compressed WAV; miniaudio encoder пишет WAV, не MP3/FLAC. cute_sound читает поддержанные PCM/float mono/stereo WAV и использует SDL3 для выбранного audio backend. |
 | AIFF, RIFX | Ч: текущий dr_wav | Запись и чтение metadata для них отсутствуют; AIFF ADPCM не поддерживается. |
 | MP3 | Ч: dr_mp3, minimp3, miniaudio | MP3 encoder отсутствует; dr_mp3 и minimp3 не полностью независимы по происхождению. |
 | FLAC, Ogg FLAC | Ч: dr_flac; native FLAC также miniaudio | FLAC encoder отсутствует; Ogg FLAC не означает Opus. |
@@ -136,13 +142,34 @@ framing и параметры heatshrink. Это не описание прои�
 | FASTA/FASTQ | kseq macro parser | Нужны `KSEQ_INIT` и read callback для выбранного stream; готовый самостоятельный runtime reader не инстанцирован библиотекой. |
 | BGZF | Ч/З: klib + zlib | Включён в POSIX profile; это не полный BAM/CRAM parser. |
 | Newick/NHX subset | Ч/З: klib knhx | Node/name/distance representation; полное сохранение всех NHX annotations не обещается. |
-| MAT4/MAT5 | Ч/З: matio, включая zlib MAT5 | **MAT7.3/HDF5 отключён**; MCOS paths не были exercised в focused tests. |
+| MAT4/MAT5/MAT7.3 | Ч/З: matio 1.6.0 | MAT5 compression через zlib; MAT7.3 через HDF5. Dense/sparse/complex/struct roundtrips PASS; MCOS paths отдельно не проверены. |
+| HDF5 | Ч/З: HDF5 2.3.0 + полный C HL | Hierarchy/datasets/attributes, filters, tables, images, dimension scales, packets и другие HL операции; поддержка конкретных filters зависит от сборки. |
+| netCDF CDF-1/2/5 | Ч/З: netCDF-C 4.10.1 и PnetCDF 1.15.1 | CDF-5 — 64-bit data (`NC_64BIT_DATA`), включая точные unsigned 64-bit values. PnetCDF использует MPI-IO. |
+| netCDF-4 | Ч/З: netCDF-C + HDF5 | HDF5 backend; parallel4 требует совместимый MPI. |
+| Directory NCZarr | Ч/З: выбранный netCDF-C backend | Directory representation; S3 и ZIP backends не входят в проверенный профиль. |
+| DAP2/DAP4 | Ч: netCDF-C | Чтение через протокол; DAP4 использует libxml2. Нужен соответствующий endpoint, который может быть в локальной сети. |
 | TinySpline JSON | Ч/З: TinySpline | Собственная spline schema; embedded Parson не выставлен как ещё один generic JSON API. |
 | Genann/KANN/Tinn models | Ч/З: собственные APIs | Три разных native formats, не взаимозаменяемые; не ONNX/GGUF/SafeTensors. |
 | Mint converted model | Ч: Mint | Только заранее converted representation; C API не читает ONNX напрямую. |
 
-Основание: строки `gltf`–`newick`, `mat`, `tinyspline_json`, `native_nn`,
-`mint_native`; public headers и generated-profile CMake adapters.
+`netCDF-5` в обозначениях upstream `ncgen` означает формат CDF-5, а не
+пятую major version библиотеки. Проверяются реальные bytes `CDF\x05`, format
+ID и целые значения больше `2^53`; проводить их через `double` нельзя.
+CDF-5 читают две независимые реализации — netCDF-C и PnetCDF. Взаимное чтение
+фиксируется отдельными тестами, а не предполагается из совпадения названия.
+
+Параллельные HDF5, netCDF и PnetCDF имеют реальную проверку MPI-IO с одним
+rank; multi-rank execution ограничен текущей средой. Это не отменяет
+сохранённого MPI API, но не даёт основания заявлять двухпроцессный PASS.
+Окончательные результаты: [общая проверка](VERIFICATION_2026-11-26.json),
+[HDF5](../../third_party/lmx_c99_compact/extensions/scientific_hdf5/VERIFICATION.json),
+[PnetCDF](../../third_party/lmx_c99_compact/extensions/scientific_pnetcdf/VERIFICATION.json),
+[netCDF/libxml2](../../third_party/lmx_c99_compact/extensions/scientific_netcdf/VERIFICATION.json),
+[MAT7.3](../../third_party/lmx_c99_compact/extensions/knowledge_extra/MAT73_INTEGRATION.json).
+
+Основание: строки `gltf`–`newick`, `mat`, `hdf5`, `netcdf`, `netcdf4`,
+`nczarr`, `dap`, `tinyspline_json`, `native_nn`, `mint_native`; public headers,
+selected-profile adapters и названные verification reports.
 
 ## Носители, хранилища и локальная инфраструктура
 
@@ -189,7 +216,7 @@ PDF. Для показа страниц и общего извлечения т�
 набор и дополнительные научные контейнеры.
 
 В этой проверенной подборке не найден готовый target/API для PDF rendering,
-DOCX/PPTX/ODT/ODS semantic rendering, MAT7.3/HDF5/NetCDF/NPY/NPZ/DICOM,
+DOCX/PPTX/ODT/ODS semantic rendering, NPY/NPZ/DICOM,
 AVIF/HEIF/JPEG XL/OpenEXR/SVG rendering, общего MP4/MOV mux/demux,
 HEVC/AV1/VP9/AAC/Opus, MP3/FLAC/Vorbis encoding, RAR/BZip2/XZ container,
 CSV/TSV quoting-aware I/O, прямого ONNX/GGUF/SafeTensors import. Наличие ZIP,

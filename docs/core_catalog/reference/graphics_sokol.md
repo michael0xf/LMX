@@ -3,14 +3,14 @@
 [Первичный LMX-каталог](../catalog/graphics_sokol.lmx) · [Тела LMX](../bindings/graphics_sokol.lm3) · [Формат и shim по запросу](../CATALOG_FORMAT.ru.md)
 
 Версия: `09558a100857`.
-Записей: **2287**; кандидатов вызова: **448**; scalar prototypes: **4**.
+Записей: **2293**; кандидатов вызова: **448**; scalar prototypes: **4**.
 
 Пакеты: `image\gpu`.
 CMake: `LMX::sokol`.
 
 | Категория | Записи |
 |---|---:|
-| callback | 128 |
+| callback | 134 |
 | function | 1689 |
 | function_macro | 64 |
 | static_header_function | 244 |

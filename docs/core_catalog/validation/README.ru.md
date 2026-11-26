@@ -1,44 +1,99 @@
 # Проверки и границы результатов
 
-Объекты проверок заданы первичными
-[core/inventory.lmx](../core/inventory.lmx), [schema.lmx](../catalog/schema.lmx),
-[lowering_contract.lmx](../bridge/lowering_contract.lmx) и
-[profiles.lmx](../new_primitives/profiles.lmx).
+Первичные объекты проверок — [core/inventory.lmx](../core/inventory.lmx),
+[schema.lmx](../catalog/schema.lmx), [package_plan.lmx](../package_plan.lmx),
+[common_models.lmx](../types/common_models.lmx) и
+[lowering_contract.lmx](../bridge/lowering_contract.lmx). Отчёты ниже имеют
+явную область: актуальная опись, конкретный native профиль либо историческая
+проверка прежнего снимка.
 
-| Проверка | Результат | Свидетельство |
+## Актуальная документационная опись
+
+| Проверка | Что подтверждено | Свидетельство |
 |---|---|---|
-| Все 132 компонента C-коллекции | Configure + build PASS, повторная конфигурация PASS | [full_build.json](full_build.json) |
-| Пять потребителей общего `LMX::all` | 5/5 PASS | [full_build.json](full_build.json) |
-| Числовые добавления | 3/3 CTest PASS, все 10 архивов меньше 1 000 000 B в измеренном профиле | [numeric_extra/VERIFICATION.json](../../../third_party/lmx_c99_compact/extensions/numeric_extra/VERIFICATION.json) |
-| Текст, геометрия, терминал, xxHash | 9 проверок PASS | [non_numeric_build.json](../additions/non_numeric_build.json) |
-| DNS, события, mDNS | C99 offline test PASS, header-only пример компилируется | [network_build.json](network_build.json) |
-| Reference C-граница | 101 проверка, обычная сборка и ASan/UBSan PASS | [bridge_tests.json](bridge_tests.json), [sanitized](bridge_tests_sanitized.json) |
-| Сгенерированные C-shim | Три default-отказа; включённый compress2, 67 проверок, ASan/UBSan PASS | [generated_shim_tests.json](generated_shim_tests.json), [sanitized](generated_shim_tests_sanitized.json), [финальные исходники](generated_shim_final_artifact.json) |
-| Reference новых примитивов | ASan/UBSan PASS; владение, rollback, precision, exact narrowing, квота памяти | [new_primitives/VERIFICATION.json](../new_primitives/VERIFICATION.json) |
-| Исходная/расширенная опись | Независимые acceptance checks, дедупликация, сохранение всех прежних идентичностей | [expanded_api_coverage.json](expanded_api_coverage.json), [api_census_delta.json](api_census_delta.json) |
-| Символы в построенных `.a` | Измеренные совпадения имён и отдельные inline/profile категории | [expanded_archive_symbols.json](expanded_archive_symbols.json) |
+| Полнота источников | Все записи SOURCES, все объявленные public-header patterns, fingerprints исходников | [expanded_api_coverage.json](expanded_api_coverage.json) |
+| Независимые API anchors | Известные семейства функций; отдельные SDL_DECLSPEC и ERFA scans; callbacks, inline, varargs и недоступные профили | [expanded_api_acceptance.json](expanded_api_acceptance.json) |
+| Состав LMX-плана и моделей | Все текущие компоненты присутствуют ровно по одному разу, ссылки на модели/конвертеры разрешены, пути имеют 1–3 сегмента | [catalog_scope_check.json](catalog_scope_check.json) |
+| Полный round-trip метаданных | Из первичных LMX-таблиц восстановлены все записи, все варианты C-деклараций, компонентные данные и header coverage | [catalog_summary.json](../catalog_summary.json), поле `metadata_roundtrip` |
+| Статический LMX-текст | Отступы, cutters, границы форм и расположение `c.*`; без ошибок и неподдержанных форм | [lmx_static_sources.json](lmx_static_sources.json) |
+| Сравнение со снимком пользователя | Новые native компоненты отдельно от уже существовавших 23 пропусков каталога; прежние публичные callable IDs сохранены | [api_census_delta.json](api_census_delta.json) |
+| Исправление callback parser | 47 неверных исторических identities сопоставлены 125 настоящим callback typedef names по полным исходным сигнатурам | [callback_identity_migration.json](callback_identity_migration.json) |
+| Неоткрываемые native-ветки | Force-enable пяти unavailable/application/absent контрактов всё равно даёт `REVIEW_REQUIRED`; native providers не линкуются | [profile_gates.json](profile_gates.json), [код проверки](../bridge/run_profile_gate_tests.py) |
+| Финальные входы и ссылки | SHA-256 конечного SOURCES и native evidence, совпадение входов nm, локальные ссылки и отсутствие Python caches | [final_catalog_checks.json](final_catalog_checks.json) |
 
-Файл `tools/check_lmx_sources.py` проверяет только описанный набор свойств
-исходного текста: отступы, cutters, закрытие на пустой строке и расположение
-`c.*`. Он не заменяет P0, разрешение ссылок, полную типизацию и исполнение.
-Round-trip каталога проверяет восстановление всей метаинформации, а не
-корректность произвольной C-сигнатуры на любом ABI.
+Извлекатель не считает наличие объявления доказательством реализации.
+Например, GL/EGL prototypes внутри SDL interoperability headers требуют
+внешнего driver dispatch, `SDL_main` реализует host, APR skiplist исключён
+из strict-C99 target, а optional SDL2 RWops/OGG ветви cute_sound не входят
+в выбранный SDL3/WAV профиль. Такие контракты сохраняются в описи, но
+генератор не добавляет для них включаемую native-ветку.
 
-Восстановленные поля `build_input_status`/`source_validation` внутри
-компонентных записей отражают область исходного census: сам извлекатель
-не выполняет линковку. Итоговую отдельную проверку сборки описывает
-`full_build.json`. `whole_collection_link: NOT_RUN` в поисковой проекции
-не означает, что пять проверочных consumers не запускались: не проверялся
-единый образ со всеми API/объектами коллекции.
+`tools/check_lmx_sources.py` не является P0-парсером и не выполняет
+разрешение имён, полную типизацию либо запуск LMX. Round-trip доказывает
+сохранность метаданных, а не корректность произвольного C ABI. Числа
+`callable_candidates` и `direct_scalar_prototypes` обозначают классификацию
+описи, а не число готовых защищённых функций ядра.
 
-LeakSanitizer в этой среде недоступен под ptrace и отмечен `NOT_RUN`;
-AddressSanitizer и UndefinedBehaviorSanitizer реально запускались.
-Нормализованные пути команд в отчётах обозначают корень проекта, коллекцию
-и временный build directory. Полные build logs в патч не входят.
+## Нативные сборки
 
-**Не выполнялись:** интеграция в актуальный LMX runtime, Windows/QNX
-cross-builds, испытания на малых процессорах, полный набор upstream
-regression suites и сборка единого executable со всеми объектами через
-`--whole-archive`. Выбранные consumers действительно связаны и выполнены;
-это проверка конкретного совместного использования, не доказательство
-любой возможной комбинации API.
+Полная выбранная композиция из **180 компонентов** собрана в strict C99;
+**138 из 138 CTest** прошли, включая пять native consumers `LMX::all`.
+В **195 выбранных production-архивах** проверены **42 500 strong definitions**;
+совпадений strong symbol names между архивами не обнаружено. Свидетельства:
+[общая проверка сборки](../../c99_archive/VERIFICATION_2026-11-26.json) и
+[аудит выбранных архивов](../../c99_archive/SYMBOL_AUDIT_2026-11-26.json).
+Эти проверки относятся к нативной композиции и не запускают LMX runtime.
+
+Точные версии, зависимости, C99-флаги, код проверок, измеренные архивы и
+ограничения каждого нового профиля находятся рядом с интегратором:
+
+| Расширение | Отчёт |
+|---|---|
+| gb, curated libc и cute | [bundles_extra/VERIFICATION.json](../../../third_party/lmx_c99_compact/extensions/bundles_extra/VERIFICATION.json) |
+| APR, APR-Util и SDL3 | [platform_extra/VERIFICATION.json](../../../third_party/lmx_c99_compact/extensions/platform_extra/VERIFICATION.json) |
+| NetSurf libraries | [netsurf_extra/VERIFICATION.json](../../../third_party/lmx_c99_compact/extensions/netsurf_extra/VERIFICATION.json) |
+| HDF5 core + HL | [scientific_hdf5/VERIFICATION.json](../../../third_party/lmx_c99_compact/extensions/scientific_hdf5/VERIFICATION.json) |
+| netCDF-C и libxml2 | [scientific_netcdf/VERIFICATION.json](../../../third_party/lmx_c99_compact/extensions/scientific_netcdf/VERIFICATION.json) |
+| matio MAT7.3 | [knowledge_extra/MAT73_INTEGRATION.json](../../../third_party/lmx_c99_compact/extensions/knowledge_extra/MAT73_INTEGRATION.json) |
+| PnetCDF | [scientific_pnetcdf/VERIFICATION.json](../../../third_party/lmx_c99_compact/extensions/scientific_pnetcdf/VERIFICATION.json) |
+
+Детали профилей являются существенной частью результата. Наличие SDL video
+API не доказывает испытание реального GPU/камеры; наличие MPI-IO не доказывает
+многоранговый запуск. Область CDF-5 cross-read, число ranks и причина
+неисполненных проверок указаны в научных отчётах. Исходный код тестов
+сохраняется для повторения на другом оборудовании.
+
+[expanded_archive_symbols.json](expanded_archive_symbols.json) — отдельное
+наблюдение `nm` для указанного в нём набора native архивов. Совпадение имени
+не устанавливает сигнатуру, владельца target или работоспособность backend.
+Inline/static wrappers, platform guards и application hooks разбираются
+отдельно. `whole_collection_link` в поисковой проекции содержит явную область
+и ссылку на проверку configured consumers. `native_whole_archive_link: NOT_RUN`
+обозначает, что единый образ через `--whole-archive` всех объектов не строился;
+`lmx_runtime: NOT_RUN` сохраняет отдельный статус портирования в язык.
+
+## Исторические результаты, сохранённые из загруженного снимка
+
+Следующие файлы сохраняют свою исходную область. Они не выдаются за новую
+сборку всей расширенной коллекции:
+
+| Исходный результат | Область |
+|---|---|
+| [full_build.json](full_build.json) | 132 компонента и пять конкретных `LMX::all` consumers прежнего этапа |
+| [bridge_tests.json](bridge_tests.json), [sanitized](bridge_tests_sanitized.json) | 101 проверка C reference-границы; обычная сборка и ASan/UBSan |
+| [generated_shim_tests.json](generated_shim_tests.json), [sanitized](generated_shim_tests_sanitized.json), [final artifact](generated_shim_final_artifact.json) | Три default-отказа и 67 проверок включённого zlib compress2 adapter |
+| [new_primitives/VERIFICATION.json](../new_primitives/VERIFICATION.json) | Числовой C reference: владение, rollback, precision, narrowing, квота памяти |
+| [additions/summary.json](../additions/summary.json) | Измерения первых 20 добавленных библиотек |
+| `baseline_*`, `expanded_api_validation.json`, `generated_lmx_static.json`, `all_lmx_static.json`, `delivery_checks.json`, `census_*_refresh.json` | Прежние проверки соответствующих исторических входов; актуальные результаты перечислены выше |
+
+LeakSanitizer в исторических ASan/UBSan запусках был недоступен под ptrace
+и указан как `NOT_RUN`. Это не означает отказ AddressSanitizer или
+UndefinedBehaviorSanitizer, которые в тех запусках действительно работали.
+Пути команд в новых компактных отчётах нормализованы; transient build trees
+и длинные логи не включаются в overlay.
+
+**Не заявлены выполненными:** интеграция всего каталога в актуальный LMX
+runtime, Windows/QNX cross-builds, испытания на процессорах 100–200 МГц,
+полный набор всех upstream suites и единый executable через
+`--whole-archive` всех объектов. Фактически выполненные проверки описаны
+своими отчётами и не распространяются автоматически на другие профили.

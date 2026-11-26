@@ -36,10 +36,18 @@ def main():
     ap.add_argument('--summary',type=Path,required=True)
     ap.add_argument('--details',type=Path)
     ap.add_argument('--nm',default='nm')
+    ap.add_argument('--archive-selection',type=Path,help='production archive audit JSON with archives[].path and sha256; limits live scan to these exact archives')
     ap.add_argument('--exclude-archive',action='append',default=[],help='exclude a relative archive glob, e.g. a stale unselected combined archive')
     a=ap.parse_args();root=a.build_dir.resolve() if a.build_dir else None
     inventory=json.loads(a.inventory.read_text())
-    archives=sorted(root.rglob('*.a')) if root else []
+    if a.archive_selection and not root:
+        ap.error('--archive-selection requires --build-dir')
+    selection=json.loads(a.archive_selection.read_text()) if a.archive_selection else None
+    archives=([root / row['path'] for row in selection['archives']] if selection else sorted(root.rglob('*.a'))) if root else []
+    if selection:
+        for path,row in zip(archives,selection['archives']):
+            if not path.is_file() or sha256(path)!=row['sha256']:
+                raise SystemExit('Selected archive missing or changed: '+str(path))
     skipped=[p.relative_to(root).as_posix() for p in archives if any(fnmatch.fnmatchcase(p.relative_to(root).as_posix(),g) for g in a.exclude_archive)]
     archives=[p for p in archives if p.relative_to(root).as_posix() not in skipped]
     env=dict(os.environ,LC_ALL='C')
@@ -85,6 +93,7 @@ def main():
         'schema_version':1,'scope':'Native nm observations of this configured C build; not a final-link or ABI-signature verification.',
         'inventory_sha256':sha256(a.inventory),'source_manifest_sha256':inventory['source_manifest_sha256'],
         'symbol_origin':({'kind':'recorded_nm_snapshot','snapshot_sha256':sha256(a.symbol_snapshot)} if a.symbol_snapshot else {'kind':'live_nm_archive_scan'}),
+        'archive_selection':({'kind':'production_archive_audit','sha256':sha256(a.archive_selection),'selected_archive_count':len(selection['archives'])} if selection else None),
         'excluded_archives':skipped,
         'archive_count':len(records),'nm_failures':sum(r['nm_returncode']!=0 for r in records),
         'distinct_callable_symbol_spellings':len(definitions),
@@ -93,7 +102,7 @@ def main():
         'components':[{'component':cid,**dict(counts)} for cid,counts in sorted(by_component.items())],
         'archives':[{k:v for k,v in r.items() if k!='symbols'} for r in records],
         'limits':[
-            'Definitions are collected from all discovered .a files, including dependency/staging copies. Duplicate spelling is not automatically a conflicting final link.',
+            ('Definitions are collected only from the selected production archives; path and SHA-256 were checked against the archive audit.' if selection else 'Definitions are collected from all discovered .a files, including dependency/staging copies. Duplicate spelling is not automatically a conflicting final link.'),
             'A spelling match may belong to another archive/component; signature and target membership require separate C ABI/link validation.',
             'Missing global definitions are expected for inactive platform/features, header-only implementations, private/static APIs and required application implementations.',
             'Inline and static header functions need typed addressable shims even when a same-named global definition exists elsewhere.',

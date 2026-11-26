@@ -3,14 +3,14 @@
 [Первичный LMX-каталог](../catalog/systems_enet.lmx) · [Тела LMX](../bindings/systems_enet.lm3) · [Формат и shim по запросу](../CATALOG_FORMAT.ru.md)
 
 Версия: `v1.3.18`.
-Записей: **105**; кандидатов вызова: **75**; scalar prototypes: **2**.
+Записей: **111**; кандидатов вызова: **75**; scalar prototypes: **2**.
 
 Пакеты: `net`.
 CMake: `LMX::enet`.
 
 | Категория | Записи |
 |---|---:|
-| callback | 3 |
+| callback | 9 |
 | function | 75 |
 | function_macro | 27 |
 

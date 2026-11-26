@@ -1,0 +1,10 @@
+# Guard the one build-system adjustment; retain original vendor bytes.
+file(SHA256 "${LIBXML_VENDOR}/CMakeLists.txt" sha)
+if(NOT sha STREQUAL "7eaa7ede8fcb65853850004253d1e2d298d4d1f80816e74b3b437a5b2ceedf7f")
+  message(FATAL_ERROR "libxml2 CMake input changed: review C99 profile")
+endif()
+file(MAKE_DIRECTORY "${LIBXML_VIEW}")
+file(COPY "${LIBXML_VENDOR}/" DESTINATION "${LIBXML_VIEW}")
+file(READ "${LIBXML_VENDOR}/CMakeLists.txt" text)
+string(REPLACE "set(CMAKE_C_STANDARD 11)" "set(CMAKE_C_STANDARD 99)\nset(CMAKE_C_STANDARD_REQUIRED ON)\nset(CMAKE_C_EXTENSIONS OFF)" text "${text}")
+file(WRITE "${LIBXML_VIEW}/CMakeLists.txt" "${text}")

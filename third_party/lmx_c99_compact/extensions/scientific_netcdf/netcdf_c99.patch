@@ -1,0 +1,375 @@
+--- vendor/netcdf/CMakeLists.txt
++++ build-view/netcdf/CMakeLists.txt
+@@ -10,7 +10,7 @@
+ 
+ #Project Name
+ project(netCDF
+-  LANGUAGES C CXX
++  LANGUAGES C
+   HOMEPAGE_URL "https://www.unidata.ucar.edu/software/netcdf/"
+   DESCRIPTION "NetCDF is a set of software libraries and machine-independent data formats that support the creation, access, and sharing of array-oriented scientific data."
+   VERSION 4.10.1
+--- vendor/netcdf/cmake/dependencies.cmake
++++ build-view/netcdf/cmake/dependencies.cmake
+@@ -134,6 +134,12 @@
+   #####
+   # First, find the C and HL libraries.
+   #####
++  find_package(ZLIB REQUIRED)
++  if(NOT TARGET ZLIB::ZLIB)
++    add_library(ZLIB::ZLIB UNKNOWN IMPORTED)
++    set_target_properties(ZLIB::ZLIB PROPERTIES IMPORTED_LOCATION "${ZLIB_LIBRARY}" INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDE_DIR}")
++  endif()
++  find_package(MPI COMPONENTS C)
+   find_package(HDF5 COMPONENTS C HL REQUIRED)
+ 
+   message(STATUS "Found HDF5 version: ${HDF5_VERSION}")
+@@ -198,7 +204,10 @@
+     set(HDF5_PARALLEL ${HDF5_PROVIDES_PARALLEL})
+   endif(NOT HDF5_PARALLEL)
+ 
+-  set(CMAKE_REQUIRED_LIBRARIES HDF5::HDF5)
++  set(CMAKE_REQUIRED_LIBRARIES HDF5::HDF5 ZLIB::ZLIB Threads::Threads)
++  if(TARGET MPI::MPI_C)
++    list(APPEND CMAKE_REQUIRED_LIBRARIES MPI::MPI_C)
++  endif()
+   include(CheckSymbolExists)
+ 
+   #Check to see if HDF5 library has collective metadata APIs, (HDF5 >= 1.10.0)
+--- vendor/netcdf/include/ncconfigure.h
++++ build-view/netcdf/include/ncconfigure.h
+@@ -144,7 +144,7 @@
+ #endif /*_WIN32*/
+ 
+ #ifndef nulldup
+-#define nulldup(s) ((s)==NULL?s:strdup(s))
++#define nulldup(s) ((s)==NULL?NULL:strdup(s))
+ #endif
+ 
+ #ifndef nulllen
+--- vendor/netcdf/libdap4/ncd4.h
++++ build-view/netcdf/libdap4/ncd4.h
+@@ -248,7 +248,7 @@
+  *
+  * Requires a local @c int @c ret and a @c done label in the enclosing function.
+  */
+-#define FAIL(code,fmt,...) do{ret=NCD4_error(code,__LINE__,__FILE__,fmt , ##__VA_ARGS__); goto done;}while(0)
++#define FAIL(code,...) do{ret=NCD4_error(code,__LINE__,__FILE__,__VA_ARGS__); goto done;}while(0)
+ 
+ /** Allocate an NCD4offset covering [@p base, @p base+@p size). */
+ #define BUILDOFFSET(base,size) NCD4_buildoffset(base,size)
+--- vendor/netcdf/libdap4/ncd4types.h
++++ build-view/netcdf/libdap4/ncd4types.h
+@@ -42,10 +42,6 @@
+ /* sigh, do the forwards */
+ 
+ typedef struct NCD4INFO NCD4INFO;
+-typedef enum NCD4CSUM NCD4CSUM;
+-typedef enum NCD4mode NCD4mode;
+-typedef enum NCD4format NCD4format;
+-typedef enum NCD4translation NCD4translation;
+ typedef struct NCD4curl NCD4curl;
+ typedef struct NCD4meta NCD4meta;
+ typedef struct NCD4node NCD4node;
+@@ -130,6 +126,7 @@
+     NCD4_NOTRANS  = 0, /**< Straight DAP4-to-NetCDF4 translation. */
+     NCD4_TRANSNC4 = 1, /**< Use @c _edu.ucar flags for improved translation. */
+ };
++typedef enum NCD4translation NCD4translation;
+ 
+ #define NCF_DEBUG_NONE  0 /**< No debug action. */
+ #define NCF_DEBUG_COPY  1 /**< Write data into substrate and close instead of aborting. */
+@@ -140,12 +137,14 @@
+     NCD4_DAP = 2, /**< Retrieve the full DAP response (DMR + data). */
+     NCD4_DSR = 4  /**< Retrieve the DSR (dataset services resource). */
+ };
++typedef enum NCD4mode NCD4mode;
+ 
+ /** Wire format of a DAP4 response. */
+ enum NCD4format {
+     NCD4_FORMAT_NONE = 0, /**< No specific format. */
+     NCD4_FORMAT_XML  = 1  /**< XML-encoded response. */
+ };
++typedef enum NCD4format NCD4format;
+ 
+ /**
+  * Union providing storage for any DAP4 primitive value.
+--- vendor/netcdf/libdispatch/dinfermodel.c
++++ build-view/netcdf/libdispatch/dinfermodel.c
+@@ -40,7 +40,7 @@
+ #endif
+ 
+ #ifndef nulldup
+- #define nulldup(x) ((x)?strdup(x):(x))
++ #define nulldup(x) ((x)?strdup(x):NULL)
+ #endif
+ 
+ #undef DEBUG
+--- vendor/netcdf/libdispatch/dudfplugins.c
++++ build-view/netcdf/libdispatch/dudfplugins.c
+@@ -66,19 +66,24 @@
+  * @author Edward Hartnett
+  * @date 2/2/26
+  */
+-static void*
++typedef void (*lmx_nc_plugin_symbol)(void);
++static lmx_nc_plugin_symbol
+ get_symbol(void* handle, const char* symbol)
+ {
+-    void* sym = NULL;
++    lmx_nc_plugin_symbol sym = NULL;
+     
+ #ifdef _WIN32
+-    sym = (void*)GetProcAddress((HMODULE)handle, symbol);
++    sym = (lmx_nc_plugin_symbol)GetProcAddress((HMODULE)handle, symbol);
+     if (!sym) {
+         DWORD err = GetLastError();
+         nclog(NCLOGERR, "GetProcAddress failed for %s: error %lu", symbol, err);
+     }
+ #else
+-    sym = dlsym(handle, symbol);
++    {
++        void* raw_symbol = dlsym(handle, symbol);
++        if (sizeof sym != sizeof raw_symbol) return NULL;
++        memcpy(&sym, &raw_symbol, sizeof sym);
++    }
+     if (!sym) {
+         nclog(NCLOGERR, "dlsym failed for %s: %s", symbol, dlerror());
+     }
+--- vendor/netcdf/libdispatch/ncjson.c
++++ build-view/netcdf/libdispatch/ncjson.c
+@@ -90,7 +90,7 @@
+ #define nullfree(x) {if(x)free(x);}
+ #endif /*nullfree*/
+ #ifndef nulldup
+-#define nulldup(x) ((x)?strdup(x):(x))
++#define nulldup(x) ((x)?strdup(x):NULL)
+ #endif /*nulldup*/
+ 
+ #if defined NCJDEBUG || defined NCJTRACE
+@@ -652,7 +652,7 @@
+     const NCjson* jvalue = NULL;
+     stat = NCJdictget(dict,key,&jvalue);
+     if(stat != NCJ_OK) jvalue = NULL;
+-    return jvalue;
++    return (NCjson*)jvalue;
+ }
+ 
+ /* Unescape the text in parser->yytext; can
+@@ -1326,25 +1326,25 @@
+ netcdf_supresswarnings(void)
+ {
+     void* ignore = NULL;
+-    ignore = (void*)netcdf_supresswarnings;
+-    ignore = (void*)NCJparse;
+-    ignore = (void*)NCJparsen;
+-    ignore = (void*)NCJreclaim;
+-    ignore = (void*)NCJnew;
+-    ignore = (void*)NCJnewstring;
+-    ignore = (void*)NCJnewstringn;
+-    ignore = (void*)NCJdictget;
+-    ignore = (void*)NCJdictlookup;
+-    ignore = (void*)NCJcvt;
+-    ignore = (void*)NCJaddstring;
+-    ignore = (void*)NCJappend;
+-    ignore = (void*)NCJappendstring;
+-    ignore = (void*)NCJappendint;
+-    ignore = (void*)NCJinsert;
+-    ignore = (void*)NCJinsertstring;
+-    ignore = (void*)NCJinsertint;
+-    ignore = (void*)NCJoverwrite;
+-    ignore = (void*)NCJdictsort;
+-    ignore = (void*)NCJdump;
++    (void)netcdf_supresswarnings;
++    (void)NCJparse;
++    (void)NCJparsen;
++    (void)NCJreclaim;
++    (void)NCJnew;
++    (void)NCJnewstring;
++    (void)NCJnewstringn;
++    (void)NCJdictget;
++    (void)NCJdictlookup;
++    (void)NCJcvt;
++    (void)NCJaddstring;
++    (void)NCJappend;
++    (void)NCJappendstring;
++    (void)NCJappendint;
++    (void)NCJinsert;
++    (void)NCJinsertstring;
++    (void)NCJinsertint;
++    (void)NCJoverwrite;
++    (void)NCJdictsort;
++    (void)NCJdump;
+     (void)ignore;
+ }
+--- vendor/netcdf/libdispatch/ncproplist.c
++++ build-view/netcdf/libdispatch/ncproplist.c
+@@ -380,17 +380,16 @@
+ static void
+ ncproplist_unused(void)
+ {
+-    void* unused = ncproplist_unused;
+-    unused = ncproplistnew;
+-    unused = ncproplistfree;
+-    unused = ncproplistadd;
+-    unused = ncproplistaddbytes;
+-    unused = ncproplistaddstring;
+-    unused = ncproplistaddx;
+-    unused = ncproplistclone;
+-    unused = ncproplistget;
+-    unused = ncproplistith;
+-    unused = ncproplistinit;
+-    unused = (void*)ncproplistith;
+-    (void)unused;
+-}
++    (void)ncproplist_unused;
++    (void)ncproplistnew;
++    (void)ncproplistfree;
++    (void)ncproplistadd;
++    (void)ncproplistaddbytes;
++    (void)ncproplistaddstring;
++    (void)ncproplistaddx;
++    (void)ncproplistclone;
++    (void)ncproplistget;
++    (void)ncproplistith;
++    (void)ncproplistinit;
++    (void)ncproplistith;
++}
+--- vendor/netcdf/libhdf5/hdf5internal.c
++++ build-view/netcdf/libhdf5/hdf5internal.c
+@@ -36,9 +36,10 @@
+  * @return 0 for success.
+  */
+ static herr_t
+-h5catch(void* ignored)
+-{
+-    H5Eprint1(NULL);
++h5catch(hid_t stack, void* ignored)
++{
++    (void)ignored;
++    H5Eprint2(stack, NULL);
+     return 0;
+ }
+ #endif
+@@ -48,6 +49,10 @@
+    severity 0 for errors, 1 for important log messages, 2 for less
+    important, etc. */
+ extern int nc_log_level;
++static herr_t lmx_nc_hdf_log_error(hid_t stack, void *stream)
++{
++    return H5Eprint2(stack, (FILE *)stream);
++}
+ 
+ #endif /* LOGGING */
+ 
+@@ -67,12 +72,12 @@
+  * @return 0 for success
+  */
+ static herr_t
+-set_auto(void* func, void *client_data)
++set_auto(H5E_auto2_t func, void *client_data)
+ {
+ #ifdef DEBUGH5
+-    return H5Eset_auto2(H5E_DEFAULT,(H5E_auto2_t)h5catch,client_data);
++    return H5Eset_auto2(H5E_DEFAULT,h5catch,client_data);
+ #else
+-    return H5Eset_auto2(H5E_DEFAULT,(H5E_auto2_t)func,client_data);
++    return H5Eset_auto2(H5E_DEFAULT,func,client_data);
+ #endif
+ }
+ 
+@@ -1004,6 +1009,10 @@
+ #ifdef LOGGING
+ /* We will need to check against nc log level from nc4internal.c. */
+ extern int nc_log_level;
++static herr_t lmx_nc_hdf_log_error(hid_t stack, void *stream)
++{
++    return H5Eprint2(stack, (FILE *)stream);
++}
+ 
+ /**
+  * @internal This is like nc_set_log_level(), but will also turn on
+@@ -1027,7 +1036,7 @@
+     }
+     else
+     {
+-        if (set_auto((H5E_auto_t)&H5Eprint1, stderr) < 0)
++        if (set_auto(lmx_nc_hdf_log_error, stderr) < 0)
+             LOG((0, "H5Eset_auto failed!"));
+         LOG((1, "HDF5 error messages turned on."));
+     }
+--- vendor/netcdf/liblib/CMakeLists.txt
++++ build-view/netcdf/liblib/CMakeLists.txt
+@@ -136,6 +136,10 @@
+ if(USE_HDF5 AND NOT NETCDF_ENABLE_FILTER_SZIP)
+   foreach(_hdf5_tgt IN ITEMS HDF5::HDF5 hdf5::hdf5_hl)
+     if(TARGET ${_hdf5_tgt})
++      get_target_property(_hdf5_real ${_hdf5_tgt} ALIASED_TARGET)
++      if(_hdf5_real)
++        set(_hdf5_tgt ${_hdf5_real})
++      endif()
+       get_target_property(_iface_libs ${_hdf5_tgt} INTERFACE_LINK_LIBRARIES)
+       if(_iface_libs)
+         list(FILTER _iface_libs EXCLUDE REGEX "(libsz|libszip|libaec|[/\\]sz[.;]|[/\\]szip[.;]|[/\\]aec[.;])")
+--- vendor/netcdf/libncxml/ncxml_xml2.c
++++ build-view/netcdf/libncxml/ncxml_xml2.c
+@@ -3,7 +3,7 @@
+ #include <stddef.h>
+ #include <stdlib.h>
+ #include <string.h>
+-#include <libxml2/libxml/parser.h>
++#include <libxml/parser.h>
+ #include <libxml/tree.h>
+ #include "ncxml.h"
+ 
+--- vendor/netcdf/libnczarr/zdebug.h
++++ build-view/netcdf/libnczarr/zdebug.h
+@@ -48,19 +48,19 @@
+ #endif
+ 
+ #ifdef ZTRACING
+-#define ZTRACE(level,fmt,...) nctrace((level),__func__,fmt,##__VA_ARGS__)
+-#define ZTRACEMORE(level,fmt,...) nctracemore((level),fmt,##__VA_ARGS__)
++#define ZTRACE(level,...) nctrace((level),__func__,__VA_ARGS__)
++#define ZTRACEMORE(level,...) nctracemore((level),__VA_ARGS__)
+ #define ZUNTRACE(e) ncuntrace(__func__,THROW(e),NULL)
+-#define ZUNTRACEX(e,fmt,...) ncuntrace(__func__,THROW(e),fmt,##__VA_ARGS__)
++#define ZUNTRACEX(e,...) ncuntrace(__func__,THROW(e),__VA_ARGS__)
+ #else
+-#define ZTRACE(level,fmt,...)
+-#define ZTRACEMORE(level,fmt,...)
++#define ZTRACE(level,...)
++#define ZTRACEMORE(level,...)
+ #ifdef ZCATCH
+ #define ZUNTRACE(e) THROW(e)
+-#define ZUNTRACEX(e,fmt,...) THROW(e)
++#define ZUNTRACEX(e,...) THROW(e)
+ #else
+ #define ZUNTRACE(e) (e)
+-#define ZUNTRACEX(e,fmt,...) (e)
++#define ZUNTRACEX(e,...) (e)
+ #endif
+ #endif
+ 
+--- vendor/netcdf/libnczarr/zsync.c
++++ build-view/netcdf/libnczarr/zsync.c
+@@ -9,7 +9,7 @@
+ #include "ncutil.h"
+ 
+ #ifndef nulldup
+-#define nulldup(x) ((x)?strdup(x):(x))
++#define nulldup(x) ((x)?strdup(x):NULL)
+ #endif
+ 
+ #undef FILLONCLOSE
+--- vendor/netcdf/libsrcp/CMakeLists.txt
++++ build-view/netcdf/libsrcp/CMakeLists.txt
+@@ -6,7 +6,7 @@
+ # See netcdf-c/COPYRIGHT file for more info.
+ 
+ add_library(netcdfp OBJECT ${libsrcp_SOURCES})
+-target_link_libraries(netcdfp PUBLIC PNETCDF::PNETCDF)
++target_link_libraries(netcdfp PUBLIC PNETCDF::PNETCDF MPI::MPI_C)
+ 
+ target_sources(netcdfp PRIVATE ncpdispatch.c)
+ 

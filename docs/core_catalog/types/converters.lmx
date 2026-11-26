@@ -109,6 +109,20 @@ BridgeConverters:
         char[]: status "REQUIRE_IMPLEMENTATION"
         char[]: ownership "borrow only compatible layout; otherwise explicit scratch copy"
         char[]: checks "dtype; rank; shape; strides; layout; dimensions fit backend int; retention; quantization"
+    scientificSelection:
+        char[]: from "BridgeData\\Hyperslab + Tensor + backend dataset Resource"
+        char[]: to "HDF5 dataspaces / netCDF start-count-stride-imap / MAT array selections"
+        char[]: nativeSymbol "per-format checked selection / datatype / pack adapter"
+        char[]: status "REQUIRE_IMPLEMENTATION"
+        char[]: ownership "hold dataset, dataspace and memory owner until operation or asynchronous completion finishes"
+        char[]: checks "rank; native integer widths; start/count/stride/block bounds and overflow; memory/file element-count agreement; unlimited dimensions; endian and compound layout; explicit narrowing; no raw struct or datatype-handle cast"
+    mpiResource:
+        char[]: from "BridgeData\\MpiContext + exact-kind Resource + Tensor or Buffer"
+        char[]: to "backend MPI_Comm / MPI_Info / MPI_Datatype / MPI_Request and MPI_Offset"
+        char[]: nativeSymbol "owner-side MPI ABI resolve / collective admission / completion adapter"
+        char[]: status "REQUIRE_IMPLEMENTATION"
+        char[]: ownership "same-process references may share one runtime-bound resource under owner and MPI thread-support rules; pending requests retain all buffers until completion"
+        char[]: checks "exact MPI backend/ABI; initialized and non-finalized runtime; communicator membership; collective ordering and participation; independent versus collective I/O; datatype extent and displacement; count/offset width; no raw handle transport to another process or node"
     imageBackend:
         char[]: from "BridgeData\\Image"
         char[]: to "stb / QOI / PNG / JPEG / GIF / WebP / renderer pixels"

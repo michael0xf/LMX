@@ -2,7 +2,6 @@
 # Metadata: ../catalog/databases_hiredis.lmx; CallRequest validation is per entry.
 L2:
     include: "\"alloc.h\""
-    include: "\"hiredis_ssl.h\""
     include: "\"redismoduleapi.h\""
 
 C99Calls_databases_hiredis:
@@ -1117,6 +1116,16 @@ C99Calls_databases_hiredis:
                 BridgeLower\release(f)
             ---
             int: s c.lmx_bridge_redisGetReplyFromReader_fa0c23fefdb1d5e7(f)
+            return: BridgeLower\finish(f, s)
+    ---
+    capi_5b6ff81e5e32a64c:
+        throws: BridgeLowerError
+        L2:
+            @: f BridgeLower\open(request, C99Catalog_databases_hiredis, C99Catalog_databases_hiredis\Entries\capi_5b6ff81e5e32a64c)
+            finally:
+                BridgeLower\release(f)
+            ---
+            int: s c.lmx_bridge_redisInitOpenSSL_5b6ff81e5e32a64c(f)
             return: BridgeLower\finish(f, s)
     ---
     capi_881242c51dc4465a:
@@ -2863,12 +2872,6 @@ C99Direct_capi_5f2e7f93f9abcdca:
     invoke:
         L2:
             c.hiredisResetAllocators()
-
-C99Direct_capi_5b6ff81e5e32a64c:
-    return: int
-    invoke:
-        L2:
-            return: c.redisInitOpenSSL()
 
 C99Direct_capi_512bbb171abeae85:
     return: int

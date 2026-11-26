@@ -219,15 +219,17 @@
     "capabilities": [
       "read/write MAT4 and MAT5",
       "zlib-compressed MAT5",
+      "read/write HDF5-based MAT7.3 when LMX::hdf5 is available",
       "dense/sparse/complex arrays, cells, structures",
       "MCOS reading code retained and compiled"
     ],
-    "profile": "HDF5/MAT7.3 OFF; Fortran/C++ tools excluded; extended sparse and MCOS ON. MCOS itself was not exercised. C-only adapter uses upstream configuration templates/checks; Linux _DEFAULT_SOURCE exposes endianness constants.",
+    "profile": "MAT7.3/HDF5 ON when LMX::hdf5 exists; otherwise MAT4/MAT5-only. Fortran/C++ tools excluded; extended sparse and MCOS ON. MCOS corpus not exercised. C-only adapter uses upstream configuration templates/checks; Linux _DEFAULT_SOURCE exposes endianness constants.",
     "packages": [
       "data\\scientific\\mat"
     ],
     "dependencies": [
-      "base:zlib"
+      "base:zlib",
+      "scientific_formats:hdf5 (optional; enables MAT7.3)"
     ],
     "id": "knowledge_extra:matio",
     "paths": [

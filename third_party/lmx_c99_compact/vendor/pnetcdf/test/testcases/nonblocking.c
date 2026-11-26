@@ -1,0 +1,301 @@
+/*
+ *  Copyright (C) 2013, Northwestern University and Argonne National Laboratory
+ *  See COPYRIGHT notice in top-level directory.
+ */
+
+/*
+ * This program tests the use of nonblocking API.
+ * The write buffer is a 2D array of size NY x NX
+ * It writes the NY-th row of the memory buffer to the 1st row of the variable
+ * array in file and (NY-1)-th row of the memory buffer to the 2nd row of the
+ * variable in the file, and so one. Testing for reading is the opposite of
+ * write.
+ *
+  The expected reults from the output file contents are:
+ *
+ *  % mpiexec -n 4 ./nonblocking
+ *  % ncmpidump testfile.nc
+ *    netcdf testfile {
+ *    // file format: CDF-1
+ *    dimensions:
+ *         Y = UNLIMITED ; // (16 currently)
+ *         X = 5 ;
+ *    variables:
+ *         int VAR(Y, X) ;
+ *    data:
+ *
+ *    var =
+ *      3, 3, 3, 3, 3,
+ *      2, 2, 2, 2, 2,
+ *      1, 1, 1, 1, 1,
+ *      0, 0, 0, 0, 0,
+ *      3, 3, 3, 3, 3,
+ *      2, 2, 2, 2, 2,
+ *      1, 1, 1, 1, 1,
+ *      0, 0, 0, 0, 0,
+ *      3, 3, 3, 3, 3,
+ *      2, 2, 2, 2, 2,
+ *      1, 1, 1, 1, 1,
+ *      0, 0, 0, 0, 0,
+ *      3, 3, 3, 3, 3,
+ *      2, 2, 2, 2, 2,
+ *      1, 1, 1, 1, 1,
+ *      0, 0, 0, 0, 0 ;
+ *    }
+ */
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <libgen.h> /* basename() */
+#include <mpi.h>
+#include <pnetcdf.h>
+
+#include <testutils.h>
+
+#define NY 4
+#define NX 5
+
+int tst_iput(const char *out_path,
+             int         format,
+             int         coll_io,
+             MPI_Info    info)
+{
+    int i, j, err, ncid, varid, dimids[2], req[NY], st[NY], nerrs=0;
+    int rank, nprocs, buf[NY+1][NX];
+    MPI_Offset start[2], count[2];
+
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    /* Set format. */
+    err = ncmpi_set_default_format(format, NULL);
+    CHECK_ERR
+
+    err = ncmpi_create(MPI_COMM_WORLD, out_path, NC_CLOBBER, info, &ncid);
+    CHECK_FATAL_ERR
+
+    /* define a 2D array */
+    err = ncmpi_def_dim(ncid, "Y", NC_UNLIMITED, &dimids[0]); CHECK_ERR
+    err = ncmpi_def_dim(ncid, "X", NX,    &dimids[1]); CHECK_ERR
+    err = ncmpi_def_var(ncid, "var", NC_INT, 2, dimids, &varid); CHECK_ERR
+    err = ncmpi_enddef(ncid); CHECK_ERR
+
+    if (!coll_io) {
+        err = ncmpi_sync(ncid); CHECK_ERR
+    }
+
+    /* initialize the contents of the array */
+    for (j=0; j<NY+1; j++) for (i=0; i<NX; i++) buf[j][i] = j;
+
+    start[0] = NY*rank; start[1] = 0;
+    count[0] = 1;       count[1] = NX;
+
+    for (j=0; j<NY; j++) {
+        /* call nonblocking API */
+        err = ncmpi_iput_vara_int(ncid, varid, start, count, buf[NY-j-1], &req[j]);
+        CHECK_ERR
+
+        start[0] += 1;
+        st[j] = NC_NOERR;
+    }
+
+    if (coll_io) {
+        err = ncmpi_wait_all(ncid, NY, req, st);
+        CHECK_ERR
+    }
+    else {
+        err = ncmpi_begin_indep_data(ncid);
+        CHECK_ERR
+        err = ncmpi_wait(ncid, NY, req, st);
+        CHECK_ERR
+    }
+
+    for (j=0; j<NY; j++) {
+        err = st[j]; CHECK_ERR
+    }
+
+    /* check if the contents of buf are altered */
+    for (j=0; j<NY; j++)
+        for (i=0; i<NX; i++)
+            if (buf[j][i] != j) {
+                fprintf(stderr,"Error at line %d in %s: buf[%d][%d]=%d != %d\n",
+                __LINE__,__FILE__,j,i,buf[j][i],j);
+                nerrs++;
+                goto fn_exit;
+            }
+
+    /* check if root process can write to file header in data mode */
+    err = ncmpi_rename_var(ncid, varid, "VAR"); CHECK_ERR
+
+    /* file sync before reading */
+    err = ncmpi_sync(ncid);
+    CHECK_ERR
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    err = ncmpi_close(ncid); CHECK_ERR
+
+    /* open the same file and read back for validate */
+    err = ncmpi_open(MPI_COMM_WORLD, out_path, NC_NOWRITE, info, &ncid);
+    CHECK_FATAL_ERR
+
+    err = ncmpi_inq_varid(ncid, "VAR", &varid); CHECK_ERR
+
+    if (!coll_io) {
+        err = ncmpi_begin_indep_data(ncid);
+        CHECK_ERR
+    }
+
+    /* initialize the contents of the array to a different value */
+    for (j=0; j<NY; j++) for (i=0; i<NX; i++) buf[j][i] = -1;
+
+    /* read back variable */
+    start[0] = NY*rank; start[1] = 0;
+    count[0] = NY;      count[1] = NX;
+    if (coll_io)
+        err = ncmpi_get_vara_int_all(ncid, varid, start, count, buf[0]);
+    else
+        err = ncmpi_get_vara_int(ncid, varid, start, count, buf[0]);
+    CHECK_ERR
+
+    err = ncmpi_close(ncid); CHECK_ERR
+
+    /* check if the contents of buf are expected */
+    for (j=0; j<NY; j++) {
+        int exp = NY - j - 1;
+        for (i=0; i<NX; i++)
+            if (buf[j][i] != exp) {
+                fprintf(stderr,"Error at line %d: expect buf[%d][%d]=%d but got %d\n",
+                       __LINE__, j,i,exp, buf[j][i]);
+                nerrs++;
+                goto fn_exit;
+            }
+    }
+
+fn_exit:
+    return nerrs;
+}
+
+int tst_iget(const char *in_path,
+             int         coll_io,
+             MPI_Info    info)
+{
+    int i, j, err, ncid, varid, req[NY], st[NY], nerrs=0;
+    int rank, nprocs, buf[NY+1][NX];
+    MPI_Offset start[2], count[2];
+
+    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    /* open the same file and read back for validate */
+    err = ncmpi_open(MPI_COMM_WORLD, in_path, NC_NOWRITE, info, &ncid);
+    CHECK_FATAL_ERR
+
+    err = ncmpi_inq_varid(ncid, "VAR", &varid); CHECK_ERR
+
+    if (!coll_io) {
+        err = ncmpi_begin_indep_data(ncid);
+        CHECK_ERR
+    }
+
+    /* initialize the contents of the array to a different value */
+    for (j=0; j<NY; j++) for (i=0; i<NX; i++) buf[j][i] = -1;
+
+    /* read back variable */
+    start[0] = NY*rank; start[1] = 0;
+    count[0] = 1;       count[1] = NX;
+
+    for (j=0; j<NY; j++) {
+        /* call nonblocking API */
+        err = ncmpi_iget_vara_int(ncid, varid, start, count, buf[NY-j-1], &req[j]);
+        CHECK_ERR
+
+        start[0] += 1;
+        st[j] = NC_NOERR;
+    }
+
+    if (coll_io) {
+        err = ncmpi_wait_all(ncid, NY, req, st);
+        CHECK_ERR
+    }
+    else {
+        err = ncmpi_begin_indep_data(ncid);
+        CHECK_ERR
+        err = ncmpi_wait(ncid, NY, req, st);
+        CHECK_ERR
+    }
+    for (j=0; j<NY; j++) {
+        err = st[j]; CHECK_ERR
+    }
+
+    err = ncmpi_close(ncid); CHECK_ERR
+
+    /* check if the contents of buf are expected */
+    for (j=0; j<NY; j++) {
+        int exp = j;
+        for (i=0; i<NX; i++)
+            if (buf[j][i] != exp) {
+                fprintf(stderr,"Error at line %d: expect buf[%d][%d]=%d but got %d\n",
+                       __LINE__,j,i,exp,buf[j][i]);
+                nerrs++;
+                goto fn_exit;
+            }
+    }
+
+fn_exit:
+    return nerrs;
+}
+
+static
+int test_io(const char *out_path,
+            const char *in_path, /* ignored */
+            int         format,
+            int         coll_io,
+            MPI_Info    info)
+{
+    int nerrs=0;
+
+    nerrs = tst_iput(out_path, format, coll_io, info);
+    if (nerrs > 0) goto err_out;
+
+    nerrs = tst_iget(out_path, coll_io, info);
+    if (nerrs > 0) goto err_out;
+
+    /* disable PnetCDF internal buffering */
+    MPI_Info_set(info, "nc_ibuf_size", "0");
+
+    nerrs = tst_iput(out_path, format, coll_io, info);
+    if (nerrs > 0) goto err_out;
+
+    nerrs = tst_iget(out_path, coll_io, info);
+    if (nerrs > 0) goto err_out;
+
+err_out:
+    return nerrs;
+}
+
+int main(int argc, char **argv) {
+
+    int err;
+    int formats[] = {NC_FORMAT_CLASSIC, NC_FORMAT_64BIT_OFFSET, NC_FORMAT_64BIT_DATA};
+
+    loop_opts opt;
+
+    MPI_Init(&argc, &argv);
+
+    opt.num_fmts = sizeof(formats) / sizeof(int);
+    opt.formats  = formats;
+    opt.ina      = 2;    /* enable and disable intra-node aggregation */
+    opt.drv      = 2;    /* test GIO and MPI-IO driver */
+    opt.ibuf     = 2;    /* enable and disable hint nc_ibuf_size */
+    opt.bb       = 2;    /* enable and disable burst-buffering feature */
+    opt.mod      = 2;    /* collective and independent data mode */
+    opt.hdr_diff = true; /* run ncmpidiff for file header */
+    opt.var_diff = true; /* run ncmpidiff for variables */
+
+    err = tst_main(argc, argv, "ncmpi_iput_vara_int()", opt, test_io);
+
+    MPI_Finalize();
+
+    return err;
+}

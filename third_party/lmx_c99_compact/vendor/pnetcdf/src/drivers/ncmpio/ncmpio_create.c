@@ -1,0 +1,813 @@
+/*
+ *  Copyright (C) 2003, Northwestern University and Argonne National Laboratory
+ *  See COPYRIGHT notice in top-level directory.
+ */
+/* $Id$ */
+
+/*
+ * This file implements the corresponding APIs defined in src/dispatchers/file.c
+ *
+ * ncmpi_create() : dispatcher->create()
+ */
+
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <string.h>    /* strcpy(), strchr() */
+
+#if defined(HAVE_LSTAT) || defined(HAVE_ACCESS) || defined(HAVE_OPEN) || defined(HAVE_UNLINK) || defined(HAVE_CLOSE)
+#include <sys/types.h> /* lstat(), open() */
+#include <sys/stat.h>  /* lstat(), open() */
+#include <unistd.h>    /* lstat(), access(), unlink(), open(), close() */
+#include <fcntl.h>     /* open(), O_CREAT, O_RDWR, O_RDONLY */
+#endif
+#include <libgen.h>    /* dirname() */
+#include <assert.h>
+
+#include <mpi.h>
+
+#if PNETCDF_DRIVER_GIO == 1
+#include <gio.h>
+#endif
+
+#include <pnc_debug.h>
+#include <common.h>
+#include "ncmpio_NC.h"
+
+
+#ifdef HAVE_LUSTRE
+/* /usr/include/lustre/lustreapi.h
+ * /usr/include/linux/lustre/lustre_user.h
+ */
+#include <lustre/lustreapi.h>
+
+// #define PNETCDF_LUSTRE_DEBUG
+
+#define PATTERN_STR(pattern, int_str) ( \
+    (pattern == LLAPI_LAYOUT_DEFAULT)      ? "LLAPI_LAYOUT_DEFAULT" : \
+    (pattern == LLAPI_LAYOUT_RAID0)        ? "LLAPI_LAYOUT_RAID0" : \
+    (pattern == LLAPI_LAYOUT_WIDE)         ? "LLAPI_LAYOUT_WIDE" : \
+    (pattern == LLAPI_LAYOUT_MDT)          ? "LLAPI_LAYOUT_MDT" : \
+    (pattern == LLAPI_LAYOUT_OVERSTRIPING) ? "LLAPI_LAYOUT_OVERSTRIPING" : \
+    (pattern == LLAPI_LAYOUT_SPECIFIC)     ? "LLAPI_LAYOUT_SPECIFIC" : \
+    int_str)
+
+/*----< lustre_get_striping() >----------------------------------------------*/
+static
+void lustre_get_striping(const char *path,
+                         uint64_t   *stripe_count,
+                         uint64_t   *stripe_size)
+{
+    char *dirc, *dname;
+    int err, fd;
+    struct llapi_layout *layout;
+
+    /* Retrieve the file striping settings from the parent folder. */
+    dirc = NCI_Strdup(path);
+    dname = dirname(dirc); /* folder name */
+
+    fd = open(dname, O_RDONLY, PNC_PERM);
+
+    layout = llapi_layout_get_by_fd(fd, LLAPI_LAYOUT_GET_COPY);
+    if (layout == NULL) {
+#ifdef PNETCDF_LUSTRE_DEBUG
+        fprintf(stderr,"Error at %s (%d) llapi_layout_get_by_fd() fails\n",
+                __FILE__, __LINE__);
+#endif
+        goto err_out;
+    }
+
+    if (stripe_count != NULL && *stripe_count == 0) {
+        /* obtain file striping count */
+        err = llapi_layout_stripe_count_get(layout, stripe_count);
+        if (err != 0) {
+#ifdef PNETCDF_LUSTRE_DEBUG
+            char int_str[32];
+            snprintf(int_str, 32, "%lu", *stripe_count);
+            fprintf(stderr,"Error at %s (%d) llapi_layout_stripe_count_get() fails to get stripe count %s\n",
+                __FILE__, __LINE__, PATTERN_STR(*stripe_count, int_str));
+#endif
+            goto err_out;
+        }
+    }
+
+    if (stripe_size != NULL && *stripe_size == 0) {
+        /* obtain file striping unit size */
+        err = llapi_layout_stripe_size_get(layout, stripe_size);
+        if (err != 0) {
+#ifdef PNETCDF_LUSTRE_DEBUG
+            char int_str[32];
+            snprintf(int_str, 32, "%lu", *stripe_size);
+            fprintf(stderr,"Error at %s (%d) llapi_layout_stripe_size_get() fails to get stripe size %s\n",
+                __FILE__,__LINE__, PATTERN_STR(*stripe_size, int_str));
+#endif
+            goto err_out;
+        }
+    }
+
+err_out:
+    if (layout != NULL) llapi_layout_free(layout);
+
+    close(fd);
+}
+#endif
+
+/*----< ncmpio_create() >----------------------------------------------------*/
+int
+ncmpio_create(MPI_Comm         comm,
+              const char      *path,
+              int              cmode,
+              int              ncid,
+              int              env_mode,
+              MPI_Info         user_info, /* user's and env info combined */
+              PNC_comm_attr    comm_attr, /* node IDs and INA metadata */
+              void           **ncpp)      /* OUT */
+{
+    char *filename, value[MPI_MAX_INFO_VAL + 1], *mpi_name;
+    int rank, nprocs, mpi_amode, err, mpireturn, default_format, file_exist=1;
+    int use_trunc=1, flag, striping_info[2];
+    MPI_File fh=MPI_FILE_NULL;
+    NC *ncp=NULL;
+
+    *ncpp = NULL;
+
+    MPI_Comm_rank(comm, &rank);
+    MPI_Comm_size(comm, &nprocs);
+
+    /* Note path's validity and cmode consistency have been checked in
+     * ncmpi_create() in src/dispatchers/file.c.
+     */
+
+    /* First, check whether cmode is valid or supported ---------------------*/
+
+    /* NC_DISKLESS is not supported yet */
+    if (cmode & NC_DISKLESS) DEBUG_RETURN_ERROR(NC_EINVAL_CMODE)
+
+    /* NC_MMAP is not supported yet */
+    if (cmode & NC_MMAP) DEBUG_RETURN_ERROR(NC_EINVAL_CMODE)
+
+    /* Check cmode for other illegal flags already done in dispatcher layer */
+
+    /* Get default format, in case cmode does not include either NC_64BIT_DATA
+     * or NC_64BIT_OFFSET.
+     */
+    ncmpi_inq_default_format(&default_format);
+
+    /* allocate buffer for header object NC and initialize its contents */
+    ncp = (NC*) NCI_Calloc(1, sizeof(NC));
+    if (ncp == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
+
+    *ncpp = (void*)ncp;
+
+    ncp->ncid   = ncid;
+    ncp->comm   = comm;     /* reuse comm duplicated in dispatch layer */
+    ncp->rank   = rank;
+    ncp->nprocs = nprocs;
+
+    /* Extract hints from user_info.
+     *
+     *   Three PnetCDF hints must and have been be extracted before calling
+     *   MPI_File_open() or GIO_open().
+     *      + nc_driver: whether to use MPI-IO or GIO driver.
+     *      + nc_num_aggrs_per_node: number of processes per node to be the INA
+     *          aggregators, which determines the MPI communicator to be passed
+     *          to GIO_open() and MPI_File_open().
+     *      + nc_striping: whether to inherit parent folder's striping.
+     *
+     *   Four PnetCDF hints must be extracted before ncmpio_enddef(). They are
+     *   used when creating dimensions, attributes, and variables.
+     *      + nc_hash_size_dim: hash table size for dimensions
+     *      + nc_hash_size_var: hash table size for variables
+     *      + nc_hash_size_gattr: hash table size for global attributes
+     *      + nc_hash_size_vattr: hash table size for non-global attributes
+     *
+     *   The remaining PnetCDF hints are used at ncmpio_enddef() and after.
+     *      + nc_var_align_size             ncp->info_v_align
+     *      + nc_header_align_size          ncp->info_v_align
+     *      + nc_record_align_size          ncp->info_r_align
+     *      + nc_header_read_chunk_size     ncp->hdr_chunk
+     *      + nc_in_place_swap              fSet(ncp->flags, NC_MODE_SWAP_ON)
+     *      + nc_ibuf_size                  ncp->ibuf_size
+     *      + pnetcdf_subfiling             ncp->subfile_mode/num_subfiles
+     *      + nc_data_move_chunk_size       ncp->data_chunk
+     *
+     *   Note after a call to MPI_File_open() returns, any hints that are not
+     *   used by MPI_File_open() will be discarded, which includes all PnetCDF
+     *   hints. Therefore, we must at first call MPI_File_get_info() to obtain
+     *   an info object containing all the hints used by MPI-IO, and then add
+     *   the PnetCDF hints into the info object (ncp->info). So ncp->info
+     *   can be used in ncmpi_inq_file_info() to return all hints to users.
+     *
+     *   MPI_File_open() will add new hints, such as those related to file
+     *   striping and I/O aggregators.
+     *      + cb_nodes
+     *      + striping_unit
+     *      + striping_factor
+     *      + start_iodevice
+     *
+     *   GIO_open() will add new hints, such as those related to file striping
+     *   and I/O aggregators.
+     *      + cb_nodes
+     *      + cb_node_list
+     *      + striping_unit
+     *      + striping_factor
+     *      + start_iodevice
+     *      + overstriping_ratio
+     *      + lustre_num_osts
+     */
+    ncmpio_hint_extract(ncp, user_info);
+
+    if (rank == 0)
+        /* Check file system type. If the given file does not exist, check its
+         * parent folder. This info will be used to set file striping hints.
+         */
+        ncp->fstype = ncmpio_FileSysType(path);
+
+    /* Setting file open mode in mpi_amode which may later be needed in
+     * ncmpi_begin_indep_data() to open file in the independent data mode.
+     */
+    mpi_amode = MPI_MODE_RDWR | MPI_MODE_CREATE;
+
+    /* Remove the file system type prefix name if there is any. For example,
+     * when path = "lustre:/home/foo/testfile.nc", remove "lustre:" to make
+     * filename pointing to "/home/foo/testfile.nc", so it can be used in POSIX
+     * access() below.
+     */
+    filename = ncmpii_remove_file_system_type_prefix(path);
+
+    /* In case of file clobber mode, we first check if the file already exists,
+     * through a call to lstat() or access() if they are is available. If not,
+     * we call MPI_File_open() to try opening the file. If the file exists, we
+     * will cal MPI_File_set_size() to truncate the file.
+     */
+#ifdef HAVE_LSTAT
+    /* Call lstat() to check the file if exists and if is a symbolic link */
+    if (rank == 0) {
+        struct stat st_buf;
+        st_buf.st_mode = 0;
+
+        if (lstat(filename, &st_buf) == -1) file_exist = 0;
+        errno = 0; /* reset errno */
+
+        /* If the file is a regular file, not a symbolic link, then we delete
+         * the file first and later create it (by calling MPI_File_open() with
+         * MPI_MODE_CREATE). In this case, it is faster to delete and re-create
+         * the file, as truncating a file to zero size is more expensive.
+         *
+         * If the file is a symbolic link, then we cannot delete the file, as
+         * the link will be gone. If the file is deleted and there are other
+         * files symbolically linked to this file, then their links will become
+         * invalid.
+         */
+        if (S_ISREG(st_buf.st_mode)) use_trunc = 0;
+    }
+#elif defined HAVE_ACCESS
+    /* If access() is available, use it to check whether file already exists,
+     * by having rank 0 to call access() and broadcast file_exist.
+     */
+    if (rank == 0) {
+        if (access(filename, F_OK) == -1) file_exist = 0;
+        errno = 0; /* reset errno */
+    }
+#endif
+
+    if (fIsSet(cmode, NC_NOCLOBBER)) {
+        /* Error NC_EEXIST will be returned, if the file already exists. */
+#ifdef HAVE_ACCESS
+        if (nprocs > 1) {
+            int msg[2] = {file_exist, ncp->fstype};
+            TRACE_COMM(MPI_Bcast)(msg, 2, MPI_INT, 0, comm);
+            file_exist  = msg[0];
+            ncp->fstype = msg[1];
+        }
+        if (file_exist) {
+            NCI_Free(ncp);
+            DEBUG_RETURN_ERROR(NC_EEXIST)
+        }
+#else
+        if (nprocs > 1)
+            TRACE_COMM(MPI_Bcast)(&ncp->fstype, 1, MPI_INT, 0, comm);
+
+        /* Add MPI_MODE_EXCL mode for MPI_File_open, so it can error out, if
+         * the file exists.
+         */
+        fSet(mpi_amode, MPI_MODE_EXCL);
+        errno = 0; /* reset errno, as MPI_File_open may change it */
+#endif
+    }
+    else {
+        /* NC_CLOBBER is the default mode in ncmpi_create(). Below, rank 0
+         * truncates or deletes the file and ignores error code.  Note in some
+         * implementation of MPI-IO, calling MPI_File_set_size() can be very
+         * expensive as it may call truncate() by all ranks.
+         */
+        err = NC_NOERR;
+        if (rank == 0 && file_exist) {
+            if (!use_trunc) { /* delete the file */
+#ifdef HAVE_UNLINK
+                /* unlink() is likely faster then truncate(). However, unlink()
+                 * can be expensive when the file size is large. For example,
+                 * it took 1.1061 seconds to delete a file of size 27.72 GiB
+                 * on Perlmutter at NERSC.
+                 */
+                err = unlink(filename);
+                if (err < 0 && errno != ENOENT)
+                    /* ignore ENOENT: file not exist */
+                    DEBUG_ASSIGN_ERROR(err, NC_EFILE) /* report other error */
+                else
+                    err = NC_NOERR;
+#else
+                if (ncp->driver == PNC_DRIVER_MPIIO) {
+                    err = NC_NOERR;
+#ifdef MPICH_VERSION
+                    /* MPICH recognizes file system type acronym prefixed to
+                     * the file name. Other MPI implementations may not.
+                     */
+                    TRACE_IO(MPI_File_delete, (path, MPI_INFO_NULL));
+#else
+                    TRACE_IO(MPI_File_delete, (filename, MPI_INFO_NULL));
+#endif
+                    if (mpireturn != MPI_SUCCESS) {
+                        int errorclass;
+                        MPI_Error_class(mpireturn, &errorclass);
+                        if (errorclass != MPI_ERR_NO_SUCH_FILE)
+                            /* ignore file not exist */
+                            err = ncmpii_error_mpi2nc(mpireturn, mpi_name);
+                    }
+                }
+#if PNETCDF_DRIVER_GIO == 1
+                else if (ncp->driver == PNC_DRIVER_GIO)
+                    err = GIO_delete(path);
+#endif
+                else
+                    err = NC_EDRIVER;
+#endif
+            }
+            else {
+                /* If file is not a regular file (e.g. a symbolic link), we
+                 * cannot delete it and must truncate it to zero size. In this
+                 * case, file open mode needs to remove MPI_MODE_CREATE.
+                 */
+                mpi_amode = MPI_MODE_RDWR;
+
+#ifdef HAVE_TRUNCATE
+                err = truncate(filename, 0); /* truncate() may be expensive */
+                if (err < 0 && errno != ENOENT)
+                    /* ignore ENOENT: file not exist */
+                    DEBUG_ASSIGN_ERROR(err, NC_EFILE) /* report other error */
+                else
+                    err = NC_NOERR;
+#elif defined HAVE_OPEN
+                int fd = open(filename, O_TRUNC | O_WRONLY);
+                if (fd < 0)
+                    DEBUG_ASSIGN_ERROR(err, NC_EFILE)
+                else {
+                    err = close(fd);
+                    if (err < 0)
+                        DEBUG_ASSIGN_ERROR(err, NC_EFILE)
+                }
+#else
+                /* When all POSIX system calls are not available, the last
+                 * resort is to call MPI_File_set_size() to truncate the file.
+                 * Note in some ROMIO versions that make all processes to call
+                 * truncate(), this option may be expensive.
+                 */
+                if (ncp->driver == PNC_DRIVER_MPIIO) {
+                    err = NC_NOERR;
+#ifdef MPICH_VERSION
+                    /* MPICH recognizes file system type acronym prefixed to
+                     * the file name. Other MPI implementations may not.
+                     */
+                    TRACE_IO(MPI_File_open, (MPI_COMM_SELF, path,
+                             MPI_MODE_RDWR, MPI_INFO_NULL, &fh));
+#else
+                    TRACE_IO(MPI_File_open, (MPI_COMM_SELF, filename,
+                             MPI_MODE_RDWR, MPI_INFO_NULL, &fh));
+#endif
+                    if (mpireturn != MPI_SUCCESS) {
+                        int errorclass;
+                        MPI_Error_class(mpireturn, &errorclass);
+                        err = ncmpii_error_mpi2nc(mpireturn, mpi_name);
+                    }
+                    else {
+                        /* MPI_File_set_size() can be expensive */
+                        TRACE_IO(MPI_File_set_size, (fh, 0));
+                        if (mpireturn != MPI_SUCCESS) {
+                            int errorclass;
+                            MPI_Error_class(mpireturn, &errorclass);
+                            err = ncmpii_error_mpi2nc(mpireturn, mpi_name);
+                        }
+                        else {
+                            TRACE_IO(MPI_File_close, (&fh));
+                            if (mpireturn != MPI_SUCCESS) {
+                                int errorclass;
+                                MPI_Error_class(mpireturn, &errorclass);
+                                err = ncmpii_error_mpi2nc(mpireturn, mpi_name);
+                            }
+                        }
+                    }
+                }
+#if PNETCDF_DRIVER_GIO == 1
+                else if (ncp->driver == PNC_DRIVER_GIO) {
+                    GIO_File gio_fh;
+                    err = GIO_open(MPI_COMM_SELF, path, O_RDWR, MPI_INFO_NULL,
+                                   &gio_fh);
+                    if (err == NC_NOERR)
+                        GIO_set_size(gio_fh, 0); /* may be expensive */
+                    else
+                        GIO_close(&gio_fh);
+                }
+#endif
+                else
+                    err = NC_EDRIVER;
+#endif
+            }
+            if (errno == ENOENT) errno = 0; /* reset errno */
+        }
+        /* All processes must wait here until file clobbering by root process
+         * is completed. Note mpi_amode may be modified by removing
+         * MPI_MODE_CREATE when the file to be clobbered is a symbolic link.
+         */
+        if (nprocs > 1) {
+            int msg[3] = {err, mpi_amode, ncp->fstype};
+            TRACE_COMM(MPI_Bcast)(&msg, 3, MPI_INT, 0, comm);
+            err         = msg[0];
+            mpi_amode   = msg[1];
+            ncp->fstype = msg[2];
+        }
+        if (err != NC_NOERR) return err;
+    }
+    /* Now file has been clobbered, i.e. deleted if it is not a symbolic link.
+     * If it is a symbolic link, it now has been truncated to zero size.
+     */
+
+    ncp->path      = path;     /* reuse path duplicated in dispatch layer */
+    ncp->mpi_amode = mpi_amode;
+    ncp->info      = MPI_INFO_NULL;
+
+#if PNETCDF_DRIVER_GIO == 1
+    ncp->gio_fh = NULL; /* when using GIO driver */
+#endif
+
+    /* For file create, ignore NC_NOWRITE if set in cmode argument. */
+    ncp->nc_amode = cmode | NC_WRITE;
+
+    ncp->mpio_fh_coll  = MPI_FILE_NULL;
+    ncp->mpio_fh_indep = MPI_FILE_NULL;
+
+    /* set the file format version based on the create mode, cmode */
+         if (fIsSet(cmode, NC_64BIT_DATA))   ncp->format = 5;
+    else if (fIsSet(cmode, NC_64BIT_OFFSET)) ncp->format = 2;
+    else {
+             if (default_format == NC_FORMAT_CDF5) ncp->format = 5;
+        else if (default_format == NC_FORMAT_CDF2) ncp->format = 2;
+        else                                       ncp->format = 1;
+    }
+
+    /* indicate this is from ncmpi_create */
+    fSet(ncp->flags, NC_MODE_CREATE);
+    /* create automatically enter write mode */
+    fClr(ncp->flags, NC_MODE_RDONLY);
+    /* create automatically enter define mode */
+    fSet(ncp->flags, NC_MODE_DEF);
+    /* PnetCDF default mode is no fill */
+    fClr(ncp->flags, NC_MODE_FILL);
+
+    /* incorporate modes set in environment variables */
+    fSet(ncp->flags, env_mode);
+
+    /* initialize unlimited_id as no unlimited dimension yet defined */
+    ncp->dims.unlimited_id = -1;
+
+    /* comm_attr has been constructed at the dispatchers.
+     *
+     * comm_attr.NUMA_IDs[] stores the NUMA compute node IDs of all MPI ranks
+     * of this comm (the MPI communicator passed from the user application). It
+     * is a keyval attribute cached in the communicator, comm. See how
+     * comm_attr.NUMA_IDs[] was constructed in src/dispatchers/file.c.
+     *
+     * When the intra-node aggregation (INA) is enabled, commm_attr also stores
+     * an intra-node communicator (containing processes belonging to its INA
+     * group) and an inter-node communicator (containing all the INA
+     * aggregators).
+     *
+     * The inter-node communicator will be used to call GIO_open() or
+     * MPI_File_open(), which means only the INA aggregators will perform
+     * collective I/O to the file.
+     */
+    ncp->comm_attr = comm_attr;
+
+#if PNETCDF_DEBUG_MODE == 1
+    if (ncp->num_aggrs_per_node == 0)
+        assert(comm_attr.ina_intra_comm == MPI_COMM_NULL);
+    else
+        assert(comm_attr.ina_intra_comm != MPI_COMM_NULL);
+#endif
+
+    /* When the total number of aggregators >= number of processes, disable
+     * intra-node aggregation.
+     */
+    if (ncp->num_aggrs_per_node * comm_attr.num_NUMAs >= ncp->nprocs)
+        ncp->num_aggrs_per_node = 0;
+
+    /* The value of ncp->num_aggrs_per_node = 0, or > 0 is an indicator of
+     * whether the INA feature is disabled or enabled globally. Thus,
+     * ncp->num_aggrs_per_node is always consistent among all processes.
+     */
+    if (ncp->num_aggrs_per_node > 0) {
+#if PNETCDF_DEBUG_MODE == 1
+        if (comm_attr.is_ina_aggr) /* INA aggregator */
+            assert(comm_attr.ina_inter_comm != MPI_COMM_NULL);
+        else
+            assert(comm_attr.ina_inter_comm == MPI_COMM_NULL);
+#endif
+
+        /* As non-aggregators will call MPI_File_open() or GIO_open(), we now
+         * can replace comm with ina_inter_comm. Note 'comm' is a local
+         * variable of this subroutine.
+         */
+        comm = comm_attr.ina_inter_comm;
+
+        /* For non-INA aggregators, comm_attr.ina_inter_comm is MPI_COMM_NULL.
+         * Because the codes below till label 'after_open' are for INA
+         * aggregators to open the file and obtain a file handler, non-INA
+         * aggregators do not participate and thus do not make use of comm.
+         */
+        if (comm == MPI_COMM_NULL) {
+            if (user_info != MPI_INFO_NULL)
+                MPI_Info_dup(user_info, &ncp->info);
+            goto after_open; /* non-INA aggregators skip to 'after_open' */
+        }
+
+#if PNETCDF_DEBUG_MODE == 1
+        assert(comm_attr.is_ina_aggr); /* INA aggregator */
+#endif
+
+        /* As non-aggregators will not perform any file I/O, we now can replace
+         * nprocs with ina_inter_comm's size. Note 'nprocs' is a local variable
+         * of this subroutine.
+         */
+        MPI_Comm_size(comm, &nprocs);
+    }
+
+    /* create file collectively -------------------------------------------- */
+    if (ncp->driver == PNC_DRIVER_MPIIO) {
+        /* If hint file_striping is set to "auto" and hint striping_factor is
+         * not set by the user, then set hint striping_factor to
+         * ncp->comm_attr.num_nodes.
+         */
+        if (ncp->file_striping == PNCIO_STRIPING_AUTO) {
+            int striping_factor=0;
+            if (user_info != MPI_INFO_NULL) {
+                MPI_Info_get(user_info, "striping_factor", MPI_MAX_INFO_VAL-1,
+                            value, &flag);
+                if (flag)
+                    striping_factor = atoi(value);
+            }
+            if (striping_factor == 0) {
+                sprintf(value, "%d", ncp->comm_attr.num_NUMAs);
+                MPI_Info_set(user_info, "striping_factor", value);
+            }
+        }
+        else { /* ncp->file_striping == PNCIO_STRIPING_INHERIT */
+            if (user_info != MPI_INFO_NULL) {
+                striping_info[0] = striping_info[1] = 0;
+
+                /* check if hint striping_factor is set by the user */
+                MPI_Info_get(user_info, "striping_factor", MPI_MAX_INFO_VAL-1,
+                            value, &flag);
+                if (flag)
+                    striping_info[0] = atoi(value);
+
+                /* check if hint striping_unit is set by the user */
+                MPI_Info_get(user_info, "striping_unit", MPI_MAX_INFO_VAL-1,
+                            value, &flag);
+                if (flag)
+                    striping_info[1] = atoi(value);
+
+#ifdef HAVE_LUSTRE
+                uint64_t striping_factor, striping_unit;
+                striping_factor = striping_info[0];
+                striping_unit   = striping_info[1];
+                /* When either striping_factor or striping_unit is not set, but
+                 * not both, retrieve folder's striping factor or unit in order
+                 * to inherit the missing one.
+                 */
+                if (ncp->rank == 0 &&
+                    striping_factor * striping_unit == 0 &&
+                    striping_factor + striping_unit > 0) {
+                    /* rank 0 retrieves folder's striping settings */
+                    lustre_get_striping(filename, &striping_factor,
+                                        &striping_unit);
+                    /* error is ignored, if there is any */
+                    striping_info[0] = striping_factor;
+                    striping_info[1] = striping_unit;
+                }
+                MPI_Bcast(striping_info, 2, MPI_INT, 0, comm);
+#endif
+
+                if (striping_info[0] > 0) {
+                    sprintf(value, "%d", striping_info[0]);
+                    MPI_Info_set(user_info, "striping_factor", value);
+                }
+
+                if (striping_info[1] > 0) {
+                    sprintf(value, "%d", striping_info[1]);
+                    MPI_Info_set(user_info, "striping_info", value);
+                }
+            }
+        }
+
+#ifdef MPICH_VERSION
+        /* MPICH recognizes file system type acronym prefixed to file names */
+        TRACE_IO(MPI_File_open, (comm, path, mpi_amode, user_info, &fh));
+#else
+        TRACE_IO(MPI_File_open, (comm, filename, mpi_amode, user_info, &fh));
+#endif
+        if (mpireturn != MPI_SUCCESS) {
+#ifndef HAVE_ACCESS
+            if (fIsSet(cmode, NC_NOCLOBBER)) {
+                /* This is the case when NC_NOCLOBBER is used in file creation
+                 * and function access() is not available. MPI_MODE_EXCL is set
+                 * in open mode. When MPI_MODE_EXCL is used and the file
+                 * already exists, MPI-IO should return error class
+                 * MPI_ERR_FILE_EXISTS. But, some MPI-IO implementations (older
+                 * ROMIO) do not correctly return this error class. In this
+                 * case, we can do the followings: check errno to see if it set
+                 * to EEXIST. Note usually rank 0 makes the file open call and
+                 * can be the only one having errno set.
+                 */
+                if (nprocs > 1)
+                    TRACE_COMM(MPI_Bcast)(&errno, 1, MPI_INT, 0, comm);
+                if (errno == EEXIST) {
+                    NCI_Free(ncp);
+                    DEBUG_FOPEN_ERROR(NC_EEXIST)
+                }
+            }
+#endif
+            err = ncmpii_error_mpi2nc(mpireturn, "MPI_File_open");
+            DEBUG_FOPEN_ERROR(err);
+            /* for NC_NOCLOBBER, MPI_MODE_EXCL was added to mpi_amode. If the
+             * file already exists, MPI-IO should return error class
+             * MPI_ERR_FILE_EXISTS which PnetCDF will return error code
+             * NC_EEXIST. This is checked inside of ncmpii_error_mpi2nc()
+             */
+        }
+        else
+            /* reset errno, as MPI_File_open may change it, even if it returns
+             * MPI_SUCCESS
+             */
+            errno = 0;
+
+        /* Now the file has been successfully created */
+        ncp->mpio_fh_coll  = fh;
+        ncp->mpio_fh_indep = (nprocs == 1) ? fh : MPI_FILE_NULL;
+
+        /* Now the file has been successfully created, obtain the I/O hints
+         * used/modified by MPI-IO.
+         */
+        TRACE_IO(MPI_File_get_info, (fh, &ncp->info));
+        if (mpireturn != MPI_SUCCESS) {
+            err = ncmpii_error_mpi2nc(mpireturn, mpi_name);
+            DEBUG_FOPEN_ERROR(err);
+        }
+    }
+#if PNETCDF_DRIVER_GIO == 1
+    else if (ncp->driver == PNC_DRIVER_GIO) {
+        /* Use GIO driver.
+         *
+         * Note when INA is enabled, only the INA aggregators call GIO_open().
+         * Non-INA aggregators have skipped to 'after_open' from above, with
+         * their 'comm', a local variable of this subroutine, remaining
+         * MPI_COMM_NULL (ncp->comm is always assigned to comm).
+         */
+
+        /* 'use_trunc' also indicates whether the file has already existed as a
+         * symbolic link, For a symbolic link file, we cannot add O_CREAT.
+         */
+        int amode = (mpi_amode & MPI_MODE_CREATE) ? O_CREAT|O_RDWR : O_RDWR;
+        err = GIO_open(comm, path, amode, user_info, &ncp->gio_fh);
+        if (err != GIO_NOERR) {
+            err = ncmpii_error_gio2nc(err, "GIO_open");
+            DEBUG_FOPEN_ERROR(err);
+        }
+
+        /* Now the file has been successfully created, obtain the I/O hints
+         * used/modified by GIO driver.
+         */
+        err = GIO_get_info(ncp->gio_fh, &ncp->info);
+        if (err != NC_NOERR) DEBUG_FOPEN_ERROR(err)
+    }
+#endif
+    else
+        DEBUG_FOPEN_ERROR(NC_EDRIVER);
+
+after_open:
+    ncp->striping_unit = 0;
+    ncp->striping_factor = 0;
+
+    /* All processes must obtain striping_unit and striping_factor consistent
+     * across all processes in order to fulfill ncmpi_inq_striping() and
+     * striping_unit is also used to set ncp->data_chunk if hint
+     * nc_data_move_chunk_size is not set by the user.
+     *
+     * When INA is enabled, only INA aggregators have valid hints striping_unit
+     * and striping_factor stored in their ncp->info, returned from the call to
+     * MPI_File_get_info() or GIO_get_info(). When non-INA aggregators have
+     * never call MPI_File_open() or GIO_open(), only happened when performing
+     * independent I/O, they do not have valid file striping hints store in
+     * their ncp->info. We need to make INA root to broadcast these 2 info to
+     * its INA group members. It is OK to have all processes extract these 2
+     * hints below. In this case, the INA aggregators' hints will be valid and
+     * non-INA aggregators' hints will be overwritten by their INA aggregator's
+     * after the call of MPI_Bcast() later.
+     *
+     * When INA is disabled, all processes extract hints.
+     */
+    MPI_Info_get(ncp->info, "striping_unit", MPI_MAX_INFO_VAL-1, value, &flag);
+    striping_info[0] = 0;
+    if (flag) {
+        errno = 0;  /* errno must set to zero before calling strtoll */
+        striping_info[0] = (int)strtol(value,NULL,10);
+        if (errno != 0) striping_info[0] = 0;
+    }
+
+    MPI_Info_get(ncp->info, "striping_factor", MPI_MAX_INFO_VAL-1, value,
+                 &flag);
+    striping_info[1] = 0;
+    if (flag) {
+        errno = 0;  /* errno must set to zero before calling strtoll */
+        striping_info[1] = (int)strtol(value,NULL,10);
+        if (errno != 0) striping_info[1] = 0;
+    }
+
+    if (ncp->num_aggrs_per_node > 0) {
+        /* When INA is enabled, each INA aggregator broadcasts the file
+         * striping  hints to its INA group members.
+         *
+         * Note ncp->num_aggrs_per_node may have been adjusted above.
+         */
+        int intra_nprocs, intra_rank;
+
+#if PNETCDF_DEBUG_MODE == 1
+        assert(comm_attr.ina_intra_comm != MPI_COMM_NULL);
+#endif
+        MPI_Comm_size(comm_attr.ina_intra_comm, &intra_nprocs);
+
+        if (intra_nprocs > 1) {
+            MPI_Info_get(ncp->info, "striping_unit", MPI_MAX_INFO_VAL-1, value,
+                         &flag);
+            striping_info[0] = 0;
+            if (flag) {
+                errno = 0;  /* errno must set to zero before calling strtoll */
+                striping_info[0] = (int)strtol(value,NULL,10);
+                if (errno != 0) striping_info[0] = 0;
+            }
+
+            MPI_Info_get(ncp->info, "striping_factor", MPI_MAX_INFO_VAL-1,
+                         value, &flag);
+            striping_info[1] = 0;
+            if (flag) {
+                errno = 0;  /* errno must set to zero before calling strtoll */
+                striping_info[1] = (int)strtol(value,NULL,10);
+                if (errno != 0) striping_info[1] = 0;
+            }
+
+            MPI_Comm_rank(comm_attr.ina_intra_comm, &intra_rank);
+
+            MPI_Bcast(striping_info, 2, MPI_INT, 0, comm_attr.ina_intra_comm);
+
+            if (intra_rank > 0) {
+                /* non-INA aggregators have not set these to ncp->info */
+                sprintf(value, "%d", striping_info[0]);
+                MPI_Info_set(ncp->info, "striping_unit", value);
+                sprintf(value, "%d", striping_info[1]);
+                MPI_Info_set(ncp->info, "striping_factor", value);
+            }
+        }
+    }
+
+    ncp->striping_unit = striping_info[0];
+    ncp->striping_factor = striping_info[1];
+
+    if (ncp->data_chunk == -1)
+        /* if hint nc_data_move_chunk_size is not set by the user */
+        ncp->data_chunk = (ncp->striping_unit > 0) ? ncp->striping_unit
+                                                   : PNC_DATA_MOVE_CHUNK_SIZE;
+
+    /* Add PnetCDF hints into ncp->info. This step is necessary, because the
+     * underneath MPI-IO may discard hints it does not recognize, which include
+     * all PnetCDF hints. PnetCDF hints need to be added to info, so users can
+     * inquire them.
+     */
+    ncmpio_hint_set(ncp, ncp->info);
+
+    /* comm_attr.NUMA_IDs[] is no longer needed once the file is opened. */
+
+    return NC_NOERR;
+}
+

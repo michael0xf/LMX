@@ -1,8 +1,24 @@
 # LMX: компактная коллекция библиотек C99
 
-[English](README.md) · Редакция от **25 ноября 2026 года**
+[English](README.md) · Редакция от **26 ноября 2026 года**
 
 Этот README рассчитан на размещение в корне `lmx_c99_compact`, рядом с [CMakeLists.txt](CMakeLists.txt). Коллекция содержит компоненты, перечисленные в **SOURCES.json**; все группы библиотек включены по умолчанию. Она предоставляет исходники, CMake-targets, адаптеры, примеры и тесты для подключения к LMX или другому приложению. Компилятор LMX, его FFI и графический Manager сюда не входят.
+
+
+## Обновление: полная коллекция и каталог LMX
+
+В текущей коллекции **180 компонентов**. Основная опись API, общих типов и предлагаемых пакетов LMX находится в [docs/core_catalog](../../docs/core_catalog/README.ru.md). [Проверка от 26 ноября](../../docs/c99_archive/VERIFICATION_2026-11-26.json) подтверждает общую сборку сокращённого дерева и **138/138 успешных проверок**.
+
+| Добавленная группа | Состав | Targets |
+|---|---|---|
+| Платформа | APR 1.7.6, APR-Util 1.6.6, SDL 3.4.20 | `LMX::platform_extra` |
+| Компактные наборы | gb; восемь выбранных модулей cute; permissive-подмножество Embedded Artistry libc с префиксами символов | `LMX::bundles_extra` |
+| Библиотеки NetSurf | libwapcaplet, libparserutils, libhubbub, libdom, libcss, libsvgtiny, libnsbmp, libnsgif | `LMX::netsurf_extra` |
+| Научные форматы | HDF5 2.3.0 core + HL, PnetCDF 1.15.1, netCDF-C 4.10.1, libxml2 2.15.4 | `LMX::scientific_hdf5`, `LMX::scientific_pnetcdf`, `LMX::scientific_netcdf` |
+
+Уже имевшаяся matio 1.6.0 теперь работает с MAT7.3 через HDF5. **netCDF-5 / CDF-5** явно внесён в каталог и проверен через netCDF-C и PnetCDF. C99Containers представлен уже включённой линией STC. Полная коллекция сохраняет согласованные библиотеки и описанные профили исходников; конкретные необязательные бэкенды и поддержка каждой ОС проверяются отдельно.
+
+Научным адаптерам нужен **MPI C SDK**; PnetCDF требует POSIX shell, make и m4. Сам MPI остаётся внешней зависимостью. Эта редакция проверена на Linux/GCC в C99. MPI I/O на одном процессе проверен с настоящим MPI; тесты на двух процессах сохранены, но блокируются IPC-ограничениями данного стенда. HDF5 HL требует сериализации вызовов согласно описанию адаптера.
 
 ## Начать здесь
 
@@ -85,7 +101,7 @@
 
 ## 2. Требования к сборке
 
-- **CMake 3.20+**, C99-компилятор, linker/archiver и системные C-заголовки. Проверены GCC и Clang. Корневой проект использует только `LANGUAGES C`, `C_STANDARD=99`, `C_STANDARD_REQUIRED=ON`, `C_EXTENSIONS=OFF`; строгий режим GCC/Clang добавляет `-pedantic-errors`.
+- **CMake 3.26+**, C99-компилятор, linker/archiver и системные C-заголовки. Проверены GCC и Clang. Корневой проект использует только `LANGUAGES C`, `C_STANDARD=99`, `C_STANDARD_REQUIRED=ON`, `C_EXTENSIONS=OFF`; строгий режим GCC/Clang добавляет `-pedantic-errors`.
 - **Python 3.8+** для адаптеров; **POSIX/MSYS2 `sh` и GNU Make** для libsodium и исходной сборки libpq. Используйте single-config generator: **Ninja** или **Unix Makefiles**. Multi-config generators не поддерживаются этими двумя адаптерами.
 - Для **libpq из исходников** нужны Bison, Flex, Perl, GNU m4 и `nm`; исходной Windows-ветви также нужен `windres`. Совместимая готовая Windows x64/MSVCRT DLL выбирается до поиска PostgreSQL-specific host tools. Готовый `configure` сохранён; Autoconf/Automake повторно запускать не требуется.
 - Для графики нужен SDK выбранного backend: OpenGL, OpenGL ES 3 либо Vulkan. В проверенном Linux-варианте используется системный `OpenGL::OpenGL`; Android GLES3 использует NDK `GLESv3` и `log`.
@@ -143,7 +159,7 @@ ctest --test-dir build-checks -L lmx_usage_checks --output-on-failure
 Если коллекция лежит в `third_party/lmx_c99_compact`:
 
 ```cmake
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.26)
 project(MyApplication LANGUAGES C)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)

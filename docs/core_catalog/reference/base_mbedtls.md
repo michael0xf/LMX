@@ -3,7 +3,7 @@
 [Первичный LMX-каталог](../catalog/base_mbedtls.lmx) · [Тела LMX](../bindings/base_mbedtls.lm3) · [Формат и shim по запросу](../CATALOG_FORMAT.ru.md)
 
 Версия: `3.6.7`.
-Записей: **1341**; кандидатов вызова: **1051**; scalar prototypes: **40**.
+Записей: **1347**; кандидатов вызова: **1051**; scalar prototypes: **40**.
 
 Пакеты: `crypto`, `crypto\certificate`, `net`, `net\tls`, `random`.
 CMake: `LMX::mbedtls`.
@@ -11,7 +11,7 @@ CMake: `LMX::mbedtls`.
 | Категория | Записи |
 |---|---:|
 | alias | 28 |
-| callback | 69 |
+| callback | 75 |
 | function | 955 |
 | function_macro | 193 |
 | static_header_function | 29 |

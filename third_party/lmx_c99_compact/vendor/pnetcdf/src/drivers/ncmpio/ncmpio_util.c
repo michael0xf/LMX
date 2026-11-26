@@ -1,0 +1,1237 @@
+/*
+ *  Copyright (C) 2015, Northwestern University and Argonne National Laboratory
+ *  See COPYRIGHT notice in top-level directory.
+ */
+/* $Id$ */
+
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>   /* strtoll() is first introduced in C99 */
+#include <string.h>   /* strcpy() */
+#include <strings.h>  /* strcasecmp() */
+#include <limits.h>   /* INT_MAX */
+#include <assert.h>
+#include <errno.h>
+
+#include <mpi.h>
+
+#include <pnc_debug.h>
+#include <common.h>
+#include <ncx.h>
+#include "ncmpio_NC.h"
+
+#define MAX_INT_LEN 24
+
+/*----< ncmpio_hint_extract() >----------------------------------------------*/
+/* Extract hints from info. Argument info is the info object set by application
+ * user and passed to ncmpi_create() or ncmpi_open(). For those PnetCDF hints
+ * are not set in info, their default values are used.
+ */
+void ncmpio_hint_extract(NC       *ncp,
+                         MPI_Info  info)
+{
+    char value[MPI_MAX_INFO_VAL];
+    int  flag, ival;
+    long long llval;
+    MPI_Offset var_align_val, hdr_align_val;
+
+    assert(ncp != NULL);
+
+    ncp->info_v_align = -1; /* -1 indicates not set */
+    ncp->info_r_align = -1; /* -1 indicates not set */
+
+    /* chunk size for reading header (set default before check hints) */
+    ncp->hdr_chunk = PNC_HDR_READ_CHUNK_SIZE;
+
+    /* chunk size for moving variables to higher offsets */
+    ncp->data_chunk = -1;
+
+    /* buffer to pack noncontiguous user buffers when calling wait() */
+    ncp->ibuf_size = PNC_DEFAULT_IBUF_SIZE;
+
+#if PNETCDF_SUBFILING == 1
+    ncp->subfile_mode           = 0;
+    ncp->num_subfiles           = 0;
+    ncp->comm_attr_sf.num_NUMAs = 0;
+    ncp->comm_attr_sf.NUMA_IDs  = NULL;
+#endif
+
+    ncp->dims.hash_size  = PNC_HSIZE_DIM;
+    ncp->vars.hash_size  = PNC_HSIZE_VAR;
+    ncp->attrs.hash_size = PNC_HSIZE_GATTR;
+    ncp->hash_size_attr  = PNC_HSIZE_VATTR;
+
+    /* number of INA aggregators per compute node */
+    ncp->num_aggrs_per_node = 0;
+
+    ncp->driver = PNC_DRIVER_MPIIO;
+
+    /* default I/O driver is GIO, if it is not disabled at configure time */
+#if PNETCDF_DRIVER_GIO == 1
+    ncp->driver = PNC_DRIVER_GIO;
+#endif
+
+    if (info == MPI_INFO_NULL) return;
+
+    /* nc_var_align_size, and r_align take effect when a file is created, or
+     * opened and later adding more metadata or variable data
+     */
+
+    /* aligns starting file offsets of entire data section */
+    var_align_val = -1;
+    MPI_Info_get(info, "nc_var_align_size", MPI_MAX_INFO_VAL-1, value, &flag);
+    if (flag) {
+        errno = 0;  /* errno must set to zero before calling strtoll */
+        llval = strtoll(value, NULL, 10);
+        if (errno == 0 && llval >= 0)
+            var_align_val = llval;
+    }
+
+    /* Hint nc_header_align_size is now deprecated. But for backward
+     * compatibility, let's still check.
+     */
+    hdr_align_val = -1;
+    MPI_Info_get(info, "nc_header_align_size", MPI_MAX_INFO_VAL-1,
+                 value, &flag);
+    if (flag) {
+        errno = 0;  /* errno must set to zero before calling strtoll */
+        llval = strtoll(value, NULL, 10);
+        if (errno == 0 && llval >= 0) {
+            /* if nc_header_align_size is set and nc_var_align_size is not set,
+             * replace hint nc_var_align_size with the value of info_h_align.
+             */
+            if (llval >= 0 && ncp->info_v_align == -1)
+                hdr_align_val = llval;
+        }
+    }
+
+    /* hint nc_var_align_size supersedes nc_header_align_size */
+    if (var_align_val > 0)
+        ncp->info_v_align = var_align_val;
+    else if (hdr_align_val > 0)
+        ncp->info_v_align = hdr_align_val;
+
+    /* aligns starting file offset of the record variable section */
+    MPI_Info_get(info, "nc_record_align_size", MPI_MAX_INFO_VAL-1,
+                 value, &flag);
+    if (flag) {
+        errno = 0;  /* errno must set to zero before calling strtoll */
+        llval = strtoll(value, NULL, 10);
+        if (errno == 0 && llval >= 0)
+            ncp->info_r_align = llval;
+    }
+
+    /* header reading chunk size */
+    MPI_Info_get(info, "nc_header_read_chunk_size", MPI_MAX_INFO_VAL-1,
+                 value, &flag);
+    if (flag) {
+        errno = 0;  /* errno must set to zero before calling strtoll */
+        llval = strtoll(value, NULL, 10);
+        if (errno == 0) {
+            if (llval < 0)
+                ncp->hdr_chunk = PNC_HDR_READ_CHUNK_SIZE;
+            else if (llval > NC_MAX_INT) /* limit to NC_MAX_INT */
+                ncp->hdr_chunk = NC_MAX_INT;
+            else if (llval < 48)
+                /* minimum file sizes: 32 bytes for CDF-1 and 2, 48 for CDF5 */
+                ncp->hdr_chunk = 48;
+            else
+                ncp->hdr_chunk = (int)llval;
+
+            /* CDF-5's minimum header size is 4 bytes more than CDF-1 2's */
+            ncp->hdr_chunk = PNETCDF_RNDUP(MAX(MIN_NC_XSZ+4, ncp->hdr_chunk),
+                                           X_ALIGN);
+        }
+    }
+
+    /* setting in-place byte swap (matters only for Little Endian) */
+    MPI_Info_get(info, "nc_in_place_swap", MPI_MAX_INFO_VAL-1, value, &flag);
+    if (flag) {
+        if (strcasecmp(value, "enable") == 0) {
+            fClr(ncp->flags, NC_MODE_SWAP_OFF);
+            fSet(ncp->flags, NC_MODE_SWAP_ON);
+        }
+        else if (strcasecmp(value, "disable") == 0) {
+            fClr(ncp->flags, NC_MODE_SWAP_ON);
+            fSet(ncp->flags, NC_MODE_SWAP_OFF);
+        }
+        else if (strcasecmp(value, "auto") == 0) {
+            fClr(ncp->flags, NC_MODE_SWAP_ON);
+            fClr(ncp->flags, NC_MODE_SWAP_OFF);
+        }
+    }
+
+    /* Temporal buffer size used to pack non-contiguous aggregated user buffers
+     * when calling ncmpi_wait/wait_all. Default PNC_DEFAULT_IBUF_SIZE.
+     */
+    MPI_Info_get(info, "nc_ibuf_size", MPI_MAX_INFO_VAL-1, value, &flag);
+    if (flag) {
+        errno = 0;  /* errno must set to zero before calling strtoll */
+        llval = strtoll(value, NULL, 10);
+        if (errno == 0 && llval >= 0)
+            ncp->ibuf_size = llval;
+    }
+
+#if PNETCDF_SUBFILING == 1
+    MPI_Info_get(info, "pnetcdf_subfiling", MPI_MAX_INFO_VAL-1, value, &flag);
+    if (flag) {
+        if (strcasecmp(value, "enable") == 0)
+            ncp->subfile_mode = 1;
+        else {
+            ncp->subfile_mode = 0;
+            ncp->num_subfiles = 0;
+        }
+    }
+
+    if (ncp->subfile_mode == 1) {
+        MPI_Info_get(info, "nc_num_subfiles", MPI_MAX_INFO_VAL-1, value, &flag);
+        if (flag) {
+            errno = 0;  /* errno must set to zero before calling atoi */
+            ival = atoi(value);
+            if (errno == 0 && ival >= 0)
+                ncp->num_subfiles = ival;
+        }
+    }
+#endif
+
+    /* Hash table size for dimensions */
+    MPI_Info_get(info, "nc_hash_size_dim", MPI_MAX_INFO_VAL-1, value, &flag);
+    if (flag) {
+        errno = 0;  /* errno must set to zero before calling atoi */
+        ival = atoi(value);
+        if (errno == 0 && ival >= 0)
+            ncp->dims.hash_size = ival;
+    }
+
+    /* Hash table size for variables */
+    MPI_Info_get(info, "nc_hash_size_var", MPI_MAX_INFO_VAL-1, value, &flag);
+    if (flag) {
+        errno = 0;  /* errno must set to zero before calling atoi */
+        ival = atoi(value);
+        if (errno == 0 && ival >= 0)
+            ncp->vars.hash_size = ival;
+    }
+
+    /* Hash table size for global attributes */
+    MPI_Info_get(info, "nc_hash_size_gattr", MPI_MAX_INFO_VAL-1, value, &flag);
+    if (flag) {
+        errno = 0;  /* errno must set to zero before calling atoi */
+        ival = atoi(value);
+        if (errno == 0 && ival >= 0)
+            ncp->attrs.hash_size = ival;
+    }
+
+    /* Hash table size for non-global attributes */
+    MPI_Info_get(info, "nc_hash_size_vattr", MPI_MAX_INFO_VAL-1, value, &flag);
+    if (flag) {
+        errno = 0;  /* errno must set to zero before calling atoi */
+        ival = atoi(value);
+        if (errno == 0 && ival >= 0)
+            ncp->hash_size_attr = ival;
+    }
+
+    /* Number of INA aggregators per compute node. */
+    if (ncp->nprocs > 1) {
+        MPI_Info_get(info, "nc_num_aggrs_per_node", MPI_MAX_INFO_VAL-1, value,
+                     &flag);
+        if (flag) {
+            errno = 0;  /* errno must set to zero before calling atoi */
+            ival = atoi(value);
+            if (errno == 0 && ival >= 0)
+                ncp->num_aggrs_per_node = ival;
+        }
+    }
+
+    /* If user explicitly want to use MPI-IO instead of GIO driver, then set
+     * PnetCDF I/O hint "nc_driver" to "mpiio".
+     */
+    MPI_Info_get(info, "nc_driver", MPI_MAX_INFO_VAL-1, value, &flag);
+    if (flag) {
+        if (strcasecmp(value, "gio") == 0)
+            ncp->driver = PNC_DRIVER_GIO;
+        else if (strcasecmp(value, "mpiio") == 0)
+        ncp->driver = PNC_DRIVER_MPIIO;
+    }
+
+    /* Data movement chunk size when variables need to be moved to higher file
+     * offsets.
+     */
+    MPI_Info_get(info, "nc_data_move_chunk_size", MPI_MAX_INFO_VAL-1, value,
+                 &flag);
+    if (flag) {
+        errno = 0;  /* errno must set to zero before calling strtoll */
+        llval = strtoll(value, NULL, 10);
+        if (errno == 0) {
+            if (llval < 0)
+                ncp->data_chunk = -1;
+            else if (llval > NC_MAX_INT) /* limit to NC_MAX_INT */
+                ncp->data_chunk = NC_MAX_INT;
+            else
+                ncp->data_chunk = (int)llval;
+        }
+    }
+
+    /* When creating a file, inherit file striping from the parent folder or
+     * let PnetCDF to decide.
+     */
+    ncp->file_striping = PNCIO_STRIPING_AUTO;
+    MPI_Info_get(info, "file_striping", MPI_MAX_INFO_VAL-1, value, &flag);
+    if (flag && strcasecmp(value, "inherit") == 0)
+        ncp->file_striping = PNCIO_STRIPING_INHERIT;
+
+    /* Check and set hint NUMA_ID, which is set by the dispatcher. */
+    MPI_Info_get(info, "NUMA_ID", MPI_MAX_INFO_VAL-1, value, &flag);
+    if (flag) {
+        errno = 0;  /* errno must set to zero before calling atoi */
+        ival = atoi(value);
+        if (errno == 0 && ival >= 0)
+            ncp->NUMA_ID = ival;
+    }
+}
+
+/*----< ncmpio_hint_set() >--------------------------------------------------*/
+/* Insert PnetCDF hints into info. Argument info is the info object returned
+ * from an earlier call to MPI_File_get_info(). This subroutine is necessary,
+ * because the underneath MPI-IO may discard hints it does not recognize, which
+ * include all PnetCDF hints. PnetCDF hints need to be added to info, so users
+ * can inquire them.
+ */
+void ncmpio_hint_set(NC       *ncp,
+                     MPI_Info  info)
+{
+    char int_str[MAX_INT_LEN];
+
+    assert(ncp != NULL);
+    assert(info != MPI_INFO_NULL);
+
+    /* nc_var_align_size, and r_align take effect when a file is created, or
+     * opened and later adding more metadata or variable data
+     */
+
+    /* aligns starting file offsets of entire data section */
+    if (ncp->info_v_align != -1) {
+        snprintf(int_str, MAX_INT_LEN, OFFFMT, ncp->info_v_align);
+        MPI_Info_set(info, "nc_var_align_size", int_str);
+    }
+
+    /* aligns starting file offset of the record variable section */
+    if (ncp->info_r_align != -1) {
+        snprintf(int_str, MAX_INT_LEN, OFFFMT, ncp->info_r_align);
+        MPI_Info_set(info, "nc_record_align_size", int_str);
+    }
+
+    /* header reading chunk size */
+    snprintf(int_str, MAX_INT_LEN, "%d", ncp->hdr_chunk);
+    MPI_Info_set(info, "nc_header_read_chunk_size", int_str);
+
+    /* variable movement chunk size */
+    snprintf(int_str, MAX_INT_LEN, "%d", ncp->data_chunk);
+    MPI_Info_set(info, "nc_data_move_chunk_size", int_str);
+
+    /* setting in-place byte swap (matters only for Little Endian) */
+    int swap_on  = fIsSet(ncp->flags, NC_MODE_SWAP_ON);
+    int swap_off = fIsSet(ncp->flags, NC_MODE_SWAP_OFF);
+    if (!swap_on && !swap_off)
+        MPI_Info_set(info, "nc_in_place_swap", "auto");
+    else if (swap_on)
+        MPI_Info_set(info, "nc_in_place_swap", "enable");
+    else
+        MPI_Info_set(info, "nc_in_place_swap", "disable");
+
+    /* Temporal buffer size used to pack non-contiguous aggregated user buffers
+     * when calling ncmpi_wait/wait_all. Default PNC_DEFAULT_IBUF_SIZE.
+     */
+    snprintf(int_str, MAX_INT_LEN, OFFFMT, ncp->ibuf_size);
+    MPI_Info_set(info, "nc_ibuf_size", int_str);
+
+#if PNETCDF_SUBFILING == 1
+    if (ncp->subfile_mode)
+        MPI_Info_set(info, "pnetcdf_subfiling", "enable");
+    else
+        MPI_Info_set(info, "pnetcdf_subfiling", "disable");
+
+    snprintf(int_str, MAX_INT_LEN, "%d", ncp->num_subfiles);
+    MPI_Info_set(info, "nc_num_subfiles", int_str);
+#endif
+
+    /* Hash table size for dimensions */
+    snprintf(int_str, MAX_INT_LEN, "%d", ncp->dims.hash_size);
+    MPI_Info_set(info, "nc_hash_size_dim", int_str);
+
+    /* Hash table size for variables */
+    snprintf(int_str, MAX_INT_LEN, "%d", ncp->vars.hash_size);
+    MPI_Info_set(info, "nc_hash_size_var", int_str);
+
+    /* Hash table size for global attributes */
+    snprintf(int_str, MAX_INT_LEN, "%d", ncp->attrs.hash_size);
+    MPI_Info_set(info, "nc_hash_size_gattr", int_str);
+
+    /* Hash table size for non-global attributes */
+    snprintf(int_str, MAX_INT_LEN, "%d", ncp->hash_size_attr);
+    MPI_Info_set(info, "nc_hash_size_vattr", int_str);
+
+    /* Whether to use MPI-IO or GIO driver. */
+    if (ncp->driver == PNC_DRIVER_MPIIO)
+        MPI_Info_set(info, "nc_driver", "mpiio");
+#if PNETCDF_DRIVER_GIO == 1
+    else if (ncp->driver == PNC_DRIVER_GIO)
+        MPI_Info_set(info, "nc_driver", "gio");
+#endif
+
+    if (ncp->num_aggrs_per_node > 0) {
+        /* Number of INA aggregators per compute node. */
+        snprintf(int_str, MAX_INT_LEN, "%d", ncp->num_aggrs_per_node);
+        MPI_Info_set(info, "nc_num_aggrs_per_node", int_str);
+
+        /* Add hint "ina_ranks", list of INA aggregators' rank IDs.
+         * Note this hint is just informative, not user changeable.
+         */
+        if (ncp->comm_attr.ina_ranks != NULL) {
+            char value[MPI_MAX_INFO_VAL];
+            int i;
+
+            snprintf(value, MAX_INT_LEN, "%d", ncp->comm_attr.ina_ranks[0]);
+            for (i=1; i<ncp->comm_attr.num_ina_aggrs; i++) {
+                snprintf(int_str, sizeof(int_str), " %d", ncp->comm_attr.ina_ranks[i]);
+                if (strlen(value) + strlen(int_str) >= MPI_MAX_INFO_VAL-5) {
+                    strcat(value, " ...");
+                    break;
+                }
+                strcat(value, int_str);
+            }
+            MPI_Info_set(info, "nc_ina_node_list", value);
+        }
+    }
+    else /* Update hint "num_aggrs_per_node" to indicate disabled. */
+        MPI_Info_set(info, "nc_num_aggrs_per_node", "0");
+
+    /* When creating a file, inherit file striping from the parent folder or
+     * let PnetCDF to decide.
+     */
+    if (ncp->file_striping == PNCIO_STRIPING_AUTO)
+        MPI_Info_set(info, "file_striping", "auto");
+    else
+        MPI_Info_set(info, "file_striping", "inherit");
+
+    if (ncp->NUMA_ID >= 0) {
+        /* This rank's NUMA_ID, will be used by GIO. */
+        snprintf(int_str, MAX_INT_LEN, "%d", ncp->NUMA_ID);
+        MPI_Info_set(info, "NUMA_ID", int_str);
+    }
+}
+
+/*----< ncmpio_first_offset() >----------------------------------------------*/
+/* Returns the file offset of the first variable element accessed by this
+ * request. Note zero-length request should never call this subroutine.
+ */
+int
+ncmpio_first_offset(const NC         *ncp,
+                    const NC_var     *varp,
+                    const MPI_Offset  start[],  /* [varp->ndims] */
+                    MPI_Offset       *offset)   /* OUT: file offset */
+{
+    int i, ndims;
+
+    ndims = varp->ndims; /* number of dimensions of this variable */
+
+    if (ndims == 0) { /* scalar variable */
+        *offset = varp->begin;
+        return NC_NOERR;
+    }
+
+    *offset = 0;
+    if (IS_RECVAR(varp)) {
+        if (ndims > 1) *offset += start[ndims - 1];
+        for (i=1; i<ndims-1; i++)
+            *offset += start[i] * varp->dsizes[i+1];
+        *offset *= varp->xsz;  /* multiply element size */
+        *offset += start[0] * ncp->recsize;
+    }
+    else {
+        if (ndims > 1) *offset += start[0] * varp->dsizes[1];
+        for (i=1; i<ndims-1; i++)
+            *offset += start[i] * varp->dsizes[i+1];
+        *offset += start[ndims-1];
+        *offset *= varp->xsz;  /* multiply element size */
+    }
+
+    *offset += varp->begin; /* beginning file offset of this variable */
+
+    return NC_NOERR;
+}
+
+/*----< ncmpio_last_offset() >-----------------------------------------------*/
+/* Returns the file offset of the last variable element accessed by this
+ * request.
+ * If count is NULL, this is equivalent to find the starting offset of this
+ * request. Note zero-length request should never call this subroutine.
+ */
+int
+ncmpio_last_offset(const NC         *ncp,
+                   const NC_var     *varp,
+                   const MPI_Offset  start[],    /* [varp->ndims] */
+                   const MPI_Offset  count[],    /* [varp->ndims] */
+                   const MPI_Offset  stride[],   /* [varp->ndims] */
+                   MPI_Offset       *offset_ptr) /* OUT: file offset */
+{
+    int i, ndims;
+    MPI_Offset offset, *last_indx=NULL;
+
+    offset = varp->begin; /* beginning file offset of this variable */
+    ndims  = varp->ndims; /* number of dimensions of this variable */
+
+    if (ndims == 0) { /* scalar variable */
+        *offset_ptr = varp->begin;
+        return NC_NOERR;
+    }
+
+    /* when count == NULL, this is called from a var API */
+    if (count != NULL) {
+        last_indx = (MPI_Offset*) NCI_Malloc(sizeof(MPI_Offset) * ndims);
+
+        if (stride != NULL) {
+            for (i=0; i<ndims; i++) {
+                assert(count[i] > 0);
+                last_indx[i] = start[i] + (count[i] - 1) * stride[i];
+            }
+        }
+        else { /* stride == NULL */
+            for (i=0; i<ndims; i++) {
+                assert(count[i] > 0);
+                last_indx[i] = start[i] + count[i] - 1;
+            }
+        }
+    }
+    else { /* when count == NULL stride is of no use */
+        last_indx = (MPI_Offset*) start;
+    }
+
+    /* Note check NC_EINVALCOORDS and NC_EEDGE already done in
+     * dispatchers/var_getput.m4 */
+
+    if (varp->shape[0] == NC_UNLIMITED)
+        offset += last_indx[0] * ncp->recsize;
+    else
+        offset += last_indx[ndims-1] * varp->xsz;
+
+    if (ndims > 1) {
+        if (IS_RECVAR(varp))
+            offset += last_indx[ndims - 1] * varp->xsz;
+        else
+            offset += last_indx[0] * varp->dsizes[1] * varp->xsz;
+
+        for (i=1; i<ndims-1; i++)
+            offset += last_indx[i] * varp->dsizes[i+1] * varp->xsz;
+    }
+
+    if (count != NULL) NCI_Free(last_indx);
+
+    *offset_ptr = offset;
+    return NC_NOERR;
+}
+
+/*----< ncmpio_pack_xbuf() >-------------------------------------------------*/
+/* Pack user buffer, buf, into xbuf, when buftype is non-contiguous or imap
+ * is non-contiguous, or type-casting is needed. The immediate buffers, lbuf
+ * and cbuf, may be allocated and freed within this subroutine. We try to reuse
+ * the intermediate buffers as much as possible. Below describe such design.
+ *
+ * When called from bput APIs: (abuf means attached buffer pool)
+ *     if contig && no imap && no convert
+ *         buf   ==   lbuf   ==   cbuf    ==     xbuf memcpy-> abuf
+ *                                               abuf
+ *     if contig && no imap &&    convert
+ *         buf   ==   lbuf   ==   cbuf convert-> xbuf == abuf
+ *                                               abuf
+ *     if contig &&    imap && no convert
+ *         buf   ==   lbuf pack-> cbuf    ==     xbuf == abuf
+ *                                abuf
+ *     if contig &&    imap &&    convert
+ *         buf   ==   lbuf pack-> cbuf convert-> xbuf == abuf
+ *                                               abuf
+ *  if noncontig && no imap && no convert
+ *         buf pack-> lbuf   ==   cbuf    ==     xbuf == abuf
+ *                    abuf
+ *  if noncontig && no imap &&    convert
+ *         buf pack-> lbuf   ==   cbuf convert-> xbuf == abuf
+ *                                               abuf
+ *  if noncontig &&    imap && no convert
+ *         buf pack-> lbuf pack-> cbuf    ==     xbuf == abuf
+ *                                abuf
+ *  if noncontig &&    imap &&    convert
+ *         buf pack-> lbuf pack-> cbuf convert-> xbuf == abuf
+ *                                               abuf
+ *
+ * When called from put/iput APIs:
+ *  if contig && no imap && no convert && xbuf_size > NC_BYTE_SWAP_BUFFER_SIZE
+ *         buf   ==   lbuf   ==   cbuf    ==     xbuf
+ *  if contig && no imap && no convert && xbuf_size <= NC_BYTE_SWAP_BUFFER_SIZE
+ *         buf   ==   lbuf   ==   cbuf    ==     xbuf
+ *                                                   malloc + memcpy
+ *  if contig && no imap &&    convert
+ *         buf   ==   lbuf   ==   cbuf convert-> xbuf
+ *                                               malloc
+ *  if contig &&    imap && no convert
+ *         buf   ==   lbuf pack-> cbuf    ==     xbuf
+ *                                malloc
+ *  if contig &&    imap &&    convert
+ *         buf   ==   lbuf pack-> cbuf convert-> xbuf
+ *                                malloc         malloc
+ *  if noncontig && no imap && no convert
+ *         buf pack-> lbuf   ==   cbuf    ==     xbuf
+ *                    malloc
+ *  if noncontig && no imap &&    convert
+ *         buf pack-> lbuf   ==   cbuf convert-> xbuf
+ *                    malloc                     malloc
+ *  if noncontig &&    imap && no convert
+ *         buf pack-> lbuf pack-> cbuf    ==     xbuf
+ *                    malloc      malloc
+ *  if noncontig &&    imap &&    convert
+ *         buf pack-> lbuf pack-> cbuf convert-> xbuf
+ *                    malloc      malloc         malloc
+ */
+int
+ncmpio_pack_xbuf(int           fmt,    /* NC_FORMAT_CDF2 NC_FORMAT_CDF5 etc. */
+                 NC_var       *varp,
+                 MPI_Offset    bufcount,
+                 MPI_Datatype  buftype,
+                 int           buftype_is_contig,
+                 MPI_Offset    nelems, /* no. elements in buf */
+                 MPI_Datatype  itype,  /* element type in buftype */
+                 int           el_size,/* size of itype */
+                 MPI_Datatype  imaptype,
+                 int           need_convert,
+                 int           need_swap,
+                 size_t        xbuf_size,
+                 void         *buf,    /* user buffer */
+                 void         *xbuf)   /* already allocated, in external type */
+{
+    int err=NC_NOERR, mpireturn, free_lbuf=0, free_cbuf=0;
+    void *lbuf=NULL, *cbuf=NULL;
+    MPI_Offset ibuf_size;
+
+    /* check byte size of buf (internal representation) */
+    ibuf_size = nelems * el_size;
+
+    /* Step 1: if buftype is not contiguous, i.e. a noncontiguous MPI derived
+     * datatype, pack buf into a contiguous buffer, lbuf,
+     */
+    if (!buftype_is_contig) { /* buftype is not contiguous */
+        if (imaptype == MPI_DATATYPE_NULL && !need_convert)
+            /* in this case, lbuf will later become xbuf */
+            lbuf = xbuf;
+        else {
+            /* in this case, allocate lbuf and it will be freed before
+             * constructing xbuf */
+            lbuf = NCI_Malloc((size_t)ibuf_size);
+            if (lbuf == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
+            free_lbuf = 1;
+        }
+
+        if (buf != lbuf) {
+            /* pack buf into lbuf based on buftype */
+#ifdef HAVE_MPI_LARGE_COUNT
+            MPI_Count position = 0;
+            mpireturn = MPI_Pack_c(buf, (MPI_Count)bufcount, buftype, lbuf,
+                                   (MPI_Count)ibuf_size, &position,
+                                   MPI_COMM_SELF);
+            if (mpireturn != MPI_SUCCESS)
+                return ncmpii_error_mpi2nc(mpireturn, "MPI_Pack_c");
+#else
+            int position = 0;
+            if (bufcount > NC_MAX_INT || ibuf_size > NC_MAX_INT) {
+                if (free_lbuf) NCI_Free(lbuf);
+                DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
+            }
+            mpireturn = MPI_Pack(buf, (int)bufcount, buftype, lbuf,
+                                 (int)ibuf_size, &position, MPI_COMM_SELF);
+            if (mpireturn != MPI_SUCCESS)
+                return ncmpii_error_mpi2nc(mpireturn, "MPI_Pack");
+#endif
+        }
+    }
+    else /* for contiguous case, we reuse buf */
+        lbuf = buf;
+
+    /* Step 2: if imap is non-contiguous, pack lbuf to cbuf */
+    if (imaptype != MPI_DATATYPE_NULL) { /* true varm */
+        if (!need_convert)
+            /* in this case, cbuf will later become xbuf */
+            cbuf = xbuf;
+        else {
+            /* in this case, allocate cbuf and cbuf will be freed before
+             * constructing xbuf */
+            cbuf = NCI_Malloc((size_t)ibuf_size);
+            if (cbuf == NULL) {
+                if (free_lbuf) NCI_Free(lbuf);
+                DEBUG_RETURN_ERROR(NC_ENOMEM)
+            }
+            free_cbuf = 1;
+        }
+
+        /* pack lbuf to cbuf based on imaptype */
+#ifdef HAVE_MPI_LARGE_COUNT
+        MPI_Count position = 0;
+        mpireturn = MPI_Pack_c(lbuf, 1, imaptype, cbuf, (MPI_Count)ibuf_size,
+                               &position, MPI_COMM_SELF);
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Pack_c");
+#else
+        int position = 0;
+        if (ibuf_size > NC_MAX_INT)
+            DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
+        mpireturn = MPI_Pack(lbuf, 1, imaptype, cbuf, (int)ibuf_size,
+                             &position, MPI_COMM_SELF);
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Pack");
+#endif
+        MPI_Type_free(&imaptype);
+
+        /* lbuf is no longer needed */
+        if (free_lbuf) {
+            NCI_Free(lbuf);
+            free_lbuf = 0;
+        }
+    }
+    else /* not a true varm call: reuse lbuf */
+        cbuf = lbuf;
+
+    /* Step 3: type-convert and byte-swap cbuf to xbuf, and xbuf will be used
+     * in MPI write function to write to file
+     */
+    if (need_convert) {
+        /* user buf type does not match nc var type defined in file */
+        char  tmpbuf[8];
+        void *fillp=tmpbuf; /* fill value in internal representation */
+
+        /* find the fill value */
+        ncmpio_inq_var_fill(varp, fillp);
+
+        /* datatype conversion + byte-swap from cbuf to xbuf */
+        switch(varp->xtype) {
+            case NC_BYTE:
+                err = ncmpii_putn_NC_BYTE(fmt,xbuf,cbuf,nelems,itype,fillp);
+                break;
+            case NC_UBYTE:
+                err = ncmpii_putn_NC_UBYTE(xbuf,cbuf,nelems,itype,fillp);
+                break;
+            case NC_SHORT:
+                err = ncmpii_putn_NC_SHORT(xbuf,cbuf,nelems,itype,fillp);
+                break;
+            case NC_USHORT:
+                err = ncmpii_putn_NC_USHORT(xbuf,cbuf,nelems,itype,fillp);
+                break;
+            case NC_INT:
+                err = ncmpii_putn_NC_INT(xbuf,cbuf,nelems,itype,fillp);
+                break;
+            case NC_UINT:
+                err = ncmpii_putn_NC_UINT(xbuf,cbuf,nelems,itype,fillp);
+                break;
+            case NC_FLOAT:
+                err = ncmpii_putn_NC_FLOAT(xbuf,cbuf,nelems,itype,fillp);
+                break;
+            case NC_DOUBLE:
+                err = ncmpii_putn_NC_DOUBLE(xbuf,cbuf,nelems,itype,fillp);
+                break;
+            case NC_INT64:
+                err = ncmpii_putn_NC_INT64(xbuf,cbuf,nelems,itype,fillp);
+                break;
+            case NC_UINT64:
+                err = ncmpii_putn_NC_UINT64(xbuf,cbuf,nelems,itype,fillp);
+                break;
+            default:
+                DEBUG_ASSIGN_ERROR(err, NC_EBADTYPE) /* this never happens */
+                break;
+        }
+        /* The only error codes returned from the above switch block are
+         * NC_EBADTYPE or NC_ERANGE. Bad varp->xtype and itype have been sanity
+         * checked at the dispatchers, so NC_EBADTYPE is not possible. Thus,
+         * the only possible error is NC_ERANGE.  NC_ERANGE can be caused by
+         * one or more elements of buf that is out of range representable by
+         * the external data type, it is not considered a fatal error. This
+         * request must continue to finish.
+         */
+        if (free_cbuf) NCI_Free(cbuf);
+        if (free_lbuf) NCI_Free(lbuf);
+    }
+    else {
+        if (cbuf == buf && xbuf != buf)
+            memcpy(xbuf, cbuf, (size_t)xbuf_size);
+
+        if (need_swap) /* perform array in-place byte swap on xbuf */
+            ncmpii_in_swapn(xbuf, nelems, varp->xsz);
+    }
+
+    return err;
+}
+
+/*----< ncmpio_unpack_xbuf() >-----------------------------------------------*/
+/* Unpack xbuf into user buffer, buf, when type-casting is needed, imap is
+ * non-contiguous, or buftype is non-contiguous. The immediate buffers, cbuf
+ * and lbuf, may be allocated and freed within this subroutine. We try to reuse
+ * the intermediate buffers as much as possible. Below describe such design.
+ *
+ * When called from get/iget APIs:
+ *  if no convert && imap contig    && buftype contig
+ *        xbuf  ==   cbuf   ==       lbuf    ==      buf
+ *  if no convert && imap contig    && buftype noncontig
+ *        xbuf  ==   cbuf   ==       lbuf  unpack->  buf
+ *        malloc
+ *  if no convert && imap noncontig && buftype contig
+ *        xbuf  ==   cbuf  unpack->  lbuf    ==      buf
+ *        malloc
+ *  if no convert && imap noncontig && buftype noncontig
+ *        xbuf  ==   cbuf  unpack->  lbuf  unpack->  buf
+ *        malloc                     malloc
+ *  if    convert && imap contig    && buftype contig
+ *        xbuf  convert->  cbuf   ==       lbuf    ==      buf
+ *        malloc
+ *  if    convert && imap contig    && buftype noncontig
+ *        xbuf  convert->  cbuf   ==       lbuf  unpack->  buf
+ *        malloc           malloc
+ *  if    convert && imap noncontig && buftype contig
+ *        xbuf  convert->  cbuf  unpack->  lbuf    ==      buf
+ *        malloc           malloc
+ *  if    convert && imap noncontig && buftype noncontig
+ *        xbuf  convert->  cbuf  unpack->  lbuf  unpack->  buf
+ *        malloc           malloc          malloc
+ */
+int
+ncmpio_unpack_xbuf(int           fmt,   /* NC_FORMAT_CDF2 NC_FORMAT_CDF5 etc. */
+                   NC_var       *varp,
+                   MPI_Offset    bufcount,
+                   MPI_Datatype  buftype,
+                   int           buftype_is_contig,
+                   MPI_Offset    nelems, /* no. elements in buf */
+                   MPI_Datatype  itype,  /* element type in buftype */
+                   MPI_Datatype  imaptype,
+                   int           need_convert,
+                   int           need_swap,
+                   void         *buf,  /* user buffer */
+                   void         *xbuf) /* already allocated, in external type */
+{
+    int err=NC_NOERR, mpireturn, el_size, free_lbuf=0, free_cbuf=0;
+    void *lbuf=NULL, *cbuf=NULL;
+    MPI_Offset ibuf_size;
+
+    /* check byte size of buf (internal representation) */
+    MPI_Type_size(itype, &el_size); /* itype is MPI primitive datatype */
+    ibuf_size = nelems * el_size;
+
+    /* Step 1: type-convert and byte-swap xbuf to cbuf, and xbuf contains data
+     * read from file
+     */
+    if (need_convert) {
+        /* user buf type does not match nc var type defined in file */
+
+        if (buftype_is_contig && imaptype == MPI_DATATYPE_NULL)
+            /* both imap and buftype are contiguous */
+            cbuf = buf;
+        else {
+            cbuf = NCI_Malloc(ibuf_size);
+            if (cbuf == NULL) DEBUG_RETURN_ERROR(NC_ENOMEM)
+            free_cbuf = 1;
+        }
+
+        /* datatype conversion + byte-swap from xbuf to cbuf */
+        switch(varp->xtype) {
+            case NC_BYTE:
+                err = ncmpii_getn_NC_BYTE(fmt,xbuf,cbuf,nelems,itype);
+                break;
+            case NC_UBYTE:
+                err = ncmpii_getn_NC_UBYTE(xbuf,cbuf,nelems,itype);
+                break;
+            case NC_SHORT:
+                err = ncmpii_getn_NC_SHORT(xbuf,cbuf,nelems,itype);
+                break;
+            case NC_USHORT:
+                err = ncmpii_getn_NC_USHORT(xbuf,cbuf,nelems,itype);
+                break;
+            case NC_INT:
+                err = ncmpii_getn_NC_INT(xbuf,cbuf,nelems,itype);
+                break;
+            case NC_UINT:
+                err = ncmpii_getn_NC_UINT(xbuf,cbuf,nelems,itype);
+                break;
+            case NC_FLOAT:
+                err = ncmpii_getn_NC_FLOAT(xbuf,cbuf,nelems,itype);
+                break;
+            case NC_DOUBLE:
+                err = ncmpii_getn_NC_DOUBLE(xbuf,cbuf,nelems,itype);
+                break;
+            case NC_INT64:
+                err = ncmpii_getn_NC_INT64(xbuf,cbuf,nelems,itype);
+                break;
+            case NC_UINT64:
+                err = ncmpii_getn_NC_UINT64(xbuf,cbuf,nelems,itype);
+                break;
+            default:
+                DEBUG_ASSIGN_ERROR(err, NC_EBADTYPE) /* this never happens */
+                break;
+        }
+        /* The only error codes returned from the above switch block are
+	     * NC_EBADTYPE or NC_ERANGE. Bad varp->xtype and itype have been sanity
+	     * checked at the dispatchers, so NC_EBADTYPE is not possible. Thus,
+	     * the only possible error is NC_ERANGE.  NC_ERANGE can be caused by
+	     * one or more elements of buf that is out of range representable by
+	     * the external data type, it is not considered a fatal error. This
+	     * request must continue to finish.
+         */
+    }
+    else {
+        if (need_swap) /* perform array in-place byte swap on xbuf */
+            ncmpii_in_swapn(xbuf, nelems, varp->xsz);
+        cbuf = xbuf;
+    }
+
+    /* Step 2: if imap is non-contiguous, unpack cbuf to lbuf */
+    /* determine whether we can use cbuf as lbuf */
+    if (imaptype != MPI_DATATYPE_NULL && !buftype_is_contig) {
+        /* a true varm and buftype is not contiguous: we need a separate
+         * buffer, lbuf, to unpack cbuf to lbuf using imaptype, and later
+         * unpack lbuf to buf using buftype.
+         * In this case, cbuf cannot be buf and lbuf cannot be buf.
+         */
+        lbuf = NCI_Malloc((size_t)ibuf_size);
+        if (lbuf == NULL) {
+            if (free_cbuf) NCI_Free(cbuf);
+            DEBUG_RETURN_ERROR(NC_ENOMEM)
+        }
+        free_lbuf = 1;
+    }
+    else if (imaptype == MPI_DATATYPE_NULL) /* not varm */
+        lbuf = cbuf;
+    else /* varm and buftype are contiguous */
+        lbuf = buf;
+
+    /* unpacked cbuf into lbuf based on imap -------------------------------*/
+    if (imaptype != MPI_DATATYPE_NULL) {
+        /* unpack cbuf to lbuf based on imaptype */
+#ifdef HAVE_MPI_LARGE_COUNT
+        MPI_Count position = 0;
+        mpireturn = MPI_Unpack_c(cbuf, (MPI_Count)ibuf_size, &position, lbuf,
+                                 1, imaptype, MPI_COMM_SELF);
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Unpack_c");
+#else
+        int position = 0;
+        if (ibuf_size > NC_MAX_INT) DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
+
+        mpireturn = MPI_Unpack(cbuf, (int)ibuf_size, &position, lbuf,
+                               1, imaptype, MPI_COMM_SELF);
+        if (mpireturn != MPI_SUCCESS)
+            return ncmpii_error_mpi2nc(mpireturn, "MPI_Unpack");
+#endif
+        MPI_Type_free(&imaptype);
+    }
+
+    /* Unpacked lbuf into buf based on buftype. Note no need to unpack when
+     * buftype is used in MPI_File_read, i.e. lbuf == buf.
+     */
+    if (lbuf != buf) {
+        if (buftype_is_contig)
+            memcpy(buf, lbuf, ibuf_size);
+        else { /* buftye is not contiguous */
+#ifdef HAVE_MPI_LARGE_COUNT
+            MPI_Count position = 0;
+            mpireturn = MPI_Unpack_c(lbuf, (MPI_Count)ibuf_size, &position,
+                                     buf, (MPI_Count)bufcount, buftype,
+                                     MPI_COMM_SELF);
+            if (mpireturn != MPI_SUCCESS)
+                return ncmpii_error_mpi2nc(mpireturn, "MPI_Unpack_c");
+#else
+            if (bufcount > NC_MAX_INT) {
+                if (err == NC_NOERR)
+                    DEBUG_ASSIGN_ERROR(err, NC_EINTOVERFLOW)
+            }
+            else {
+                int position = 0;
+                if (ibuf_size > NC_MAX_INT)
+                    DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
+                mpireturn = MPI_Unpack(lbuf, (int)ibuf_size, &position, buf,
+                                       (int)bufcount, buftype, MPI_COMM_SELF);
+                if (mpireturn != MPI_SUCCESS)
+                    return ncmpii_error_mpi2nc(mpireturn, "MPI_Unpack");
+            }
+#endif
+        }
+    }
+    if (free_cbuf) NCI_Free(cbuf);
+    if (free_lbuf) NCI_Free(lbuf);
+
+    return err;
+}
+
+/*----< ncmpio_calc_off() >--------------------------------------------------*/
+/* Returns the starting file offset of a subarray request.
+ * Note zero-length request should never call this subroutine.
+ * Only a single offset-length pair will call this subroutine.
+ */
+int
+ncmpio_calc_off(const NC         *ncp,
+                const NC_var     *varp,
+                const MPI_Offset *start,  /* [varp->ndims] */
+                MPI_Offset       *offset) /* OUT: start offset */
+{
+    int i, ndims = varp->ndims; /* number of dimensions of this variable */
+
+    /*
+     * varp->dsizes[] is computed from right to left product of shape
+     * For example, a 3D array of size 5x4x3 in C order,
+     * For fixed-size variable: dsizes[0]=60 dsizes[1]=12 dsizes[2]=3
+     * For record     variable: dsizes[0]=12 dsizes[1]=12 dsizes[2]=3
+     */
+    if (IS_RECVAR(varp)) {
+        *offset = 0;
+        if (ndims > 1) {
+            /* start from the least significant dimension */
+            *offset = start[ndims-1];
+            /* the remaining dimensions */
+            for (i=ndims-2; i>0; i--)
+                *offset += start[i]*varp->dsizes[i+1];
+        }
+        *offset *= varp->xsz;  /* offset in bytes */
+    }
+    else {
+        /* first handle the least significant dimension */
+        *offset = start[ndims-1];
+        /* remaining dimensions till the most significant dimension */
+        for (i=ndims-2; i>=0; i--)
+            *offset += start[i] * varp->dsizes[i+1];
+        *offset *= varp->xsz;  /* offset in bytes */
+    }
+
+    return NC_NOERR;
+}
+
+/*----< ncmpio_calc_start_end() >--------------------------------------------*/
+/* Returns the file offsets of access range of this request: starting file
+ * offset and end offset (exclusive).
+ * Note zero-length request should never call this subroutine.
+ */
+int
+ncmpio_calc_start_end(const NC         *ncp,
+                      const NC_var     *varp,
+                      const MPI_Offset *start,     /* [varp->ndims] */
+                      const MPI_Offset *count,     /* [varp->ndims] */
+                      const MPI_Offset *stride,    /* [varp->ndims] */
+                      MPI_Offset       *start_off, /* OUT: start offset */
+                      MPI_Offset       *end_off)   /* OUT: end   offset */
+{
+    int i, ndims = varp->ndims; /* number of dimensions of this variable */
+
+    /*
+     * varp->dsizes[] is computed from right to left product of shape
+     * For example, a 3D array of size 5x4x3 in C order,
+     * For fixed-size variable: dsizes[0]=60 dsizes[1]=12 dsizes[2]=3
+     * For record     variable: dsizes[0]=12 dsizes[1]=12 dsizes[2]=3
+     */
+    if (IS_RECVAR(varp)) {
+        *start_off = 0;
+        *end_off   = 0;
+        if (stride == NULL) {
+            if (ndims > 1) {
+                /* least significant dimension */
+                *start_off = start[ndims-1];
+                *end_off   = start[ndims-1]+(count[ndims-1]-1);
+                /* the remaining dimensions */
+                for (i=ndims-2; i>0; i--) {
+                    *start_off += start[i]*varp->dsizes[i+1];
+                    *end_off += (start[i]+(count[i]-1))*varp->dsizes[i+1];
+                }
+            }
+            *start_off *= varp->xsz;  /* offset in bytes */
+            *end_off   *= varp->xsz;
+            /* handle the unlimited, most significant dimension */
+            *start_off += start[0] * ncp->recsize;
+            *end_off   += (start[0]+(count[0]-1)) * ncp->recsize;
+        }
+        else {
+            if (ndims > 1) {
+                /* least significant dimension */
+                *start_off = start[ndims-1];
+                *end_off   = start[ndims-1]+(count[ndims-1]-1)*stride[ndims-1];
+                /* the remaining dimensions */
+                for (i=ndims-2; i>0; i--) {
+                    *start_off += start[i]*varp->dsizes[i+1];
+                    *end_off += (start[i]+(count[i]-1)*stride[i]) *
+                                varp->dsizes[i+1];
+                }
+            }
+            *start_off *= varp->xsz;  /* offset in bytes */
+            *end_off   *= varp->xsz;
+            /* handle the unlimited, most significant dimension */
+            *start_off += start[0] * ncp->recsize;
+            *end_off   += (start[0]+(count[0]-1)*stride[0]) * ncp->recsize;
+        }
+    }
+    else {
+        if (stride == NULL) {
+            /* first handle the least significant dimension */
+            *start_off = start[ndims-1];
+            *end_off   = start[ndims-1] + (count[ndims-1]-1);
+            /* remaining dimensions till the most significant dimension */
+            for (i=ndims-2; i>=0; i--) {
+                *start_off += start[i] * varp->dsizes[i+1];
+                *end_off += (start[i]+(count[i]-1)) * varp->dsizes[i+1];
+            }
+        }
+        else {
+            /* first handle the least significant dimension */
+            *start_off = start[ndims-1];
+            *end_off   = start[ndims-1]+(count[ndims-1]-1)*stride[ndims-1];
+            /* remaining dimensions till the most significant dimension */
+            for (i=ndims-2; i>=0; i--) {
+                *start_off += start[i] * varp->dsizes[i+1];
+                *end_off += (start[i]+(count[i]-1)*stride[i])*varp->dsizes[i+1];
+            }
+        }
+        *start_off *= varp->xsz;  /* offset in bytes */
+        *end_off   *= varp->xsz;
+    }
+    *start_off += varp->begin; /* beginning file offset of this variable */
+    *end_off   += varp->begin + varp->xsz;
+
+    return NC_NOERR;
+}
+
+/*----< ncmpio_type_contiguous() >-------------------------------------------*/
+int ncmpio_type_contiguous(MPI_Offset    count,
+                           MPI_Datatype *newType)
+{
+    char *mpi_name;
+    int err;
+
+    *newType = MPI_BYTE;
+
+    if (count == 0) return NC_NOERR;
+
+#ifdef HAVE_MPI_LARGE_COUNT
+    err = MPI_Type_contiguous_c((MPI_Count)count, MPI_BYTE, newType);
+    mpi_name = "MPI_Type_contiguous_c";
+#else
+    if (count > INT_MAX) {
+        *newType = MPI_DATATYPE_NULL;
+        return NC_EINTOVERFLOW;
+    }
+
+    err = MPI_Type_contiguous((int)count, MPI_BYTE, newType);
+    mpi_name = "MPI_Type_contiguous";
+#endif
+
+    if (err != MPI_SUCCESS) {
+        *newType = MPI_DATATYPE_NULL;
+        return ncmpii_error_mpi2nc(err, mpi_name);
+    }
+    else {
+        err = MPI_Type_commit(newType);
+        if (err != MPI_SUCCESS) {
+            MPI_Type_free(newType);
+            *newType = MPI_DATATYPE_NULL;
+            return ncmpii_error_mpi2nc(err,"MPI_Type_commit");
+        }
+    }
+
+    return NC_NOERR;
+}
+
+/*----< ncmpio_type_create_hindexed() >--------------------------------------*/
+int ncmpio_type_create_hindexed(MPI_Offset    count,
+                                MPI_Offset   *off,
+                                MPI_Offset   *len,
+                                MPI_Datatype *newType)
+{
+    char *mpi_name;
+    int err;
+
+    *newType = MPI_BYTE;
+
+    if (count == 0) return NC_NOERR;
+
+#ifdef HAVE_MPI_LARGE_COUNT
+    /* Note argument array_of_displacements[] in MPI_Type_create_hindexed_c()
+     * is of type 'MPI_Count'.
+     */
+    MPI_Count *disp, *blklen;
+#if SIZEOF_MPI_OFFSET == SIZEOF_MPI_COUNT
+    disp = off;
+    blklen = len;
+#else
+    MPI_Count j;
+    disp   = (MPI_Count*) NCI_Malloc(sizeof(MPI_Count) * count);
+    blklen = (MPI_Count*) NCI_Malloc(sizeof(MPI_Count) * count);
+    for (j=0; j<count; j++) {
+        disp[j]   = (MPI_Count)off[j];
+        blklen[j] = (MPI_Count)len[j];
+    }
+#endif
+    err = MPI_Type_create_hindexed_c((MPI_Count)count, blklen, disp, MPI_BYTE,
+                                     newType);
+    mpi_name = "MPI_Type_create_hindexed_c";
+#if SIZEOF_MPI_OFFSET != SIZEOF_MPI_COUNT
+    NCI_Free(blklen);
+    NCI_Free(disp);
+#endif
+#else
+    /* MPI _c APIs are not available */
+    int *blklen;
+    MPI_Aint *disp;
+
+    if (count > INT_MAX) {
+        /* count argument in MPI_Type_create_hindexed() is of type int */
+        *newType = MPI_DATATYPE_NULL;
+        DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
+    }
+
+#if SIZEOF_MPI_AINT == SIZEOF_MPI_OFFSET
+    disp = (MPI_Aint*) off;
+#else
+    MPI_Offset j;
+    disp = (MPI_Aint*) NCI_Malloc(sizeof(MPI_Aint) * count);
+    for (j=0; j<count; j++)
+        disp[j] = (MPI_Aint)off[j];
+#endif
+#if SIZEOF_INT == SIZEOF_MPI_OFFSET
+    blklen = (int*) len;
+#else
+    MPI_Offset k;
+    blklen = (int*) NCI_Malloc(sizeof(int) * count);
+    for (k=0; k<count; k++) {
+        if (len[k] > INT_MAX) {
+            *newType = MPI_DATATYPE_NULL;
+            DEBUG_RETURN_ERROR(NC_EINTOVERFLOW)
+        }
+        blklen[k] = (int)len[k];
+    }
+#endif
+
+    err = MPI_Type_create_hindexed((int)count, blklen, disp, MPI_BYTE, newType);
+    mpi_name = "MPI_Type_create_hindexed";
+
+#if SIZEOF_MPI_AINT != SIZEOF_MPI_OFFSET
+    NCI_Free(disp);
+#endif
+#if SIZEOF_INT != SIZEOF_MPI_OFFSET
+    NCI_Free(blklen);
+#endif
+#endif
+
+    if (err != MPI_SUCCESS) {
+        *newType = MPI_DATATYPE_NULL;
+        return ncmpii_error_mpi2nc(err, mpi_name);
+    }
+    else {
+        err = MPI_Type_commit(newType);
+        if (err != MPI_SUCCESS) {
+            MPI_Type_free(newType);
+            *newType = MPI_DATATYPE_NULL;
+            return ncmpii_error_mpi2nc(err,"MPI_Type_commit");
+        }
+    }
+
+    return NC_NOERR;
+}
+

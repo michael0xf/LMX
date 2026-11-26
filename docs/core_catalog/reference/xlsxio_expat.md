@@ -3,7 +3,7 @@
 [Первичный LMX-каталог](../catalog/xlsxio_expat.lmx) · [Тела LMX](../bindings/xlsxio_expat.lm3) · [Формат и shim по запросу](../CATALOG_FORMAT.ru.md)
 
 Версия: `2.11.0`.
-Записей: **98**; кандидатов вызова: **86**; scalar prototypes: **0**.
+Записей: **120**; кандидатов вызова: **86**; scalar prototypes: **0**.
 
 Пакеты: `document\markup`.
 CMake: `LMX::expat`.
@@ -11,7 +11,7 @@ CMake: `LMX::expat`.
 | Категория | Записи |
 |---|---:|
 | alias | 3 |
-| callback | 5 |
+| callback | 27 |
 | function | 86 |
 | function_macro | 4 |
 

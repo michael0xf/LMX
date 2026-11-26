@@ -3,14 +3,14 @@
 [Первичный LMX-каталог](../catalog/base_sqlite3.lmx) · [Тела LMX](../bindings/base_sqlite3.lm3) · [Формат и shim по запросу](../CATALOG_FORMAT.ru.md)
 
 Версия: `3.54.1`.
-Записей: **476**; кандидатов вызова: **367**; scalar prototypes: **14**.
+Записей: **477**; кандидатов вызова: **367**; scalar prototypes: **14**.
 
 Пакеты: `db\sql`.
 CMake: `LMX::sqlite3`.
 
 | Категория | Записи |
 |---|---:|
-| callback | 107 |
+| callback | 108 |
 | function | 367 |
 | function_macro | 2 |
 

@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "date_utc": "2026-11-26",
+  "producer": {
+    "component": "scientific_formats:netcdf",
+    "version": "4.10.1",
+    "test": "../scientific_netcdf/tests/formats.c",
+    "format": "CDF-5 / 64-bit data / netCDF-5"
+  },
+  "reader": {
+    "component": "scientific_formats:pnetcdf",
+    "version": "1.15.1",
+    "test": "tests/netcdf_crossread.c",
+    "mpi_ranks": 1,
+    "io": "collective MPI-IO"
+  },
+  "fixture": {
+    "name": "lmx-netcdf-cdf5.nc",
+    "bytes": 308,
+    "sha256": "2160e8d3892ccca03fdc4695597f892ca763fcbf3162d418c3acf21818d6dedd"
+  },
+  "compile": {
+    "dialect": "C99",
+    "flags": [
+      "-std=c99",
+      "-pedantic-errors",
+      "-O2"
+    ],
+    "exit_code": 0
+  },
+  "execution": {
+    "exit_code": 0,
+    "stdout": "[1795689897.575992] [1894cd7a4124:23   :0]       tcp_iface.c:912  UCX  ERROR scandir(/sys/class/net) failed: No such file or directory\nnetCDF-C -> PnetCDF CDF-5: dimensions, unlimited records, int data, text attribute, exact uint64; ranks=1 PASS",
+    "stderr": "",
+    "runtime_environment": {
+      "UCX_TLS": "self",
+      "UCX_VFS_ENABLE": "n",
+      "HWLOC_COMPONENTS": "-linux"
+    }
+  },
+  "verified": [
+    "CDF5 format ID",
+    "unlimited time dimension with two records",
+    "fixed x dimension with three elements",
+    "NC_INT array [-7,0,42,300,-900,12345]",
+    "values/unit text attribute Kelvin",
+    "NC_UINT64 exact values 9007199254740993, 18446744073709551614, 12345678901234567890"
+  ],
+  "multi_rank_status": "not exercised: environment blocks multi-rank MPI initialization",
+  "result": "PASS"
+}

@@ -66,8 +66,10 @@
     {
       "component": "knowledge_extra:matio",
       "path": "liblmx_matio.a",
-      "bytes": 451916,
-      "sha256": "f34e0f885582333123987b224a64e0ca2d63c7f9dbe46c41c680b5a6b9d836a1"
+      "bytes": 527166,
+      "sha256": "3c73f8f9700fec792e0fbd0918bc303210e7871c3fd6c9bae4abb9d7e0b72fdf",
+      "profile_update_date": "2026-11-26",
+      "profile": "MAT73 enabled; dependencies separate"
     }
   ],
   "retained_vendor_file_manifest_sha256": "ffd995271240d721d29c5e462aa8485ddbcf92644be693b07e364873657ade49",
@@ -95,7 +97,7 @@
   "not_run": [
     "Full upstream test suites / omitted binary corpora",
     "Windows, macOS, embedded CPUs, 32-bit and big-endian hardware",
-    "External TIFF codecs and MAT7.3/HDF5",
+    "External TIFF codecs",
     "MCOS input corpus",
     "Performance / peak RAM / fuzz campaigns / safety certification"
   ],
@@ -105,7 +107,7 @@
     "pcre2": "UTF8 Unicode properties, captures, no-match and invalid regex rejection",
     "tiff": "20 roundtrips: classic TIFF/BigTIFF x little/big endian x none/LZW/PackBits/AdobeDeflate/Deflate; horizontal predictor for LZW/Deflate; exact pixels and metadata",
     "xls": "Upstream workbook represented as source array: sheet/cell parsing, expected a/h values, invalid small buffer rejection",
-    "matio": "MAT4, plain MAT5 and zlib MAT5: numeric matrix exact comparison, struct field, missing variable"
+    "matio": "MAT4, plain MAT5 and zlib MAT5: numeric matrix exact comparison, struct field, missing variable; 2026-11-26 MAT73 follow-up: dense/sparse/complex/struct compressed roundtrip and physical HDF5 identification."
   },
   "namespace_check": {
     "baseline_archives": 159,
@@ -118,5 +120,14 @@
     "result": "PASS, 6/6 group tests repeated from retained sources",
     "profile": "Existing zlib is now reused by TIFF and matio; no added zlib copy",
     "archive_bytes": 623182
+  },
+  "mat73_followup": {
+    "date": "2026-11-26",
+    "result": "PASS, 2/2 relevant tests (existing MAT4/MAT5 and new MAT73)",
+    "flags": "-std=c99 -pedantic-errors",
+    "zlib": "existing compact zlib1.4",
+    "hdf5": "2.3.0 verified trimmed core",
+    "report": "MAT73_INTEGRATION.json",
+    "baseline_group_date_unchanged": true
   }
 }

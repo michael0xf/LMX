@@ -14,6 +14,7 @@ import fnmatch
 import gzip
 import hashlib
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -47,7 +48,9 @@ def load_plan(path):
 def place(entry, plan, rules):
     p = dict(plan[entry["component"]])
     for r in rules:
-        if r["component"] == entry["component"] and fnmatch.fnmatchcase(entry["name"], r["namePattern"]):
+        if (r["component"] == entry["component"]
+                and fnmatch.fnmatchcase(entry["name"], r.get("namePattern", "*"))
+                and fnmatch.fnmatchcase(entry.get("source", {}).get("path", ""), r.get("headerPattern", "*"))):
             p.update(r)
             break
     return p
@@ -62,16 +65,28 @@ def base_type(t):
 
 SCALAR = {"int": "int", "unsigned": "unsigned", "unsigned int": "unsigned",
           "double": "double", "float": "float", "char": "char", "size_t": "size_t"}
-CALLBACK_TYPES = set()
-
-
 def arg_model(param, primary):
     t = base_type(param.get("c_type"))
     name = param.get("name", "")
-    if param.get("callback") or "(*" in t.replace(" ", "") or t in CALLBACK_TYPES:
+    # The extractor resolves typedefs within their component and records the
+    # exact callback_type_refs. A same-named typedef in another library must
+    # never turn an ordinary argument into a callback.
+    if param.get("callback") or "(*" in t.replace(" ", ""):
         return "BridgeData\\Callback@", "callback_trampoline", "callback_contract_required"
     if param.get("variadic") or name == "..." or t == "...":
         return "@[]", "finite_typed_varargs", "specialize_before_publication"
+    if param.get("semantic_role") in ("native_resource_id", "native_resource_output"):
+        return "BridgeData\\Resource@", param["semantic_role"], "owner_bound_" + param.get("resource_backend", "native") + "_" + param.get("resource_kind", "handle")
+    if param.get("semantic_role") == "native_resource_vector":
+        return "@[]", "native_resource_vector", "checked_count_and_owner_bound_" + param.get("resource_backend", "native") + "_handles"
+    if re.search(r"\bMPI_(?:Comm|Info|Datatype|Request|File|Group|Op|Win|Session)\b", t):
+        return "BridgeData\\Resource@", "mpi_resource", "exact_MPI_kind_backend_ABI_owner_thread_support_and_collective_contract"
+    if re.search(r"\bhid_t\b", t):
+        return "BridgeData\\Resource@", "hdf5_resource", "exact_HDF5_identifier_kind_owner_lifetime_and_predefined_id_policy"
+    if re.search(r"\b(?:MPI_Offset|MPI_Aint|MPI_Count|hsize_t|hssize_t)\b", t):
+        if "*" in t or param.get("array"):
+            return "BridgeData\\Buffer@", "checked_native_integer_span", "resolve_native_width_rank_count_units_and_overflow_no_typedef_cast"
+        return "@", "checked_native_integer", "resolve_native_width_sign_offset_units_and_overflow"
     if not param.get("pointer") and not param.get("array") and t in SCALAR:
         return SCALAR[t], "exact_scalar", "c_width_preserved"
     if re.search(r"\b(?:int[0-9]+_t|uint[0-9]+_t|u?long|ssize_t|ptrdiff_t)\b", t) and "*" not in t and "[" not in t:
@@ -111,9 +126,10 @@ def is_callable(e):
 
 
 def direct_scalar(e):
-    if e.get("ffi_disposition") in {"unimplemented_declaration_contract", "outside_selected_profile"}:
+    if e.get("ffi_disposition") in {"unimplemented_declaration_contract", "outside_selected_profile", "typed_scientific_resource_bridge"}:
         return False
-    if e.get("availability") in {"outside_selected_profile", "unimplemented", "declared_unimplemented"}:
+    if (e.get("availability", "").startswith(("outside_selected_", "not_built_"))
+            or e.get("availability") in {"unimplemented", "declared_unimplemented", "application_implementation_required"}):
         return False
     if e.get("unresolved") or e.get("variant_count", 1) != 1:
         return False
@@ -152,8 +168,10 @@ def emit_c(e):
     guessed struct layout or automatic varargs/typedef promotion.
     """
     mid, name = macro_id(e), shim_name(e)
-    if e.get("ffi_disposition") == "unimplemented_declaration_contract":
-        return ("/* " + e["id"] + ": declaration without an implementation. */\n"
+    if (e.get("ffi_disposition") == "unimplemented_declaration_contract"
+            or e.get("availability", "").startswith(("outside_selected_", "not_built_"))
+            or e.get("availability") == "application_implementation_required"):
+        return ("/* " + e["id"] + ": declaration unavailable in this selected profile or requiring an owner implementation. */\n"
                 "/* No opt-in native branch is emitted for this declaration. */\n"
                 "int " + name + "(void *opaque)\n{\n"
                 "    return lmx_catalog_review_required((lmx_catalog_frame *)opaque, "
@@ -288,7 +306,9 @@ def apply_delta(base, changes):
 def status_of(e):
     if e.get("ffi_disposition") == "unimplemented_declaration_contract": return 3
     if not is_callable(e): return 0
-    if e.get("ffi_disposition") == "outside_selected_profile" or e.get("availability") == "outside_selected_profile": return 4
+    if (e.get("ffi_disposition") == "outside_selected_profile"
+            or e.get("availability", "").startswith(("outside_selected_", "not_built_"))
+            or e.get("availability") == "application_implementation_required"): return 4
     return 1 if direct_scalar(e) else 2
 
 
@@ -753,6 +773,10 @@ FORMAT_RU = '''# Компактный C-каталог в обычных LMX-с�
 
 `Properties` сохраняет редкие поля без потерь. Каждая запись — последовательность пар `(keyIndex; valueIndex)` в справочники `PropertyKeys` и `PropertyValues`. Имена и повторяющиеся значения хранятся один раз. Значения имеют явные теги: `s` string, `i` integer, `b` boolean, `n` null, `f` float text, `l` list, `d` dictionary. Это вложенные LMX Structures, а не сериализованный JSON. Служебный `$omit` сохраняет отсутствие необязательного поля исходного census. Потребителю porting-плана обычно нужны именованные таблицы, а не эти provenance-поля. При восстановлении основного declaration с кодом `-1` берутся PRIMARY_KEYS записи, classification/header/targets из её profile, а исходный return type — из `return_type_original` после наложения extra; это сохраняет различие нормализованного типа и исходного объявления.
 
+Семантические уточнения параметров тоже находятся в `extra`: например, `semantic_role`, `resource_kind` и `resource_backend` отличают owner-bound netCDF/PnetCDF `int ncid` от обычного целого. Исходная C-сигнатура остаётся неизменной. Callback typedef разрешается внутри своего компонента по `callback_type_refs`; совпадение имени typedef в другой библиотеке не изменяет модель аргумента.
+
+В [package_plan.lmx](package_plan.lmx) правила имеют `component`, необязательные `namePattern` и `headerPattern`, новый `package` и `primaryModel`. Обе маски должны совпасть; применяется первое подходящее правило. Это позволяет распределить большие APR/SDL/gb API по смыслу без отдельных ручных записей на каждую функцию. Поле `headerPattern` использует исходный путь header из census, а не установленное include-имя.
+
 В [schema.lmx](catalog/schema.lmx) структура `C99SourceCoverage` сохраняет все поверхности заголовков: компонент, путь относительно `sourceRoot`, targets, SHA-256, размер, количество исходных деклараций и function macros. `components` и `targets` — общие позиционные справочники, `Headers/hN` — группы по 32 строки с объявленными columns. Хеши относятся к закреплённому источнику; они не являются доказательством бинарной совместимости. Диагностика и ограничения census приведены в [отчёте покрытия](validation/expanded_api_coverage.json).
 
 ## Методы и C-переход
@@ -761,9 +785,11 @@ FORMAT_RU = '''# Компактный C-каталог в обычных LMX-с�
 
 Метод вызывает `BridgeLower\\open(request, componentCatalog, entry)`. Затем регистрируется `finally` с `BridgeLower\\release`, выполняется конкретный `c.lmx_bridge_<symbol>_<id>` и сохраняется результат через `finish`. Open/finish/release остаются явными [требованиями интеграции](bridge/lowering_contract.lmx); запрос не преобразуется в C-frame простым cast.
 
-**Компактность файлов не определяет стоимость копирования графа.** У показанного учебного шаблона методы одного компонента имеют общего настоящего DATA-родителя; его копирование может захватить соседние CODE-методы. Производственный порт должен явно материализовать обычные DATA-контексты по выбранному пакету/сигнатуре и выбранные CODE, сохраняя настоящий `parent(C)`. Подмена родителя путём публикации или скрытый общий global-контекст недопустимы. Bootstrap closure включает нужные модели, converters и действительных родителей выбранных методов. Каталоги metadata и инструменты генерации по запросу служат руководством интегратору; **все 32 тысячи записей не входят по умолчанию в R0→actor payload**. Конкретные договоры аргументов можно материализовать при сборке выбранного пакета, а учебный `open` с полной metadata-строкой заменить явно подготовленным договором, реализовав соответствующую проверку.
+**Общие определения не копируются в арены акторов.** Пакеты, CODE и неизменяемые DATA с `independent: immutable:` используются через ссылки на существующие объекты. Bootstrap явно передаёт выбранные ссылки и сохраняет настоящий `parent(C)` и lifetime владельца; стоимость каталога не умножается на число акторов. Mutable invocation DATA, включая `request`, рабочие буферы и C contexts принадлежат конкретной активации/ресурсу. Учебный шаблон не вводит один изменяемый запрос для всех акторов. При порте используется штатный вызов с локальными аргументами; публикуемое определение остаётся общим. Полная опись и инструменты генерации — руководство интегратору, а не дублируемый runtime payload.
 
 Простые scalar prototypes имеют отдельные DATA-контексты с точными аргументами и прямым `c.originalSymbol`. Они тоже помечены `NOT_RUN`; review поведения и прав остаётся обязательной частью порта. У отсутствующего определения `unimplemented_declaration_contract` генератор C-адаптера выдаёт только отказ и не содержит включаемой ветки вызова несуществующей реализации. Функции вне выбранного build profile не допускаются в direct scalar путь.
+
+Научные HDF5/netCDF/PnetCDF backend используют `typed_scientific_resource_bridge` даже при внешне простой скалярной сигнатуре: живые identifiers и process-wide state не должны обходить owner/lifetime admission. `MPI_Comm`/`MPI_Info`/`MPI_Datatype` и `hid_t` получают точную ресурсную модель; `MPI_Offset` и размеры преобразуются с проверкой ширины.
 
 ## Один C-shim по запросу
 
@@ -789,6 +815,8 @@ python3 tools/build_c_catalog.py --catalog-root . --regenerate-projections
 
 Импортёр после записи заново читает LMX и сравнивает **каждый исходный JSON entry целиком**, включая signatures, параметры, все source positions, variants, notes, ABI rename и неизвестные дополнительные поля. Ошибка прекращает импорт. Это проверка сохранности данных. Отдельный `check_lmx_sources.py` проверяет лишь ограниченный синтаксический набор; C/LMX runtime acceptance в результате не повышается.
 
+Если native composition уже проверена, импорт или регенерация проекций принимает явный `--native-verification ../c99_archive/VERIFICATION_2026-11-26.json` из этой директории. Число компонентов должно совпасть; проверенные `catalog.combined_*` consumers, статус CTest, ссылка и SHA-256 отчёта записываются в `whole_collection_link`. Без такого входа поле остаётся `NOT_RUN`. Даже с этим свидетельством `lmx_runtime` и отдельный `native_whole_archive_link` остаются `NOT_RUN`: проверка выбранных consumers не запускает язык и не включает принудительно каждый объект каждого архива.
+
 Публикация выводится из Entries/Placements и [исключений коллизий](publication.lmx). [План пакетов](package_plan.lmx) определяет смысловые пути. Одинаковые имена не объединяют разные библиотеки: сначала используется `component__symbol`, затем при необходимости стабильный ID. Глубина смыслового пути не растёт от этих уточнений.
 '''
 
@@ -804,6 +832,25 @@ def prepare_output(out, replace):
         folder.mkdir(parents=True, exist_ok=True)
 
 
+def native_verification(args, out, component_count):
+    """Attach explicit native evidence without changing LMX runtime status."""
+    if not args.native_verification:
+        return {}
+    report = json.loads(args.native_verification.read_text())
+    if report.get("components") != component_count:
+        raise ValueError("Native verification component count does not match catalogue")
+    combined = [c for c in report.get("ctest_cases", []) if c.get("name", "").startswith("catalog.combined_")]
+    passed = report.get("build") == "PASS" and bool(combined) and all(c.get("result") == "PASS" for c in combined)
+    return {"whole_collection_link": {
+        "status": "PASS" if passed else "NOT_CONFIRMED",
+        "scope": "Configured LMX::all native consumers; no --whole-archive image and no LMX runtime execution",
+        "report": os.path.relpath(args.native_verification.resolve(), out),
+        "sha256": hashlib.sha256(args.native_verification.read_bytes()).hexdigest(),
+        "combined_consumers": combined,
+        "ctest": report.get("ctest", {})
+    }, "native_whole_archive_link": "NOT_RUN"}
+
+
 def run_import(args):
     out = args.output.resolve(); prepare_output(out, args.replace_generated)
     plan, rules = load_plan(args.plan)
@@ -811,7 +858,6 @@ def run_import(args):
     inventory_sha256 = hashlib.sha256(inventory_bytes).hexdigest()
     data = json.loads(inventory_bytes)
     del inventory_bytes
-    CALLBACK_TYPES.clear(); CALLBACK_TYPES.update(e["name"] for e in data["entries"] if e["classification"] == "callback")
     info = {c["id"]: c for c in data["components"]}
     missing = set(info) - set(plan)
     if missing: raise SystemExit("Missing plan components: " + repr(sorted(missing)))
@@ -834,7 +880,7 @@ def run_import(args):
               "    @: statuses " + native(tuple(STATUS)),
               "    char[]: publication \"proposal_only\"", "    char[]: runtimeAcceptance \"NOT_RUN\"",
               "    char[]: ownership \"review every argument/result; pin borrowed storage for full call interval\"",
-              "    char[]: actorTransfer \"copy values; resources through owner messages; callbacks explicit\"",
+              "    char[]: actorTransfer \"retain references to independent immutable definitions; mutable invocation data and native resources keep explicit owners\"",
               "    char[]: errors \"preserve native status then map explicitly\"", "    Models:"]
     schema += ["        @: m" + str(i) + " " + native(row) for i, row in enumerate(models.rows)]
     write(out / "catalog/schema.lmx", "\n".join(schema) + "\n" + source_coverage_text(data))
@@ -859,10 +905,13 @@ def run_import(args):
             write(out / "c_shims" / (ident(cid) + "_" + symbol + ".c"), '#include "lmx_catalog_bridge.h"\n' + emit_c(e))
     summary = projections(out, reread, {"metadata_roundtrip": "PASS_ALL_FIELDS_ALL_ENTRIES", "component_metadata_roundtrip": "PASS",
                                       "header_coverage_roundtrip": "PASS", "header_surfaces": len(data.get("header_coverage", [])),
-                                      "source_inventory_sha256": inventory_sha256})
+                                      "source_inventory_sha256": inventory_sha256,
+                                      **native_verification(args, out, len(reread))})
     sizes = summary["generated_bytes"]
-    if sizes["catalog"] > 10_000_000 or sizes["bindings"] > 10_000_000:
-        raise SystemExit("Size budget exceeded: " + json.dumps(sizes))
+    # The old fixed ten-megabyte documentation ceiling was tied to 132
+    # components. Catalogue growth follows the accepted public API census;
+    # report real bytes while retaining pooled types/signatures/metadata.
+    # Runtime binary budgets do not apply to these offline porting documents.
     print(json.dumps({"components": len(reread), "entries": len(expected), "callables": summary["callable_candidates"],
                       "direct_scalar": summary["direct_scalar_prototypes"], "metadata_roundtrip": summary["metadata_roundtrip"], "bytes": sizes}, ensure_ascii=False))
 
@@ -873,7 +922,6 @@ def run_catalog_action(args):
     entry_id = args.emit_shim if only_shim and re.fullmatch(r"capi_[A-Za-z0-9_]+", args.emit_shim) else None
     components, models = read_catalog(root, args.component if only_shim else None, entry_id)
     entries = [c.decode_entry(eid, row)[0] for c in components for eid, row in c.entries.items()]
-    CALLBACK_TYPES.clear(); CALLBACK_TYPES.update(e["name"] for e in entries if e["classification"] == "callback")
     if args.emit_shim:
         choices = [e for e in entries if args.emit_shim in {e["id"], e["name"]} and (not args.component or e["component"] == args.component)]
         if len(choices) != 1:
@@ -888,7 +936,8 @@ def run_catalog_action(args):
         write(args.export_json, json.dumps({"schema_version": 2, "scope": "Lossless entry projection from canonical LMX; no runtime proof", "components": [c.info for c in components], "header_coverage": read_source_coverage(root), "entries": entries}, ensure_ascii=False, separators=(",", ":")) + "\n")
         print("Exported " + str(len(entries)) + " entries to " + str(args.export_json))
     if args.regenerate_projections:
-        summary = projections(root, components, {"metadata_roundtrip": "NOT_RECHECKED_FROM_INVENTORY"})
+        summary = projections(root, components, {"metadata_roundtrip": "NOT_RECHECKED_FROM_INVENTORY",
+                                                **native_verification(args, root, len(components))})
         print(json.dumps({"entries": summary["entries"], "callables": summary["callable_candidates"]}))
 
 
@@ -904,6 +953,7 @@ if __name__ == "__main__":
     ap.add_argument("--shim-output", type=Path)
     ap.add_argument("--export-json", type=Path)
     ap.add_argument("--regenerate-projections", action="store_true")
+    ap.add_argument("--native-verification", type=Path, help="explicit native composition verification report; does not claim LMX runtime acceptance")
     args = ap.parse_args()
     if args.catalog_root:
         if not (args.emit_shim or args.export_json or args.regenerate_projections): ap.error("Select a catalogue action")

@@ -3,7 +3,7 @@
 [Первичный LMX-каталог](../catalog/databases_hiredis.lmx) · [Тела LMX](../bindings/databases_hiredis.lm3) · [Формат и shim по запросу](../CATALOG_FORMAT.ru.md)
 
 Версия: `v1.5.1`.
-Записей: **488**; кандидатов вызова: **288**; scalar prototypes: **3**.
+Записей: **493**; кандидатов вызова: **288**; scalar prototypes: **2**.
 
 Пакеты: `db\redis`.
 CMake: `LMX::hiredis`.
@@ -11,7 +11,7 @@ CMake: `LMX::hiredis`.
 | Категория | Записи |
 |---|---:|
 | alias | 4 |
-| callback | 29 |
+| callback | 34 |
 | function | 164 |
 | function_macro | 54 |
 | static_header_function | 110 |

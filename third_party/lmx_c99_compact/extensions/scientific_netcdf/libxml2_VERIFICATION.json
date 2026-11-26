@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "date_utc": "2026-11-26",
+  "component": "scientific_formats:libxml2",
+  "version": "2.15.4",
+  "result": "PASS",
+  "builds": {
+    "original_download_selected_profile": {
+      "result": "PASS",
+      "compiled_c_translation_units": 38
+    },
+    "trimmed_vendor_selected_profile": {
+      "result": "PASS",
+      "compiled_c_translation_units": 38
+    }
+  },
+  "compiler": "GCC 14.2.0",
+  "language_proof": {
+    "dialect": "C99",
+    "flags": [
+      "-std=c99",
+      "-pedantic-errors",
+      "-Os",
+      "-fPIC"
+    ],
+    "evidence": "All 38 C object rules in both generated build.ninja files carry the dialect and pedantic-errors flags; successful build logs and installed static archives were inspected.",
+    "thread_local_profile": "LIBXML2_WITH_TLS=OFF, using portable pthread-backed thread state instead of C11 _Thread_local",
+    "build_view_adjustment": "Hash-guarded replacement of upstream CMake C_STANDARD 11 by 99, REQUIRED ON and EXTENSIONS OFF; upstream vendor files remain unchanged."
+  },
+  "profile": {
+    "LIBXML2_WITH_C14N": true,
+    "LIBXML2_WITH_CATALOG": true,
+    "LIBXML2_WITH_DEBUG": true,
+    "LIBXML2_WITH_DOCS": false,
+    "LIBXML2_WITH_HTML": true,
+    "LIBXML2_WITH_HTTP": false,
+    "LIBXML2_WITH_ICONV": true,
+    "LIBXML2_WITH_ICU": false,
+    "LIBXML2_WITH_ISO8859X": true,
+    "LIBXML2_WITH_LEGACY": true,
+    "LIBXML2_WITH_MODULES": true,
+    "LIBXML2_WITH_OUTPUT": true,
+    "LIBXML2_WITH_PATTERN": true,
+    "LIBXML2_WITH_PROGRAMS": false,
+    "LIBXML2_WITH_PUSH": true,
+    "LIBXML2_WITH_PYTHON": false,
+    "LIBXML2_WITH_READER": true,
+    "LIBXML2_WITH_READLINE": false,
+    "LIBXML2_WITH_REGEXPS": true,
+    "LIBXML2_WITH_RELAXNG": true,
+    "LIBXML2_WITH_SAX1": true,
+    "LIBXML2_WITH_SCHEMAS": true,
+    "LIBXML2_WITH_SCHEMATRON": true,
+    "LIBXML2_WITH_TESTS": false,
+    "LIBXML2_WITH_THREADS": true,
+    "LIBXML2_WITH_THREAD_ALLOC": false,
+    "LIBXML2_WITH_TLS": false,
+    "LIBXML2_WITH_VALID": true,
+    "LIBXML2_WITH_WRITER": true,
+    "LIBXML2_WITH_XINCLUDE": true,
+    "LIBXML2_WITH_XPATH": true,
+    "LIBXML2_WITH_XPTR": true
+  },
+  "dependencies": {
+    "zlib": "enabled; linked through the existing zlib provider",
+    "iconv": "enabled on the host; glibc implementation used in the observed build",
+    "threads": "pthread host implementation",
+    "network_http": "upstream HTTP disabled; netCDF DAP transport is a separate dependency"
+  },
+  "tests": [
+    {
+      "profile": "original",
+      "compile_exit": 0,
+      "run_exit": 0,
+      "test": "XML namespaced parse + XPath + XML writer roundtrip + XML Schema validation",
+      "assertions_enabled": true
+    },
+    {
+      "profile": "retained",
+      "compile_exit": 0,
+      "run_exit": 0,
+      "test": "XML namespaced parse + XPath + XML writer roundtrip + XML Schema validation",
+      "assertions_enabled": true
+    }
+  ],
+  "test_source": "tests/xml.c",
+  "test_source_sha256": "e8dc83c1dfb57a0c32252c51399e03217831d6065fb3c90b33aeb716dfe9a0b1",
+  "test_limits": [
+    "Focused assertions check namespaces, XPath value selection, XML writing and XML Schema validation.",
+    "No claim of full upstream XML conformance-suite execution; code is retained but the external test corpus is not bundled.",
+    "No new language runtime or Python binding is enabled."
+  ],
+  "archives": {
+    "original": {
+      "archive_bytes": 1684442,
+      "archive_sha256": "c07660ade66631b2d7c8944cd84d10482e0530e680a3eb94dba8c8da17a5810e",
+      "object_count": 38,
+      "sections": {
+        "text": 817779,
+        "data": 29644,
+        "bss": 3988
+      }
+    },
+    "retained": {
+      "archive_bytes": 1684450,
+      "archive_sha256": "05f119f9f793ffe9a203cec04803ac02b79847f8bfe81ad1141edb7f7d9c0409",
+      "object_count": 38,
+      "sections": {
+        "text": 817788,
+        "data": 29644,
+        "bss": 3988
+      }
+    }
+  },
+  "comparison": {
+    "byte_identical": false,
+    "different_objects": [
+      "xpath.c.o",
+      "catalog.c.o"
+    ],
+    "observed_differences": [
+      "xpath.c.o contains the original_view/retained_view __FILE__ source pathname.",
+      "catalog.c.o contains the configured default XML catalog installation pathname."
+    ],
+    "same_object_count": true,
+    "unchanged_object_count": 36,
+    "claim": "Both source sets build and pass the same semantic test; archive byte identity is not claimed."
+  },
+  "license": "MIT (Copyright), plus retained per-file notices",
+  "source_url": "https://download.gnome.org/sources/libxml2/2.15/libxml2-2.15.4.tar.xz",
+  "download_sha256": "98087fd181d9070724f3fbc65c7377db03038eb92bd882374daff44940138821"
+}

@@ -1,0 +1,73 @@
+# Format names are ordinary DATA. These records do not register new primitives
+# or promise a driver that the selected native build does not contain.
+# Native library/version/profile is resolved from the component's catalogue.
+#
+ScientificFormatPlan:
+    NetcdfClassic:
+        char[]: label "netCDF classic / CDF-1"
+        char[]: formatIds "NC_FORMAT_CLASSIC"
+        char[]: createFlags "NC_CLOBBER with neither NC_64BIT_OFFSET nor NC_64BIT_DATA nor NC_NETCDF4"
+        char[]: providers "scientific_formats:netcdf scientific_formats:pnetcdf"
+        char[]: models "Tensor Hyperslab DbValue Resource Buffer"
+        char[]: nativeVerification "third_party/lmx_c99_compact/extensions/scientific_netcdf/VERIFICATION.json"
+        char[]: status "LMX_WRAPPER_REVIEW_REQUIRED"
+#
+    Netcdf64BitOffset:
+        char[]: label "netCDF 64-bit offset / CDF-2"
+        char[]: formatIds "NC_FORMAT_64BIT_OFFSET"
+        char[]: createFlags "NC_64BIT_OFFSET"
+        char[]: providers "scientific_formats:netcdf scientific_formats:pnetcdf"
+        char[]: models "Tensor Hyperslab DbValue Resource Buffer"
+        char[]: nativeVerification "third_party/lmx_c99_compact/extensions/scientific_netcdf/VERIFICATION.json"
+        char[]: status "LMX_WRAPPER_REVIEW_REQUIRED"
+#
+    Netcdf5:
+        char[]: label "netCDF-5 / CDF-5"
+        char[]: aliases "nc5; cdf5; 64-bit data; netCDF-5"
+        char[]: formatIds "NC_FORMAT_CDF5 / NC_FORMAT_64BIT_DATA"
+        char[]: createFlags "NC_CDF5 / NC_64BIT_DATA"
+        char[]: commandLine "ncgen -5 / ncgen -k nc5 / ncgen -k cdf5"
+        char[]: providers "scientific_formats:netcdf scientific_formats:pnetcdf"
+        char[]: models "Tensor Hyperslab DbValue Resource Buffer MpiContext"
+        char[]: conversion "scientificSelection; checked integer widths; mpiResource for parallel calls"
+        char[]: terminology "Format name used by upstream ncgen documentation; distinct from the release version of the netCDF-C library."
+        char[]: source "https://github.com/Unidata/netcdf-c/blob/v4.10.1/ncgen/ncgen.1"
+        char[]: validation "Cross-provider CDF5 read/write, actual format ID and values exceeding 32-bit range; execution results are separate native build reports."
+        char[]: nativeVerification "third_party/lmx_c99_compact/extensions/scientific_netcdf/VERIFICATION.json"
+        char[]: status "LMX_WRAPPER_REVIEW_REQUIRED"
+#
+    Netcdf4:
+        char[]: label "netCDF-4 / HDF5 storage"
+        char[]: formatIds "NC_FORMAT_NETCDF4"
+        char[]: createFlags "NC_NETCDF4"
+        char[]: providers "scientific_formats:netcdf with selected HDF5 backend"
+        char[]: models "Tensor Hyperslab DbValue Resource Buffer"
+        char[]: policy "Groups, user types, filters and other enhanced-model features require the configured netCDF/HDF5 capabilities. A netCDF file is not an arbitrary HDF5 graph."
+        char[]: nativeVerification "third_party/lmx_c99_compact/extensions/scientific_netcdf/VERIFICATION.json"
+        char[]: status "LMX_WRAPPER_REVIEW_REQUIRED"
+#
+    Netcdf4ClassicModel:
+        char[]: label "netCDF-4 classic model / HDF5 storage"
+        char[]: formatIds "NC_FORMAT_NETCDF4_CLASSIC"
+        char[]: createFlags "NC_NETCDF4 | NC_CLASSIC_MODEL"
+        char[]: providers "scientific_formats:netcdf with selected HDF5 backend"
+        char[]: models "Tensor Hyperslab DbValue Resource Buffer"
+        char[]: policy "Classic data model with HDF5 storage; not the CDF-1 file encoding."
+        char[]: nativeVerification "third_party/lmx_c99_compact/extensions/scientific_netcdf/VERIFICATION.json"
+        char[]: status "LMX_WRAPPER_REVIEW_REQUIRED"
+#
+    Hdf5:
+        char[]: label "HDF5 core + high-level interfaces"
+        char[]: providers "scientific_formats:hdf5"
+        char[]: models "Tensor Hyperslab Image DbRows DbValue Resource Buffer Callback"
+        char[]: policy "File, group, dataset, attribute, datatype, dataspace and property-list identifiers preserve exact native kinds. HL images/tables/dimension scales reuse ordinary LMX models."
+        char[]: nativeVerification "third_party/lmx_c99_compact/extensions/scientific_hdf5/VERIFICATION.json"
+        char[]: status "LMX_WRAPPER_REVIEW_REQUIRED"
+#
+    Mat:
+        char[]: label "MAT v4 / v5 / v7.3"
+        char[]: providers "knowledge_extra:matio"
+        char[]: models "Tensor Hyperslab ComplexBuffer DbValue Resource Buffer"
+        char[]: policy "MAT v7.3 requires configured HDF5 support. Preserve sparse/complex layout, cell/struct semantics, byte order, rank and allocation lifetime."
+        char[]: nativeVerification "third_party/lmx_c99_compact/extensions/knowledge_extra/MAT73_INTEGRATION.json"
+        char[]: status "LMX_WRAPPER_REVIEW_REQUIRED"

@@ -3,14 +3,14 @@
 [Первичный LMX-каталог](../catalog/xlsxio_minizip.lmx) · [Тела LMX](../bindings/xlsxio_minizip.lm3) · [Формат и shim по запросу](../CATALOG_FORMAT.ru.md)
 
 Версия: `classic MiniZip 1.1 Zip64 as shipped in zlib 1.4`.
-Записей: **82**; кандидатов вызова: **60**; scalar prototypes: **0**.
+Записей: **77**; кандидатов вызова: **60**; scalar prototypes: **0**.
 
 Пакеты: `archive`.
 CMake: `LMX::minizip`.
 
 | Категория | Записи |
 |---|---:|
-| callback | 15 |
+| callback | 10 |
 | function | 60 |
 | function_macro | 7 |
 

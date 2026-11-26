@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.26)
 project(LMX_C99_Libraries VERSION 3.3.0 LANGUAGES C)
 set(LMX_VENDOR_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor")
 
@@ -22,6 +22,12 @@ if(LMX_ARCHIVE_VERIFY)
     set(LMX_KNOWLEDGE_EXTRA_BUILD_TESTS ON)
     set(LMX_SCIENCE_EXTRA_BUILD_TESTS ON)
     set(LMX_PDF_EXTRA_BUILD_TESTS ON)
+    set(LMX_NETSURF_BUILD_TESTS ON)
+    set(LMX_HDF5_BUILD_TESTS ON)
+    set(LMX_PNETCDF_BUILD_TESTS ON)
+    set(LMX_NETCDF_BUILD_TESTS ON)
+    set(LMX_PLATFORM_EXTRA_BUILD_TESTS ON)
+    set(LMX_BUNDLES_EXTRA_BUILD_TESTS ON)
     enable_testing()
 endif()
 # Fixed default composition: all accepted components are included.
@@ -260,6 +266,11 @@ if(LMX_WITH_CONTROL_EXTRA)
     add_subdirectory(extensions/control_extra)
     target_link_libraries(lmx_c99_all INTERFACE LMX::control_extra)
 endif()
+add_subdirectory(extensions/scientific_hdf5)
+target_link_libraries(lmx_c99_all INTERFACE LMX::scientific_hdf5)
+add_subdirectory(extensions/scientific_pnetcdf)
+target_link_libraries(lmx_c99_all INTERFACE LMX::scientific_pnetcdf)
+
 if(LMX_WITH_KNOWLEDGE_EXTRA)
     add_subdirectory(extensions/knowledge_extra)
     target_link_libraries(lmx_c99_all INTERFACE LMX::knowledge_extra)
@@ -331,6 +342,17 @@ endif()
 
 # These tests are retained in this patch and do not need the omitted historical
 # test fixtures. Enable explicitly without changing the fixed bundle profile.
+
+# Broad portable libraries added to the full source collection.
+add_subdirectory(extensions/platform_extra)
+target_link_libraries(lmx_c99_all INTERFACE LMX::platform_extra)
+add_subdirectory(extensions/bundles_extra)
+target_link_libraries(lmx_c99_all INTERFACE LMX::bundles_extra)
+add_subdirectory(extensions/netsurf_extra)
+target_link_libraries(lmx_c99_all INTERFACE LMX::netsurf_extra)
+add_subdirectory(extensions/scientific_netcdf)
+target_link_libraries(lmx_c99_all INTERFACE LMX::scientific_netcdf)
+
 if(LMX_BUILD_CATALOG_CHECKS)
     enable_testing()
     add_subdirectory(extensions/catalog_checks)

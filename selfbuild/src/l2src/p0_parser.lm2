@@ -2587,6 +2587,17 @@ fn: lm_p0_find_colon (c.LmP0Document@: document; const: (char@: text); size_t: b
     return: 0
 end: lm_p0_find_colon
 
+# A depth-one operator `.:` or `.=` starts at index: the cheap filter is a dot followed by `:` or `=`, and the boundary
+# itself is the one of the compact registry (lm_p0_scan_compact_atom_piece, p0_scan.lm2), which reads a two-byte token
+# only where it is one. 1 when that token has length 2.
+fn: lm_p0_dot_operator_at (const: (char@: text); size_t: byte_count; size_t: index) int
+    if: index + 1U >= byte_count || text[index] != '.'
+        return: 0
+    if: text[index + 1U] != ':' && text[index + 1U] != '='
+        return: 0
+    return: (cast: (int) (c.lm_p0_scan_compact_atom_piece(text, byte_count, index, 0) = index + 2U))
+end: lm_p0_dot_operator_at
+
 # A parenthesised counter that directly follows the previous part of a prefix chain -- an empty square (its own trivia
 # allowed) or a pointer series `@` written right before it, with prefix_open = 1 (only prefix constructors precede it) --
 # continues the head when a TYPE part follows it at once: `[](N)int:`, `@(N)int:`, `[](R)@(P)Lib\T:`, `[](N)`Exact`:`.
@@ -2650,8 +2661,13 @@ fn: lm_p0_scan_head (c.LmP0Document@: document; const: (char@: text); size_t: by
             quoted_head[0] := 1
             return: 1
     ---
+    # A depth-one operator at the head start is the head span `.:` or `.=`; inside a head the dot of such an operator
+    # ends the head (`a.:f()` is the name `a`, then `.:`, then `f()`), so the operator is never read as a Frame colon.
+    if: lm_p0_dot_operator_at(text, byte_count, i) != 0
+        index[0] := i + 2U
+        return: 1
     prefix_open := (cast: (int) (text[i] = '@' || text[i] = '['))
-    while: i < byte_count && c.lm_p0_is_field_space(text[i]) = 0 && c.lm_p0_is_field_separator(text[i]) = 0 && text[i] != ')' && text[i] != '#' && text[i] != '{' && text[i] != '}' && text[i] != ':'
+    while: i < byte_count && c.lm_p0_is_field_space(text[i]) = 0 && c.lm_p0_is_field_separator(text[i]) = 0 && lm_p0_dot_operator_at(text, byte_count, i) = 0 && text[i] != ')' && text[i] != '#' && text[i] != '{' && text[i] != '}' && text[i] != ':'
         if: text[i] = '('
             if: prefix_open = 0 || (i != square_end && i != pointer_end)
                 break
@@ -2708,6 +2724,9 @@ fn: lm_p0_field_start_looks_explicit_frame (c.LmP0Document@: document; const: (c
         if: lm_p0_find_matching_paren(document, text, byte_count, i, line, column, @ close_index) = 0
             return: 0
         return: close_index + 1U < byte_count && text[close_index + 1U] = ':' && (close_index + 2U >= byte_count || text[close_index + 2U] != ':')
+    # A depth-one operator head (`.:`, `.=`) is an atom, never a Frame head, whatever follows it (`(a b).:(b a)`, `a.=(b)`).
+    if: lm_p0_dot_operator_at(text, byte_count, i) != 0
+        return: 0
     if: lm_p0_scan_head(document, text, byte_count, @ i, line, column, @ quoted_head) = 0
         return: 0
     return: i > index && i < byte_count && ((text[i] = ':' && (i + 1U >= byte_count || text[i + 1U] != ':')) || text[i] = '(')
@@ -3083,6 +3102,15 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                     if: lm_p0_scan_head(document, text, byte_count, @ i, line, column, @ quoted_head) = 0
                         return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                     head_end := i
+                    # A depth-one operator head (`.:`, `.=`) is an atom of its own: nothing after it makes a Frame or a call
+                    # here (`(a b).:(b a)`, `a.=(b)`), so its span goes straight to the compact atom path.
+                    if: (head_end = (start + 2U) && lm_p0_dot_operator_at(text, byte_count, start) != 0)
+                        i := head_end
+                        if: (lm_p0_append_compact_atom_pieces(document, structure, text, byte_count, line, column, offset, start, head_end) = 0)
+                            return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                        expect_field := 0
+                        continue
+                    ---
                     # The operator `:=` (the author, 2026-11-07; the grammar's operators section): one token, written compact
                     # (`a:=5`) or spaced (`a := 5`), never the colon head `a:` with a body `=5` -- the Frame of its left side
                     # (the head) and its right side (the body), flagged LM_P0_FRAME_ASSIGN, no colon.  Its body parses as a

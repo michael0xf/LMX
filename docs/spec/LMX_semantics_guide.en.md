@@ -1207,7 +1207,7 @@ the profile selected by the Table's consumer, not a universal hidden registry.
 
 ### Groups are structural, application packaging is separate
 
-The grouper reads the clean graph. In Expression, a graph reference atom to a Structure forms a group only outside the operand role. Translation rejects ambiguous interpretations before effects. Other reached Structures follow the name/actual-parent rule. References preserve the target's parent and context. Whole VALUE/TYPE/DATA positions retain their own contracts. [Classification rules](LMX_semantics.en.md#expression-structure-parent-guard).
+The grouper reads the clean graph. In Expression, a graph reference atom to a Structure supplies one Array value when its target fails the operand template check. Translation rejects ambiguous interpretations before effects. Other reached Structures follow the name/actual-parent rule. References preserve the target's parent and context. Whole VALUE/TYPE/DATA positions retain their own contracts. [Classification rules](LMX_semantics.en.md#expression-structure-parent-guard).
 
 `1 + ((2))` is 3 and `(1) + (2 * 3)` is 7: an Expression group contains one complete expression. Material `(1 2 3 4)` and nested `((1 2))` do not become implicit arithmetic. The same rule works on the tree of any source form, not only parentheses. A Structure received as a whole value stays one value; a graph received as CODE/Expression follows the same occurrence-role and name/actual-parent rules; `(copy(Model))` collects a field stream even when it emits zero or one field.
 

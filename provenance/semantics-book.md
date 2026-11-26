@@ -1177,10 +1177,12 @@ Structure различаются.
 роль графового атома-ссылки на Structure в Expression обычной проверкой
 `satisfies` относительно [шаблона операнда](#operand-receiver). При `1`
 ссылка обозначает операцию и применяется её обычный договор. При
-установленном `0` ссылка образует группу даже при совпадающем родителе.
-Группа сохраняет фактический `parent` цели и её контекст вычисления.
-Содержимое группы исполняется на месте. Шаблон одинаково применим к
-скопированному и самостоятельно собранному описанию операнда.
+установленном `0` ссылка передаёт один целый Array ссылок (`[]@`).
+Она сохраняет тождество цели, её фактический `parent` и контекст.
+Группировщик оставляет поля внутри массива, а принимающая операция читает
+их по своему договору. Это правило одинаково при любом имени и родителе
+цели. Шаблон одинаково применим к скопированному и самостоятельно
+собранному описанию операнда.
 
 Проверка роли происходит при трансляции, до вычисления аргументов и тела.
 Для неизвестной ссылки, например `@void`, если по доступному описанию
@@ -1218,10 +1220,10 @@ TYPE/модели сохраняют все требования без чтен
 примитива.
 
 Если в чистом графе для `print: 1 + S + 2` стоит атом-ссылка на
-`S: a b c d` вне роли операнда, он занимает то же место группы, что и в
-`print: 1 + (a b c d) + 2`. Ссылочная группа сохраняет фактический
-`parent` и лексический контекст. Допуск и результат определяют принимающие
-договоры `+` и `print`.
+`S: a b c d` и установлен `satisfies = 0`, на позиции S находится
+один Array со своими четырьмя полями. В `print: 1 + (a b c d) + 2`
+написанная безымянная Structure подвергается обычной группировке.
+Допуск и результат определяют принимающие договоры `+` и `print`.
 
 Модификаторы, включая `::`, сохраняют потребление DATA. Декларации и
 отложенные инициализаторы DATA-шаблона не обходятся как исполняемое
@@ -1239,7 +1241,7 @@ groupTree(graph, receivingContext):
     resolve graph references without changing their actual parent
     resolve admissible operand roles and ready priorities without evaluation
     reject ambiguous interpretations during translation using ordinary call selection
-    in Expression: graph reference atom to a Structure outside the operand role -> group
+    in Expression: graph reference atom to a Structure with established satisfies = 0 -> one Array value
     in Expression: graph reference atom in the operand role -> selected operand
     for other CODE/Expression Structures: apply the name/actual-parent rule
     recursively group dependencies and complete units in the admitted Expression graph
@@ -2230,10 +2232,11 @@ translator determines the role of a graph reference atom to a Structure
 in Expression with the ordinary `satisfies` check against the
 [operand template](#operand-receiver). A result of `1` selects the
 operation and its ordinary contract. An established `0` makes the
-reference a group even when the target has the current lexical owner as
-its parent. The group keeps the target's actual `parent` and evaluation
-context, and its contents execute in place. The same template applies to
-an operand description copied from it or built independently.
+reference one whole Array of references (`[]@`). It keeps the target's
+identity, actual `parent` and context. The grouper keeps the fields inside
+the Array, and the receiving operation reads them under its own contract.
+This rule is independent of the target's name and parent. The same template
+applies to an operand description copied from it or built independently.
 
 Translation determines the role before any argument or body is evaluated.
 For an unknown reference such as `@void`, if the available description
@@ -2269,10 +2272,10 @@ Complete TYPE/model positions retain their full requirements without reading
 a missing primitive payload.
 
 If the clean graph for `print: 1 + S + 2` contains a reference atom to
-`S: a b c d` outside the operand role, it occupies the same group position
-as in `print: 1 + (a b c d) + 2`. The referenced group keeps its actual
-`parent` and lexical context. The receiving contracts of `+` and `print`
-determine admission and the result.
+`S: a b c d` with an established `satisfies = 0`, the S position holds
+one Array with its four fields. In `print: 1 + (a b c d) + 2`, the
+written anonymous Structure undergoes ordinary grouping. The receiving
+contracts of `+` and `print` determine admission and the result.
 
 Modifiers, including `::`, retain DATA consumption. A DATA template's
 declarations and deferred initializers are not traversed as executable
@@ -2292,7 +2295,7 @@ groupTree(graph, receivingContext):
     resolve graph references without changing their actual parent
     resolve admissible operand roles and ready priorities without evaluation
     reject ambiguous interpretations during translation using ordinary call selection
-    in Expression: graph reference atom to a Structure outside the operand role -> group
+    in Expression: graph reference atom to a Structure with established satisfies = 0 -> one Array value
     in Expression: graph reference atom in the operand role -> selected operand
     for other CODE/Expression Structures: apply the name/actual-parent rule
     recursively group dependencies and complete units in the admitted Expression graph
@@ -7361,7 +7364,7 @@ List — обычная последовательность ссылок, оп�
 
 ### Построение, правила исходного текста и проверка
 
-Expression — обычный граф Structure с [семантическим группировщиком](#expression-structural-grouping): он определяет приоритеты, полные выражения и потоки текущего уровня дерева независимо от исходного написания. Отдельная подготовка применения Expression упаковывает left одним actual/пакетом ссылок, а right — Array ссылок. Общая форма — `arg0 operand arg1 arg2 arg3`; бинарный договор использует один правый элемент без автоматической свёртки и без переноса первого правого элемента в отсутствующий left. Принимающий договор выбирает целое значение либо последовательность текущего уровня. Поэтому `(a b c) .: (a c b)` даёт один левый пакет и три правых значения; три соседние RHS-группы остаются тремя элементами Structure. Дополнительного условного раскрытия после группировки нет. Группировщик читает чистый граф. В Expression атом-ссылка по графу на Structure образует группу только вне роли операнда. Трансляция отклоняет неоднозначные чтения до эффектов. Для остальных достигнутых Structure действует правило имени и фактического parent. Разрешение ссылки сохраняет фактический parent. Целый материал VALUE/TYPE/DATA автоматически не становится CODE. `1 + ((2))` равно 3; коллектор `(copy(Model))` остаётся контейнером для нуля, одного или нескольких полей. `::` и модификаторы сохраняют DATA и общий механизм чтения непосредственных полей, без собственного исполнителя RHS. P0, обычный W/E вызываемых и правила эффектов/времени жизни сохраняются. См. [архитектуру и приёмку](EXPRESSION_GROUPING.md); исполнение — **NOT_RUN**.
+Expression — обычный граф Structure с [семантическим группировщиком](#expression-structural-grouping): он определяет приоритеты, полные выражения и потоки текущего уровня дерева независимо от исходного написания. Отдельная подготовка применения Expression упаковывает left одним actual/пакетом ссылок, а right — Array ссылок. Общая форма — `arg0 operand arg1 arg2 arg3`; бинарный договор использует один правый элемент без автоматической свёртки и без переноса первого правого элемента в отсутствующий left. Принимающий договор выбирает целое значение либо последовательность текущего уровня. Поэтому `(a b c) .: (a c b)` даёт один левый пакет и три правых значения; три соседние RHS-группы остаются тремя элементами Structure. Дополнительного условного раскрытия после группировки нет. Группировщик читает чистый граф. В Expression атом-ссылка по графу на Structure передаёт один Array, если цель не удовлетворяет шаблону операнда. Трансляция отклоняет неоднозначные чтения до эффектов. Для остальных достигнутых Structure действует правило имени и фактического parent. Разрешение ссылки сохраняет фактический parent. Целый материал VALUE/TYPE/DATA автоматически не становится CODE. `1 + ((2))` равно 3; коллектор `(copy(Model))` остаётся контейнером для нуля, одного или нескольких полей. `::` и модификаторы сохраняют DATA и общий механизм чтения непосредственных полей, без собственного исполнителя RHS. P0, обычный W/E вызываемых и правила эффектов/времени жизни сохраняются. См. [архитектуру и приёмку](EXPRESSION_GROUPING.md); исполнение — **NOT_RUN**.
 
 Захват и порождённый исходный текст сохраняют фактических родителей, приватное состояние и обычные правила времени жизни. Порождение кода должно учитывать завершение корня пустой строкой и явные отсекатели хвоста. Компиляция остаётся явной; скопированное или перестроенное вызываемое не наследует несовместимый нативный вход. Повторно используемые формы можно разделять, только если остаются верными их контракты типа, владения, состояния и эффектов.
 
@@ -7957,7 +7960,7 @@ errors, not a negative predicate result. See the [unified Pattern contract](CORE
 
 ### Construction, source rules and verification
 
-Expression is the ordinary Structure graph interpreted with a [structural grouper](#expression-structural-grouping): it determines priorities, complete expression units and streams at the current tree level, independently of source spelling. A separate Expression application adapter packages left as one actual/reference bundle and right as an Array of references. `arg0 operand arg1 arg2 arg3` is the general form; a binary contract uses one right item, with no automatic fold or movement of the first right item into an absent left. The receiving contract selects whole-value or current-level sequence consumption. `(a b c) .: (a c b)` therefore has one left bundle and three right values; three sibling material RHS groups remain three subgroup items. Recursive in-memory normalization already belongs to the grouper; the application adapter adds no conditional unwrapping pass. The grouper reads the clean graph. In Expression, a graph reference atom to a Structure forms a group only outside the operand role. Translation rejects ambiguous interpretations before effects. Other reached Structures follow the name/actual-parent rule. Reference resolution preserves the actual parent. Whole VALUE/TYPE/DATA material is not automatically reclassified as CODE. `1 + ((2))` is 3; field collectors such as `(copy(Model))` remain containers for zero, one or many fields. `::` and modifiers keep DATA consumption and the common immediate-field reader; they gain no RHS evaluator. P0, ordinary callable W/E and the existing lifetime/effect rules remain intact. See [architecture and acceptance](EXPRESSION_GROUPING.md); execution is **NOT_RUN**.
+Expression is the ordinary Structure graph interpreted with a [structural grouper](#expression-structural-grouping): it determines priorities, complete expression units and streams at the current tree level, independently of source spelling. A separate Expression application adapter packages left as one actual/reference bundle and right as an Array of references. `arg0 operand arg1 arg2 arg3` is the general form; a binary contract uses one right item, with no automatic fold or movement of the first right item into an absent left. The receiving contract selects whole-value or current-level sequence consumption. `(a b c) .: (a c b)` therefore has one left bundle and three right values; three sibling material RHS groups remain three subgroup items. Recursive in-memory normalization already belongs to the grouper; the application adapter adds no conditional unwrapping pass. The grouper reads the clean graph. In Expression, a graph reference atom to a Structure supplies one Array value when its target fails the operand template check. Translation rejects ambiguous interpretations before effects. Other reached Structures follow the name/actual-parent rule. Reference resolution preserves the actual parent. Whole VALUE/TYPE/DATA material is not automatically reclassified as CODE. `1 + ((2))` is 3; field collectors such as `(copy(Model))` remain containers for zero, one or many fields. `::` and modifiers keep DATA consumption and the common immediate-field reader; they gain no RHS evaluator. P0, ordinary callable W/E and the existing lifetime/effect rules remain intact. See [architecture and acceptance](EXPRESSION_GROUPING.md); execution is **NOT_RUN**.
 
 Capture and generated source keep actual parents, private state and the normal
 lifetime rules. Code generation must respect blank-line root termination and

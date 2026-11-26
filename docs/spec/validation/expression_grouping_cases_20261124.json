@@ -1,5 +1,6 @@
 {
   "revision": "2026-11-24",
+  "reference_array_clarification": "2026-11-26",
   "status": "NORMATIVE_CASES_NOT_RUN",
   "scope": "General structural Expression grouping and separate application adaptation; no production parser/compiler implementation supplied",
   "rules": [
@@ -31,7 +32,8 @@
     "No source-only, written-group, parenthesis or returned-object flag selects graph grouping.",
     "Expression application adaptation packages one left actual/reference bundle and right Array of references; wrapping left is not the grouping pass.",
     "Ordinary demand, input roles, mode, admission and result handling apply; no separate conditional opening pass follows.",
-    "The clean-graph CODE/Expression walker handles anonymous Structures as groups; named Structures are groups only when actual parent differs from the current lexical owner, otherwise ordinary receiver/call handling applies. Whole VALUE/TYPE/DATA gates remain.",
+    "For a graph reference atom to a Structure in Expression, an established satisfies result of 1 selects the operand and an established 0 preserves one whole Array of references. If both roles are possible for an unknown target, reject before evaluation.",
+    "For a Structure reached directly in CODE/Expression, anonymous nodes are groups; named nodes are groups when actual parent differs from the current lexical owner, otherwise ordinary receiver/call handling applies. Whole VALUE/TYPE/DATA gates remain.",
     "Built-in :: remains DATA-only; its PASS_ARGS_AS_IS metadata is unspecified because implementation is absent.",
     "Every present left has the same internal LeftView: focus occurrence, complete value plan and pending context. No parser branch selects :=, PLACE or NAME.",
     "The resolved operand method uses ordinary namespace consumption: whole VALUE plan versus selected PLACE/NAME focus; unconsumed context resumes with the declared result.",
@@ -43,7 +45,7 @@
     "The former conditional RHS wording is explained by current-level sequence contracts plus single-left application packaging, not a universal TYPE-model opening condition.",
     "RAW complete expressions retain their whole original occurrence; legacy physical-token argument-count assumptions are not preserved.",
     "A public two-Array operand ABI and arbitrary free operand placement are not introduced.",
-    "Named reference grouping requires an actual parent different from the current lexical owner. The earlier unqualified no-call/reference-group statement is corrected; anonymous Structures remain groups regardless of parent."
+    "The parent rule applies to directly reached Structure nodes. A Structure used through a graph reference atom with satisfies = 0 contributes one Array value regardless of parent."
   ],
   "cases": [
     {
@@ -399,21 +401,24 @@
       "language": "LMX graph",
       "status": "NORMATIVE_TARGET",
       "execution": "NOT_RUN",
-      "source_forms": "Any admitted inline, vertical, named-reference or graph-created representation with the same relevant clean graph and resolved receiving context.",
-      "expected": "The grouper uses the same graph, name, actual-parent relation and receiving context to derive the same plan. Anonymous nodes are groups; named different-parent nodes are groups; named same-parent nodes follow ordinary receiver/call handling. Provenance and delimiter spelling do not choose the branch."
+      "source_forms": "Any admitted source representation with the same clean graph, type of occurrence and resolved receiving context.",
+      "expected": "Equivalent clean graphs and contexts give the same plan. Directly reached nodes follow the name and parent rule. A graph reference atom follows operand admission and at satisfies = 0 remains one Array value. Provenance and delimiter spelling do not choose the branch."
     },
     {
       "id": "E29",
       "language": "LMX",
       "code": "print: 1 + S + 2",
-      "alternative_code": "print: 1 + (a b c d) + 2",
+      "contrast_code": "print: 1 + (a b c d) + 2",
       "preconditions": [
-        "S is an available named Structure containing a,b,c,d",
-        "S.actual_parent differs from the current lexical owner of the CODE/Expression traversal",
-        "Each graph keeps its actual parent and lexical/evaluation context"
+        "The S occurrence in the clean graph is an atom referencing the existing named Structure containing a,b,c,d",
+        "The operand template check for its target proves satisfies = 0",
+        "Check both matching and different actual parents relative to the current lexical owner"
       ],
-      "expected": "Under the different-parent condition, the reference S is the next group just like the inline material group. No lexical S declaration, reparenting, copy or call to S is synthesized for this group branch. Operator admission and the value of + on this material remain separate.",
+      "expected": "In both parent cases the S occurrence supplies one whole Array of references with the same graph identity and four fields. Planning does not evaluate fields. The receiving + decides admission and reads elements under its own contract. The inline control uses ordinary grouping of the directly reached anonymous node.",
       "implicit_calls_to_S": 0,
+      "field_evaluations_during_planning": 0,
+      "operand_match": 0,
+      "handling": "whole_array",
       "source_provenance_used_for_grouping": false,
       "status": "NORMATIVE_TARGET",
       "execution": "NOT_RUN",
@@ -421,7 +426,7 @@
       "actual_parent_preserved": true,
       "lexical_context_preserved": true,
       "graph_copy": false,
-      "parent_relation": "different",
+      "parent_relations": ["same", "different"],
       "named_structure": true
     },
     {
@@ -430,9 +435,9 @@
       "code": "sys\\eval(G)",
       "preconditions": [
         "G is an available reference to the clean graph of the complete int Expression 1 + 2 under its valid evaluation context",
-        "G is anonymous, or its named Structure target has actual parent different from the current lexical owner of this explicit Expression traversal"
+        "The explicit evaluation contract admits G as code with its evaluation context"
       ],
-      "expected": "The explicit Expression consumer traverses the referenced graph through the group branch and returns 3. Reference spelling does not change this branch; the name/actual-parent conditions do.",
+      "expected": "The explicit evaluation consumer uses the admitted graph as Expression and returns 3. For a separate ordinary Expression occurrence using the reference atom to the same Structure with satisfies = 0, the plan retains one Array value.",
       "expected_value": 3,
       "implicit_calls_to_G": 0,
       "status": "NORMATIVE_TARGET",
@@ -443,11 +448,11 @@
       "language": "LMX graph",
       "code": "S",
       "preconditions": [
-        "The node is reached in CODE/Expression",
+        "The named Structure is the directly reached node in CODE/Expression",
         "S is named and S.actual_parent equals the current lexical owner of this traversal",
         "S is an available ordinary callable with admissible actuals"
       ],
-      "expected": "Select ordinary call handling for S with normal actual admission, effects, result and activation rules; do not traverse it as a noncalling group merely because it came through a reference. Planning itself does not execute its body.",
+      "expected": "Select ordinary call handling for the directly reached S with normal actual admission, effects, result and activation rules. Body execution waits for demand.",
       "named_structure": true,
       "parent_relation": "same",
       "handling": "ordinary_call",
@@ -460,7 +465,7 @@
       "language": "LMX graph",
       "code": "(1 + 2)",
       "preconditions": [
-        "The anonymous Structure is reached in CODE/Expression",
+        "The anonymous Structure is reached directly in CODE/Expression",
         "Its actual parent equals the current lexical owner"
       ],
       "expected": "The anonymous node remains a group despite the same parent; evaluate in place to 3 when demanded, with no anonymous call activation.",

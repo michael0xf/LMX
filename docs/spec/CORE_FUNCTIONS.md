@@ -89,7 +89,7 @@ separate whole TYPE admission from Expression evaluation. No constructor-specifi
 The built-in `::` implementation is not supplied, and execution is **NOT_RUN**.
 
 The [common Expression grouper](LMX_semantics.en.md#expression-structural-grouping)
-handles priorities and groups in the clean graph. In Expression, a graph reference atom to a Structure forms a group only outside the operand role. Translation rejects ambiguous interpretations before effects. Other reached Structures follow the name/actual-parent rule. The actual parent is preserved.
+handles priorities and groups in the clean graph. In Expression, a graph reference atom to a Structure supplies one Array value when its target fails the operand template check. Translation rejects ambiguous interpretations before effects. Other reached Structures follow the name/actual-parent rule. The actual parent is preserved.
 A separate application adapter packages one left actual and the current-level
 right sequence; complete TYPE/model and whole-value contracts keep their objects whole, while a graph received as CODE/Expression follows the same grouping through its references.
 `1 + ((2))` follows ordinary scalar grouping, while `int -> (int int)` retains

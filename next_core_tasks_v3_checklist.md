@@ -82,7 +82,9 @@ sys/native, весь W4, W5 и весь 27.10 открыты. Полный на�
 тройки, требование типизированной головы `@Model: p` (шаг 21.8) —
 [29.4](next_core_tasks_v3.md#k2-20261125), задачи интеграции каталога 29.7.1–29.7.3 (выбор
 ABI и профиля; понижение и публикация пакетов; модели, конвертеры, числовые примитивы —
-[29.7](next_core_tasks_v3.md#c99-catalog-20261125)), общий P0, TypeRef ABI, Array, Expression, миграция каталога и SLJIT
+[29.7](next_core_tasks_v3.md#c99-catalog-20261125)), общий P0, TypeRef ABI, Array,
+[подготовка Expression с целым Array при `satisfies = 0`](next_core_tasks_v3.md#expression-reference-array),
+миграция каталога и SLJIT
 ([29.8](next_core_tasks_v3.md#types-arrays-20261126)), префиксные объявления и индексированные вызовы
 ([29.9](next_core_tasks_v3.md#prefix-types-20261126)), K5b (рост ширины чанка) и `copy_metadata` — когда
 будут обоснованы,

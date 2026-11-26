@@ -1,30 +1,20 @@
-# HG2-A (CALLFORM, Р36 п.2): the body of f over D is `call(D; f\code)` (data first, #call-receivers); the write of y is explicit into the given data (rule Б: `data\y`), so the value reaches D as the comment says. Pins kept: seen 6, d_x 5, d_y 6. Observation: the root values are written explicitly in sub: observe (#flush-receiver-contract; #call-frame-20261115).
-(
-    Observed:
-        int: seen 0
-        int: d_x 0
-        int: d_y 0
-)
-# A callable launched over data it was given finds a name of its code in that data before a free input (plan M11 5a,
-# the executor's reading B4): x is no place of f, D has it, and the write of y is published into D.
-# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
-# The fields of D, which the dump of D showed, are the places d_x and d_y of the root.
-sub: f () (int: y 0)
-    data\y := x + 1
-sub: main () (
-    D:
-        int: x 5
-        int: y 0
-)
-    call(D; f\code)
-main()
-int: seen main\data\D\y
-int: d_x main\data\D\x
-int: d_y main\data\D\y
-
-sub: observe ()
-    @: shared node[0]
-    shared\Observed\seen := seen
-    shared\Observed\d_x := d_x
-    shared\Observed\d_y := d_y
-observe()
+# HG2-A (CALLFORM, Р36 п.2): the body of f over D is `call(D; f\code)` (data first, #call-receivers); the write of y is
+# explicit into the given data (rule Б: `data\y`), so the value reaches D as the comment says.
+# Step 21.7 K2, S3: the structural link carries the scene — the record f is written inside D and launched by the chosen
+# entry `D\f()` over parent(f) = D, where the bare `x` reads D's 5 and the explicit write `data\y` reaches D's y: the
+# pins are kept (D\x 5, D\y 6). The former record `call: D (f \ code)` supplied the data; no form of call supplies it.
+# Norm: the book #structural-call («The selected Structure C is executed in CODE; its actual parent supplies DATA»),
+# #call-frame-20261115 (no write-back of a bare write; explicit paths write the graph).
+Observed:
+    int: seen 0
+end: Observed
+D:
+    int: x 5
+    int: y 0
+    f:
+        data\y := x + 1
+    end: f
+end: D
+Main:
+    D\f()
+    Observed\seen := D\y

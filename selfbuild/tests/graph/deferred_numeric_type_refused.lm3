@@ -1,16 +1,31 @@
 # A numeric declaration cannot consume a deferred reference destination.
 # Its initializer is not reached when the destination has the wrong type.
-int: calls 0
+# Step 21.7 K2, S3: the record Code is written inside D and launched by `D\Code()` over its data parent(Code) = D.
+# Its first line declares `int: p touch()` where D holds the reference place `@: p Target`: the type is checked on
+# that line, before the initializer's effects. `touch` records each of its runs in the graph (`Observed\touches`):
+# it is run once before the launch as the control of that record (touches 1) and the launch adds none (still 1);
+# `reached` stays 0. The launch answers 4.
+# The former record `call(D; Code)` still fits the outer form [args, code] with D as the args actual; the
+# substitution of DATA is removed (the data is parent(Code)), and D's fields name no input of it: the launch answers 5.
+# Norm: the book #structural-call (the data is parent(C)), the roles of data and code (#data-code-roles: «in code it
+# checks the type on its own line»).
+Observed:
+    int: touches 0
+end: Observed
 fn: touch () int
-    node\calls := node\calls + 1
+    Observed\touches := Observed\touches + 1
     return: 7
-@: D (
-    Target(int: n 30)
+D:
+    Target:
+        int: n 30
+    end: Target
     @: p Target
     int: reached 0
-)
-@: Code (
-    int: p touch()
-    reached := 1
-)
-call(D; Code)
+    Code:
+        int: p touch()
+        reached := 1
+    end: Code
+end: D
+Main:
+    int: control touch()
+    D\Code()

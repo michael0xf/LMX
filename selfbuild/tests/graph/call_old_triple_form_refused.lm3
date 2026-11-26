@@ -1,0 +1,28 @@
+# Entry Main. The former three-argument form of the receiver is no form: three operands fit neither [code] nor
+# [args, code]. The record is refused by the binder before an operand runs and before any effect: before 1, after 0,
+# steps 0; answer 5.
+# Norm: the book #structural-call (`call` has two forms; `call(code := C)` does not make the two-argument form suit
+# a record with three parameters), #call-receivers.
+Counter:
+    int: steps 0
+end: Counter
+Sum:
+    int: a 1
+    int: b 2
+    add:
+        Counter\steps := Counter\steps + a * 10 + b
+    end: add
+end: Sum
+Args:
+    int: a 7
+    int: b 3
+end: Args
+D:
+    int: z 1
+end: D
+int: before 0
+int: after 0
+Main:
+    node\before := 1
+    call(args := Args; data := D; code := Sum\add)
+    node\after := 2

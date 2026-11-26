@@ -1,0 +1,194 @@
+# The explicit receiver call holds what its operands give, and a Structure with no parent runs (step 21.7 K2, S3).
+# Case 1: the chain of execution roots is linear where the call stands -- walked with a bound inside the second operand
+# of both written orders and in the body of the callee -- and the arena is swept there: the result of each call is
+# the actual a 7, admitted from Pick\Args before the sweep of the second operand and read by the body after that sweep
+# and after its own; the entry of probe is reached four times (Counter\entered 4, Counter\loops 0).
+# Cases 2-3: a null parent is permitted and is not checked on entry (the book #null-parent). Host\Solo, whose body is
+# a native entry, with its parent set to 0 runs without DATA: the statement without actuals and without a result
+# request reaches the body, which receives no owner and leaves an observable effect (Solo\hits 1); a consumed value is
+# refused before any effect, since nothing describes a result (5, Solo\hits stays 1).
+# This assertion owner uses the C door only to choose parts, to install two entries, to read the four records where
+# they are written (a value consumer for the two orders, the statement door for the null parent) and to inspect the
+# graph.
+predef: "l2src/l2_graph_build.lm1"
+predef: "l2src/lmx_graph.h.lm1"
+predef: "l2src/lmx_graph_run.h.lm1"
+predef: "l2src/lmx_gc.h.lm1"
+predef: "l2src/lmx_call.h.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+fn: cer_named (@: g c.LmxGraph; @: record c.Lmx; @: name char) @: c.Lmx
+    if: record = 0
+        return: 0
+    return: (cast: (@: c.Lmx) c.lmx_graph_resolve(g, record, c.lmx_graph_intern(name, c.strlen(name))))
+
+fn: cer_field (@: g c.LmxGraph; @: record c.Lmx; @: name char) @: void
+    if: record = 0
+        return: 0
+    return: c.lmx_graph_get_in(g, record, c.lmx_graph_named(g, record, c.lmx_graph_intern(name, c.strlen(name))))
+
+fn: cer_number (@: g c.LmxGraph; @: cell void) int
+    int: number -1000
+    if: cell = 0 || c.lmx_graph_value_int(g, cell, @ number) != 0
+        return: -1000
+    return: number
+
+# The entry of probe: the chain of execution roots is walked with a bound -- a loop in it is counted in Counter\loops,
+# not waited for --, then the arena is swept where the call stands, then Counter\entered is advanced. The cells are
+# found from the record of the callable, upward to the root (as generated entries find their places).
+fn: cer_probe (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
+    @: g c.LmxGraph arena\graph_metadata
+    @: decl c.Lmx 0
+    @: top c.Lmx 0
+    @: counter c.Lmx 0
+    @: entered void 0
+    @: loops void 0
+    @: roots c.LmxExecutionRoots 0
+    c.LmxWalkValue: one
+    size_t: steps 0U
+    if: owner = 0 || nargs != 0U || dest = 0 || result = 0 || code = 0 || code\parent = 0
+        return: 171
+    decl := (cast: (@: c.Lmx) code\parent)
+    if: decl\parent = 0 || c.lmx_graph_kind(g, (cast: (@: void) decl)) != 4
+        return: 172
+    top := (cast: (@: c.Lmx) decl\parent)
+    if: c.lmx_graph_kind(g, (cast: (@: void) top)) != 4
+        return: 173
+    counter := cer_named(g, top, "Counter")
+    if: counter = 0 || c.lmx_graph_kind(g, (cast: (@: void) counter)) != 4
+        return: 174
+    entered := cer_field(g, counter, "entered")
+    loops := cer_field(g, counter, "loops")
+    if: entered = 0 || loops = 0
+        return: 175
+    roots := arena\execution_roots
+    while: roots != 0 && steps < 4096U
+        if: roots\lane != (cast: (@) arena)
+            return: 176
+        roots := (cast: (c.LmxExecutionRoots@) roots\prior)
+        steps := steps + 1U
+    ---
+    if: roots != 0
+        if: c.lmx_int_store_known(loops, cer_number(g, loops) + 1) != 0
+            return: 177
+        ---
+        return: 178
+    if: c.lmx_int_store_known(loops, 0) != 0 || c.lmx_gc_sweep(arena, c.lmx_arena_generation_next(arena)) != c.LMX_GC_OK
+        return: 179
+    if: c.lmx_int_store_known(entered, cer_number(g, entered) + 1) != 0 || c.lmx_walk_value_num(@ one, c.LMX_TYPE_INT, 1U) != c.LMX_WALK_OK
+        return: 180
+    return: c.lmx_call_result_value(arena, code, @ one, dest, out, result)
+
+# The entry of Solo: the body of the Structure in its native form. A launch without DATA gives it no owner -- a data
+# put in place of the null parent would arrive here --; the first cell of the Structure is advanced.
+fn: cer_solo (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
+    @: g c.LmxGraph arena\graph_metadata
+    @: cell void 0
+    if: owner != 0 || nargs != 0U || code = 0 || c.lmx_graph_kind(g, (cast: (@: void) code)) != 4
+        return: 181
+    cell := c.lmx_graph_get_in(g, code, 0U)
+    if: c.lmx_int_store_known(cell, cer_number(g, cell) + 1) != 0
+        return: 182
+    if: out != 0
+        out[0] := 0
+    if: result != 0
+        c.lmx_walk_value_clear(result)
+    ---
+    return: 0
+
+fn: cer_roots_check () int
+    c.LmxArena: arena
+    @: g c.LmxGraph 0
+    @: root c.Lmx 0
+    @: counter c.Lmx 0
+    @: probe c.Lmx 0
+    @: host c.Lmx 0
+    @: solo c.Lmx 0
+    @: phase1 c.Lmx 0
+    @: phase2 c.Lmx 0
+    @: phase3 c.Lmx 0
+    @: phase4 c.Lmx 0
+    @: call1 c.Lmx 0
+    @: call2 c.Lmx 0
+    @: call3 c.Lmx 0
+    @: call4 c.Lmx 0
+    @: entered void 0
+    @: loops void 0
+    @: hits void 0
+    @: file c.FILE 0
+    c.LmxWalkValue: result
+    c.LmxExecutionRoots: roots
+    @: before c.LmxExecutionRoots 0
+    int: opened 0
+    int: status 0
+    int: number -1000
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ arena) != 0
+        return: 161
+    g := c.lmx_graph_open(@ arena)
+    file := c.fopen("graph_call_explicit_roots_code.lm3", "wb")
+    if: g = 0 || file = 0
+        return: 162
+    if: c.fputs("Counter:\n    int: entered 0\n    int: loops 0\nend: Counter\n\nfn: probe () int\n    return: 1\nend: probe\n\nHost:\n    int: a 1\n    return: int\n    add:\n        probe()\n        return: a\n    end: add\n    Solo:\n        int: hits 0\n    end: Solo\nend: Host\n\nPick:\n    return: @\n    Args:\n        int: a 7\n    end: Args\n    PickCode:\n        int: ignored probe()\n        return: Host\\add\n    end: PickCode\n    PickArgs:\n        int: ignored probe()\n        return: node\\Args\n    end: PickArgs\nend: Pick\n\nPhase1:\n    call(args := Pick\\Args; code := Pick\\PickCode())\nend: Phase1\n\nPhase2:\n    call(code := Host\\add; args := Pick\\PickArgs())\nend: Phase2\n\nPhase3:\n    call(code := Host\\Solo)\nend: Phase3\n\nPhase4:\n    int: r 0\n    r := call(code := Host\\Solo)\nend: Phase4\n", file) < 0 || c.fclose(file) != 0
+        return: 163
+    status := c.lm_graph_build_file(g, "graph_call_explicit_roots_code.lm3", @ root)
+    c.remove("graph_call_explicit_roots_code.lm3")
+    if: status != 0 || root = 0 || c.lmx_graph_space_open(g, root, @ opened) != 0
+        c.fprintf(c.stderr, "explicit roots: build status=%d\n", status)
+        return: 164
+    counter := cer_named(g, root, "Counter")
+    probe := cer_named(g, root, "probe")
+    host := cer_named(g, root, "Host")
+    phase1 := cer_named(g, root, "Phase1")
+    phase2 := cer_named(g, root, "Phase2")
+    phase3 := cer_named(g, root, "Phase3")
+    phase4 := cer_named(g, root, "Phase4")
+    if: counter = 0 || probe = 0 || host = 0 || phase1 = 0 || phase2 = 0 || phase3 = 0 || phase4 = 0
+        return: 165
+    solo := (cast: (@: c.Lmx) cer_field(g, host, "Solo"))
+    entered := cer_field(g, counter, "entered")
+    loops := cer_field(g, counter, "loops")
+    hits := cer_field(g, solo, "hits")
+    call1 := (cast: (@: c.Lmx) c.lmx_graph_get_in(g, phase1, 0U))
+    call2 := (cast: (@: c.Lmx) c.lmx_graph_get_in(g, phase2, 0U))
+    call3 := (cast: (@: c.Lmx) c.lmx_graph_get_in(g, phase3, 0U))
+    call4 := (cast: (@: c.Lmx) c.lmx_graph_get_in(g, (cast: (@: c.Lmx) c.lmx_graph_get_in(g, phase4, 1U)), 2U))
+    if: solo = 0 || entered = 0 || loops = 0 || hits = 0 || call1 = 0 || call2 = 0 || call3 = 0 || call4 = 0
+        return: 166
+    if: c.lmx_native_install(@ arena, probe, (cast: (c.LmxPrimitiveEntry) c.cer_probe), 0, 0, 0, 0, 0) != 0 || c.lmx_native_install(@ arena, solo, (cast: (c.LmxPrimitiveEntry) c.cer_solo), 0, 0, 0, 0, 0) != 0
+        return: 1
+    before := c.lmx_execution_roots_mark(@ arena)
+    # The source graph remains a root of the sweep.
+    c.lmx_execution_roots_push(@ arena, @ roots, 0, 0U, 0, 0U, (cast: (@: void) root), 0)
+    # Each record is read where it is written, as the assignment `r := call(...)` reads it: the result is the actual
+    # a 7, admitted from Pick\Args, and read by the body after the sweep of the second operand and after its own.
+    status := c.lmx_graph_eval_record(g, phase1, (cast: (@: void) call1), @ result)
+    number := -1000
+    if: c.lmx_graph_result_int(g, @ result, @ number) != 0
+        number := -1000
+    if: status != 0 || number != 7 || cer_number(g, entered) != 2 || cer_number(g, loops) != 0
+        c.fprintf(c.stderr, "explicit roots: first order status=%d number=%d entered=%d loops=%d\n", status, number, cer_number(g, entered), cer_number(g, loops))
+        return: 169
+    status := c.lmx_graph_eval_record(g, phase2, (cast: (@: void) call2), @ result)
+    number := -1000
+    if: c.lmx_graph_result_int(g, @ result, @ number) != 0
+        number := -1000
+    if: status != 0 || number != 7 || cer_number(g, entered) != 4 || cer_number(g, loops) != 0
+        c.fprintf(c.stderr, "explicit roots: second order status=%d number=%d entered=%d loops=%d\n", status, number, cer_number(g, entered), cer_number(g, loops))
+        return: 170
+    # A null parent is permitted and is not checked on entry: the Structure runs without DATA.
+    solo\parent := 0
+    status := c.lmx_graph_eval_explicit_call(g, phase3, call3)
+    if: status != 0 || cer_number(g, hits) != 1 || solo\parent != 0
+        c.fprintf(c.stderr, "explicit roots: null parent statement status=%d hits=%d\n", status, cer_number(g, hits))
+        return: 171
+    # A value consumer reads the record of the call (the assignment `r := call(...)` reads it so).
+    status := c.lmx_graph_eval_record(g, phase4, (cast: (@: void) call4), @ result)
+    if: status != 5 || cer_number(g, hits) != 1 || cer_number(g, entered) != 4 || arena\activation != 0 || arena\execution_roots != @ roots
+        c.fprintf(c.stderr, "explicit roots: null parent value status=%d hits=%d\n", status, cer_number(g, hits))
+        return: 172
+    c.lmx_execution_roots_restore(@ arena, before)
+    c.lmx_graph_space_close(g, opened)
+    c.lmx_graph_close(g)
+    c.lmx_arena_release(@ arena)
+    return: 7

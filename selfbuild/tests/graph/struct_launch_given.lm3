@@ -1,32 +1,23 @@
 # HG2-A (group B): the launch is `call(D; Code)` (data first, #call-receivers); the writes into the given data are explicit (rule Б): `data\x := data\x + 10`, `data\k := data\k + 2`. Pins kept: seen 21, twice 2. Observation: the root values are written explicitly in sub: observe (#flush-receiver-contract; #call-frame-20261115).
-(
-    Observed:
-        int: seen 0
-        int: twice 0
-)
-# Code launched over data it was given is separated from that data too (R22, item 1; plan M11 5b): a record there whose
-# head is an ordinary Structure of the data launches it -- `Step(Inner)` and `Step(data := Inner)` run Step over Inner,
-# `Twice()` runs Twice over itself.
-# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call
-# main(). The Structures inside D are written in one line each: a block closed by `end:` inside the parentheses of the
-# part data is a later step of 5b.
-sub: main () (
-    Code:
-        Step(Inner)
-        Step(data := Inner)
-        Twice()
-    D:
-        Inner(int: x 1)
-        Step(data\x := data\x + 10)
-        Twice(int: k 0; data\k := data\k + 2)
-)
-    call(D; Code)
-main()
-int: seen main\data\D\Inner\x
-int: twice main\data\D\Twice\k
-
-sub: observe ()
-    @: shared node[0]
-    shared\Observed\seen := seen
-    shared\Observed\twice := twice
-observe()
+# Step 21.7 K2, S3: the structural link carries the part of Step -- the record Step is written inside Inner and
+# launched by `Inner\Step()` twice over its parent: both explicit writes reach Inner\x, 1 + 10 + 10 = 21 (seen 21).
+# The former records `Step(Inner)` and `Step(data := Inner)` launched Step with an actual; the named `data` is no
+# formal now, and with Step written inside Inner the launch is `Inner\Step()`. The former Twice, launched over
+# itself, accumulated into its own place (twice 2 in the former expectation): that launch is removed -- a launch of a
+# record over itself has no form under the norm (a call executes the chosen record over its parent); the own place
+# and the parent's place are told apart by `call_point_own_and_parent` and `call_own_place_not_published`.
+# Norm: the book #structural-call («The selected Structure C is executed in CODE; its actual parent supplies DATA»),
+# #call-frame-20261115.
+Observed:
+    int: seen 0
+end: Observed
+Inner:
+    int: x 1
+    Step:
+        data\x := data\x + 10
+    end: Step
+end: Inner
+Main:
+    Inner\Step()
+    Inner\Step()
+    Observed\seen := Inner\x

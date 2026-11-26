@@ -1,20 +1,39 @@
 # The first check accepts raw int-reference data without executing it.
 # The second wrapper requires a Structure reference and refuses the int s.
-int: before 0
-int: after 0
-int: calls 0
+# Step 21.7 K2, S3: the record Types is written inside Bad and launched by `Bad\Types()` over its data
+# parent(Types) = Bad. Its first line, `@: p int`, accepts the reference producer `@: p int data[touch()]` of Bad
+# without reading it; the mark written after it shows that the first line passed (p_checked 1). The second line,
+# `@: s A`, is the reference s that initially refers to the Structure A: in code the line checks the destination on
+# its own line, the place s of the data already holds the int 99, and the line answers 4 before any effect --
+# `Observed\after` is not written. `touch` records each of its runs in the graph (`Observed\touches`); it is run once
+# before the launch as the control of that record (touches 1) and the launch adds none (still 1).
+# The former record `call(Bad; Types\code)` still fits the outer form [args, code] with Bad as the args actual; the
+# substitution of DATA is removed (the data is parent(Types)), and Bad's fields name no input of it: it answers 5.
+# Norm: the book #structural-call (the data is parent(C)), the roles of data and code (#data-code-roles: «in code it
+# checks the type on its own line»); the L2 spec #lowlevel-address (`@: s A` initially refers to A itself).
+Observed:
+    int: before 0
+    int: after 0
+    int: touches 0
+    int: p_checked 0
+end: Observed
 fn: touch () int
-    node\calls := node\calls + 1
+    Observed\touches := Observed\touches + 1
     return: 0
-@: Bad (@: p int data[touch()]; int: s 99)
-sub: main () (
-    int: i 3
-    A(int: v 7)
-    sub: Types () ()
-        @: p int @i
+A:
+    int: v 7
+end: A
+Bad:
+    @: p int data[touch()]
+    int: s 99
+    Types:
+        @: p int
+        Observed\p_checked := 1
         @: s A
-)
-    node\before := 1
-    call(Bad; Types\code)
-    node\after := 1
-main()
+    end: Types
+end: Bad
+Main:
+    int: control touch()
+    Observed\before := 1
+    Bad\Types()
+    Observed\after := 1

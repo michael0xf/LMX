@@ -1,31 +1,36 @@
 # Entry selects the existing data description before its source field is replaced.
 # The first read computes that description once; the next call selects the new source value.
-(
-    Observed:
-        int: ticks 0
-        int: first 0
-        int: second 0
-        int: source 0
-    Inputs:
-        int: x tick()
+# Step 21.7 K2, S3: the structural link carries the scene -- the record Code is written inside Inputs next to the
+# computed description `int: x tick()`; main selects it by the alias `@: body Inputs\Code` and calls
+# `call(code := body)` twice (the translation of the machine row frame_description_gc). The first launch reads the
+# description once (ticks 1, total 80); the body writes `data\x := 9` into the parent, so the second launch reads the
+# new source (total 18) and the root read gives 9. The former records `call(source; body)` still have the two
+# positionals of [args, code]; the substitution of DATA is removed, and they answer 5 on this scene.
+# Norm: the book #structural-call, #call-frame-20261115 (the read of a computed place executes the declaration's
+# expression once at the read).
+Observed:
+    int: ticks 0
+    int: first 0
+    int: second 0
+    int: source 0
+end: Observed
+fn: tick () int
+    Observed\ticks := Observed\ticks + 1
+    return: 40
+Inputs:
+    int: x tick()
+    @: observed Observed
     Code:
-        source\x := 9
+        data\x := 9
         int: total x + x
         if: observed\first = 0
             observed\first := total
         else:
             observed\second := total
-)
-fn: tick () int
-    @: shared node[0]
-    shared\Observed\ticks := shared\Observed\ticks + 1
-    return: 40
-sub: main ()
-    @: shared node[0]
-    @: source shared\Inputs
-    @: observed shared\Observed
-    @: body shared\Code
-    call(source; body)
-    call(source; body)
-    observed\source := source\x
-main()
+    end: Code
+end: Inputs
+Main:
+    @: body Inputs\Code
+    call(code := body)
+    call(code := body)
+    Observed\source := Inputs\x

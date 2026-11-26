@@ -1,25 +1,15 @@
----
-    Observed:
-        int: self_seen 41
-        int: given_seen 13
-        int: structure_seen 30
-        int: callable_seen 23
-        int: calls 0
-        int: ignored_initializers 0
-    end: Observed
----
-int: calls 0
+Observed:
+    int: self_seen 41
+    int: given_seen 13
+    int: structure_seen 30
+    int: callable_seen 23
+    int: calls 0
+    int: touches 1
+end: Observed
 fn: touch () int
-    :=: (node \ calls) ((node \ calls) + 1)
+    :=: (Observed \ touches) ((Observed \ touches) + 1)
     return: 0
 end: touch
-sub: Writer () (
-    @: p int (data [] (touch))
-    int: seen 0
-)
-    @: p int (data [] 1)
-    :=: (data \ seen) (\ p)
-end: Writer
 Self:
     int: x 40
     int: y 41
@@ -38,33 +28,28 @@ D:
     @: s Missing
     int: seen 13
     int: sseen 30
+    Code:
+        @: p int (data [] 1)
+        @: s Target
+        :=: (data \ seen) (\ p)
+        :=: (data \ sseen) (s \ n)
+    end: Code
 end: D
-Code:
-    @: p int (data [] 1)
-    @: s Target
-    :=: (data \ seen) (\ p)
-    :=: (data \ sseen) (s \ n)
-end: Code
 D2:
     int: x 21
     int: y 23
     @: p int (data [] (touch))
     int: seen 23
+    Writer: (@ p int (data [] 1)) (:= (data \ seen) (\ p))
 end: D2
-call: Self
-call: D Code
-call: D2 (Writer \ code)
-int: self_seen (Self \ seen)
-int: given_seen (D \ seen)
-int: structure_seen (D \ sseen)
-int: callable_seen (D2 \ seen)
-sub: observe ()
-    @: shared (node [] 0)
-    :=: ((shared \ Observed) \ self_seen) self_seen
-    :=: ((shared \ Observed) \ given_seen) given_seen
-    :=: ((shared \ Observed) \ structure_seen) structure_seen
-    :=: ((shared \ Observed) \ callable_seen) callable_seen
-    :=: ((shared \ Observed) \ calls) calls
-    :=: ((shared \ Observed) \ ignored_initializers) (node \ calls)
-end: observe
-observe:
+Main:
+    call: Self
+    D\Code()
+    D2\Writer()
+    :=: (Observed \ self_seen) (Self \ seen)
+    :=: (Observed \ given_seen) (D \ seen)
+    :=: (Observed \ structure_seen) (D \ sseen)
+    :=: (Observed \ callable_seen) (D2 \ seen)
+    :=: (Observed \ calls) (Observed \ touches)
+    int: control (touch)
+end: Main

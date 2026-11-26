@@ -1,5 +1,8 @@
 # The assertion owner uses the C ABI. The Code bodies below are parsed and
 # executed as ordinary Structures over supplied typed DATA, without a fake fn.
+# The nested launch over the same data goes through the structural link (step 21.7 K2, S3: no form of call supplies
+# a data): the owner builds Touch as a child of the data object it creates, in its slot 4, and both bodies choose it
+# by `call(code := data\Touch)`, over parent(Touch) = that data; the former records `call: data Touch` are no form.
 predef: "l2src/l2_graph_build.lm1"
 predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_graph_run.h.lm1"
@@ -336,7 +339,7 @@ fn: gs_working_check () int
     @: profile_b c.Lmx c.lmx_node_new_owned(@ arena)
     @: model_a c.Lmx c.lmx_node_new_profiled(@ arena, profile_a)
     @: model_b c.Lmx c.lmx_node_new_profiled(@ arena, profile_b)
-    @: data c.Lmx c.lmx_graph_lmx(g, 0, 4U)
+    @: data c.Lmx c.lmx_graph_lmx(g, 0, 5U)
     @: x void gs_cell(g, "x", abi, source, model_b, physical, @ zero)
     @: y void gs_cell(g, "y", abi, alias_source, model_a, physical, @ precise)
     @: z void gs_cell(g, "z", abi, source, model_b, physical, @ replacement)
@@ -392,11 +395,11 @@ fn: gs_working_check () int
     int: opened 0
     if: g = 0 || file = 0 || abi = 0 || alias_abi != abi || alias_source = source || narrow_abi = 0 || physical = 0 || profile_a = 0 || profile_b = 0 || model_a = 0 || model_b = 0 || data = 0 || x = 0 || y = 0 || z = 0 || saved = 0 || empty = 0
         return: 81
-    if: c.fputs("Copy:\n    x := y\n    y := z\n    saved := x\n    return: saved\nend: Copy\n\nFill:\n    empty := y\n    return: empty\nend: Fill\n\nsub: Read ()\n    saved := x\nend: Read\n\nTouch:\nend: Touch\n\nSnapshot:\n    x := y\n    call: data Touch\n    saved := x\n    return: saved\nend: Snapshot\n", file) < 0
+    if: c.fputs("Copy:\n    x := y\n    y := z\n    saved := x\n    return: saved\nend: Copy\n\nFill:\n    empty := y\n    return: empty\nend: Fill\n\nsub: Read ()\n    saved := x\nend: Read\n\nSnapshot:\n    x := y\n    call(code := data\\Touch)\n    saved := x\n    return: saved\nend: Snapshot\n", file) < 0
         return: 82
     if: c.fputs("\nProtected:\n    data\\x := data\\y\nend: Protected\n", file) < 0
         return: 82
-    if: c.fputs("\nfn: GSHold () double\n    finally:\n        call: data Touch\n    end: finally\n    return: data\\y\nend: GSHold\n\nfn: GSReplace () f64\n    finally:\n        return: data\\z\n    end: finally\n    return: data\\y\nend: GSReplace\n\nfn: GSCInt () int\n    return: data\\number\nend: GSCInt\n\nfn: GSForward () int\n    return: GSCInt()\nend: GSForward\n\nfn: GSForwardHold () double\n    return: GSHold()\nend: GSForwardHold\n", file) < 0 || c.fclose(file) != 0
+    if: c.fputs("\nfn: GSHold () double\n    finally:\n        call(code := data\\Touch)\n    end: finally\n    return: data\\y\nend: GSHold\n\nfn: GSReplace () f64\n    finally:\n        return: data\\z\n    end: finally\n    return: data\\y\nend: GSReplace\n\nfn: GSCInt () int\n    return: data\\number\nend: GSCInt\n\nfn: GSForward () int\n    return: GSCInt()\nend: GSForward\n\nfn: GSForwardHold () double\n    return: GSHold()\nend: GSForwardHold\n", file) < 0 || c.fclose(file) != 0
         return: 82
     status := c.lm_graph_build_file(g, "graph_scalar_working_code.lm3", @ root)
     c.remove("graph_scalar_working_code.lm3")
@@ -408,7 +411,11 @@ fn: gs_working_check () int
     fill_code := (cast: (@: c.Lmx) c.lmx_graph_get(root, c.lmx_graph_named(g, root, c.lmx_graph_intern("Fill", 4U))))
     protected_code := (cast: (@: c.Lmx) c.lmx_graph_get(root, c.lmx_graph_named(g, root, c.lmx_graph_intern("Protected", 9U))))
     snapshot_code := (cast: (@: c.Lmx) c.lmx_graph_get(root, c.lmx_graph_named(g, root, c.lmx_graph_intern("Snapshot", 8U))))
-    touch_code := (cast: (@: c.Lmx) c.lmx_graph_get(root, c.lmx_graph_named(g, root, c.lmx_graph_intern("Touch", 5U))))
+    # Touch is a child of the data object: its parent is the data the nested launch runs over.
+    touch_code := (cast: (@: c.Lmx) c.lmx_graph_lmx(g, data, 0U))
+    # The name of a slot is the name of the cell it holds (as a named Structure carries its own).
+    if: touch_code = 0 || c.lmx_graph_put(data, 4U, (cast: (@: void) touch_code)) != 0 || c.lmx_graph_name(g, (cast: (@: void) touch_code), "Touch", 5U) != 0
+        return: 84
     read_code := (cast: (@: c.Lmx) c.lmx_graph_resolve(g, root, c.lmx_graph_intern("Read", 4U)))
     if: copy_code = 0 || fill_code = 0 || protected_code = 0 || snapshot_code = 0 || touch_code = 0 || c.lmx_graph_put(data, 0U, x) != 0 || c.lmx_graph_put(data, 1U, y) != 0 || c.lmx_graph_put(data, 2U, z) != 0 || c.lmx_graph_put(data, 3U, saved) != 0
         return: 84

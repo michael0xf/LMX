@@ -1,5 +1,9 @@
 # A selected computed description survives replacing its source and an explicit execution-root sweep.
 # Collect is called normally from the interpreted body before the first bare x read.
+# The code runs over its data by the structural link (step 21.7 K2, S3: no form of call supplies a data): Code is
+# written directly in Inputs, main selects it as source\Code (the alias body) and calls it twice by
+# `call(code := body)`, over parent(Code). The former records `call(source; body)` are no form; the assertions of
+# this owner are those they were.
 predef: "l2src/l2_graph_build.lm1"
 predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_graph_run.h.lm1"
@@ -70,7 +74,7 @@ fn: wd_description_gc_check () int
     file := c.fopen("codex_frame_description_gc_code.lm3", "wb")
     if: g = 0 || file = 0
         return: 82
-    if: c.fputs("(\n    Observed:\n        int: ticks 0\n        int: first 0\n        int: second 0\n        int: source 0\n        int: collected 0\n    Inputs:\n        int: x tick()\n    Code:\n        source\\x := 9\n        int: ignored Collect()\n        int: total x + x\n        if: observed\\first = 0\n            observed\\first := total\n        else:\n            observed\\second := total\n)\nfn: tick () int\n    @: shared node[0]\n    shared\\Observed\\ticks := shared\\Observed\\ticks + 1\n    return: 40\nfn: Collect () int\n    return: 1\nsub: main ()\n    @: shared node[0]\n    @: source shared\\Inputs\n    @: observed shared\\Observed\n    @: body shared\\Code\n    call(source; body)\n    call(source; body)\n    observed\\source := source\\x\n", file) < 0 || c.fclose(file) != 0
+    if: c.fputs("(\n    Observed:\n        int: ticks 0\n        int: first 0\n        int: second 0\n        int: source 0\n        int: collected 0\n    Inputs:\n        int: x tick()\n        Code:\n            source\\x := 9\n            int: ignored Collect()\n            int: total x + x\n            if: observed\\first = 0\n                observed\\first := total\n            else:\n                observed\\second := total\n)\nfn: tick () int\n    @: shared node[0]\n    shared\\Observed\\ticks := shared\\Observed\\ticks + 1\n    return: 40\nfn: Collect () int\n    return: 1\nsub: main ()\n    @: shared node[0]\n    @: source shared\\Inputs\n    @: observed shared\\Observed\n    @: body source\\Code\n    call(code := body)\n    call(code := body)\n    observed\\source := source\\x\n", file) < 0 || c.fclose(file) != 0
         return: 83
     status := c.lm_graph_build_file(g, "codex_frame_description_gc_code.lm3", @ root)
     c.remove("codex_frame_description_gc_code.lm3")

@@ -1,32 +1,26 @@
----
-    Observed:
-        int: ticks 1
-        int: first 80
-        int: second 18
-        int: source 9
-    end: Observed
-    Inputs:
-        int: x 9
-    end: Inputs
+Observed:
+    int: ticks 1
+    int: first 80
+    int: second 18
+    int: source 9
+end: Observed
+fn: tick () int
+    :=: (Observed \ ticks) ((Observed \ ticks) + 1)
+    return: 40
+end: tick
+Inputs:
+    int: x 9
+    @: observed Observed
     Code:
-        :=: (source \ x) 9
+        :=: (data \ x) 9
         int: total (x + x)
         if: ((observed \ first) = 0) ((:= (observed \ first) total))
         else: (:= (observed \ second) total)
     end: Code
----
-fn: tick () int
-    @: shared (node [] 0)
-    :=: ((shared \ Observed) \ ticks) (((shared \ Observed) \ ticks) + 1)
-    return: 40
-end: tick
-sub: main ()
-    @: shared (node [] 0)
-    @: source (shared \ Inputs)
-    @: observed (shared \ Observed)
-    @: body (shared \ Code)
-    call: source body
-    call: source body
-    :=: (observed \ source) (source \ x)
-end: main
-main:
+end: Inputs
+Main:
+    @: body Code
+    call: (:= code body)
+    call: (:= code body)
+    :=: (Observed \ source) (Inputs \ x)
+end: Main

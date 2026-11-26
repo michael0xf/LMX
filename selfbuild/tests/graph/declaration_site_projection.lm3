@@ -3,48 +3,34 @@
 # D\x stays 10. In Inline `int: x 7` stands in the block of `if`, a nested level: it takes its own place and shadows
 # the outer x until the block is left, so the read after the block gives 1 and Inline\x stays 1. seen is written
 # through data\. Observation: explicit writes in sub: observe (#flush-receiver-contract; #call-frame-20261115).
-(
-    Observed:
-        int: seen 0
-        int: x 0
-        int: pad 0
-        int: inline_seen 0
-        int: inline_x 0
-        int: inline_pad 0
-)
-# Distinct CODE projects by unique name; inline bodies share the selected DATA.
-sub: main () (
-    D:
-        int: seen 0
-        int: pad 99
-        int: x 10
+# The bodies over that data are given by the structural link (step 21.7 K2, S3: no form of call substitutes a data):
+# Code and Inline are written inside D and launched by the paths `D\Code()` and `D\Inline()`, over their parent;
+# the write of Inline goes to its own slot by the record path `Inline\seen := x`. The former records
+# `call(D Code)` and `call(Inline)` keep the positionals of [args, code] (D, or Inline alone, is the args actual);
+# the substitution of DATA is removed, and they answer 5 on this scene.
+Observed:
+    int: seen 0
+    int: inline_seen 0
+end: Observed
+D:
+    int: seen 0
+    int: pad 99
+    int: x 10
     Code:
         data\seen := x
         int: x 2
         int: x 3
+    end: Code
     Inline:
         int: pad 90
         int: x 1
         int: seen 0
         if: 1 (int: x 7)
-        data\seen := x
-)
-    call(D Code)
-    call(Inline)
-main()
-int: seen main\data\D\seen
-int: x main\data\D\x
-int: pad main\data\D\pad
-int: inline_seen main\data\Inline\seen
-int: inline_x main\data\Inline\x
-int: inline_pad main\data\Inline\pad
-
-sub: observe ()
-    @: shared node[0]
-    shared\Observed\seen := seen
-    shared\Observed\x := x
-    shared\Observed\pad := pad
-    shared\Observed\inline_seen := inline_seen
-    shared\Observed\inline_x := inline_x
-    shared\Observed\inline_pad := inline_pad
-observe()
+        Inline\seen := x
+    end: Inline
+end: D
+Main:
+    D\Code()
+    D\Inline()
+    Observed\seen := D\seen
+    Observed\inline_seen := D\Inline\seen

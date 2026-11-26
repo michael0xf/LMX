@@ -1,0 +1,11 @@
+# The root R0 without an entry. The target is chosen once, when its operand is read, and is not read again: the operands
+# are read in the order they are written. `code := Host\ref` reads the reference place `ref`, which holds C1; then
+# `args := D\Flip()` runs, replaces `ref` by C2 and gives Args (a 7). The call executes the C chosen before -- C1 -- with
+# a 7: Log\first 7, Log\second 0. A second read of `ref` would run C2 and give first 0, second 7.
+# Norm: the book #structural-call («Values already obtained are not evaluated again»; the operands are evaluated in
+# the order they are written).
+@: Log (int: first 0; int: second 0)
+@: Host (int: a 1; @: ref 0; C1(Log\first := a); C2(Log\second := a))
+@: D (Args(int: a 7); return: @; Flip(Host\ref := Host\C2; return: node\Args))
+Host\ref := Host\C1
+call(code := Host\ref; args := D\Flip())

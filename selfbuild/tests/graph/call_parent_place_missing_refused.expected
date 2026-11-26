@@ -1,0 +1,18 @@
+Log:
+    int: before 1
+    int: after 0
+    int: seen 0
+end: Log
+fn: k () int (
+    int: y 0
+    Code:
+        int: x 7
+        :=: (Log \ before) 1
+        :=: (data \ x) 7
+        :=: (Log \ after) 1
+    end: Code
+)
+    call: (:= code Code)
+    return: (data \ y)
+end: k
+:=: (Log \ seen) (k)

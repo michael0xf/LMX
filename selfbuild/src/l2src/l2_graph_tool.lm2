@@ -833,73 +833,77 @@ fn: lm_graph_emit_launch_operand (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: scope; c.L
     return: lm_graph_emit_received_operand(g, f, scope, holder, at, 2, -1, temps, decl_names, decl_slots, decl_n, temp)
 end: lm_graph_emit_launch_operand
 
-# call in native code (the book, call-receivers): the forms [code], [data code], [args data code], given by position or
-# by name through `:=` -- the translation binds the record by the interpreter's one binder (lmx_graph_launch_formals;
-# R22). The operands are evaluated in the order they are written (lm_graph_emit_launch_operand); the launch is the
-# kernel's own (lmx_graph_call_data, lmx_graph_launch), shared with the interpreter. No form: the code refuses the record
-# where it reaches it, as the interpreter does (5).
+# The readings of a call are diagnosed here, before any code of it is generated (the author's clarification of
+# 2026-11-26): an argument is never executed to learn whether the call is admitted, and a known or a potential
+# ambiguity is refused by the translation. The questions are the kernel's (lmx_graph_call_diagnosis,
+# lmx_graph_structural_diagnosis), the same its preparation asks before an effect; the line names the record and the
+# answer, the answer is the emitter's, and the image is not written (graph: emit answered N).
+fn: lm_graph_emit_call_diagnosis (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: expression) int
+    int: diagnosis c.lmx_graph_call_diagnosis(g, scope, expression)
+    if: diagnosis = 3
+        c.fputs("graph: call: refused at translation, answer 3: its one positional actual is code and its fields are args and code at once, or it is obtained by execution and may be so\n", c.stderr)
+    ---
+    if: diagnosis = 5
+        c.fputs("graph: call: refused at translation, answer 5: its one positional actual cannot be code\n", c.stderr)
+    ---
+    return: diagnosis
+
+fn: lm_graph_emit_structural_diagnosis (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: application) int
+    c.Lmx@: resolved 0
+    @: target void 0
+    c.Lmx@: actuals 0
+    char@: name 0
+    @: head void 0
+    int: diagnosis 0
+    # A head written as an expression is resolved when the code runs: the question stays with the preparation.
+    if: c.lmx_graph_application_parts(g, (cast: (@) application), @ name, @ head, @ actuals) = 0 || name = 0
+        return: 0
+    ---
+    resolved := c.lmx_graph_resolve(g, scope, name)
+    target := c.lmx_graph_target(g, (cast: (@) resolved))
+    if: resolved = 0 || target = 0 || c.lmx_graph_kind(g, target) != 4 || c.lmx_graph_fn_result(g, target) != 0
+        return: 0
+    ---
+    diagnosis := c.lmx_graph_structural_diagnosis(g, scope, (cast: (c.Lmx@) target), actuals)
+    if: diagnosis = 3
+        c.fprintf(c.stderr, "graph: %s(A): refused at translation, answer 3: the call is admitted as written and by the fields of its one actual at once, or that actual is obtained by execution and may be so\n", name)
+    ---
+    # 1: the value of the actual is not known at translation; the preparation of the call asks again before any effect.
+    if: diagnosis = 1
+        diagnosis := 0
+    ---
+    return: diagnosis
+
+fn: lm_graph_emit_record_diagnosis (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: expression) int
+    c.LmxGraphState@: state (cast: (c.LmxGraphState@) c.lmx_graph_state())
+    if: c.lmx_graph_kind(g, (cast: (@) expression)) != 4
+        return: 0
+    ---
+    if: c.lmx_graph_name_of(g, expression) = state\w_call
+        return: lm_graph_emit_call_diagnosis(g, scope, expression)
+    ---
+    return: lm_graph_emit_structural_diagnosis(g, scope, expression)
+
+# call in native code (the book #call-receivers, #structural-call; step 21.7 K2, S3): the whole record is read when the
+# code runs by the one evaluator of the interpreter (lmx_graph_eval_explicit_call) -- the choice of the form and of the
+# reading, the operands in written order, the common binder and the launch of the code over its actual parent --, as
+# the interpreter reads it: no form is repeated here. The consumed call enters through lmx_graph_eval_record
+# (lm_graph_emit_evaluated).
 fn: lm_graph_emit_explicit_call (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: scope; c.Lmx@: expression; int@: temps; char@@: decl_names; size_t@: decl_slots; size_t: decl_n) int
     c.LmxGraphEmitScratch: leave_storage
     char@: leave_failure (cast: (char@) leave_storage\failure)
-    lm_graph_emit_leave_text(leave_failure, temps[1], 1)
-    c.LmxGraphState@: state (cast: (c.LmxGraphState@) c.lmx_graph_state())
-    char@@: formals 0
-    char@: head 0
-    size_t: count c.lmx_graph_count(expression)
-    size_t: i 0U
-    int: code -1
-    int: data -1
-    int: args -1
-    int: value 0
-    int: reading -1
     int: status 0
-    if: state = 0
-        return: 5
-    formals := (cast: (char@@) c.calloc(count + 1U, sizeof(char@)))
-    if: formals = 0
-        return: 4
-    head := state\w_call
-    status := c.lmx_graph_launch_formals(g, head, expression, formals)
-    # One actual: the reading of the general algorithm decides first (R87-R93); the record as written goes on below.
-    if: count = 1U && status = 0
-        reading := temps[0]
-        temps[0] := temps[0] + 1
-        c.fprintf(f, "        @: Lmx l2_ro%d 0\n        int: l2_rr%d lmx_graph_receiver_reading(l2_g, lmx_call_code, ", reading, reading)
-        status := lm_graph_emit_head(g, f, scope, expression)
-        c.fputs(", (cast: (@: Lmx) ", f)
-        if: status = 0
-            status := lm_graph_emit_address(g, f, scope, expression)
-        c.fprintf(f, "), 1, @ l2_ro%d)\n        if: l2_rr%d = 3 || (l2_rr%d = 1 && lmx_graph_eval_explicit_call(l2_g, lmx_call_code, l2_ro%d) != 0)\n            %s\n        if: l2_rr%d != 0\n            goto: l2_label%d\n", reading, reading, reading, reading, leave_failure, reading, reading)
-    if: status = 5
-        c.free((cast: (@) formals))
-        c.fprintf(f, "        if: 1\n            %s\n", leave_failure)
-        return: 0
-    ---
-    while: status = 0 && i < count
-        status := lm_graph_emit_launch_operand(g, f, scope, expression, i, temps, decl_names, decl_slots, decl_n, @ value)
-        if: formals[i] = state\w_args
-            args := value
-        if: formals[i] = state\w_data
-            data := value
-        if: formals[i] = state\w_code
-            code := value
-        i := i + 1U
-    ---
-    c.free((cast: (@) formals))
+    # The readings are diagnosed before any code of the call (the author's clarification of 2026-11-26).
+    status := lm_graph_emit_call_diagnosis(g, scope, expression)
     if: status != 0
         return: status
-    # [args data code]: the parts of a launch without a result (lmx_graph_launch).
-    if: args >= 0
-        c.fprintf(f, "        if: l2_v%d = 0 || l2_v%d = 0 || l2_v%d = 0 || lmx_graph_launch(l2_g, (cast: (@: Lmx) l2_v%d), (cast: (@: Lmx) l2_v%d), 0, (cast: (@: Lmx) l2_v%d), 0) != 0\n            %s\n", args, data, code, args, data, code, leave_failure)
-        return: 0
-    # [data code]: the code over the data (the author 2026-11-11, LMX_blog/2026-11-11.md#data-before-code).
-    if: data >= 0
-        c.fprintf(f, "        if: lmx_graph_call_data(l2_g, (cast: (@: Lmx) l2_v%d), (cast: (@: Lmx) l2_v%d), 0) != 0\n            %s\n", data, code, leave_failure)
-        return: 0
-    # [code]: the code alone; it selects its data (lmx_graph_call_data, shorthand).
-    c.fprintf(f, "        if: lmx_graph_call_data(l2_g, 0, (cast: (@: Lmx) l2_v%d), 1) != 0\n            %s\n", code, leave_failure)
-    if: reading >= 0
-        c.fprintf(f, "        l2_label%d:\n", reading)
+    ---
+    lm_graph_emit_leave_text(leave_failure, temps[1], 1)
+    c.fputs("        if: lmx_graph_eval_explicit_call(l2_g, lmx_call_code, (cast: (@: Lmx) ", f)
+    status := lm_graph_emit_address(g, f, scope, expression)
+    if: status != 0
+        return: status
+    c.fprintf(f, ")) != 0\n            %s\n", leave_failure)
     return: 0
 end: lm_graph_emit_explicit_call
 
@@ -2236,7 +2240,14 @@ fn: lm_graph_emit_methods (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: scope; c.Lmx@@: m
             if: status = 0
                 status := lm_graph_emit_method_body(g, f, current, temps)
             c.fprintf(f, "    end: lm_graph_body%d\nend: external\n\nexternal:\n", label)
-            c.fprintf(f, "    fn: lm_graph_method%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue input; @: LmxWalkValue result) int\n        @: LmxGraph l2_g lmx_call_arena\\graph_metadata\n        LmxGraphFrame: l2_frame\n        int: l2_status 0\n        if: l2_g = 0 || result = 0\n            return: 1\n        l2_status: lmx_graph_work_open_data(l2_g, lmx_call_code, (cast: (@: Lmx) owner), @ l2_frame)\n        if: l2_status != 0\n            return: 1\n        l2_status: lm_graph_body%d(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code, input, result)\n        l2_status: lmx_graph_work_finish(l2_g, @ l2_frame, l2_status)\n        if: l2_status != 0\n            return: l2_status\n        return: lmx_call_result_value(lmx_call_arena, lmx_call_code, result, dest, out, result)\n    end: lm_graph_method%d\nend: external\n\n", label, label, label)
+            # The machine body is written for the code part of the method object the traversal made from this
+            # declaration, and it runs for a method object alone: the dispatch into an entry (lmx_graph_invoke_data_value)
+            # gives a method object that body. The entry is installed on the declaration (lm_graph_emit_native_install)
+            # and inherited by the object; a launch that selected the whole source record, the declaration itself,
+            # adapter with that record open as the body: the executor of the open frame runs it, as the interpreter
+            # does (lmx_graph_method_run_value takes the body of the frame; the machine body would enter a body
+            # outside it and lmx_graph_work_scope refuses it).
+            c.fprintf(f, "    fn: lm_graph_method%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue input; @: LmxWalkValue result) int\n        @: LmxGraph l2_g lmx_call_arena\\graph_metadata\n        LmxGraphFrame: l2_frame\n        LmxWalkValue: l2_frame_value\n        int: l2_status 0\n        if: l2_g = 0 || result = 0\n            return: 1\n        l2_status: lmx_graph_work_open_data(l2_g, lmx_call_code, (cast: (@: Lmx) owner), @ l2_frame)\n        if: l2_status != 0\n            return: 1\n        if: lmx_graph_method(l2_g, lmx_call_code) != 0\n            l2_status: lm_graph_body%d(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code, input, result)\n        else:\n            lmx_walk_value_clear(@ l2_frame_value)\n            l2_status: lmx_graph_method_run_value(l2_g, lmx_call_code, @ l2_frame_value)\n            if: l2_status = 0\n                c.memcpy(result, @ l2_frame_value, c.sizeof(LmxWalkValue))\n            ---\n        ---\n        l2_status: lmx_graph_work_finish(l2_g, @ l2_frame, l2_status)\n        if: l2_status != 0\n            return: l2_status\n        return: lmx_call_result_value(lmx_call_arena, lmx_call_code, result, dest, out, result)\n    end: lm_graph_method%d\nend: external\n\n", label, label, label)
         ---
         i := i + 1U
     ---
@@ -3416,6 +3427,12 @@ fn: lm_graph_emit_evaluated (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: scope; c.Lmx@: 
     c.LmxGraphEmitScratch: leave_storage
     char@: leave_failure (cast: (char@) leave_storage\failure)
     int: call_id temps[0]
+    int: status 0
+    # The readings are diagnosed before any code of the record (the author's clarification of 2026-11-26).
+    status := lm_graph_emit_record_diagnosis(g, scope, expression)
+    if: status != 0
+        return: status
+    ---
     lm_graph_emit_leave_text(leave_failure, temps[1], 1)
     temps[0] := temps[0] + 1
     c.fprintf(f, "        LmxWalkValue: l2_cv%d\n        lmx_walk_value_clear(@ l2_cv%d)\n", call_id, call_id)
@@ -3455,6 +3472,11 @@ fn: lm_graph_emit_application (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: scope; c.Lmx@
     if: c.lmx_graph_application_parts(g, (cast: (@) application), @ name, @ head, @ actuals) = 0
         return: 2
     count := c.lmx_graph_count(actuals)
+    # The readings are diagnosed before any code of the call (the author's clarification of 2026-11-26).
+    status := lm_graph_emit_structural_diagnosis(g, scope, application)
+    if: status != 0
+        return: status
+    ---
     # A call chosen among declarations (the book #declaration-selection) is handed to the selection of the interpreter:
     # the image does not prepare it yet (fable's answer Q6 (b); the call tables are OPEN).
     if: name != 0 && c.lmx_graph_call_selects(g, scope, name, actuals) != 0

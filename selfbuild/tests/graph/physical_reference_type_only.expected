@@ -1,37 +1,19 @@
----
-    Observed:
-        int: before 1
-        int: after 1
-        int: p_after 3
-        int: s_after 7
-    end: Observed
----
-int: before 1
-int: after 1
-sub: build () (
+Observed:
+    int: before 1
+    int: after 1
+    int: p_after 3
+    int: s_after 7
+end: Observed
+Build:
     int: i 3
     A:
         int: v 7
     end: A
     @: p int (@ i)
     @: s A
-    sub: Types ()
-        @: p int (@ i)
+    Types:
+        @: p int
         @: s A
     end: Types
-)
-    :=: (node \ before) 1
-    call: data (Types \ data)
-    :=: (node \ after) 1
-end: build
-build:
-int: p_after (\ ((build \ data) \ p))
-int: s_after (((build \ data) \ s) \ v)
-sub: main ()
-    @: sink (node [] 0)
-    :=: ((sink \ Observed) \ before) (node \ before)
-    :=: ((sink \ Observed) \ after) (node \ after)
-    :=: ((sink \ Observed) \ p_after) (node \ p_after)
-    :=: ((sink \ Observed) \ s_after) (node \ s_after)
-end: main
-main:
+end: Build
+Main: (:= (Observed \ before) 1) Build\Types() (:= (Observed \ after) 1) (:= (Observed \ p_after) (\ (Build \ p))) (:= (Observed \ s_after) ((Build \ s) \ v))

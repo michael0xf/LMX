@@ -1,0 +1,18 @@
+# The root R0 without an entry. The positive control of call_computed_single_ambiguity: structural calls whose readings
+# do not compete, so each call goes on and evaluates its actual once, after the choice (the author's clarification of
+# 2026-11-26). The data of C is D: two inputs of the profile, `int: base 40` and `int: x 99`, and `return: int`. `Tick`
+# is an ordinary Structure whose data describes `return: int`; it counts its run and gives 7. `call(code := D\C)` has
+# no actual: base + x = 139. The named record `D\C(x := Pick\Tick())` names its formal: no reading opens the actual;
+# 7 goes into x, base + x = 47. The positional record `D\C(Pick\Tick())`: the reading as written takes the result of
+# Tick at the input of its position, base; the opened reading would need a Structure, and an input that takes an int
+# admits none -- for every value one reading alone, and no argument is executed to learn it; base + x = 7 + 99 = 106.
+# Each record with an actual evaluates Tick once; a supplied actual fills the place of the call, so D keeps base 40 and
+# x 99. Observed: plain 139, named 47, positional 106, made 2, D\base 40, D\x 99.
+# Norm: the book #declaration-selection (steps 5 and 6: all admitted candidates are counted, then the selected actuals
+# are evaluated and received once in written order; an explicit `formal := S` has no E), #structural-call, #return-in-data.
+@: Log (int: made 0; int: plain 0; int: named 0; int: positional 0)
+@: Pick (return: int; Tick(Log\made := Log\made + 1; return: 7))
+@: D (int: base 40; int: x 99; return: int; C(return: base + x))
+Log\plain := call(code := D\C)
+Log\named := D\C(x := Pick\Tick())
+Log\positional := D\C(Pick\Tick())

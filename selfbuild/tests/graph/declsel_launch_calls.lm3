@@ -5,15 +5,17 @@
 # Проверяет launch_calls: C(foo()) в данных main, call(C): C исполняется над собой, запись foo() не вызывает функцию: seen 0
 # Witness: a data block whose single record is the call foo(); call(C) runs C over itself, the record does not call foo, so seen stays 0 (the earlier measure, now pinned by the norm)
 # Norm: the book #data-code-roles, #declaration-selection item 2; the journal 2026-11-11 #self-launch-no-own-rules, #structure-head-call-refuses-in-code; R92, R93; fable R101 (the earlier norm seen 11, R93 item 2, withdrawn).
-(
-    Observed:
-        int: seen 0
-)
+# Step 21.7 K2, S3: `call(C)` executes C over its actual parent, parent(C) = the data of main, where the fn foo
+# is declared: its single record calls foo and Observed\seen takes 1. The reading over itself
+# (Sol and Astra, 2026-11-25).
+Observed:
+    int: seen 0
+end: Observed
 fn: foo () int
-    @: shared node[0]
-    shared\Observed\seen := shared\Observed\seen + 1
+    Observed\seen := Observed\seen + 1
     return: 1
-
-sub: main (C(foo()))
+C:
+    foo()
+end: C
+Main:
     call(C)
-main()

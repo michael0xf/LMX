@@ -1,0 +1,19 @@
+# The root R0 without an entry. The observation of line 60 of the row construction_paths, separated: the index is
+# changed from 0 to 1 before the call, then the real code of C reads Leaf/B through the reference its parent
+# declares (a path with the index) and writes the observable into `Log` explicitly: `Log\selected` 2; `Log\before`
+# 1, `Log\after` 1. (With the index 0 the same body would read 1.)
+@: Log (int: before 0; int: selected 0; int: after 0)
+@: D (
+    S(A(Leaf(int: v 1)); B(Leaf(int: v 2)))
+    int: i 0
+    C(
+        @: saved S[i]\Leaf
+        go:
+            Log\selected := saved\v
+        end: go
+    )
+)
+Log\before := 1
+D\i := 1
+call(code := D\C\go)
+Log\after := 1

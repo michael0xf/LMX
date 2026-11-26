@@ -1,30 +1,17 @@
----
-    Observed:
-        int: seen 8
-        int: after 12
-    end: Observed
----
-sub: main () (
-    Total:
-        int: sum 0
-    end: Total
+Observed:
+    int: seen 8
+    int: after 12
+end: Observed
+Total:
+    int: sum 12
+end: Total
+Host:
+    int: v 0
     Add: (:= (Total \ sum) ((Total \ sum) + v))
-    int: seen 0
-)
-    fn: f () int
-        Add: (:= data ((int v 5)))
-        call: ((int v 3)) Add
-        return: (Total \ sum)
-    end: f
-    :=: (data \ seen) (f)
-end: main
-main:
-int: seen ((main \ data) \ seen)
-call: ((int v 4)) ((main \ data) \ Add)
-int: after (((main \ data) \ Total) \ sum)
-sub: observe ()
-    @: shared (node [] 0)
-    :=: ((shared \ Observed) \ seen) seen
-    :=: ((shared \ Observed) \ after) after
-end: observe
-observe:
+end: Host
+fn: f () int
+    Host\Add(((int v 5)))
+    Host\Add(((int v 3)))
+    return: (Total \ sum)
+end: f
+Main: (:= (Observed \ seen) (f)) Host\Add(((int v 4))) (:= (Observed \ after) (Total \ sum))

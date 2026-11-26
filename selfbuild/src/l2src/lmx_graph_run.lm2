@@ -3152,8 +3152,9 @@ fn: lmx_graph_call_reading (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: code; c.Lmx@:
 # The one actual of a call may be opened -- its fields weighed as the actuals of the opened reading (the book, #declaration-selection:
 # a name or a field path; a group of one of them (a grouped value: the opening is of what it holds); a written
 # group of several fields (one Structure written in place); a value obtained by execution that by description may be a
-# Structure (lmx_graph_computed_structure; fable Р130; the book, #declaration-selection, step 4: computed once before the decision, both readings use
-# it). Not a named actual (`formal := S` has no E), not a group of one other value (`h((5))` is a group read as an
+# Structure (lmx_graph_computed_structure) -- it is not read before the choice: the pairs judge it by its description,
+# and a call whose input can receive a Structure refuses it as a potential ambiguity (the author's clarification of
+# 2026-11-26). Not a named actual (`formal := S` has no E), not a group of one other value (`h((5))` is a group read as an
 # expression, the book #declaration-selection), not an application whose described result is primitive. Nothing is
 # evaluated here.
 fn: lmx_graph_single_candidate (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: expression) int
@@ -5588,6 +5589,8 @@ end: lmx_graph_method_run_value
 
 # Invoke with arguments that have already passed admission. Missing literal defaults are copied into this call's
 # private places. Native and interpretation share the ordinary activation ABI; the signature graph remains intact.
+# data 0 is a launch without DATA, as the root is (the book #null-parent): an ordinary Structure executed over no
+# parent (lmx_graph_call_explicit); a callable keeps its data.
 fn: lmx_graph_invoke_data_value (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: data; c.Lmx@: body; char@: result; c.Lmx@: result_description; @@: actuals; c.LmxWalkValue@: supplied; size_t: count; size_t@: bindings; c.LmxWalkValue@: out) int
     c.LmxGraphState@: state (cast: (c.LmxGraphState@) c.lmx_graph_state())
     c.Lmx@: statement 0
@@ -5617,7 +5620,13 @@ fn: lmx_graph_invoke_data_value (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: data; c.L
     size_t: i 0U
     size_t: slot 0U
     int: status 0
-    if: c.lmx_graph_kind(g, (cast: (@) code)) != 4 || c.lmx_graph_kind(g, (cast: (@) data)) != 4 || c.lmx_graph_kind(g, (cast: (@) body)) != 4 || out = 0
+    if: c.lmx_graph_kind(g, (cast: (@) code)) != 4 || c.lmx_graph_kind(g, (cast: (@) body)) != 4 || out = 0
+        return: 5
+    # data 0 is a launch without DATA, as the root is (the book #null-parent: a null parent is permitted and is not
+    # checked on entry): a Structure executed over no parent. Any other data is a Structure.
+    if: data != 0 && c.lmx_graph_kind(g, (cast: (@) data)) != 4
+        return: 5
+    if: data = 0 && body != code
         return: 5
     c.lmx_walk_value_clear(@ result_value)
     c.lmx_walk_value_clear(@ destination_value)
@@ -6556,13 +6565,15 @@ fn: lmx_graph_actual_pure (c.LmxGraph@: g; c.Lmx@: expression; size_t: i) int
 
 # The value the opened reading weighs (the book, #declaration-selection): when the call has one actual that may be one Structure
 # (lmx_graph_single_candidate), its value in whole -- a written group as data, a name or a path read (a group of one
-# around a name or a path is read through what it holds, lmx_graph_grouped_name), a value obtained by execution
-# evaluated now, once, before the decision (fable Р130; the book, #declaration-selection, step 4: the same value serves both readings and is not
-# evaluated again at its reception) --; absent otherwise. No other actual is evaluated before the choice (fable R102,
-# R103): the pairs judge them (lmx_graph_pair_written). 0, or the answer of the read or the evaluation.
+# around a name or a path is read through what it holds, lmx_graph_grouped_name): a concrete Structure of the lexical
+# space, its fields known --; absent otherwise. A value obtained by execution is NOT read here (the author's
+# clarification of 2026-11-26): the pairs judge such an actual by its description at the choice, the call that is
+# admitted evaluates it once at its reception, and a call whose input can receive a Structure refuses it before it
+# runs (lmx_graph_eval_structural, lmx_graph_select_call). No other actual is evaluated before the choice (fable R102,
+# R103): the pairs judge them (lmx_graph_pair_written). 0, or the answer of the read.
 # carry (0 when no actual is a call of a name): the sole actual that is a call of a name has its description read
-# here, once -- a call of class 3 is computed below; any other leaves the whole empty and its choice in the carry,
-# which the judgement of the pairs reuses (lmx_graph_described_value), so its description is not read again.
+# here, once -- a call of class 3 leaves the whole empty and its choice in the carry, which the judgement of the pairs
+# reuses (lmx_graph_described_value), so its description is not read again.
 fn: lmx_graph_select_whole (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: expression; c.LmxWalkValue@: whole; @@: carry) int
     @: raw void 0
     char@: name 0
@@ -6590,6 +6601,9 @@ fn: lmx_graph_select_whole (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: expression; c
         raw := c.lmx_graph_get_in(g, (cast: (c.Lmx@) raw), 0U)
     if: lmx_graph_written_group(g, raw) != 0
         return: c.lmx_walk_value_cell(g\arena, raw, whole)
+    # Only an actual without an effect is read: a name or a path. An actual with an effect leaves the whole empty.
+    if: lmx_graph_actual_pure(g, expression, 0U) = 0
+        return: 0
     return: lmx_graph_eval_record(g, scope, raw, whole)
 
 # The pair of declaration code and the actuals of expression as written (the book #declaration-selection, steps 2-4):
@@ -6769,8 +6783,8 @@ fn: lmx_graph_pair_opened (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: code; c.LmxWal
 # (lmx_graph_bind_inputs), then each actual at the one admission of its input (lmx_graph_admit_value), the body of
 # lmx_graph_pair_written over that data. run 0 is the choice, and nothing runs: an actual without an effect is read by
 # the contract of its input (lmx_graph_read_formal_value); one with an effect is judged by its description
-# (lmx_graph_described_admit); the one computed actual of the call is whole, its value obtained once. run 1 is the call:
-# each actual evaluated once, in written order, and received before the next. values[i], bindings[i]: the admitted Value
+# (lmx_graph_described_admit); the one actual that may be a Structure of the lexical space is whole, read without an
+# effect. run 1 is the call: each actual evaluated once, in written order, and received before the next. values[i], bindings[i]: the admitted Value
 # of actual i and the number the formals of the data give its input. stage[0]: 0 admitted; 1 the assignment failed; 2
 # refused at admission. 0, or 4 without memory; at run 0 also the answer of a description that gives no value; at run 1
 # also the answer of an evaluation or of a reception.
@@ -6949,6 +6963,8 @@ fn: lmx_graph_select_call (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@@: candidates; s
     int: stage 0
     int: reached 0
     int: written 0
+    size_t: taken 0U
+    @: formal void 0
     int: status 0
     chosen[0] := 0
     opened[0] := 0
@@ -6982,12 +6998,25 @@ fn: lmx_graph_select_call (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@@: candidates; s
                 admitted := admitted + 1U
                 chosen[0] := candidates[k]
                 opened[0] := reading
+                if: reading = 0
+                    taken := bindings[0]
+                ---
             k := k + 1U
         reading := reading + 1U
     c.free((cast: (@) values))
     c.free((cast: (@) bindings))
     if: status != 0
         return: status
+    # The one actual obtained by execution (the whole stays empty, lmx_graph_select_whole): the pair as written
+    # admitted it by its description, and the fields of its value are not known. An input that receives no primitive
+    # value receives a Structure, and a Structure of one field is admitted by the opened reading with the same map:
+    # both readings for one admissible value, 3 before the actual runs (as lmx_graph_eval_structural; the author's
+    # clarification of 2026-11-26).
+    if: status = 0 && admitted = 1U && count = 1U && whole\present = 0 && lmx_graph_actual_pure(g, expression, 0U) = 0 && lmx_graph_single_candidate(g, scope, expression) != 0
+        formal := lmx_graph_formal_raw(g, c.lmx_graph_method_data(g, chosen[0]), taken)
+        if: lmx_graph_primitive_branch(g, formal, lmx_graph_scalar_pool(g, formal)) = 0
+            return: 3
+        ---
     if: admitted > 1U
         return: 3
     if: admitted = 0U && reached != 0
@@ -7044,8 +7073,8 @@ fn: lmx_graph_call_selects (c.LmxGraph@: g; c.Lmx@: scope; char@: name; c.Lmx@: 
 # The call of a name that declares callables, by the selection: -1 when the selection does not apply
 # (lmx_graph_selection_applies: no fn or sub of the name, or exactly one with no opened reading and no actual with an
 # effect -- the call is then today's, judging and calling cannot differ observably), else the answer of the selection
-# (3, 4, 5) or of the call of the one admitted pair. Nothing runs before the choice except the one computed actual the
-# opened reading needs (lmx_graph_select_whole; fable Р130), kept live while the selected call runs.
+# (3, 4, 5) or of the call of the one admitted pair. Nothing runs before the choice: the opened reading weighs a
+# Structure of the lexical space, read without an effect (lmx_graph_select_whole).
 fn: lmx_graph_eval_selected (c.LmxGraph@: g; c.Lmx@: scope; char@: name; c.Lmx@: args; int: want_result; c.LmxWalkValue@: out) int
     c.Lmx@@: candidates 0
     c.Lmx@: chosen 0
@@ -7102,11 +7131,14 @@ fn: lmx_graph_structure_result (c.LmxGraph@: g; c.Lmx@: data; char@@: result; c.
 # The structural call of an ordinary Structure C with actuals (the book #structural-call; step 21.7 K2): C is executed
 # as code over its data parent(C) (lmx_graph_callee_data); the written actuals fill the inputs of that data by the
 # common algorithm, and no data is substituted. The readings W (lmx_graph_pair_structural: the actuals as written) and
-# E (lmx_graph_pair_structural_opened: the fields of the one actual that may be a Structure, its value obtained once
-# before the decision, lmx_graph_select_whole) are weighed as the selection weighs them (lmx_graph_select_call), with C
+# E (lmx_graph_pair_structural_opened: the fields of the one actual that is a Structure of the lexical space, read
+# without an effect, lmx_graph_select_whole) are weighed as the selection weighs them (lmx_graph_select_call), with C
 # the one candidate: exactly one admitted pair is the call; more than one -- 3; none, after a pair reached admission --
 # 4; none by form -- 5. A named actual that names no input admits no form: 5, before its value is read. Nothing runs
-# before the choice except the one computed actual E needs. The call evaluates each actual once, in written order, in
+# before the choice (the author's clarification of 2026-11-26): an actual obtained by execution is judged by its
+# description, and when the input that takes it receives no primitive value alone -- it receives a Structure, and one
+# of one field would be admitted by both readings -- the call is 3 before that actual runs. The call evaluates each
+# actual once, in written order, in
 # the scope of the caller, and launches C by the one launch of a structural call (lmx_graph_launch_structure_values):
 # the frame reads the admitted Values by the number the formals of the data give each input. want_result: the value is
 # consumed (1) or discarded (0); a consumed value with no described result is refused before any effect (5). A record
@@ -7136,6 +7168,7 @@ fn: lmx_graph_eval_structural (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: given_code
     int: admitted 0
     int: opened 0
     int: written 0
+    @: formal void 0
     int: status 0
     if: out = 0 || c.lmx_graph_kind(g, (cast: (@) code)) != 4
         return: 5
@@ -7199,6 +7232,17 @@ fn: lmx_graph_eval_structural (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: given_code
             status := 4
         if: status = 0 && admitted = 0
             status := 5
+        # The one actual obtained by execution (the whole stays empty, lmx_graph_select_whole): the reading as written
+        # admitted it by its description, and the fields of its value are not known. The input that takes it receives
+        # no primitive value alone, so it receives a Structure -- and a Structure of one field is admitted by the opened
+        # reading with the same map: both readings for one admissible value, 3 before the actual runs. An input that
+        # takes a primitive value admits no Structure whole, and the opened reading admits no primitive: for every
+        # value one reading alone (the author's clarification of 2026-11-26).
+        if: status = 0 && admitted = 1 && lmx_graph_actual_pure(g, expression, 0U) = 0 && lmx_graph_single_candidate(g, scope, expression) != 0
+            formal := lmx_graph_formal_raw(g, data, bindings[0])
+            if: lmx_graph_primitive_branch(g, formal, lmx_graph_scalar_pool(g, formal)) = 0
+                status := 3
+            ---
         # The call of the one admitted pair as written: each actual evaluated once, in written order. The opened pair
         # keeps the map and the Values the choice admitted; nothing is read again.
         if: status = 0 && opened = 0
@@ -7220,6 +7264,89 @@ fn: lmx_graph_eval_structural (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: given_code
     c.free((cast: (@) bindings))
     return: status
 end: lmx_graph_eval_structural
+
+# The diagnosis of the structural call C(A) at translation (lmx_graph_eval_structural; the author's clarification of
+# 2026-11-26): the emitter asks it with the Structure C it resolved here, and nothing is evaluated. 0 -- no ambiguity: no
+# one actual that may be a Structure, a named actual, a reading that does not admit, or a call the program will refuse
+# for another reason; 3 -- an ambiguity (a Structure of the lexical space is admitted as written and opened) or a
+# potential one (the actual is obtained by execution, the reading as written admits it by description, and its input
+# receives a Structure); 1 -- the value of the actual is not known here, the question stays with the preparation of the
+# call; 4 without memory.
+fn: lmx_graph_structural_diagnosis (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: code; c.Lmx@: expression) int
+    c.Lmx@: data 0
+    @: target void 0
+    @: referent void 0
+    @: formal void 0
+    c.LmxWalkValue@: values 0
+    size_t@: bindings 0
+    c.LmxWalkValue: whole
+    c.LmxExecutionRoots: whole_roots
+    c.LmxExecutionRoots@: roots_mark 0
+    size_t: width 0U
+    size_t: count c.lmx_graph_count(expression)
+    size_t: supplied 0U
+    int: stage 0
+    int: admitted 0
+    int: written 0
+    int: status 0
+    if: count != 1U || lmx_graph_single_candidate(g, scope, expression) = 0
+        return: 0
+    if: c.lmx_graph_kind(g, (cast: (@) code)) != 4
+        return: 1
+    data := lmx_graph_callee_data(g, code)
+    if: data = code || c.lmx_graph_method(g, code) != 0
+        return: 0
+    width := lmx_graph_formal_width(g, data)
+    if: width < count
+        width := count
+    values := (cast: (c.LmxWalkValue@) c.calloc(width + 1U, c.sizeof(c.LmxWalkValue)))
+    bindings := (cast: (size_t@) c.calloc(width + 1U, sizeof(size_t)))
+    if: values = 0 || bindings = 0
+        status := 4
+    c.lmx_walk_value_clear(@ whole)
+    roots_mark := c.lmx_execution_roots_mark(g\arena)
+    c.lmx_execution_roots_push(g\arena, @ whole_roots, (cast: (@) (@ whole)), 1U, 0, 0U, 0, 0)
+    if: status = 0 && lmx_graph_written_group(g, c.lmx_graph_get_in(g, expression, 0U)) != 0
+        written := 1
+    if: status = 0 && lmx_graph_actual_pure(g, expression, 0U) = 0
+        # Obtained by execution: judged by its description, the whole stays empty (lmx_graph_select_whole).
+        status := lmx_graph_pair_structural(g, scope, code, data, expression, @ whole, values, bindings, @ stage, 0, 0)
+        if: status = 0 && stage = 0
+            formal := lmx_graph_formal_raw(g, data, bindings[0])
+            if: lmx_graph_primitive_branch(g, formal, lmx_graph_scalar_pool(g, formal)) = 0
+                status := 3
+            ---
+        ---
+    if: status = 0 && lmx_graph_actual_pure(g, expression, 0U) != 0
+        status := lmx_graph_select_whole(g, scope, expression, @ whole, 0)
+        if: status = 0 && whole\present = 0
+            status := 1
+        if: status = 0
+            status := lmx_graph_pair_structural(g, scope, code, data, expression, @ whole, values, bindings, @ stage, 0, 0)
+            if: status = 0 && stage = 0
+                admitted := 1
+            if: status = 0 && whole\present != 0 && whole\kind = c.LMX_WALK_VALUE_REFERENCE
+                referent := whole\ref
+                target := c.lmx_graph_target(g, referent)
+                if: c.lmx_graph_kind(g, target) = 4 && c.lmx_graph_method(g, (cast: (c.Lmx@) target)) = 0
+                    status := lmx_graph_pair_structural_opened(g, scope, code, data, @ whole, written, values, bindings, @ stage, @ supplied)
+                    if: status = 0 && stage = 0
+                        admitted := admitted + 1
+                    ---
+                ---
+            ---
+            if: status = 0 && admitted > 1
+                status := 3
+            ---
+        ---
+    ---
+    c.lmx_execution_roots_restore(g\arena, roots_mark)
+    c.free((cast: (@) values))
+    c.free((cast: (@) bindings))
+    # An answer of a pair is the answer the call gives when it runs: not an ambiguity reported here.
+    if: status != 0 && status != 3 && status != 1 && status != 4
+        status := 0
+    return: status
 
 # The same selected head uses the existing callable binder/admission, or the
 # ordinary launch contract. A value context requires a declared result before
@@ -7394,33 +7521,119 @@ fn: lmx_graph_receiver_reading (c.LmxGraph@: g; c.Lmx@: scope; char@: head; c.Lm
         return: 3
     return: 1
 
-# The receiver call (the book, call-receivers; the author 2026-11-11): the actual code and data are selected when the
-# call runs. Its forms (lmx_graph_receivers_open) are bound by the one binder, by position or by name through `:=`
-# (lmx_graph_launch_formals; R22): [args data code] is the launch without a result by its parts (lmx_graph_launch);
-# [code] is the code alone -- an ordinary Structure runs over parent(C) (the book #call-receivers;
-# lmx_graph_call_data), a callable over its own data; [data
-# code] runs the code over the data: the data stands before the code (the author 2026-11-11,
-# LMX_blog/2026-11-11.md#data-before-code; formerly the sources wrote `call: code data`). The operands are evaluated in
-# the order they are written (lmx_graph_launch_operand).
-# The value of the call (want_result; the book #return-in-data: `call` and a by-name call of a Structure return a value
-# by one contract) is the result of the structural call of its code alone, the one-argument form [code]
-# (lmx_graph_launch_structure_value): the forms of the receiver, the reading of one Structure and its ambiguity are
-# those of the statement, nothing is bypassed. The forms that give a data keep the reading they have and give no
-# value: refused as before anything is evaluated (2). lmx_graph_eval_explicit_call is the statement, which discards.
+# The reading of the record of call with one positional actual (the book #call-receivers, #declaration-selection; step
+# 21.7 K2, S3): the record is weighed as written and by the fields of the Structure the actual stands for
+# (lmx_graph_receiver_opened) -- both readings are 3, and nothing of the callee runs. An actual without effects -- a
+# name, a path, a written group: a concrete Structure of the lexical space, its fields known -- is read as the receiver
+# reading of fncall reads it (lmx_graph_receiver_reading). An actual obtained by execution is NOT evaluated to learn
+# whether the record is admitted (the author's clarification of 2026-11-26): its value is a Structure outside the
+# lexical space, and its fields are not known. By description not a Structure, it cannot stand as code: 5, before its
+# effect. By description it may be a Structure: a value of two fields is admitted by call(args code) and by call(code)
+# at once, and the record is refused as a potential ambiguity, 3, before its effect. A named actual (`code := C`)
+# names its formal and is not opened, and is evaluated once after the choice. 0 -- the record goes on as written;
+# 3 -- ambiguity; 5 -- the actual cannot be code. written: whether the record as written binds a form; a record that
+# binds none is refused by the caller and is not opened. computed stays empty.
+fn: lmx_graph_call_record_reading (c.LmxGraph@: g; c.Lmx@: scope; char@: head; c.Lmx@: expression; int: written; c.LmxWalkValue@: computed) int
+    @: value void 0
+    @: raw void 0
+    c.Lmx@: opened 0
+    c.lmx_walk_value_clear(computed)
+    if: written = 0 || c.lmx_graph_count(expression) != 1U
+        return: 0
+    raw := c.lmx_graph_get_in(g, expression, 0U)
+    if: lmx_graph_launch_actual(g, expression, 0U) != raw
+        return: 0
+    if: lmx_graph_actual_pure(g, expression, 0U) = 0
+        if: lmx_graph_computed_structure(g, scope, raw) = 0
+            return: 5
+        return: 3
+    if: lmx_graph_launch_operand(g, scope, raw, @ value) != 0
+        return: 0
+    if: lmx_graph_receiver_opened(g, scope, head, value, @ opened) = 0
+        return: 0
+    return: 3
+
+# The diagnosis of the record of call at translation (lm_graph_call_record_reading; the author's clarification of
+# 2026-11-26): the emitter asks it before it generates the call, and nothing is evaluated. 0 -- no ambiguity by the
+# written material: the record binds no form (the binder refuses it when the program runs), has no one positional
+# actual, or that actual is a concrete Structure of the lexical space whose readings do not both admit it; 3 -- an
+# ambiguity (both readings admit that Structure) or a potential one (the actual is obtained by execution, or its value
+# is not readable here: a reference the program sets); 5 -- the actual cannot be code. 4 without memory.
+fn: lmx_graph_call_diagnosis (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: expression) int
+    c.LmxGraphState@: state (cast: (c.LmxGraphState@) c.lmx_graph_state())
+    char@: head 0
+    char@@: formals 0
+    c.LmxWalkValue: computed
+    @: value void 0
+    @: raw void 0
+    size_t: count c.lmx_graph_count(expression)
+    int: reading 0
+    int: status 0
+    if: state = 0 || count != 1U
+        return: 0
+    formals := (cast: (char@@) c.calloc(count + 1U, sizeof(char@)))
+    if: formals = 0
+        return: 4
+    head := state\w_call
+    status := lmx_graph_launch_formals(g, head, expression, formals)
+    # The record binds the form [code]: its one positional actual is the formal `code`.
+    if: status = 0 && formals[0] = state\w_code
+        reading := 1
+    ---
+    c.free((cast: (@) formals))
+    if: reading = 0
+        return: 0
+    raw := c.lmx_graph_get_in(g, expression, 0U)
+    if: lmx_graph_launch_actual(g, expression, 0U) != raw
+        return: 0
+    c.lmx_walk_value_clear(@ computed)
+    reading := lmx_graph_call_record_reading(g, scope, head, expression, 1, @ computed)
+    if: reading != 0
+        return: reading
+    if: lmx_graph_actual_pure(g, expression, 0U) = 0
+        return: 0
+    while: lmx_graph_grouped_name(g, raw) != 0
+        raw := c.lmx_graph_get_in(g, (cast: (c.Lmx@) raw), 0U)
+    if: lmx_graph_written_group(g, raw) != 0
+        return: 0
+    # The value of the actual is not readable here: its fields are not known.
+    if: lmx_graph_launch_operand(g, scope, raw, @ value) != 0
+        return: 3
+    return: 0
+
+# The receiver call (the book #call-receivers, #structural-call; the author 2026-11-11; step 21.7 K2, S3): the code is
+# selected when the call runs. `call` has two forms, two separate declarations (lmx_graph_receivers_open), bound by the
+# one binder, by position or by name through `:=` (lmx_graph_launch_formals; R22): [code] -- the code alone -- and
+# [args, code], both formals required. The former forms [data, code] and [args, data, code] are no form: the binder
+# refuses them before an operand runs. The reading of the record is chosen first (lmx_graph_call_record_reading): one
+# positional actual is weighed as written and by the fields of the Structure it stands for -- both are 3; `code := C`
+# names its formal and is not opened; a value obtained by execution is refused before it runs. The operands
+# are read in the order they are written, each once; `args := A` gives the actuals and opens nothing. Both forms are one
+# call (lmx_graph_call_explicit): the chosen C over its actual parent, the fields of A bound to the inputs of that
+# parent. What an operand gives is held from its reading to the launch, each by a record of its own -- a value obtained
+# by execution, A, C --: a collection or a new reference while the next operand is read does not take it away, and the
+# target is not read a second time after a later operand ran. The value of the call (want_result; the book
+# #return-in-data) is the result the data describes, by one contract for a statement and an expression; the statement
+# discards it (lmx_graph_eval_explicit_call). 0, or the interpreter's answer.
 fn: lmx_graph_eval_explicit_call_value (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: expression; int: want_result; c.LmxWalkValue@: out) int
     c.LmxGraphState@: state (cast: (c.LmxGraphState@) c.lmx_graph_state())
     char@@: formals 0
     char@: head 0
+    c.LmxWalkValue: computed
+    c.LmxWalkValue: code_value
+    c.LmxWalkValue: whole
+    c.LmxExecutionRoots: computed_roots
+    c.LmxExecutionRoots: code_roots
+    c.LmxExecutionRoots: whole_roots
+    c.LmxExecutionRoots@: roots_mark 0
     @: raw void 0
     @: code void 0
-    @: data void 0
-    @: args void 0
-    @: value void 0
-    c.Lmx@: opened 0
+    @: chosen void 0
     size_t: count c.lmx_graph_count(expression)
     size_t: i 0U
-    int: parts 0
-    int: given 0
+    int: supplied 0
+    int: written 0
+    int: carried 0
     int: reading 0
     int: status 0
     if: state = 0
@@ -7428,47 +7641,66 @@ fn: lmx_graph_eval_explicit_call_value (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: e
     formals := (cast: (char@@) c.calloc(count + 1U, sizeof(char@)))
     if: formals = 0
         return: 4
+    c.lmx_walk_value_clear(@ computed)
+    c.lmx_walk_value_clear(@ code_value)
+    c.lmx_walk_value_clear(@ whole)
     head := state\w_call
+    # One mark for the whole call: the roots below end on every exit. The record of the computed value is pushed
+    # before that value exists -- it holds the Value's place, so what the evaluation puts there is held from then on.
+    roots_mark := c.lmx_execution_roots_mark(g\arena)
+    c.lmx_execution_roots_push(g\arena, @ computed_roots, (cast: (@) (@ computed)), 1U, 0, 0U, 0, 0)
     status := lmx_graph_launch_formals(g, head, expression, formals)
-    reading := lmx_graph_receiver_reading(g, scope, head, expression, (cast: (int) (status = 0)), @ opened)
+    reading := lmx_graph_call_record_reading(g, scope, head, expression, (cast: (int) (status = 0)), @ computed)
     if: reading != 0
-        c.free((cast: (@) formals))
-        if: reading = 1
-            return: lmx_graph_eval_explicit_call_value(g, scope, opened, want_result, out)
-        return: reading
-    # A consumed value asks the one-argument form: with any other form bound the call is no value, before an operand runs.
-    if: status = 0 && want_result != 0 && (count != 1U || formals[0] != state\w_code)
-        c.free((cast: (@) formals))
-        return: 2
+        status := reading
+    if: status = 0
+        carried := (cast: (int) (computed\present != 0))
+    ---
     while: status = 0 && i < count
         raw := lmx_graph_launch_actual(g, expression, i)
-        status := lmx_graph_launch_operand(g, scope, raw, @ value)
         if: formals[i] = state\w_args
-            args := value
-            parts := 1
-        ---
-        if: formals[i] = state\w_data
-            data := value
-            given := 1
+            # A is obtained once, here, in written order, after the choice of the form: a group written in the call is
+            # itself, a name or a path is read, a computed value is evaluated.
+            while: lmx_graph_grouped_name(g, raw) != 0
+                raw := c.lmx_graph_get_in(g, (cast: (c.Lmx@) raw), 0U)
+            if: lmx_graph_written_group(g, raw) != 0
+                written := 1
+                status := c.lmx_walk_value_cell(g\arena, raw, @ whole)
+            else:
+                status := lmx_graph_eval_record(g, scope, raw, @ whole)
+            ---
+            if: status = 0
+                c.lmx_execution_roots_push(g\arena, @ whole_roots, (cast: (@) (@ whole)), 1U, 0, 0U, 0, 0)
+            supplied := 1
         ---
         if: formals[i] = state\w_code
-            code := value
+            if: carried != 0
+                code := computed\ref
+            else:
+                if: lmx_graph_computed_structure(g, scope, raw) != 0
+                    # A code obtained by execution keeps its result record (lmx_graph_eval_record): the target is read
+                    # through that value, as the whole of the actuals is.
+                    status := lmx_graph_eval_record(g, scope, raw, @ code_value)
+                    if: status = 0
+                        code := code_value\ref
+                    ---
+                else:
+                    status := lmx_graph_launch_operand(g, scope, raw, @ code)
+                ---
+            ---
+            if: status = 0
+                # C is chosen here, once: the launch takes this address, whatever a later operand writes.
+                chosen := c.lmx_graph_target(g, code)
+                c.lmx_execution_roots_push(g\arena, @ code_roots, (cast: (@) (@ code_value)), 1U, 0, 0U, chosen, 0)
+            ---
+        ---
         i := i + 1U
     ---
     c.free((cast: (@) formals))
-    if: status != 0
-        return: status
-    if: parts != 0
-        if: args = 0 || data = 0 || code = 0
-            return: 5
-        return: lmx_graph_launch(g, (cast: (c.Lmx@) args), (cast: (c.Lmx@) data), 0, (cast: (c.Lmx@) code), 0)
-    ---
-    if: given != 0
-        return: lmx_graph_call_data(g, (cast: (c.Lmx@) data), (cast: (c.Lmx@) code), 0)
-    if: want_result != 0
-        return: lmx_graph_launch_structure_value(g, (cast: (c.Lmx@) code), 0, 1, out)
-    return: lmx_graph_call_data(g, 0, (cast: (c.Lmx@) code), 1)
-end: lmx_graph_eval_explicit_call_value
+    if: status = 0
+        status := lmx_graph_call_explicit(g, scope, (cast: (c.Lmx@) chosen), supplied, @ whole, written, want_result, out)
+    c.lmx_execution_roots_restore(g\arena, roots_mark)
+    return: status
 
 fn: lmx_graph_eval_explicit_call (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: expression) int
     c.LmxWalkValue: result
@@ -7519,6 +7751,18 @@ fn: lmx_graph_launch_structure_values (c.LmxGraph@: g; c.Lmx@: given_code; c.Lmx
             return: 5
         return: lmx_graph_launch_value(g, 0, data, 0, code, out)
     ---
+    return: lmx_graph_launch_prepared(g, code, data, supplied, count, bindings, want_result, out)
+end: lmx_graph_launch_structure_values
+
+# The prepared launch of a structural call (step 21.7 K2): C over the data chosen before it -- parent(C), or the data
+# the caller of this function holds --, with the Values the choice admitted: a consumed value with no described result
+# is refused before any effect (5); a described result the body does not give -- a bare `return`, the end of the
+# body -- is the same answer after the launch. 0, or the interpreter's answer.
+fn: lmx_graph_launch_prepared (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: data; c.LmxWalkValue@: supplied; size_t: count; size_t@: bindings; int: want_result; c.LmxWalkValue@: out) int
+    c.LmxGraphState@: state (cast: (c.LmxGraphState@) c.lmx_graph_state())
+    c.Lmx@: described 0
+    char@: result 0
+    int: status 0
     if: state = 0
         return: 5
     lmx_graph_structure_result(g, data, @ result, @ described)
@@ -7534,7 +7778,65 @@ fn: lmx_graph_launch_structure_values (c.LmxGraph@: g; c.Lmx@: given_code; c.Lmx
     if: out\present = 0
         return: 5
     return: 0
-end: lmx_graph_launch_structure_values
+
+# The receiver call itself (the book #call-receivers, #structural-call, #null-parent; step 21.7 K2, S3): `call(C)`,
+# `call(code := C)` and `call(A C)` are one call -- the chosen C itself over its actual parent. The Lmx C is written in;
+# no data is substituted (lmx_graph_callee_data is not asked), and a C with no parent runs without DATA, as the root
+# does (lmx_graph_work_open_parts): a null parent is permitted and is not checked on entry. chosen is the target read
+# once by the caller (lmx_graph_eval_explicit_call_value); it is not read again here. With actuals (supplied) the
+# immediate fields of A are bound to the inputs of that parent in written order (lmx_graph_pair_structural_opened over
+# lmx_graph_bind_inputs), and A is not weighed a second time as a whole; written: A is a group written in the call. A
+# consumed value with no described result is refused before any effect (lmx_graph_launch_prepared). The data of C and
+# the admitted Values stay live through the binding and the launch (execution roots); A, C and a value obtained by
+# execution are held by the caller from their reading on. 0, or the interpreter's answer.
+fn: lmx_graph_call_explicit (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: chosen; int: supplied; c.LmxWalkValue@: whole; int: written; int: want_result; c.LmxWalkValue@: out) int
+    c.Lmx@: data 0
+    c.Lmx@: described 0
+    char@: result 0
+    c.LmxWalkValue@: values 0
+    size_t@: bindings 0
+    c.LmxExecutionRoots: values_roots
+    c.LmxExecutionRoots@: roots_mark 0
+    size_t: width 0U
+    size_t: count 0U
+    int: stage 0
+    int: status 0
+    c.lmx_walk_value_clear(out)
+    if: c.lmx_graph_kind(g, (cast: (@) chosen)) != 4
+        return: 5
+    data := (cast: (c.Lmx@) chosen\parent)
+    if: want_result != 0
+        lmx_graph_structure_result(g, data, @ result, @ described)
+        # A consumed value with no described result is refused before any effect.
+        if: result = 0 && described = 0
+            return: 5
+        ---
+    ---
+    width := lmx_graph_formal_width(g, data)
+    values := (cast: (c.LmxWalkValue@) c.calloc(width + 1U, c.sizeof(c.LmxWalkValue)))
+    bindings := (cast: (size_t@) c.calloc(width + 1U, sizeof(size_t)))
+    if: values = 0 || bindings = 0
+        status := 4
+    roots_mark := c.lmx_execution_roots_mark(g\arena)
+    if: status = 0
+        # The data of C and the admitted Values stay live through the binding and the launch; A and C are held by the
+        # caller (lmx_graph_eval_explicit_call_value), each by a record of its own, as this one is.
+        c.lmx_execution_roots_push(g\arena, @ values_roots, (cast: (@) values), width, 0, 0U, (cast: (@) data), 0)
+        if: supplied != 0
+            status := lmx_graph_pair_structural_opened(g, scope, chosen, data, whole, written, values, bindings, @ stage, @ count)
+            if: status = 0 && stage = 1
+                status := 5
+            if: status = 0 && stage = 2
+                status := 4
+            ---
+        ---
+        if: status = 0
+            status := lmx_graph_launch_prepared(g, chosen, data, values, count, bindings, want_result, out)
+        c.lmx_execution_roots_restore(g\arena, roots_mark)
+    ---
+    c.free((cast: (@) values))
+    c.free((cast: (@) bindings))
+    return: status
 
 # The same launch of a record without actuals; a record with actuals reaches the launch through the structural call
 # alone (lmx_graph_eval_structural): 5 here.
@@ -9396,9 +9698,7 @@ fn: lmx_graph_receivers_open (c.LmxGraph@: g; c.Lmx@: root) int
     if: status = 0
         status := lmx_graph_receiver_form(g, calls, 0U, w_call, 1U, w_code, 0, 0, 0, 0, 0)
     if: status = 0
-        status := lmx_graph_receiver_form(g, calls, 1U, w_call, 2U, w_data, w_code, 0, 0, 0, 0)
-    if: status = 0
-        status := lmx_graph_receiver_form(g, calls, 2U, w_call, 3U, w_args, w_data, w_code, 0, 0, 0)
+        status := lmx_graph_receiver_form(g, calls, 1U, w_call, 2U, w_args, w_code, 0, 0, 0, 0)
     if: status = 0
         status := lmx_graph_receiver_form(g, fncalls, 0U, w_fncall, 2U, w_return, w_code, 0, 0, 0, 1)
     if: status = 0
@@ -10434,8 +10734,8 @@ fn: lmx_graph_data_effect (c.LmxGraph@: g; c.Lmx@: data; c.Lmx@: expression; siz
 fn: lmx_graph_actual_effect (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: expression; size_t: i; size_t: slot) int
     return: lmx_graph_data_effect(g, c.lmx_graph_method_data(g, code), expression, i, slot)
 # A value obtained by execution that by description may be a Structure or a reference (fable Р130; the book, #declaration-selection, step 4):
-# an application whose description is unknown (lmx_graph_described_class 3) -- a receiver word (merge, parent, length,
-# typeof, sys ...), a head that is a path or a reference to a callable, a call of a name some declaration of which
+# an application whose description is unknown (lmx_graph_described_class 3) -- a receiver word such as merge or parent,
+# a head that is a path or a reference to a callable, a call of a name some declaration of which
 # declares a result that is no primitive word. Not a declaration; not a group: a group of one around a computed value
 # is a one-field wrapper today (step 21.11). Nothing is evaluated: the description is read. 1 or 0.
 fn: lmx_graph_computed_structure (c.LmxGraph@: g; c.Lmx@: scope; @: raw) int
@@ -10473,7 +10773,7 @@ fn: lmx_graph_described_root (c.LmxGraph@: g; @: raw) @
     return: root
 
 # The class of the description of an actual with an effect (fable R103 item 2; fable 2026-11-21), nothing evaluated: 1
-# known -- a declaration of a place whose type has a known ABI, `call` (no value), a call of a name whose every
+# known -- a declaration of a place whose type has a known ABI, `length` and `typeof` (int), `call` (no value), or a call of a name whose every
 # declaration with a result declares a primitive word and whose own actuals need no execution to choose
 # (lmx_graph_described_value gives it); 2 a primitive of no known type -- an expression of a built-in operator (no
 # static type of an expression exists today: step 21.14); 3 unknown -- any other head: a receiver word, a head that is a
@@ -10516,7 +10816,7 @@ fn: lmx_graph_described_class_of (c.LmxGraph@: g; c.Lmx@: scope; @: raw; c.Lmx@@
         return: 3
     if: name = 0
         return: 3
-    if: name = state\w_call
+    if: name = state\w_call || name = state\w_length || name = state\w_typeof
         return: 1
     if: lmx_graph_call_candidates(g, scope, name, @ candidates, @ n) != 0
         return: 3
@@ -10538,7 +10838,8 @@ fn: lmx_graph_described_class_of (c.LmxGraph@: g; c.Lmx@: scope; @: raw; c.Lmx@@
 
 # When does a call of a name go through the selection (the book, #declaration-selection; fable R103 item 1): the name declares two or
 # more fn or sub, or one and the call has an opened reading (lmx_graph_single_candidate) or an actual with an effect --
-# its pair is judged before anything runs. A one-declaration call whose actuals are all without effects is the
+# its pair is judged before anything runs, and it is not evaluated before the choice. A one-declaration call whose
+# actuals are all without effects is the
 # selection's case too, but judging it first and calling it cannot differ observably: it keeps today's path. 1 or 0.
 fn: lmx_graph_selection_applies (c.LmxGraph@: g; c.Lmx@: scope; size_t: n; c.Lmx@: args) int
     size_t: i 0U
@@ -10580,6 +10881,15 @@ fn: lmx_graph_described_value (c.LmxGraph@: g; c.Lmx@: scope; @: raw; c.LmxWalkV
     if: entry != 0 && entry[0] != 0
         known[0] := 1
         return: lmx_graph_described_result(g, (cast: (c.Lmx@) entry[0]), out)
+    name := c.lmx_graph_name_of(g, root)
+    if: name != 0 && (name = state\w_length || name = state\w_typeof)
+        known[0] := 1
+        if: c.lmx_graph_count((cast: (c.Lmx@) root)) != 1U
+            return: 5
+        if: c.lmx_walk_value_num(out, c.LMX_TYPE_INT, 0U) != c.LMX_WALK_OK
+            return: 4
+        return: 0
+    ---
     known[0] := lmx_graph_described_class_of(g, scope, root, @ candidates, @ n)
     if: known[0] != 1 || c.lmx_graph_declaration_place_name(g, root) != 0 || c.lmx_graph_application_parts(g, root, @ name, @ head, @ args) = 0 || name = state\w_call
         c.free((cast: (@) candidates))

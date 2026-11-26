@@ -1,0 +1,20 @@
+Log:
+    int: parent 10
+    int: entry 5
+    int: source 5
+end: Log
+fn: h () int (
+    int: x 0
+    Self:
+        int: x 5
+        :=: (Log \ entry) (data \ x)
+        :=: (data \ x) ((data \ x) + x)
+        :=: x (x + 1)
+    end: Self
+)
+    call: (:= code Self)
+    call: (:= code Self)
+    return: (data \ x)
+end: h
+:=: (Log \ parent) (h)
+:=: (Log \ source) (((h \ data) \ Self) \ x)

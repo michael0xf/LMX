@@ -1,0 +1,19 @@
+# The root R0 without an entry. A Structure written in the data of a function, called by the one-argument form of the
+# receiver, runs over its actual parent -- the data of the function. Its own declaration `int: n 1` is a place of the
+# code, local to the launch: read and written by its bare name inside the body it gives 2 (Log\own 2) and is not
+# published into the source, where its line keeps 1 (Log\source 1). `data\n` is the place n of the parent: 5 + 10, and
+# the function returns it (Log\parent 15). A place of the same name outside the function is not touched: Log\outer 5.
+# Norm: the book #structural-call («The selected Structure C is executed in CODE; its actual parent supplies DATA»),
+# the roles of data and code (#data-code-roles: «A code declaration defines a call-local place, without extending
+# source data»).
+@: Log (int: own 0; int: parent 0; int: source 0; int: outer 0)
+@: Outer (int: n 5)
+fn: f () int (
+    int: n 5
+    Point(int: n 1; n := n + 1; data\n := data\n + 10; Log\own := n)
+)
+    call(code := Point)
+    return: data\n
+Log\parent := f()
+Log\source := f\data\Point\n
+Log\outer := Outer\n

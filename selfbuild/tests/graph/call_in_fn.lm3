@@ -1,0 +1,15 @@
+# Entry Main. The same two calls, written in the body of a function: `call(args := Pick\Args; code := Pick\PickCode())`
+# and `call(code := Host\add; args := Pick\PickArgs())`. Expected by the norm: inside a callable the receiver call is
+# the same call -- Log\made 2, Log\seen 7, Log\after 1.
+# Norm: the book #structural-call («The interpreter sends a by-name call, a call through a pointer and both explicit
+# forms of call through one mechanism for binding, admission, frame, execution and result transfer»).
+@: Log (int: made 0; int: seen 0; int: after 0)
+@: Host (int: a 1; return: int; add(Log\seen := a; return: a))
+@: Pick (return: @; Args(int: a 7); PickCode(Log\made := Log\made + 1; return: Host\add); PickArgs(Log\made := Log\made + 1; return: node\Args))
+fn: main () int
+    call(args := Pick\Args; code := Pick\PickCode())
+    call(code := Host\add; args := Pick\PickArgs())
+    return: 1
+Main:
+    main()
+    Log\after := 1

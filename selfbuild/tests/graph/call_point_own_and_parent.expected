@@ -1,0 +1,24 @@
+Log:
+    int: own 2
+    int: parent 15
+    int: source 1
+    int: outer 5
+end: Log
+Outer:
+    int: n 5
+end: Outer
+fn: f () int (
+    int: n 5
+    Point:
+        int: n 1
+        :=: n (n + 1)
+        :=: (data \ n) ((data \ n) + 10)
+        :=: (Log \ own) n
+    end: Point
+)
+    call: (:= code Point)
+    return: (data \ n)
+end: f
+:=: (Log \ parent) (f)
+:=: (Log \ source) (((f \ data) \ Point) \ n)
+:=: (Log \ outer) (Outer \ n)

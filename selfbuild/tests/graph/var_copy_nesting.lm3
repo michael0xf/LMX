@@ -1,19 +1,17 @@
 # Codex review of 332, item 4: the data of the Structure fn creates is copied from the written data through one map in
 # which the written data is the new data, keeping the nesting of the copied Structures: Code is under the copy of Box, so
 # its kk is Box's own (9) -- the caller's frames hold no kk, and a Code flattened under data would find none. The written
-# data of the declaration stays as written.
-# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
-(
-    Observed:
-        int: seen 0
-)
+# data of the declaration stays as written. The body over that data is given by the structural link: Code is written
+# inside Box and launched by the path `Box\Code()` in the body of probe, over parent(Code) = the copy of Box (step 21.7
+# K2, S3: the former tail record `call: data\Box\Code data\Box\Code` still has the two positionals of [args, code]
+# and answers 5 here). probe returns the r of that copy: 9.
+# Norm: the book #structural-call («The selected Structure C is executed in CODE; its actual parent supplies DATA»).
+Observed:
+    int: seen 0
+end: Observed
 fn: probe () int (Box(int: kk 9; Code(int: r 0; data\r := kk)))
-    call: data\Box\Code data\Box\Code
+    Box\Code()
     return: data\Box\Code\r
 end: probe
-int: seen probe()
-
-sub: main ()
-    @: shared node[0]
-    shared\Observed\seen := seen
-main()
+Main:
+    Observed\seen := probe()

@@ -1,32 +1,21 @@
-# Code launched over data it was given reads a Structure of that data by reference (plan M11 5b): Inner is found in the
-# registry of the launch's data, with no row of its own.
-# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
-# Inner is written in the compact form inside D, so that the blocks in the parentheses stay one level. The fields of D,
-# which the dump of D showed, are the places inner_x and d_y of the root.
-# наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
-(
-    Observed:
-        int: seen 0
-        int: inner_x 0
-        int: d_y 0
-)
-sub: main () (
+# Entry Main. Code launched over its data by the structural link reads a Structure of that data by reference (plan M11
+# 5b): Inner is found in the registry of D, the parent of Code, with no row of its own, and keeps its declared x 4. The
+# body over other data is given as Code written inside D and launched by the path `D\Code()`, over parent(Code) = D
+# (step 21.7 K2, S3: no form of call substitutes a data; the former tail record `call: D Code` still has the two
+# positionals of [args, code] and answers 5 here). The write
+# `data\y := Inner\x` reaches the place y of D: Observed\seen 4, D\y 4.
+# Norm: the book #structural-call («The selected Structure C is executed in CODE; its actual parent supplies DATA»).
+Observed:
+    int: seen 0
+end: Observed
+D:
+    Inner(int: x 4)
+    int: y 0
     Code:
         int: y
         data\y := Inner\x
-    D:
-        Inner(int: x 4)
-        int: y 0
-)
-    call: D Code
-main()
-int: seen main\data\D\y
-int: inner_x main\data\D\Inner\x
-int: d_y main\data\D\y
-
-sub: observe ()
-    @: shared node[0]
-    shared\Observed\seen := seen
-    shared\Observed\inner_x := inner_x
-    shared\Observed\d_y := d_y
-observe()
+    end: Code
+end: D
+Main:
+    D\Code()
+    Observed\seen := D\y

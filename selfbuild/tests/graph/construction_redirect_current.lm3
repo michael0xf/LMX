@@ -1,0 +1,20 @@
+# The root R0 without an entry. The observation of line 17 of the row construction_paths, separated: `cur` is
+# redirected from A to B before the call, then the real code of C reads Leaf/B through the reference its parent
+# declares and writes the observable into `Log` explicitly: `Log\selected` 2; `Log\before` 1, `Log\after` 1. (With
+# `cur` still on A the same body would read 1.) A nested record is written without a space before its parenthesis.
+@: Log (int: before 0; int: selected 0; int: after 0)
+@: D (
+    A(Leaf(int: v 1))
+    B(Leaf(int: v 2))
+    @: cur A
+    C(
+        @: saved cur\Leaf
+        go:
+            Log\selected := saved\v
+        end: go
+    )
+)
+Log\before := 1
+D\cur := D\B
+call(code := D\C\go)
+Log\after := 1

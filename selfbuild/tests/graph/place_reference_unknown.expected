@@ -1,13 +1,12 @@
-sub: main () (
-    Model:
-        int: v 1
-    end: Model
+Model:
+    int: v 1
+end: Model
+D:
     @: p Model
-    Attempt: (p (:= data (data \ other)))
-)
-    return:
-end: main
-main:
-int: prepared_p (((main \ data) \ p) \ v)
-call: (main \ data) ((main \ data) \ Attempt)
-int: after (((main \ data) \ Model) \ v)
+    Attempt: (p (:= v (data \ other)))
+end: D
+Observed:
+    int: before 1
+    int: prepared_p 1
+end: Observed
+Main: (:= (Observed \ before) 1) (:= (Observed \ prepared_p) ((D \ p) \ v)) D\Attempt()

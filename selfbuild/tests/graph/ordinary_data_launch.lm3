@@ -1,34 +1,46 @@
 # HG2-B (data(D), item 3): `data(To)` is `call(To data)`, and `data()` runs the launch data over itself. A declaration of a
 # visible name assigns the existing place, the call's local (no write-back): To\x stays 0 (copied 0, pinned 7) and Self\x
 # stays 1 (own 1, pinned 2). The results are written through data\ (rule Б). Observation: explicit writes in sub: observe (#flush-receiver-contract; #call-frame-20261115).
-(
-    Observed:
-        int: copied 0
-        int: own 0
-)
-# M11 5v: data is the current launch's ordinary Structure, not a model child.
-sub: main () (
-    From(int: x 7)
-    To(int: x 0)
-    Self(
-        int: x 1
-        x := x + 1
-    )
-    Copy(data(To))
-    Apply(data())
+# visible name assigns the existing place, the call's local (no write-back).
+# Step 21.7 K2, S3: both `data(To)` and `data()` are the removed form (a data record launched over other data or over
+# itself). The property is carried by the structural link: Copy is written in From and launched over From
+# (`From\Copy()`); the inner launch is the relay record of To, `To\Echo()`; the former self-launch is `Self\Apply()`,
+# whose relay is the sibling record `Self\Mark()`. Every bare write `x := x + 1` is reached and writes the local of
+# its launch (#call-frame-20261115): the local is read out by an explicit write right after it (echo_local 1 -- the
+# local of To's relay, 0 + 1; mark_local 2 -- the local of Self's relay, 1 + 1), and no source changes: To\x stays 0
+# (copied 0) and Self\x stays 1 (own 1).
+# Norm: the book #structural-call, #call-frame-20261115.
+Observed:
     int: copied 0
     int: own 0
-)
-    call(From Copy)
-    call(Self Apply)
-    data\copied := To\x
-    data\own := Self\x
-main()
-int: copied main\data\copied
-int: own main\data\own
-
-sub: observe ()
-    @: shared node[0]
-    shared\Observed\copied := copied
-    shared\Observed\own := own
-observe()
+    int: echo_local 0
+    int: mark_local 0
+end: Observed
+To:
+    int: x 0
+    Echo:
+        x := x + 1
+        Observed\echo_local := x
+    end: Echo
+end: To
+From:
+    int: x 7
+    Copy:
+        To\Echo()
+    end: Copy
+end: From
+Self:
+    int: x 1
+    Mark:
+        x := x + 1
+        Observed\mark_local := x
+    end: Mark
+    Apply:
+        Self\Mark()
+    end: Apply
+end: Self
+Main:
+    From\Copy()
+    Self\Apply()
+    Observed\copied := To\x
+    Observed\own := Self\x

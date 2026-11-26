@@ -1,5 +1,9 @@
 # Real sub/fn construction and ordinary Code exercise the common copier.
 # The C ABI supplies exact scalar bytes and observes physical identities.
+# The code that runs over a given data goes through an observer (step 21.7 K2, S3: no form of call supplies a
+# data): Before, Verify and VerifyMerge have a real parent with one named reference input; the former places pass
+# the exact F.data or the current merged as the actual, the callbacks take the target from the full Value. The
+# former records `call: F\data Before`, `call: F\data Verify` and `call: merged VerifyMerge` are no form.
 predef: "l2src/l2_graph_build.lm1"
 predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_graph_run.h.lm1"
@@ -108,14 +112,15 @@ fn: fd_verify_data (@: g c.LmxGraph; @: original c.Lmx; @: data c.Lmx; int: afte
 
 fn: fd_callback (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
     @: g c.LmxGraph arena\graph_metadata
-    @: root c.Lmx (cast: (@: c.Lmx) code\parent)
+    # The counter context is the parent of the observer; the target is the full Value of its one input.
+    @: root c.Lmx (cast: (@: c.Lmx) code\parent\parent)
     @: original c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(g, root, c.lmx_graph_intern("D", 1U)))
-    @: data c.Lmx (cast: (@: c.Lmx) owner)
+    @: data c.Lmx (cast: (@: c.Lmx) c.lmx_graph_target(g, inputs\ref))
     size_t: checked_slot c.lmx_graph_named(g, root, c.lmx_graph_intern("checked", 7U))
     int: after (cast: (int) (c.lmx_graph_name_of(g, (cast: (@: void) code)) = c.lmx_graph_intern("Verify", 6U)))
     int: checked 0
     int: status 0
-    if: g = 0 || original = 0 || nargs != 0U || c.lmx_graph_value_int(g, c.lmx_graph_get_in(g, root, checked_slot), @ checked) != 0 || checked != after
+    if: g = 0 || original = 0 || data = 0 || nargs != 1U || c.lmx_graph_value_int(g, c.lmx_graph_get_in(g, root, checked_slot), @ checked) != 0 || checked != after
         return: 109
     status := fd_verify_data(g, original, data, after)
     if: status != 0
@@ -181,10 +186,11 @@ fn: fd_word_cross () int
 
 fn: fd_merge_callback (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
     @: g c.LmxGraph arena\graph_metadata
-    @: root c.Lmx (cast: (@: c.Lmx) code\parent)
+    # The counter context is the parent of the observer; the target is the full Value of its one input.
+    @: root c.Lmx (cast: (@: c.Lmx) code\parent\parent)
     @: m c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(g, root, c.lmx_graph_intern("M", 1U)))
     @: n c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(g, root, c.lmx_graph_intern("N", 1U)))
-    @: merged c.Lmx (cast: (@: c.Lmx) owner)
+    @: merged c.Lmx (cast: (@: c.Lmx) c.lmx_graph_target(g, inputs\ref))
     @: source void 0
     @: alias_source void 0
     const: (@: abi c.LmxScalarABI fd_binding("double", @ source))
@@ -202,7 +208,7 @@ fn: fd_merge_callback (@: owner void; @@: refs void; size_t: nargs; @: dest void
         return: 120
     if: checked = 1
         expected := zero
-    if: nargs != 0U || merged = m || merged = n || c.lmx_graph_count(merged) != 4U || c.lmx_graph_named(g, merged, c.lmx_graph_intern("x", 1U)) != 0U || merged\parent != 0 || fd_expect(arena, cell, abi, source, merged, 0, @ expected) != 0
+    if: nargs != 1U || merged = 0 || merged = m || merged = n || c.lmx_graph_count(merged) != 4U || c.lmx_graph_named(g, merged, c.lmx_graph_intern("x", 1U)) != 0U || merged\parent != 0 || fd_expect(arena, cell, abi, source, merged, 0, @ expected) != 0
         return: 121
     if: pointer = 0 || slot_pointer = 0 || c.lmx_pointer_value_in(arena, pointer) != cell || c.lmx_pointer_value_in(arena, slot_pointer) != c.lmx_graph_ref_cell_in(arena, merged, 0U) || context = 0 || context\referent != c.lmx_value_cell_context(arena, cell)
         return: 122
@@ -576,6 +582,7 @@ fn: fd_merge_check () int
     @: slot_pointer void c.lmx_pointer_new_profiled(c.LMX_TYPE_CELL_POINTER, @ arena, 0)
     c.LmxWalkPlace: place
     c.LmxWalkValue: address
+    @: observer c.Lmx 0
     @: verify c.Lmx 0
     @: work c.Lmx 0
     @: bad_work c.Lmx 0
@@ -591,7 +598,7 @@ fn: fd_merge_check () int
         return: 133
     if: c.lmx_graph_name(g, only_m, "onlyM", 5U) != 0 || c.lmx_graph_name(g, cell_pointer, "cellAlias", 9U) != 0 || c.lmx_graph_name(g, slot_pointer, "slotAlias", 9U) != 0 || c.lmx_graph_put_in(g, m, 0U, x) != 0 || c.lmx_graph_put_in(g, m, 1U, only_m) != 0 || c.lmx_graph_put_in(g, n, 0U, cell_pointer) != 0 || c.lmx_graph_put_in(g, n, 1U, slot_pointer) != 0 || c.lmx_graph_put_in(g, n, 2U, late) != 0 || c.lmx_graph_put_in(g, bad, 0U, mismatch) != 0 || c.lmx_pointer_store_in(@ arena, slot_pointer, c.lmx_graph_ref_cell_in(@ arena, n, 2U)) != 0
         return: 134
-    if: c.fputs("int: merge_checks 0\nVerifyMerge:\nend: VerifyMerge\nsub: MergeWork () ()\n    @: merged merge(M; N)\n    call: merged VerifyMerge\n    @: merged merge(M; N; M)\n    call: merged VerifyMerge\nend: MergeWork\nsub: BadMergeWork () ()\n    @: merged merge(M; Bad)\n    call: merged VerifyMerge\nend: BadMergeWork\n", file) < 0 || c.fclose(file) != 0
+    if: c.fputs("int: merge_checks 0\nMergeObserver:\n    @: target M\n    VerifyMerge:\n    end: VerifyMerge\nend: MergeObserver\nsub: MergeWork () ()\n    @: merged merge(M; N)\n    MergeObserver\\VerifyMerge(target := merged)\n    @: merged merge(M; N; M)\n    MergeObserver\\VerifyMerge(target := merged)\nend: MergeWork\nsub: BadMergeWork () ()\n    @: merged merge(M; Bad)\n    MergeObserver\\VerifyMerge(target := merged)\nend: BadMergeWork\n", file) < 0 || c.fclose(file) != 0
         return: 135
     status := c.lm_graph_build_file(g, "graph_merge_typed_code.lm3", @ root)
     c.remove("graph_merge_typed_code.lm3")
@@ -600,7 +607,8 @@ fn: fd_merge_check () int
     m\parent := root
     n\parent := root
     bad\parent := root
-    verify := (cast: (@: c.Lmx) fd_named(g, root, "VerifyMerge"))
+    observer := (cast: (@: c.Lmx) fd_named(g, root, "MergeObserver"))
+    verify := (cast: (@: c.Lmx) fd_named(g, observer, "VerifyMerge"))
     if: c.lmx_native_install(@arena, verify, (cast: (c.LmxPrimitiveEntry) c.fd_merge_callback), 0, 0, 0, 0, 0) != 0
         return: 1
     work := (cast: (@: c.Lmx) c.lmx_graph_space_find(g, root, c.lmx_graph_intern("MergeWork", 9U)))
@@ -662,6 +670,7 @@ fn: fd_mapped_check () int
     @: held c.Lmx 0
     @: make c.Lmx 0
     @: before c.Lmx 0
+    @: observer c.Lmx 0
     @: verify c.Lmx 0
     c.LmxWalkValue: warm_result
     int: opened 0
@@ -678,7 +687,7 @@ fn: fd_mapped_check () int
     c.lmx_charptr_store_known(word_a, c.lmx_graph_intern("token", 5U))
     c.lmx_charptr_store_known(word_b, c.lmx_graph_intern("token", 5U))
     c.memset(empty, 165, abi\size)
-    if: c.fputs("int: checked 0\nfn: Held () int (int: count 0)\n    data\\count := data\\count + 1\n    return: data\\count\nend: Held\nBefore:\nend: Before\nVerify:\nend: Verify\nTransfer:\n    int: touched 7\n    data\\x := data\\y\n    data\\y := data\\z\n    data\\saved := data\\x\nend: Transfer\nMake:\n    sub: F () D Transfer\n    call: F\\data Before\n    F()\n    fn: Again F\\data\\held\n    Again()\n    call: F\\data Verify\nend: Make\n", file) < 0 || c.fclose(file) != 0
+    if: c.fputs("int: checked 0\nfn: Held () int (int: count 0)\n    data\\count := data\\count + 1\n    return: data\\count\nend: Held\nObserver:\n    @: target D\n    Before:\n    end: Before\n    Verify:\n    end: Verify\nend: Observer\nTransfer:\n    int: touched 7\n    data\\x := data\\y\n    data\\y := data\\z\n    data\\saved := data\\x\nend: Transfer\nMake:\n    sub: F () D Transfer\n    Observer\\Before(target := F\\data)\n    F()\n    fn: Again F\\data\\held\n    Again()\n    Observer\\Verify(target := F\\data)\nend: Make\n", file) < 0 || c.fclose(file) != 0
         return: 82
     status := c.lm_graph_build_file(g, "graph_fn_data_typed_code.lm3", @ root)
     c.remove("graph_fn_data_typed_code.lm3")
@@ -698,8 +707,9 @@ fn: fd_mapped_check () int
     if: held_ref = 0 || c.lmx_graph_name(g, held_ref, "held", 4U) != 0 || c.lmx_graph_name(g, self, "self", 4U) != 0 || c.lmx_graph_put_in(g, data, 0U, x) != 0 || c.lmx_graph_put_in(g, data, 1U, y) != 0 || c.lmx_graph_put_in(g, data, 2U, z) != 0 || c.lmx_graph_put_in(g, data, 3U, saved) != 0 || c.lmx_graph_put_in(g, data, 4U, empty) != 0 || c.lmx_graph_put_in(g, data, 5U, word_a) != 0 || c.lmx_graph_put_in(g, data, 6U, word_a) != 0 || c.lmx_graph_put_in(g, data, 7U, word_b) != 0 || c.lmx_graph_put_in(g, data, 8U, self) != 0 || c.lmx_graph_put_in(g, data, 9U, held_ref) != 0
         return: 86
     make := (cast: (@: c.Lmx) fd_named(g, root, "Make"))
-    before := (cast: (@: c.Lmx) fd_named(g, root, "Before"))
-    verify := (cast: (@: c.Lmx) fd_named(g, root, "Verify"))
+    observer := (cast: (@: c.Lmx) fd_named(g, root, "Observer"))
+    before := (cast: (@: c.Lmx) fd_named(g, observer, "Before"))
+    verify := (cast: (@: c.Lmx) fd_named(g, observer, "Verify"))
     if: c.lmx_native_install(@arena, before, (cast: (c.LmxPrimitiveEntry) c.fd_callback), 0, 0, 0, 0, 0) != 0
         return: 1
     if: c.lmx_native_install(@arena, verify, (cast: (c.LmxPrimitiveEntry) c.fd_callback), 0, 0, 0, 0, 0) != 0

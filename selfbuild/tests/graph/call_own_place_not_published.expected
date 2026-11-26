@@ -1,0 +1,17 @@
+Log:
+    int: own 1
+    int: parent 7
+end: Log
+fn: f () int (
+    int: n 5
+    Point:
+        int: n 1
+        :=: (data \ n) ((data \ n) + 1)
+    end: Point
+)
+    call: (:= code Point)
+    call: (:= code Point)
+    return: (data \ n)
+end: f
+:=: (Log \ parent) (f)
+:=: (Log \ own) (((f \ data) \ Point) \ n)

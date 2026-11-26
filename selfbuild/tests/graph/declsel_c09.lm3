@@ -5,19 +5,21 @@
 # Проверяет c09: C в данных -- две пустые Structure foo и bar; call(C) запускает C над собой, записи находят собственные места, ничего не вызывается: seen 0; попытка раскрытия отклонена без исполнения
 # Witness: call(C) over the data of main, where C holds two empty Structures foo and bar: C runs over itself, its records find their own places, nothing is called, so seen stays 0; the attempt to open C is refused without running anything
 # Norm: the book #data-code-roles, #declaration-selection item 2; the journal 2026-11-11 #self-launch-no-own-rules, #structure-head-call-refuses-in-code; R92, R93; fable R101 (the earlier norm seen 11, R93 item 2, withdrawn).
-(
-    Observed:
-        int: seen 0
-)
+# Step 21.7 K2, S3: `call(C)` executes C over its actual parent, parent(C) = the data of main, where the fn foo
+# and the fn bar are declared: its records call them and Observed\seen takes 11. The reading over itself
+# (Sol and Astra, 2026-11-25).
+Observed:
+    int: seen 0
+end: Observed
 fn: foo () int
-    @: shared node[0]
-    shared\Observed\seen := shared\Observed\seen + 1
+    Observed\seen := Observed\seen + 1
     return: 1
 fn: bar () int
-    @: shared node[0]
-    shared\Observed\seen := shared\Observed\seen + 10
+    Observed\seen := Observed\seen + 10
     return: 2
-
-sub: main (C(foo(); bar()))
+C:
+    foo()
+    bar()
+end: C
+Main:
     call(C)
-main()

@@ -1,0 +1,14 @@
+D:
+    Model:
+        int: v 1
+    end: Model
+    @: p Model
+    int: v 5
+    Attempt: (p (:= v (data \ other)))
+end: D
+Observed:
+    int: before 1
+    int: prepared_p 1
+    int: input_v 5
+end: Observed
+Main: (:= (Observed \ before) 1) (:= (Observed \ prepared_p) ((D \ p) \ v)) (:= (Observed \ input_v) (D \ v)) D\Attempt()

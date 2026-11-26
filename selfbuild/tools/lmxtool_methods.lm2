@@ -1588,9 +1588,15 @@ fn: tool_main (char@@: args; int: n) int
                     expected_exit := 2
                     interp_exit := "2"
                 else:
-                    if: c.strcmp(args[11], "0") != 0
-                        c.fputs("graph-check: expected exit must be 0, 1 or 2\n", c.stderr)
-                        return: 2
+                    # 3 marks a refusal of the translation: the emitter's diagnosis answers the number of field 14 at
+                    # emit-check in the native and the forced mode, before a program is emitted (bld_graph_check).
+                    if: c.strcmp(args[11], "3") = 0
+                        expected_exit := 3
+                    else:
+                        if: c.strcmp(args[11], "0") != 0
+                            c.fputs("graph-check: expected exit must be 0, 1, 2 or 3\n", c.stderr)
+                            return: 2
+                        ---
                     ---
                 ---
             ---
@@ -1599,7 +1605,7 @@ fn: tool_main (char@@: args; int: n) int
             runs := args[12]
         if: n >= 14
             interp_exit := args[13]
-            if: c.strlen(interp_exit) != 1U || interp_exit[0] < 48 || interp_exit[0] > 56 || (expected_exit = 0 && interp_exit[0] != 48) || (expected_exit = 2 && interp_exit[0] = 48)
+            if: c.strlen(interp_exit) != 1U || interp_exit[0] < 48 || interp_exit[0] > 56 || (expected_exit = 0 && interp_exit[0] != 48) || (expected_exit = 2 && interp_exit[0] = 48) || (expected_exit = 3 && interp_exit[0] = 48)
                 c.fputs("graph-check: interpreter answer must be 0..8 and agree with success\n", c.stderr)
                 return: 2
             ---

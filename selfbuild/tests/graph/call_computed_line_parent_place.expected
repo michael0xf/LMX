@@ -1,0 +1,24 @@
+Log:
+    int: parent 6
+    int: before 0
+    int: after 1
+    int: ticks 1
+end: Log
+fn: five () int
+    :=: (Log \ ticks) ((Log \ ticks) + 1)
+    return: 5
+end: five
+fn: g () int (
+    int: y 0
+    Computed:
+        :=: (Log \ before) (Log \ ticks)
+        int: x (five)
+        :=: (Log \ after) (Log \ ticks)
+        int: y 0
+        :=: (data \ y) (x + 1)
+    end: Computed
+)
+    call: (:= code Computed)
+    return: (data \ y)
+end: g
+:=: (Log \ parent) (g)

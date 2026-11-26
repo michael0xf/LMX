@@ -1,0 +1,19 @@
+# Entry Main. The two-argument form of the receiver, by position: `call(A C)` -- A is the Structure of the actual
+# supplied values, C runs over parent(C), and the record is one call with the by-name record `Sum\add(Args)`: the
+# fields of A are supplied to the inputs a and b (7 and 3), and `Counter\steps` is 73 (the book #structural-call).
+Counter:
+    int: steps 0
+end: Counter
+Sum:
+    int: a 1
+    int: b 2
+    add:
+        Counter\steps := Counter\steps + a * 10 + b
+    end: add
+end: Sum
+Args:
+    int: a 7
+    int: b 3
+end: Args
+Main:
+    call(Args Sum\add)

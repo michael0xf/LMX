@@ -1,0 +1,24 @@
+Log:
+    int: made 2
+    int: plain 139
+    int: named 47
+    int: positional 106
+end: Log
+Pick:
+    return: int
+    Tick:
+        :=: (Log \ made) ((Log \ made) + 1)
+        return: 7
+    end: Tick
+end: Pick
+D:
+    int: base 40
+    int: x 99
+    return: int
+    C:
+        return: (base + x)
+    end: C
+end: D
+:=: (Log \ plain) (call (:= code (D \ C)))
+:=: (Log \ named) D\C((:= x Pick\Tick()))
+:=: (Log \ positional) D\C(Pick\Tick())

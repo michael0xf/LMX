@@ -1,0 +1,28 @@
+Log:
+    int: before 1
+    int: first 11
+    int: second 12
+    int: after 1
+end: Log
+D:
+    S:
+        f:
+            int: v 11
+        end: f
+        f:
+            int: v 12
+        end: f
+    end: S
+    F1:
+        @: p f
+        go: (:= (Log \ first) (p \ v))
+    end: F1
+    F2:
+        @: p f
+        go: (:= (Log \ second) (p \ v))
+    end: F2
+end: D
+:=: (Log \ before) 1
+call: (:= code ((D \ F1) \ go))
+call: (:= code ((D \ F2) \ go))
+:=: (Log \ after) 1

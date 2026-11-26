@@ -1,0 +1,23 @@
+# Entry Main. A former form of the receiver is no form: `call` has only [code] and [args, code], and the name `data`
+# is no formal of either. The record is refused by the binder before an operand runs and before any effect: before 1,
+# after 0, steps 0; answer 5.
+# Norm: the book #structural-call (`call` has two forms; the parameters are named `args` and `code`), #call-receivers.
+Counter:
+    int: steps 0
+end: Counter
+Sum:
+    int: a 1
+    int: b 2
+    add:
+        Counter\steps := Counter\steps + a * 10 + b
+    end: add
+end: Sum
+D:
+    int: z 1
+end: D
+int: before 0
+int: after 0
+Main:
+    node\before := 1
+    call(data := D; code := Sum\add)
+    node\after := 2

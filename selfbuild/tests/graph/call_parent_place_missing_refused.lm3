@@ -1,0 +1,16 @@
+# The root R0 without an entry. The negative control of the reading over the parent: the place x the body writes
+# through `data\x` exists only in the Structure itself (`int: x 7`), not in the data of the function, which declares y.
+# The body is entered -- the mark written at its entry stands (Log\before 1) --; the access to the missing field of the
+# parent refuses with 3; the mark after it is absent (Log\after 0); the function's place y and the root place stand
+# (Log\seen 0). The interpreter's answer is 3.
+# Norm: the book #structural-call («The selected Structure C is executed in CODE; its actual parent supplies DATA»),
+# the roles of data and code (#data-code-roles: «A code declaration defines a call-local place, without extending
+# source data»).
+@: Log (int: before 0; int: after 0; int: seen 0)
+fn: k () int (
+    int: y 0
+    Code(int: x 7; Log\before := 1; data\x := 7; Log\after := 1)
+)
+    call(code := Code)
+    return: data\y
+Log\seen := k()

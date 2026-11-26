@@ -1,0 +1,29 @@
+Log:
+    int: made 1
+    int: seen 7
+    int: after 1
+end: Log
+Host:
+    int: a 1
+    return: int
+    add:
+        :=: (Log \ seen) a
+        return: a
+    end: add
+end: Host
+Pick:
+    return: @
+    Args:
+        int: a 7
+    end: Args
+    PickCode:
+        :=: (Log \ made) ((Log \ made) + 1)
+        return: (Host \ add)
+    end: PickCode
+    PickArgs:
+        :=: (Log \ made) ((Log \ made) + 1)
+        return: (node \ Args)
+    end: PickArgs
+end: Pick
+call: (:= code (Host \ add)) (:= args Pick\PickArgs())
+:=: (Log \ after) 1

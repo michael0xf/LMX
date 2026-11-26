@@ -1,0 +1,11 @@
+# The root R0 without an entry. The code operand is obtained by execution: `Pick\PickCode()` is an ordinary Structure
+# whose data describes a reference result (`return: @` in Pick); it counts its run and returns the Structure Host\add.
+# The call then executes Host\add over Host with the fields of Args supplied (a 7): Log\made 1, Log\seen 7, and the
+# statement after the call is reached (Log\after 1). The actuals are read first, as written.
+# Norm: the book #structural-call (the operands are evaluated in the order they are written; `call(args code)` is one
+# call), #return-in-data (`@` as a reference with the identity of what the body returned).
+@: Log (int: made 0; int: seen 0; int: after 0)
+@: Host (int: a 1; return: int; add(Log\seen := a; return: a))
+@: Pick (return: @; Args(int: a 7); PickCode(Log\made := Log\made + 1; return: Host\add); PickArgs(Log\made := Log\made + 1; return: node\Args))
+call(args := Pick\Args; code := Pick\PickCode())
+Log\after := 1

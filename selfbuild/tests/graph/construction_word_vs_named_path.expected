@@ -1,0 +1,19 @@
+Log:
+    int: before 1
+    int: after 0
+end: Log
+D:
+    B:
+        int: v 8
+    end: B
+    A: B
+    @: p (A [] 0)
+end: D
+Use:
+    @: target
+    go: (:= (target \ v) ((target \ v) + 1))
+end: Use
+:=: (Log \ before) 1
+Use\go((D \ B))
+Use\go(((D \ A) [] 0))
+:=: (Log \ after) 1

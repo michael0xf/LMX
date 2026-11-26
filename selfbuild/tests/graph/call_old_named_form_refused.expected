@@ -1,0 +1,18 @@
+Counter:
+    int: steps 0
+end: Counter
+Sum:
+    int: a 1
+    int: b 2
+    add: (:= (Counter \ steps) (((Counter \ steps) + (a * 10)) + b))
+end: Sum
+D:
+    int: z 1
+end: D
+int: before 1
+int: after 0
+Main:
+    :=: (node \ before) 1
+    call: (:= data D) (:= code (Sum \ add))
+    :=: (node \ after) 2
+end: Main

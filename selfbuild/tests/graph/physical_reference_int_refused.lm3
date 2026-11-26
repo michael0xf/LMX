@@ -1,15 +1,31 @@
 # A wrapper8 source requires an int reference, not an int place.
-int: before 0
-int: after 0
-@: Bad (int: p 99; @: s Missing)
-sub: main () (
-    int: i 3
+# Step 21.7 K2, S3: the record Types is written inside Bad and launched by `Bad\Types()` over its data
+# parent(Types) = Bad. Its first line declares the reference `@: p int` where Bad holds the int place p (99): the
+# type is checked on that line, before the second declaration is reached and before any effect -- `Observed\after` is
+# not written. The launch answers 4. The former record `call(Bad; Types\code)` still has the two positionals of
+# [args, code]; the substitution of DATA is removed, and it answers 5 on this scene.
+# Norm: the book #structural-call (the data is parent(C)), the roles of data and code (#data-code-roles: «in code it
+# checks the type on its own line»).
+Observed:
+    int: before 0
+    int: after 0
+    int: calls 0
+end: Observed
+int: calls 0
+fn: touch () int
+    calls := calls + 1
+    return: 0
+Bad:
+    int: p 99
     A(int: v 7)
-    sub: Types () ()
-        @: p int @i
+    @: s Missing
+    Types:
+        @: p int
         @: s A
-)
-    node\before := 1
-    call(Bad; Types\code)
-    node\after := 1
-main()
+    end: Types
+end: Bad
+Main:
+    Observed\before := 1
+    Bad\Types()
+    Observed\after := 1
+    Observed\calls := calls

@@ -1,14 +1,27 @@
 # The destination is checked before the candidate's effects.
-int: calls 0
+# Step 21.7 K2, S3: the record Code is written inside D and launched by `D\Code()` over its data parent(Code) = D.
+# Its first line declares the reference `@: p int data[touch()]` where D holds the int place p: the type is checked on
+# that line, before the initializer's effects. `touch` records each of its runs in the graph (`Observed\touches`); it
+# is run once before the launch as the control of that record (touches 1) and the launch adds none (still 1); `seen`
+# stays 0. The launch answers 4.
+# The former record `call(D; Code)` still fits the outer form [args, code] with D as the args actual; the
+# substitution of DATA is removed (the data is parent(Code)), and D's fields name no input of it: the launch answers 5.
+# Norm: the book #structural-call (the data is parent(C)), the roles of data and code (#data-code-roles: «in code it
+# checks the type on its own line»).
+Observed:
+    int: touches 0
+end: Observed
 fn: touch () int
-    node\calls := node\calls + 1
+    Observed\touches := Observed\touches + 1
     return: 0
-@: D (
+D:
     int: p 0
     int: seen 0
-)
-@: Code (
-    @: p int data[touch()]
-    seen := 1
-)
-call(D; Code)
+    Code:
+        @: p int data[touch()]
+        seen := 1
+    end: Code
+end: D
+Main:
+    int: control touch()
+    D\Code()

@@ -1,0 +1,17 @@
+# The root R0 without an entry. Both properties of the physical word in one context (the coordinates of Sol and Astra
+# for the row construction_index_word): the physical `A[0]` keeps the word B, and the named path to B gives a
+# Structure. `Use` has the reference input `@: target`; its body writes through it. `Use\go(D\B)` -- the named path is
+# a Structure: admitted, `D\B\v` 8. `Use\go(D\A[0])` -- the physical `A[0]` is the word B, not a Structure: the
+# reached admission refuses, 4; `Log\before` 1, `Log\after` 0.
+@: Log (int: before 0; int: after 0)
+@: D (B(int: v 7); A(B); @: p A[0])
+@: Use (
+    @: target
+    go:
+        target\v := target\v + 1
+    end: go
+)
+Log\before := 1
+Use\go(D\B)
+Use\go(D\A[0])
+Log\after := 1

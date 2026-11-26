@@ -1,36 +1,20 @@
----
-    Observed:
-        int: copied 0
-        int: own 1
-    end: Observed
----
-sub: main () (
-    From:
-        int: x 7
-    end: From
-    To:
-        int: x 0
-    end: To
-    Self:
-        int: x 1
-        :=: x (x + 1)
-    end: Self
-    Copy: (data To)
-    Apply: (data)
+Observed:
     int: copied 0
-    int: own 0
-)
-    call: From Copy
-    call: Self Apply
-    :=: (data \ copied) (To \ x)
-    :=: (data \ own) (Self \ x)
-end: main
-main:
-int: copied ((main \ data) \ copied)
-int: own ((main \ data) \ own)
-sub: observe ()
-    @: shared (node [] 0)
-    :=: ((shared \ Observed) \ copied) copied
-    :=: ((shared \ Observed) \ own) own
-end: observe
-observe:
+    int: own 1
+    int: echo_local 1
+    int: mark_local 2
+end: Observed
+To:
+    int: x 0
+    Echo: (:= x (x + 1)) (:= (Observed \ echo_local) x)
+end: To
+From:
+    int: x 7
+    Copy: To\Echo()
+end: From
+Self:
+    int: x 1
+    Mark: (:= x (x + 1)) (:= (Observed \ mark_local) x)
+    Apply: Self\Mark()
+end: Self
+Main: From\Copy() Self\Apply() (:= (Observed \ copied) (To \ x)) (:= (Observed \ own) (Self \ x))

@@ -1,26 +1,23 @@
-int: before 1
-int: after 0
-int: calls 0
+Observed:
+    int: before 1
+    int: after 0
+    int: touches 1
+    int: p_checked 1
+end: Observed
 fn: touch () int
-    :=: (node \ calls) ((node \ calls) + 1)
+    :=: (Observed \ touches) ((Observed \ touches) + 1)
     return: 0
 end: touch
+A:
+    int: v 7
+end: A
 Bad:
     @: p int (data [] (touch))
     int: s 99
-end: Bad
-sub: main () (
-    int: i 3
-    A:
-        int: v 7
-    end: A
-    sub: Types ()
-        @: p int (@ i)
+    Types:
+        @: p int
+        :=: (Observed \ p_checked) 1
         @: s A
     end: Types
-)
-    :=: (node \ before) 1
-    call: Bad (Types \ code)
-    :=: (node \ after) 1
-end: main
-main:
+end: Bad
+Main: (int control (touch)) (:= (Observed \ before) 1) Bad\Types() (:= (Observed \ after) 1)

@@ -1,19 +1,11 @@
----
-    Observed:
-        int: seen 10
-        int: x 10
-        int: pad 99
-        int: inline_seen 1
-        int: inline_x 1
-        int: inline_pad 90
-    end: Observed
----
-sub: main () (
-    D:
-        int: seen 0
-        int: pad 99
-        int: x 10
-    end: D
+Observed:
+    int: seen 10
+    int: inline_seen 1
+end: Observed
+D:
+    int: seen 10
+    int: pad 99
+    int: x 10
     Code:
         :=: (data \ seen) x
         int: x 2
@@ -22,28 +14,9 @@ sub: main () (
     Inline:
         int: pad 90
         int: x 1
-        int: seen 0
+        int: seen 1
         if: 1 ((int x 7))
-        :=: (data \ seen) x
+        :=: (Inline \ seen) x
     end: Inline
-)
-    call: D Code
-    call: Inline
-end: main
-main:
-int: seen (((main \ data) \ D) \ seen)
-int: x (((main \ data) \ D) \ x)
-int: pad (((main \ data) \ D) \ pad)
-int: inline_seen (((main \ data) \ Inline) \ seen)
-int: inline_x (((main \ data) \ Inline) \ x)
-int: inline_pad (((main \ data) \ Inline) \ pad)
-sub: observe ()
-    @: shared (node [] 0)
-    :=: ((shared \ Observed) \ seen) seen
-    :=: ((shared \ Observed) \ x) x
-    :=: ((shared \ Observed) \ pad) pad
-    :=: ((shared \ Observed) \ inline_seen) inline_seen
-    :=: ((shared \ Observed) \ inline_x) inline_x
-    :=: ((shared \ Observed) \ inline_pad) inline_pad
-end: observe
-observe:
+end: D
+Main: D\Code() D\Inline() (:= (Observed \ seen) (D \ seen)) (:= (Observed \ inline_seen) ((D \ Inline) \ seen))

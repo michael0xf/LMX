@@ -1,32 +1,14 @@
----
-    Observed:
-        int: seen 4
-        int: inner_x 4
-        int: d_y 4
-    end: Observed
----
-sub: main () (
+Observed:
+    int: seen 4
+end: Observed
+D:
+    Inner:
+        int: x 4
+    end: Inner
+    int: y 4
     Code:
         int: y
         :=: (data \ y) (Inner \ x)
     end: Code
-    D:
-        Inner:
-            int: x 4
-        end: Inner
-        int: y 0
-    end: D
-)
-    call: D Code
-end: main
-main:
-int: seen (((main \ data) \ D) \ y)
-int: inner_x ((((main \ data) \ D) \ Inner) \ x)
-int: d_y (((main \ data) \ D) \ y)
-sub: observe ()
-    @: shared (node [] 0)
-    :=: ((shared \ Observed) \ seen) seen
-    :=: ((shared \ Observed) \ inner_x) inner_x
-    :=: ((shared \ Observed) \ d_y) d_y
-end: observe
-observe:
+end: D
+Main: D\Code() (:= (Observed \ seen) (D \ y))

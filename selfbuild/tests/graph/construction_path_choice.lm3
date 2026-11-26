@@ -1,0 +1,24 @@
+# The root R0 without an entry. The positive choice of both same-named occurrences, by their index in S (the
+# coordinates of Sol and Astra for the row construction_path_ambiguous), on ordinary Structures: `S\[0]f` and
+# `S\[1]f`. `call(code := D\F1\go)` and `call(code := D\F2\go)` select the code by naming its formal; each body reads
+# the value of the occurrence its parent's input names and writes it into `Log`: first 11, second 12; before 1, after 1.
+@: Log (int: before 0; int: first 0; int: second 0; int: after 0)
+@: D (
+    S(f(int: v 11); f(int: v 12))
+    F1(
+        @: p S\[0]f
+        go:
+            Log\first := p\v
+        end: go
+    )
+    F2(
+        @: p S\[1]f
+        go:
+            Log\second := p\v
+        end: go
+    )
+)
+Log\before := 1
+call(code := D\F1\go)
+call(code := D\F2\go)
+Log\after := 1

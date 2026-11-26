@@ -1,19 +1,18 @@
----
-    Observed:
-        int: seen 0
-    end: Observed
----
+Observed:
+    int: seen 11
+end: Observed
 fn: foo () int
-    @: shared (node [] 0)
-    :=: ((shared \ Observed) \ seen) (((shared \ Observed) \ seen) + 1)
+    :=: (Observed \ seen) ((Observed \ seen) + 1)
     return: 1
 end: foo
 fn: bar () int
-    @: shared (node [] 0)
-    :=: ((shared \ Observed) \ seen) (((shared \ Observed) \ seen) + 10)
+    :=: (Observed \ seen) ((Observed \ seen) + 10)
     return: 2
 end: bar
-sub: main ((C (foo) (bar)))
+C:
+    foo:
+    bar:
+end: C
+Main:
     call: C
-end: main
-main:
+end: Main

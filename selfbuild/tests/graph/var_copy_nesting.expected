@@ -1,8 +1,6 @@
----
-    Observed:
-        int: seen 9
-    end: Observed
----
+Observed:
+    int: seen 9
+end: Observed
 fn: probe () int (
     Box:
         int: kk 9
@@ -12,12 +10,7 @@ fn: probe () int (
         end: Code
     end: Box
 )
-    call: ((data \ Box) \ Code) ((data \ Box) \ Code)
+    Box\Code()
     return: (((data \ Box) \ Code) \ r)
 end: probe
-int: seen (probe)
-sub: main ()
-    @: shared (node [] 0)
-    :=: ((shared \ Observed) \ seen) seen
-end: main
-main:
+Main: (:= (Observed \ seen) (probe))

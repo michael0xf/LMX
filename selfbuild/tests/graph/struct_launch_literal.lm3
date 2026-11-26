@@ -5,30 +5,31 @@
 # Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places, the call
 # main() and the launch of Add by the path main\data\Add.
 # наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
-(
-    Observed:
-        int: seen 0
-        int: after 0
-)
-sub: main () (
-    Total:
-        int: sum 0
+# Structure as written, given by name to the record of a launch by name and as an operand of the receiver call -- in a
+# callable's code and at the root.
+# Step 21.7 K2, S3: the anonymous written Structure is the single actual of the record launch `Host\Add((int: v 5))`:
+# its field v names the input v of the data parent(Add) = Host (the opened reading of a structural call, step 21.7 K2,
+# S2) -- in a callable's code and at the root. The sum takes 5 + 3 = 8, then 8 + 4 = 12: Observed\seen 8,
+# Observed\after 12. The former `call((int: v 3); Add)` supplied the literal as data; no form of call supplies data.
+# Norm: the book #structural-call (`C(args)`: written actual arguments by the common algorithm), #declaration-selection.
+Observed:
+    int: seen 0
+    int: after 0
+end: Observed
+Total:
+    int: sum 0
+end: Total
+Host:
+    int: v 0
     Add:
         Total\sum := Total\sum + v
-    int: seen 0
-)
-    fn: f () int
-        Add(data := (int: v 5))
-        call((int: v 3); Add)
-        return: Total\sum
-    data\seen := f()
-main()
-int: seen main\data\seen
-call((int: v 4); main\data\Add)
-int: after main\data\Total\sum
-
-sub: observe ()
-    @: shared node[0]
-    shared\Observed\seen := seen
-    shared\Observed\after := after
-observe()
+    end: Add
+end: Host
+fn: f () int
+    Host\Add((int: v 5))
+    Host\Add((int: v 3))
+    return: Total\sum
+Main:
+    Observed\seen := f()
+    Host\Add((int: v 4))
+    Observed\after := Total\sum

@@ -1,0 +1,22 @@
+Log:
+    int: first 7
+    int: second 0
+end: Log
+Host:
+    int: a 1
+    @: ref C2
+    C1: (:= (Log \ first) a)
+    C2: (:= (Log \ second) a)
+end: Host
+D:
+    Args:
+        int: a 7
+    end: Args
+    return: @
+    Flip:
+        :=: (Host \ ref) (Host \ C2)
+        return: (node \ Args)
+    end: Flip
+end: D
+:=: (Host \ ref) (Host \ C1)
+call: (:= code (Host \ ref)) (:= args D\Flip())

@@ -1,35 +1,35 @@
 # наблюдение явной записью: локалы не публикуются (#flush-receiver-contract)
 # Types is never called. Its implicit wrappers check the supplied places;
 # their unpromised payload must not be read or stored into the filled data.
-(
-    Observed:
-        int: before 0
-        int: after 0
-        int: p_after 0
-        int: s_after 0
-)
-int: before 0
-int: after 0
-sub: build () (
+# Step 21.7 K2, S3: the record Types is written inside Build and launched by `Build\Types()` over its data
+# parent(Types) = Build. Types holds only the reference declarations `@: p int` and `@: s A`: they are checked on
+# their lines against the places of Build (p is a reference to int, s is a reference to A). No payload is read into
+# the filled data and nothing is stored into it: Build keeps its prepared places -- p stays the reference to i
+# (its dereference gives p_after 3), s stays A (s_after 7). Whether a local write took place is not concluded
+# from the graph. The former record `call(data; Types\data)` still has the two positionals of [args, code]; the
+# substitution of DATA is removed, and it answers 5 on this scene.
+# Norm: the book #structural-call, the roles of data and code (#data-code-roles).
+Observed:
+    int: before 0
+    int: after 0
+    int: p_after 0
+    int: s_after 0
+end: Observed
+Build:
     int: i 3
-    A(int: v 7)
+    A:
+        int: v 7
+    end: A
     @: p int @i
     @: s A
-    sub: Types () ()
-        @: p int @i
+    Types:
+        @: p int
         @: s A
-)
-    node\before := 1
-    call(data; Types\data)
-    node\after := 1
-build()
-int: p_after \(build\data\p)
-int: s_after build\data\s\v
-
-sub: main ()
-    @: sink node[0]
-    sink\Observed\before := node\before
-    sink\Observed\after := node\after
-    sink\Observed\p_after := node\p_after
-    sink\Observed\s_after := node\s_after
-main()
+    end: Types
+end: Build
+Main:
+    Observed\before := 1
+    Build\Types()
+    Observed\after := 1
+    Observed\p_after := \(Build\p)
+    Observed\s_after := Build\s\v

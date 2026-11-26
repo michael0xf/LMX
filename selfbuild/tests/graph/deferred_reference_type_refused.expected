@@ -1,14 +1,13 @@
-int: calls 0
+Observed:
+    int: touches 1
+end: Observed
 fn: touch () int
-    :=: (node \ calls) ((node \ calls) + 1)
+    :=: (Observed \ touches) ((Observed \ touches) + 1)
     return: 0
 end: touch
 D:
     int: p 0
     int: seen 0
+    Code: (@ p int (data [] (touch))) (:= seen 1)
 end: D
-Code:
-    @: p int (data [] (touch))
-    :=: seen 1
-end: Code
-call: D Code
+Main: (int control (touch)) D\Code()

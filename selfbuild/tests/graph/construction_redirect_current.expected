@@ -1,0 +1,26 @@
+Log:
+    int: before 1
+    int: selected 2
+    int: after 1
+end: Log
+D:
+    A:
+        Leaf:
+            int: v 1
+        end: Leaf
+    end: A
+    B:
+        Leaf:
+            int: v 2
+        end: Leaf
+    end: B
+    @: cur B
+    C:
+        @: saved (cur \ Leaf)
+        go: (:= (Log \ selected) (saved \ v))
+    end: C
+end: D
+:=: (Log \ before) 1
+:=: (D \ cur) (D \ B)
+call: (:= code ((D \ C) \ go))
+:=: (Log \ after) 1

@@ -1,0 +1,19 @@
+# Entry Main. The two-argument form of the receiver, by name: `call(args := Args; code := Sum\add)` -- the same call
+# as `call(Args Sum\add)` and as `Sum\add(Args)`: `Counter\steps` 73 (the book #structural-call: the receiver's own
+# named arguments are ordinary).
+Counter:
+    int: steps 0
+end: Counter
+Sum:
+    int: a 1
+    int: b 2
+    add:
+        Counter\steps := Counter\steps + a * 10 + b
+    end: add
+end: Sum
+Args:
+    int: a 7
+    int: b 3
+end: Args
+Main:
+    call(args := Args; code := Sum\add)

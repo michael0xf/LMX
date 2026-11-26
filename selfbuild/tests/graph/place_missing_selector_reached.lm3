@@ -1,0 +1,32 @@
+# Prepare the own reference before attempting the failing launch. A missing
+# data selector is read at the reached reference-head, after p has been checked;
+# a bare missing input would instead fail entry binding before data runs.
+# Step 21.7 K2, S3: the same check over the real parent. Model is written inside D next to the reference place p that
+# holds it and the input v; the launch is `D\Attempt()` and the record in its body is `p(v := data\other)`. The head
+# p is checked first (it selects Model); the actual `v := data\other` names the input v of the real parent D (read
+# before the launch: input_v 5), so its right-hand side is read -- and the field `other` of D does not exist: the
+# read of the record fails, one reading reached admission and none is admitted, and the launch answers 4 (the rule
+# of step 21.7 K2, as struct_actual_kind_refused; the former source answered 3). The reference p is read by an
+# explicit write before the launch (prepared_p 1). A named actual that names no input of the real parent is refused
+# before its value is read (place_reference_unknown).
+# Norm: the book #structural-call (the data is parent(C)), #declaration-selection.
+D:
+    Model:
+        int: v 1
+    end: Model
+    @: p Model
+    int: v 5
+    Attempt:
+        p(v := data\other)
+    end: Attempt
+end: D
+Observed:
+    int: before 0
+    int: prepared_p 0
+    int: input_v 0
+end: Observed
+Main:
+    Observed\before := 1
+    Observed\prepared_p := D\p\v
+    Observed\input_v := D\v
+    D\Attempt()

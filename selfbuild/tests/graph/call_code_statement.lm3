@@ -1,0 +1,9 @@
+# The root R0 without an entry. The form `call(code)` with its formal named: `call(code := Sum\add)` executes the chosen
+# Structure itself over its actual parent: the fields a 1 and b 2 of Sum are its data, the effect is that of the
+# structural call `Sum\add()` -- Log\steps 12 -- and the statement after the call is reached (Log\after 1).
+# Norm: the book #structural-call (the forms `call(C)`, `call(A C)`, `C()`, `C(args)`: the executed object is C, the
+# data is parent(C)), #return-in-data (the statement discards the result).
+@: Log (int: steps 0; int: after 0)
+@: Sum (int: a 1; int: b 2; add(Log\steps := Log\steps + a * 10 + b))
+call(code := Sum\add)
+Log\after := 1

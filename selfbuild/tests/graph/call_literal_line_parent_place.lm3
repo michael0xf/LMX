@@ -1,0 +1,17 @@
+# The root R0 without an entry. A declaration with a literal of a Structure written in the data of a function is a place
+# of the code, local to each launch: `int: x 5` gives x 5 every time, also after the body changed it (x := x + 1), and
+# the source keeps the written 5 (Log\source 5). The Structure, called twice by the one-argument form of the receiver,
+# runs over its actual parent -- the data of the function --, so `data\x` is the place x of the parent: the second launch
+# enters with 5 (Log\entry 5), and the function returns 0 + 5 + 5 (Log\parent 10).
+# Norm: the book #structural-call (the data is parent(C)), the roles of data and code (#data-code-roles: a code
+# declaration «checks the type on its own line and, when a value is written, assigns … without extending source data»).
+@: Log (int: parent 0; int: entry 0; int: source 0)
+fn: h () int (
+    int: x 0
+    Self(int: x 5; Log\entry := data\x; data\x := data\x + x; x := x + 1)
+)
+    call(code := Self)
+    call(code := Self)
+    return: data\x
+Log\parent := h()
+Log\source := h\data\Self\x

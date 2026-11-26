@@ -1,0 +1,17 @@
+# The root R0 without an entry. One positional actual obtained by execution: `call(D\Mk())` gives the Structure P, whose
+# whole suits the form `call(code)` and whose two fields suit the form `call(args code)` by position. Its fields are
+# not known before the call: P is made when the program runs, it is no concrete Structure of the lexical space. By the
+# author's clarification of 2026-11-26 an argument is never executed to learn whether the call is admitted: a Structure
+# of two fields would be code and (args, code) at once, and the record is refused before Mk runs. The translation
+# refuses it before any code of the call is generated (`graph: call: refused at translation, answer 3`; the native and
+# the forced routes answer 3 at emit-check); the interpreter answers 3 when it prepares the call: Mk does not run
+# (Log\made 0), P is not launched (Log\steps 0), and the statement after the call is not reached (Log\after 0). The same
+# value with its formal named (`call(code := D\Mk())`) has the written reading alone and evaluates Mk once after the
+# choice (call_code_from_call).
+# Norm: the book #structural-call («if the whole C suits the form call(code) and its fields suit the form call(args
+# code), the record call(C) is an error of ambiguity»), #declaration-selection (checks available before argument
+# effects occur first; no evaluation for the choice).
+@: Log (int: made 0; int: after 0; int: steps 0)
+@: D (P((int: a 7); (Log\steps := 1)); return: @; Mk(Log\made := Log\made + 1; return: node\P))
+call(D\Mk())
+Log\after := 1

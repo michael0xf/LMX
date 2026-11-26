@@ -1,31 +1,9 @@
----
-    Observed:
-        int: seen 6
-        int: d_x 5
-        int: d_y 6
-    end: Observed
----
-sub: f () (
-    int: y 0
-)
-    :=: (data \ y) (x + 1)
-end: f
-sub: main () (
-    D:
-        int: x 5
-        int: y 0
-    end: D
-)
-    call: D (f \ code)
-end: main
-main:
-int: seen (((main \ data) \ D) \ y)
-int: d_x (((main \ data) \ D) \ x)
-int: d_y (((main \ data) \ D) \ y)
-sub: observe ()
-    @: shared (node [] 0)
-    :=: ((shared \ Observed) \ seen) seen
-    :=: ((shared \ Observed) \ d_x) d_x
-    :=: ((shared \ Observed) \ d_y) d_y
-end: observe
-observe:
+Observed:
+    int: seen 6
+end: Observed
+D:
+    int: x 5
+    int: y 6
+    f: (:= (data \ y) (x + 1))
+end: D
+Main: D\f() (:= (Observed \ seen) (D \ y))

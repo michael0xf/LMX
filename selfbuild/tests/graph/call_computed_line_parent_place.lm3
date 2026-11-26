@@ -1,0 +1,18 @@
+# The root R0 without an entry. A computed declaration of a Structure written in the data of a function is code executed
+# at its line, as a place of the code local to the launch: `int: x five()` calls five() there and nowhere else -- the
+# mark written immediately before the declaration reads 0 and the mark immediately after it reads 1 (Log\before 0,
+# Log\after 1). The Structure, called by the one-argument form of the receiver, runs over its actual parent -- the data
+# of the function --, so `data\y` is the place y of the parent: 0 + 5 + 1, and the function returns it (Log\parent 6).
+# Norm: the book #structural-call (the data is parent(C)), the roles of data and code (#data-code-roles: a code
+# declaration «checks the type on its own line and, when a value is written, assigns … without extending source data»).
+@: Log (int: parent 0; int: before 0; int: after 0; int: ticks 0)
+fn: five () int
+    Log\ticks := Log\ticks + 1
+    return: 5
+fn: g () int (
+    int: y 0
+    Computed(Log\before := Log\ticks; int: x five(); Log\after := Log\ticks; int: y 0; data\y := x + 1)
+)
+    call(code := Computed)
+    return: data\y
+Log\parent := g()

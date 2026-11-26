@@ -1,17 +1,31 @@
 # A formal cannot satisfy a missing DATA receiver requirement; no body or RHS runs.
+# Step 21.7 K2, S3: the record is `call(args := Args; code := D\Code)` (the former `call(Args D Code)` is no form). The
+# inputs of the launch are described by the data parent(Code) = D, which declares seen; x is a declaration of the code
+# of Code, not an input of D. The field x of Args names no input: 5, before its value is read; no body or RHS runs
+# (Observed\before 1, Observed\after 0, calls 0, D\seen 0).
+# Norm: the book #structural-call («The input places, requirements and defaults are described by the data parent(C)»),
+# #declaration-selection (a named actual that names no input admits no form).
+Observed:
+    int: before 0
+    int: after 0
+    int: calls 0
+end: Observed
 int: calls 0
 fn: side () int
-    node\calls := node\calls + 1
+    calls := calls + 1
     return: 2
-end: side
-@: Args (int: x 7)
-@: D (int: seen 0)
-@: Code (
-    seen := 1
-    int: x side()
-)
-int: before 0
-int: after 0
-before := 1
-call(Args D Code)
-after := 2
+Args:
+    int: x 7
+end: Args
+D:
+    int: seen 0
+    Code:
+        seen := 1
+        int: x side()
+    end: Code
+end: D
+Main:
+    Observed\before := 1
+    call(args := Args; code := D\Code)
+    Observed\after := 1
+    Observed\calls := calls

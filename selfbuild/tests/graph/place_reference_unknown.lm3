@@ -1,15 +1,27 @@
-# Prepare the own reference before attempting the failing launch. A missing
-# data selector is read at the reached reference-head, after p has been checked;
-# a bare missing input would instead fail entry binding before data runs.
-sub: main () (
-    Model:
-        int: v 1
+# Entry Main. A named actual whose name is no input of the real parent of the selected record admits no form: the
+# record is refused before its right-hand side is read.
+# Step 21.7 K2, S3: `p` selects Model (the reference place p of D holds Model), and the data is the real parent of the
+# selected record. The named actual `v := data\other` names v: v lies inside Model, and the real parent of Model has
+# no input v. The binder refuses the form: 5, before the value of the actual is read -- the missing selector
+# `data\other` is never reached. The reference p is read by an explicit write before the launch (prepared_p 1); Model
+# is not changed (v 1). The reached missing selector of a form that is admitted is checked by
+# place_missing_selector_reached.
+# Norm: the book #declaration-selection (the inputs are described by the data parent(C); a name without an input is no
+# form), #structural-call.
+Model:
+    int: v 1
+end: Model
+D:
     @: p Model
     Attempt:
-        p(data := data\other)
-)
-    return:
-main()
-int: prepared_p main\data\p\v
-call(main\data; main\data\Attempt)
-int: after main\data\Model\v
+        p(v := data\other)
+    end: Attempt
+end: D
+Observed:
+    int: before 0
+    int: prepared_p 0
+end: Observed
+Main:
+    Observed\before := 1
+    Observed\prepared_p := D\p\v
+    D\Attempt()

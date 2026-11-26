@@ -1,6 +1,8 @@
-int: calls 0
+Observed:
+    int: touches 1
+end: Observed
 fn: touch () int
-    :=: (node \ calls) ((node \ calls) + 1)
+    :=: (Observed \ touches) ((Observed \ touches) + 1)
     return: 7
 end: touch
 D:
@@ -9,9 +11,6 @@ D:
     end: Target
     @: p Target
     int: reached 0
+    Code: (int p (touch)) (:= reached 1)
 end: D
-Code:
-    int: p (touch)
-    :=: reached 1
-end: Code
-call: D Code
+Main: (int control (touch)) D\Code()

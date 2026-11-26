@@ -1,6 +1,11 @@
+Observed:
+    int: before 1
+    int: after 0
+    int: calls 0
+end: Observed
 int: calls 0
 fn: side () int
-    :=: (node \ calls) ((node \ calls) + 1)
+    :=: calls (calls + 1)
     return: 2
 end: side
 Args:
@@ -8,13 +13,11 @@ Args:
 end: Args
 D:
     int: seen 0
+    Code: (:= seen 1) (int x (side))
 end: D
-Code:
-    :=: seen 1
-    int: x (side)
-end: Code
-int: before 0
-int: after 0
-:=: before 1
-call: Args D Code
-:=: after 2
+Main:
+    :=: (Observed \ before) 1
+    call: (:= args Args) (:= code (D \ Code))
+    :=: (Observed \ after) 1
+    :=: (Observed \ calls) calls
+end: Main

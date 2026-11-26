@@ -1,38 +1,20 @@
----
-    Observed:
-        int: short_result 6
-        int: parts_result 16
-    end: Observed
----
-sub: main () (
-    From:
-        int: x 6
-    end: From
-    FromParts:
-        int: x 16
-    end: FromParts
-    To:
-        int: x 0
-    end: To
-    Change:
-        :=: x (x + 1)
-        return:
-        data: To
-    end: Change
-    int: short_result 0
-    int: parts_result 0
-)
-    call: From Change
-    call: (:= args ()) (:= data FromParts) (:= code Change)
-    :=: (data \ short_result) (From \ x)
-    :=: (data \ parts_result) (FromParts \ x)
-end: main
-main:
-int: short_result ((main \ data) \ short_result)
-int: parts_result ((main \ data) \ parts_result)
-sub: observe ()
-    @: shared (node [] 0)
-    :=: ((shared \ Observed) \ short_result) short_result
-    :=: ((shared \ Observed) \ parts_result) parts_result
-end: observe
-observe:
+Observed:
+    int: short_result 6
+    int: parts_result 16
+    int: to_x 0
+    int: change_local 17
+    int: relay_local 1
+end: Observed
+To:
+    int: x 0
+    Relay: (:= x (x + 1)) (:= (Observed \ relay_local) x)
+end: To
+From:
+    int: x 6
+    Change: (:= x (x + 1)) (:= (Observed \ change_local) x) To\Relay()
+end: From
+FromParts:
+    int: x 16
+    Change: (:= x (x + 1)) (:= (Observed \ change_local) x) To\Relay()
+end: FromParts
+Main: From\Change() FromParts\Change() (:= (Observed \ short_result) (From \ x)) (:= (Observed \ parts_result) (FromParts \ x)) (:= (Observed \ to_x) (To \ x))

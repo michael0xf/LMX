@@ -1,35 +1,48 @@
 # HG2-B (data(D), item 3): in Change `x := x + 1` is the call's local, and `data(To)` runs From's data over To (a declaration
 # of a visible name: the local). From\x stays 6 (short_result 6, pinned 7); FromParts\x stays 16 (parts_result 16, pinned 17).
 # Results written through data\ (rule Б). Observation: explicit writes in sub: observe (#flush-receiver-contract; #call-frame-20261115).
-(
-    Observed:
-        int: short_result 0
-        int: parts_result 0
-)
-# M11 5v: a child's spelling does not supply an ordinary code's data model.
-# The same C runs over different D through both existing launch forms.
-sub: main () (
-    From(int: x 6)
-    FromParts(int: x 16)
-    To(int: x 0)
-    Change(
-        x := x + 1
-        return:
-        data(To)
-    )
+# of a visible name: the local).
+# Step 21.7 K2, S3: the inner `data(To)` is the removed form (a data record launched over other data). The same
+# property is carried by the structural link: Change is written in From and in FromParts and launched over its parent
+# (`From\Change()`, `FromParts\Change()`); the inner launch is the relay record of To, `To\Relay()`. Every bare write
+# `x := x + 1` is reached and writes the local of its launch (#call-frame-20261115): the local is read out by an
+# explicit write right after it (change_local 17 -- the local of FromParts, 16 + 1; relay_local 1 -- the local of
+# To's relay, 0 + 1), and no source changes: From\x stays 6 (short_result 6), FromParts\x stays 16 (parts_result 16),
+# To\x stays 0 (to_x 0).
+# Norm: the book #structural-call (the data is parent(C)), #call-frame-20261115 (no write-back of a bare write).
+Observed:
     int: short_result 0
     int: parts_result 0
-)
-    call(From Change)
-    call(args := (); data := FromParts; code := Change)
-    data\short_result := From\x
-    data\parts_result := FromParts\x
-main()
-int: short_result main\data\short_result
-int: parts_result main\data\parts_result
-
-sub: observe ()
-    @: shared node[0]
-    shared\Observed\short_result := short_result
-    shared\Observed\parts_result := parts_result
-observe()
+    int: to_x 0
+    int: change_local 0
+    int: relay_local 0
+end: Observed
+To:
+    int: x 0
+    Relay:
+        x := x + 1
+        Observed\relay_local := x
+    end: Relay
+end: To
+From:
+    int: x 6
+    Change:
+        x := x + 1
+        Observed\change_local := x
+        To\Relay()
+    end: Change
+end: From
+FromParts:
+    int: x 16
+    Change:
+        x := x + 1
+        Observed\change_local := x
+        To\Relay()
+    end: Change
+end: FromParts
+Main:
+    From\Change()
+    FromParts\Change()
+    Observed\short_result := From\x
+    Observed\parts_result := FromParts\x
+    Observed\to_x := To\x

@@ -1005,22 +1005,27 @@ Structure различаются.
 
 <a id="expression-structure-parent-guard"></a>
 Группировщик читает **чистый граф** и учитывает принимающую роль каждого
-вхождения. По уточнению автора от 26 ноября 2026 года атом-ссылка по графу
-на Structure, достигнутый в Expression, считается группой Expression только
-вне роли операнда. Вхождение, выбранное операндом (операцией, к которой
-связываются аргументы), обрабатывается по обычному договору операнда.
-При единственном групповом чтении атом группируется и тогда, когда
-родитель цели совпадает с текущим лексическим владельцем.
-Группа по ссылке сохраняет фактический `parent` цели и её контекст
-вычисления. Содержимое группы исполняется на месте.
+вхождения. По уточнению автора от 26 ноября 2026 года транслятор определяет
+роль графового атома-ссылки на Structure в Expression обычной проверкой
+`satisfies` относительно [шаблона операнда](#operand-receiver). При `1`
+ссылка обозначает операцию и применяется её обычный договор. При
+установленном `0` ссылка образует группу даже при совпадающем родителе.
+Группа сохраняет фактический `parent` цели и её контекст вычисления.
+Содержимое группы исполняется на месте. Шаблон одинаково применим к
+скопированному и самостоятельно собранному описанию операнда.
 
-Трансляция определяет эти роли по тем же строгим
-[правилам выбора, что и для вызовов](#declaration-selection). Поля известных
-Structure и применимые принимающие договоры проверяются до эффектов.
-Если подходят несколько чтений или одно возможное значение неизвестной
-ссылки допускает конкурирующие чтения, трансляция сообщает об ошибке.
-Для определения роли не исполняются операнд, тело кандидата или аргумент.
-Подготовка к интерпретации использует тот же выбор.
+Проверка роли происходит при трансляции, до вычисления аргументов и тела.
+Для неизвестной ссылки, например `void@`, если по доступному описанию
+возможны и `1`, и `0`, выражение отклоняется при трансляции. Неизвестность
+сама по себе не даёт установленного `0`. Остальные конкурирующие чтения
+отклоняются по тем же строгим [правилам выбора, что и для
+вызовов](#declaration-selection). Подготовка к интерпретации использует
+тот же выбор до вычисления.
+
+Когда роль, цель и связывание известны и у цели есть подготовленный native
+вход, транслятор использует выбранный план и генерирует прямой вызов.
+Нативный код использует установленную роль без повторного `satisfies`
+или повторной группировки во время исполнения.
 
 Лексическое разрешение ресивера или вызова следует обычным правилам.
 Для остальных Structure-узлов, достигнутых в CODE/Expression, обработку
@@ -2010,23 +2015,27 @@ place `ptr`; an empty stream and one empty Structure are different values.
 
 <a id="expression-structure-parent-guard"></a>
 The grouper consumes the **clean graph** and the receiving role of each
-occurrence. Under the author's clarification of 26 November 2026, a graph
-reference atom to a Structure reached in Expression is an Expression group
-only outside the operand role. An occurrence selected as the operand (the
-operation to which arguments are bound) follows that operand's ordinary
-contract. An atom with only a group reading is grouped even when the target
-has the current lexical owner as its parent. A graph reference atom used as
-a group keeps the target's actual
-`parent` and evaluation context. The group's contents execute in place.
+occurrence. Under the author's clarification of 26 November 2026, the
+translator determines the role of a graph reference atom to a Structure
+in Expression with the ordinary `satisfies` check against the
+[operand template](#operand-receiver). A result of `1` selects the
+operation and its ordinary contract. An established `0` makes the
+reference a group even when the target has the current lexical owner as
+its parent. The group keeps the target's actual `parent` and evaluation
+context, and its contents execute in place. The same template applies to
+an operand description copied from it or built independently.
 
-Translation determines these roles by the same strict
-[selection rules as for calls](#declaration-selection). It checks the fields
-of known Structures and the applicable receiving contracts before any effects.
-If more than one interpretation fits, or if one possible value of an unknown
-reference would admit competing interpretations, translation reports an
-error. Role selection does not execute an operand, a candidate body or an
-argument to find out which interpretation works. Preparation for
-interpretation uses the same selection.
+Translation determines the role before any argument or body is evaluated.
+For an unknown reference such as `void@`, if the available description
+allows both `1` and `0`, translation rejects the expression. An unknown
+match does not establish `0`. Other competing interpretations are
+rejected by the same strict [selection rules as for calls](#declaration-selection).
+Preparation for interpretation makes the same choice before evaluation.
+
+When the role, target and bindings are known and the target has a prepared
+native entry, the translator uses the selected plan to emit a direct call.
+The native code uses the established role without repeating `satisfies` or
+grouping at runtime.
 
 Lexical receiver/call resolution retains its ordinary rules. For other
 Structure nodes reached in CODE/Expression, the actual name and `parent`

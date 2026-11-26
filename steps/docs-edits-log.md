@@ -340,6 +340,7 @@ Haskell (`patterns/examples/haskell_comparision/A01, H01–H09, M01, M05, R01–
 | 32 | 2026-11-25 | `3ac8a4a07` | `README.ru.md` | одна строка ссылок на каталог и архив; запись 32 |
 | 33 | 2026-11-25 | коммит этой строки | `next_core_tasks_v3.md`, `next_core_tasks_v3_checklist.md`, `steps/current.md`, `steps/witnesses/c99-packets-applied-20261125/**` | план дополнен шагом 29.7 (три задачи интеграции); свидетель; запись 33 |
 | 34 | 2026-11-26 | коммит этой строки | `docs/spec/**` (29 файлов), `provenance/grammar.json`, `provenance/semantics-book.md`, `LMX_blog/2026-11-26-expression-reference-atoms.md` | уточнение автора: атом-ссылка на Structure в Expression — группа только вне роли операнда; конкурирующие чтения — ошибка трансляции до вычисления; запись 34 |
+| 35 | 2026-11-26 | коммит этой строки | `docs/spec/LMX_semantics.en.md`, `.ru.md`, `docs/spec/EXPRESSION_ALGORITHM.md`, `docs/spec/EXPRESSION_GROUPING.md`, `docs/spec/LMX_grammar.en.md`, `.ru.md`, `provenance/grammar.json`, `provenance/semantics-book.md`, `LMX_blog/2026-11-26-expression-reference-atoms.md` | уточнение автора: роль атома-ссылки в Expression задаёт обычный `satisfies` по шаблону операнда при трансляции; запись 35 |
 
 Запись 28: рабочая коллекция взята из пакета 3. Из 2861 изменённых путей 2854 новых и 7 заменённых; 2526 хранятся
 байтами автора, остальные 335 текстов (2 779 499 → 2 733 078 байт, 46 421 перевод CRLF; `vendor/softfloat` 307,
@@ -394,6 +395,8 @@ Structure может быть группой Expression только вне ро
 source snapshots; 29 paired grammar sections, 40 verbatim source excerpts, 615 imported files, links, exact semantic
 opening`, все числа равны проверке 308, отслеживаемых файлов 50335 (было 50334); `python tools/check_docs.py` — OK,
 выход 0. Общее правило объявлений и вызовов в эти файлы coder не вносил.
+
+Запись 35: второе уточнение автора об Expression из обсуждения с Astra (Sol внёс, `CODER-EXPRESSION-SATISFIES-DOCS-READY-20261126-01`). При трансляции обычный `satisfies` сопоставляет цель атома-ссылки с шаблоном операнда: `1` выбирает операцию, установленный `0` — группу. Для неизвестной ссылки (`void@`), у которой возможны оба ответа, выражение отклоняется до вычисления; отдельного признака операнда нет. Для известной роли, цели, связывания и подготовленного native-входа в L1/C должен быть виден прямой вызов без повторной проверки роли. Это уточнение не заменяет отдельную проверку карт W/E вызова. Правка: 9 файлов, 101 строка добавлена, 75 убраны (`provenance/semantics-book.md` 75, `LMX_semantics.en.md` 38, `.ru.md` 37, остальные 2–8). Проверки перед коммитом (coder): docs check 310 — OK, все числа равны 309; `python tools/check_docs.py` — OK, выход 0.
 
 ## Правки 2026-11-23 до снимка
 

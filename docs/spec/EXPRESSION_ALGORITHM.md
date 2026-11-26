@@ -6,16 +6,16 @@
 
 ## 1. Роль вхождения и структурные связи
 
-VALUE, TYPE, DATA, NAME, PLACE и RAW сохраняют собственные договоры. Для атома-ссылки на Structure в Expression трансляция устанавливает допустимые чтения до вычисления. Роль операнда выбирается по договору операции. Если чтения конкурируют для одного и того же возможного значения, трансляция выдаёт ошибку по [общим правилам выбора](LMX_semantics.ru.md#declaration-selection).
+VALUE, TYPE, DATA, NAME, PLACE и RAW сохраняют собственные договоры. Для атома-ссылки на Structure в Expression трансляция определяет роль обычным `satisfies` по [шаблону операнда](LMX_semantics.ru.md#operand-receiver). Установленная `1` выбирает операнд, установленный `0` — группу. Возможность обоих ответов для неизвестной ссылки даёт ошибку до вычисления, как и другие конкурирующие чтения. Псевдокод получает уже установленный результат проверки. При известной цели, связывании и подготовленном native-входе транслятор генерирует прямой вызов по выбранному плану.
 
 ```python
-def classify_expression_item(item, context, selected_role):
+def classify_expression_item(item, context, operand_match):
     node = resolve_reference(item)       # без вызова и изменения parent
     if not is_structure(node):
         return AtomPlan(node, context)
 
     if is_graph_reference_atom(item):
-        if selected_role == OPERAND:
+        if operand_match == 1:
             return OperandPlan(item, node, context)
         return GroupPlan(node, context)
 

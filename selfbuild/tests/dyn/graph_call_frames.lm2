@@ -1,5 +1,8 @@
 # Parsed language calls use the public common Graph worker. This assertion
 # owner uses the C door only to choose parts and inspect the unchanged graph.
+# Cases 122-123: the path write of a body into the right-hand side of a retained declaration. The declaration keeps
+# its identity, its operand becomes the address of the written cell, the initializer is not executed, and the value
+# is read through: the result is 5 and `calls` does not grow (the norm; trace of 2026-11-25; Sol and Astra).
 predef: "l2src/l2_graph_build.lm1"
 predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_graph_run.h.lm1"
@@ -186,18 +189,20 @@ fn: cf_frames_check () int
     if: description = 0 || description_data = 0 || c.lmx_graph_kind(g, (cast: (@: void) declaration)) != 4
         return: 122
     status := c.lmx_graph_invoke_value(g, description, 0, 0U, @ result)
-    if: cf_expect(g, status, @ result, 9, 122) != 0 || cf_number(g, counter, "calls") != 7 || c.lmx_graph_get_in(g, description_data, 0U) != (cast: (@: void) declaration) || c.lmx_graph_kind(g, (cast: (@: void) declaration)) != 4
+    if: cf_expect(g, status, @ result, 5, 122) != 0 || cf_number(g, counter, "calls") != 6 || c.lmx_graph_get_in(g, description_data, 0U) != (cast: (@: void) declaration) || c.lmx_graph_kind(g, (cast: (@: void) declaration)) != 4
         return: 122
     if: c.lmx_graph_value_int(g, c.lmx_graph_get_in(g, declaration, 1U), @ rhs) != 0 || rhs != 5
         return: 122
     status := c.lmx_graph_invoke_value(g, description, 0, 0U, @ result)
-    if: cf_expect(g, status, @ result, 5, 123) != 0 || cf_number(g, counter, "calls") != 7 || c.lmx_graph_get_in(g, description_data, 0U) != (cast: (@: void) declaration) || c.lmx_graph_kind(g, (cast: (@: void) declaration)) != 4 || c.lmx_graph_value_int(g, c.lmx_graph_get_in(g, declaration, 1U), @ rhs) != 0 || rhs != 5 || arena\activation != 0 || arena\execution_roots != 0
+    if: cf_expect(g, status, @ result, 5, 123) != 0 || cf_number(g, counter, "calls") != 6 || c.lmx_graph_get_in(g, description_data, 0U) != (cast: (@: void) declaration) || c.lmx_graph_kind(g, (cast: (@: void) declaration)) != 4 || c.lmx_graph_value_int(g, c.lmx_graph_get_in(g, declaration, 1U), @ rhs) != 0 || rhs != 5 || arena\activation != 0 || arena\execution_roots != 0
         return: 123
     descriptor := cf_named(g, root, "cf_descriptor")
     if: descriptor = 0 || (cast: (c.LmxEntry) c.lmx_native_entry(@arena, descriptor)) != 0
         return: 124
+    if: c.lmx_graph_value_int(g, cf_field(g, counter, "calls"), @ rhs) != 0
+        return: 124
     status := c.lmx_graph_call_data(g, 0, descriptor, 1)
-    if: status != 0 || cf_number(g, counter, "calls") != 8
+    if: status != 0 || cf_number(g, counter, "calls") != rhs + 1
         c.fprintf(c.stderr, "descriptor baseline: status=%d counter=%d\n", status, cf_number(g, counter, "calls"))
         return: 124
     if: c.lmx_int_store_known(cf_field(g, counter, "calls"), 7) != 0

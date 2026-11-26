@@ -1,0 +1,16 @@
+Counter:
+    int: calls 0
+end: Counter
+fn: bump () int
+    :=: (Counter \ calls) ((Counter \ calls) + 1)
+    return: 9
+end: bump
+fn: cf_description () int (
+    int: cf_pending (bump)
+)
+    int: cf_five 5
+    :=: ((data [] 0) [] 1) (@ cf_five)
+    return: cf_pending
+end: cf_description
+int: r 5
+Main: (:= (node \ r) (cf_description))

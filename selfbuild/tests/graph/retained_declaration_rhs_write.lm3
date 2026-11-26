@@ -1,0 +1,22 @@
+# Entry Main. A path write of a body reaches the right-hand side of a retained declaration of the call's data: the
+# declaration keeps its identity, its operand becomes the address of the written cell, its initializer is not
+# executed, and the read of the place goes through to the written value. `cf_description` declares `cf_pending`
+# with the computed initializer `bump()` and writes `data[0][1] := @cf_five` before returning `cf_pending`: the result
+# is 5, `calls` 0 (the row of the self-test graph_call_frames, case 122; the norm; Sol and Astra).
+# Norm: the book #call-frame (a local without a write back keeps its place; a reached declaration is read by what its
+# operand is now), #frame-and-graph-assignment (a write through an index replaces one cell).
+Counter:
+    int: calls 0
+end: Counter
+fn: bump () int
+    Counter\calls := Counter\calls + 1
+    return: 9
+end: bump
+fn: cf_description () int (int: cf_pending bump())
+    int: cf_five 5
+    data[0][1] := @cf_five
+    return: cf_pending
+end: cf_description
+int: r 0
+Main:
+    node\r := cf_description()

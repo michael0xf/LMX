@@ -1346,8 +1346,11 @@ decorated_operation = ".", operation_designator
                     | ".", "(", expression_region, ")", operation_designator ;
 ```
 
-The designator follows the base operation's existing structural class,
-including a custom operation obtained through a reference/path. The value is
+The ordinary designator follows the base operation's existing structural class,
+including a custom operation obtained through a reference/path. The common
+prefix supplies depth to this unchanged designator. For example, `.=` and
+`.Lib\op` select `=` and `Lib\op` at depth 1. The dedicated depth-one
+assignment spelling is `.:`, with canonical family `:=`. The value is
 not limited to literal 10. `..op` and `...op` **are not depth shorthands**;
 depths greater than one use only `.(expression)`. This does not forbid dots
 inside exact names. An undeclared exact `` `..op` `` never becomes an alias

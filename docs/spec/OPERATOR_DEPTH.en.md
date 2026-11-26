@@ -20,6 +20,14 @@ new kind of function or Structure.
 
 **The modifier has only one dot.** Custom depths are written in parentheses. A run of dots is not an alternative depth notation.
 
+Place the depth modifier before the ordinary designator of a built-in or
+user-defined operation. `.=`, `.**` and `.Lib\op`
+select `=`, `**` and `Lib\op` respectively at depth 1. The same designators
+can follow `.(expression)`. A whole exact identifier retains its spelling,
+including any dot inside its backquotes. `.:` is the dedicated depth-one
+spelling of assignment `:=`. `.(expression):` uses the explicit depth form
+of that same assignment.
+
 The material inside `.(…)` is parsed by the **same general parser** as other
 expressions. It may contain a name, a call or an expression such as `1 + 9`.
 No decimal-only scanner, source-text evaluator or second expression grammar

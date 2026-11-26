@@ -2587,6 +2587,31 @@ fn: lm_p0_find_colon (c.LmP0Document@: document; const: (char@: text); size_t: b
     return: 0
 end: lm_p0_find_colon
 
+# A parenthesised counter that directly follows the previous part of a prefix chain -- an empty square (its own trivia
+# allowed) or a pointer series `@` written right before it, with prefix_open = 1 (only prefix constructors precede it) --
+# continues the head when a TYPE part follows it at once: `[](N)int:`, `@(N)int:`, `[](R)@(P)Lib\T:`, `[](N)`Exact`:`.
+# A counter followed by `:`, a space or the end keeps its old reading (`[](name):`, `[](N) int:`); `a@(N)b` is not a
+# prefix chain (prefix_open = 0 after the name). The closing parenthesis is searched ONCE by the common delimiter scope
+# (marks, strings, comments); nothing is evaluated. Returns 0 when that search fails (the head is refused; there is no
+# compact fallback). after[0] is the offset after the counter, or 0 when the counter does not continue the head.
+fn: lm_p0_counter_after (c.LmP0Document@: document; const: (char@: text); size_t: byte_count; size_t: open_index; size_t: line; size_t: column; size_t@: after) int
+    size_t: close_index 0U
+    size_t: next 0U
+    after[0] := 0U
+    if: lm_p0_find_matching_paren(document, text, byte_count, open_index, line, column, @ close_index) = 0
+        return: 0
+    next := close_index + 1U
+    if: next >= byte_count
+        return: 1
+    if: text[next] = '@' || text[next] = '[' || text[next] = 96
+        after[0] := next
+        return: 1
+    if: lm_p0_is_word_byte(text[next]) != 0 && text[next] != '.' && (text[next] < '0' || text[next] > '9')
+        after[0] := next
+        return: 1
+    return: 1
+end: lm_p0_counter_after
+
 # Original: parser.lm1:2107 lm_p0_field_start_looks_explicit_frame
 # One head-span reader for the parser and its explicit-frame lookahead. Quoted path components
 # retain their boundaries; strings/chars/C surfaces retain their existing isolated-token rules.
@@ -2597,6 +2622,11 @@ fn: lm_p0_scan_head (c.LmP0Document@: document; const: (char@: text); size_t: by
     int: occurrence_label 0
     size_t: diagnostic_line 0U
     size_t: diagnostic_column 0U
+    size_t: square_end 0U
+    size_t: pointer_end 0U
+    size_t: square_after 0U
+    size_t: counter_after 0U
+    int: prefix_open 0
     quoted_head[0] := 0
     if: i >= byte_count
         return: 1
@@ -2620,9 +2650,22 @@ fn: lm_p0_scan_head (c.LmP0Document@: document; const: (char@: text); size_t: by
             quoted_head[0] := 1
             return: 1
     ---
-    while: i < byte_count && c.lm_p0_is_field_space(text[i]) = 0 && c.lm_p0_is_field_separator(text[i]) = 0 && text[i] != '(' && text[i] != ')' && text[i] != '#' && text[i] != '{' && text[i] != '}' && text[i] != ':'
+    prefix_open := (cast: (int) (text[i] = '@' || text[i] = '['))
+    while: i < byte_count && c.lm_p0_is_field_space(text[i]) = 0 && c.lm_p0_is_field_separator(text[i]) = 0 && text[i] != ')' && text[i] != '#' && text[i] != '{' && text[i] != '}' && text[i] != ':'
+        if: text[i] = '('
+            if: prefix_open = 0 || (i != square_end && i != pointer_end)
+                break
+            if: lm_p0_counter_after(document, text, byte_count, i, line, column, @ counter_after) = 0
+                return: 0
+            if: counter_after = 0U
+                break
+            i := counter_after
+            occurrence_label := (cast: (int) (text[i] = 96))
+            continue
         if: text[i] = '['
             occurrence_label := (cast: (int) (i > start && text[i - 1U] = 92))
+            if: lm_p0_empty_square_at(text, byte_count, i, @ square_after) != 0
+                square_end := square_after
             if: lm_p0_find_matching_bracket(document, text, byte_count, i, line, column, @ close_index) = 0
                 return: 0
             i := close_index + 1U
@@ -2633,6 +2676,7 @@ fn: lm_p0_scan_head (c.LmP0Document@: document; const: (char@: text); size_t: by
             if: lm_p0_scan_quoted(document, text, byte_count, @ i, (cast: (char) 96), line, column) = 0
                 return: 0
             occurrence_label := 0
+            prefix_open := 0
             if: i < byte_count && text[i] != 92 && text[i] != '[' && text[i] != ':'
                 if: lm_p0_require_quoted_token_boundary(document, text, byte_count, i, line, column) = 0
                     return: 0
@@ -2643,6 +2687,10 @@ fn: lm_p0_scan_head (c.LmP0Document@: document; const: (char@: text); size_t: by
             lm_p0_position_in_slice(text, byte_count, i, line, column, @ diagnostic_line, @ diagnostic_column)
             lm_p0_set_diagnostic(document, 18, diagnostic_line, diagnostic_column, "missing separator before quoted token")
             return: 0
+        if: text[i] = '@'
+            pointer_end := i + 1U
+        if: text[i] != '@'
+            prefix_open := 0
         occurrence_label := 0
         i := i + 1U
     ---

@@ -16,7 +16,7 @@
 
 ```json
 {"topic":"R0"}
-{"topic":"int@:"}
+{"topic":"@int:"}
 {"topic":"динамическое связывание"}
 {"topic":"then"}
 ```

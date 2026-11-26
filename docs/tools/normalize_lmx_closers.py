@@ -12,6 +12,7 @@ import argparse
 from collections import Counter
 from dataclasses import dataclass
 import hashlib
+from io import StringIO
 import json
 from pathlib import Path
 import re
@@ -54,7 +55,7 @@ def scan(text: str) -> tuple[list[Line], list[str]]:
     raw_fence = None
     pairs: list[str] = []
     columns = [0]
-    for number, raw in enumerate(text.splitlines(keepends=True), 1):
+    for number, raw in enumerate(StringIO(text, newline=''), 1):
         body = raw.rstrip('\r\n')
         if raw_fence is not None:
             if re.fullmatch(re.escape(raw_fence) + r'[ \t]*', body):
@@ -104,6 +105,8 @@ def scan(text: str) -> tuple[list[Line], list[str]]:
                 # Keep a token placeholder so a literal-only field is a field.
                 clean.extend('L' + ' ' * (len(quote) - 1)); i += len(quote)
                 continue
+            if ch.isspace() and ch not in ' \t':
+                warnings.append(f'{number}: non-layout whitespace outside a literal or comment; code unit preserved')
             if ch == '{' or ch == '}':
                 # Mix has a document-local comment/blank-line scope. Rather
                 # than guessing that scope, leave this complete code unit alone.
@@ -120,7 +123,7 @@ def scan(text: str) -> tuple[list[Line], list[str]]:
         if start_quote is not None:
             kind = 'protected'
             level = None
-        elif not body.strip() and quote is None:
+        elif not body.strip(' \t') and quote is None:
             if initial_depth:
                 warnings.append(f'{number}: blank boundary in paired form; code unit preserved')
             kind = 'blank'; level = -1; columns = [0]
@@ -232,7 +235,7 @@ def normalize_text(text: str) -> tuple[str, dict]:
         # full-root closure. Preserve comment text without keeping the cutter.
         if row.comment:
             prefix = re.match(r'^[ \t]*', row.raw)[0]
-            eol = '\r\n' if row.raw.endswith('\r\n') else '\n' if row.raw.endswith('\n') else ''
+            eol = row.raw[len(row.raw.rstrip('\r\n')):]
             out.append(prefix + row.comment + eol)
         records.append({'line': row.number, 'closer': row.code,
                         'reason': decisions[i]})
@@ -253,7 +256,7 @@ def normalize_text(text: str) -> tuple[str, dict]:
 
 def normalize_markdown(text: str) -> tuple[str, dict]:
     """Touch only explicitly tagged LMX fenced blocks, never Markdown rules."""
-    lines = text.splitlines(keepends=True)
+    lines = list(StringIO(text, newline=''))
     out, units = [], []
     i = 0
     while i < len(lines):

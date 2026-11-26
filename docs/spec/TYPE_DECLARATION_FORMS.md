@@ -127,7 +127,7 @@ the arrays or pointees described by it.
 | `[]@` | `[]@: refs` | The existing Structure/reference-array requirement. |
 | `@[]Model` | `@[]Model: modelsPtr` | Reference to an array with the complete Model element requirement. |
 
-The full left description is preserved, including groups. `@(Model)` and
+A prefix applies to the entire base type. `[]@Lib\Model` is an Array of references to `Lib\Model`, and `@[]Lib\Model` is a reference to an Array of that type. Qualified bases retain their path as written. In TYPE, `@(Model)` and
 `[](Model)` normalize the written grouped description; the group is not silently
 erased as if it were necessarily identical to bare Model. Different derived
 requirements are not merged merely because their machine sizes match.
@@ -174,7 +174,7 @@ call meaning.
 | Composition | Pointer/array prefix order, complete model requirements and arbitrary supported finite depth survive normalization, copy, serialization, interpreter and native lowering. |
 | Value initializers | Genuine `@: model Model` and `@: resource Resource` remain valid universal-reference initializers. |
 | Source carriers | Check standalone `.lmx`/`.lm3` files, Markdown LMX fences, JSON code fields and source-generating strings; generated mirrors agree with canonical inputs. |
-| Declaration, call and write | `[N]T: value`, `[N]T: args` and `[N]T := value` select declaration, call and write before effects. |
+| Declaration, call and write | `[N]T: value`, `T[N]: args` and `T[N] := value` select declaration, call and write before effects. |
 
 Square brackets also retain their other ordinary roles. An attached type
 prefix `[]T` or `[N]T` constructs an unsized or sized axis requirement in TYPE;
@@ -313,9 +313,10 @@ The attached count region belongs to the prefix TYPE requirement. It is not
 an Array index, an initializer, a size tail, or the arguments of a subsequent
 call to a constructed type value. The common P0 and receiving-role machinery
 retain these boundaries; a separate parser or textual expansion into N source
-prefix nodes is not introduced. The compact forms with no following type,
-`@(name)` and `[](name)`, retain their ordinary compact-declaration meaning.
-Their existence does not reclassify `@(N)T` or `[](N)T` after evaluating N.
+prefix nodes is not introduced. In a completed declaration Frame, `@(name)` and
+`[](name)` use the ordinary NAME contract. In TYPE, `@(Model)` and `[](Model)`
+apply the prefix to the grouped base. In `@(N)T` and `[](N)T` a base T follows
+the attached count. These boundaries are determined before N is evaluated.
 
 Written Array rank/axis constraints belong to its canonical TypeRef description.
 Unspecified axes remain unspecified except for values derivable from TYPE and

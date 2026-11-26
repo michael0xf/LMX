@@ -14,7 +14,7 @@ from normalize_lmx_closers import normalize_text
 def write_lmx(path, lines):
     text = '\n'.join(lines) + '\n'
     cleaned, _ = normalize_text(text)
-    path.write_text(cleaned)
+    path.write_text(cleaned, encoding="utf-8", newline="\n")
 texts = {p.relative_to(R): p.read_text() for p in sorted((R/'src').rglob('*.lmx'))}
 source = Source(texts)
 effects = source.contracts()
@@ -69,8 +69,12 @@ for index, d in enumerate(definitions, 1):
 write_lmx(R/'src/public.lmx', public)
 write_lmx(R/'src/public_operands.lmx', operands)
 write_lmx(R/'src/public_families.lmx', families)
-(R/'catalog.json').write_text(json.dumps(rows, ensure_ascii=False, indent=2)+'\n')
+(R/'catalog.json').write_text(json.dumps(rows, ensure_ascii=False, indent=2)+'\n', encoding="utf-8", newline="\n")
 lines = ['# Canonical library operations and their two forms', '',
+    '> TYPE-контракты этой документации используют прямую TypeRef. Машинный каталог',
+    '> и связанные отдельные исходники ещё содержат прежние int-интерфейсы; перед',
+    '> пересборкой им требуется миграция по [инструкции дополнения](../../../ARRAY_TYPE_MIGRATION.md).',
+    '',
     f'{len(rows)} canonical names. Every input export is accounted for in [the migration inventory](CANONICAL_MIGRATION.json). Former names are not callable aliases.', '',
     'Both forms use the same algorithms and real owner DATA. Complete family/role binding, adaptive capture and exact result projection are defined in [PUBLICATION_CONTRACT.md](PUBLICATION_CONTRACT.md). Runtime execution is **NOT_RUN**.', '',
     'Operand DATA order is `left`, `int: depth`, `right`, with ready `PASS_ARGS_AS_IS` and `PRIORITY`. `op`, `.op` and `.(expression)op` select one base operation. Ordinary VALUE adapters traverse logical outer axes of the flat Array shape through the shared engine and exact dependent result policy; rank-2 multiplication has matrix / row-dot / scalar profiles at depths 0 / 1 / 2. A Structure is an `[]@`, and indexed reference access introduces no separate array-of-arrays kind. Whole-role profiles admit depth 0 and diagnose unsupported depth before execution. No synthetic language exception is added. PD01 is a required kernel integration, not a passed runtime implementation.', '',
@@ -82,8 +86,8 @@ lines += ['', '## Roles, results and failures', '']
 for row in rows:
     lines.append(f"- **{row['name']}** — {row['scope']}. Roles: "+', '.join(row['variants'][0]['roles'])+'.')
 lines += ['', 'Every variant retains its actual result, void/field-stream/control role, context and finite failures. Quoting does not select a different implementation. See [forms](../../OPERATION_FORMS.md), [generic operations](../../GENERIC_OPERATIONS.md), [monads](../../MONADIC_OPERATIONS.md) and [equality](../../GENERIC_EQUALITY.md).']
-(R/'CATALOG.md').write_text('\n'.join(lines)+'\n')
+(R/'CATALOG.md').write_text('\n'.join(lines)+'\n', encoding="utf-8", newline="\n")
 regex = json.loads((R/'REGEX_EXPORTS.json').read_text())
 values = [x for x in regex['exports'] if x['role'] not in {'builder','receiver','text_profile','operand','source_profile'}]
-(R/'value_symbols.json').write_text(json.dumps(values, ensure_ascii=False, indent=2)+'\n')
+(R/'value_symbols.json').write_text(json.dumps(values, ensure_ascii=False, indent=2)+'\n', encoding="utf-8", newline="\n")
 print(json.dumps({'canonical_names':len(rows),'variants':sum(len(x['variants']) for x in rows),'baseline_exports_covered':len(migration['entries']),'runtime_executed':False}))

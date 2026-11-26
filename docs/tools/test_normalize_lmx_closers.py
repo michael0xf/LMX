@@ -28,6 +28,24 @@ class CloserNormalization(unittest.TestCase):
     def test_blank_closes(self):
         self.check_case('Root:\n    Item:\n        int: x 1\n---\n\nNext:\n    int: y 2\n', 1)
 
+    def test_only_spaces_and_tabs_form_a_blank_physical_line(self):
+        for eol in ('\n', '\r', '\r\n'):
+            for whitespace in (' \t', '\u00a0', '\u0085', '\u2028', '\x0c'):
+                with self.subTest(eol=eol, whitespace=whitespace):
+                    source = eol.join(['Root:', '    Inner:', '        int: x 1',
+                                       '--- # keep comment', whitespace, 'Next:', ''])
+                    is_blank = whitespace == ' \t'
+                    result = self.check_case(source, int(is_blank))
+                    expected = source.replace('--- #', '#') if is_blank else source
+                    self.assertEqual(result, expected)
+
+    def test_unicode_separator_is_payload_in_comments_literals_and_markdown(self):
+        source = 'Root:\n    []char: text "a\u2028b"\n--- # a\u0085b\x0cc\n'
+        result = self.check_case(source, 1)
+        self.assertEqual(result, source.replace('--- #', '#'))
+        prose = 'intro\u2028```lmx\nRoot:\n---\n```\n'
+        self.assertEqual(normalize_markdown(prose)[0], prose)
+
     def test_root_cutter_before_exactly_one_blank_with_comments(self):
         source = ('Root:\n    Item:\n        int: x 1\n'
                   '--- # root cutter\n# retained comment\n\n'

@@ -7,7 +7,7 @@ The [TypeRef migration](../TYPE_REFERENCES_CHANGE.md) replaces integer type code
 with references to canonical immutable system Structures. This is a documentation
 addition; source migration and production acceptance remain **NOT_RUN**.
 
-[Interpreter and SLJIT design](../LMX_INTERPRETER_JIT.md) describes the supported implementation plan for the shared graph and the direct generator. [v3 tracks the remaining work](../../next_core_tasks_v3.md#types-arrays-20261126).
+[Interpreter and SLJIT design](../LMX_INTERPRETER_JIT.md) describes the supported implementation plan for the shared graph and the direct generator. The [migration guide](../ARRAY_TYPE_MIGRATION.md) identifies the pending implementation and acceptance work.
 
 **Revision 2026-11-26 — arrays and Expression.** [Array/matrix operations](ARRAY_EXPRESSIONS.en.md) now distinguish ordinary `*` from `.*`, elementwise equality `.=` from assignment `.:`; [fuse](FUSION.en.md) specifies one-loop evaluation; [conditional and strided slices](TERNARY_AND_SLICES.en.md) cover lazy branches and signed slice bounds. Native L2's omitted bounds checks do not legitimize negative Array indexing; use a pointer for a relative offset. The [revision and validation report](REVISION_2026-11-26.md) identifies all implementation and test limits.
 

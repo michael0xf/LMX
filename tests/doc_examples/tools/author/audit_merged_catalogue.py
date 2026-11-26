@@ -60,14 +60,14 @@ def fenced_blocks(path: Path, root: Path):
                       "char": marker[:1], "width": len(marker), "info": info,
                       "is_lmx": language.lower() == "lmx", "body": []}
             if language.lower().startswith("lmx") and language.lower() != "lmx":
-                related.append({"doc": str(path.relative_to(root)), "line": i, "info": info})
+                related.append({"doc": path.relative_to(root).as_posix(), "line": i, "info": info})
         else:
             closing = re.fullmatch(rb" {0,3}(" + re.escape(active["char"]) + rb"{"
                                    + str(active["width"]).encode() + rb",})[ \t]*", plain)
             if closing:
                 if active["is_lmx"]:
                     ordinal += 1
-                    found.append({"doc": str(path.relative_to(root)), "kind": "block",
+                    found.append({"doc": path.relative_to(root).as_posix(), "kind": "block",
                                   "block": ordinal, "line": active["line"],
                                   "open_line": active["open_line"], "close_line": i,
                                   "indent": active["indent"], "info": active["info"],
@@ -76,7 +76,7 @@ def fenced_blocks(path: Path, root: Path):
             else:
                 active["body"].append(line)
     if active and active["is_lmx"]:
-        unclosed.append({"doc": str(path.relative_to(root)), "line": active["open_line"]})
+        unclosed.append({"doc": path.relative_to(root).as_posix(), "line": active["open_line"]})
     return found, unclosed, related
 
 
@@ -98,8 +98,10 @@ def audit(root: Path):
     places = rows(catalogue / "places.tsv")
     issues = []
 
-    def issue(kind, **detail):
-        issues.append(dict(kind=kind, **detail))
+    def issue(category, **detail):
+        if "kind" in detail:
+            detail["place_kind"] = detail.pop("kind")
+        issues.append({"kind": category, **detail})
 
     by_id = collections.defaultdict(list)
     for row in index:
@@ -119,15 +121,15 @@ def audit(root: Path):
         ident = path.stem
         src_by_id[ident].append(path)
         src_by_hash[sha(data)].append(ident)
-        src[ident] = {"path": str(path.relative_to(root)), "data": data,
+        src[ident] = {"path": path.relative_to(root).as_posix(), "data": data,
                       "sha256": sha(data), "bytes": len(data)}
         if path.suffix not in (".lm3", ".lmx"):
-            issue("unexpected_src_extension", path=str(path.relative_to(root)))
+            issue("unexpected_src_extension", path=path.relative_to(root).as_posix())
         if raw != data:
-            issue("src_not_canonical_lf_one_trailing_lf", id=ident, path=str(path.relative_to(root)))
+            issue("src_not_canonical_lf_one_trailing_lf", id=ident, path=path.relative_to(root).as_posix())
     for ident, paths in src_by_id.items():
         if len(paths) != 1:
-            issue("duplicate_src_id", id=ident, paths=[str(p.relative_to(root)) for p in paths])
+            issue("duplicate_src_id", id=ident, paths=[p.relative_to(root).as_posix() for p in paths])
     for digest, ids in src_by_hash.items():
         if len(ids) != 1:
             issue("duplicate_src_content", sha256=digest, ids=ids)
@@ -160,11 +162,11 @@ def audit(root: Path):
     for path in all_code_files:
         rel = path.relative_to(root)
         if not path.is_relative_to(patterns):
-            outside_scope.append(str(rel))
+            outside_scope.append(rel.as_posix())
         elif path.suffix.lower() == ".lmx" and "LMX_Fn_Receivers" in path.relative_to(patterns).parts:
-            excluded_files.append(str(rel))
+            excluded_files.append(rel.as_posix())
         else:
-            expected_files.append(str(rel))
+            expected_files.append(rel.as_posix())
 
     expected_keys = {(f, "file", 1) for f in expected_files}
     expected_keys.update((b["doc"], "block", b["line"]) for b in blocks)
@@ -298,7 +300,7 @@ def audit(root: Path):
         "parser_or_runtime_executed": False,
         "normalization": "CRLF/CR to LF, retain spaces and all non-newline bytes, exactly one final LF",
         "stable_bNN_ids_treated_as_opaque": True,
-        "input_hashes": {str(p.relative_to(root)):sha(p.read_bytes()) for p in
+        "input_hashes": {p.relative_to(root).as_posix():sha(p.read_bytes()) for p in
                          (catalogue/"README.md", catalogue/"index.tsv", catalogue/"places.tsv")},
         "summary": {"index_texts":len(index), "src_files":sum(map(len,src_by_id.values())),
                     "distinct_src_texts":len(src_by_hash), "places":len(places),

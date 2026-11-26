@@ -31,7 +31,7 @@ has no fixed language limit beyond finite available resources.
 
 The common TYPE normalizer accepts a canonical TypeRef, symbolic type atom,
 uninitialized typed record or full model under its receiving contract and preserves
-complete structural/callable requirements. In `[]@`, the left `@` is the universal
+complete structural/callable requirements. In `[]@`, the element type `@` is the universal
 reference requirement and the result describes the existing Structure/reference
 Array. It allocates no Array value or separate STRUCT/ARRAY kind. An ordinary
 integer does not become a type or metadata address. Normalizing a model introduces
@@ -60,7 +60,7 @@ fixtures are not validation of this documentation-only ABI. Production **NOT_RUN
 | `@int: 65536` | One unnamed reference-to-int value given by address 65536; no place is declared |
 | `@x` | Address of the actual place x under the selected level's address contract |
 | `@x` | Pointer type constructed from x in TYPE role |
-| `@(name)` / `[](name)` | Ordinary compact declarations, equivalent to `@: name` / `[]: name` |
+| `@(name)` / `[](name)` in a completed declaration Frame | Ordinary compact declarations, equivalent to `@: name` / `[]: name` |
 
 The author-approved structural forms `@Model: p`, `@int: left`, `[]Model: arr`, `[]int: values`, `[]Model: arr [Model Model]`, `[]Model: [Model Model]`, `[]int: values [1 2 3]`, and `[]int: [1 2 3]` are retained explicitly in the [positive-form acceptance matrix](TYPE_DECLARATION_FORMS.md). The complete type is always on the left of the colon. In the Model initializers both elements refer to the existing Model value; construction does not copy its fields, reparent it or replace the complete requirement with a coarse universal-reference requirement. Named and anonymous square initializers share ordinary element admission.
 
@@ -96,7 +96,7 @@ an anonymous value of the length-two Struct-array requirement, a named value
 with that requirement, and a named value with no fixed size constraint.
 Elements a and b must satisfy Struct; no variable is invented for the first
 line. In the last line `:=` is one assignment operand. Its left actual is
-ordinary indexed PLACE `[2]Struct`; there is no declaration colon and no type
+ordinary indexed PLACE `Struct[2]`; there is no declaration colon and no type
 construction. The indexed destination must already exist and admit the RHS.
 The same spelling of Struct in these independent examples does not introduce
 an implicit conversion between an existing value and a type description.
@@ -105,7 +105,7 @@ Sized prefixes are a **DOC_SPEC_ADDITION_ONLY** in this package; production
 P0/translator/runtime acceptance is **NOT_RUN**.
 [Full TYPE forms](TYPE_DECLARATION_FORMS.md#sized-postfix).
 
-`@Struct: p` and `@(Struct): p` each normalize their complete left description; the enclosing group in the latter is not silently removed. Prefix `@Struct` still obtains an address. To address a field, write `@D\field` or `(@D\field)`; bare `@(D\field)` now has ordinary compact-declaration reading, not an address exception.
+`@Struct: p` and `@(Struct): p` each normalize their complete left description; the enclosing group in the latter is not silently removed. In VALUE, `@Struct` obtains the address. To address a field, write `@D\field` or `(@D\field)`; bare `@(D\field)` now has ordinary compact-declaration reading, not an address exception.
 
 `sys\typeof(value)` returns the canonical TypeRef of the actual consumed value.
 A TYPE result is a reference, not an int containing a type number. Type descriptions
@@ -241,7 +241,7 @@ Successful admission does not change actual storage or retag the Array to the re
 
 A written form is processed in one order: its source form and boundaries are kept; the consumer's role for it is established (a declaration name, a type description, or an ordinary value); it is resolved by that common contract; the reached operation then executes in the established order, each once. The outer colon and the prefix type regions and the indexed-call heads are determined structurally; a fragment is never executed first and recognized afterwards, by its result or failure, as part of a head or a type description. In a standalone TYPE position `[5]type` describes an Array type without declaring a name. `type[5]` reads a physical index and `struct\[5]type` selects occurrence 5 of the field named `type`. In TYPE `@type` describes the address type, while in VALUE the same `@type` takes the address. `T[n]: args` calls the target selected by ordinary indexing; `[n]T:` starts a sized Array declaration. Missing square brackets are not guessed, and no branch is chosen by the success of an evaluation.
 
-The withdrawn readings are not kept as a second standard or a second parser path: the typed `[](T): …` and `@(T): …`, the prefix type forms `@int`, `@@int`, `[]T`, the typed heads `@Struct: p`, `@(Struct): p`, `[]@` as the Structure/reference-array type (now `[]@`), `@(int)` or `@: int` as the type of a pointer to int (now `@int`), `[]: int values …` and `[]: char text` (now `[]int: values …`, `[]char: text`), and `@: p Model Other` (now `@Model: p Other`). Their bytes are read by the common resolver with their ordinary meaning, if any; they are not converted into the new heads. The compact equivalence `@(name)` ≡ `@: name` and `[](name)` ≡ `[]: name` is a property of the ordinary receiver applied to the retained form, not an early textual substitution that loses the form's role or boundaries. A compact declaration with an invalid or occupied name gets the ordinary name diagnostic.
+A typed declaration puts its complete requirement in the head, as in `[]int: values …` or `@Model: p Other`. The former tails `[]: int values …` and `@: p Model Other` have no typed-declaration reading. In a completed declaration Frame, `@(name)` and `[](name)` have the ordinary meanings `@: name` and `[]: name`. The receiver consumes the written NAME and applies its ordinary name diagnostics. In TYPE, `@(Model)` and `[](Model)` apply the constructor to the complete grouped base. In `@(N)T` and `[](N)T` the following base T makes the attached group the count. The receiving role and the written boundary determine the reading before evaluation.
 
 ```lmx
 int: value 7
@@ -250,8 +250,8 @@ int: value 7
 []int: numbers [1 2 3]
 ```
 
-`valueType` holds the canonical int description. `@valueType` addresses its
-reference-variable cell; `@valueType` constructs pointer-to-int TYPE and
+`valueType` holds the canonical int description. In VALUE, `@valueType` addresses its
+reference-variable cell. In TYPE, `@valueType` constructs pointer-to-int TYPE and
 `[]valueType` constructs Array-of-int TYPE. A colon in `@valueType: p` uses that
 already resolved pointer requirement. It does not change address-operand semantics.
 
@@ -269,7 +269,7 @@ lexical token class. Invalid TYPE candidates receive the ordinary type diagnosti
 
 The compact form exists at every depth: `@@(name)` in the position of a completed Frame is `@@: name`, and so on for `@@@(name)`. It declares a universal reference of that depth and never obtains a type from `name`.
 
-A group to the left of a type prefix keeps its meaning: `[](Struct)` and `@(Struct)` use the complete requirement the common normalizer obtains from the group; they are not declared equal to `[]Struct` and `@Struct` by removing the parentheses — when `(Struct)` is an anonymous one-element Structure, that is a different structural model, and equality of the normalized requirements is established by the common mechanism. `[]: [Name]` holds a group with one element and is not `[]: Name`. `[]: []` and `[]int: []` hold a present empty group and construct an empty value; a missing initializer is a different state. Empty and one-element groups are kept in the clean graph and in roundtrip. Standalone `[]` in VALUE position constructs an ordinary empty Array; `[items]` constructs an anonymous Array as `[]@: [items]` does. The symbolic head `[]:` retains its declaration role. This is not a prefix type constructor applied to an absent left argument.
+The group following a TYPE prefix supplies its complete base: `[](Struct)` and `@(Struct)` use the complete requirement the common normalizer obtains from the group; they are not declared equal to `[]Struct` and `@Struct` by removing the parentheses — when `(Struct)` is an anonymous one-element Structure, that is a different structural model, and equality of the normalized requirements is established by the common mechanism. `[]: [Name]` holds a group with one element and is not `[]: Name`. `[]: []` and `[]int: []` hold a present empty group and construct an empty value; a missing initializer is a different state. Empty and one-element groups are kept in the clean graph and in roundtrip. Standalone `[]` in VALUE position constructs an ordinary empty Array; `[items]` constructs an anonymous Array as `[]@: [items]` does. The symbolic head `[]:` retains its declaration role. The declaration Frame supplies its NAME and optional initializer.
 
 `[]@int` is an array of pointers to int, `@[]int` a pointer to an array of int, `[][]int` one flat int Array with two logical axes, `@@int` a pointer to a pointer to int, `[]@@int` an array of depth-2 pointers to int. A depth beyond the available resources is refused by the ordinary resource failure; a depth is never truncated or wrapped. The depth of a type orders no chain of objects: `@@@int: p 0` initializes one null reference and allocates no intermediate cells.
 

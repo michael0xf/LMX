@@ -10,7 +10,7 @@ import re
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = 'https://www.lispworks.com/documentation/HyperSpec/Body/01_i.htm'
 INDEX = 'https://www.lispworks.com/documentation/HyperSpec/Front/Contents.htm'
-inventory = json.loads((ROOT / 'validation/common_lisp_symbols.json').read_text())
+inventory = json.loads((ROOT / 'validation/common_lisp_symbols.json').read_text(encoding="utf-8"))
 symbols = {row['symbol'] for row in inventory['symbols']}
 decisions = {}
 
@@ -213,10 +213,10 @@ def main():
               'scope': 'All 978 external COMMON-LISP symbols; SBCL extensions separately by capability family.',
               'classification': 'Every row reviewed for a source shortcut; coverage is not semantic/runtime equivalence.',
               'counts': dict(sorted(summary.items())), 'total': len(rows), 'symbols': rows}
-    (ROOT / 'COMMON_LISP_COVERAGE.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
+    (ROOT / 'COMMON_LISP_COVERAGE.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n', encoding='utf-8', newline='\n')
     out=io.StringIO(newline='');fields=['symbol','family','decision','lmx','qualification','lmx_runtime','cl_source','lmx_source']
     writer=csv.DictWriter(out,fieldnames=fields,extrasaction='ignore');writer.writeheader();writer.writerows(rows)
-    (ROOT / 'COMMON_LISP_COVERAGE.csv').write_text(out.getvalue())
+    (ROOT / 'COMMON_LISP_COVERAGE.csv').write_text(out.getvalue(), encoding='utf-8', newline='')
     detail=['# Поимённый аудит COMMON-LISP','',
             'Источник списка — фактически запущенный SBCL `do-external-symbols`; 978 внешних символов. '+
             'Один символ может иметь несколько ролей. Отнесение к группе не объявляет все его варианты '+
@@ -226,7 +226,7 @@ def main():
     for r in rows:
         text=(r['lmx']+' — '+r['qualification']).replace('|','\\|')
         detail.append(f"| `{r['symbol']}` | {r['family']} | `{r['decision']}` | {text} |")
-    (ROOT / 'COMMON_LISP_SYMBOLS.md').write_text('\n'.join(detail)+'\n')
+    (ROOT / 'COMMON_LISP_SYMBOLS.md').write_text('\n'.join(detail)+'\n', encoding='utf-8', newline='\n')
     print(json.dumps({'symbols':len(rows),'decisions':dict(summary)},ensure_ascii=False))
 
 

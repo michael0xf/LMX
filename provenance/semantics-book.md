@@ -228,8 +228,8 @@ print: "Hello World"
 
 `sys\capacity(obj)` остаётся запросом фактической вместимости данного Array.
 Общий TYPE описывает проверку необязательной записи capacity либо использование
-length; величины capacity отдельного экземпляра в нём нет. При capacity=length
-второго дескриптора на Array нет, в том числе для nD.
+length. При capacity=length экземпляр любого ранга имеет один собственный основной `Lmx` без записи о резерве.
+TypeRef всех `[]int` указывает на одну реально существующую служебную Structure типа `[]int`, в том числе при разных длинах.
 
 Сохранённая TypeRef и её каноническое описание неизменяемы. Reserve или
 допущенное изменение длины не меняет тип Array, поэтому свежий и сохранённый
@@ -364,8 +364,8 @@ initializer rows manufactures per-object shape metadata.
 
 `sys\capacity(obj)` remains the query for that Array's actual capacity. The
 shared TYPE describes how to consult the optional capacity entry or use length;
-it does not contain an instance-specific capacity. When capacity=length there
-is no secondary per-Array descriptor, even for nD values.
+at capacity=length an instance of any rank has one primary `Lmx` of its own and no reserve entry.
+Every `[]int` has a TypeRef pointing to the same actual system Structure for `[]int`, including arrays of different lengths.
 
 A saved TypeRef and its canonical description remain immutable. Reserve or an
 admitted resize does not change the Array's type, so fresh and saved queries
@@ -981,7 +981,7 @@ F:
 <a id="explicit-copy"></a>
 ### Явное копирование и указатели-переменные
 
-Ресивер ссылки использует обычные объявляющие формы. `@: ptr` объявляет неинициализированную универсальную ссылку; `@: ptr 0` инициализирует null; `@: ptr Model` сохраняет ссылку на Model. Типизированное объявление помещает полное требование в голову: `@Model: ptr Candidate` или `@Model: ptr` без значения. Прежняя трёхаргументная форма «требование и кандидат» снята. В позиции TYPE `@Model` задаёт тип указателя и строит каноническую TypeRef. В выражении VALUE `@Model` берёт адрес. `@(name)` — обычное компактное объявление `@: name`, а не выражение адреса. Глубина указателей и их композиция используют один и тот же общий механизм для любой конечной глубины. Ни написание, ни эвристика по значению нагрузки роли аргументов не меняют.
+Ресивер ссылки использует обычные объявляющие формы. `@: ptr` объявляет неинициализированную универсальную ссылку; `@: ptr 0` инициализирует null; `@: ptr Model` сохраняет ссылку на Model. Типизированное объявление помещает полное требование в голову: `@Model: ptr Candidate` или `@Model: ptr` без значения. Прежняя трёхаргументная форма «требование и кандидат» снята. В позиции TYPE `@Model` задаёт тип указателя и строит каноническую TypeRef. В выражении VALUE `@Model` берёт адрес. В завершённом объявляющем Frame `@(name)` означает обычное компактное объявление `@: name`. В TYPE группа в `@(Model)` задаёт требование к основе. Глубина указателей и их композиция используют один и тот же общий механизм для любой конечной глубины. Ни написание, ни эвристика по значению нагрузки роли аргументов не меняют. TypeRef — адрес реально существующей канонической неизменяемой служебной Structure, описывающей соответствующий тип. Правило действует для любого введённого пользователем или нативного типа. В TYPE запись `@int` буквально означает «адрес int». У готовой переменной `var` этого типа поле `type` записи `{type value}` и результат `typeof(var)` содержат один адрес канонического дескриптора типа `@int`. Поле `value` хранит значение указателя. В VALUE операция `@x` берёт адрес самого места `x`. Объявление `@Struct: var` задаёт место для адреса Struct. В `f :: @Struct -> @Struct` операнд `::` объявляет имя `f`, а вход и результат имеют тип «адрес Struct».
 
 Повторное объявление на том же уровне CODE без нового кандидата проверяет существующее место, не очищая его значение. Поданный кандидат проходит обычное преобразование/допуск перед записью. Присваивание адреса задним числом не задаёт тип уже объявленного места void-ссылки. Внешняя форма `ptr: @: Model` вместо этого объявляет Structure в DATA или вызывает ptr в CODE; это не объявление переменной-ссылки. Это контракты ресивера, разрешаемые после общего парсера.
 
@@ -2025,7 +2025,7 @@ A free input is a free value used by a callable without being declared as its ex
 <a id="explicit-copy"></a>
 ### Explicit copying and pointer variables
 
-The reference receiver uses ordinary declaring forms. `@: ptr` declares an uninitialized universal reference; `@: ptr 0` initializes null; `@: ptr Model` retains a reference to Model. A typed declaration places its complete requirement in the head: `@Model: ptr Candidate`, or `@Model: ptr` without a value. The former three-argument requirement/candidate form is withdrawn. In TYPE position `@Model` constructs the canonical pointer TypeRef. In a VALUE expression `@Model` takes an address. `@(name)` is the ordinary compact declaration `@: name`, not an address expression. Pointer depth and composition use the same common mechanism for every finite depth. No spelling or payload-value heuristic changes the argument roles.
+The reference receiver uses ordinary declaring forms. `@: ptr` declares an uninitialized universal reference; `@: ptr 0` initializes null; `@: ptr Model` retains a reference to Model. A typed declaration places its complete requirement in the head: `@Model: ptr Candidate`, or `@Model: ptr` without a value. The former three-argument requirement/candidate form is withdrawn. In TYPE position `@Model` constructs the canonical pointer TypeRef. In a VALUE expression `@Model` takes an address. In a completed declaration Frame `@(name)` has the ordinary compact meaning `@: name`. In TYPE the group in `@(Model)` supplies the base requirement. Pointer depth and composition use the same common mechanism for every finite depth. No spelling or payload-value heuristic changes the argument roles. A TypeRef is the address of the actual canonical immutable system Structure describing the type. This applies to every user-defined or native type. In TYPE, `@int` denotes “address of int”. For a ready variable `var` of that type, the `type` field of `{type value}` and `typeof(var)` both give the address of the canonical descriptor for `@int`. Its `value` holds the pointer value. In VALUE, `@x` takes the address of the place `x`. The declaration `@Struct: var` describes a place for an address of Struct. In `f :: @Struct -> @Struct`, `::` declares the name `f` and both the input and result have that address type.
 
 A repeated declaration at the same CODE level with no new candidate checks the existing place without clearing its value. A supplied candidate follows ordinary conversion/admission before the write. Address assignment does not retroactively type an already declared void-reference place. The outer form `ptr: @: Model` instead declares a Structure in DATA or calls ptr in CODE; it is not a reference-variable declaration. These are resolved receiver contracts after the common parser.
 
@@ -5164,7 +5164,7 @@ capacity, и TYPE он не меняет. Общий допуск не меня�
 См. [канонические типы](ARRAY_STORAGE.ru.md#array-profiles) и
 [представление](ARRAY_STORAGE.ru.md#side-metadata).
 
-В роли VALUE/PLACE `[2]Struct` остаётся индексированием. Поэтому
+В роли VALUE/PLACE `Struct[2]` выбирает физический индекс 2. Поэтому
 `Struct[2]:= [a b]` — то же индексное присваивание, что `Struct[2] := [a b]`:
 оно пишет в третий слот существующего индексируемого значения. Построения типа
 Array или объявления var здесь нет. Атомарный операнд `:=` не является
@@ -5420,7 +5420,7 @@ respect written bounds, and a cached type pair cannot prove a mutable value's
 current size. See [canonical types](ARRAY_STORAGE.en.md#array-profiles) and
 [representation](ARRAY_STORAGE.en.md#side-metadata).
 
-In a VALUE/PLACE role `[2]Struct` remains indexing. Consequently
+In a VALUE/PLACE role `Struct[2]` selects physical index 2. Consequently
 `Struct[2]:= [a b]` is the same indexed assignment as `Struct[2] := [a b]`:
 it writes the third slot of an existing indexed value. It does not construct
 an Array type or declare var. The atomic operand `:=` is not a declaration

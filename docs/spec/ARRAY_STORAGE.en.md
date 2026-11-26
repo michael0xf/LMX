@@ -202,13 +202,13 @@ translator, or LMX runtime implementation: **NOT_RUN**.
 <a id="side-metadata"></a>
 ## 2. Primary descriptor and optional capacity storage
 
-Every initialized Array has the same primary Lmx descriptor with `parent`,
-`length`, and `storage`. It adds no shape field, hidden shape prefix, or
-per-Array shape descriptor. The capacity association is independent of TYPE:
+Every initialized Array has its own primary `Lmx` with `parent`, `length`, and `storage` and no hidden shape prefix.
+At `capacity == length` this is the instance’s only header. The TypeRefs of `[]int`
+arrays of different lengths point to the same system Structure describing the type `[]int`.
 
 | Actual storage condition | Representation |
 | --- | --- |
-| `capacity == length` | No secondary descriptor or capacity entry. Capacity is obtained from length. This applies to empty, one-dimensional, and multidimensional values. |
+| `capacity == length` | The instance needs no additional capacity or shape record. Capacity is obtained from length. This applies to empty, one-dimensional, and multidimensional values. |
 | `capacity > length` | A compact optional entry stores capacity through the existing arena association. It contains no mandatory rank/extents data. |
 | `capacity < length` | Invalid state. |
 

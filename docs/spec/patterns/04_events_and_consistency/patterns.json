@@ -110,7 +110,7 @@
         },
         {
           "language": "Java",
-          "code": "interface EventStore {\n    []int read();\n    boolean append(int expected,int delta);\n}\nfinal class EventAccount {\n    private final EventStore store;\n    EventAccount(EventStore store) { this.store=store; }\n    int balance() {\n        int result=0;\n        for (int delta:store.read()) result+=delta;\n        return result;\n    }\n    int append(int expected,int delta) {\n        if (!store.append(expected,delta)) throw new IllegalStateException(\"conflict\");\n        return balance();\n    }\n}\n",
+          "code": "interface EventStore {\n    int[] read();\n    boolean append(int expected,int delta);\n}\nfinal class EventAccount {\n    private final EventStore store;\n    EventAccount(EventStore store) { this.store=store; }\n    int balance() {\n        int result=0;\n        for (int delta:store.read()) result+=delta;\n        return result;\n    }\n    int append(int expected,int delta) {\n        if (!store.append(expected,delta)) throw new IllegalStateException(\"conflict\");\n        return balance();\n    }\n}\n",
           "notes_ru": "Листинг использует один поток событий без snapshots и schema evolution. Crash durability, checksums и transaction log реализует store. HTTP admission не означает durable append.",
           "notes_en": "One stream only, without snapshots or schema evolution. The store provides durability, checksums and transaction logging. HTTP admission is not durable append.",
           "metrics": {

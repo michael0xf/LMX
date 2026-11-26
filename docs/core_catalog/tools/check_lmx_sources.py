@@ -19,15 +19,17 @@ def check(path: Path):
     errors=[]; unsupported=[]; stack=[]; quote=None; quote_at=None
     last_indent=None; after_blank=False; l2_levels=[]; calls=0
     try:
-        text=path.read_text(encoding='utf-8')
+        with path.open(encoding='utf-8', newline='') as source:
+            lines = source.readlines()
     except (OSError,UnicodeError) as exc:
         return {'file':str(path),'errors':[str(exc)],'unsupported':[],'c_tokens':0}
-    for line_no,line in enumerate(text.splitlines(),1):
+    for line_no, raw in enumerate(lines, 1):
+        line = raw.rstrip('\r\n')
         if not quote and re.fullmatch(r'={3,80}[ \t]*',line):
             unsupported.append(f'{line_no}: raw block text requires the production P0 parser')
         if '\x00' in line and not quote:
             errors.append(f'{line_no}: NUL outside a supported ordinary literal')
-        if not line.strip() and not quote:
+        if not line.strip(' \t') and not quote:
             if stack:
                 errors.append(f'{line_no}: blank physical line closes the block with an unmatched {stack[-1][0]} from line {stack[-1][1]}')
             last_indent=None; after_blank=True; l2_levels=[]
@@ -58,6 +60,8 @@ def check(path: Path):
                 if ch!='`' and line[i:i+3]==ch*3:
                     unsupported.append(f'{line_no}: triple raw literal requires the production P0 parser')
                 quote=ch;quote_at=line_no;clean.append(' ');i+=1;continue
+            if ch.isspace() and ch not in ' \t':
+                unsupported.append(f'{line_no}: non-layout whitespace outside a literal or comment')
             clean.append(ch)
             if ch in '([{':
                 if ch=='{':

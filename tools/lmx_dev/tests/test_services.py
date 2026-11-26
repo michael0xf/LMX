@@ -22,6 +22,7 @@ class SpecTests(unittest.TestCase):
     def test_real_queries_preserve_sources_and_notation(self):
         index = SpecIndex(ROOT, CATALOGUE)
         expected = {"R0": "program.root_startup", "Main": "program.root_startup",
+                    "@int:": "types.prefix", "type[5]: args": "types.prefix", "[5]type": "types.prefix",
                     "int@:": "types.postfix", "int[]": "types.postfix", "`@name`": "syntax.names",
                     "::": "syntax.signature", "динамическое связывание": "binding.chain",
                     "own default": "binding.own_default", "bind": "operations.bind", "Pattern-then": "patterns.then"}
@@ -216,13 +217,19 @@ class ProtocolTests(unittest.IsolatedAsyncioTestCase):
     async def test_stdio_real_handshake_and_tools(self):
         from fastmcp import Client
         from fastmcp.client.transports import StdioTransport
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        config = Path(temp.name) / "unconfigured.json"
         transport = StdioTransport(command=sys.executable,
-                                   args=["-m", "tools.lmx_dev", "serve"], cwd=str(ROOT))
+                                   args=["-m", "tools.lmx_dev", "--config", str(config), "serve"],
+                                   cwd=str(ROOT))
         async with Client(transport) as client:
             names = {tool.name for tool in await client.list_tools()}
             self.assertEqual(names, {"get_spec_rule", "check_file", "bootstrap", "service_status"})
             result = await client.call_tool("get_spec_rule", {"topic": "R0"})
             self.assertEqual(result.data["ruleId"], "program.root_startup")
+            result = await client.call_tool("get_spec_rule", {"topic": "[5]type"})
+            self.assertEqual(result.data["ruleId"], "types.prefix")
             result = await client.call_tool("check_file", {"file": "missing.lm2", "phase": "static"})
             self.assertEqual(result.data["execution"], "unavailable")
 

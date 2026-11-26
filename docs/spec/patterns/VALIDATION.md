@@ -1,47 +1,60 @@
-# Проверка дополнения — 24 ноября 2026 года
+# Проверка документации и публикаций — 26 ноября 2026
 
-Основа: `spec.tar(2).gz`, SHA-256 `d88d7732d511ebb5679cc045cd5764fc1d02b25f8242c46d4eb728edc147ed00`. Текущие результаты ниже относятся к новым файлам и полному пересчёту. Предыдущие receipts сохраняют только свою историческую область; их PASS не переносится на новый код.
+Текущая модель: [PUBLICATION_DATA.json](PUBLICATION_DATA.json), SHA-256 `f8455be2a482e95311435e231a815bd84bcc2133c837a644fa4075ae971b6627`. Статус исходников и публикаций: **PASS**; статус текущих изменённых/новых материалов переданной ревизии: **PASS**. PASS относится к указанной текущей области и перечисленным проверкам, а не ко всем историческим записям дерева. Production LMX parser, translator, runtime и интеграция PD01 имеют **NOT_RUN**.
 
 ## Текущие проверки
 
 | Область | Статус | Что проверено | Отчёт |
 | --- | --- | --- | --- |
-| Весь текущий пакет | PASS | 21263 проверок; текущие исходники, зеркала и метрики | [JSON](validation/current_packet_expansion_20261124.json) |
-| 11 групп | PASS | 108 записей, 337 сравниваемых листингов | [JSON](validation/recount_report.json) |
-| Ядро | PASS | 215 имён, 51 частей; ограниченная статическая проверка | [JSON](LMX_Fn_Receivers/tests/STATIC_REPORT.json) |
-| Haskell | PASS | 24 модуля; 32 сохранённых LMX-файла; GHC и LMX NOT_RUN | [JSON](examples/haskell_comparision/validation/check_receipt.json) |
-| Julia | PASS | 157 проверок, 96 Python oracle cases; Julia NOT_RUN | [JSON](examples/julia_comparison/validation/check_report.json) |
-| Perl | PASS | 98 клиентских + 87 библиотечных проверок на настоящем Perl | [JSON](examples/perl_comparison/validation/client_tests.json) |
-| SBCL | PASS | 468 статических проверок; новые runtime cases NOT_RUN | [JSON](examples/SBCL_comparison/validation/workflow_source_checks.json) |
-| PDF/XLSX | PASS | 21 PDF и 21 XLSX; значения, формулы, цвета и подчёркивания | [JSON](validation/publication_checks.json) |
-| Визуальная проверка | PASS | 34 PDF-страницы и 32 листа XLSX просмотрены после рендера | [JSON](validation/visual_review_expansion_20261124.json) |
+| Общий текущий пакет | PASS | Текущие изменённые/новые материалы; 54 исходника и 108 мест, связанные evidence receipts | [JSON](validation/current_revision_checks_20261126.json) |
+| Группы сравнений | PASS | 11 групп, 108 сравнений, 337 полных листингов | [JSON](validation/recount_report.json) |
+| Ядро | PASS | 215 имён, 52 частей, 20 интеграционных границ; ограниченная статическая проверка | [JSON](LMX_Fn_Receivers/tests/STATIC_REPORT.json) |
+| Depth ABI | PASS | 261 проверок исходников и метаданных; PD01 production NOT_RUN | [JSON](LMX_Fn_Receivers/tests/operand_depth_source_20261126.json) |
+| Haskell | PASS | 24 модулей, 32 LMX-файла; исходники, исполнение NOT_RUN | [JSON](examples/haskell_comparision/validation/check_receipt.json) |
+| Julia | PASS | 175 проверок, 113 случаев Python oracle; Julia и LMX NOT_RUN | [JSON](examples/julia_comparison/validation/check_report.json) |
+| Perl | PASS | 31 сравнений: исходники, JSON, Markdown и размеры; текущий runtime NOT_RUN | [JSON](examples/perl_comparison/validation/final_consistency.json) |
+| SBCL | PASS | 468 проверок исходников и размеров; SBCL и LMX NOT_RUN | [JSON](examples/SBCL_comparison/validation/workflow_source_checks.json) |
+| PDF/XLSX | PASS | 21/21 PDF и 21/21 XLSX; 1909 числовых размеров, формулы, минимумы и равенства | [JSON](validation/publication_checks.json) |
+| Визуальная проверка | PASS | Выборочно просмотрены 6 PDF-страниц и 8 полных листов; прочая проверка отдельно обозначена в отчёте | [JSON](validation/visual_review_20261126.json) |
 
-## Комплектность и размеры
+## Граница текущей ревизии и исторические записи
 
-В 11 группах: 93 паттерна, 6 алгоритмов и 9 сравнений реализаций. Ещё 23 GoF-сравнения сохранены. Общая модель содержит 109 договоров с двумя LMX-формами / 218 полных измерений. В examples находятся 96 сценариев; 80 являются полными парами, 16 — реализованными аналогиями. Все 24 Haskell-сценария имеют контрольный код.
+Общий обход дерева документации сохраняет статус **FAIL**: в нём остаются **11** прежних наблюдений в исторических файлах, побайтно совпадающих с базовым архивом. Новых замечаний в текущем отчёте: **0**. Их точные пути, SHA-256 и область проверки сохранены в [отчёте ревизии](validation/current_revision_checks_20261126.json). Исторические записи не переписаны для получения общего PASS; PASS текущей ревизии не отменяет результат обхода всего дерева.
 
-Полный размер включает объявления, локальные пользовательские зависимости, комментарии внутри границы и Throws. Одна физическая общая часть включается ровно один раз в каждый использующий её полный листинг. Многочастные исходники перечислены в source_files. Совместимое поле LMX не является третьей сравниваемой формой.
+Формы `T[](N)`, `T@(N)` имеют область **DOC_SPEC_ADDITION_ONLY** и production acceptance **NOT_RUN**. Описание синтаксиса не выдаётся за выполненную проверку его production-парсером.
 
-Все PDF/XLSX и текстовые таблицы используют [PUBLICATION_DATA.json](PUBLICATION_DATA.json). Зелёным подчёркнуты минимумы сопоставимой строки, включая равенства; обе формы LMX участвуют самостоятельно. Аналогии не участвуют в минимуме или сумме полных пар. Измерение размера не является измерением скорости или памяти.
+## Комплектность и измерения
 
-## Исполнение контрольных программ
+Модель содержит **112** клиентских договоров и **224** измерений двух LMX-форм. В 4 языковых наборах examples находятся **99** сценариев и **198** стилевых листингов; **83** сценария образуют полные пары. Отдельно учтены **24** сравнений общих реализаций. Это разные области подсчёта; они не складываются в число различных программ.
 
-Алгоритмы 100–105: 1492 результата настоящих контрольных программ на фиксированных и генерируемых входах — PASS; [отчёт](10_algorithms/tests/validation.json). Для 106–108 выполнены C++ и предусмотренные JavaScript-контроли; Go NOT_RUN, потому что компилятор Go отсутствует. [Отчёт](11_state_and_simulation_patterns/tests/validation_results.json) сохраняет PARTIAL для общего набора и отдельные PASS выполненных сторон.
+Публикация состоит из **20** основных документов и **1** зеркала: всего **21 PDF** и **21 XLSX**. В этой ревизии пересозданы 9 PDF и 9 XLSX. Неизменённые файлы сохраняют исходную дату генерации в текущих receipts; их история не переписана.
 
-Julia и SBCL не установлены; Python oracle Julia и статическая сверка SBCL не считаются запуском этих языков. GHC не установлен. Старые SBCL execution receipts не подтверждают изменённые клиентские листинги.
+Полный размер включает все объявления, код в указанной границе, комментарии, Throws и ссылки copy. Обе формы LMX участвуют самостоятельно. Минимум сопоставимой строки подчёркнут зелёным; при равенстве отмечены все победители. Аналогии не становятся нулевым контрольным листингом и не входят в сумму полных пар. Размер исходника не измеряет скорость или память.
 
-## Парсер и doc_examples
+## Публикации и визуальная область
 
-Настоящие LMX parser/runtime в данной среде не предоставлены. Новые и изменённые примеры имеют NOT_RUN. [Общий doc_examples](../../../tests/doc_examples/README.md) обновлён в прежнем формате src и TSV с дедупликацией кода, актуальными местами в документации и сохранением прежних результатов только для совпадающих текстов. Два случая parser-debt:21.12 сохраняются явно. Новые примеры стрелки включены в тот же каталог.
+[PDF receipt](validation/pdf_generation_20261126.json) и [XLSX receipt](validation/workbook_publication_20261126.json) содержат хеши готовых файлов и их действительную edition. [Проверка](validation/publication_checks.json) читает сериализованные XLSX и PDF: значения, формулы и кэш сумм, правила условного форматирования, реальные зелёные числа и подчёркивания. Artifact-tool пересчитывал формулы; запуск Microsoft Excel не заявляется.
 
-Сигнатуры проверены относительно действующей нормы: [28 профилей](../ARROW_EXAMPLES.md). Объявления Model@ и int[] сохраняют постфиксную форму. Корень запускается как L3 Thread без DATA; имена примеров не вводят Main. Проверки документации и вспомогательные Python-модели не являются доказательством работы транслятора.
+[Визуальный отчёт](validation/visual_review_20261126.json) перечисляет конкретные просмотренные страницы и листы с хешами файлов и рендеров. Выборочная визуальная проверка не названа просмотром всех страниц. Проверки остальных страниц и их границ указаны отдельно.
 
-## Замечания к исходной загрузке
+## Исполнение и предыдущие receipts
 
-[Отдельный файл замечаний](../REVIEW_NOTES.md#author-review-20261124) различает исходную намеренную отсрочку пересчёта и актуальные проблемы текста. Repository JSON синхронизирован с уже проверенным .lm3 до регенерации. Две слишком широкие фразы о голом S оставлены как конкретное замечание к нормативной формулировке; правила графа не переопределялись.
+Этот генератор только читает доказательства и обновляет сводку. Он не запускает LMX, Julia, Haskell, SBCL, Perl или сторонние компиляторы. Текущий Julia-отчёт проверяет исходники и Python oracle; это не исполнение Julia. Проверка формы или размера кода не подтверждает связывание, типизацию, parent-связи, время жизни или нативный ABI.
 
-## Воспроизведение
+Следующие прежние receipts сохранены отдельно. Записанный в них PASS не переносится на изменённый LMX-код или новые случаи исполнения:
 
-Исходные генераторы обновляют код/зеркала наборов. Затем refresh_examples_statistics.py, refresh_statistics.py --metadata-only, refresh_group_csv.py и build_publication_data.py --text создают текущие данные. publish_pdfs.py и publish_workbooks.mjs строят документы. recount_patterns.py, validate_current_packet.py и verify_publication.py проверяют их. Визуальная проверка выполняется отдельно после рендера; этот генератор сам её не заменяет. Объединение doc_examples описано в его README. Манифесты строятся последними.
+- [examples/perl_comparison/validation/client_tests.json](examples/perl_comparison/validation/client_tests.json) — записанный статус `PASS`; прежняя область отчёта.
+- [examples/SBCL_comparison/validation/common_lisp.json](examples/SBCL_comparison/validation/common_lisp.json) — записанный статус `NOT_RUN`; прежняя область отчёта.
+- [examples/SBCL_comparison/validation/implementation_execution.json](examples/SBCL_comparison/validation/implementation_execution.json) — записанный статус `PASS`; прежняя область отчёта.
+- [10_algorithms/tests/validation.json](10_algorithms/tests/validation.json) — записанный статус `PASS`; прежняя область отчёта.
+- [11_state_and_simulation_patterns/tests/validation_results.json](11_state_and_simulation_patterns/tests/validation_results.json) — записанный статус `PARTIAL`; прежняя область отчёта.
 
-[Состав изменений](EXPANSION_2026-11-24.md) · [Статистика](STATISTICS_2026-11-22.md) · [Статистика examples](examples/STATISTICS.md).
+## Воспроизведение текущей сводки
+
+После синхронизации исходников и метаданных обновляют статистику и PUBLICATION_DATA. Экспорт выполняют только для реально затронутых сравнительных документов; затем отдельно проверяют готовые файлы и их рендеры. Эта команда не повторяет экспорт или широкие тесты:
+
+```sh
+python -B tools/refresh_validation_report.py --revision-checks validation/current_revision_checks_20261126.json
+```
+
+Команда запускается из spec/patterns. Путь --revision-checks может указывать на другой текущий отчёт. Без существующего текущего отчёта поле source_packet остаётся NOT_RUN и общий статус PARTIAL. Записываются только [VALIDATION.md](VALIDATION.md) и [validation_overview_20261126.json](validation/validation_overview_20261126.json); исторические receipts не изменяются. `--check` сравнивает эти два результата без записи.

@@ -131,6 +131,96 @@ int[]: [1 2 3]
 
 A square initializer is valid for both named and anonymous arrays. The anonymous forms yield one array without inventing a variable name; an omitted initializer preserves uninitialized absence. The requirement, including compositions such as `int@[]`, `int[]@`, `int[][]` and `int@@`, stays in the complete left head. Generic `@: ptr Model` above still initializes a universal reference from a value and is not a hidden typed declaration. See the [eight positive forms and complete composition matrix](TYPE_DECLARATION_FORMS.md).
 
+
+<a id="sized-array-declarations"></a>
+### Explicit axis sizes and an optional declaration name
+
+These independent declarations produce the same ordered payload, with distinct written type requirements:
+
+```lmx
+int[][3]: var [1 2 3    4 5 6]
+int[][]: var [1 2 3;    4 5 6]
+int[][]: var [[1 2 3]  [4 5 6]]
+int[][3]: var [1 2 3
+              4 5 6]
+```
+
+These examples produce the same ordered flat payload, but their complete
+left requirements are different: `int[][3]` retains width 3 and derives the
+other extent as `6 / 3`, whereas `int[][]` leaves both sizes unspecified.
+Explicit row boundaries validate rectangular input and flatten it; they do not
+become persistent shape metadata or specialize TYPE. To retain shape `[2,3]`
+write `int[2][3]`. `int[][]` and `int[](2)` are the same normalized type, while
+`int[2][3]` and `int[3][2]` are different types even at the same total length.
+An ordinary newline within the bounded initializer is whitespace: it adds no
+row or declaration boundary. Omitting the name yields an anonymous initialized
+value of the same written requirement; an omitted initializer remains typed
+absence and allocates no elements.
+
+A flat initializer is valid even when several axes remain unspecified:
+`int[][]: [1 2 3 4 5 6]` stores six elements without guessing `[2,3]` or `[3,2]`.
+Only an operation requiring undetermined axes diagnoses missing shape; flat
+operations remain available. One unknown axis is derivable from length divided
+exactly by the positive product of specified axes. `int[][3]: [1 2 3 4 5]`
+is invalid, as are contradictory explicit rows, violated written extents and
+negative or noninteger extent results. No zero padding or truncation repairs
+such a mismatch. `int[0][]: []` and `int[][0]: []` are valid incomplete zero
+shapes: the other extent is not guessed. `int[2][0]: []` is fully specified.
+See [shape consumption](ARRAY_STORAGE.en.md#shape-inference).
+
+```lmx
+int[][N]: [1 2 3 4 5 6]
+int[2][5]: [[1 2 3 4 5] [1 2 3 4 5]]
+Struct[2][5]: [[a b c d e] [e d c b a]]
+Struct[2]: [a b]
+Struct[2]: var [a b]
+Struct[]: var [a b]
+```
+
+Struct denotes the element requirement; a through e are admitted existing
+values. `Struct[2]` means “Array of Struct of length 2”; its anonymous initializer
+creates that value, while the NAME form initializes var. `Struct[]` retains an
+unspecified length. `Struct[2]: var` without an initializer still declares typed
+absence and allocates no elements.
+
+N may be a full ordinary expression, for example `int[][width + 1]` or
+`int[rows()][cols()]`; the complete content of `[...]` uses the common parser.
+The extent itself has VALUE role inside the outer TYPE requirement:
+`int[][sizes[axis]]` uses an ordinary index, and `int[][length(row)]` uses an
+ordinary call. Neither inner form adds an Array axis. The TYPE consumer obtains
+each written result once in order. An extent is
+nonnegative; negative, noninteger or absent results are errors. Actual rows
+must match the required sizes. No zero padding or truncation repairs a mismatch,
+and no factorization guesses several missing dimensions from a flat length.
+
+The similar-looking assignment has a different consuming role:
+
+```lmx
+Struct[2]:= [a b]
+```
+
+This is `Struct[2] := [a b]`: write to the third element of an existing indexed
+value. The atomic `:=` never declares a sized type. Here Struct is consumed as
+an indexed value; in the earlier declarations it is consumed as a full TYPE
+requirement. Role selection precedes evaluation, without trial index execution.
+
+`T[N]` contributes one axis of size N; `T[](N)` contributes N unspecified
+axes; `T@(N)` contributes N pointer levels. Rank and pointer-depth counts remain
+positive, while an extent may be zero. Canonical normalization stores the full
+left requirement in a shared immutable system TYPE Structure. Equal requirements
+reuse its TypeRef; initializer lengths/rows, variable names and reserve are not
+part of type identity. Known extents come from that description; a single missing
+extent can be derived from current length only when unique. There is no hidden
+per-instance shape entry, and the original initializer is not runtime metadata.
+At capacity=length no secondary Array descriptor exists; reserve needs only its
+optional capacity entry and never changes TYPE. Generic admission does not
+retag a value or discard its full original requirement. Size-changing operations
+respect written bounds, and a cached type pair cannot prove a mutable value's
+current size. See [canonical types](ARRAY_STORAGE.en.md#array-profiles) and
+[representation](ARRAY_STORAGE.en.md#side-metadata).
+
+These are documentation examples; production parser/translator/runtime acceptance is **NOT_RUN**.
+
 A first definition establishes the place; in code a repeated form with a
 candidate writes after admission, and a repeated form without a candidate
 only checks the requirement (in data a repeated form is one more occurrence
@@ -140,7 +230,7 @@ withdrawn by the author's decision of 2026-11-10
 ([semantics](LMX_semantics.en.md#receiver-args-only)): in data `ms: int: time`
 declares a Structure `ms` with a field `time`, not a place `ms`.
 
-For `int: x` without a value, the graph leaf is only the `uninit:int` code:
+For `int: x` without a value, the graph leaf is only the TypeRef of `uninit:int`:
 `sizeof(value) = 0`. There is no hidden int cell, inner int record, or reserved
 payload waiting for its first assignment. The executing call can initialize its
 own local x without changing that source leaf. An explicit graph assignment
@@ -153,27 +243,54 @@ distinction applies to other T; absence is not a zero value. [Semantics: zero-pa
 
 Lmx's flat header contains parent/length/storage. `parent(S)`, `length(S)`, and `sys\storage(S)`
 load these fields directly. `sys\native(S)` returns the native descriptor of variants from call's tables,
-or 0; `sys\capacity(S)` returns reserved capacity from the arena table. All five no-argument forms
+or 0; `sys\capacity(S)` returns length when no reserve entry exists, or reads that entry. All five no-argument forms
 select the data of the current call; code requires an explicit argument. Reading neither compiles nor invokes native.
 
 These resolved receivers retain their contracts in DATA and CODE; merely storing or inspecting a source form does not execute it ([context invariance](LMX_semantics.en.md#receiver-context-invariance)).
 For example, the path `D\length` (`D` is the data Structure) selects a user field while `length()` reads the length
 of the call's data. The parameters of `call` are named `args` and `code`; node keeps its existing meaning.
 
-Structure and `Array<@>` are interchangeable; numeric `Array<T>` stores T elements. All arrays have variable
-length and a common allocation mechanism. `sys\resize(S,n)` changes length; `sys\reserve(S,n)` changes reserve only.
-Capacity belongs to an arena table, not the header. The descriptor address stays stable; storage may move.
-In L2 an index, including a negative one, only computes an offset. In L3 adjacent [i][j] yield one linear
-index and one length check; an L3 element reference contains the Array descriptor reference and index,
-not storage. A raw L2 address is not repaired when storage moves.
-[Contract](LMX_semantics.en.md#array-capacity).
+Structure and `Array<@>` are interchangeable; numeric `Array<T>` stores T
+in one flat backing. All Arrays use the same length/capacity mechanism. Their
+canonical TypeRef is determined by the normalized complete left requirement,
+including declared rank and explicit extents. Initializer rows check and flatten
+input but do not turn unknown axes into persistent type metadata. Thus `int[]`
+with length two and three has the same type, `int[][]` equals `int[](2)`, and
+`int[2][3]` differs from `int[3][2]`.
+
+`sys\resize(S,n)` respects that original type and its explicit size constraints;
+`sys\reserve(S,n)` changes reserve only. Neither creates a new type for reserve
+or length. At capacity=length there is no secondary descriptor or hidden shape
+entry. A larger reserve needs only its optional compact capacity entry, removed
+when capacity again equals length. `sys\capacity(arr)` consults that entry or
+returns length. The primary descriptor remains stable; storage may move.
+
+`sys\typeof(arr)` returns a reference to the canonical system TYPE Structure,
+not an int. A saved TypeRef remains immutable; reserve and admitted resize leave
+fresh queries equal to that saved reference. Passing through a generic requirement
+does not retag the target. Rebinding a place to a different value changes what a
+fresh query selects, without changing an old type description. Ordinary directed
+compatibility remains distinct from identity of TypeRefs. Address and reference-
+place queries retain their own contract without recursive dereferencing.
+
+A negative Array index is invalid; backward address offsets use a pointer. L3
+and interpreted L2 reduce a full adjacent coordinate chain to one linear index
+and check the final element; native L2 adds no automatic check. Dimensions needed
+for coordinate access come only from TYPE plus current length, when uniquely
+derivable. Missing required dimensions cause the reached operation's diagnostic,
+not a blanket constructor error. An L3 element reference holds the Array descriptor
+and index, not storage. A raw L2 address is not repaired after storage moves.
+[Complete contract](LMX_semantics.en.md#array-capacity).
 
 <a id="get-descriptor"></a>
-## Header-field addresses through descriptor
+## Header-field addresses and the shared type descriptor
 
-`sys\descriptor(S)` returns an ordinary Structure of three actual parent/length/storage field addresses:
+For an ordinary Array/Structure value S, `sys\descriptor(S)` returns an ordinary Structure of three actual parent/length/storage field addresses:
 Lmx **, size_t *, void **. Omitting the argument selects the data of the current call, including inside control bodies.
-The result contains neither native nor capacity.
+This value-overload result covers the primary header only; it exposes neither native call data,
+shared type/shape metadata nor an optional reserve entry. Reading it does not
+allocate a secondary descriptor. A direct length write must still preserve
+capacity and written type constraints.
 
 With d = `sys\descriptor(S)`, `\(d\length) := n` directly changes S's length; `d\length := p` changes
 the pointer in d itself. The first example does not allocate storage; `sys\resize` performs a consistent
@@ -182,6 +299,56 @@ resize. There is no header copy, proxy, write-back, or special assignment.
 Ordinary typed dereferences and paths permit reference/function-pointer writes; restricting changes
 to a bare Structure name does not restrict a path. Pointer depth and array rank are arbitrary finite
 values; address lifetime remains ordinary. [Exact form](L2_spec_en.md#get-descriptor).
+
+
+<a id="get-type-descriptor"></a>
+### The shared system descriptor of a type
+
+`typeof` and `sys\typeof` return **TypeRef**: an ordinary reference to the
+canonical immutable system Structure describing the complete type. Consequently,
+`sys\descriptor(sys\typeof(obj))` returns that same system Structure; there is
+no integer-code lookup or additional description allocation.
+
+| Argument | Result of the existing `sys\descriptor` receiver |
+| --- | --- |
+| Canonical system TYPE Structure selected by TypeRef | The same canonical immutable Structure. This more specific contract has priority over ordinary Structure handling. |
+| Ordinary Array/Structure value S | The existing Structure of three actual primary-field addresses. |
+| Omitted argument | The existing current-DATA value contract. |
+
+This priority follows the canonical system TYPE contract, not a user field name,
+apparent field layout or capitalization. An arbitrary integer is not accepted as
+a TypeRef. A user Structure that resembles a type description is not silently
+promoted to this branch.
+
+```lmx
+@: savedType sys\typeof(obj)
+@: valueFields sys\descriptor(obj)
+@: typeInfo sys\descriptor(savedType)
+@: currentTypeInfo sys\descriptor(sys\typeof(obj))
+@: primitiveTypeInfo sys\descriptor(int)
+```
+
+Here obj is an ordinary Array/Structure. `savedType` already refers to its type
+description; `typeInfo` retains that identity. The description exposes primitive
+or element storage, rank and the axis constraints written in the normalized
+TYPE, compatibility relationships, and the common capacity-access policy.
+Unspecified axes stay unspecified. Neither inspecting a type nor observing
+initializer rows manufactures per-object shape metadata.
+
+`sys\capacity(obj)` remains the query for that Array's actual capacity. The
+shared TYPE describes how to consult the optional capacity entry or use length;
+it does not contain an instance-specific capacity. When capacity=length there
+is no secondary per-Array descriptor, even for nD values.
+
+A saved TypeRef and its canonical description remain immutable. Reserve or an
+admitted resize does not change the Array's type, so fresh and saved queries
+agree. Rebinding a place to another value or replacing a graph fragment selects
+the new value on a fresh query and does not mutate the old description. Address
+and reference-place queries retain their own contract; this is no universal
+recursive dereference rule. System TYPE Structures themselves have a finite
+bootstrapped meta-description: `typeof(typeof(obj))` uses ordinary graph links,
+including permitted cycles, without an infinite tower of allocations. See
+[the complete TYPE-descriptor contract](ARRAY_STORAGE.en.md#type-descriptor).
 
 <a id="system-indexof"></a>
 ## A field's index
@@ -877,11 +1044,11 @@ sources. If W and E both fit, the result is the usual ambiguity error; import ha
 The ordinary named-signature expression `Name :: DATA` separately reads its one right template in the DATA role. This declaration contract does not turn the source arguments of import, copy or merge into DATA arguments merely because their output is accepted in a DATA context.
 
 ~~~lmx
-(a b) := copy(Pair)
-(c b d a) := (a b c d)
+(a b) .: copy(Pair)
+(c b d a) .: (a b c d)
 ~~~
 
-For [group positional assignment](LMX_semantics.en.md#group-assign), `(a b) := copy(Pair)` and `(a b) := (copy(Pair))` consume the same two emitted fields when the source and targets satisfy the contract. The collector is optional for this sequence consumer. The grouper preserves current-level items; application adaptation packages the left PLACE sequence as one actual. Three sibling RHS groups remain three Structure values, not a recursively flattened stream. Obtain and retain all RHS values and check their count before the first target write; RHS names do not reorder targets and previous RHS effects are not rolled back. A function-returned Structure remains one value. Scalar `ptr := (copy(Pair))` still receives one collected Structure.
+For [group positional assignment](LMX_semantics.en.md#group-assign), `(a b) .: copy(Pair)` and `(a b) .: (copy(Pair))` consume the same two emitted fields when the source and targets satisfy the contract. The collector is optional for this sequence consumer. The grouper preserves current-level items; application adaptation packages the left PLACE sequence as one actual. Three sibling RHS groups remain three Structure values, not a recursively flattened stream. Obtain and retain all RHS values and check their count before the first target write; RHS names do not reorder targets and previous RHS effects are not rolled back. A function-returned Structure remains one value. Scalar `ptr := (copy(Pair))` still receives one collected Structure.
 
 <a id="import-selection"></a>
 ### Import keeps original identities and parents
@@ -1044,7 +1211,7 @@ The grouper reads the clean graph. In Expression, a graph reference atom to a St
 
 `1 + ((2))` is 3 and `(1) + (2 * 3)` is 7: an Expression group contains one complete expression. Material `(1 2 3 4)` and nested `((1 2))` do not become implicit arithmetic. The same rule works on the tree of any source form, not only parentheses. A Structure received as a whole value stays one value; a graph received as CODE/Expression follows the same occurrence-role and name/actual-parent rules; `(copy(Model))` collects a field stream even when it emits zero or one field.
 
-The grouper builds priority dependencies and current-level sequences. A separate Expression application adapter packages left as one actual and right as an Array of references. Thus `(a b c) := (a c b)` supplies one left PLACE bundle and three right values; `(a b c) := (f g h) (f g h) (f g h)` supplies three right Structure values. The general form `arg0 operand arg1 arg2 arg3` includes ordinary binary expressions, without automatic folding or shifting a missing left argument. Receiving contracts preserve DATA, NAME, TYPE, PLACE and RAW. [Full rule](LMX_semantics.en.md#expression-structural-grouping).
+The grouper builds priority dependencies and current-level sequences. A separate Expression application adapter packages left as one actual and right as an Array of references. Thus `(a b c) .: (a c b)` supplies one left PLACE bundle and three right values; `(a b c) .: (f g h) (f g h) (f g h)` supplies three right Structure values. The general form `arg0 operand arg1 arg2 arg3` includes ordinary binary expressions, without automatic folding or shifting a missing left argument. Receiving contracts preserve DATA, NAME, TYPE, PLACE and RAW. [Full rule](LMX_semantics.en.md#expression-structural-grouping).
 
 <a id="expression-priority"></a>
 ## Priorities, value dependencies, and assignment effects
@@ -1090,12 +1257,13 @@ DATA matches the explicit structural header:
 ~~~lmx
 operand_template:
     @: left
+    int: depth
     @[]: right
     const: int: PASS_ARGS_AS_IS
     const: int: PRIORITY
 ~~~
 
-All four named fields are required. The actual method must have ready constant integer `PASS_ARGS_AS_IS` equal to
+All five named fields are required. The actual method must have ready constant integer `PASS_ARGS_AS_IS` equal to
 0 or 1 and a ready integer `PRIORITY` on the common scale before operator grouping. Missing properties acquire
 no defaults. The mode and priority are independent; a special numeric priority does not encode raw mode.
 
@@ -1106,6 +1274,7 @@ A numeric specialization can require int targets and an int result:
 ~~~lmx
 int_operand_template:
     int@: left
+    int: depth
     int@[]: right
     const: int: PASS_ARGS_AS_IS
     const: int: PRIORITY
@@ -1118,9 +1287,9 @@ but that is a separate field-stream operation. Any method body explicitly includ
 model's requirement; extra implementation fields absent from the model are not.
 
 Fn remains a distinct positional contract. For example,
-`PairSignature :: (@: first; @[]: rest; return: int)`
-can match inputs named lhs/rhs by position. It does not establish operand discovery, for which the names left,
-right, `PASS_ARGS_AS_IS`, and `PRIORITY` are significant. Through such a fn reference, public labels map to positions;
+`TripleSignature :: (@: first; int: level; @[]: rest; return: int)`
+can match inputs named lhs/level/rhs by position. It does not establish operand discovery, for which the names left,
+depth, right, `PASS_ARGS_AS_IS`, and `PRIORITY` are significant. Through such a fn reference, public labels map to positions;
 hidden binding still uses the real candidate's names and DATA.
 
 <a id="operand-values"></a>
@@ -1145,6 +1314,7 @@ The complete prepared-value example is:
 ~~~lmx
 operands:
     int@: left
+    int: depth
     int@[]: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("+")
@@ -1185,6 +1355,7 @@ names, literals, calls, assignments, or groups. General raw code therefore uses 
 ~~~lmx
 raw_operands:
     @: left
+    int: depth
     @[]: right
     const: int: PASS_ARGS_AS_IS 1
     const: int: PRIORITY sys\priority("+")
@@ -1231,11 +1402,17 @@ int: address 1 + @SomeStructure
 ~~~
 
 The first line uses the ordinary reference contract; the second explicitly performs address arithmetic.
-An ordinary storage reference points to the value, whose type code lies immediately before it under the
+An ordinary storage reference points to the value, whose TypeRef lies immediately before it under the
 [L2 record contract](L2_spec_en.md#value-record). A reference to a container points to its typed descriptor.
 A packed `Array<int>` is not an Array of references. Native temporaries that need a storage reference use the
 common typed-value representation; a raw machine address is not passed off as a tagged record.
-Neither mandatory copies of all values nor a new per-value wrapper type follows.
+Neither mandatory copies of all values nor a new per-value wrapper type follows. The prefix cell is one TypeRef wide:
+from a genuine initialized record-value address p, read once at
+`byteAddress(p) - sizeof(TypeRef)` to obtain the system description address.
+This explanatory ABI formula is not a new LMX receiver. The width follows the
+reference ABI, not a fixed four bytes or universal sizeof(size_t). Uninit has no
+payload to address; dense elements and arbitrary native locals have no such
+individual prefix. [TypeRef layout](LMX_semantics.en.md#type-reference-layout).
 
 <a id="operand-name-priority"></a>
 ### Name strings and priorities
@@ -1388,3 +1565,5 @@ wholeMatch(utf8Text("AB-09"); (then (within("A"; "Z") times 2) "-" (asciiDigit t
 ```
 
 The Pattern is assembled by ordinary operands. The text is literal, the view explicitly chooses UTF-8 scalar positions, and wholeMatch tests the whole input. Builder evaluation is distinct from matching; no regex-string parser is implied.
+
+The [common depth input](OPERATOR_DEPTH.en.md) is the second input between left and right. The source forms supply 0, 1 or the once-obtained general expression in `.(…)`; only one dot is admitted. Structural receiver calls use the base name and named depth. Invalid depth/structure/fusion is diagnosed by translation or interpretation, without new user exceptions.

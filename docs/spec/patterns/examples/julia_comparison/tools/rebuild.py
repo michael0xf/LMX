@@ -13,7 +13,7 @@ from lmx_style_variants import get_variants, validate_variants
 from lmx_execution_contract import apply_execution_contract, acceptance_document
 from lmx_style_suite_reports import prepare as prepare_style, rows_for, client_markdown, count_table, write_overview, write_csv, block
 from canonical_operations import definitions, public_roots as catalog_roots, selected_operations
-EDITION = '2026-11-24'
+EDITION = '2026-11-26'
 COMPONENTS = [
  ('JI01','Упорядоченные обходы, предикаты и свёртки','JI01_ordered.jl',
   ['map','filter','foldl','scanl','zip','zipWith','bind','any','all','index','count','record'],
@@ -120,7 +120,7 @@ def main():
     write_json(R/'validation/implementation_dependencies.json',dep_report)
 
     rows=[]; checks=[]; comparison_rows=[]
-    expected_ids=[f'J{i:02}' for i in range(1,25)]
+    expected_ids=[f'J{i:02}' for i in range(1,data.get('expected_client_count',24)+1)]
     assert [e['id'] for e in data['examples']]==expected_ids
     for e in data['examples']:
         prepare_style(e,R)
@@ -142,6 +142,8 @@ def main():
         comparison_rows.extend(rows_for(e,'Julia'))
         assert not re.search(r'Julia(?:Ordered|Array|Mutation|OrderGroup)Reference|include\(|library_comparisons',e['foreign'])
         links='\n'.join(f'- `{name}`: [полная пара реализации]({link})' for name,link in e['implementation_links'].items())
+        expression_links='\n'.join(f'- `{name}`: [договор Expression]({link})' for name,link in e.get('expression_operations',{}).items())
+        if expression_links:links += ('\n' if links else '') + expression_links
         (R/(e['id']+'_comparision.md')).write_text(client_markdown(e,'Julia',links,'notes_ru',
             ('Изменённые LMX-исходники: parser/P0 **NOT_RUN**; прежний receipt не переносится на новый хэш. ' if e.get('lmx_parser_execution')=='NOT_RUN' else '') +
             'LMX и Julia runtime: **NOT_RUN** в этой сборке. Проверяются обе LMX-формы как текст и общий независимый oracle; это не языковое исполнение. Численные размеры пересчитаны по текущим полным исходникам.'))
@@ -184,11 +186,9 @@ def main():
             semantic.append({'id':e['id']+f'-edge{number}','example':e['id'],'contract_id':e['id'],'styles':['procedural','functional'],**case,'status':'NOT_RUN'})
     write_json(R/'validation/semantic_cases.json',acceptance_document({'kind':'acceptance_specification_not_execution','cases':semantic}))
     (R/'validation/throws_metrics.json').unlink(missing_ok=True)
-    revision_path=R/'validation/julia_revision_20261123.json'
-    if revision_path.exists():
-        revision=json.loads(revision_path.read_text())
-        revision.update({'status':'PAIRED_CLIENTS_READY','core_operations_used':sorted({name for item in data['examples'] for name in item['core_functions']}),'statistics':totals,'style_totals':style_totals,'notes_ru':'Обе полные LMX-формы опубликованы отдельно; старое lmx является functional-зеркалом. Исключений из полного счёта Throws нет.','final_frozen_core_refresh':True})
-        write_json(revision_path,revision)
+    revision_path=R/('validation/julia_revision_'+EDITION.replace('-','')+'.json')
+    revision={'edition':EDITION,'status':'PAIRED_CLIENTS_READY','core_operations_used':sorted({name for item in data['examples'] for name in item['core_functions']}),'statistics':totals,'style_totals':style_totals,'notes_ru':'Обе полные LMX-формы опубликованы отдельно; старое lmx является functional-зеркалом. Исключений из полного счёта Throws нет.','runtime_execution':'NOT_RUN'}
+    write_json(revision_path,revision)
     from write_julia_tests import main as write_tests
     write_tests()
     print(json.dumps({'examples':len(data['examples']),'lmx_client_variants':len(comparison_rows)-len(data['examples']),'implementations':len(implementations),'semantic_cases':len(semantic),'style_totals':style_totals},ensure_ascii=False))

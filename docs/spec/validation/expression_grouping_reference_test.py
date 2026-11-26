@@ -7,6 +7,8 @@ import sys
 import unittest
 
 path = Path(__file__).resolve().parents[1] / "tools/expression_grouping_reference.py"
+sys.path.insert(0, str(path.parent))
+from operand_depth_reference import DepthExpression, DepthError
 spec = importlib.util.spec_from_file_location("lmx_expression_reference", path)
 ref = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = ref
@@ -62,24 +64,34 @@ def shape(plan):
 
 class NumericMethod:
     """Tiny host method body; this is not LMX numeric semantics."""
-    def __init__(self, function):
+    def __init__(self, function, arities=(2,)):
         self.function = function
+        self.arities = arities
         self.calls = []
 
-    def invoke(self, left, right, namespace, evaluate):
+    def invoke(self, left, depth, right, namespace, evaluate):
+        if depth != 0:
+            raise NotImplementedError("this scalar test method has no lifting implementation")
         values = [] if left is ref.ABSENT else [evaluate(left.region)]
         values.extend(evaluate(item) for item in right)
         self.calls.append(tuple(values))
+        if len(values) not in self.arities:
+            raise ValueError("scalar numeric arity")
         consumed = ref.ABSENT if left is ref.ABSENT else left.region
         return ref.MethodOutcome(self.function(values), consumed)
 
 
 class StoreMethod:
-    """The choice of equivalent forms occurs *inside this operand body*."""
+    """Scalar :=: one PLACE and one whole VALUE, never Array field assignment.
+
+    The choice of equivalent prefix/infix forms occurs inside this body.
+    """
     def __init__(self):
         self.received_shapes = []
 
-    def invoke(self, left, right, namespace, evaluate):
+    def invoke(self, left, depth, right, namespace, evaluate):
+        if depth != 0:
+            raise ValueError("scalar store body requires depth zero")
         self.received_shapes.append((left is ref.ABSENT, len(right)))
         if left is ref.ABSENT:
             if len(right) != 2: raise ValueError("target and value required")
@@ -96,7 +108,112 @@ class StoreMethod:
         return ref.MethodOutcome(value, consumed)
 
 
-def evaluate_model(plan, planner, methods, namespace, replacements=None):
+@dataclass(frozen=True)
+class HostPlace:
+    container: object
+    key: object
+
+    def store(self, value):
+        self.container[self.key] = value
+
+
+class HostNoArgCall:
+    """A narrow test double for one already-dispatched receiver call."""
+    def __init__(self, function):
+        self.function = function
+        self.calls = 0
+
+    def obtain(self):
+        self.calls += 1
+        return self.function()
+
+
+class ElementwiseStoreMethod:
+    """Host .: consumer; source admission is separate from graph grouping.
+
+    Both a group of field places and an existing Array select real cells and
+    use ref.elementwise_assignment. Python tuple/list stand for the same
+    unrestricted LMX Array shape; they do not introduce a tuple language type.
+    This small model checks one level, not physical LMX typing or Array rank.
+    """
+    def __init__(self, planner):
+        self.planner = planner
+        self.received_shapes = []
+
+    def invoke(self, left, depth, right, namespace, evaluate):
+        if depth != 1:
+            raise NotImplementedError("this one-level consumer models depth one")
+        self.received_shapes.append((left is ref.ABSENT, len(right)))
+        if left is ref.ABSENT:
+            if len(right) < 2:
+                raise ValueError("target and incoming values required")
+            target, source = right[0], right[1:]
+            consumed = ref.ABSENT
+        else:
+            target, source, consumed = left.occurrence, right, left.occurrence
+
+        target_items = ref.expose_sequence((target,), self.planner)
+        places, original_lengths = [], []
+        array_target = None
+        for item in target_items:
+            item = ref.prepared_value(item)
+            if (not isinstance(item, ref.Unit) or item.kind != "atom"
+                    or not isinstance(item.node, str)):
+                raise ValueError("model requires live named or Array places")
+            if len(target_items) == 1 and isinstance(namespace.get(item.node), list):
+                array_target = namespace[item.node]
+                original_lengths.append((array_target, len(array_target)))
+                places.extend(HostPlace(array_target, i)
+                              for i in range(len(array_target)))
+            else:
+                places.append(HostPlace(namespace, item.node))
+
+        # The sole Array returned by a call is still one whole VALUE here.
+        # Only this receiver consumes its immediate fields. Wider streams
+        # retain each Array as one item; no recursive flattening is performed.
+        source_items = ref.expose_sequence(source, self.planner)
+        incoming = tuple(evaluate(item) for item in source_items)
+        if len(incoming) == 1:
+            value = incoming[0]
+            incoming = tuple(value) if isinstance(value, (tuple, list)) else (value,) * len(places)
+
+        def validate(targets, values):
+            if any(len(array) != size for array, size in original_lengths):
+                raise ValueError("destination shape changed while obtaining RHS")
+
+        ref.elementwise_assignment(places, incoming, lambda value: value,
+                                   validate, lambda place, value: place.store(value))
+        # Return the existing target representation, never a copied value
+        # vector. A group is represented here by its original graph occurrence.
+        result = array_target if array_target is not None else target
+        return ref.MethodOutcome(result, consumed)
+
+
+class AssignmentMethod:
+    """One canonical := family; surface .: supplies depth=1 before demand.
+
+    The generic recursive lifting implementation is specified separately.
+    These host checks deliberately exercise only the existing zero/one bodies.
+    """
+    def __init__(self, scalar, elementwise):
+        self.scalar, self.elementwise = scalar, elementwise
+
+    def invoke(self, left, depth, right, namespace, evaluate):
+        body = self.scalar if depth == 0 else self.elementwise
+        return body.invoke(left, depth, right, namespace, evaluate)
+
+
+class ArgumentProbe:
+    def __init__(self):
+        self.received = []
+
+    def invoke(self, left, depth, right, namespace, evaluate):
+        self.received.append((left, depth, right))
+        consumed = ref.ABSENT if left is ref.ABSENT else left.region
+        return ref.MethodOutcome(depth, consumed)
+
+
+def evaluate_model(plan, planner, methods, namespace, replacements=None, depth_obtain=None):
     """Small host consumer model, outside parsing; not a full effect scheduler.
 
     Only the explicit assertions below are checked. This evaluator does not
@@ -109,7 +226,7 @@ def evaluate_model(plan, planner, methods, namespace, replacements=None):
     def evaluate(child, more=None):
         merged = dict(replacements)
         if more: merged.update(more)
-        return evaluate_model(child, planner, methods, namespace, merged)
+        return evaluate_model(child, planner, methods, namespace, merged, depth_obtain)
     if isinstance(plan, ref.PreparedAtom):
         return evaluate(plan.value)
     if isinstance(plan, ref.PreparedGroup):
@@ -124,9 +241,13 @@ def evaluate_model(plan, planner, methods, namespace, replacements=None):
         if plan.kind == "group":
             return evaluate(ref.normalize_expression((plan,), planner)[0])
         if plan.kind == "receiver":
+            handler = namespace.get(plan.node.name)
+            if isinstance(handler, HostNoArgCall) and not plan.node.items:
+                return handler.obtain()
             raise NotImplementedError("production receiver/call handling is external")
         return namespace[plan.node] if isinstance(plan.node, str) else plan.node
-    return ref.receive_application(plan, methods[id(plan.operation)], namespace, evaluate)
+    return ref.receive_application(plan, methods[id(plan.operation)], namespace, evaluate,
+                                   depth_obtain)
 
 
 class PlannerChecks(unittest.TestCase):
@@ -152,17 +273,123 @@ class PlannerChecks(unittest.TestCase):
         self.view = View(self.ops)
         self.planner = ref.Planner(self.view)
         self.store = StoreMethod()
+        self.elementwise_store = ElementwiseStoreMethod(self.planner)
+        self.assign_each = ref.DecoratedOperation(":=", 1)
+        self.assignment_method = AssignmentMethod(self.store, self.elementwise_store)
         self.methods = {
-            id(self.ops["+"]): NumericMethod(sum),
-            id(self.ops["-"]): NumericMethod(lambda xs: -xs[0] if len(xs) == 1 else xs[0]-xs[1]),
+            id(self.ops["+"]): NumericMethod(sum, arities=(1, 2)),
+            id(self.ops["-"]): NumericMethod(lambda xs: -xs[0] if len(xs) == 1 else xs[0]-xs[1], arities=(1, 2)),
             id(self.ops["*"]): NumericMethod(lambda xs: xs[0]*xs[1]),
             id(self.ops["**"]): NumericMethod(lambda xs: xs[0]**xs[1]),
-            id(self.ops[":="]): self.store,
+            id(self.ops[":="]): self.assignment_method,
             id(self.ops["store"]): self.store,
         }
 
     def plan(self, *items):
         return self.planner.plan(Group(items, self.owner), self.context)
+
+    def test_undecorated_application_supplies_zero_depth(self):
+        app = self.plan(1, "+", 2)[0]
+        self.assertEqual(app.depth, 0)
+        self.assertEqual(evaluate_model(app, self.planner, self.methods, {}), 3)
+
+    def test_depth_decoration_inherits_base_priority_without_evaluation(self):
+        source = DepthExpression(object(), {"depth": 99})
+        decorated = ref.DecoratedOperation("*", source, object())
+        app = self.plan(1, "+", 2, decorated, 3)[0]
+        prepared = ref.normalize_expression((app,), self.planner)[0]
+        self.assertEqual(shape(prepared), ("+", 1, (("*", 2, (3,)),)))
+        self.assertIs(prepared.right[0].depth, source)
+        self.assertIs(prepared.right[0].operation, self.ops["*"])
+        self.assertIs(prepared.right[0].operation_raw, decorated)
+
+    def test_depth_is_obtained_once_in_original_context_before_method(self):
+        events = []
+        expression, context = object(), {"n": 1}
+        source = DepthExpression(expression, context, object())
+        app = self.plan("a", ref.DecoratedOperation("op", source), "b")[0]
+        probe = ArgumentProbe()
+        self.methods[id(self.ops["op"])] = probe
+        def obtain(node, live_context):
+            self.assertIs(node, expression)
+            self.assertIs(live_context, context)
+            events.append("depth")
+            return live_context["n"] + 9
+        self.assertEqual(evaluate_model(app, self.planner, self.methods,
+                                        {"a": 4, "b": 5}, depth_obtain=obtain), 10)
+        left, depth, right = probe.received[0]
+        self.assertIs(left, app.left)
+        self.assertIs(right, app.right)
+        self.assertEqual(depth, 10)
+        self.assertEqual(events, ["depth"])
+
+    def test_explicit_zero_depth_keeps_scalar_behavior_and_evaluates_expression(self):
+        calls = []
+        source = DepthExpression("zero", self.context)
+        app = self.plan(2, ref.DecoratedOperation("+", source), 3)[0]
+        def obtain(expression, context):
+            calls.append((expression, context))
+            return 0
+        self.assertEqual(evaluate_model(app, self.planner, self.methods, {},
+                                        depth_obtain=obtain), 5)
+        self.assertEqual(calls, [("zero", self.context)])
+
+    def test_prefix_depth_does_not_promote_first_right(self):
+        app = self.plan(ref.DecoratedOperation("op", 2), 1, 2)[0]
+        probe = ArgumentProbe()
+        self.methods[id(self.ops["op"])] = probe
+        self.assertEqual(evaluate_model(app, self.planner, self.methods, {}), 2)
+        left, depth, right = probe.received[0]
+        self.assertIs(left, ref.ABSENT)
+        self.assertEqual(depth, 2)
+        self.assertEqual(shape(right), (1, 2))
+
+    def test_bad_depth_never_enters_method(self):
+        for invalid in (-1, 1.5, True, (1, 2)):
+            probe = ArgumentProbe()
+            self.methods[id(self.ops["op"])] = probe
+            app = self.plan(1, ref.DecoratedOperation("op", invalid), 2)[0]
+            with self.assertRaises(DepthError):
+                evaluate_model(app, self.planner, self.methods, {})
+            self.assertEqual(probe.received, [])
+
+    def test_shared_depth_source_is_not_cached_across_distinct_demands(self):
+        calls = []
+        source = DepthExpression("nextDepth", self.context)
+        probe = ArgumentProbe()
+        self.methods[id(self.ops["op"])] = probe
+        def obtain(expression, context):
+            calls.append(expression)
+            return len(calls)
+        for expected in (1, 2):
+            app = self.plan(1, ref.DecoratedOperation("op", source), 2)[0]
+            self.assertEqual(evaluate_model(app, self.planner, self.methods, {},
+                                            depth_obtain=obtain), expected)
+        self.assertEqual(len(calls), 2)
+
+    def test_nested_arrays_are_not_flattened_by_depth_transport(self):
+        nested = [[1, 2], [3, 4]]
+        app = self.plan("values", ref.DecoratedOperation("op", 2), 10)[0]
+        probe = ArgumentProbe()
+        self.methods[id(self.ops["op"])] = probe
+        self.assertEqual(evaluate_model(app, self.planner, self.methods,
+                                        {"values": nested}), 2)
+        left, depth, right = probe.received[0]
+        self.assertIs(evaluate_model(left.region, self.planner, self.methods,
+                                     {"values": nested}), nested)
+        self.assertEqual(len(right), 1)
+        self.assertEqual(depth, 2)
+
+    def test_depth_zero_assignment_preserves_left_demand_dependencies(self):
+        namespace = {"v": 100}
+        app = self.plan(1, "+", "v", ref.DecoratedOperation(":=", 0), 2, "+", 3)[0]
+        self.assertEqual(evaluate_model(app, self.planner, self.methods, namespace), 6)
+        self.assertEqual(namespace["v"], 5)
+
+    def test_attached_depth_preserves_general_side_class(self):
+        app = self.plan(ref.DecoratedOperation("pre", 3), "a", "tighter", "b")[0]
+        self.assertEqual(shape(app), ("tighter", ("pre", None, ("a",)), ("b",)))
+        self.assertEqual(app.left.region.depth, 3)
 
     def test_prefix_has_absent_left_and_all_right_items(self):
         self.assertEqual(shape(self.plan("op", 1, 2, 3)), (("op", None, (1, 2, 3)),))
@@ -267,10 +494,10 @@ class PlannerChecks(unittest.TestCase):
     def test_one_rhs_group_selects_current_level(self):
         left = Group(("a", "b", "c"), self.owner)
         right = Group(("a", "c", "b"), self.owner)
-        app = self.plan(left, ":=", right)[0]
+        app = self.plan(left, self.assign_each, right)[0]
         ls = ref.expose_sequence((app.left.occurrence,), self.planner)
         rs = ref.expose_sequence(app.right, self.planner)
-        actuals = ref.prepare_actuals(ls, rs, lambda x: x)
+        actuals = ref.prepare_actuals(ls, 1, rs, lambda x: x)
         self.assertEqual(shape(actuals.left.items), ("a", "b", "c"))
         self.assertEqual(shape(actuals.right), ("a", "c", "b"))
         self.assertIs(actuals.right[0].context.lexical_parent, right)
@@ -279,7 +506,7 @@ class PlannerChecks(unittest.TestCase):
     def test_three_sibling_groups_are_three_items(self):
         left = Group(("a", "b", "c"), self.owner)
         groups = [Group(("f", "g", "h"), self.owner) for _ in range(3)]
-        app = self.plan(left, ":=", *groups)[0]
+        app = self.plan(left, self.assign_each, *groups)[0]
         rs = ref.expose_sequence(app.right, self.planner)
         self.assertEqual(len(rs), 3)
         self.assertTrue(all(isinstance(item, ref.PreparedAtom) for item in rs))
@@ -288,7 +515,7 @@ class PlannerChecks(unittest.TestCase):
     def test_singleton_chain_exposes_multi_atom_level(self):
         inner = Group(("x", "y"), self.owner)
         outer = Group((inner,), self.owner)
-        app = self.plan(Group(("a", "b"), self.owner), ":=", outer)[0]
+        app = self.plan(Group(("a", "b"), self.owner), self.assign_each, outer)[0]
         rs = ref.expose_sequence(app.right, self.planner)
         self.assertEqual(shape(rs), ("x", "y"))
         self.assertIs(rs[0].context.lexical_parent, inner)
@@ -300,7 +527,7 @@ class PlannerChecks(unittest.TestCase):
         self.assertEqual(shape(rs), (("*", 2, (3,)),))
 
     def test_adapter_preserves_absence(self):
-        actuals = ref.prepare_actuals(ref.ABSENT, (1, 2), lambda x: x)
+        actuals = ref.prepare_actuals(ref.ABSENT, 0, (1, 2), lambda x: x)
         self.assertIs(actuals.left, ref.ABSENT)
         self.assertEqual(actuals.right, (1, 2))
 
@@ -337,17 +564,93 @@ class PlannerChecks(unittest.TestCase):
         def write(target, value):
             writes.append(target)
             values[target] = value
-        ref.group_assignment(("a", "b", "c"), ("a", "c", "b"),
-                             values.__getitem__, validate, write)
+        ref.elementwise_assignment(("a", "b", "c"), ("a", "c", "b"),
+                                   values.__getitem__, validate, write)
         self.assertEqual(values, {"a": 1, "b": 3, "c": 2})
 
     def test_no_write_when_validation_fails(self):
         writes = []
         def reject(*args): raise ValueError("arity")
         with self.assertRaises(ValueError):
-            ref.group_assignment(("a", "b"), (1,), lambda x: x,
-                                 reject, lambda *args: writes.append(args))
+            ref.elementwise_assignment(("a", "b"), (1,), lambda x: x,
+                                       reject, lambda *args: writes.append(args))
         self.assertEqual(writes, [])
+
+    def test_elementwise_group_rotation_uses_captured_rhs(self):
+        g = lambda *items: Group(items, self.owner)
+        namespace = {"a": 1, "b": 2, "c": 3}
+        app = self.plan(g("a", "b", "c"), self.assign_each, g("b", "c", "a"))[0]
+        evaluate_model(app, self.planner, self.methods, namespace)
+        self.assertEqual(namespace, {"a": 2, "b": 3, "c": 1})
+        self.assertEqual(self.store.received_shapes, [])
+
+    def test_elementwise_prefix_equivalence_is_inside_its_method(self):
+        g = lambda *items: Group(items, self.owner)
+        prefix = self.plan(self.assign_each, g("a", "b", "c"), g("b", "c", "a"))[0]
+        infix = self.plan(g("a", "b", "c"), self.assign_each, g("b", "c", "a"))[0]
+        self.assertIs(prefix.left, ref.ABSENT)
+        self.assertEqual(len(prefix.right), 2)
+        one = {"a": 1, "b": 2, "c": 3}
+        two = dict(one)
+        evaluate_model(prefix, self.planner, self.methods, one)
+        evaluate_model(infix, self.planner, self.methods, two)
+        self.assertEqual(one, two)
+        self.assertEqual(self.elementwise_store.received_shapes, [(True, 2), (False, 1)])
+
+    def test_elementwise_consumer_reads_one_returned_array(self):
+        g = lambda *items: Group(items, self.owner)
+        namespace = {"a": 1, "b": 2, "c": 3}
+        returned = [2, 3, 1]
+        function = HostNoArgCall(lambda: returned)
+        namespace["myFn"] = function
+        call = Group((), self.owner, "myFn")
+        app = self.plan(g("a", "b", "c"), self.assign_each, call)[0]
+        prepared = ref.normalize_expression((app,), self.planner)[0]
+        self.assertEqual(len(prepared.right), 1)
+        self.assertEqual(function.calls, 0)
+        evaluate_model(prepared, self.planner, self.methods, namespace)
+        self.assertEqual(function.calls, 1)
+        self.assertEqual([namespace[k] for k in ("a", "b", "c")], returned)
+
+    def test_elementwise_sibling_groups_remain_array_items(self):
+        g = lambda *items: Group(items, self.owner)
+        namespace = {"a": None, "b": None, "c": None}
+        app = self.plan(g("a", "b", "c"), self.assign_each, g(1, 2), g(3, 4), g(5, 6))[0]
+        evaluate_model(app, self.planner, self.methods, namespace)
+        self.assertEqual(namespace, {"a": (1, 2), "b": (3, 4), "c": (5, 6)})
+
+    def test_array_target_uses_same_elementwise_commit_body(self):
+        target, incoming = [0, 0, 0], [10, 20, 30]
+        namespace = {"target": target, "incoming": incoming}
+        app = self.plan("target", self.assign_each, "incoming")[0]
+        result = evaluate_model(app, self.planner, self.methods, namespace)
+        self.assertIs(result, target)
+        self.assertEqual(target, incoming)
+        self.assertIsNot(target, incoming)
+
+    def test_elementwise_shape_failure_keeps_destinations_unchanged(self):
+        g = lambda *items: Group(items, self.owner)
+        namespace = {"a": 1, "b": 2, "c": 3}
+        app = self.plan(g("a", "b", "c"), self.assign_each, g(8, 9))[0]
+        with self.assertRaisesRegex(ValueError, "shape mismatch"):
+            evaluate_model(app, self.planner, self.methods, namespace)
+        self.assertEqual(namespace, {"a": 1, "b": 2, "c": 3})
+
+    def test_scalar_assignment_does_not_copy_array_fields(self):
+        source = [1, 2, 3]
+        namespace = {"target": None, "source": source}
+        app = self.plan("target", ":=", "source")[0]
+        self.assertIs(evaluate_model(app, self.planner, self.methods, namespace), source)
+        self.assertIs(namespace["target"], source)
+        self.assertEqual(self.elementwise_store.received_shapes, [])
+
+    def test_scalar_assignment_refuses_material_group_target(self):
+        g = lambda *items: Group(items, self.owner)
+        namespace = {"a": 1, "b": 2, "c": 3}
+        app = self.plan(g("a", "b", "c"), ":=", g("b", "c", "a"))[0]
+        with self.assertRaisesRegex(ValueError, "simple named place"):
+            evaluate_model(app, self.planner, self.methods, namespace)
+        self.assertEqual(namespace, {"a": 1, "b": 2, "c": 3})
 
     def test_attached_left_class_has_one_argument(self):
         self.assertEqual(shape(self.plan("pre", 1, 2)), (("pre", None, (1,)), 2))
@@ -380,17 +683,17 @@ class PlannerChecks(unittest.TestCase):
         self.assertEqual(shape(app), ("+", 1, (2, 3, 4, 5)))
         self.assertEqual(self.methods[id(self.ops["+"])].calls, [])
 
-    def test_author_material_subgroup_is_rejected_only_inside_numeric_method(self):
+    def test_author_wider_right_arity_is_rejected_only_inside_numeric_method(self):
         g = lambda *items: Group(items, self.owner)
         app = ref.normalize_expression(
             self.plan(1, "+", 2, g(g(g(5, 6))), g(4), 5), self.planner)[0]
         self.assertEqual(shape(app), ("+", 1, (2, ("group", (5, 6)), 4, 5)))
         method = self.methods[id(self.ops["+"])]
         self.assertEqual(method.calls, [])
-        with self.assertRaises(TypeError):
+        with self.assertRaisesRegex(ValueError, "scalar numeric arity"):
             evaluate_model(app, self.planner, self.methods, {})
-        # The method received the whole subgroup as one argument. Host sum,
-        # not normalization or expression traversal, then rejected it.
+        # The whole subgroup remains one item. The receiving scalar method,
+        # not normalization, rejects the wider five-value invocation.
         self.assertEqual(method.calls, [(1, 2, (5, 6), 4, 5)])
 
     def test_author_prefix_operation_in_subgroup_is_one_unit(self):
@@ -401,7 +704,9 @@ class PlannerChecks(unittest.TestCase):
         inner = ref.prepared_value(app.right[1])
         self.assertIs(inner.left, ref.ABSENT)
         self.assertEqual(len(inner.right), 2)
-        self.assertEqual(evaluate_model(app, self.planner, self.methods, {}), 23)
+        self.assertEqual(evaluate_model(inner, self.planner, self.methods, {}), 11)
+        with self.assertRaisesRegex(ValueError, "scalar numeric arity"):
+            evaluate_model(app, self.planner, self.methods, {})
 
     def test_normalized_grouped_apply_remains_one_source_atom(self):
         group = Group((3, "+", 4), self.owner)
@@ -418,7 +723,7 @@ class PlannerChecks(unittest.TestCase):
     def test_sibling_expression_groups_are_normalized_without_splicing(self):
         g = lambda *items: Group(items, self.owner)
         app = ref.normalize_expression(
-            self.plan(g("a", "b", "c"), ":=", g("x", "+", 1),
+            self.plan(g("a", "b", "c"), self.assign_each, g("x", "+", 1),
                       g("y", "*", 2), g("z", "-", 3)), self.planner)[0]
         rs = ref.expose_sequence(app.right, self.planner)
         self.assertEqual(len(rs), 3)
@@ -432,7 +737,7 @@ class PlannerChecks(unittest.TestCase):
         self.assertIs(app.left, ref.ABSENT)
         self.assertEqual(shape(app.right), (1, ("group", ()), 2))
         self.assertEqual(len(ref.expose_sequence(app.right, self.planner)), 3)
-        actuals = ref.prepare_actuals(ref.ABSENT, app.right, lambda x: x)
+        actuals = ref.prepare_actuals(ref.ABSENT, 0, app.right, lambda x: x)
         self.assertIs(actuals.left, ref.ABSENT)
         self.assertEqual(len(actuals.right), 3)
 

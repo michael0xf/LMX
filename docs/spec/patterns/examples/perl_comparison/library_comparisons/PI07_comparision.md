@@ -12,8 +12,8 @@ Perl использует собственный regex engine для распо�
 
 | Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
 | --- | ---: | ---: | ---: |
-| LMX | 9897 | 14267 | 425 |
-| Perl | 3999 | 5209 | 168 |
+| LMX | 9917 | 14309 | 427 |
+| Perl | <span style="color:#176233"><u>3999</u></span> | 5209 | 168 |
 
 ## LMX
 
@@ -177,6 +177,7 @@ RxLogicalArguments:
 RxThenOperand:
     private:
         @: left
+        int: depth 0
         @[]: right
     required: right
     const: int: PASS_ARGS_AS_IS 0
@@ -192,6 +193,7 @@ RxThenOperand:
 RxRepeatOperands:
     private:
         @: left
+        int: depth 0
         @[]: right
     required: right
     const: int: PASS_ARGS_AS_IS 0

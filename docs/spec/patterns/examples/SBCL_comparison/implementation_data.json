@@ -1,6 +1,6 @@
 {
   "suite": "SBCL",
-  "edition": "2026-11-23",
+  "edition": "2026-11-26",
   "implementations": [
     {
       "id": "SI01",
@@ -142,7 +142,7 @@
         {
           "name": "FxRecordOperands",
           "source_spec_relative": "patterns/LMX_Fn_Receivers/src/generic_functions.lmx",
-          "file_sha256": "e44f06a73aea80ce06caa7e0a1ea1288f1abd2719b2f614841fea2a4f3b32c2d",
+          "file_sha256": "b40c82d16c849281868058049e7ea5e8d1faf87abddf9417f1aa3a6000acf39a",
           "sha256": "bc9eea7b1ed13fbf19ba9dab65a8d66ba156fb32509a24c21eacc0144df7a51a"
         },
         {
@@ -215,7 +215,7 @@
         "https://www.lispworks.com/documentation/HyperSpec/Body/f_rm_dup.htm"
       ],
       "dependency_role": "selected_clients",
-      "lmx": "FxSort:\n    private:\n        @: items\n        @: compare\n    required: items compare\n    return: @\n    sort:\n        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize\n        private: @: info FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: current FxSeqSlice\\slice(items; 0; count)\n        if: count < 2\n            return: current\n        private: @: scratch FxSeqAllocate\\make(info\\arrayType; count)\n        private: int: width 1\n        while: width < count\n            private: int: start 0\n            while: start < count\n                private: int: middle count\n                if: width < count - start\n                    middle := start + width\n                private: int: end count\n                if: width < count - middle\n                    end := middle + width\n                private: int: left start\n                private: int: right middle\n                private: int: at start\n                while: at < end\n                    private: int: takeLeft 0\n                    if: right = end\n                        takeLeft := 1\n                    else:\n                        if: left < middle\n                            private: @: a FxSeqRead\\read(current; left)\n                            private: @: b FxSeqRead\\read(current; right)\n                            private: @: answer FxApply\\apply(compare; FxTwo\\make(a; b))\n                            private: int: order FxSeqInteger\\read(answer)\n                            takeLeft := order <= 0\n                    ---\n                    private: @: selected 0\n                    if: takeLeft != 0\n                        selected := FxSeqRead\\read(current; left)\n                        left += 1\n                    else:\n                        selected := FxSeqRead\\read(current; right)\n                        right += 1\n                    ---\n                    FxSeqStore\\write(scratch; at; selected)\n                    at += 1\n                start := end\n            private: @: previous current\n            current := scratch\n            scratch := previous\n            # Guard before doubling: count bounds the array length and bytes.\n            if: width > count - width\n                width := count\n            else:\n                width += width\n        ---\n        return: current\n\nFxUnique:\n    private:\n        @: items\n        @: same 0\n    required: items\n    return: @\n    unique:\n        throws: copy(FxThrows\\predicate) SequenceElement SequenceSize\n        private: @: info FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: result FxSeqAllocate\\make(info\\arrayType; count)\n        private: int: used 0\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: int: duplicate 0\n            private: int: j 0\n            while: j < used\n                private: @: previous FxSeqRead\\read(result; j)\n                if: FxValueSame\\test(previous; item; same) != 0\n                    duplicate := 1\n                    break\n                j += 1\n            if: duplicate = 0\n                FxSeqStore\\write(result; used; item)\n                used += 1\n            i += 1\n        sys\\resize(result; used)\n        return: result\n",
+      "lmx": "FxSort:\n    private:\n        @: items\n        @: compare\n    required: items compare\n    return: @\n    sort:\n        throws: FxCallFailure FxKernelFailure FxTypeToken ReceiverIndex SequenceElement SequenceSize\n        private: @: info FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: current FxSeqSlice\\slice(items; 0; count)\n        if: count < 2\n            return: current\n        private: @: scratch FxSeqAllocate\\make(info\\arrayType; count)\n        private: int: width 1\n        while: width < count\n            private: int: start 0\n            while: start < count\n                private: int: middle count\n                if: width < count - start\n                    middle := start + width\n                private: int: end count\n                if: width < count - middle\n                    end := middle + width\n                private: int: left start\n                private: int: right middle\n                private: int: at start\n                while: at < end\n                    private: int: takeLeft 0\n                    if: right = end\n                        takeLeft := 1\n                    else:\n                        if: left < middle\n                            private: @: a FxSeqRead\\read(current; left)\n                            private: @: b FxSeqRead\\read(current; right)\n                            private: @: answer FxApply\\apply(compare; FxTwo\\make(a; b))\n                            private: int: order FxSeqInteger\\read(answer)\n                            takeLeft := order <= 0\n                    ---\n                    private: @: selected 0\n                    if: takeLeft != 0\n                        selected := FxSeqRead\\read(current; left)\n                        left += 1\n                    else:\n                        selected := FxSeqRead\\read(current; right)\n                        right += 1\n                    FxSeqStore\\write(scratch; at; selected)\n                    at += 1\n                start := end\n            private: @: previous current\n            current := scratch\n            scratch := previous\n            # Guard before doubling: count bounds the array length and bytes.\n            if: width > count - width\n                width := count\n            else:\n                width += width\n        ---\n        return: current\n\nFxUnique:\n    private:\n        @: items\n        @: same 0\n    required: items\n    return: @\n    unique:\n        throws: copy(FxThrows\\predicate) SequenceElement SequenceSize\n        private: @: info FxSeqInfo\\get(items)\n        private: int: count length(items)\n        private: @: result FxSeqAllocate\\make(info\\arrayType; count)\n        private: int: used 0\n        private: int: i 0\n        while: i < count\n            private: @: item FxSeqRead\\read(items; i)\n            private: int: duplicate 0\n            private: int: j 0\n            while: j < used\n                private: @: previous FxSeqRead\\read(result; j)\n                if: FxValueSame\\test(previous; item; same) != 0\n                    duplicate := 1\n                    break\n                j += 1\n            if: duplicate = 0\n                FxSeqStore\\write(result; used; item)\n                used += 1\n            i += 1\n        sys\\resize(result; used)\n        return: result\n",
       "foreign": "(in-package #:lmx-sbcl-reference)\n\n(defun sort-values (items compare)\n  (sequence-value items)\n  (function-value compare)\n  (let* ((source (snapshot items)) (size (length source))\n         (target (make-array size)) (width 1))\n    (loop while (< width size) do\n      (loop for begin from 0 below size by (* 2 width) do\n        (let* ((middle (min size (+ begin width)))\n               (end (min size (+ middle width)))\n               (left begin) (right middle) (out begin))\n          (loop while (and (< left middle) (< right end)) do\n            (let ((order (funcall compare (aref source left)\n                                          (aref source right))))\n              (check-type order integer)\n              (if (<= order 0)\n                  (progn (setf (aref target out) (aref source left))\n                         (incf left))\n                  (progn (setf (aref target out) (aref source right))\n                         (incf right)))\n              (incf out)))\n          (loop while (< left middle) do\n            (setf (aref target out) (aref source left))\n            (incf left) (incf out))\n          (loop while (< right end) do\n            (setf (aref target out) (aref source right))\n            (incf right) (incf out))))\n      (rotatef source target)\n      (setf width (* 2 width)))\n    (same-profile items source)))\n\n(defun unique-values (items same)\n  (sequence-value items)\n  (function-value same)\n  (let ((source (coerce items 'vector))\n        (out (make-array 0 :adjustable t :fill-pointer 0)))\n    (dotimes (i (length source))\n      (let ((value (aref source i)) (found nil))\n        (dotimes (j (length out))\n          (when (integer-truth (funcall same (aref out j) value))\n            (setf found t)\n            (return)))\n        (unless found (vector-push-extend value out))))\n    (same-profile items out)))\n",
       "source_files": {
         "lmx": "source/implementations/lmx/SI03.lmx",
@@ -225,13 +225,13 @@
         {
           "name": "FxSort",
           "source_spec_relative": "patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx",
-          "file_sha256": "40d889d8879ecb2c607ea9d17dfdaa1373ea25649760c2a7580ff235ea0c7268",
-          "sha256": "37eaee6a42aa868c91832a98e74183a9ad80f6761a50a7cebddc900a265b2d4a"
+          "file_sha256": "d7a6207a5cc0c025e1f2901b7056bef7c6670127e74cde1702058c0768ffba58",
+          "sha256": "b61240a2385cf999a9d6291f6e87892cf19be32f1aeebbae7d3c6d8e6fb1e837"
         },
         {
           "name": "FxUnique",
           "source_spec_relative": "patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx",
-          "file_sha256": "40d889d8879ecb2c607ea9d17dfdaa1373ea25649760c2a7580ff235ea0c7268",
+          "file_sha256": "d7a6207a5cc0c025e1f2901b7056bef7c6670127e74cde1702058c0768ffba58",
           "sha256": "8d4a6d2ed83e3d0ba9c278a36b58bfde1d88cf0083756099a9d7da24b7283cb8"
         }
       ],
@@ -267,10 +267,10 @@
       },
       "metrics": {
         "LMX": {
-          "characters_with_whitespace": 3327,
-          "characters_without_whitespace": 1799,
-          "nonblank_lines": 89,
-          "utf8_bytes": 3327
+          "characters_with_whitespace": 3303,
+          "characters_without_whitespace": 1796,
+          "nonblank_lines": 88,
+          "utf8_bytes": 3303
         },
         "Common Lisp": {
           "characters_with_whitespace": 1845,
@@ -368,7 +368,7 @@
         {
           "name": "FxPartial",
           "source_spec_relative": "patterns/LMX_Fn_Receivers/src/generic_functions.lmx",
-          "file_sha256": "e44f06a73aea80ce06caa7e0a1ea1288f1abd2719b2f614841fea2a4f3b32c2d",
+          "file_sha256": "b40c82d16c849281868058049e7ea5e8d1faf87abddf9417f1aa3a6000acf39a",
           "sha256": "58c4cd4bf7bb30af5409b9db5f537331645a3c1b58db50af5c603d0fb69bad4e"
         }
       ],
@@ -590,10 +590,10 @@
   },
   "totals": {
     "LMX": {
-      "characters_with_whitespace": 14281,
-      "characters_without_whitespace": 9142,
-      "nonblank_lines": 407,
-      "utf8_bytes": 14281
+      "characters_with_whitespace": 14257,
+      "characters_without_whitespace": 9139,
+      "nonblank_lines": 406,
+      "utf8_bytes": 14257
     },
     "Common Lisp": {
       "characters_with_whitespace": 7585,

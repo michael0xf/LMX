@@ -107,9 +107,9 @@ def main():
                 lines[at+1]='| --- | ---: | ---: | ---: | --- |'
         p.write_text('\n'.join(lines)+'\n')
     p=ROOT/'README.md';s=p.read_text()
-    s=re.sub(r'Для исходной корневой подборки из 23 GoF-паттернов LMX занимает .*?Подробные цифры,',f"Для корневой подборки из 23 GoF-паттернов LMX занимает **{all_['totals']['LMX']}**, Python — **{all_['totals']['Python']}** непробельных символов: сокращение **{percent(all_['reduction_python'],True)}**. LMX короче Python в **{all_['shorter_python']} из 23** примеров и минимален среди восьми языков в **{all_['minimum_all']}**. Python имеет наименьшую сумму среди остальных семи языков. Подробные цифры,",s)
+    s=re.sub(r'Для (?:исходной )?корневой подборки из 23 GoF-паттернов LMX занимает .*?Подробные цифры,',f"Для корневой подборки из 23 GoF-паттернов LMX занимает **{all_['totals']['LMX']}**, Python — **{all_['totals']['Python']}** непробельных символов: сокращение **{percent(all_['reduction_python'],True)}**. LMX короче Python в **{all_['shorter_python']} из 23** примеров и минимален среди восьми языков в **{all_['minimum_all']}**. Python имеет наименьшую сумму среди остальных семи языков. Подробные цифры,",s)
     p.write_text(s)
-    report={'date':'2026-11-23','scope':'23 GoF primary listings; all 184 counted blocks','records':rows,'aggregates':sets,'runtime_executed':False}
+    report={'date':'2026-11-26','scope':'23 GoF primary listings; all 184 counted blocks','records':rows,'aggregates':sets,'runtime_executed':False}
     (ROOT/'validation/gof_statistics_20261122.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
     with (ROOT/'GoF_Comparison_1-23.csv').open('w',encoding='utf-8-sig',newline='') as stream:
         fields=['id','title']+[lang+'_characters' for lang in LANGS.values()]+['source']

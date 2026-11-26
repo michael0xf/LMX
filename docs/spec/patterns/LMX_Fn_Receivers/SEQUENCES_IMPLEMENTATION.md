@@ -105,7 +105,7 @@ and groupBy retain their original `Fx*` paths in `collections.lmx`.
 
 ## 4. Four precise kernel boundaries
 
-These are shared operations over the existing type table, descriptor, storage,
+These are shared operations over the existing canonical type descriptions, descriptor, storage,
 admission machinery, and allocator. They implement no map, filtering,
 selection, mutation-range algorithm, Regex matching, or callable adapter.
 The declaration sketches below document provider interfaces; they are not
@@ -128,16 +128,18 @@ ordinary metadata value with these fields:
 
 | Field | Meaning |
 | --- | --- |
-| `arrayType: int` | Canonical code of the **linear** array profile with the source's complete element requirement; `@[]` for ordinary Structures |
-| `elementType: int` | Canonical full element requirement, retaining nested models, callable requirements, and arbitrary pointer depth |
-| `elementBits: int` | Actual physical element width from layout; Regex may use it to require an 8-bit `char` substrate |
-| `dense: int` | Nonzero for dense typed storage, zero for ordinary Structure/reference storage |
-| `maxLength: int` | Largest length representable by this API's index/count contract and actual storage byte-size calculation; not an estimate of free memory |
+| `@: arrayType` | Canonical TypeRef of the **linear** result array requirement with the source's complete element requirement; `@[]` for ordinary Structures |
+| `@: elementType` | Canonical full element requirement, retaining nested models, callable requirements, and arbitrary pointer depth |
+| `int: elementBits` | Actual physical element width from layout; Regex may use it to require an 8-bit `char` substrate |
+| `int: dense` | Nonzero for dense typed storage, zero for ordinary Structure/reference storage |
+| `int: maxLength` | Largest length representable by this API's index/count contract and actual storage byte-size calculation; not an estimate of free memory |
 
-Canonical codes come from the shared type resolver, including its equivalence
-handling after attach. No new type is generated for each length or capacity.
-The metadata describes existing values; it does not materialize a sequence,
-read a nonexistent uninit payload, or interpret an int type-id as an instance.
+Canonical TypeRef values come from the shared type resolver and describe the
+complete normalized result requirement. They are not numeric codes. Equal left
+requirements reuse a descriptor; length and capacity do not specialize it.
+`arrayType` is the unconstrained linear result requirement with the source element
+requirement, not a claim that every result keeps the exact source TypeRef.
+The metadata neither materializes a sequence nor reads absent uninit payload.
 The linear result profile does not infer or copy external multidimensional
 shape descriptions merely from length.
 
@@ -191,11 +193,19 @@ range-replacement engine or an unchecked reinterpretation API.
 
 ## 5. Allocation, types, and overflow
 
-`FxSeqAllocate\make(arrayType; count)` resolves an ordinary full int type code
+`FxSeqAllocate\make(arrayType; count)` resolves the complete linear TypeRef
 as a declaration head, constructs its empty value with `(arrayType: [])`,
-checks `maxLength`, and uses existing `sys\resize`. It introduces no allocator
-or growth family. `reserve/resize/capacity` remain the common mechanism with
-capacity stored outside the parent/length/storage descriptor.
+checks `maxLength`, and uses existing `sys\resize`. This existing helper is
+restricted to a linear requirement without a fixed length. A nonempty fixed
+requirement such as `int[2][3]` cannot first construct an empty value and resize
+it, nor can a completed generic `int[]` be secretly retagged. Such results must
+be prepared by the common constructor/allocation boundary immediately under
+their complete evaluated requirement, with the required backing/count and
+initialization checked before publication. The old source prototype needs that
+integration. No separate allocator or growth family is introduced. `reserve/resize/capacity` remain the common mechanism with
+capacity stored outside the parent/length/storage descriptor only when it exceeds
+length. With equal capacity and length no secondary descriptor exists, and reserve
+does not change TypeRef.
 
 All size additions check `extra <= limit - base` before calculating the sum.
 Selected indices, masks, lengths, and mutation intervals are validated before
@@ -212,11 +222,14 @@ both signs without a fixed machine-width constant. An implementation may
 replace that preflight with a proven equivalent bounded multiword calculation;
 it must not replace it with overflowing native subtraction or `abs(MIN_INT)`.
 
-Postfix types use the shared interner: `T[]`, `T@`, and arbitrary finite depths
+Postfix types use the shared interner: `T[]`, `T[N]`, `T@`, and arbitrary finite depths
 are not privately implemented by collections. `[]: pending` remains any-array
 uninit, distinct from `@[]: pending` and from an initialized empty array.
-Array compatibility follows `A[] satisfies B[] iff A satisfies B`; this does
-not change the actual source stride or permit writing B bytes into A storage.
+Unconstrained element compatibility keeps the directed `A[] satisfies B[]`
+contract; rank and explicit extents additionally obey the
+[complete Array requirement](../../ARRAY_STORAGE.en.md#array-profiles).
+Admission does not change the actual source stride, retag an existing value or
+permit writing B bytes into A storage.
 
 ## 6. Result and effect contracts
 

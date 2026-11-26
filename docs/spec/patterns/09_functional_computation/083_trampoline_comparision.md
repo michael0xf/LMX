@@ -107,7 +107,7 @@ object TrampolineExample {
 
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX — процедурный | **82** | 10 |
+| LMX — процедурный | <span style="color:#176233"><u>82</u></span> | 10 |
 | LMX — функциональный | 344 | 25 |
 | Haskell | 307 | 10 |
 | Scala | 265 | 8 |
@@ -141,4 +141,4 @@ Both complete LMX client styles are counted in full. Foreign controls retain the
 
 ## Проверка
 
-[Проверка публикации](VALIDATION_2026-11-23.md) проверяет обе записи и зеркала. [Acceptance cases](acceptance_cases.json) — спецификация ожидаемых наблюдений, а не LMX execution receipt.
+[Проверка публикации](VALIDATION_2026-11-26.md) проверяет обе записи и зеркала. [Acceptance cases](acceptance_cases.json) — спецификация ожидаемых наблюдений, а не LMX execution receipt.

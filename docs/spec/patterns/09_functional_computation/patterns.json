@@ -933,15 +933,15 @@
       "listings": [
         {
           "language": "LMX",
-          "code": "FxAround:\n    private:\n        @: acquire\n        @: release\n        @: action\n        @: arguments ()\n    return: @\n    around:\n        throws: copy(FxThrows\\traversal)\n        private: @: resourceArgs (copy(()))\n        sys\\resize(resourceArgs; 1)\n        resourceArgs[0] := FxApply\\apply(acquire; ())\n        finally:\n            FxApply\\apply(release; resourceArgs)\n        ---\n        return: FxApply\\apply(action; FxAppend\\append(resourceArgs; arguments))\n",
+          "code": "FxAround:\n    private:\n        @: acquire\n        @: release\n        @: action\n        @: arguments ()\n    return: @\n    around:\n        throws: copy(FxThrows\\traversal)\n        private: @: resourceArgs (copy(()))\n        sys\\resize(resourceArgs; 1)\n        resourceArgs[0] := FxApply\\apply(acquire; ())\n        finally:\n            FxApply\\apply(release; resourceArgs)\n        return: FxApply\\apply(action; FxAppend\\append(resourceArgs; arguments))\n",
           "notes_ru": "Основной листинг — точные определения FxAround из действующих исходников пакета. Публичные операции являются частью ядра; общие зависимости посчитаны отдельно в [реестре](IMPLEMENTATION_DEPENDENCIES.md). Другая версия библиотеки для этого примера не выбирается. Сам этот фрагмент не объявлен самостоятельной реализацией ядра.",
           "notes_en": "The primary listing is the exact production definitions FxAround. Public operations belong to the single core; shared dependencies are measured separately in the dependency ledger. No alternate library edition is selected. This component fragment is not presented as a standalone kernel implementation.",
           "primary_variant": "core",
           "metrics": {
-            "characters": 316,
-            "nonblank_lines": 16,
-            "utf8_bytes": 462,
-            "sha256": "bd73137544899883a0c80263b63a33dc43ae37490f4c2b695ba4bf93f1139f6b"
+            "characters": 313,
+            "nonblank_lines": 15,
+            "utf8_bytes": 450,
+            "sha256": "0c2e01cf0ddf764b77dbc779747d21421c6e5e8012395b5e91e9849dd6b33849"
           }
         },
         {
@@ -979,7 +979,7 @@
       ],
       "variants": {
         "LMX": {
-          "core": "FxAround:\n    private:\n        @: acquire\n        @: release\n        @: action\n        @: arguments ()\n    return: @\n    around:\n        throws: copy(FxThrows\\traversal)\n        private: @: resourceArgs (copy(()))\n        sys\\resize(resourceArgs; 1)\n        resourceArgs[0] := FxApply\\apply(acquire; ())\n        finally:\n            FxApply\\apply(release; resourceArgs)\n        ---\n        return: FxApply\\apply(action; FxAppend\\append(resourceArgs; arguments))\n"
+          "core": "FxAround:\n    private:\n        @: acquire\n        @: release\n        @: action\n        @: arguments ()\n    return: @\n    around:\n        throws: copy(FxThrows\\traversal)\n        private: @: resourceArgs (copy(()))\n        sys\\resize(resourceArgs; 1)\n        resourceArgs[0] := FxApply\\apply(acquire; ())\n        finally:\n            FxApply\\apply(release; resourceArgs)\n        return: FxApply\\apply(action; FxAppend\\append(resourceArgs; arguments))\n"
         },
         "Haskell": {
           "implementation": "{-# LANGUAGE ScopedTypeVariables #-}\nmodule Around (bracket) where\nimport Control.Exception (SomeException, mask, throwIO, try)\n\nbracket :: forall resource released result.\n           IO resource -> (resource -> IO released) ->\n           (resource -> IO result) -> IO result\nbracket acquire release action = mask $ \\restore -> do\n  resource <- acquire\n  outcome <- try (restore (action resource)) :: IO (Either SomeException result)\n  _ <- release resource\n  either throwIO pure outcome\n"

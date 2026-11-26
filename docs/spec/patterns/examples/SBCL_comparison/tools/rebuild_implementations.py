@@ -146,7 +146,7 @@ def main():
     write_json(ROOT/'validation/implementation_dependencies.json',dependencies)
     totals={language:{key:sum(x['metrics'][language][key] for x in items)
                       for key in metrics('')} for language in ('LMX','Common Lisp')}
-    write_json(ROOT/'implementation_data.json',dict(suite='SBCL',edition='2026-11-23',
+    write_json(ROOT/'implementation_data.json',dict(suite='SBCL',edition='2026-11-26',
                implementations=items,coverage=coverage,totals=totals,
                shared_dependencies={'lmx':'source/implementations/lmx/shared_dependencies.lmx',
                                     'foreign':'source/implementations/common-lisp/runtime.lisp'},

@@ -12,7 +12,7 @@ LMX регистрирует finally до acquire и охраняет cleanup у
 
 | Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
 | --- | ---: | ---: | ---: |
-| LMX | 316 | 462 | 16 |
+| LMX | <span style="color:#176233"><u>313</u></span> | 450 | 15 |
 | Perl | 454 | 637 | 23 |
 
 ## LMX
@@ -34,7 +34,6 @@ FxAround:
         resourceArgs[0] := FxApply\apply(acquire; ())
         finally:
             FxApply\apply(release; resourceArgs)
-        ---
         return: FxApply\apply(action; FxAppend\append(resourceArgs; arguments))
 ```
 

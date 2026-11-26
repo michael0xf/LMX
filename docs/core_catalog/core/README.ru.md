@@ -1,5 +1,7 @@
 # Каталог функций ядра
 
+**Дополнение 2026-11-26:** [матричные и поэлементные формы, `.:`, `.=`, `fuse`, условие и срезы](ARRAY_EXPRESSIONS.md) включены в отдельную опись профилей; исходные 215 имён / 227 вариантов сохранены. LMX-циклы и модели проверки приложены, production-интеграция не объявляется выполненной.
+
 Исходная опись — [inventory.lmx](inventory.lmx); [JSON-проекция](inventory.json) удобна для инструментария и не вводит JSON в runtime языка.
 
 В исходном каноническом каталоге **215 имён и 227 семантических вариантов**. Предложенная группировка сохраняет все тела, роли аргументов, сигнатуры и declared failures. Самосборщик не использовался как замена действующей спецификации.
@@ -36,12 +38,12 @@
 | `graph\types` | `default` | `types(source)` | [RxTypes\types](../../../docs/spec/patterns/LMX_Fn_Receivers/src/reflection.lmx), строка 34 |
 | `graph\names` | `default` | `names(source)` | [RxNames\names](../../../docs/spec/patterns/LMX_Fn_Receivers/src/reflection_bridges.lmx), строка 19 |
 | `graph\signature` | `default` | `signature(operation)` | [RxSignature\signature](../../../docs/spec/patterns/LMX_Fn_Receivers/src/reflection_bridges.lmx), строка 8 |
-| `call\->` | `default` | ``->`(inputTypes...; resultType)` | [FxToTokens\`->`](../../../docs/spec/patterns/LMX_Fn_Receivers/src/fn_operand.lmx), строка 44 |
-| `call\curry` | `default` | `curry(operation)` | [FxLambda\lambda](../../../docs/spec/patterns/LMX_Fn_Receivers/src/generic_functions.lmx), строка 343 |
+| `call\->` | `default` | ``->`(inputTypes...; resultType)` | [FxToTokens\`->`](../../../docs/spec/patterns/LMX_Fn_Receivers/src/fn_operand.lmx), строка 45 |
+| `call\curry` | `default` | `curry(operation)` | [FxLambda\lambda](../../../docs/spec/patterns/LMX_Fn_Receivers/src/generic_functions.lmx), строка 350 |
 | `call\apply` | `default` | `apply(operation; args)` | [FxApply\apply](../../../docs/spec/patterns/LMX_Fn_Receivers/src/generic_runtime.lmx), строка 70 |
-| `call\partial` | `default` | `partial(operation; prefix)` | [FxPartial\partial](../../../docs/spec/patterns/LMX_Fn_Receivers/src/generic_functions.lmx), строка 268 |
-| `call\uncurry` | `default` | `uncurry(operation; contract; failures)` | [FxUncurry\uncurry](../../../docs/spec/patterns/LMX_Fn_Receivers/src/generic_functions.lmx), строка 419 |
-| `call\flip` | `default` | `flip(operation)` | [FxFlip\flip](../../../docs/spec/patterns/LMX_Fn_Receivers/src/generic_functions.lmx), строка 351 |
+| `call\partial` | `default` | `partial(operation; prefix)` | [FxPartial\partial](../../../docs/spec/patterns/LMX_Fn_Receivers/src/generic_functions.lmx), строка 275 |
+| `call\uncurry` | `default` | `uncurry(operation; contract; failures)` | [FxUncurry\uncurry](../../../docs/spec/patterns/LMX_Fn_Receivers/src/generic_functions.lmx), строка 426 |
+| `call\flip` | `default` | `flip(operation)` | [FxFlip\flip](../../../docs/spec/patterns/LMX_Fn_Receivers/src/generic_functions.lmx), строка 358 |
 | `call\compose` | `default` | `compose(outer; inner)` | [FxCompose\compose](../../../docs/spec/patterns/LMX_Fn_Receivers/src/generic_combinators.lmx), строка 24 |
 | `call\identity` | `default` | `identity(typeToken)` | [FxIdentity\identity](../../../docs/spec/patterns/LMX_Fn_Receivers/src/generic_combinators.lmx), строка 40 |
 | `seq\map` | `default` | `map(items; transform)` | [FxMap\map](../../../docs/spec/patterns/LMX_Fn_Receivers/src/collections.lmx), строка 15 |
@@ -75,16 +77,16 @@
 | `call\runUntil` | `default` | `runUntil(step; finished; initial)` | [FxUntil\runUntil](../../../docs/spec/patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx), строка 92 |
 | `call\retryCall` | `default` | `retryCall(operation; attempts; args=())` | [FxRetry\retryCall](../../../docs/spec/patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx), строка 111 |
 | `call\bracket` | `default` | `bracket(acquire; release; action; arguments=())` | [FxAround\around](../../../docs/spec/patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx), строка 146 |
-| `call\recover` | `default` | `recover(operation; handler)` | [FxRecover\recover](../../../docs/spec/patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx), строка 185 |
+| `call\recover` | `default` | `recover(operation; handler)` | [FxRecover\recover](../../../docs/spec/patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx), строка 184 |
 | `call\adapter` | `default` | `adapter(operation; before; after; contract)` | [FxAdapter\adapter](../../../docs/spec/patterns/LMX_Fn_Receivers/src/generic_combinators.lmx), строка 201 |
 | `call\permute` | `default` | `permute(operation; permutation)` | [FxPermute\permute](../../../docs/spec/patterns/LMX_Fn_Receivers/src/generic_combinators.lmx), строка 66 |
 | `call\overload` | `default` | `overload(candidates; accepts; contract)` | [FxOverload\overload](../../../docs/spec/patterns/LMX_Fn_Receivers/src/generic_combinators.lmx), строка 339 |
 | `call\predicate` | `default` | `predicate(operation)` | [FxPredicate\predicate](../../../docs/spec/patterns/LMX_Fn_Receivers/src/generic_combinators.lmx), строка 233 |
 | `call\guard` | `default` | `guard(operation; accepts)` | [FxGuard\guard](../../../docs/spec/patterns/LMX_Fn_Receivers/src/generic_combinators.lmx), строка 301 |
-| `call\trace` | `default` | `trace(operation; sink)` | [FxTrace\trace](../../../docs/spec/patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx), строка 247 |
+| `call\trace` | `default` | `trace(operation; sink)` | [FxTrace\trace](../../../docs/spec/patterns/LMX_Fn_Receivers/src/generic_wrappers.lmx), строка 246 |
 | `call\contract` | `default` | `contract(operation; pre; post)` | [FxContract\contract](../../../docs/spec/patterns/LMX_Fn_Receivers/src/generic_combinators.lmx), строка 279 |
 | `graph\composeData` | `default` | `composeData(code; overlay)` | [RxComposeData\composeData](../../../docs/spec/patterns/LMX_Fn_Receivers/src/structures.lmx), строка 202 |
-| `call\record` | `default` | `record(left; right=())` | [FxRecordOperands\record](../../../docs/spec/patterns/LMX_Fn_Receivers/src/generic_functions.lmx), строка 44 |
+| `call\record` | `default` | `record(left; right=())` | [FxRecordOperands\record](../../../docs/spec/patterns/LMX_Fn_Receivers/src/generic_functions.lmx), строка 51 |
 | `maybe\some` | `default` | `some(value)` | [FxSome\some](../../../docs/spec/patterns/LMX_Fn_Receivers/src/containers.lmx), строка 14 |
 | `maybe\none` | `default` | `none()` | [FxNone\none](../../../docs/spec/patterns/LMX_Fn_Receivers/src/containers.lmx), строка 22 |
 | `result\ok` | `default` | `ok(value)` | [FxOk\ok](../../../docs/spec/patterns/LMX_Fn_Receivers/src/containers.lmx), строка 51 |
@@ -143,10 +145,10 @@
 | `pattern\replaceFirst` | `default` | `replaceFirst(source; pattern; replacement)` | [RxReplaceFirst\replaceFirst](../../../docs/spec/patterns/LMX_Fn_Receivers/src/regex/operations.lmx), строка 286 |
 | `pattern\replace` | `default` | `replace(source; pattern; replacement)` | [RxReplace\replace](../../../docs/spec/patterns/LMX_Fn_Receivers/src/regex/operations.lmx), строка 310 |
 | `pattern\split` | `default` | `split(source; pattern)` | [RxSplit\split](../../../docs/spec/patterns/LMX_Fn_Receivers/src/regex/operations.lmx), строка 336 |
-| `pattern\times` | `default` | `times(left; right)` | [RxRepeatOperands\times](../../../docs/spec/patterns/LMX_Fn_Receivers/src/regex/operands.lmx), строка 51 |
-| `pattern\atLeast` | `default` | `atLeast(left; right)` | [RxRepeatOperands\atLeast](../../../docs/spec/patterns/LMX_Fn_Receivers/src/regex/operands.lmx), строка 58 |
-| `pattern\atMost` | `default` | `atMost(left; right)` | [RxRepeatOperands\atMost](../../../docs/spec/patterns/LMX_Fn_Receivers/src/regex/operands.lmx), строка 65 |
-| `pattern\optional` | `default` | `optional(left; right)` | [RxRepeatOperands\optional](../../../docs/spec/patterns/LMX_Fn_Receivers/src/regex/operands.lmx), строка 74 |
+| `pattern\times` | `default` | `times(left; right)` | [RxRepeatOperands\times](../../../docs/spec/patterns/LMX_Fn_Receivers/src/regex/operands.lmx), строка 54 |
+| `pattern\atLeast` | `default` | `atLeast(left; right)` | [RxRepeatOperands\atLeast](../../../docs/spec/patterns/LMX_Fn_Receivers/src/regex/operands.lmx), строка 61 |
+| `pattern\atMost` | `default` | `atMost(left; right)` | [RxRepeatOperands\atMost](../../../docs/spec/patterns/LMX_Fn_Receivers/src/regex/operands.lmx), строка 68 |
+| `pattern\optional` | `default` | `optional(left; right)` | [RxRepeatOperands\optional](../../../docs/spec/patterns/LMX_Fn_Receivers/src/regex/operands.lmx), строка 77 |
 | `seq\findFirst` | `default` | `findFirst(items; accepts)` | [FxFindFirst\findFirst](../../../docs/spec/patterns/LMX_Fn_Receivers/src/coreComparisonGroups.lmx), строка 11 |
 | `call\allOf` | `default` | `allOf(predicates; contract=0)` | [FxAllOf\allOf](../../../docs/spec/patterns/LMX_Fn_Receivers/src/coreComparisonGroups.lmx), строка 83 |
 | `graph\equalFields` | `default` | `equalFields(first; second; same=0)` | [FxEqualFields\equalFields](../../../docs/spec/patterns/LMX_Fn_Receivers/src/coreComparisonGroups.lmx), строка 35 |
@@ -154,7 +156,7 @@
 | `call\between` | `default` | `between(left; right)` | [FxBetween\between](../../../docs/spec/patterns/LMX_Fn_Receivers/src/coreComparisonExamples.lmx), строка 10 |
 | `call\iterateUntilStop` | `default` | `iterateUntilStop(iteration; body)` | [FxIterateUntilStop\iterateUntilStop](../../../docs/spec/patterns/LMX_Fn_Receivers/src/coreComparisonExamples.lmx), строка 25 |
 | `seq\sort` | `default` | `sort(items; compare)` | [FxSort\sort](../../../docs/spec/patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx), строка 17 |
-| `seq\unique` | `default` | `unique(items; same=0)` | [FxUnique\unique](../../../docs/spec/patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx), строка 81 |
+| `seq\unique` | `default` | `unique(items; same=0)` | [FxUnique\unique](../../../docs/spec/patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx), строка 80 |
 | `seq\take` | `default` | `take(items; count)` | [FxStdCut\take](../../../docs/spec/patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx), строка 42 |
 | `seq\drop` | `default` | `drop(items; count)` | [FxStdCut\drop](../../../docs/spec/patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx), строка 45 |
 | `seq\splitAt` | `default` | `splitAt(items; count)` | [FxStdCut\splitAt](../../../docs/spec/patterns/LMX_Fn_Receivers/src/coreStandardFunctional.lmx), строка 48 |
@@ -212,7 +214,7 @@
 | `graph\setProperty` | `default` | `setProperty(properties; key; value; same=0)` | [FxSetProperty\setProperty](../../../docs/spec/patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx), строка 109 |
 | `graph\removeProperty` | `default` | `removeProperty(properties; key; same=0)` | [FxRemoveProperty\removeProperty](../../../docs/spec/patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx), строка 124 |
 | `graph\getProperties` | `default` | `getProperties(properties; indicators; same=0)` | [FxGetProperties\getProperties](../../../docs/spec/patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx), строка 144 |
-| `graph\asOperand` | `default` | `asOperand(operation; priority)` | [FxAsOperand\asOperand](../../../docs/spec/patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx), строка 272 |
+| `graph\asOperand` | `default` | `asOperand(operation; priority)` | [FxAsOperand\asOperand](../../../docs/spec/patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx), строка 294 |
 | `graph\mismatch` | `default` | `mismatch(first; second; same=0)` | [FxMismatch\mismatch](../../../docs/spec/patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx), строка 200 |
 | `graph\searchSequence` | `default` | `searchSequence(items; pattern; same=0; start=0)` | [FxSearchSequence\searchSequence](../../../docs/spec/patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx), строка 222 |
 | `graph\substitute` | `default` | `substitute(items; oldValue; newValue; same=0)` | [FxSubstitute\substitute](../../../docs/spec/patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx), строка 241 |

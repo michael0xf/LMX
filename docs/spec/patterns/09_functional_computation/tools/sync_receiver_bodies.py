@@ -31,7 +31,7 @@ def dependencies(names,available):
  return seen
 def main():
  available=blocks();data=json.loads((ROOT/'patterns.json').read_text());by={p['id']:p for p in data['patterns']}
- report={'date':'2026-11-23','scope':'Production source definitions, static source/dependency accounting only. Kernel bridge declarations and native implementation cost are not represented as working LMX bodies.','components':[]}
+ report={'date':'2026-11-26','scope':'Production source definitions, static source/dependency accounting only. Kernel bridge declarations and native implementation cost are not represented as working LMX bodies.','components':[]}
  all_required=set();all_primary=set()
  for ident,names in SELECT.items():
   missing=set(names)-set(available)

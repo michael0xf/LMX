@@ -2,11 +2,19 @@
 from pathlib import Path
 import json
 import re
+import sys
 from sync_effects import Source
 from identifier_spelling import markdown_code, spell
 from catalog_data import owner_data
 
 R = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'tools'))
+from normalize_lmx_closers import normalize_text
+
+def write_lmx(path, lines):
+    text = '\n'.join(lines) + '\n'
+    cleaned, _ = normalize_text(text)
+    path.write_text(cleaned)
 texts = {p.relative_to(R): p.read_text() for p in sorted((R/'src').rglob('*.lmx'))}
 source = Source(texts)
 effects = source.contracts()
@@ -58,13 +66,14 @@ for index, d in enumerate(definitions, 1):
             field = variant['operand']['target'].split('\\')[-1]
             operands.append('        @: '+field+' FxAsOperand\\asOperand('+variant['api']+'; sys\\priority("+"))')
         families += ['        '+variant['family']+':', '            @: call '+variant['call']['target'], '            @: operand '+variant['operand']['target']]
-(R/'src/public.lmx').write_text('\n'.join(public)+'\n')
-(R/'src/public_operands.lmx').write_text('\n'.join(operands)+'\n')
-(R/'src/public_families.lmx').write_text('\n'.join(families)+'\n')
+write_lmx(R/'src/public.lmx', public)
+write_lmx(R/'src/public_operands.lmx', operands)
+write_lmx(R/'src/public_families.lmx', families)
 (R/'catalog.json').write_text(json.dumps(rows, ensure_ascii=False, indent=2)+'\n')
 lines = ['# Canonical library operations and their two forms', '',
     f'{len(rows)} canonical names. Every input export is accounted for in [the migration inventory](CANONICAL_MIGRATION.json). Former names are not callable aliases.', '',
     'Both forms use the same algorithms and real owner DATA. Complete family/role binding, adaptive capture and exact result projection are defined in [PUBLICATION_CONTRACT.md](PUBLICATION_CONTRACT.md). Runtime execution is **NOT_RUN**.', '',
+    'Operand DATA order is `left`, `int: depth`, `right`, with ready `PASS_ARGS_AS_IS` and `PRIORITY`. `op`, `.op` and `.(expression)op` select one base operation. Ordinary VALUE adapters traverse logical outer axes of the flat Array shape through the shared engine and exact dependent result policy; rank-2 multiplication has matrix / row-dot / scalar profiles at depths 0 / 1 / 2. A Structure is an `@[]`, and indexed reference access introduces no separate array-of-arrays kind. Whole-role profiles admit depth 0 and diagnose unsupported depth before execution. No synthetic language exception is added. PD01 is a required kernel integration, not a passed runtime implementation.', '',
     '| Name | Ordinary form | Implementations and operand form |', '| --- | --- | --- |']
 for row in rows:
     variants = '; '.join(f"**{v['family']}** [{markdown_code(v['api'])}]({v['source']}) → {markdown_code(v['operand']['target'])} ({v['operand']['route']})" for v in row['variants'])

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Publish both complete LMX styles for all96 examples and separate shared bodies.
+"""Publish both complete LMX styles for all declared examples and shared bodies.
 
 Inputs are read-only. Source/JSON inconsistencies are errors, never a reason to
 silently bless a new hash. This tool does not execute any compared language.
@@ -13,7 +13,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 PATTERNS = ROOT.parent
-EDITION = '2026-11-24'
+EDITION = '2026-11-26'
 sys.path.insert(0, str(PATTERNS/'tools'))
 from canonical_operations import definitions as canonical_definitions
 from lmx_style_variants import normalize, measure as metric, validate_variants
@@ -185,7 +185,7 @@ def publish_markdown(result):
               'По авторской оценке, явные конечные Throws и общий throws: copy(Throws) — преимущество LMX: точно видны возможные ошибки метода. Они полностью входят в каждое измерение. Процедурная запись использует прямые операции и явный поток управления; функциональная — композицию, Expression и общие операции.', '',
               'Поле lmx и прежние однозначные totals/ratio оставлены в JSON только как явно помеченные функциональные совместимые зеркала. Сравниваемые значения находятся в lmx_variants/ratios; в пользовательских таблицах обе формы представлены отдельными столбцами.', '',
               'Источники: [Haskell coverage](haskell_comparision/comparison_index.json), [Julia](julia_comparison/examples.json), [Perl](perl_comparison/examples.json), [SBCL](SBCL_comparison/examples.json). [JSON](STATISTICS.json), [CSV клиентов](STATISTICS.csv), [CSV реализаций](IMPLEMENTATIONS.csv), [реестр физических исходников](SOURCE_INVENTORY.json).', '',
-              'Из корня spec: python3 patterns/examples/tools/refresh_examples_statistics.py. Затем python3 patterns/tools/build_publication_data.py --text создаёт единую модель всех 109 контрактов, включая четыре клиента группы 09 и девять сценариев групп 10–11. PDF и XLSX строятся через patterns/tools/publish_pdfs.py и patterns/tools/publish_workbooks.mjs из этой общей модели.', '',
+              'Из корня spec: python3 patterns/examples/tools/refresh_examples_statistics.py. Затем python3 patterns/tools/build_publication_data.py --text создаёт единую модель всех объявленных контрактов, включая клиентов группы 09 и сценарии групп 10–11. PDF и XLSX строятся через patterns/tools/publish_pdfs.py и patterns/tools/publish_workbooks.mjs из этой общей модели.', '',
               result['runtime_note'], '']
     (ROOT/'STATISTICS.md').write_text('\n'.join(lines))
 
@@ -198,7 +198,7 @@ def main():
     require({item['id'] for item in expected['source_examples']} == set(by_haskell), 'Haskell acceptance/index identities differ')
     require(hashlib.sha256((ROOT/'haskell_comparision/Analogies.hs').read_bytes()).hexdigest() == index['source_module_sha256'],
             'Haskell module fingerprint is stale')
-    examples = []; implementations = []
+    examples = []; implementations = []; declared_client_count = len(index['entries'])
     for expectation in expected['source_examples']:
         item = by_haskell[expectation['id']]
         require(expectation['file'] == item['lmx_variants']['functional']['source_file'], f"{item['id']}: compatibility source path mismatch")
@@ -215,8 +215,10 @@ def main():
                         source_symbols=item.get('source_symbols', []), runtime={'LMX': 'NOT_RUN', 'Haskell': 'NOT_RUN'}))
     for suite, dirname in SUITES.items():
         directory = ROOT/dirname; data = read(directory/'examples.json')
-        require(len(data['examples']) == len({item['id'] for item in data['examples']}) == 24,
-                f'{suite}: exactly24 unique clients required')
+        expected_count = data.get('expected_client_count', 24)
+        declared_client_count += expected_count
+        require(len(data['examples']) == len({item['id'] for item in data['examples']}) == expected_count,
+                f'{suite}: exactly {expected_count} declared unique clients required')
         for item in data['examples']:
             paths = listing_paths(item)
             # The complete LMX body can have one shared source and one client.
@@ -281,7 +283,8 @@ def main():
         'foreign': metric(bodies['haskell']), 'comparison_file': 'library_comparisons/r01_derive_comparision.md',
         'comparison_scope': 'implementation_only', 'imported_by_clients': False,
         'contract': 'Exact explicitly delimited comparison bodies, including the stated host representation boundary.'})
-    require(len(examples) == len({(row['suite'], row['id']) for row in examples}) == 96, 'Expected96 unique client contracts')
+    require(len(examples) == len({(row['suite'], row['id']) for row in examples}) == declared_client_count,
+            f'Expected {declared_client_count} declared unique client contracts')
     require(len(implementations) == len({(row['suite'], row['id']) for row in implementations}) == 24, 'Expected24 unique shared implementation comparisons')
     summaries = summarize(examples, implementations)
     source_styles = {}

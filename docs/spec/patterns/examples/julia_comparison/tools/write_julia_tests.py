@@ -36,6 +36,8 @@ def main():
  '        return Dict{String,Any}("removed"=>value, "target"=>args[1])',
  '    elseif id == "J20"',
  '        return [Dict{String,Any}("key"=>x.key, "id"=>x.id) for x in value]',
+ '    elseif id == "J27"',
+ '        return Dict{String,Any}("mask"=>Int.(value), "values"=>args[1])',
  '    end',
  '    value',
  'end','']
@@ -52,13 +54,14 @@ def main():
    argtuple='('+', '.join(parts)+(',' if len(parts)==1 else '')+')'
    lines+=['    # Случай '+str(n)+': подготовка и assertions вне сравниваемого кода.','    args = '+argtuple,'    before = deepcopy(args)']
    if 'error' in c:
-    kind={'bounds':'BoundsError','shape':'DimensionMismatch','zero_step':'ArgumentError'}[c['error']]
+    kind={'bounds':'BoundsError','shape':'DimensionMismatch','zero_step':'ArgumentError','negative_count':'ArgumentError'}[c['error']]
     lines+=['    @test_throws '+kind+' Base.invokelatest(call, args...)','    @test args == before']
    else:
     lines+=['    value = Base.invokelatest(call, args...)','    @test observe("'+e['id']+'", value, args) == '+literal(c['expected'])]
-    if e['id'] not in ('J17','J18'):lines+=['    @test args == before']
-    if e['id'] in ('J02','J03','J20'):lines+=['    @test value !== args[1]']
+    if e['id'] not in ('J17','J18','J27'):lines+=['    @test args == before']
+    if e['id'] in ('J02','J03','J20','J25','J26','J27'):lines+=['    @test value !== args[1]']
     if e['id']=='J18':lines+=['    @test value !== args[1]']
+    if e['id']=='J27':lines+=['    @test length(args[1]) == length(before[1])','    @test args[2] == before[2]']
    total+=1
   lines+=['end','']
  (R/'validation/run_clients.jl').write_text('\n'.join(lines)+'\n')

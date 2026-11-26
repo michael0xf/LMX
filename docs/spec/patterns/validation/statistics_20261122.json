@@ -1,5 +1,5 @@
 {
-  "date": "2026-11-24",
+  "date": "2026-11-26",
   "method": "Complete nonwhitespace Unicode codepoints, nonblank lines and UTF-8 bytes; all declarations, Throws arguments and copy references are included. Where lmx_variants are declared, procedural and functional are both compared under one contract; their compatibility LMX listing is not a third comparison. Equal minimal forms share one physical source and retain both style metrics. Implementation comparisons use one common body with dependencies counted separately. Other published controls retain their declared comparison scope. No size-based style selection, runtime execution or performance claim.",
   "groups": [
     {
@@ -3620,10 +3620,10 @@
           ],
           "metrics": {
             "LMX": {
-              "characters": 316,
-              "nonblank_lines": 16,
-              "utf8_bytes": 462,
-              "sha256": "bd73137544899883a0c80263b63a33dc43ae37490f4c2b695ba4bf93f1139f6b"
+              "characters": 313,
+              "nonblank_lines": 15,
+              "utf8_bytes": 450,
+              "sha256": "0c2e01cf0ddf764b77dbc779747d21421c6e5e8012395b5e91e9849dd6b33849"
             },
             "Haskell": {
               "characters": 390,
@@ -3790,9 +3790,9 @@
         },
         "implementation": {
           "LMX": {
-            "characters": 1906,
-            "nonblank_lines": 96,
-            "utf8_bytes": 2749
+            "characters": 1903,
+            "nonblank_lines": 95,
+            "utf8_bytes": 2737
           },
           "Haskell": {
             "characters": 1558,
@@ -3915,7 +3915,7 @@
               "runtime_status": "NOT_RUN",
               "source_file": "../LMX_Fn_Receivers/src/lowerBound.lmx",
               "entry_source_file": "examples/lmx/procedural/100_lower_bound.lm3",
-              "fragment_code": "FxLowerBound:\n    private:\n        @: items\n        @: needle\n        @: less\n    required: items needle less\n    return: int\n    lowerBound:\n        throws: copy(FxSeqInfo\\get\\throws) copy(FxSeqRead\\read\\throws) copy(FxApply\\apply\\throws) copy(FxSeqPredicate\\truth\\throws)\n        FxSeqInfo\\get(items)\n        int: low 0\n        int: high length(items)\n        while: low < high\n            int: middle low + (high - low) / 2\n            @: item FxSeqRead\\read(items; middle)\n            @: flag FxApply\\apply(less; FxTwo\\make(item; needle))\n            if: FxSeqPredicate\\truth(flag) != 0\n                low := middle + 1\n            else:\n                high := middle\n        ---\n        return: low\n",
+              "fragment_code": "# The complete procedural implementation is the single core definition\n# FxLowerBound in ../../../../LMX_Fn_Receivers/src/lowerBound.lmx.\n# The comparison includes that complete definition, not this alias alone.\n@: lowerBound FxLowerBound\\lowerBound\n",
               "source_files": [
                 "../LMX_Fn_Receivers/src/lowerBound.lmx"
               ],
@@ -4115,7 +4115,7 @@
               "runtime_status": "NOT_RUN",
               "source_file": "examples/lmx/procedural/102_topological_sort.lm3",
               "entry_source_file": "examples/lmx/procedural/102_topological_sort.lm3",
-              "fragment_code": "TopoProcedural:\n    return: int\n    run:\n        throws: copy(TopoCount\\run\\throws) copy(TopoEnqueue\\run\\throws) copy(TopoRemove\\run\\throws)\n        int: i 0\n        while: i < n\n            @: row graph[i]\n            int: j 0\n            while: j < length(row)\n                TopoCount\\run(0; row[j])\n                j += 1\n            i += 1\n        ---\n        i := 0\n        while: i < n\n            TopoEnqueue\\run(i)\n            i += 1\n        ---\n        while: head < tail\n            @: row graph[queue[head]]\n            head += 1\n            int: j 0\n            while: j < length(row)\n                tail := TopoRemove\\run(tail; row[j])\n                j += 1\n        ---\n        return: 0\n",
+              "fragment_code": "TopoProcedural:\n    return: int\n    run:\n        throws: copy(TopoCount\\run\\throws) copy(TopoEnqueue\\run\\throws) copy(TopoRemove\\run\\throws)\n        int: i 0\n        while: i < n\n            @: row graph[i]\n            int: j 0\n            while: j < length(row)\n                TopoCount\\run(0; row[j])\n                j += 1\n            i += 1\n        i := 0\n        while: i < n\n            TopoEnqueue\\run(i)\n            i += 1\n        while: head < tail\n            @: row graph[queue[head]]\n            head += 1\n            int: j 0\n            while: j < length(row)\n                tail := TopoRemove\\run(tail; row[j])\n                j += 1\n        ---\n        return: 0\n",
               "source_files": [
                 "examples/lmx/common/array.lm3",
                 "examples/lmx/common/102_topological_sort.lm3",
@@ -4124,11 +4124,11 @@
               "source_file_is_fragment": true,
               "runtime_execution": "NOT_RUN",
               "metrics": {
-                "characters": 1236,
-                "characters_with_whitespace": 2024,
-                "nonblank_lines": 79,
-                "utf8_bytes": 2024,
-                "sha256": "1604478b63a7be387784df4f054c76510ffcdb0fcd38ef24b03c1147f894a853"
+                "characters": 1230,
+                "characters_with_whitespace": 2000,
+                "nonblank_lines": 77,
+                "utf8_bytes": 2000,
+                "sha256": "8787fb4bd9169864fefad94a7fe677d53fa26d15600f4cf75f9ef0afecd75df3"
               }
             },
             "functional": {
@@ -4186,7 +4186,7 @@
               "characters": 1279,
               "nonblank_lines": 68,
               "utf8_bytes": 1852,
-              "sha256": "f23bf1175d571a55421d161b507a6f6e0b779400c98dd527f7e16fd52c332206"
+              "sha256": "fffc7ae2ea5ca20a8cfc6e156e4b1b04fd4adcc800b121325c614612d683a957"
             },
             "C++": {
               "characters": 578,
@@ -4219,7 +4219,7 @@
               "runtime_status": "NOT_RUN",
               "source_file": "examples/lmx/procedural/103_union_find.lm3",
               "entry_source_file": "examples/lmx/procedural/103_union_find.lm3",
-              "fragment_code": "DsuProcedural:\n    return: int\n    run:\n        throws: copy(DsuInitialize\\run\\throws) copy(DsuJoin\\run\\throws) copy(DsuEmit\\run\\throws)\n        int: vertex 0\n        while: vertex < n\n            DsuInitialize\\run(vertex)\n            vertex += 1\n        ---\n        int: count n\n        int: i 0\n        while: i < length(pairs)\n            count := DsuJoin\\run(count; pairs[i])\n            i += 1\n        ---\n        vertex := 0\n        while: vertex < n\n            DsuEmit\\run(vertex)\n            vertex += 1\n        ---\n        return: count\n",
+              "fragment_code": "DsuProcedural:\n    return: int\n    run:\n        throws: copy(DsuInitialize\\run\\throws) copy(DsuJoin\\run\\throws) copy(DsuEmit\\run\\throws)\n        int: vertex 0\n        while: vertex < n\n            DsuInitialize\\run(vertex)\n            vertex += 1\n        int: count n\n        int: i 0\n        while: i < length(pairs)\n            count := DsuJoin\\run(count; pairs[i])\n            i += 1\n        vertex := 0\n        while: vertex < n\n            DsuEmit\\run(vertex)\n            vertex += 1\n        return: count\n",
               "source_files": [
                 "examples/lmx/common/array.lm3",
                 "examples/lmx/common/103_union_find.lm3",
@@ -4228,11 +4228,11 @@
               "source_file_is_fragment": true,
               "runtime_execution": "NOT_RUN",
               "metrics": {
-                "characters": 1379,
-                "characters_with_whitespace": 2100,
-                "nonblank_lines": 80,
-                "utf8_bytes": 2100,
-                "sha256": "704a1c741ce8b7d3c1a4f3e03c5714f06d7bf09a6f65b966ee952f26074cc38e"
+                "characters": 1370,
+                "characters_with_whitespace": 2064,
+                "nonblank_lines": 77,
+                "utf8_bytes": 2064,
+                "sha256": "6332cfe1583eb0bddb70b30aad119c961c736b14b8acd7fb3d527d5ab9c680b4"
               }
             },
             "functional": {
@@ -4265,7 +4265,7 @@
                 "characters_with_whitespace": 1852,
                 "nonblank_lines": 68,
                 "utf8_bytes": 1852,
-                "sha256": "f23bf1175d571a55421d161b507a6f6e0b779400c98dd527f7e16fd52c332206"
+                "sha256": "fffc7ae2ea5ca20a8cfc6e156e4b1b04fd4adcc800b121325c614612d683a957"
               }
             }
           },
@@ -4322,7 +4322,7 @@
               "runtime_status": "NOT_RUN",
               "source_file": "examples/lmx/procedural/104_edit_distance.lm3",
               "entry_source_file": "examples/lmx/procedural/104_edit_distance.lm3",
-              "fragment_code": "EditDistance:\n    @: left\n    @: right\n    @: same\n    return: int\n    run:\n        throws: copy(FxSeqAllocate\\make\\throws) copy(EditCell\\value\\throws)\n        int: m length(right)\n        @: previous FxSeqAllocate\\make(int[]; m + 1)\n        int: j 0\n        while: j <= m\n            previous[j] := j\n            j += 1\n        ---\n        int: i 1\n        while: i <= length(left)\n            @: current FxSeqAllocate\\make(int[]; m + 1)\n            current[0] := i\n            j := 1\n            while: j <= m\n                current[j] := EditCell\\value(current[j - 1]; j)\n                j += 1\n            previous := current\n            i += 1\n        ---\n        return: previous[m]\n",
+              "fragment_code": "EditDistance:\n    @: left\n    @: right\n    @: same\n    return: int\n    run:\n        throws: copy(FxSeqAllocate\\make\\throws) copy(EditCell\\value\\throws)\n        int: m length(right)\n        @: previous FxSeqAllocate\\make(int[]; m + 1)\n        int: j 0\n        while: j <= m\n            previous[j] := j\n            j += 1\n        int: i 1\n        while: i <= length(left)\n            @: current FxSeqAllocate\\make(int[]; m + 1)\n            current[0] := i\n            j := 1\n            while: j <= m\n                current[j] := EditCell\\value(current[j - 1]; j)\n                j += 1\n            previous := current\n            i += 1\n        return: previous[m]\n",
               "source_files": [
                 "examples/lmx/common/104_edit_distance.lm3",
                 "examples/lmx/procedural/104_edit_distance.lm3"
@@ -4330,11 +4330,11 @@
               "source_file_is_fragment": true,
               "runtime_execution": "NOT_RUN",
               "metrics": {
-                "characters": 799,
-                "characters_with_whitespace": 1310,
-                "nonblank_lines": 44,
-                "utf8_bytes": 1310,
-                "sha256": "eaa86a98724591fc7df114647581f4ca9b052940d58e240ec8f169eb76c0a9cb"
+                "characters": 793,
+                "characters_with_whitespace": 1286,
+                "nonblank_lines": 42,
+                "utf8_bytes": 1286,
+                "sha256": "d10921d2224590f0f3c8433e0be693321c75db6e7dab3d5a6f52d4b592b92b7c"
               }
             },
             "functional": {
@@ -4423,7 +4423,7 @@
               "runtime_status": "NOT_RUN",
               "source_file": "examples/lmx/procedural/105_dijkstra.lm3",
               "entry_source_file": "examples/lmx/procedural/105_dijkstra.lm3",
-              "fragment_code": "DijkstraProcedural:\n    return: int\n    run:\n        throws: copy(DijkstraPick\\run\\throws) copy(DijkstraRelax\\run\\throws)\n        int: step 0\n        while: step < n\n            best := -1\n            int: vertex 0\n            while: vertex < n\n                best := DijkstraPick\\run(best; vertex)\n                vertex += 1\n            ---\n            if: best = -1\n                return: 0\n            settled[best] := 1\n            @: row graph[best]\n            int: i 0\n            while: i < length(row)\n                DijkstraRelax\\run(0; row[i])\n                i += 1\n            step += 1\n        ---\n        return: 0\n",
+              "fragment_code": "DijkstraProcedural:\n    return: int\n    run:\n        throws: copy(DijkstraPick\\run\\throws) copy(DijkstraRelax\\run\\throws)\n        int: step 0\n        while: step < n\n            best := -1\n            int: vertex 0\n            while: vertex < n\n                best := DijkstraPick\\run(best; vertex)\n                vertex += 1\n            if: best = -1\n                return: 0\n            settled[best] := 1\n            @: row graph[best]\n            int: i 0\n            while: i < length(row)\n                DijkstraRelax\\run(0; row[i])\n                i += 1\n            step += 1\n        return: 0\n",
               "source_files": [
                 "examples/lmx/common/array.lm3",
                 "examples/lmx/common/105_dijkstra.lm3",
@@ -4432,11 +4432,11 @@
               "source_file_is_fragment": true,
               "runtime_execution": "NOT_RUN",
               "metrics": {
-                "characters": 1255,
-                "characters_with_whitespace": 2018,
-                "nonblank_lines": 72,
-                "utf8_bytes": 2018,
-                "sha256": "445f1dcde243297898286e13c81f819a589a7b5706d214e2e3d2908aa1fb5a8b"
+                "characters": 1249,
+                "characters_with_whitespace": 1990,
+                "nonblank_lines": 70,
+                "utf8_bytes": 1990,
+                "sha256": "51e77303d8285dc8686baf76310c8c0dbea4cfe61de8ce3df81cf4a5e682800f"
               }
             },
             "functional": {
@@ -4600,9 +4600,9 @@
       "lmx_style_totals": {
         "scenario": {
           "procedural": {
-            "characters": 6092,
-            "nonblank_lines": 351,
-            "utf8_bytes": 9662
+            "characters": 6065,
+            "nonblank_lines": 342,
+            "utf8_bytes": 9550
           },
           "functional": {
             "characters": 6482,
@@ -4671,7 +4671,7 @@
               "characters": 1147,
               "nonblank_lines": 66,
               "utf8_bytes": 1726,
-              "sha256": "4bf341802f99262db8735c7c4b598f304f7d840714a5309173cd9e5b59902f53"
+              "sha256": "29b88a2ac5431caa88d1225c973a998c26056644a24b659505c9522321765048"
             },
             "C++": {
               "characters": 516,
@@ -4704,7 +4704,7 @@
                 "characters_with_whitespace": 1483,
                 "nonblank_lines": 58,
                 "utf8_bytes": 1483,
-                "sha256": "287f8241ec891376c06fb2d0d0a757d9fd2a7e5c28b0e1f565710a8df9b65784"
+                "sha256": "7d5de3e94383ec51c367d39c2470d9d356a8b0d68e86ceebd307c4a00d3c74e4"
               }
             },
             "functional": {
@@ -4724,7 +4724,7 @@
                 "characters_with_whitespace": 1726,
                 "nonblank_lines": 66,
                 "utf8_bytes": 1726,
-                "sha256": "4bf341802f99262db8735c7c4b598f304f7d840714a5309173cd9e5b59902f53"
+                "sha256": "29b88a2ac5431caa88d1225c973a998c26056644a24b659505c9522321765048"
               }
             }
           },
@@ -5297,9 +5297,9 @@
       ],
       "fairness_note": "Сравнивается полная реализация заявленного компонента; runtime и стандартные языковые примитивы не разворачиваются.",
       "characters": {
-        "core": 316
+        "core": 313
       },
-      "selected_characters": 316,
+      "selected_characters": 313,
       "primary_role": "published_control_under_declared_scope"
     },
     {
@@ -5484,7 +5484,7 @@
       ],
       "fairness_note": "",
       "characters": {
-        "procedural": 1236,
+        "procedural": 1230,
         "functional": 1335
       },
       "selected_characters": 1335,
@@ -5506,7 +5506,7 @@
       ],
       "fairness_note": "",
       "characters": {
-        "procedural": 1379,
+        "procedural": 1370,
         "functional": 1279
       },
       "selected_characters": 1279,
@@ -5528,7 +5528,7 @@
       ],
       "fairness_note": "",
       "characters": {
-        "procedural": 799,
+        "procedural": 793,
         "functional": 1030
       },
       "selected_characters": 1030,
@@ -5550,7 +5550,7 @@
       ],
       "fairness_note": "",
       "characters": {
-        "procedural": 1255,
+        "procedural": 1249,
         "functional": 1260
       },
       "selected_characters": 1260,
@@ -6259,7 +6259,7 @@
       "characters": 93,
       "nonblank_lines": 10,
       "utf8_bytes": 169,
-      "sha256": "e2fc29d306076753d8fd7d9f777ddb59356ca0ea7ef640ab4007220e07ac0089",
+      "sha256": "5e347e67c7200a160ecba623e8d86167c538c4f4cfc0d57e44aecdddc6076df8",
       "procedural_archived": false,
       "lmx_variants": {
         "procedural": {
@@ -6271,7 +6271,7 @@
             "characters_with_whitespace": 169,
             "nonblank_lines": 10,
             "utf8_bytes": 169,
-            "sha256": "e2fc29d306076753d8fd7d9f777ddb59356ca0ea7ef640ab4007220e07ac0089"
+            "sha256": "5e347e67c7200a160ecba623e8d86167c538c4f4cfc0d57e44aecdddc6076df8"
           }
         },
         "functional": {
@@ -6283,7 +6283,7 @@
             "characters_with_whitespace": 169,
             "nonblank_lines": 10,
             "utf8_bytes": 169,
-            "sha256": "e2fc29d306076753d8fd7d9f777ddb59356ca0ea7ef640ab4007220e07ac0089"
+            "sha256": "5e347e67c7200a160ecba623e8d86167c538c4f4cfc0d57e44aecdddc6076df8"
           }
         }
       },
@@ -7269,7 +7269,7 @@
   "receiver_library_counts": {
     "format": "receiver-library-comparisons-v2",
     "status": "publication_consistency_not_execution",
-    "date": "2026-11-23",
+    "date": "2026-11-26",
     "comparisons": [
       {
         "file": "library_comparisons/h01_apply_comparision.md",
@@ -7393,10 +7393,10 @@
           "sha256": "58c4cd4bf7bb30af5409b9db5f537331645a3c1b58db50af5c603d0fb69bad4e"
         },
         "lmx": {
-          "characters": 16390,
+          "characters": 16397,
           "nonblank_lines": 843,
-          "utf8_bytes": 24834,
-          "sha256": "6c71d3946e44a9b18e75a27b944fccf32c17e8c2246ae1b0eb42c706c52a9efa"
+          "utf8_bytes": 24839,
+          "sha256": "6a7c34e6fa8f9b8a4431730ee4880cc4066f22b4ede7addbe8e4176fae62b86f"
         },
         "haskell": {
           "characters": 699,
@@ -7485,10 +7485,10 @@
           "sha256": "43a39b1d320fb426818975bb09d533d31ba4e4dfa43280f27be4b09141414c13"
         },
         "lmx": {
-          "characters": 14403,
+          "characters": 14410,
           "nonblank_lines": 762,
-          "utf8_bytes": 22038,
-          "sha256": "2f2ad730499fd37cc72c00129ca2856cd590fddad4b9483e84ef45a53da0622b"
+          "utf8_bytes": 22043,
+          "sha256": "fde390b9e260fc4417d52bac08a2fef6fe15b4fc3f7da7e676e9bcf715761442"
         },
         "haskell": {
           "characters": 389,
@@ -7579,10 +7579,10 @@
           "sha256": "78840afbecfc917b66aa380bc1549be3daf5773e09f7abdbbe7d40038435d169"
         },
         "lmx": {
-          "characters": 14590,
+          "characters": 14597,
           "nonblank_lines": 771,
-          "utf8_bytes": 22341,
-          "sha256": "0b1d2b634f84208854dc2f5be2526ab6441128b9176a209e2d41912700903054"
+          "utf8_bytes": 22346,
+          "sha256": "a97fb475830fb408583ae22bd6a4e98b26703d05b3c04acdb4e7089a1602eaaa"
         },
         "haskell": {
           "characters": 1309,
@@ -7704,10 +7704,10 @@
             "sha256": "1a5e1998428bbb76af1f2da1391580927865f21bd9e2a46c0c37c299936bebcd"
           },
           "lmx": {
-            "characters": 13904,
+            "characters": 13911,
             "nonblank_lines": 739,
-            "utf8_bytes": 21388,
-            "sha256": "5072e4c96a01a817dc3ac57bbed5ee1965dae4a7bc566257364290f4d4b59a4f"
+            "utf8_bytes": 21393,
+            "sha256": "c1b985aa84ae69d6c5e6ef795b3cfef27297c2dad45bedbffb0891d376d7a0a7"
           },
           "different_failure_api": true,
           "included_in_primary_metric": false
@@ -7735,10 +7735,10 @@
           "sha256": "7f947f3590c6b3fb7a2b47c3dd2a26ff8cd9ef0a75ff32dc7d8d82c045ddcf16"
         },
         "lmx": {
-          "characters": 250,
-          "nonblank_lines": 14,
-          "utf8_bytes": 363,
-          "sha256": "60e4aaf952286c72961e67ec586d7a04c7dae8658e088f4e0789b4d264691607"
+          "characters": 260,
+          "nonblank_lines": 15,
+          "utf8_bytes": 384,
+          "sha256": "1016440f1ccf4cbe45f2067264e6bda1598c833df6ef4f3b11b8d50fac9973d9"
         },
         "haskell": {
           "characters": 315,
@@ -7755,7 +7755,7 @@
     ]
   },
   "functional_library_dependencies": {
-    "date": "2026-11-23",
+    "date": "2026-11-26",
     "scope": "Production source definitions, static source/dependency accounting only. Kernel bridge declarations and native implementation cost are not represented as working LMX bodies.",
     "components": [
       {
@@ -7806,9 +7806,9 @@
           "FxTypeTokens"
         ],
         "shared": {
-          "characters": 9187,
-          "lines": 521,
-          "utf8_bytes": 14204
+          "characters": 9207,
+          "lines": 524,
+          "utf8_bytes": 14254
         },
         "external_or_failure_identifiers": [
           "FxArity",
@@ -7857,10 +7857,10 @@
           {
             "name": "FxBindOperandTail",
             "source": "src/monadic_forms.lmx",
-            "characters": 110,
-            "lines": 5,
-            "utf8_bytes": 140,
-            "sha256": "e6cbded21c5be59751c78a4598960d1c47fc4ab3b45bec533f6c416c6f24f027"
+            "characters": 120,
+            "lines": 7,
+            "utf8_bytes": 169,
+            "sha256": "6e3ed413115f86529d9000689b3d7f2adf3c70bd7f1896ff620019228887d86b"
           },
           {
             "name": "FxBuild",
@@ -7993,10 +7993,10 @@
           {
             "name": "FxPreparedOperands",
             "source": "src/generic_functions.lmx",
-            "characters": 68,
-            "lines": 5,
-            "utf8_bytes": 102,
-            "sha256": "0e46786f3f58a70f49606cb5c7fba31d6aa02bd190c9d353a4b5d4137908ea3c"
+            "characters": 78,
+            "lines": 6,
+            "utf8_bytes": 123,
+            "sha256": "d866b381b8ae556e8cfcecdb7608228799e1764bd81985b138184f9656f3d5a1"
           },
           {
             "name": "FxRecordAdapter",
@@ -8156,9 +8156,9 @@
           "FxTypeTokens"
         ],
         "shared": {
-          "characters": 8493,
-          "lines": 483,
-          "utf8_bytes": 13178
+          "characters": 8503,
+          "lines": 484,
+          "utf8_bytes": 13199
         },
         "external_or_failure_identifiers": [
           "FxArity",
@@ -8311,10 +8311,10 @@
           {
             "name": "FxPreparedOperands",
             "source": "src/generic_functions.lmx",
-            "characters": 68,
-            "lines": 5,
-            "utf8_bytes": 102,
-            "sha256": "0e46786f3f58a70f49606cb5c7fba31d6aa02bd190c9d353a4b5d4137908ea3c"
+            "characters": 78,
+            "lines": 6,
+            "utf8_bytes": 123,
+            "sha256": "d866b381b8ae556e8cfcecdb7608228799e1764bd81985b138184f9656f3d5a1"
           },
           {
             "name": "FxRecordAdapter",
@@ -8436,9 +8436,9 @@
           "FxAround"
         ],
         "primary": {
-          "characters": 316,
-          "lines": 16,
-          "utf8_bytes": 462
+          "characters": 313,
+          "lines": 15,
+          "utf8_bytes": 450
         },
         "shared_definitions": [
           "FxAppend",
@@ -8487,10 +8487,10 @@
           {
             "name": "FxAround",
             "source": "src/generic_wrappers.lmx",
-            "characters": 316,
-            "lines": 16,
-            "utf8_bytes": 462,
-            "sha256": "bd73137544899883a0c80263b63a33dc43ae37490f4c2b695ba4bf93f1139f6b"
+            "characters": 313,
+            "lines": 15,
+            "utf8_bytes": 450,
+            "sha256": "0c2e01cf0ddf764b77dbc779747d21421c6e5e8012395b5e91e9849dd6b33849"
           },
           {
             "name": "FxSeqAllocate",
@@ -8616,9 +8616,9 @@
           "FxWrap"
         ],
         "shared": {
-          "characters": 15857,
+          "characters": 15864,
           "lines": 826,
-          "utf8_bytes": 24120
+          "utf8_bytes": 24125
         },
         "external_or_failure_identifiers": [
           "FxArity",
@@ -8867,10 +8867,10 @@
           {
             "name": "FxPreparedOperands",
             "source": "src/generic_functions.lmx",
-            "characters": 68,
-            "lines": 5,
-            "utf8_bytes": 102,
-            "sha256": "0e46786f3f58a70f49606cb5c7fba31d6aa02bd190c9d353a4b5d4137908ea3c"
+            "characters": 78,
+            "lines": 6,
+            "utf8_bytes": 123,
+            "sha256": "d866b381b8ae556e8cfcecdb7608228799e1764bd81985b138184f9656f3d5a1"
           },
           {
             "name": "FxRecordAdapter",
@@ -9003,10 +9003,10 @@
           {
             "name": "FxSourcePolicy",
             "source": "src/adapter_frames.lmx",
-            "characters": 1055,
-            "lines": 48,
-            "utf8_bytes": 1686,
-            "sha256": "7ec359b5faf7f3769a3887e6a4869db64ae62af8682a84ea5dd0c9cf981a62ac"
+            "characters": 1052,
+            "lines": 47,
+            "utf8_bytes": 1670,
+            "sha256": "72562a123ac93112d869f51bdf4e5e4e9748b137c3601ab4095ae3327e05157b"
           },
           {
             "name": "FxStageFailures",
@@ -9136,9 +9136,9 @@
           "FxWrap"
         ],
         "shared": {
-          "characters": 15386,
+          "characters": 15393,
           "lines": 806,
-          "utf8_bytes": 23436
+          "utf8_bytes": 23441
         },
         "external_or_failure_identifiers": [
           "FxArity",
@@ -9403,10 +9403,10 @@
           {
             "name": "FxPreparedOperands",
             "source": "src/generic_functions.lmx",
-            "characters": 68,
-            "lines": 5,
-            "utf8_bytes": 102,
-            "sha256": "0e46786f3f58a70f49606cb5c7fba31d6aa02bd190c9d353a4b5d4137908ea3c"
+            "characters": 78,
+            "lines": 6,
+            "utf8_bytes": 123,
+            "sha256": "d866b381b8ae556e8cfcecdb7608228799e1764bd81985b138184f9656f3d5a1"
           },
           {
             "name": "FxRecordAdapter",
@@ -9539,10 +9539,10 @@
           {
             "name": "FxSourcePolicy",
             "source": "src/adapter_frames.lmx",
-            "characters": 1055,
-            "lines": 48,
-            "utf8_bytes": 1686,
-            "sha256": "7ec359b5faf7f3769a3887e6a4869db64ae62af8682a84ea5dd0c9cf981a62ac"
+            "characters": 1052,
+            "lines": 47,
+            "utf8_bytes": 1670,
+            "sha256": "72562a123ac93112d869f51bdf4e5e4e9748b137c3601ab4095ae3327e05157b"
           },
           {
             "name": "FxStageFailures",
@@ -9678,22 +9678,22 @@
       "FxWrap"
     ],
     "unique_required_total": {
-      "characters": 20151,
-      "lines": 1025,
-      "utf8_bytes": 30252
+      "characters": 20165,
+      "lines": 1026,
+      "utf8_bytes": 30274
     },
     "unique_shared_excluding_all_primary": {
-      "characters": 16725,
-      "lines": 873,
-      "utf8_bytes": 25397
+      "characters": 16742,
+      "lines": 875,
+      "utf8_bytes": 25431
     },
     "public_bundle": [
       {
         "source": "src/public.lmx",
-        "characters": 5951,
-        "lines": 217,
-        "utf8_bytes": 8315,
-        "sha256": "6edb1da07e561f2e4cff482c48c9390f681e355c71394ba0694bdbfd50500a1e"
+        "characters": 6028,
+        "lines": 220,
+        "utf8_bytes": 8425,
+        "sha256": "25e144a5163d48eb350de8e715678ecb8d6178fd911c16fb0a56219ee41d5956"
       }
     ]
   },
@@ -11303,13 +11303,13 @@
   "receiver_library": {
     "public_receivers": 215,
     "assembled": {
-      "characters": 258267,
-      "nonblank_lines": 10375,
-      "utf8_bytes": 375828,
-      "sha256": "a2cb339074086f00bc253ff2227032fd7605e0d474833df5a7456cad5fffd65a"
+      "characters": 270276,
+      "nonblank_lines": 10749,
+      "utf8_bytes": 391705,
+      "sha256": "22f98de2db310e03dda380d604ba1cccc2a3e97e1009bf1d2417d4f17708356d"
     },
-    "assembled_file_utf8_bytes": 375829,
-    "assembled_file_sha256": "b7d7ed4cf940593e542b547d7297a87798c433c57c63795d08b956b632c9c989",
+    "assembled_file_utf8_bytes": 391706,
+    "assembled_file_sha256": "2a692a88d5cc1189d5318ee0e3bc6589c96ac7d289cabea9e49fb721f7587417",
     "runtime_executed": false
   }
 }

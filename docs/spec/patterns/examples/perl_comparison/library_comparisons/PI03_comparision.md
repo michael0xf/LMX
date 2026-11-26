@@ -12,8 +12,8 @@
 
 | Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
 | --- | ---: | ---: | ---: |
-| LMX | 1799 | 3327 | 89 |
-| Perl | 1174 | 1745 | 55 |
+| LMX | 1796 | 3303 | 88 |
+| Perl | <span style="color:#176233"><u>1174</u></span> | 1745 | 55 |
 
 ## LMX
 
@@ -66,7 +66,6 @@ FxSort:
                     else:
                         selected := FxSeqRead\read(current; right)
                         right += 1
-                    ---
                     FxSeqStore\write(scratch; at; selected)
                     at += 1
                 start := end

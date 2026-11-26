@@ -90,7 +90,7 @@ object MonadExample {
 | --- | ---: | ---: |
 | LMX — процедурный | 191 | 14 |
 | LMX — функциональный | 180 | 11 |
-| Haskell | **125** | 5 |
+| Haskell | <span style="color:#176233"><u>125</u></span> | 5 |
 | Scala | 135 | 5 |
 
 Обе LMX-записи сравниваются самостоятельно. Полный текст включает все объявления, локальные helpers и Throws; заголовки и списки ошибок не вычитаются. Общие тела ядра учитываются один раз в отдельных сравнениях. Минимум сопоставимой строки подчёркивается в PDF и XLSX зелёным; при равенстве отмечаются все победители.
@@ -122,4 +122,4 @@ Both complete LMX client styles are counted in full. Foreign controls retain the
 
 ## Проверка
 
-[Проверка публикации](VALIDATION_2026-11-23.md) проверяет обе записи и зеркала. [Acceptance cases](acceptance_cases.json) — спецификация ожидаемых наблюдений, а не LMX execution receipt.
+[Проверка публикации](VALIDATION_2026-11-26.md) проверяет обе записи и зеркала. [Acceptance cases](acceptance_cases.json) — спецификация ожидаемых наблюдений, а не LMX execution receipt.

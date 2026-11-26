@@ -1,0 +1,248 @@
+{
+  "revision": "2026-11-26",
+  "status": "SOURCE_MD_SYNC_PASS",
+  "scope": "Additive Array-expression examples; no production execution",
+  "examples": 6,
+  "places": 12,
+  "cases": [
+    {
+      "id": "array_expressions__001_matrix_and_elementwise",
+      "source": "spec/examples/array_expressions/matrix_and_elementwise.lm3",
+      "title": "Матричное произведение и выбранные scalar cells",
+      "negative": false,
+      "note": "MatrixExpression получает a shape(2,3)=[1,2,3,4,5,6], b shape(3,2)=[7,8,9,10,11,12], e shape(2,2)=[1,2,3,4]. ElementwiseExpression, напротив, получает три согласованных матрицы ранга 2; SameCoordinates в приведённом ожидании — два вектора. Все аргументы имеют свои полные реальные описания.",
+      "entries": [
+        {
+          "call": "MatrixExpression\\run(a; b; e)",
+          "expected": {
+            "shape": [
+              2,
+              2
+            ],
+            "flat": [
+              59,
+              66,
+              142,
+              158
+            ]
+          }
+        },
+        {
+          "call": "ElementwiseExpression\\run(a; b; e)",
+          "expected": "при shape(2,2), a=[1,2,3,4], b=[5,6,7,8], e=[1,1,1,1]: flat [6,13,22,33], один проход"
+        },
+        {
+          "call": "SameCoordinates\\run([1 2 3]; [1 8 3])",
+          "expected": [
+            1,
+            0,
+            1
+          ]
+        }
+      ],
+      "sha256": "ebfb2495387be69d792e3d5ad069371366724d186305f748408d619ba326315c",
+      "markdown": "spec/examples/array_expressions/README.md",
+      "block": 1,
+      "line": 54,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "array_expressions__002_fused_update",
+      "source": "spec/examples/array_expressions/fused_update.lm3",
+      "title": "Один проход с реальным назначением и ленивой ветвью",
+      "negative": false,
+      "note": "values одномерен; scale=2, bias=1 доступны обычным динамическим связыванием. FusedUpdate сохраняет identity values. В ConditionalFusion получается только выбранная ветвь. Поздний обычный отказ fused-записи может оставить записанный префикс.",
+      "entries": [
+        {
+          "call": "FusedUpdate\\run([1 2 3])",
+          "expected": [
+            3,
+            5,
+            7
+          ]
+        },
+        {
+          "call": "ConditionalFusion\\run([1 2 3]; 1)",
+          "expected": [
+            2,
+            4,
+            6
+          ]
+        },
+        {
+          "call": "ConditionalFusion\\run([1 2 3]; 0)",
+          "expected": [
+            2,
+            3,
+            4
+          ]
+        }
+      ],
+      "sha256": "7a5d7aaeae6fe3a5e9794e0fe02d24458f6972c9dcc12493ace26a13ed7cd175",
+      "markdown": "spec/examples/array_expressions/README.md",
+      "block": 2,
+      "line": 101,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "array_expressions__003_place_rotation",
+      "source": "spec/examples/array_expressions/place_rotation.lm3",
+      "title": "Снимок значений перед перестановкой реальных переменных",
+      "negative": false,
+      "note": "Левая группа содержит настоящие PLACE. Все правые значения готовы до первой записи.",
+      "entries": [
+        {
+          "call": "Rotation\\run()",
+          "expected": [
+            2,
+            3,
+            1
+          ]
+        }
+      ],
+      "sha256": "a51738915161532e516643d23c8507c93eb1165653b39d47fe696d54c676f48d",
+      "markdown": "spec/examples/array_expressions/README.md",
+      "block": 3,
+      "line": 133,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "array_expressions__004_flat_depth",
+      "source": "spec/examples/array_expressions/flat_depth.lm3",
+      "title": "Один flat rank2 на глубинах 0, 1 и 2",
+      "negative": false,
+      "note": "Две формы typed initializer создают прямоугольные flat Array. Результат первого * — матрица, второго — вектор row-dot, третьего — координатное умножение. Полный scalar fuse у матриц требует depth=2. Числа int лишь делают эту демонстрацию проверяемой вручную; общие алгоритмы тип не сужают.",
+      "entries": [
+        {
+          "call": "FlatDepth\\run()",
+          "expected": [
+            {
+              "shape": [
+                2,
+                2
+              ],
+              "flat": [
+                19,
+                22,
+                43,
+                50
+              ]
+            },
+            {
+              "shape": [
+                2
+              ],
+              "flat": [
+                17,
+                53
+              ]
+            },
+            {
+              "shape": [
+                2,
+                2
+              ],
+              "flat": [
+                5,
+                12,
+                21,
+                32
+              ]
+            }
+          ]
+        },
+        {
+          "call": "FlatDepthFusion\\run()",
+          "expected": {
+            "shape": [
+              2,
+              2
+            ],
+            "flat": [
+              6,
+              13,
+              22,
+              33
+            ],
+            "output_passes": 1,
+            "result_arrays": 1
+          }
+        }
+      ],
+      "sha256": "65ce75dfa5caab86b1f22db522dee49ae6d33646df34b5ff3b98c191b9c30065",
+      "markdown": "spec/examples/array_expressions/README.md",
+      "block": 4,
+      "line": 159,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "array_expressions__005_inline_array_chains",
+      "source": "spec/examples/array_expressions/inline_array_chains.lm3",
+      "title": "Inline Array в обычной цепочке; один whole child",
+      "negative": false,
+      "note": "InlineChain сохраняет группировку ((a+b)+literal)+d: scalar a+b получается один раз. WholeChildChain имеет внешнюю длину 1; [arr2] содержит сам arr2 и не раскрывается. Удаление ненаблюдаемого промежуточного хранения требует доказанной эквивалентности identity, порядка эффектов и ошибок; переассоциация/FMA не разрешены автоматически.",
+      "entries": [
+        {
+          "call": "InlineChain\\run()",
+          "expected": [
+            17,
+            27
+          ]
+        },
+        {
+          "call": "WholeChildChain\\run()",
+          "expected": [
+            [
+              111,
+              222
+            ]
+          ]
+        }
+      ],
+      "sha256": "fc900d460ea7b3e1c584b56c5ce5b9359bba599e0050f6d2f1d64b70027f0f33",
+      "markdown": "spec/examples/array_expressions/README.md",
+      "block": 5,
+      "line": 186,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "array_expressions__006_inline_singleton_mismatch",
+      "source": "spec/examples/array_expressions/negative/inline_singleton_mismatch.lm3",
+      "title": "Отдельный отказ: whole child не означает singleton broadcast",
+      "negative": true,
+      "note": "Первое .+ допустимо, внешняя длина его результата равна 2. Единственный arr2 справа содержится во внешнем Array длины 1; это несовпадение выбранной оси. Группировщик не удаляет оболочку явного конструктора.",
+      "entries": [
+        {
+          "call": "InlineSingletonMismatch\\run()",
+          "expected": {
+            "diagnostic": "translator if known, otherwise interpreter when reached",
+            "catchable_lmx_exception": false
+          }
+        }
+      ],
+      "sha256": "bca65745bbee6f93104b425b9353bc2325bf856ad5f604b1d683c77b837b5a81",
+      "markdown": "spec/examples/array_expressions/README.md",
+      "block": 6,
+      "line": 214,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    }
+  ]
+}

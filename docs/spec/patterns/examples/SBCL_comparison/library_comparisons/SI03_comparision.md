@@ -59,7 +59,6 @@ FxSort:
                     else:
                         selected := FxSeqRead\read(current; right)
                         right += 1
-                    ---
                     FxSeqStore\write(scratch; at; selected)
                     at += 1
                 start := end
@@ -159,7 +158,7 @@ FxUnique:
 
 | Язык | Без пробельных | Непустые строки | Все Unicode-символы |
 | --- | ---: | ---: | ---: |
-| LMX | 1799 | 89 | 3327 |
+| LMX | 1796 | 88 | 3303 |
 | Common Lisp | 1218 | 43 | 1845 |
 
 Это размеры первичных тел, а не замер производительности. [Общие LMX определения](../source/implementations/lmx/shared_dependencies.lmx), [Common Lisp runtime](../source/implementations/common-lisp/runtime.lisp) и [реестр замыкания](../validation/implementation_dependencies.json) учитываются отдельно. Повторно прибавлять общие определения к каждой строке нельзя. Сигнатуры и admission LMX шире общего профиля SI05/SI06; их стоимость оставлена видимой.
@@ -170,7 +169,7 @@ FxUnique:
 
 ## Происхождение LMX
 
-- `FxSort` — [patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx](../../../LMX_Fn_Receivers/src/corePerlExamples.lmx), SHA-256 `37eaee6a42aa868c91832a98e74183a9ad80f6761a50a7cebddc900a265b2d4a`.
+- `FxSort` — [patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx](../../../LMX_Fn_Receivers/src/corePerlExamples.lmx), SHA-256 `b61240a2385cf999a9d6291f6e87892cf19be32f1aeebbae7d3c6d8e6fb1e837`.
 - `FxUnique` — [patterns/LMX_Fn_Receivers/src/corePerlExamples.lmx](../../../LMX_Fn_Receivers/src/corePerlExamples.lmx), SHA-256 `8d4a6d2ed83e3d0ba9c278a36b58bfde1d88cf0083756099a9d7da24b7283cb8`.
 
 ## Первичные источники Common Lisp

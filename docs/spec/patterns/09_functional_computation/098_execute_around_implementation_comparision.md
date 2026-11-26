@@ -27,7 +27,6 @@ FxAround:
         resourceArgs[0] := FxApply\apply(acquire; ())
         finally:
             FxApply\apply(release; resourceArgs)
-        ---
         return: FxApply\apply(action; FxAppend\append(resourceArgs; arguments))
 ```
 
@@ -106,7 +105,7 @@ object Around {
 
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX — общая реализация | **316** | 16 |
+| LMX — общая реализация | <span style="color:#176233"><u>313</u></span> | 15 |
 | Haskell | 390 | 11 |
 | Scala | 836 | 36 |
 
@@ -139,4 +138,4 @@ Both complete LMX client styles are counted in full. Foreign controls retain the
 
 ## Проверка
 
-[Проверка публикации](VALIDATION_2026-11-23.md) проверяет обе записи и зеркала. [Acceptance cases](acceptance_cases.json) — спецификация ожидаемых наблюдений, а не LMX execution receipt.
+[Проверка публикации](VALIDATION_2026-11-26.md) проверяет обе записи и зеркала. [Acceptance cases](acceptance_cases.json) — спецификация ожидаемых наблюдений, а не LMX execution receipt.

@@ -16,7 +16,7 @@ is referred to the author with the competing rules and a minimal differing examp
 merge always consume ordinary CODE arguments, including when written inside DATA; their common
 W/E argument algorithm applies everywhere. This supersedes the earlier role-dependent source
 reading. The field-stream rules control any conflicting earlier composition example. [P01](#uninit-record-control) is resolved:
-`uninit:T` has a type code and zero payload, graph assignment replaces fragments, and the full literal
+`uninit:T` has a TypeRef and zero payload, graph assignment replaces fragments, and the full literal
 source graph includes both all written receivers and direct primitive leaves. Replacing `uninit:T` with `{T value}` cannot preserve a preexisting T-cell address, because `uninit:T` has zero payload.
 
 <a id="scope"></a>
@@ -44,14 +44,22 @@ form another program graph. Explicit copy/merge results are normal requested val
 <a id="lmx"></a>
 ## 2. The `Lmx` structure
 
-Structures and Arrays share a flat `parent/length/storage` header, without native, capacity,
-or an embedded VoidArray. In L2 order: `Lmx@: parent`, `size_t: length`, `@: storage`.
+Every initialized Array has one mandatory primary `Lmx` descriptor. Structures
+and Arrays share its flat `parent/length/storage` header, without native,
+capacity, rank/extents, or an embedded VoidArray. The canonical type description
+contains exactly the normalized complete LEFT requirement; it does not acquire
+extra axes or sizes from an initializer. Only a reserve beyond length needs a
+compact capacity entry. Capacity equal to length means no secondary descriptor,
+including for nD Arrays ([§6.1](#array-capacity)).
+In L2 order the primary fields remain `Lmx@: parent`, `size_t: length`, `@: storage`.
 These are `Lmx *`, `size_t`, and `void *`; the typed requirement is in the head,
-not an initializer naming a type.
-A reference points to the header's start; the code of the record's type stands in the four bytes
-before it ([§3](#value-record)). Structure and Array<@> store void* elements and are fully
-interchangeable in indexing, named paths, admission, copying, and execution.
-Numeric Array<T> stores T itself; the code of the Array's record tells the element type.
+not an initializer naming a type. A reference points to the header's start.
+Immediately before it is a TypeRef: the direct address of the canonical system
+Structure describing the complete type ([§3](#value-record)). This representation
+applies to every type, including primitives, references and Arrays.
+Structure and Array<@> store `void *` elements and are interchangeable in indexing,
+named paths, admission, copying and execution. Numeric Array<T> stores T densely;
+its descriptor's TypeRef supplies the actual element requirement and storage layout.
 
 The source shape logically determines parent and length; the remaining written program material
 is represented through the Lmx pointer array and the typed records it references. This is compatible
@@ -75,7 +83,7 @@ The source graph retains **all receivers as written**, including declarations, m
 namespace; neither preparation nor C emission replaces a receiver with its computed result.
 Terminal primitive declarations are included in this full literal source reflection in their own
 `{type value}` form at the address held by the Lmx cell, with names in the ordinary name table.
-An uninitialized leaf has only its type code and zero value bytes. A form whose RHS still requires
+An uninitialized leaf has only its TypeRef and zero value bytes. A form whose RHS still requires
 evaluation retains its written form; typed-leaf representation does not authorize evaluating it away.
 A primitive cell needs no extra leaf wrapper. Names reside in the common canonical
 string-address table, not in Lmx. The selected Structure performs the code role, and its actual parent performs the data role ([§11](#call-receivers)).
@@ -109,9 +117,9 @@ a clean graph. The walker executes admissible L3; explicit compilation updates m
 See [semantics](LMX_semantics.en.md#source-codec).
 
 <a id="get-descriptor"></a>
-### 2.2. descriptor and actual header fields
+### 2.2. descriptor: value fields and system type descriptions
 
-`sys\descriptor(S)` returns an ordinary Structure of S's live field addresses. Without an argument it
+`sys\descriptor(S)` with an ordinary Structure/Array value returns an ordinary Structure of S's three live primary field addresses. Without an argument it
 selects the current launch's data (the parent of the executed Structure), including inside nested control bodies. Code is explicit.
 
 ```text
@@ -125,19 +133,57 @@ selects the current launch's data (the parent of the executed Structure), includ
 Machine types are Lmx**, size_t*, void**. `\(d\length) := n` changes S.length;
 `d\length := p` changes only the pointer in d. This is neither a copy, proxy, nor write-back.
 Writing length itself allocates no storage; sys\resize performs coordinated resizing.
-Native and capacity are absent from the result because they are not header fields. Obtaining descriptor
+Native, capacity, and rank/extents are absent from the result because they are not header fields. Obtaining descriptor
 does not extend S's lifetime. The first field's address may equal S, but typed dereferencing does not
 classify it as another standalone Lmx. Pointer depth is arbitrary and finite.
+
+The more specific canonical system-TYPE contract accepts a TypeRef:
+
+```lmx
+@: description sys\descriptor(sys\typeof(obj))
+```
+
+`sys\typeof(obj)` already returns the direct reference to the canonical immutable
+system Structure describing the complete type. `sys\descriptor` returns that
+**same Structure**, without another lookup by integer, a copy, an address tuple
+for obj or a per-Array allocation. The same contract serves all primitive,
+reference, Array and callable type descriptions, including dynamically resolved
+requirements. It takes precedence when the argument is such a canonical TYPE
+description. An ordinary user Structure with similar fields or a matching name
+is not reclassified as a system type, and an arbitrary integer is not an address.
+The ordinary object overload still returns the three live primary-field addresses.
+The no-argument form retains its current-DATA/object contract.
+
+The description exposes the complete normalized LEFT requirement, its storage
+contract, declared rank and explicit axis constraints, derivation rules and
+compatibility. It contains no initializer-specific dimensions or reserve amount.
+For `int[]`, a current extent comes from the object's length. For `int[][3]`, one
+missing extent can be derived from length and 3 when the quotient is integral.
+For `int[][]`, two missing extents stay unknown even if row syntax was used to
+initialize the value. Reading a description does not invent zeros or factors.
+
+`sys\capacity(obj)` reports the actual instance capacity through the common
+optional association or length; the type description states that common policy.
+Capacity equal to length requires no second descriptor even after this query.
+A saved TypeRef remains the same immutable description; reserve/resize do not
+change it. Querying a pointer/place retains its ordinary argument meaning and
+adds no recursive dereference. Type descriptions themselves use a finite
+bootstrapped meta-description, with ordinary graph cycles where needed:
+`sys\typeof(sys\typeof(obj))` does not allocate an infinite chain.
+[Canonical TYPE contract](ARRAY_STORAGE.en.md#type-descriptor).
+The TypeRef migration is **DOC_SPEC_ADDITION_ONLY**; production acceptance **NOT_RUN**.
 
 <a id="header-receivers"></a>
 ### 2.3. Reading the header and service tables
 
 parent(S), length(S), sys\storage(S) directly read parent, length, storage.
 sys\native(S) returns the ordinary native descriptor from call tables, including signature variants,
-or 0 when absent. sys\capacity(S) reads capacity in elements from the arena table.
+or 0 when absent. sys\capacity(S) consults the existing optional capacity
+association: it reads that entry when present and otherwise returns length.
+The query allocates no descriptor or table row and does not select a new type.
 These queries construct no auxiliary descriptor. Every zero-argument form selects current data;
 code requires an explicit argument. R0 has no artificial DATA for these queries. Resolved system queries retain their contracts in DATA as well. A path such as `D\for` selects an actually stored field; path lookup does not execute its source or reclassify a receiver application as a declaration.
-Ordinary paths S\parent, S\length, S\storage, and S\native select written fields without pseudo-fields.
+Ordinary paths S\parent, S\length, S\storage, and S\native select written fields without pseudo-fields. `S\rank` and `S\shape` likewise gain no service meaning.
 
 The selected Structure performs CODE and its actual parent performs DATA ([§11](#call-receivers));
 `node` is the reserved lexical operation and retains the context needed for that access.
@@ -164,43 +210,84 @@ elements. Reuse existing addressing; no reverse-index table or per-write mainten
 <a id="value-record"></a>
 ## 3. Value record: the type beside the value
 
-**Physical record contract.** Type and value are stored in one record and obtained from that
-record. Arena address ranges establish ownership; they do not determine a value's type.
+**Physical record contract.** Every graph value record has the form
+`{TypeRef value}`. TypeRef is the direct reference/address of the canonical
+immutable system Structure describing its complete type. It is not an integer
+counter, registry index or encoded tag. Arena intervals establish ownership;
+they do not determine type. Primitive, reference, Structure, Array and callable
+requirements all use this same type-description mechanism.
 
-A value that a Structure or `Array<@>` slot, a reference or `parent` refers to is a **record**: `int type`, the code of its physical type, followed by exactly the payload size defined for that type. A payload may be a number, a reference, or the `parent/length/storage` descriptor of a Structure or an Array. It may also have size zero: `uninit:T` is a type code with no value bytes and no reserved T storage ([§3.1](#uninit-record-control)). The elements of an Array and the slots of a Structure lie in the storage that the descriptor names, not in the record. The size of a record is `sizeof(int) + size(type)`; for `uninit:T`, `size(type) = 0`. No record reserves room for the largest kind of value, and the layout does not follow the rules of a C `union`.
+A payload is exactly the storage required by its described type: for example a
+number, a reference or a Structure/Array's three-field Lmx. Elements and slots
+remain in the separate backing named by Lmx.storage. The logical record size is
+`sizeof(TypeRef) + payload_size(type)`; it is neither a largest-value reservation
+nor a C union. `uninit:T` contains only its TypeRef to the absence description:
+zero payload bytes and no reserved future T cell ([§3.1](#uninit-record-control)).
 
-The terminal declaration `int: x 10` is fully present in the graph as the Structure element's record «type `int`, value 10», with the name `x` held by the ordinary «address -> name» row. This is the declaration's direct physical encoding, not its deletion from the source graph. The declaration is recovered unambiguously from the type, the value and the name, so a path to such a field has no step for the receiver: `S\x`, not `S\int\x` ([semantics](LMX_semantics.en.md#primitive-declaration-is-the-element)).
+The terminal declaration `int: x 10` remains directly represented by the record
+«TypeRef for int, value 10», with x in the ordinary address-to-name table. A path
+selects `S\x`, not `S\int\x`; this is the declaration's physical encoding, not
+deletion of its source ([semantics](LMX_semantics.en.md#primitive-declaration-is-the-element)).
 
-For a record with a value payload, the ordinary graph pointer addresses that value and its type code lies in the four bytes immediately before it. Reading an unknown physical type obtains its code and then follows that type's payload size. An `uninit:T` record has the code alone: there is no T cell to load, store or dereference, and no stable payload-start address is promised for its later replacement. This does not introduce a wrapper or a new public absent-value pointer ABI. The following address example concerns a record that has value bytes:
+For a genuine initialized record, p points to its first payload byte. The prefix
+cell is at `byteAddress(p) - sizeof(TypeRef)`; loading that cell once yields the
+address of the system type Structure. The following is explanatory C/ABI notation,
+not an additional LMX type spelling:
 
-```text
-p = storage[index]     # the slot: the address of the value
-code at p - 4          # the code of the physical type
-value at p             # the payload bytes of this initialized record
+```c
+typedef const Lmx *TypeRef;
+TypeRef type = *(TypeRef const *)
+    ((unsigned char const *)p - sizeof(TypeRef));
 ```
 
-**No operation learns a type or reads a value by classifying an address.** Reading and writing a slot, loading a value of a type unknown at translation, `sys\typeof`, indexing, dereferencing, admission by `satisfies`, copying, `merge` and collection take the kind and the size of a value from the code in its record. The arena's index of address intervals stays only for ownership: which arena and which chunk an address belongs to.
+Subtract the size of the actual stored pointer type, not a fixed four bytes.
+`sizeof(size_t)` is interchangeable only where the target ABI proves equal widths.
+The prefix-cell address and the descriptor address loaded from it are different.
+A bare field expression is not guaranteed to be an address: `(@S\field)` explicitly
+addresses a ready graph place. Computed declaration paths, reference-variable
+cells and ordinary native locals keep their separate address contracts (§17).
+The formula must not be applied to a native local or a dense Array<T> element:
+neither has its own graph-record prefix. An uninitialized record has no p naming
+a T payload; inspecting its TypeRef does not license reading nonexistent T bytes.
 
-**Alignment** (the author left the choice to the implementation: optimal and universal, not by `union` rules). A value stands at an address aligned as its type requires, but not less than four; the code occupies the four bytes immediately before it; padding, where needed, lies between records. So the code and the value are read and written by ordinary typed, aligned accesses on every platform, not by copying bytes, and the descriptor fields keep their natural alignment. With eight-byte pointers a record of `int` takes 8 bytes, a record of `double`, `size_t` or a reference 12 bytes and a step of 16, a descriptor 28 bytes and a step of 32. An `uninit:T` record contains only its four-byte type code; allocator alignment padding is not a T payload or a promise of room for a future value.
+**Alignment.** Align the payload for both its actual type and TypeRef, so that
+both the immediately preceding pointer and payload support ordinary typed aligned
+accesses. Padding goes before the prefix, between records, never between TypeRef
+and payload. On a target with eight-byte TypeRef, four-byte int and eight-byte
+reference/double/size_t, an int record has 12 logical bytes (typically a 16-byte
+step), a reference/double record has 16, and a 24-byte Lmx record has 32. An
+uninit record has only eight logical bytes. Actual allocation steps obey the next
+record's alignment; allocator padding is not payload or future initialized storage.
 
-The physical inventory includes number primitives, the word, references, “T without
-initialization”, ordinary and immutable Structures, and Arrays with their element types
-([kernel specification §2.2](kernel-implementation.en.md#arena)). A user model produces no physical
-type code of its own: `satisfies` establishes model compatibility. Ordinary and immutable
-Structures differ by code; an already published ordinary Structure cannot become immutable in
-place. There is no executable-fn result category or separate sub kind. A named positional signature requirement
-is interpreted by the common requirement mechanism, not inferred from a similar-looking body.
-The flat Lmx descriptor is common to Structure and Array; there is no embedded VoidArray.
+`sys\typeof`, indexing, dereference, admission, copying, merge and collection
+obtain complete type and payload layout from the record's TypeRef. Dense numeric
+storage remains untagged T; native locals use their call/place type contract.
+The canonical description includes qualifications and uninitialized distinctions.
+A named model or a similar field layout does not by itself change an object's type:
+a complete TYPE requirement is normalized and interned when consumed, and a ready
+value is admitted by directed `satisfies` without retagging. Ordinary/immutable
+Structure requirements have distinct descriptions; an already published ordinary
+Structure cannot become immutable by relabeling. There is no separate executable-fn
+or sub storage category, nor an embedded VoidArray.
 
-A numeric `Array<T>` stores T itself, densely and without codes; the code of the Array's record tells the element type. The address of such an element is a raw L2 address, not a pointer to a record. A typed native local or a temporary result is an ordinary machine value and is not packed into a record.
+The normalized complete LEFT determines TypeRef. Equivalent `int[][]` and
+`int[](2)` share it; `int[]` arrays of lengths 2 and 3 share it; `int[2][3]` and
+`int[3][2]` do not. Names, initializer rows, actual length and reserve are not
+interning parameters. Explicit `int[N]` evaluates N once and reuses the canonical
+description for the resolved requirement. Type descriptions have a finite
+bootstrapped meta-description; their own type references may form ordinary graph
+cycles. Stable references remain valid while any live record, saved TYPE value
+or native binding needs them. No bit flags or second type interner are introduced.
 
-For every primitive type T, an omitted initializer has the distinct type code `uninit:T`;
-the language-level place still has its declared T requirement. The record contains that code alone,
-with `sizeof(value) = 0`. Absence is written `nil: T`, or `nil` where its type is known;
-initialization is distinct from truthiness and from the input `required` selection rule.
+For every primitive T, omitted initialization retains the language place's T
+requirement while the graph record refers to `uninit:T`. Absence is `nil: T`, or
+`nil` where T is known; it is distinct from truthiness and input `required` selection.
+The [migration guide](../TYPE_REFERENCES_CHANGE.md) identifies old int-code sources
+and integration gates. Their existing receipts do not validate this new ABI;
+production implementation and parser/runtime acceptance remain **NOT_RUN**.
 
 <a id="uninit-record-control"></a>
-### 3.1. P01 resolved — a type code without a value
+### 3.1. P01 resolved — a TypeRef without a value
 
 **P01 resolved.** An uninitialized record has no value payload and reserves no
 T cell. The former nested outer/inner record, preallocated T storage and stable value-cell retagging
@@ -214,9 +301,9 @@ the graph fragment held there. For example:
 
 | Operation or state | Graph fragment at `S\novalue` |
 |---|---|
-| Source declaration `int: novalue` inside S | `{uninit_int}`: the code only, no value bytes |
-| A call's local `novalue := 5` | Source stays `{uninit_int}`; the frame holds the assigned value |
-| Explicit graph write `S\novalue := 5` | The structural place now holds the fragment `{int 5}` |
+| Source declaration `int: novalue` inside S | `{TypeRef(uninit:int)}`: the type reference only, no value bytes |
+| A call's local `novalue := 5` | Source stays `{TypeRef(uninit:int)}`; the frame holds the assigned value |
+| Explicit graph write `S\novalue := 5` | The structural place now holds the fragment `{TypeRef(int) 5}` |
 
 A fresh structural access after the explicit write observes the replacement. This is not an update
 of a nonexistent T payload and does not promise that a previously obtained raw address follows the
@@ -236,14 +323,14 @@ The anchor is retained for existing links; no author question remains here.
 <a id="pool"></a>
 ## 4. Allocation of records
 
-Every arena has one stream of records “type code, value”: records are issued successively from
+Every arena has one stream of records “TypeRef, value”: records are issued successively from
 its chunks so a Structure's descriptor, slots, and fields can be placed together. A chunk is never
 reallocated; growth adds a chunk, and issued record addresses remain stable until their ownership
 is released. There are no chunks by type and no typing by address. An interval index remains only
 for ownership, attachment, and collection. Earlier typed-pool transition steps are historical
 implementation provenance, not an alternative layout contract.
 
-In a graph Array, `void *storage` holds the address of the element storage. For a numeric `Array<T>` it is a dense block of T; L2 obtains a pointer to the actual element type from the code of the Array's record, not by classifying the storage address. A pre-existing block of `void *` slots cannot be read as an arbitrary `T` array merely by casting its pointer. Addressable graph-reference slots retain their own `void **` and stored-value conversion contract.
+In a graph Array, `void *storage` holds the address of the element storage. For a numeric `Array<T>` it is a dense block of T; L2 obtains a pointer to the actual element type from the TypeRef of the Array's record, not by classifying the storage address. A pre-existing block of `void *` slots cannot be read as an arbitrary `T` array merely by casting its pointer. Addressable graph-reference slots retain their own `void **` and stored-value conversion contract.
 
 <a id="method-array"></a>
 ## 5. Native entry and Array
@@ -253,17 +340,104 @@ Native is an ordinary descriptor in call tables containing entry variants, signa
 <a id="arena"></a>
 ## 6. Arena
 
-Each Message owns one logical arena, which may contain multiple chunks. `lmx_arena_attach` transfers ownership without moving addresses: the chunks of the attached arena become chunks of the receiver, their records keep their addresses and codes, and nothing is registered anew to tell their types. One arena is never accessed from several threads, so the codes and the allocation need no synchronization. `mark/revert` rolls back a failed copy or `merge` construction. Simple mode retains address stability but does not run GC. An independent immutable branch may remain in its owner's arena under the [L3 contract](LMX_semantics.en.md#eternal); a separate pool alone grants no such right.
+Each Message owns one logical arena, which may contain multiple chunks.
+Within a common canonical type context, `lmx_arena_attach` transfers donor chunks
+without moving record addresses or TypeRefs. It retains the metadata ownership
+needed by those references after the donor is released and transfers any optional
+capacity association. There is no type registration by address ranges. A different
+context or process must intern full descriptions and relocate type references as
+part of restoration, not retain stale numerical addresses. One arena is not accessed
+concurrently by several threads. `mark/revert` rolls back failed copy/merge
+construction; simple mode retains stable addresses without GC. Independent immutable
+branches follow the [ordinary ownership contract](LMX_semantics.en.md#eternal).
+Type metadata must outlive every dependent record, retained token and native binding.
 
 <a id="array-capacity"></a>
-### 6.1. Common variable-size Arrays and capacity
+### 6.1. Array requirements and optional reserve information
 
-Allocation and resizing use the common dynamic-array mechanism, including service arrays.
-The arena stores “descriptor address → capacity” in elements. Neither Lmx nor a hidden prefix contains
-capacity; remove a separate VoidDynamicArray family introduced merely for growth.
-Maintain the table on allocation/resizing/release, not on every indexed access.
-Existing payload cells and canonical strings do not move merely because an Array grows; this requires no separate Array per cell. Explicit graph-fragment replacement is a different operation and promises no raw value-address equality with the displaced fragment.
-Restoration may begin with capacity = length.
+Every initialized Array has one mandatory primary Lmx(parent/length/storage).
+Its payload size, alignment, identity and element stride do not change for reserve
+management. The TypeRef describes exactly the complete normalized requirement used
+by its constructor. Neither capacity nor initializer-specific shape selects another
+type. The existing primary has no new field, hidden prefix or shape pointer.
+
+| Storage state | Capacity source | Per-Array secondary descriptor |
+| --- | --- | --- |
+| `capacity = length` | Current length | None, including no hidden shape entry. |
+| `capacity > length` | Existing optional capacity association | Compact capacity-only entry. |
+
+**Capacity equal to length means no secondary descriptor.** This applies to empty,
+1D and nD Arrays, ordinary Structure/reference Arrays and service arrays. Capacity
+below length is invalid. `sys\capacity` consults the optional association or returns
+length without allocation; all Array types use this common policy. Reserve changes
+neither TypeRef nor its immutable description. There is no reserve-specific type.
+
+TYPE metadata contains declared rank and explicitly specified dimensions only.
+Equal complete requirements share one description: `int[][]` equals `int[](2)`,
+but `int[2][3]` differs from `int[3][2]` and `int[][3]` differs from `int[][]`.
+All use one flat C backing. `int[]` gets its current extent from length; one missing
+axis can be derived from length divided by a positive product of known extents
+when exact. Multiple missing axes stay unknown. A full zero shape such as
+`int[2][0][3]` is retained by its written TYPE; length zero cannot recreate it.
+`int[0][]: []` and `int[][0]: []` are valid with incomplete shape, while
+`int[2][0]: []` has fully known dimensions. No source rows or per-object shape
+record fill the missing dimensions after construction.
+
+Explicit initializer rows are checked for rectangularity, then flattened in order.
+`int[][]: [1 2 3; 4 5 6]` validates two rows of three but retains TYPE `int[][]`,
+with two unknown extents. `int[][]: [1 2 3 4 5 6]` is also valid flat storage.
+`int[][3]: [1 2 3 4 5 6]` has different TYPE information: its missing extent is
+uniquely 2. These values may contain the same ordered data without having the same
+type. `int[][3]: [1 2 3 4 5]` is invalid. Contradictory explicit rows, negative or
+noninteger size expressions and impossible length/products are errors. Missing
+shape is an error only at an operation needing information that TYPE plus length
+cannot determine; ordinary flat operations remain available.
+
+The common parser handles every full `[sizeExpression]`; the TYPE consumer obtains
+it once in lexical order. `T[](N)` repeats unspecified axes, and `T@(N)` repeats
+pointer levels. A declaration without an initializer stays uninit and allocates no
+Array or capacity entry. VALUE/PLACE indexing and indexed callable receiver heads
+retain their roles: `Struct[2]:= [a b]` is assignment, not a declaration colon.
+[Complete sized-axis and derivation contract](ARRAY_STORAGE.en.md#sized-postfix).
+
+Compatibility is directed admission between complete descriptions, with declared
+rank/size constraints and value-dependent checks where applicable. A general flat
+consumer can accept compatible dimensions without erasing the actual TypeRef.
+Ready-value admission does not copy or retag an Array to the receiving requirement.
+Pointer equality means the same canonical type, not every permitted admission.
+A proof concerning mutable length is not a permanent result of a type-pair check.
+
+`sys\reserve` preserves length. It creates a capacity entry only when capacity
+exceeds length; returning to capacity=length removes that entry. Resize respects
+all fixed TYPE constraints and updates length/storage and optional reserve coherently.
+A shrink keeping a larger backing has reserve; trim to length has none. These changes
+never alter TypeRef solely because length, reserve or initializer knowledge changed.
+A direct raw header write must preserve the same invariants. Existing effects and
+resource failures do not acquire a new general rollback guarantee.
+
+Copy preserves the normalized type, values and aliases under its usual graph rules.
+Restoration interns the same complete description in its destination context and
+relocates TypeRefs; numerical addresses need not match another context/process.
+Reserve may be discarded without changing the normalized type. Attach within the
+common context preserves addresses and transfers an existing capacity entry.
+Release removes that entry before identity reuse. A cached native storage pointer
+or length-dependent fact still needs a valid lifetime/proof after mutation, although
+the canonical TypeRef itself is unchanged. No global invalidation is introduced.
+
+`sys\descriptor(TypeRef)` returns the same canonical description;
+`sys\descriptor(ordinary Array/Structure)` returns three primary field addresses
+([§2.2](#get-descriptor)). Neither exposes or creates an instance capacity record.
+One `arr[k]` is flat access. Complete `arr[i][j][k]` coordinates require enough
+TYPE/length information to obtain the offset in that same block. Ordinary paths
+`struct\struct2\field` and `struct[i]\[j]`, or `struct\struct2\field[k]` and
+`struct[i]\[j]\[k]`, select the same fields when the indices match. They introduce
+no array-of-arrays kind. [Operation depth](OPERATOR_DEPTH.en.md#evaluation) consumes
+the dimensions actually determined by TYPE and length.
+
+This representation and the TypeRef migration are **DOC_SPEC_ADDITION_ONLY**;
+production P0/translator/runtime acceptance is **NOT_RUN**. Historical code and
+host-model receipts are not evidence for the new pointer-width prefix.
+[Migration and remaining source work](../TYPE_REFERENCES_CHANGE.md).
 
 An L3 Array-element pointer has its own type with an Array-descriptor reference and explicit index.
 It stores no storage address: access derives the element address from the current header and final offset.
@@ -316,7 +490,7 @@ shutdown successful.
 
 Each Thread owns an `LmxPost`. `staged` prepares the current turn's messages, a successful boundary publishes them to `outbox`, and `inbox` holds admitted but untaken messages. An `inbox` element is the inseparable pair `[target, source_arena]`: the producer does not mutate the recipient arena; its owner attaches the donor before releasing the target. Failure retains the pair. Admission order is FIFO.
 
-`inbox` is a ring over a common variable-size Array with external capacity. One reentrant LmxPost monitor covers admission, take, and count; outbox/staged remain owner-local. Post uses the same mailbox; see the [language API](LMX_semantics.en.md#thread-message-api).
+`inbox` is a ring over a common variable-size Array with the ordinary compact/reserved capacity contract; no auxiliary exists when capacity equals length. One reentrant LmxPost monitor covers admission, take, and count; outbox/staged remain owner-local. Post uses the same mailbox; see the [language API](LMX_semantics.en.md#thread-message-api).
 
 <a id="own"></a>
 ## 10. Structure execution
@@ -680,7 +854,7 @@ pointer types are introduced. Service C functions, the bridge and the `call` dis
 service locals: the language's sources are determined by the program location of the call.
 
 An ordinary native local has no arena header `[type][value]` ([§3](#value-record)): its type cannot be read
-from the four bytes before its address. The type, the access mode, the initialization state and the applicable restrictions of the place follow
+from a TypeRef prefix before its address. The type, the access mode, the initialization state and the applicable restrictions of the place follow
 the common place representation and the call contract. The four combinations -- native to native, native to walker,
 walker to native, walker to walker -- give one observable behaviour: `x` has one logical type `T`, and a permitted
 write changes the same logical place. For a run-time target unknown at translation the existing
@@ -860,7 +1034,7 @@ namespace receiving a stream; copied and imported methods retain their correct l
 DATA/parent relationships. Serialization preserves the written receiver, not an implicit
 expanded replacement. [Composition contract](LMX_semantics.en.md#composition).
 
-For [group positional assignment](LMX_semantics.en.md#group-assign), `(a b) := copy(Pair)` and `(a b) := (copy(Pair))` consume the same two emitted fields when the source and targets satisfy the contract. The collector is optional for this sequence consumer. The grouper preserves current-level items; application adaptation packages the left PLACE sequence as one actual. Three sibling RHS groups remain three Structure values, not a recursively flattened stream. Obtain and retain all RHS values and check their count before the first target write; RHS names do not reorder targets and previous RHS effects are not rolled back. A function-returned Structure remains one value. Scalar `ptr := (copy(Pair))` still receives one collected Structure.
+For [group positional assignment](LMX_semantics.en.md#group-assign), `(a b) .: copy(Pair)` and `(a b) .: (copy(Pair))` consume the same two emitted fields when the source and targets satisfy the contract. The collector is optional for this sequence consumer. The grouper preserves current-level items; application adaptation packages the left PLACE sequence as one actual. Three sibling RHS groups remain three Structure values, not a recursively flattened stream. Obtain and retain all RHS values and check their count before the first target write; RHS names do not reorder targets and previous RHS effects are not rolled back. A function-returned Structure reaches the method as one Array value; the `.:` consumer reads its immediate elements when it is the sole RHS Array. Ordinary assignment validates the shape and all target admissions before storing. Scalar `ptr := (copy(Pair))` still receives one collected Structure.
 
 <a id="satisfies"></a>
 ## 14. satisfies
@@ -908,7 +1082,7 @@ engine with two requirement rules; existing boundaries between interface checks,
 <a id="gc"></a>
 ## 15. Collection
 
-GC belongs to the arena. The kind and the size of every traced value come from the code of its record ([§3](#value-record)). Roots include Message, live graph, mail, execution state, and `Thread.children`; Thread state retains that List independently of source fields. From a live value, collection also follows an established `satisfies` correspondence to its required Structure: replacing a graph field does not release the model while that value still needs its admission. This rule does not retain a transient admitting frame; retirement of the frame removes a record that depends on it. These are address-proof dependencies, not hidden graph fields. The owner retains constructed `independent: immutable` branches until its arena is destroyed. Simple mode does not collect. Unloading a later module needs a separate contract and is not invented here.
+GC belongs to the arena. The kind and the size of every traced value come from the TypeRef of its record ([§3](#value-record)). Roots include Message, live graph, mail, execution state, and `Thread.children`; Thread state retains that List independently of source fields. From a live value, collection also follows an established `satisfies` correspondence to its required Structure: replacing a graph field does not release the model while that value still needs its admission. This rule does not retain a transient admitting frame; retirement of the frame removes a record that depends on it. These are address-proof dependencies, not hidden graph fields. The owner retains constructed `independent: immutable` branches until its arena is destroyed. Simple mode does not collect. Unloading a later module needs a separate contract and is not invented here.
 
 <a id="special"></a>
 ## 16. Special L2 operations
@@ -947,7 +1121,7 @@ are not calls. A place-declaration receiver supplied as a CODE argument is prese
 material under §11, without executing its initializer. These distinctions follow one P0 parser
 and the resolved head's contract.
 
-Initial `@: p` declares an absent reference with the corresponding uninitialized type code and
+Initial `@: p` declares an absent reference with the corresponding uninitialized TypeRef and
 no value payload; `@: p 0` instead supplies an initialized null reference. A later address write
 does not retroactively impose a model requirement. Pointer depth `@ⁿ:`
 has no arbitrary numerical cap. An ordinary Structure call used as an expression may return the
@@ -964,10 +1138,7 @@ A reference field retains its exact pointer type; a primitive uses its typed cel
 
 Prefix `\p` follows a reference; `p\field` accesses either a graph field or an explicitly imported machine ABI according to `p`'s category. `@array[i]` addresses the actual backing element. Native L2 code adds no automatic bounds check; checked access belongs to L3, and the interpreter executes L2 code with the same checks. Address operations neither bypass `const`/`immutable` nor extend target lifetime. A write to a protected place that the translator sees is refused at translation time; at run time native L2 code does not check it, and the result of such a write is undefined.
 
-L2 indexing `[]`, `[][]`, `[][][]` of arbitrary finite rank, including `array[-1]`, computes an offset
-without length, sign, arena, or former-field checks. Reads, writes, and address-taking share one path.
-In L3 adjacent indices reduce to one linear index and one check against current length;
-per-coordinate checks, temporary rows, and intermediate descriptors are unnecessary.
+Ordinary Array indexing has no from-end interpretation: `array[-1]` is not a valid way to select the last element. Negative relative offsets should be expressed through a suitable pointer, for example `\(p - 1)`, under its ordinary lifetime/allocation contract. L3 and interpreted L2 apply the existing final-element bounds check. Native L2 omits those automatic checks; their absence does not make an invalid Array access valid. A statically known invalid Array index may be diagnosed during preparation, without adding a native runtime sign/bounds check. A negative slice bound is different: `array[-1:]` selects the last element through the [slice contract](TERNARY_AND_SLICES.en.md#negative-index). Reads, writes and address-taking retain one common address calculation; no per-coordinate bounds checks or hidden row descriptors are added.
 
 <a id="lowlevel-array"></a>
 ## 19. Raw C storage
@@ -1030,12 +1201,13 @@ is the selected method's actual parent, checked against an ordinary structural h
 ```lmx
 operand_template:
     @: left
+    int: depth
     @[]: right
     const: int: PASS_ARGS_AS_IS
     const: int: PRIORITY
 ```
 
-All four fields must actually exist. `PASS_ARGS_AS_IS` must be a ready constant int 0 or 1;
+All five fields must actually exist. `PASS_ARGS_AS_IS` must be a ready constant int 0 or 1;
 `PRIORITY` must be a ready constant integer on the common expression scale. Neither missing field
 receives an implicit default from the template or from `satisfies`. Mode and priority are
 independent. The method declares its ordinary result, for example `return: int` or `return: @`;
@@ -1055,9 +1227,9 @@ three right values. In prefix `(foo 1 2 3 4)` no left actual is written; all fou
 and ordinary defaults/requiredness determine whether omission is admissible. No `has_left` marker
 or implicit shift of the first right value is added. An Array or Structure in a whole-value position remains one item under the receiving contract; dense numeric Array storage is not reinterpreted as `Array<@>`.
 
-Expression is the ordinary Structure graph interpreted with a [structural grouper](LMX_semantics.en.md#expression-structural-grouping): it determines priorities, complete expression units and streams at the current tree level, independently of source spelling. A separate Expression application adapter packages left as one actual/reference bundle and right as an Array of references. `arg0 operand arg1 arg2 arg3` is the general form; a binary contract uses one right item, with no automatic fold or movement of the first right item into an absent left. The receiving contract selects whole-value or current-level sequence consumption. `(a b c) := (a c b)` therefore has one left bundle and three right values; three sibling RHS groups remain three Structure items. There is no extra conditional unwrapping pass after grouping. The grouper reads the clean graph. In Expression, a graph reference atom to a Structure forms a group only outside the operand role. Translation rejects ambiguous interpretations before effects. Other reached Structures follow the name/actual-parent rule. Reference resolution preserves the actual parent. Whole VALUE/TYPE/DATA material is not automatically reclassified as CODE. `1 + ((2))` is 3; field collectors such as `(copy(Model))` remain containers for zero, one or many fields. `::` and modifiers keep DATA consumption and the common immediate-field reader; they gain no RHS evaluator. P0, ordinary callable W/E and the existing lifetime/effect rules remain intact. See [architecture and acceptance](EXPRESSION_GROUPING.md); execution is **NOT_RUN**.
+Expression is the ordinary Structure graph interpreted with a [structural grouper](LMX_semantics.en.md#expression-structural-grouping): it determines priorities, complete expression units and streams at the current tree level, independently of source spelling. A separate Expression application adapter packages left as one actual/reference bundle and right as an Array of references. `arg0 operand arg1 arg2 arg3` is the general form; a binary contract uses one right item, with no automatic fold or movement of the first right item into an absent left. The receiving contract selects whole-value or current-level sequence consumption. `(a b c) .: (a c b)` therefore has one left bundle and three right values; three sibling RHS groups remain three Structure items. There is no extra conditional unwrapping pass after grouping. The grouper reads the clean graph. In Expression, a graph reference atom to a Structure forms a group only outside the operand role. Translation rejects ambiguous interpretations before effects. Other reached Structures follow the name/actual-parent rule. Reference resolution preserves the actual parent. Whole VALUE/TYPE/DATA material is not automatically reclassified as CODE. `1 + ((2))` is 3; field collectors such as `(copy(Model))` remain containers for zero, one or many fields. `::` and modifiers keep DATA consumption and the common immediate-field reader; they gain no RHS evaluator. P0, ordinary callable W/E and the existing lifetime/effect rules remain intact. See [architecture and acceptance](EXPRESSION_GROUPING.md); execution is **NOT_RUN**.
 
-These references address values in genuine typed records: value at p, four-byte code at p − 4.
+These references address values in genuine typed records: value at p, with its TypeRef cell at byteAddress(p) − sizeof(TypeRef).
 A container reference addresses its typed descriptor. An untagged C temporary is not such a
 record; when a downstream operand needs addressable typed storage, the ordinary expression-result
 mechanism provides it with the proper lifetime. Existing suitable storage is reused. No universal
@@ -1155,4 +1327,27 @@ canonical table. Detailed provider interfaces are in the
 <a id="unified-20261122"></a>
 ## Derived types and actual storage
 
-Public type tokens remain int. The common normalizer and type context retain complete array/pointer requirements, arbitrary finite pointer depth, and the distinction between initialized null/empty values and zero-payload uninit:T. Type interning and the table of completed directed satisfies-pair results are required service metadata. Stable pairs reuse their completed result under the applicable type/conversion context, including between calls; concrete field maps and value-dependent checks retain their ordinary reception scope. Attach preserves old code meaning and record addresses; restoration resolves compatible type descriptions. A successful A[] satisfies B[] does not alter actual A stride or authorize an invalid store. Universal sequence access reads actual dense storage or direct @[] references and prepares a value record only as required by ordinary consumption. This creates no mandatory element tags in dense storage and no second graph. See [the unified type contract](CORE_SEQUENCES_REGEX.en.md#types).
+Public TYPE values are ordinary TypeRefs to canonical immutable system descriptions.
+The common normalizer preserves complete Array/pointer/callable/model requirements,
+explicit dimensions, arbitrary finite pointer depth and zero-payload uninit:T.
+Only the normalized LEFT determines type identity; length and reserve do not.
+Interning and completed directed satisfies-pair checks remain common service metadata;
+value-dependent bounds/size admission and concrete field maps retain their ordinary
+scope. Same-context attach retains valid references and ownership; restoration interns
+full descriptions and relocates them. An admitted Array<A> keeps actual A storage and
+stride. Dense access prepares a value record only when ordinary consumption requires
+one; dense elements gain no mandatory tags or second graph.
+See [the unified type contract](CORE_SEQUENCES_REGEX.en.md#types) and the
+[TypeRef migration](../TYPE_REFERENCES_CHANGE.md).
+
+<a id="array-expression-forms"></a>
+### Array expression forms and evaluation
+
+The [common Array expression contract](ARRAY_EXPRESSIONS.en.md) applies to L2 as well: actual Array operands select the admitted matrix/array profile, `.*` means componentwise multiplication, `.=` compares components, and `.:` assigns components. A Structure is the freely typed Array `@[]`. Dotted forms share the scalar form's precedence; the lazy conditional `? :` sits below logical OR and above assignment and associates right. [Slices](TERNARY_AND_SLICES.en.md) and [fuse](FUSION.en.md) use the same source graph and namespace. Native lowering does not introduce a second program graph or bypass scalar admission contracts by silently switching to `int`.
+
+<a id="operand-depth"></a>
+### Operand depth in interpretation and native calls
+
+The [common depth input](OPERATOR_DEPTH.en.md) occupies the second operand input: left/depth/right, frame slots 0/1/2. Undotted/single-dot forms supply 0/1; `.(expression)` uses the general parsed graph expression and is obtained once on demand. Only one dot is a modifier. Structural receiver calls use the base canonical name with named `depth`. The default assignment family is `:=` at depth 0, `.:` at depth 1 and `.(expression):` explicitly.
+
+Native and interpreted entry preserve the same input ordering, actual full types, RAW/PLACE roles, and missing-left distinction. The number is not inserted into logical right arguments. VALUE lifting shares the recursive executor and chooses its complete result requirement from the actual depth and shapes; scalar R must not describe an Array result, and void is not Array<void>. The source graph and parent relationships are unchanged. A whole-only semantic profile reports unsupported nonzero depth as a translator/interpreter diagnostic. [Publication requirements](patterns/LMX_Fn_Receivers/PUBLICATION_CONTRACT.md) identify the dependent-result integration boundary.

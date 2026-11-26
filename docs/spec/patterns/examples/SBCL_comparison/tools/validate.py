@@ -21,10 +21,11 @@ def validate_artifacts(check, catalog):
     """Use current common receipts and independently read the two exported files."""
     patterns = ROOT.parents[1]
     stem = 'examples/SBCL_comparison/LMX_Comparison_SBCL'
+    edition_stamp = json.loads((patterns/'PUBLICATION_DATA.json').read_text())['edition'].replace('-', '')
     report_names = {
         'model': 'PUBLICATION_DATA.json',
-        'workbook': 'validation/workbook_publication_20261123.json',
-        'pdf': 'validation/pdf_generation_20261123.json',
+        'workbook': f'validation/workbook_publication_{edition_stamp}.json',
+        'pdf': f'validation/pdf_generation_{edition_stamp}.json',
         'independent': 'validation/publication_checks.json',
     }
     reports = {}

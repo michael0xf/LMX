@@ -253,15 +253,37 @@ FxSubstitute:
         return: result
 
 # A callable becomes one ordinary prepared-value operand. The SAME instance
-# admits (op a b) and (a op b): absent left is not replaced or dynamically
-# filled. RxLogicalArguments is the already shared left/right collector.
-# Full result requirements come from signatureData, not numeric type text.
-# Only constant PRIORITY is printed once into an ordinary parsed DATA fragment.
-# FxBuild preserves that DATA and its ordinary own policy, including the
-# structural operand properties; it adds no operand registry or parser mode.
+# admits (op a b) and (a op b). Its ABI is left, depth, right; the ordinary
+# source callable receives only collected logical arguments, never depth.
+# The own policy adds operandDepthSource for dependent result preparation.
+# FxKernel\operandDepthContext is the explicit PD01 integration boundary;
+# it selects the full result requirement and common Array context, not a loop.
+# FxWrap projects the resulting actual R/void; internal @ is record transport.
+# This source is NOT evidence that PD01 is implemented by the host kernel.
 FxOperandInputTypes:
     @: left
+    int: depth
     @[]: right
+
+FxOperandValueEngine:
+    private:
+        @: state
+        @: frame
+    required: state frame
+    return: @
+    run:
+        throws: copy(FxThrows\sequencefixture)
+        private: @: left
+        private: @: slot FxKernel\frameSlot(frame; 0; demand := 0)
+        if: slot\supplied != 0
+            left := \FxFrameRead\read(frame; 0)
+        private: int: depth \FxFrameRead\read(frame; 1)
+        private: @: right FxFrameRead\read(frame; 2)
+        private: @: args RxLogicalArguments\collect(left := left; right := \right)
+        if: depth = 0
+            return: FxApply\apply(state; args)
+        private: @: context FxKernel\operandDepthContext(frame; args)
+        return: FxArrayDepth\apply(context; depth; args)
 
 FxAsOperand:
     private:
@@ -272,23 +294,22 @@ FxAsOperand:
     asOperand:
         throws: copy(FxThrows\selection)
         private: @: source FxKernel\signature(operation)
-        private: @: inputTypes FxTwo\make(FxKernel\normalizeType(FxOperandInputTypes[0]); FxKernel\normalizeType(FxOperandInputTypes[1]))
+        private: @: inputTypes (
+            FxKernel\normalizeType(FxOperandInputTypes[0]);
+            FxKernel\normalizeType(FxOperandInputTypes[1]);
+            FxKernel\normalizeType(FxOperandInputTypes[2])
+        )
         private: @: noResult FxKernel\normalizeType(void)
-        private: @: inputs FxKernel\signatureData(inputTypes; noResult; ("left"; "right"))
+        private: @: inputs FxKernel\signatureData(inputTypes; noResult; ("left"; "depth"; "right"))
         private: @: output FxKernel\signatureData((); source\resultType; ())
         private: char[]: properties FxConcat\concat("const: int: PASS_ARGS_AS_IS 0\nconst: int: PRIORITY "; FxFormat\format(priority))
         private: @: readyProperties sys\fromLmx(properties)
         private: @: data (
             private: copy(inputs)
-            required: right
+            required: depth right
             copy(output)
             copy(readyProperties)
         )
         Operand :: data
-        private: char[]: body "private: @: args RxLogicalArguments\\collect(left := left; right := right)\nprivate: @: outcome FxTry\\attempt(node\\private\\state; args)\nif: outcome\\ok = 0\n    FxKernel\\raise(name := outcome\\failure; payload := outcome\\payload)\n"
-        if: source\hasResult != 0
-            body := FxConcat\concat(body; "return: \\outcome\\value\n")
-        else:
-            body := FxConcat\concat(body; "return\n")
-        private: @: failures FxFailures\union(source\throws; ("FxKernelFailure"; "FxTypeToken"))
-        return: FxBuild\make(Operand; body; operation; failures)
+        private: @: policy merge(FxOwnPolicy\make(Operand); (@: operandDepthSource operation))
+        return: FxWrap\make(Operand; FxOperandValueEngine\run; operation; source\throws; policy)

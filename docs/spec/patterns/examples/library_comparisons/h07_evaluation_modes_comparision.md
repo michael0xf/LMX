@@ -1,6 +1,6 @@
 # Lazy and evaluation modes: usage and implementation are separate
 
-Edition: 2026-11-23. Client: [H07](../haskell_comparision/source/lmx/H07.lm3), [scenario](../../LMX_examples_and_analogies.ru.md#h07).
+Edition: 2026-11-26. Client: [H07](../haskell_comparision/source/lmx/H07.lm3), [scenario](../../LMX_examples_and_analogies.ru.md#h07).
 
 ## Contract
 
@@ -219,7 +219,7 @@ separate interruption models. All runtime statuses remain NOT_RUN.
 | Source boundary | Nonwhitespace characters | Nonblank lines | UTF-8 bytes |
 | --- | ---: | ---: | ---: |
 | LMX entry definitions shown above | 999 | 46 | 1444 |
-| All reachable LMX source roots, counted once | 14590 | 771 | 22341 |
+| All reachable LMX source roots, counted once | 14597 | 771 | 22346 |
 | Complete Haskell comparison module | 1309 | 35 | 1639 |
 
 Every declaration, complete Throws list and copy reference is included in the full source size. Shared definitions are counted once in the declared complete dependency boundary.

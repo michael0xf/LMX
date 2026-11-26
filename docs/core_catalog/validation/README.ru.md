@@ -1,5 +1,11 @@
 # Проверки и границы результатов
 
+> **Граница ABI:** native-проверки прототипов ниже относятся к прежнему
+> int-code представлению. Они не подтверждают прямую TypeRef и новый размер
+> префикса. Требования миграции находятся в
+> [TYPE_REFERENCES_CHANGE.md](../../TYPE_REFERENCES_CHANGE.md) и
+> [README прототипов](../new_primitives/README.ru.md).
+
 Первичные объекты проверок — [core/inventory.lmx](../core/inventory.lmx),
 [schema.lmx](../catalog/schema.lmx), [package_plan.lmx](../package_plan.lmx),
 [common_models.lmx](../types/common_models.lmx) и
@@ -16,6 +22,8 @@
 | Состав LMX-плана и моделей | Все текущие компоненты присутствуют ровно по одному разу, ссылки на модели/конвертеры разрешены, пути имеют 1–3 сегмента | [catalog_scope_check.json](catalog_scope_check.json) |
 | Полный round-trip метаданных | Из первичных LMX-таблиц восстановлены все записи, все варианты C-деклараций, компонентные данные и header coverage | [catalog_summary.json](../catalog_summary.json), поле `metadata_roundtrip` |
 | Статический LMX-текст | Отступы, cutters, границы форм и расположение `c.*`; без ошибок и неподдержанных форм | [lmx_static_sources.json](lmx_static_sources.json) |
+| Сокращение закрытий | Избыточные `---`/`end:` удалены по обычному одноуровневому переходу, пустой строке или EOF; необходимые cutters и маркеры групп сохранены | [closer_normalization.json](closer_normalization.json), [редактор и правила](../../tools/NORMALIZE_LMX_CLOSERS.md) |
+| Текст после сокращения | Повторная статическая проверка текущего каталога; это не запуск P0 и не исполнение LMX | [closers_lmx_static_sources.json](closers_lmx_static_sources.json) |
 | Сравнение со снимком пользователя | Новые native компоненты отдельно от уже существовавших 23 пропусков каталога; прежние публичные callable IDs сохранены | [api_census_delta.json](api_census_delta.json) |
 | Исправление callback parser | 47 неверных исторических identities сопоставлены 125 настоящим callback typedef names по полным исходным сигнатурам | [callback_identity_migration.json](callback_identity_migration.json) |
 | Неоткрываемые native-ветки | Force-enable пяти unavailable/application/absent контрактов всё равно даёт `REVIEW_REQUIRED`; native providers не линкуются | [profile_gates.json](profile_gates.json), [код проверки](../bridge/run_profile_gate_tests.py) |

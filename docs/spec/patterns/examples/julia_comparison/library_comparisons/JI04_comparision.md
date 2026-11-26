@@ -57,7 +57,6 @@ FxSort:
                     else:
                         selected := FxSeqRead\read(current; right)
                         right += 1
-                    ---
                     FxSeqStore\write(scratch; at; selected)
                     at += 1
                 start := end
@@ -237,8 +236,8 @@ end
 
 | Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
 | --- | ---: | ---: | ---: |
-| LMX | 2496 | 4504 | 125 |
-| Julia | 1614 | 2610 | 86 |
+| LMX | 2493 | 4480 | 124 |
+| Julia | <span style="color:#176233"><u>1614</u></span> | 2610 | 86 |
 
 Общие зависимости считаются один раз; отдельные style-копии библиотечных тел не создаются. Runtime execution: NOT_RUN.
 

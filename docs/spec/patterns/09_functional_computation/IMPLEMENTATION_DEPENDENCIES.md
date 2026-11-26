@@ -2,17 +2,17 @@
 Клиенты082–085 имеют две стилевые записи. Каждая общая реализация091/092/098/099 сохраняет одно точное LMX-тело. Здесь подсчитаны полные транзитивные определения ядра; объявления и Throws не исключаются.
 | ID | Основное тело | Общие зависимости | Полная сумма компонента |
 | --- | ---: | ---: | ---: |
-| 091 | 444 | 9187 | 9631 |
-| 092 | 613 | 8493 | 9106 |
-| 098 | 316 | 4070 | 4386 |
-| 099 | 533 | 15857 | 16390 |
-| 085 | 1520 | 15386 | 16906 |
+| 091 | 444 | 9207 | 9651 |
+| 092 | 613 | 8503 | 9116 |
+| 098 | 313 | 4070 | 4383 |
+| 099 | 533 | 15864 | 16397 |
+| 085 | 1520 | 15393 | 16913 |
 
-Все уникальные необходимые определения: **20151** символов / **1025** непустых строк. Между компонентами зависимости пересекаются: их нельзя повторно суммировать как разные реализации.
+Все уникальные необходимые определения: **20165** символов / **1026** непустых строк. Между компонентами зависимости пересекаются: их нельзя повторно суммировать как разные реализации.
 
 ## Публичная публикация
 
-- [src/public.lmx](../LMX_Fn_Receivers/src/public.lmx): 5951 символов. Общая таблица экспортов считается один раз.
+- [src/public.lmx](../LMX_Fn_Receivers/src/public.lmx): 6028 символов. Общая таблица экспортов считается один раз.
 
 ## Реальная граница ядра
 
@@ -28,7 +28,7 @@
 - `FxApply` — [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx), 199 символов / 11 строк.
 - `FxBind` — [src/containers.lmx](../LMX_Fn_Receivers/src/containers.lmx), 231 символов / 13 строк.
 - `FxBindChain` — [src/monadic_forms.lmx](../LMX_Fn_Receivers/src/monadic_forms.lmx), 300 символов / 19 строк.
-- `FxBindOperandTail` — [src/monadic_forms.lmx](../LMX_Fn_Receivers/src/monadic_forms.lmx), 110 символов / 5 строк.
+- `FxBindOperandTail` — [src/monadic_forms.lmx](../LMX_Fn_Receivers/src/monadic_forms.lmx), 120 символов / 7 строк.
 - `FxBuild` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 389 символов / 16 строк.
 - `FxCaptureFailures` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 105 символов / 7 строк.
 - `FxCaptureOne` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 193 символов / 9 строк.
@@ -45,7 +45,7 @@
 - `FxNone` — [src/containers.lmx](../LMX_Fn_Receivers/src/containers.lmx), 49 символов / 4 строк.
 - `FxOne` — [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx), 97 символов / 8 строк.
 - `FxOwnPolicy` — [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx), 334 символов / 13 строк.
-- `FxPreparedOperands` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 68 символов / 5 строк.
+- `FxPreparedOperands` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 78 символов / 6 строк.
 - `FxRecordAdapter` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 987 символов / 33 строк.
 - `FxRecordAdapterState` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 62 символов / 3 строк.
 - `FxRecordConstructor` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 39 символов / 1 строк.
@@ -79,7 +79,7 @@
 - `FxMore` — [src/containers.lmx](../LMX_Fn_Receivers/src/containers.lmx), 232 символов / 11 строк.
 - `FxOne` — [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx), 97 символов / 8 строк.
 - `FxOwnPolicy` — [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx), 334 символов / 13 строк.
-- `FxPreparedOperands` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 68 символов / 5 строк.
+- `FxPreparedOperands` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 78 символов / 6 строк.
 - `FxRecordAdapter` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 987 символов / 33 строк.
 - `FxRecordAdapterState` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 62 символов / 3 строк.
 - `FxRecordConstructor` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 39 символов / 1 строк.
@@ -98,7 +98,7 @@
 ### 098
 - `FxAppend` — [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx), 156 символов / 9 строк.
 - `FxApply` — [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx), 199 символов / 11 строк.
-- `FxAround` — [src/generic_wrappers.lmx](../LMX_Fn_Receivers/src/generic_wrappers.lmx), 316 символов / 16 строк.
+- `FxAround` — [src/generic_wrappers.lmx](../LMX_Fn_Receivers/src/generic_wrappers.lmx), 313 символов / 15 строк.
 - `FxSeqAllocate` — [src/sequences_core.lmx](../LMX_Fn_Receivers/src/sequences_core.lmx), 288 символов / 16 строк.
 - `FxSeqConcat` — [src/sequences.lmx](../LMX_Fn_Receivers/src/sequences.lmx), 1047 символов / 47 строк.
 - `FxSeqInfo` — [src/sequences_core.lmx](../LMX_Fn_Receivers/src/sequences_core.lmx), 122 символов / 7 строк.
@@ -137,7 +137,7 @@
 - `FxPredicateEngine` — [src/generic_combinators.lmx](../LMX_Fn_Receivers/src/generic_combinators.lmx), 191 символов / 10 строк.
 - `FxPredicateState` — [src/generic_combinators.lmx](../LMX_Fn_Receivers/src/generic_combinators.lmx), 29 символов / 2 строк.
 - `FxPrefixPolicy` — [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx), 314 символов / 13 строк.
-- `FxPreparedOperands` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 68 символов / 5 строк.
+- `FxPreparedOperands` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 78 символов / 6 строк.
 - `FxRecordAdapter` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 987 символов / 33 строк.
 - `FxRecordAdapterState` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 62 символов / 3 строк.
 - `FxRecordConstructor` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 39 символов / 1 строк.
@@ -154,7 +154,7 @@
 - `FxSequenceDifference` — [src/coreStandardLisp.lmx](../LMX_Fn_Receivers/src/coreStandardLisp.lmx), 574 символов / 30 строк.
 - `FxSignatures` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 233 символов / 11 строк.
 - `FxSlice` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 258 символов / 13 строк.
-- `FxSourcePolicy` — [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx), 1055 символов / 48 строк.
+- `FxSourcePolicy` — [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx), 1052 символов / 47 строк.
 - `FxStageFailures` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 183 символов / 11 строк.
 - `FxThrows` — [src/failures.lmx](../LMX_Fn_Receivers/src/failures.lmx), 1706 символов / 147 строк.
 - `FxTry` — [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx), 178 символов / 9 строк.
@@ -195,7 +195,7 @@
 - `FxPredicate` — [src/generic_combinators.lmx](../LMX_Fn_Receivers/src/generic_combinators.lmx), 425 символов / 11 строк.
 - `FxPredicateEngine` — [src/generic_combinators.lmx](../LMX_Fn_Receivers/src/generic_combinators.lmx), 191 символов / 10 строк.
 - `FxPredicateState` — [src/generic_combinators.lmx](../LMX_Fn_Receivers/src/generic_combinators.lmx), 29 символов / 2 строк.
-- `FxPreparedOperands` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 68 символов / 5 строк.
+- `FxPreparedOperands` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 78 символов / 6 строк.
 - `FxRecordAdapter` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 987 символов / 33 строк.
 - `FxRecordAdapterState` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 62 символов / 3 строк.
 - `FxRecordConstructor` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 39 символов / 1 строк.
@@ -212,7 +212,7 @@
 - `FxSequenceDifference` — [src/coreStandardLisp.lmx](../LMX_Fn_Receivers/src/coreStandardLisp.lmx), 574 символов / 30 строк.
 - `FxSignatures` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 233 символов / 11 строк.
 - `FxSlice` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 258 символов / 13 строк.
-- `FxSourcePolicy` — [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx), 1055 символов / 48 строк.
+- `FxSourcePolicy` — [src/adapter_frames.lmx](../LMX_Fn_Receivers/src/adapter_frames.lmx), 1052 символов / 47 строк.
 - `FxStageFailures` — [src/generic_functions.lmx](../LMX_Fn_Receivers/src/generic_functions.lmx), 183 символов / 11 строк.
 - `FxThrows` — [src/failures.lmx](../LMX_Fn_Receivers/src/failures.lmx), 1706 символов / 147 строк.
 - `FxTry` — [src/generic_runtime.lmx](../LMX_Fn_Receivers/src/generic_runtime.lmx), 178 символов / 9 строк.

@@ -12,6 +12,12 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import sys
+
+TOOLS_DIR = str(Path(__file__).resolve().parents[2] / 'tools')
+if TOOLS_DIR not in sys.path:
+    sys.path.insert(0, TOOLS_DIR)
+from normalize_lmx_closers import normalize_text
 
 LIB = Path('docs/spec/patterns/LMX_Fn_Receivers')
 
@@ -96,7 +102,7 @@ def emit_records(path, owner, rows, field_order=None):
                     value = json.dumps(value, ensure_ascii=False, separators=(',', ':'))
                 out.append(f'        char[]: {key} {quote(value)}')
         out.append('    ---')
-    path.write_text('\n'.join(out) + '\n')
+    path.write_text(normalize_text('\n'.join(out) + '\n')[0])
 
 
 def project_records(path):
@@ -234,7 +240,7 @@ def profile_role_rows(project):
             rows.append(dict(role=cells[0],package='crypto',signature=cells[1],contract=cells[2],
                              source=str(rel),sourceLine=i,status='SEMANTIC_PROFILE_ROLE; CONCRETE_BINDING_REQUIRED',executed=False))
     for name,package,anchor,contract in [
-        ('matmul','tensor','## 18. Array operations','Matrix multiplication; not elementwise *'),
+        ('matmul','tensor','## 18. Array operations','Matrix/vector product profile of * at depth 0; logical-axis depth 1 gives row-dot for rank 2, depth 2 gives scalar componentwise multiplication'),
         ('dot','tensor','## 18. Array operations','Dot product; explicit selected numeric profile'),
         ('contract','tensor','## 18. Array operations','Tensor contraction; distinct from call/contract'),
         ('outer','tensor','## 18. Array operations','Outer product; explicit selected numeric profile'),
@@ -299,7 +305,7 @@ def main():
                 publication.append('            ---')
             publication.append('        ---')
         publication.append('    ---')
-    (out/'publication.lmx').write_text('\n'.join(publication)+'\n')
+    (out/'publication.lmx').write_text(normalize_text('\n'.join(publication)+'\n')[0])
     values=json.loads((project/LIB/'value_symbols.json').read_text())
     value_records=[]
     for row in values:

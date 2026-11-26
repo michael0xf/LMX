@@ -9,7 +9,7 @@ PATTERNS=ROOT.parents[1]
 sys.path.insert(0,str(PATTERNS/'tools'))
 from lmx_style_variants import attach_variants, validate_variants, markdown_variants, STYLES
 from lmx_execution_contract import apply_execution_contract, ensure_startup_note
-EDITION='2026-11-25-workflows'
+EDITION='2026-11-26'
 FENCE='`'*3
 
 def normalized(text):

@@ -4,7 +4,12 @@ The dataclasses are test views, not additions to the P0 graph format.
 Canonical names, operation resolution and role consumption already exist.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
+from operand_depth_reference import admit_depth, resolve_depth
 
 
 class FormError(ValueError):
@@ -22,6 +27,7 @@ class OperationUse:
     name: str
     actuals: tuple[Actual, ...]
     context: object
+    depth: object = 0
 
 
 @dataclass(frozen=True)
@@ -31,6 +37,7 @@ class AttachedUpdate:
     operatorBeforeAtom: bool
     atom: Actual
     context: object
+    depth: object = 0
 
 
 def normalizeUse(use):
@@ -46,7 +53,7 @@ def normalizeUse(use):
         raise FormError("missing parsed placement")
     name = (use.operator + "var" if use.operatorBeforeAtom
             else "var" + use.operator)
-    return OperationUse(name, (use.atom,), use.context)
+    return OperationUse(name, (use.atom,), use.context, use.depth)
 
 
 def translateOperation(use, core):
@@ -55,6 +62,18 @@ def translateOperation(use, core):
     # The existing lowering owns roles, argument admission, effects and scope.
     # There is no eager VALUE conversion or additional call activation here.
     return core.lowerExistingOperation(selected, site)
+
+
+def prepareInvocation(use, obtainDepth):
+    """After demand, obtain the named/common depth input without moving actuals.
+
+    This is not called by translation or grouping. OperationUse.actuals holds
+    the receiver's ordinary user arguments unchanged; the descriptor's depth
+    represents its ordinary named `depth` input after name mapping. The
+    operand adapter separately supplies the ABI order left, depth, right.
+    """
+    site = normalizeUse(use)
+    return replace(site, depth=resolve_depth(site.depth, obtainDepth))
 
 
 @dataclass(frozen=True)
@@ -74,7 +93,10 @@ UPDATE_RULES = {
 
 
 def lowerUpdate(rule, site, backend):
-    # Called after selection of this exact operation and its PLACE contract.
+    # The zero-level scalar body, called after operation/PLACE selection.
+    # Shared lifting lowers deeper applications before invoking this body.
+    if admit_depth(site.depth) != 0:
+        raise FormError("nonzero depth requires the shared lifting boundary")
     if len(site.actuals) != 1:
         raise FormError("update expects one PLACE argument")
     place = backend.resolvePlace(site.actuals[0], site.context)

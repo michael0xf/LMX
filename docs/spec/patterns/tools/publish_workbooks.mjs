@@ -11,12 +11,25 @@ const output=path.resolve(process.env.LMX_REPORT_OUTPUT||'/tmp/lmx-full-source-p
 const filter=process.env.LMX_PUBLICATION_FILTER||process.argv[2]||'';
 const selected=stem=>!filter||(filter.startsWith('re:')?new RegExp(filter.slice(3)).test(stem):stem.includes(filter));
 const model=JSON.parse(await fs.readFile(path.join(root,'PUBLICATION_DATA.json'),'utf8'));
+const editionParts=model.edition.split('-').map(Number);
+const months=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+const editionLabel=`${editionParts[2]} ${months[editionParts[1]-1]} ${editionParts[0]}`;
+const receiptPath=`validation/workbook_publication_${model.edition.replaceAll('-','')}.json`;
 await fs.mkdir(output,{recursive:true});
 const reports=[];
 let previous=[];
 if(filter){
-  try{previous=JSON.parse(await fs.readFile(path.join(root,'validation/workbook_publication_20261123.json'),'utf8')).files;}
-  catch(error){if(error.code!=='ENOENT')throw error;}
+  let previousPath=receiptPath;
+  try { await fs.access(path.join(root,previousPath)); }
+  catch(error){
+    if(error.code!=='ENOENT')throw error;
+    const names=(await fs.readdir(path.join(root,'validation'))).filter(name=>/^workbook_publication_\d+\.json$/.test(name)).sort().reverse();
+    previousPath=names.length?'validation/'+names[0]:null;
+  }
+  if(previousPath){
+    const prior=JSON.parse(await fs.readFile(path.join(root,previousPath),'utf8'));
+    previous=prior.files.map(item=>({...item,generation_receipt:item.generation_receipt||previousPath,generation_edition:item.generation_edition||prior.edition}));
+  }
 }
 const green='#176233';
 const ink='#17344C';
@@ -50,7 +63,7 @@ for(const source of model.documents){
     sh.getRange(`A1:${last}2`).format={fill:ink,font:{name:'Arial',size:18,bold:true,color:'#FFFFFF'},verticalAlignment:'center'};
     sh.getRange(`A1:${last}2`).format.rowHeight=24;
     sh.getRange(`A3:${last}3`).merge();
-    sh.getRange('A3').values=[['24 ноября 2026 · полные листинги · все объявления и Throws включены']];
+    sh.getRange('A3').values=[[`${editionLabel} · полные листинги · все объявления и Throws включены`]];
     sh.getRange(`A3:${last}3`).format={font:{name:'Arial',size:10,color:'#526575'},rowHeight:30,wrapText:true};
     const widths=view.tables[0].widths;
     for(let c=0;c<maxColumns;c++)sh.getRange(`${column(c)}:${column(c)}`).format.columnWidth=Math.max(8,(widths[c]||1)*13);
@@ -161,6 +174,7 @@ for(const source of model.documents){
   const saved=path.join(output,source.stem.replaceAll('/','__')+'.xlsx');
   await(await SpreadsheetFile.exportXlsx(wb)).save(saved);await fs.copyFile(saved,target);
   reports.push({file:source.stem+'.xlsx',sha256:createHash('sha256').update(await fs.readFile(target)).digest('hex'),
+                generation_receipt:receiptPath,generation_edition:model.edition,
                 checked_cells:checks.length,formula_totals:totals.length,recalculation_change_restore:true,
                 formula_errors:0,sheets:source.sheets.map(s=>s.name),renders,comparison_groups:comparisonGroups});
   console.log(JSON.stringify({file:source.stem+'.xlsx',sheets:source.sheets.length,cells:checks.length,comparison_groups:comparisonGroups.length}));
@@ -176,5 +190,5 @@ const published=[...previous.filter(file=>!changed.has(file.file)),...reports];
 const report={edition:model.edition,engine:'@oai/artifact-tool',source:'PUBLICATION_DATA.json',
               source_sha256:createHash('sha256').update(await fs.readFile(path.join(root,'PUBLICATION_DATA.json'))).digest('hex'),
               files:published,visual_review:'separate rendered-sheet inspection',lmx_runtime_execution:'NOT_RUN'};
-await fs.writeFile(path.join(root,'validation/workbook_publication_20261123.json'),JSON.stringify(report,null,2)+'\n');
+await fs.writeFile(path.join(root,receiptPath),JSON.stringify(report,null,2)+'\n');
 console.log(JSON.stringify({workbooks:published.length,updated:reports.length,formula_errors:0}));

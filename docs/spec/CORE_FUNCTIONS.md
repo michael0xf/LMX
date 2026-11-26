@@ -1,6 +1,12 @@
 # Direct functions for the current LMX core
 
-Edition: **23 November 2026**, integrated canonical forms and generic operation contracts.
+> **TypeRef ABI update:** the contracts below use direct references to canonical
+> type descriptions. Linked `reflection.lmx`, `operation_forms.lmx` and generated
+> assembly still contain the previous int-code interfaces and require migration
+> before execution under this ABI. They do not establish support for this update.
+> See [the migration and validation boundary](../ARRAY_TYPE_MIGRATION.md).
+
+Edition: **26 November 2026**, canonical forms, generic operation contracts and Array/RAW/PLACE expression profiles.
 
 This is the common integration inventory of the current public operations.
 The [catalog](patterns/LMX_Fn_Receivers/catalog.json) and
@@ -43,14 +49,14 @@ Canonical families and complete implementation designs are specified in
 ### Reflection and structure composition
 
 `type(x)` / `x type` captures one whole actual value and returns the existing
-`sys\typeof` physical code. It is distinct from the field-vector query
+`sys\typeof` TypeRef to its canonical system type description. It is distinct from the field-vector query
 `types(source)`, signature reflection and a type declaration. Reference values,
 including null, and whole Arrays are captured through their true records.
 
 | Function / operand | Contract | LMX source |
 | --- | --- | --- |
-| `type(value)` / `value type` | Capture one whole value through its true typed record and return its physical `sys\typeof` code; distinct from field-vector types and TYPE-token signature composition | [operation_forms.lmx](patterns/LMX_Fn_Receivers/src/operation_forms.lmx) |
-| `types(source)` | physical field type codes; int[] by language contract | [reflection.lmx](patterns/LMX_Fn_Receivers/src/reflection.lmx) |
+| `type(value)` / `value type` | Capture one whole value through its true typed record and return its canonical `sys\typeof` TypeRef; distinct from field-vector types and TYPE-token signature composition | [operation_forms.lmx](patterns/LMX_Fn_Receivers/src/operation_forms.lmx) |
+| `types(source)` | canonical field TypeRef references; @[] by the current language contract | [reflection.lmx](patterns/LMX_Fn_Receivers/src/reflection.lmx) |
 | `names(source)` | physical canonical names; anonymous entries retain typed absence | [reflection_bridges.lmx](patterns/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
 | `signature(operation)` | ordinary positional signature description | [reflection_bridges.lmx](patterns/LMX_Fn_Receivers/src/reflection_bridges.lmx) |
 | `select(source; indices)` | actual-type selection preserving dense/reference profile | [structures.lmx](patterns/LMX_Fn_Receivers/src/structures.lmx) |
@@ -364,6 +370,32 @@ share those exact bodies through the existing `asOperand` publication path.
 Their complete contracts, provenance and failure boundaries are recorded in
 [the algorithm operations note](patterns/LMX_Fn_Receivers/ALGORITHM_OPERATIONS.md).
 No new provider hook, type specialization or execution model is introduced.
+
+
+### Array expressions, dotted operations, conditional and strided slices
+
+The [Array expression inventory](ARRAY_EXPRESSIONS.en.md) adds receiver/operand forms with one shared implementation per operation. [Matrix product and generic element traversal](patterns/LMX_Fn_Receivers/src/array_expression_ops.lmx) have concrete LMX loop bodies; RAW/PLACE preparation is connected through the existing expression and storage mechanisms described in [fuse](FUSION.en.md#implementation). These bodies are part of `LMX_Receivers.lmx`. Their production integration is **NOT_RUN**.
+
+| Public form | Receiving contract | Canonical implementation |
+| --- | --- | --- |
+| `a * b + e` | Scalar or actual-Array profile; admitted dot/matrix product and same-shape addition | Shared generic contraction and element traversal |
+| Dotted arithmetic, bitwise, comparison and compound forms | One dot passes depth 1; `.(expression)` passes an explicit depth. The common traversal follows retained logical dimensions of flat storage and retains genuine scalar inputs | [Array contracts and base-name receiver forms](ARRAY_EXPRESSIONS.en.md#dotted) |
+| `target .: values` / `target .(depth): values` | PLACE target; all RHS values retained and all target admissions checked before the first store in the whole operation | Shared depth collection and snapshot/assignment loops in array_expression_ops.lmx |
+| `fuse(expression)` | RAW eligible expression; one output traversal, no intermediate Array for each operation | [FUSION](FUSION.en.md) |
+| `condition ? yes : no` / `` `?:`(condition; yes; no) `` | Condition once, only selected RAW branch demanded | [Conditional algorithm](TERNARY_AND_SLICES.en.md#conditional) |
+| `slice(source; spec)` / `source[start:stop:step]` | Signed/omitted bounds, nonzero step, shared source-profile selection traversal | [Slice algorithm and strict overload](TERNARY_AND_SLICES.en.md#slice-receiver) |
+
+The existing strict `slice(source; begin; end)` overload is preserved. Symbolic forms and new RAW/PLACE profiles are listed in [the core extension projection](../core_catalog/core/array_expression_forms.json), separately from the previous 215-name snapshot; no claim that the running compiler already exports them is implied.
+
+The common operand header is **left, depth, right**, followed by the two
+constant mode/priority properties. Structural receiver calls use the base
+name and the named `depth` argument, for example `` `+`(a; b; depth := 1) ``;
+there are no separate standard callable aliases named `.+`. Ordinary
+receiver arguments are not the positional operand transport. See
+[operator depth](OPERATOR_DEPTH.en.md) for missing left, RAW/PLACE roles and
+custom operands. Invalid depth/required structure and ineligible fuse input
+are translator/interpreter diagnostics, without new user exceptions or
+additional `throws` declarations.
 
 ## Integration and acceptance
 

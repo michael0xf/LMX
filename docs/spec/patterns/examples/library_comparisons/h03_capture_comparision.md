@@ -1,6 +1,6 @@
 # Partial application: usage and implementation are separate
 
-Edition: 2026-11-23. Client: [H03](../haskell_comparision/source/lmx/H03.lm3), [scenario](../../LMX_examples_and_analogies.ru.md#h03).
+Edition: 2026-11-26. Client: [H03](../haskell_comparision/source/lmx/H03.lm3), [scenario](../../LMX_examples_and_analogies.ru.md#h03).
 
 ## Contract
 
@@ -97,7 +97,7 @@ capture binary first = \second -> binary first second
 | Source boundary | Nonwhitespace characters | Nonblank lines | UTF-8 bytes |
 | --- | ---: | ---: | ---: |
 | LMX entry definitions shown above | 533 | 17 | 713 |
-| All reachable LMX source roots, counted once | 16390 | 843 | 24834 |
+| All reachable LMX source roots, counted once | 16397 | 843 | 24839 |
 | Complete Haskell comparison module | 699 | 17 | 847 |
 
 Every declaration, complete Throws list and copy reference is included in the full source size. Shared definitions are counted once in the declared complete dependency boundary.

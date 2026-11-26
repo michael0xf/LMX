@@ -4,7 +4,7 @@
 
 Символьное имя можно указать точным идентификатором, например `` `+`(a; b) ``. Существующий ресивер `@` кавычек не требует. Одноаргументные варианты изменения имеют имена `++var` / `var++` и `--var` / `var--`.
 
-Ниже находятся нормативные договоры и исполняемый Python-эталон трансляции. Его 18 проверок относятся к модели; LMX runtime, production-транслятор и нативная интеграция — **NOT_RUN**. Связанные разделы: [общие операции](GENERIC_OPERATIONS.md), [монадические операции](MONADIC_OPERATIONS.md).
+Ниже находятся нормативные договоры и исполняемый Python-эталон трансляции. Его 26 проверок относятся к модели; LMX runtime, production-транслятор и нативная интеграция — **NOT_RUN**. Связанные разделы: [общие операции](GENERIC_OPERATIONS.md), [монадические операции](MONADIC_OPERATIONS.md).
 
 ## 1. Принятые решения
 
@@ -90,7 +90,7 @@ print       и `print`       — одно имя print
 
 ## 3. Формы обращения
 
-[Expression](LMX_semantics.ru.md#expression-structural-grouping) — тот же граф с группировщиком приоритетов и структурных групп. Группировщик выдаёт единицы операций и потоки текущего уровня. Затем другой участок — подготовка применения — передаёт левую последовательность одним actual/пакетом, правую — Array ссылок. Общая форма `arg0 operand arg1 arg2 arg3` содержит обычную бинарную как частный случай `length(right) = 1`; автоматической свёртки и переноса первого right в отсутствующий left нет. Получатель определяет whole/sequence и свои DATA/TYPE/NAME/PLACE/RAW роли; одного ABI недостаточно, чтобы открыть произвольную модель. Пакет left не создаётся группировщиком и не записывается в P0.
+[Expression](LMX_semantics.ru.md#expression-structural-grouping) — тот же граф с группировщиком приоритетов и структурных групп. Группировщик выдаёт единицы операций и потоки текущего уровня. Затем другой участок — подготовка применения — передаёт левую последовательность одним actual/пакетом, затем числовой `depth`, правую — Array ссылок. Общая форма `arg0 operand arg1 arg2 arg3` содержит обычную бинарную как частный случай `length(right) = 1`; автоматической свёртки и переноса первого right в отсутствующий left нет. Получатель определяет whole/sequence и свои DATA/TYPE/NAME/PLACE/RAW роли; одного ABI недостаточно, чтобы открыть произвольную модель. Пакет left не создаётся группировщиком и не записывается в P0.
 
 Ниже пары записей для подключения к одному обработчику в трансляторе. Парсер уже принимает общую структуру; таблица не предлагает менять его грамматику и не является отчётом о runtime-исполнении.
 
@@ -143,7 +143,7 @@ Name :: (int: x; return: int)
 | --- | --- |
 | Один P0, общие Frames | [CORE.md](CORE.md), [грамматика](LMX_grammar.en.md#automaton). По уточнению автора все ресиверы уже автоматически входят в Expression; подключается трансляция. |
 | Точный идентификатор | [Раздел 5](LMX_grammar.en.md#identifiers). Атомарность, удвоения, пустое имя и запрет NUL уже описаны. |
-| Операнд — обычный метод | [семантика](LMX_semantics.en.md#operand-receiver), [L2](L2_spec_en.md#operand-contract). Уже есть callable-путь с настоящими `left/right`. |
+| Операнд — обычный метод | [семантика](LMX_semantics.en.md#operand-receiver), [L2](L2_spec_en.md#operand-contract). Уже есть callable-путь с настоящими входами `left/depth/right`. |
 | Callable → operand | `FxAsOperand` в [coreStandardLisp.lmx](patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx). Режим 0, точный R/void и именованные ошибки. |
 | Policy и forwarding | `FxFullPolicy`, `FxForwardEngine` в [adapter_frames.lmx](patterns/LMX_Fn_Receivers/src/adapter_frames.lmx). Не копировать defaults/private/required вручную. |
 | Точное построение callable | `FxWrap` в [generic_runtime.lmx](patterns/LMX_Fn_Receivers/src/generic_runtime.lmx). Сохранить результат и общий путь ошибок. |
@@ -201,14 +201,15 @@ Resize:
 | `throws` | Конечный список NAME/DATA и field streams; имена не вычисляются как значения. |
 | `required`, `private` | Admission/живое место и двусторонняя граница связывания; сохранить DATA/CODE-контекст. |
 | `const`, `immutable`, `independent` как qualifications | Construction и полные требования до публикации; без раннего запуска initializer. |
-| `T:`, `@:`, `T@:`, `[]:`, `T[]:` | TYPE head, NAME места, VALUE/сохранённый initializer; declaration actual остаётся DATA. |
-| `T@`, `T[]`, `nil: T` | TYPE → TYPE/typed absence. Не смешивать с адресацией и индексированием. |
+| `T:`, `@:`, `T@:`, `[]:`, `T[]:`, `T[N]:` | TYPE head, NAME места, VALUE/сохранённый initializer; declaration actual остаётся DATA. |
+| `T@`, `T[]`, `T[N]`, `nil: T` | TYPE → TYPE/typed absence. Не смешивать с адресацией и индексированием. |
 | `Name :: DATA` | Все аргументы DATA, включая NAME; одно описание раскрывается самим `::` в список деклараций без изменения внешних actuals. Expression производителя имеет роль CODE; собственные роли аргументов сохраняются по [контракту ресивера](LMX_semantics.ru.md#signature-description-consumption). Не возвращать удалённый `fn`. |
 | `call`, `C(args)`, `C: args` | Один resolver, W/E, actual mapping; настоящий `parent(C)`. |
 | `copy`, `merge`, `import` | CODE-источники во всех позициях; FIELD STREAM. Не заворачивать поток в один Array. |
 | `satisfies`, `test` | Неисполняющий interface inspection отдельно от явно достигнутого checking BODY. |
 | `sys\name`, `sys\priority`, `sys\eval` | NAME; строка и namespace; RAW и исходный контекст соответственно. |
-| `parent`, `length`, `sys\native/storage/capacity/descriptor/typeof/indexof` | Реальная запись/identity. Нулевой вариант относится к исходной DATA, не DATA адаптера. |
+| `parent`, `length`, `sys\native/storage/capacity/typeof/indexof` | Реальная запись/identity и текущий фактический тип. Нулевой вариант относится к исходной DATA, не DATA адаптера. |
+| `sys\descriptor` | Каноническая системная TypeRef → та же неизменяемая Structure описания типа; эта ветвь имеет приоритет для системного TYPE. Обычный Array/Structure VALUE → три живых адреса основного Lmx. `sys\descriptor(typeof(obj))` не ищет int-код и не выделяет второй дескриптор экземпляра. Нулевая форма сохраняет исходную DATA. |
 | `sys\resize`, `sys\reserve`, Array mutation | Настоящая цель и её storage profile, прежний результат/отказы. |
 | `sys\check/checkL3/translate/compile/toLmx/fromLmx` | Graph/text, phase policy и explicit compilation; осмотр не запускает программу. |
 | `sys\assert`, `sys\endturn`, `print/log/error` | Сохранить вид диагностики, system exit, cleanup; не делать всё recoverable throw. |
@@ -255,9 +256,9 @@ Resize:
 
 ### 6.2. Одна подготовка
 
-[Структурный группировщик](LMX_semantics.ru.md#expression-structural-grouping) строит приоритетные операции и последовательности текущего уровня. Отдельная подготовка применения формирует один left actual и right Array ссылок. Получатель выбирает целое значение либо последовательность; второе написание операции не выполняет эту подготовку повторно. Обычный W/E остаётся своим правилом допуска.
+[Структурный группировщик](LMX_semantics.ru.md#expression-structural-grouping) строит приоритетные операции и последовательности текущего уровня. Отдельная подготовка применения формирует один left actual, числовой depth и right Array ссылок. Получатель выбирает целое значение либо последовательность; второе написание операции не выполняет эту подготовку повторно. Обычный W/E остаётся своим правилом допуска.
 
-Для группового `:=` left — один пакет PLACE, RHS — текущий поток значений, в том числе от голого `copy`. Три соседние RHS-группы дают три Structure, не рекурсивное уплощение. Целые TYPE/модели, скалярные места, DATA и RAW сохраняют собственные договоры; одна лишь форма left не задаёт неизвестному операнду последовательностного контракта.
+Для `.:` — базового `:=` с depth=1 — left обозначает один пакет PLACE, RHS предоставляет текущий поток значений, в том числе от голого `copy`. При единственном готовом Array справа его непосредственные элементы выбирает сам последовательностный профиль операции; группировщик возвращённые значения не раскрывает. Три соседние RHS-группы дают три Structure, не рекурсивное уплощение. Целые TYPE/модели, скалярные места, DATA и RAW сохраняют собственные договоры; одна лишь форма left не задаёт неизвестному операнду последовательностного контракта.
 
 Отсутствующий `left` не кодируется значением `0`, `nil`, пустой Structure или дополнительным пользовательским флагом. Остаётся отсутствие actual; действуют настоящие defaults/required/private объявления. Пустой переданный `right` и отсутствие actual различаются.
 
@@ -319,7 +320,7 @@ items[next()]++
 
 ### 8.1. Исполняемый эталон
 
-Ниже полный самостоятельный Python-эталон участка транслятора. Python выбран для проверяемого описания алгоритма; язык production-реализации остаётся прежним. Файл эталона: [translator_reference.py](reference/operation_forms/translator_reference.py).
+Ниже полный Python-эталон участка транслятора, использующий [общий helper depth](tools/operand_depth_reference.py). Python выбран для проверяемого описания алгоритма; язык production-реализации остаётся прежним. Файл эталона: [translator_reference.py](reference/operation_forms/translator_reference.py).
 
 `OperationUse`, `AttachedUpdate` и `Actual` — небольшие представления данных для эталона, получаемые из существующего графа. Это не новые типы операндов LMX и не предложение менять P0. В частности, `operatorBeforeAtom` читается из уже определённого положения операции в графе.
 
@@ -332,7 +333,12 @@ The dataclasses are test views, not additions to the P0 graph format.
 Canonical names, operation resolution and role consumption already exist.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
+from operand_depth_reference import admit_depth, resolve_depth
 
 
 class FormError(ValueError):
@@ -350,6 +356,7 @@ class OperationUse:
     name: str
     actuals: tuple[Actual, ...]
     context: object
+    depth: object = 0
 
 
 @dataclass(frozen=True)
@@ -359,6 +366,7 @@ class AttachedUpdate:
     operatorBeforeAtom: bool
     atom: Actual
     context: object
+    depth: object = 0
 
 
 def normalizeUse(use):
@@ -374,7 +382,7 @@ def normalizeUse(use):
         raise FormError("missing parsed placement")
     name = (use.operator + "var" if use.operatorBeforeAtom
             else "var" + use.operator)
-    return OperationUse(name, (use.atom,), use.context)
+    return OperationUse(name, (use.atom,), use.context, use.depth)
 
 
 def translateOperation(use, core):
@@ -383,6 +391,18 @@ def translateOperation(use, core):
     # The existing lowering owns roles, argument admission, effects and scope.
     # There is no eager VALUE conversion or additional call activation here.
     return core.lowerExistingOperation(selected, site)
+
+
+def prepareInvocation(use, obtainDepth):
+    """After demand, obtain the named/common depth input without moving actuals.
+
+    This is not called by translation or grouping. OperationUse.actuals holds
+    the receiver's ordinary user arguments unchanged; the descriptor's depth
+    represents its ordinary named `depth` input after name mapping. The
+    operand adapter separately supplies the ABI order left, depth, right.
+    """
+    site = normalizeUse(use)
+    return replace(site, depth=resolve_depth(site.depth, obtainDepth))
 
 
 @dataclass(frozen=True)
@@ -402,7 +422,10 @@ UPDATE_RULES = {
 
 
 def lowerUpdate(rule, site, backend):
-    # Called after selection of this exact operation and its PLACE contract.
+    # The zero-level scalar body, called after operation/PLACE selection.
+    # Shared lifting lowers deeper applications before invoking this body.
+    if admit_depth(site.depth) != 0:
+        raise FormError("nonzero depth requires the shared lifting boundary")
     if len(site.actuals) != 1:
         raise FormError("update expects one PLACE argument")
     place = backend.resolvePlace(site.actuals[0], site.context)
@@ -426,7 +449,7 @@ def lowerUpdate(rule, site, backend):
 
 `UPDATE_RULES` показывает четыре описания выбранных операций для эталона. В production свойства берутся из существующего описания разрешённой операции. Таблица не становится вторым глобальным реестром и не перехватывает пользовательские имена перед обычным lookup.
 
-`lowerUpdate` — один алгоритм всех четырёх вариантов. Числа `+1/-1` обозначают только направление шага. Само значение не приводится к `int`: `stepValue` использует действительный профиль операции, а `storeValue` — требования настоящего места.
+`lowerUpdate` — один скалярный алгоритм всех четырёх вариантов при depth=0. При большей глубине его использует [общий подъём операции](OPERATOR_DEPTH.ru.md#evaluation); локальная копия обхода Arrays в этом эталоне не вводится. Числа `+1/-1` обозначают только направление шага. Само значение не приводится к `int`: `stepValue` использует действительный профиль операции, а `storeValue` — требования настоящего места.
 
 Интерпретатор выполняет существующие операции backend, нативный транслятор порождает соответствующие действия в том же порядке. Там, где update-алгоритм уже есть, обе формы используют его; эталон задаёт наблюдаемый договор и не требует второго тела реализации.
 
@@ -439,9 +462,10 @@ def lowerUpdate(rule, site, backend):
 Для общего Expression-шаблона сохраняется действительное расположение входов:
 
 ```text
-(op a b)   → left отсутствует, right = [a, b]
-(a op b)   → left = a, right = [b]
-(a op)     → left = a, right = []
+(op a b)       → left отсутствует, depth = 0, right = [a, b]
+(a op b)       → left = a, depth = 0, right = [b]
+(a op)         → left = a, depth = 0, right = []
+(.(n)op a b)   → left отсутствует, depth = значение n, right = [a, b]
 ```
 
 Это варианты записи общего шаблона, не три новых типа операндов. Для обычной функции и её операндной формы используется существующее отображение логических входов. Для встроенного или пользовательского операнда — отображение его действительного контракта.
@@ -480,7 +504,7 @@ return: bind(bind(some(x); half); half)
 | `++var` / `var++` и `--var` / `var--` | Один PLACE, уже выбранное положение и результат из таблицы; общий update lowering. |
 | `return` в DATA или CODE | Существующий TYPE-договор либо выход из исходной активации. |
 | `finally`, `catch` и loop transfer | Прежние scope, BODY, cleanup и continuation. |
-| Пользовательский operand | Его действительные шаблон, left/right, priority, режим и роли. |
+| Пользовательский operand | Его действительный шаблон left/depth/right, priority, режим и роли. |
 | `end:`, fences, разделители | Существующая структурная обработка; их участие в аудите не создаёт произвольных runtime callback. |
 
 Две записи с тем же каноническим именем, тем же контекстом и тем же отображением actuals ведут в одну семантику. Сохранённое написание используется для исходника и диагностики, а не для выбора другого поведения.
@@ -498,7 +522,7 @@ return: bind(bind(some(x); half); half)
 | Результат | Точное R/void/FIELD STREAM/transfer/suspension. |
 | Эффекты | Порядок, ленивость, запись, admission, cleanup. |
 | Контекст | Parent/DATA, исходная активация/namespace, Message owner. |
-| Отображение | Left/right, omission, группы, положение одноаргументной формы. |
+| Отображение | Left/depth/right, omission, группы, положение одноаргументной формы; обычные receiver actuals не сдвигаются. |
 | Ошибки | Полный конечный договор; построение отдельно от исполнения. |
 | Статус | Поддержано; требуется подключение; отсутствует общий обработчик; найден конкретный конфликт определений. |
 
@@ -563,8 +587,9 @@ import unittest
 
 from translator_reference import (
     Actual, AttachedUpdate, FormError, OperationUse, UPDATE_RULES,
-    lowerUpdate, normalizeUse, translateOperation,
+    lowerUpdate, normalizeUse, prepareInvocation, translateOperation,
 )
+from operand_depth_reference import DepthError, DepthExpression
 
 
 @dataclass
@@ -635,10 +660,88 @@ class TranslatorChecks(unittest.TestCase):
         self.runVariant("--", False, "var--", 7, 6)
 
     def test_exact_names_are_opaque(self):
-        for name in ("@", "@name", "++counter", "counter++", "a+b", "a`b", "++var"):
+        for name in ("@", "@name", "++counter", "counter++", "a+b", "a`b", "++var",
+                     ".+", "..+", ".(10)+", ".:"):
             use = self.site(name)
             self.assertIs(normalizeUse(use), use)
             self.assertEqual(normalizeUse(use).name, name)
+
+    def test_named_depth_does_not_shift_receiver_positionals(self):
+        actuals = (Actual(2, self.context), Actual(3, self.context))
+        site = OperationUse("+", actuals, self.context, depth=2)
+        ready = prepareInvocation(site, lambda *args: self.fail("ready depth was evaluated"))
+        self.assertEqual(ready.name, "+")
+        self.assertEqual(ready.depth, 2)
+        self.assertIs(ready.actuals, actuals)
+
+    def test_absent_named_depth_is_ready_zero(self):
+        site = self.site("+")
+        ready = prepareInvocation(site, lambda *args: self.fail("default depth read caller data"))
+        self.assertEqual(ready.depth, 0)
+        self.assertIs(ready.actuals, site.actuals)
+
+    def test_depth_expression_is_not_executed_during_translation(self):
+        expression = object()
+        source = DepthExpression(expression, self.context)
+        site = OperationUse("+", (self.actual,), self.context, source)
+        seen = []
+        class Core:
+            def resolveExistingOperation(self, use):
+                self.assert_base = use.name
+                return "+"
+            def lowerExistingOperation(self, selected, use):
+                seen.append((selected, use.depth))
+                return use
+        self.assertIs(translateOperation(site, Core()), site)
+        self.assertEqual(seen, [("+", source)])
+
+    def test_dynamic_named_depth_obtained_once_in_original_scope(self):
+        expression, context = object(), {"n": 1}
+        site = OperationUse("+", (self.actual,), self.context,
+                            DepthExpression(expression, context))
+        calls = []
+        def obtain(node, source_context):
+            self.assertIs(node, expression)
+            self.assertIs(source_context, context)
+            calls.append(node)
+            return source_context["n"] + 9
+        ready = prepareInvocation(site, obtain)
+        self.assertEqual(ready.depth, 10)
+        self.assertEqual(calls, [expression])
+        self.assertIs(ready.actuals, site.actuals)
+        self.assertIsInstance(site.depth, DepthExpression)
+
+    def test_attached_depth_does_not_become_a_dot_name(self):
+        form = AttachedUpdate("++", True, self.actual, self.context, depth=3)
+        normalized = normalizeUse(form)
+        self.assertEqual(normalized.name, "++var")
+        self.assertEqual(normalized.depth, 3)
+        self.assertEqual(normalized.actuals, (self.actual,))
+
+    def test_invalid_depth_does_not_read_place(self):
+        for bad in (-1, 1.5, True, (1, 2)):
+            site = OperationUse("++var", (self.actual,), self.context, bad)
+            with self.assertRaises(DepthError):
+                prepareInvocation(site, lambda *args: self.fail("ready value has no evaluator"))
+            self.assertEqual(self.cell.value, 7)
+
+    def test_assignment_receiver_uses_base_name_and_named_depth(self):
+        actuals = (Actual("places", self.context), Actual("values", self.context))
+        site = OperationUse(":=", actuals, self.context, 1)
+        ready = prepareInvocation(site, lambda *args: self.fail("literal depth"))
+        self.assertEqual((ready.name, ready.depth), (":=", 1))
+        self.assertIs(ready.actuals, actuals)
+
+    def test_leaf_formal_named_depth_keeps_its_owner_and_value(self):
+        outer_scope, leaf_scope = {"depth": 2}, {"depth": 7}
+        leaf_argument = Actual({"name": "depth", "value": 7}, leaf_scope)
+        site = OperationUse("adaptedFunction", (leaf_argument,), outer_scope,
+                            DepthExpression("depth", outer_scope))
+        ready = prepareInvocation(site, lambda name, scope: scope[name])
+        self.assertEqual(ready.depth, 2)
+        self.assertIs(ready.actuals[0], leaf_argument)
+        self.assertIs(ready.actuals[0].context, leaf_scope)
+        self.assertEqual(ready.actuals[0].node, {"name": "depth", "value": 7})
 
     def test_parameter_name_is_not_part_of_pattern_name(self):
         for actualName in ("x", "counter", "var", "@name"):
@@ -783,7 +886,7 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-При подготовке этой редакции выполнены **18 тестов — OK**: четыре унарных варианта, непрозрачность имён, независимость имени шаблона от имени переменной, сложное место с эффектом, сохранение исходного контекста, Decimal и отдельный тип Quantity, арность, отказы, единый resolver/обработчик и сохранение готовой стороны применения.
+При подготовке этой редакции выполнены **26 тестов — OK**: четыре унарных варианта, непрозрачность имён, независимость имени шаблона от имени переменной, сложное место с эффектом, сохранение исходного контекста, Decimal и отдельный тип Quantity, арность, отказы, единый resolver/обработчик и сохранение готовой стороны применения. Дополнительно проверены готовый depth=0, именованный depth без сдвига actuals, отсутствие вычисления при трансляции, получение ровно один раз в исходном контексте, прижатая форма с отдельной глубиной, диагностика неверного depth до эффектов места, canonical `:=` при depth=1 и разные владельцы одноимённых формалов depth.
 
 Это проверки **самостоятельного эталона**. В нём backend и resolver моделируют нужные свойства; прохождение этих тестов не подтверждает выполнение LMX или готовность production-интеграции. Runtime-приёмка всех классов раздела 5, реальная динамическая типизация, AE01 и переходы I→I, I→N, N→I, N→N остаются **NOT_RUN**.
 
@@ -792,3 +895,104 @@ if __name__ == "__main__":
 Парсер уже допускает все ресиверы в Expression. Транслятор подключает их к существующим обработчикам и сохраняет роли, контекст, типы и полный договор ошибок.
 
 Ресиверная и операндная записи используют одну операцию. Прижатые одноаргументные варианты получают явные имена шаблонов; точные идентификаторы остаются непрозрачными именами. Канонизация кавычек сохраняется на существующем базовом уровне.
+
+## 14. Одна операция, отдельный вход глубины
+
+[Общая норма](OPERATOR_DEPTH.ru.md#syntax) задаёт `op` при depth=0, `.op`
+при depth=1 и `.(expression)op` при явно полученном depth. Выражение внутри
+`(...)` после точки разбирает общий P0; вычислять его во время трансляции нельзя.
+`..op` и `...op` не обозначают глубину.
+
+| Expression | Каноническая операция | Объявленная ресиверная форма |
+| --- | --- | --- |
+| `a * b` | `*`, depth=0 | `` `*`(a; b) `` |
+| `a .* b` | `*`, depth=1 | `` `*`(a; b; depth := 1) `` |
+| `a .(2)+ b` | `+`, depth=2 | `` `+`(a; b; depth := 2) `` |
+| `a .= b` | `=`, depth=1 | `` `=`(a; b; depth := 1) `` |
+| `target := source` | `:=`, depth=0 | `` `:=`(target; source) `` |
+| `target .: source` | `:=`, depth=1 | `` `:=`(target; source; depth := 1) `` |
+| `target .(n): source` | `:=`, depth=n | `` `:=`(target; source; depth := n) `` |
+| `.++items` | `++var`, depth=1 | `` `++var`(items; depth := 1) `` |
+| `items.++` | `var++`, depth=1 | `` `var++`(items; depth := 1) `` |
+
+У пользовательской операции могут быть другие логические входы и роли.
+Таблица показывает объявленные профили системных операций, а не результат
+механического перевода ABI `(left, depth, right)` в позиционный receiver-call.
+Обычный второй пользовательский аргумент b не становится depth. Для прямого
+вызова самого метода пользовательского операнда наиболее явно назвать входы:
+
+```lmx
+DepthProbe\apply(left := first; depth := levels; right := arguments)
+```
+
+`arguments` здесь — подготовленный Array для right, а first — один left
+по контракту этого метода. Префиксная Expression-форма сохраняет отсутствие
+left и весь right; вставленный между ними числовой depth не меняет это правило.
+
+Обратные кавычки сохраняют **точное имя**. `` `.*` ``, `` `.:` ``,
+`` `.++var` `` или `` `.(2)+` `` — буквальные имена; они не декодируются
+в базовую операцию с глубиной и не создаются как встроенные aliases.
+Декорации не добавляют ни внутрь, ни снаружи кавычек ресиверного имени.
+Ссылки на договоры также используют базовую операцию, например
+``copy(`:=`\throws)`` и ``copy(`*`\throws)``.
+
+### 14.1. Момент получения и владелец depth
+
+Публичный `OPERANDS_TEMPLATE` получает входы в порядке **left, depth, right**.
+Depth — один неотрицательный `int` к моменту входа в метод, в том числе при
+`PASS_ARGS_AS_IS 1`. Константные свойства режима и приоритета остаются
+в настоящем DATA операции. Приоритет, направленное связывание и прижатый
+класс определяются базовой операцией, без получения выражения depth.
+
+`OperationUse.depth` в эталоне — сохранённое описание соответствующего
+**объявленного входа выбранного operation-профиля**. Общий resolver сначала
+сохраняет обычные actuals, роли и владельцев. После установления востребованности
+`prepareInvocation` получает depth один раз в сохранённом контексте, не меняя
+actuals. `translateOperation` это получение не выполняет. Невыбранная ветвь
+`?:`, `&&` или `||` не даёт и эффектов выражения depth.
+
+Имя depth не изымается из каждого обычного вызова. Например, функция, которую
+адаптирует `asOperand`, может иметь собственный пользовательский формал depth.
+Его значение остаётся среди логических аргументов функции. Управляющий depth
+внешнего операнда принадлежит другой активации и другому объявлению.
+Совпадение написания не даёт права удалить аргумент листовой функции.
+Тест `test_leaf_formal_named_depth_keeps_its_owner_and_value` проверяет это разделение.
+
+### 14.2. RAW и PLACE сохраняют свои правила
+
+`fuse` получает RAW Expression, `?:` получает условие и две RAW-ветви,
+`:=` сохраняет PLACE-идентичность назначения на выбранной глубине.
+Универсальный VALUE-адаптер не должен заранее получать все их аргументы.
+[Описание fusion](FUSION.ru.md), [подъём операции](OPERATOR_DEPTH.ru.md#evaluation)
+и [условие/срезы](TERNARY_AND_SLICES.ru.md) задают общий путь исполнения;
+второй диспетчер для ресиверной записи не вводится.
+
+[26 host-проверок форм](validation/operation_forms_host_checks_20261126.json)
+и [10 проверок depth](validation/operand_depth_reference_report.json) отделены
+от production P0, трансляции и исполнения LMX: последние остаются **NOT_RUN**.
+
+Неверный depth либо несовместимая глубина/структура — ошибка транслятора
+при статически известном случае или интерпретатора при достижении.
+Непригодное для fuse выражение имеет тот же диагностический статус.
+Они не являются новыми LMX throw-исходами и не увеличивают throws.
+Host-классы `DepthError`/`FormError` иллюстрируют диагностику; ошибки
+обычных скалярных методов, callbacks и библиотечных действий сохраняются.
+
+
+### Лексическая граница модификатора `.(expression)`
+
+Непосредственная пара `.(` вне защищённых лексических режимов всегда начинает
+модификатор оператора либо функции, прежде чем точка могла бы войти в число
+или layout. Поэтому `1.(2)+3` разбирается как число 1, описание depth=2,
+базовый `+`, число 3; запись `1 .(3)+ 2 .(2)+ 3` имеет те же границы без
+пробелов: `1.(3)+2.(2)+3`. Это правило записи, не обещание успешного допуска
+этих значений на выбранной глубине.
+
+Внутреннее выражение и соответствующую закрывающую границу сохраняет общий
+P0. Отдельный числовой parser не вводится. Последующие алгоритмы получают
+прежнее описание depth в графе и не ищут скобки в исходной строке. `1.5`,
+`.5`, `1.` и `1.+2` сохраняют прежнее числовое чтение; содержимое строк,
+комментариев и точных имён не раскрывается. Квадратные Array-формы и
+`int[](N)`/`int@(N)` не затронуты. Квадратная запись модификатора не является
+alias. [Полный алгоритм P0](LMX_grammar.ru.md#conditional-slice-grammar).
+Production P0/LMX execution этих границ — **NOT_RUN**.

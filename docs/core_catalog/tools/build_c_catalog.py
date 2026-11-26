@@ -543,6 +543,14 @@ def read_component(path, models):
 
 
 def explicit_cuts(content):
+    # Only a real multi-level decrease needs a visible cutter. The shared
+    # normalizer removes redundant one-level/EOF closures from templates while
+    # preserving anonymous group markers and lexical payloads.
+    import sys
+    tools_dir = str(Path(__file__).resolve().parents[2] / "tools")
+    if tools_dir not in sys.path:
+        sys.path.insert(0, tools_dir)
+    from normalize_lmx_closers import normalize_text
     result, previous = [], None
     for line in content.splitlines():
         stripped = line.strip()
@@ -553,7 +561,7 @@ def explicit_cuts(content):
                 result.append(" " * indent + "---")
             previous = indent
         result.append(line)
-    return "\n".join(result) + "\n"
+    return normalize_text("\n".join(result) + "\n")[0]
 
 
 def write(path, content):

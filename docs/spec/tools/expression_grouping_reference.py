@@ -9,6 +9,7 @@ storage records or additions to OPERANDS_TEMPLATE. See EXPRESSION_ALGORITHM.md.
 
 from dataclasses import dataclass, replace
 from typing import Any, Callable
+from operand_depth_reference import admit_depth, prepare_operand_arguments
 
 
 ABSENT = object()
@@ -70,6 +71,19 @@ class GraphRange:
 
 
 @dataclass(frozen=True)
+class DecoratedOperation:
+    """View of a parsed .op or .(expression)op occurrence, never source text.
+
+    `operation` retains the base name/reference. A whole exact identifier is
+    not inspected for dots. `depth` is ready 1 or a preserved DepthExpression;
+    an undecorated application supplies 0 through the same call contract.
+    """
+    operation: Any
+    depth: Any
+    origin: Any = None
+
+
+@dataclass(frozen=True)
 class LeftView:
     """One common internal view for every present left argument.
 
@@ -85,6 +99,7 @@ class Apply:
     operation: Binding
     operation_raw: Any         # exact operand occurrence; not only its name
     left: Any                 # one LeftView, or ABSENT; never a free left list
+    depth: Any                # source description until this operation is demanded
     right: tuple              # ordered plan units; not yet the runtime ABI
     context: Context
     raw: GraphRange           # whole original graph interval for RAW demand
@@ -98,6 +113,7 @@ class LeftBundle:
 @dataclass(frozen=True)
 class Actuals:
     left: Any
+    depth: int
     right: tuple              # stand-in for the existing Array<reference>
 
 
@@ -248,12 +264,19 @@ class Planner:
         if not cursor.more():
             return None
         node = self.view.resolve(cursor.peek(), context)
+        if isinstance(node, DecoratedOperation):
+            node = self.view.resolve(node.operation, context)
         return self.view.binding(node, context)
+
+    def _depth(self, occurrence, context):
+        node = self.view.resolve(occurrence, context)
+        return node.depth if isinstance(node, DecoratedOperation) else 0
 
     def _unit(self, cursor, limit, context):
         start = cursor.index
         def application(operation, operation_raw, left, right):
-            return Apply(operation, operation_raw, left, right, context,
+            return Apply(operation, operation_raw, left,
+                         self._depth(operation_raw, context), right, context,
                          GraphRange(cursor.owner, start, cursor.index))
         first = self._binding(cursor, context)
         if first is not None:
@@ -306,7 +329,7 @@ class Planner:
             if not cursor.more():
                 raise ValueError("left-attached unary operation needs an atom")
             target = self._attached_atom(cursor, context)
-            unit = Apply(operation, raw, ABSENT, (target,), context,
+            unit = Apply(operation, raw, ABSENT, self._depth(raw, context), (target,), context,
                          GraphRange(cursor.owner, start, cursor.index))
         else:
             raise ValueError("an attached unary operation requires one atom")
@@ -315,7 +338,7 @@ class Planner:
             if operation is None or operation.attached != "right":
                 break
             raw = cursor.take()
-            unit = Apply(operation, raw, left_view(unit), (), context,
+            unit = Apply(operation, raw, left_view(unit), self._depth(raw, context), (), context,
                          GraphRange(cursor.owner, start, cursor.index))
         return unit
 
@@ -396,7 +419,7 @@ class MethodOutcome:
     consumed_left_region: Any = ABSENT
 
 
-def receive_application(application, method, namespace, evaluate):
+def receive_application(application, method, namespace, evaluate, obtain_depth=None):
     """Receive an ALREADY DEMANDED application, outside the grouper.
 
     Precondition: the production executor has established demand and retained
@@ -413,7 +436,13 @@ def receive_application(application, method, namespace, evaluate):
     evaluate(plan, replacements) substitutes by occurrence identity, never by
     identifier spelling. A production executor retains its demand/effect rules.
     """
-    outcome = method.invoke(application.left, application.right, namespace, evaluate)
+    def missing_depth_integration(expression, context):
+        raise NotImplementedError("dynamic depth needs the ordinary namespace value request")
+    actuals = prepare_operand_arguments(application.left, application.depth,
+                                       application.right,
+                                       obtain_depth or missing_depth_integration)
+    outcome = method.invoke(actuals.left, actuals.depth, actuals.right,
+                            namespace, evaluate)
     if application.left is ABSENT:
         return outcome.value
     region = application.left.region
@@ -437,7 +466,7 @@ def expose_sequence(units, planner):
     return units
 
 
-def prepare_actuals(left_sequence, right_sequence, make_reference: Callable):
+def prepare_actuals(left_sequence, depth, right_sequence, make_reference: Callable):
     """Separate application adapter: no parsing or further group opening.
 
     Sequence choice, DATA/TYPE/PLACE roles, RAW demand and stream production
@@ -450,12 +479,22 @@ def prepare_actuals(left_sequence, right_sequence, make_reference: Callable):
         refs = tuple(make_reference(item) for item in left_sequence)
         left = refs[0] if len(refs) == 1 else LeftBundle(refs)
     right = tuple(make_reference(item) for item in right_sequence)
-    return Actuals(left, right)
+    return Actuals(left, admit_depth(depth), right)
 
 
-def group_assignment(targets, right_items, read_once, validate_all, write):
-    """Existing group-assignment ordering, shown independently of planning."""
+def elementwise_assignment(targets, right_items, read_once, validate_all, write):
+    """The common .: snapshot/validate/commit body, outside graph planning.
+
+    The receiving method has already selected target cells and source fields.
+    In particular it may consume the immediate fields of one returned Array;
+    the grouper never performs that run-time Array admission or expansion.
+    Several source Array values remain several items, not a flattened stream.
+    Scalar := has its own PLACE/VALUE contract and does not call this body.
+    """
+    targets = tuple(targets)
     values = tuple(read_once(item) for item in right_items)
+    if len(targets) != len(values):
+        raise ValueError("elementwise assignment shape mismatch")
     validate_all(targets, values)   # count, place and type checks before writes
     for target, value in zip(targets, values):
         write(target, value)

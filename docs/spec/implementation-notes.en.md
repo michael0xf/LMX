@@ -49,7 +49,7 @@ called a namespace image, descriptor cache, or execution metadata.
 | Private and scope | Private source excluded and visible private receiver protected; explicit/lexical access retained; sequential locals and real nested shadowing | Source-only private checks, global name barriers, whole-body future-local masking |
 | Declaration arguments | Preserve the complete DATA declaration without initializer execution; ordinary positional mapping or explicit outer named supply only; never match the internal declaration name; repeated execution updates the receiving execution's place | Passing only initializer values, treating an absent inner name as an unknown named actual, fresh item per body invocation |
 | Import/copy/merge | Ordinary CODE arguments everywhere; common W/E; import 1+, copy 1, merge 2+ admitted sources; output fields consumed by namespace | DATA-argument mode, const-filtered copy, one-source merge, implicit destination as model, automatic outer result container |
-| User operands | Ordinary method with left/right and explicit constant PASS_ARGS_AS_IS/PRIORITY; ordinary result; shared eval for raw occurrences | sys\operand registration, one args Array, universal reference result, implicit mode/priority |
+| User operands | Ordinary method with left/depth/right and explicit constant PASS_ARGS_AS_IS/PRIORITY; ordinary result; shared eval for raw occurrences | sys\operand registration, one args Array, universal reference result, implicit mode/priority |
 | Parser closure | Blank physical line invokes common complete close at local document root; protected content/pairs/Mix retain their rules | Ignoring a physical blank inside an intended continuing block or inventing a separate grammar subsystem |
 | Storage/native | Typed records, common variable-sized Arrays, ordinary machine locals, direct native calls where known, existing bridge/arena/GC | Typing by address ranges, hidden native compilation, local publication/flush, universal wrapper/registry additions |
 | Complete program | One complete graph plus compiled methods; R0 is a C method with a local graph pointer even for interpreter execution | Static DATA replicas, persistent working/expanded/callable graphs, global hidden program instances |
@@ -106,7 +106,7 @@ The essential implementation separations are:
 
 - The physical record's code/value and ownership are distinct from a source requirement or ABI
   spelling. Preserve exact scalar ABI transport and uninitialized-state inspection without
-  reading nonexistent payload: `uninit:T` is its type code alone, with no reserved T cell.
+  reading nonexistent payload: `uninit:T` is a TypeRef to its absence description alone, with no reserved T cell.
   An explicit graph assignment replaces a fragment; execution-place assignment leaves source
   unchanged. Native locals do not have an arena tag before their address.
 - The flat descriptor has parent/length/storage only. Capacity and native descriptors stay in
@@ -212,7 +212,7 @@ before an applicable E reading.
 A stream's destination is not an implicit source or model. Matching fields overlay only inside
 one merge; independent streams use ordinary DATA repeated occurrences.
 
-For one copied value use `(copy(A))`, for one merged value `(merge(A B))`; for fields use the ungrouped receiver. An explicit named formal suppresses E for that whole structural actual. For [group positional assignment](LMX_semantics.en.md#group-assign), `(a b) := copy(Pair)` and `(a b) := (copy(Pair))` consume the same two emitted fields when the source and targets satisfy the contract. The collector is optional for this sequence consumer. The grouper preserves current-level items; application adaptation packages the left PLACE sequence as one actual. Three sibling RHS groups remain three Structure values, not a recursively flattened stream. Obtain and retain all RHS values and check their count before the first target write; RHS names do not reorder targets and previous RHS effects are not rolled back. A function-returned Structure remains one value. Scalar `ptr := (copy(Pair))` still receives one collected Structure.
+For one copied value use `(copy(A))`, for one merged value `(merge(A B))`; for fields use the ungrouped receiver. An explicit named formal suppresses E for that whole structural actual. For [group positional assignment](LMX_semantics.en.md#group-assign), `(a b) .: copy(Pair)` and `(a b) .: (copy(Pair))` consume the same two emitted fields when the source and targets satisfy the contract. The collector is optional for this sequence consumer. The grouper preserves current-level items; application adaptation packages the left PLACE sequence as one actual. Three sibling RHS groups remain three Structure values, not a recursively flattened stream. Obtain and retain all RHS values and check their count before the first target write; RHS names do not reorder targets and previous RHS effects are not rolled back. A function-returned Structure remains one value. Scalar `ptr := (copy(Pair))` still receives one collected Structure.
 
 <a id="compound-assign-notes"></a>
 ### 4.3. Expressions and operands
@@ -225,14 +225,14 @@ calls evaluate anew. Short-circuit skips all effects in the unneeded operand. Co
 addresses its destination once. Power keeps its accepted right grouping and asymmetric unary
 relationship; ordinary LMX numeric rules still determine values and type admissibility.
 
-User operands are ordinary methods with mandatory explicit left/right and constant mode/priority
+User operands are ordinary methods with mandatory explicit left/depth/right and constant mode/priority
 fields. Mode 0 transports references to prepared typed values; mode 1 transports source occurrences
 with their original live context for sys\eval. The method returns its normal declared logical
 type. Discovery, expression use, and sys\priority share its description, with no sys\operand
 registration. sys\name consumes an identifier spelling and returns a normal char Array without
 resolving or executing the named entity. Prefix dereference remains dereference, not eval.
 
-Expression is the ordinary Structure graph interpreted with a [structural grouper](LMX_semantics.en.md#expression-structural-grouping): it determines priorities, complete expression units and streams at the current tree level, independently of source spelling. A separate Expression application adapter packages left as one actual/reference bundle and right as an Array of references. `arg0 operand arg1 arg2 arg3` is the general form; a binary contract uses one right item, with no automatic fold or movement of the first right item into an absent left. The receiving contract selects whole-value or current-level sequence consumption. `(a b c) := (a c b)` therefore has one left bundle and three right values; three sibling RHS groups remain three Structure items. There is no extra conditional unwrapping pass after grouping. The grouper reads the clean graph. In Expression, a graph reference atom to a Structure forms a group only outside the operand role. Translation rejects ambiguous interpretations before effects. Other reached Structures follow the name/actual-parent rule. Reference resolution preserves the actual parent. Whole VALUE/TYPE/DATA material is not automatically reclassified as CODE. `1 + ((2))` is 3; field collectors such as `(copy(Model))` remain containers for zero, one or many fields. `::` and modifiers keep DATA consumption and the common immediate-field reader; they gain no RHS evaluator. P0, ordinary callable W/E and the existing lifetime/effect rules remain intact. See [architecture and acceptance](EXPRESSION_GROUPING.md); execution is **NOT_RUN**.
+Expression is the ordinary Structure graph interpreted with a [structural grouper](LMX_semantics.en.md#expression-structural-grouping): it determines priorities, complete expression units and streams at the current tree level, independently of source spelling. A separate Expression application adapter packages left as one actual/reference bundle and right as an Array of references. `arg0 operand arg1 arg2 arg3` is the general form; a binary contract uses one right item, with no automatic fold or movement of the first right item into an absent left. The receiving contract selects whole-value or current-level sequence consumption. `(a b c) .: (a c b)` therefore has one left bundle and three right values; three sibling RHS groups remain three Structure items. There is no extra conditional unwrapping pass after grouping. The grouper reads the clean graph. In Expression, a graph reference atom to a Structure forms a group only outside the operand role. Translation rejects ambiguous interpretations before effects. Other reached Structures follow the name/actual-parent rule. Reference resolution preserves the actual parent. Whole VALUE/TYPE/DATA material is not automatically reclassified as CODE. `1 + ((2))` is 3; field collectors such as `(copy(Model))` remain containers for zero, one or many fields. `::` and modifiers keep DATA consumption and the common immediate-field reader; they gain no RHS evaluator. P0, ordinary callable W/E and the existing lifetime/effect rules remain intact. See [architecture and acceptance](EXPRESSION_GROUPING.md); execution is **NOT_RUN**.
 
 <a id="open-design"></a>
 ## 5. Derived review cases and the resolved physical-layout decision
@@ -285,7 +285,7 @@ externally retained, keep their ordinary ownership boundary without an invented 
 ### 5.3. P01 — resolved: uninit has zero payload; graph assignment replaces fragments
 
 The [zero-payload rule](LMX_semantics.en.md#uninit-zero-payload)
-supersedes both earlier alternatives. `uninit:T` is only the type code; `sizeof(value) = 0`.
+supersedes both earlier alternatives. `uninit:T` contains only its canonical TypeRef; `sizeof(value) = 0`.
 There is neither an outer/inner T pair nor a single tag followed by reserved T storage. A
 named declaration without a value remains a named source leaf without allocating its future value.
 
@@ -505,14 +505,25 @@ boot-m11-uninit-reference-01/g2 and graph-m11-uninit-reference-g2-01. Render/doc
 ordinary physical5/6/9 native in M14 and arbitrary models/void/depth/Array in M13 remain OPEN.
 Witness 376 (original reference: `../steps/witnesses/m11-uninit-reference-20261114/notes.md`).
 
-The current generator still uses parent/native/embedded VoidArray: this is the former ABI.
-The target record contains only parent/length/storage, with capacity in an arena table and native
-descriptors in call's tables in the same arena. Structure/Array<@> are interchangeable; numeric Array stores T.
-All variable-size arrays share allocation/resizing, including service Thread.children.
-The header stays stable; storage may move. Remove separate inline capacity in DynamicArray.
-L2 indexing has no checks; L3 checks one linear index and holds the descriptor reference plus index.
-sys\descriptor returns three actual addresses; sys\native/sys\capacity query tables.
-Contract and status (original reference: `L2_spec_en.md#lmx`), plan.
+The historical generator uses parent/native/embedded VoidArray: that is the former
+ABI. The current target header contains only parent/length/storage. A direct
+TypeRef immediately before payload addresses the immutable canonical description
+of the complete normalized constructing type. Length, reserve and initializer
+rows do not specialize that description. Written rank/extents belong to it;
+missing axes remain unspecified unless uniquely derivable from TYPE plus length.
+At capacity=length no secondary descriptor exists. Real reserve uses an optional
+capacity-only association, without changing TypeRef. Numeric Array stores T;
+ordinary Structure retains reference storage. Native descriptors remain in call
+tables. Allocation/resizing remains common, including Thread.children.
+
+Native L2 adds no automatic bounds check; interpreted L2 and L3 keep the existing
+reached final-element rule. For ordinary Array/Structure, sys\descriptor returns
+three actual header addresses. For the canonical system TYPE object, the more
+specific contract returns that same type description, so
+`sys\descriptor(typeof(obj))` performs no integer-code lookup. sys\capacity
+checks the optional association, otherwise returns length, allocating nothing.
+The [TypeRef revision](../TYPE_REFERENCES_CHANGE.md) is the current normative
+contract; old witnesses below do not establish its implementation.
 
 `LmxThread` embeds `LmxMsg message` by value as its first field; a
 plain `LmxMsg` does not expose the Thread tail. The sole child List,

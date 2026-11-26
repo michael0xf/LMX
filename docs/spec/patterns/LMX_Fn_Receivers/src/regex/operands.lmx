@@ -1,6 +1,7 @@
 # The Expression grouper resolves the supplied graph, priorities and field streams.
 # Its application adapter packs left as one actual and the current right stream
-# as an Array of references. This collector only copies that prepared vector;
+# as an Array of references; depth is a separate service input. This ordinary
+# two-input collector deliberately does not receive depth. It copies the vector;
 # there is no additional opening pass.
 # See ../../../../LMX_semantics.en.md#expression-structural-grouping.
 # An absent left stays nil; it is not replaced by null/zero or autofill.
@@ -28,6 +29,7 @@ RxLogicalArguments:
 RxThenOperand:
     private:
         @: left
+        int: depth 0
         @[]: right
     required: right
     const: int: PASS_ARGS_AS_IS 0
@@ -43,6 +45,7 @@ RxThenOperand:
 RxRepeatOperands:
     private:
         @: left
+        int: depth 0
         @[]: right
     required: right
     const: int: PASS_ARGS_AS_IS 0

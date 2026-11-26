@@ -95,11 +95,27 @@ def logical(ident,a):
     if ident=='J22':return ''.join(c for c in a[0] if '0'<=c<='9')[-4:]
     if ident=='J23':return [value for part in a[0] for value in part][::-1]
     if ident=='J24':return [[x,y] for x in a[0] for y in a[1] if x+y<=a[2]]
+    if ident=='J25':
+        xs,gain,bias,limit=a
+        calibrated=[gain*x+bias for x in xs]
+        return [x for x in calibrated if x>=limit]
+    if ident=='J26':
+        values,count,newest_first=a
+        if count<0:raise ValueError('negative_count')
+        n=min(count,len(values))
+        window=values[len(values)-n:]
+        return window[::-1] if newest_first!=0 else window
+    if ident=='J27':
+        values,next_value=a
+        previous=list(values)
+        values[1:]=previous[:-1]
+        if values:values[0]=next_value
+        return {'mask':[int(x==old) for x,old in zip(values,previous)],'values':values}
     raise AssertionError(ident)
 
 def main():
     data=json.loads((R/'examples.json').read_text());errors=[];checks=[];expectations=[]
-    assert len(data['examples'])==24 and len(data['implementations'])==4
+    assert len(data['examples'])==data.get('expected_client_count',24) and len(data['implementations'])==4
     current=production()
     stats=json.loads((R/'statistics.json').read_text());by_stats={(x['id'],x['language']):x for x in stats['rows']}
     by_style={(x['id'],x['style']):x for x in stats['comparison_rows']}
@@ -159,7 +175,7 @@ def main():
             plain=target.split('#')[0]
             if path==R/'README.md' and plain in pending:continue
             if not (path.parent/plain).exists():errors.append(str(path.relative_to(R))+': missing local link '+plain)
-    report={'status':'FAIL' if errors else 'PASS','edition':'2026-11-25','scope':'Static source/metrics/provenance checks plus Python logical expectation oracle; not Julia/LMX execution or P0.','checks':checks,'errors':errors,'logical_cases_checked':len(expectations),'lmx_source_files_checked':len(lmx_paths),'lmx_parser_execution_for_changed_sources':'NOT_RUN','julia_executable':shutil.which('julia'),'julia_execution':'NOT_RUN','lmx_execution':'NOT_RUN'}
+    report={'status':'FAIL' if errors else 'PASS','edition':'2026-11-26','scope':'Static source/metrics/provenance checks plus Python logical expectation oracle; not Julia/LMX execution or P0.','checks':checks,'errors':errors,'logical_cases_checked':len(expectations),'lmx_source_files_checked':len(lmx_paths),'lmx_parser_execution_for_changed_sources':'NOT_RUN','julia_executable':shutil.which('julia'),'julia_execution':'NOT_RUN','lmx_execution':'NOT_RUN'}
     (R/'validation/check_report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
     (R/'validation/python_expectation_check.json').write_text(json.dumps({'status':'PASS' if all(x['status']=='PASS' for x in expectations) else 'FAIL','kind':'logical expectations in Python, not language execution','cases':expectations},ensure_ascii=False,indent=2)+'\n')
     print(json.dumps({'status':report['status'],'checks':len(checks),'cases':len(expectations),'errors':errors},ensure_ascii=False))

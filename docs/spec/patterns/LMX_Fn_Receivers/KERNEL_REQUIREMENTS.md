@@ -27,11 +27,11 @@ without an assignment-specific parser branch or a universal pre-call binder.
 See [grouping and application](../../LMX_semantics.en.md#expression-structural-grouping)
 and the [accepted vector outcomes](../../LMX_semantics.en.md#operand-right-only-opening).
 
-For `(a b c) := (a c b)`, the plan contains the two ordered streams and the
+For `(a b c) .: (a c b)`, the plan contains the two ordered streams and the
 adapter supplies one whole left argument with three right values. For
-`(a b c) := (f g h) (f g h) (f g h)`, the current right level has three whole
+`(a b c) .: (f g h) (f g h) (f g h)`, the current right level has three whole
 Structures, never their nine fields. An explicit field stream may be written
-directly: `(a b c) := copy(d)` and the grouped RHS spelling have the same
+directly: `(a b c) .: copy(d)` and the grouped RHS spelling have the same
 group-assignment effect. A scalar whole-Structure receiver still retains its
 `(copy(d))` container.
 
@@ -97,7 +97,7 @@ signature kind, with the existing named-signature/`call` relationship unchanged.
 
 All public receivers are part of the one current kernel namespace. `fun\const` is a physical source export group, not an optional package version or second registry. Service inputs remain private; source user inputs retain their individual policy.
 
-The current package has **19 integration bridges**: the eight original interfaces in §2 plus the read-only compatibility observation AR01, five ordinary call-phase hooks in §3, four common Array boundaries in §6, and the accepted-form gate AE01 below. These are internal boundaries, separate from the **212 public callable/operand names** and **24 other exported symbols** listed in the [catalog](CATALOG.md) and [value-symbol inventory](value_symbols.json).
+The current package has **20 integration bridges**: the eight original interfaces in §2 plus the read-only compatibility observation AR01, five ordinary call-phase hooks in §3, four common Array boundaries in §6, the accepted-form gate AE01, and the dependent operand-context gate PD01 below. These are internal boundaries, separate from the public callable/operand names and other exported symbols listed in the [catalog](CATALOG.md) and [value-symbol inventory](value_symbols.json). A declaration of a required provider does not claim its production implementation exists in this documentation archive.
 
 The bridge profile uses empty payload `()` for service exits `FxKernelFailure`
 and `FxTypeToken`. This defines the adapter service outcomes only. User-declared
@@ -194,7 +194,7 @@ Read the selected ordinary callable or signature description using the real anal
 
 | Field | Contract |
 | --- | --- |
-| `inputTypes` | Ordered full normalized requirements; the sequence stores type-code records, not arbitrary physical DATA fields |
+| `inputTypes` | Ordered full normalized requirements; the sequence stores canonical TypeRef references, not arbitrary physical DATA fields |
 | `resultType` | Full result requirement, including explicit void |
 | `hasResult` | Result presence; never inferred from a zero pointer |
 | `names` | Public labels of the inspected signature/candidate in semantic position order |
@@ -205,11 +205,24 @@ Methods, const properties, free names and `return` are not promoted to formal in
 
 ### normalizeType(token)
 
-An initialized int token's **payload** is the type code; `typeof` of that token is still int. An uninitialized `T` token contributes its type without reading nonexistent payload. Explicit void retains absence of a result. A valid existing model preserves the complete Structure/callable/Array requirements and qualifiers through the current type registry.
+Accept the existing TYPE forms and return a direct canonical TypeRef to the
+immutable system Structure describing the complete normalized requirement.
+A ready canonical type description is already that result. An uninitialized
+`T` declaration contributes its requirement without reading absent payload;
+explicit void retains the absence of a result. Full Structure, callable, Array,
+pointer and qualifier requirements remain intact. A plain initialized int is
+not a TYPE code and must not be reinterpreted as a descriptor address.
 
-The bridge's `@` return is an internal reference to the canonical ordinary int-code record, whose code resolves through the existing full type/model description. It is not a new public boxed Type value or permission to replace every model by the physical tag of `@`. Invalid codes produce `FxTypeToken`.
+Postfix `T[]`, `T[N]`, `T@` and dynamic rank/pointer forms produce TypeRef through
+the common canonicalizer. The complete normalized constructing description alone
+determines type identity: `int[][]` and `int[](2)` share a descriptor;
+initializer rows, actual length and reserve do not refine it. `[]: value` retains
+uninitialized AnyArray, and `@[]: value` the ordinary Structure/reference-array
+requirement. Neither form allocates a typed backing merely by naming a type.
 
-Postfix `T[]` and `T@` produce ordinary interned int codes. `int@@`, `int[]@`, `int@[]` retain their actual levels. `[]: value` means uninitialized AnyArray; `@[]: value` means the Structure/general-reference-array requirement. Neither is a typed allocation disguised as a type code.
+The old int-code source prototypes are pending ABI migration. Invalid TYPE
+inputs retain the ordinary `FxTypeToken` boundary; they do not enable a second
+numeric-code compatibility path.
 
 ### signatureData(inputs; result; labels)
 
@@ -337,11 +350,11 @@ The historical eight-hook source is retained under reference solely for provenan
 
 ## 6. Four common Array boundaries
 
-The sequence and Regex implementations share the existing type table, descriptor, storage, admission and allocation services through four additional narrow operations. [SEQUENCES_IMPLEMENTATION.md §4](SEQUENCES_IMPLEMENTATION.md#4-four-precise-kernel-boundaries) defines them in full; declarations are included in `kernel_contracts.lmx`.
+The sequence and Regex implementations share the existing canonical type descriptions, descriptor, storage, admission and allocation services through four additional narrow operations. [SEQUENCES_IMPLEMENTATION.md §4](SEQUENCES_IMPLEMENTATION.md#4-four-precise-kernel-boundaries) defines them in full; declarations are included in `kernel_contracts.lmx`.
 
 | Operation | Contract |
 | --- | --- |
-| `arrayInfo(source)` | Require an initialized Array/Structure; return `arrayType`, `elementType`, `elementBits`, `dense`, `maxLength` as ordinary int metadata. Canonical codes preserve full nested requirements; the array profile is linear, and maxLength accounts for index and actual byte-size overflow. |
+| `arrayInfo(source)` | Require an initialized Array/Structure; return `arrayType` and `elementType` as canonical TypeRef references, and `elementBits`, `dense`, `maxLength` as ordinary int metadata. Complete normalized descriptions preserve full nested requirements; the array profile is linear, and maxLength accounts for index and actual byte-size overflow. |
 | `arrayRead(source,index)` | Return one direct stored value reference for @[] or an ordinary stable dense-T record using actual stride. Preserve full type/reference/uninit state where representable. Do not execute saved graph forms, require a value box, or pre-materialize the entire input. |
 | `arrayAdmit(target,value)` | Before commit, prepare the value against the actual target's complete element requirement. @[] takes the direct reference independently of the former slot. Dense T uses permitted ordinary representation preparation; no hidden user converter/initializer is added. |
 | `arrayWrite(target,index,value)` | Write an already prepared same-profile/admitted value with ordinary bounds/lifetime checks and no repeated full admission, converter or callback. Keep descriptor identity and parent links. |
@@ -351,3 +364,85 @@ The sequence and Regex implementations share the existing type table, descriptor
 ## Actor publication and Expression lowering
 
 The same existing dispatcher serves both forms of every operation. P0 already preserves receiver forms in Expression; integration belongs in translator role routing, not a replacement lexer. The exact implementation contract for semantic family selection, whole-value capture before default admission, exact-R builders and source profiles is [PUBLICATION_CONTRACT.md](PUBLICATION_CONTRACT.md). These hooks reuse the interfaces above. Ordinary and backtick names share one decoded identity; symbolic callable spelling does not select a different role. Attached `++var`, `var++`, `--var`, `var--` remain unary PLACE operations with their specified before/after results.
+
+<a id="pd01"></a>
+## PD01 — operandDepthContext(frame; arguments)
+
+The [common depth ABI](../../OPERATOR_DEPTH.en.md#abi) is left / depth / right.
+The source declaration is `FxKernelOperandDepthContextAPI :: (@: frame; @: arguments; return: @)`.
+The concrete provider is `FxKernel\operandDepthContext`.
+
+This provider is an **integration requirement**, not an implemented stub.
+Production implementation: **NOT_IMPLEMENTED_IN_THIS_DOCS_ARCHIVE**;
+production execution: **NOT_RUN**. The LMX wrapper and common traversal
+bodies are supplied separately and must not be replaced by a second opaque
+algorithm inside this provider.
+
+PD01 is reached only for a selected VALUE operand. `frame` retains its
+original owner/caller context; the source ordinary callable is identified
+by `policy\operandDepthSource`. Frame slots 0/1/2 hold left/depth/right;
+the separately supplied `arguments` are already collected logical arguments
+of the source, **without the wrapper's control depth**. A source formal
+also named depth retains its own owner and ordinary argument semantics.
+
+The result is a checked, operation-local context for the common
+`FxArrayDepth` traversal:
+
+| Context component | Obligation |
+| --- | --- |
+| `base` | The selected source ordinary callable; invoked only by the common executor |
+| `hasResult` | 0 or 1; void traversals do not allocate Array<void> |
+| `level(context; depth; inputs)` | Select logical dimensions using available or uniquely derivable axis information from the current canonical Array type description plus length; insufficient required information is diagnosed. Compact arrays have no secondary descriptor. Return checked `{hasArray,count,inputs,read,layout,write}` and preserve original-scalar provenance. `count` counts base applications after the selected axes, not necessarily scalar storage cells |
+| `read(map; index)` in the frame | Obtain a selected scalar, ordinary Structure value or logical slice descriptor on the same existing storage. Do not allocate row Structures or a separate array-of-arrays representation |
+| `write(output; index; value)` in the frame | Admit and store the selected base result in its prepared scalar or block output region |
+| Full result requirement and `layout` | Preserve source R/void at depth 0 and scalar fixed points; determine the complete result shape/type without a probe call. A flat rectangular result uses one backing, without traversal-generated row containers |
+| `publish(context; layout; result)` | Use the canonical TypeRef of the complete declared/evaluated result requirement. Required persistent output axes must be expressed in that requirement; initializer/layout data cannot secretly specialize a generic result type. For capacity=length publish no secondary descriptor; real reserve uses an optional capacity entry without a new TypeRef. Preserve ordinary identity and parent rules; do not extend Lmx or user fields |
+
+The provider checks actual shapes and full input/result requirements from
+the current ordinary records and shared type metadata. Shape and reserve
+representations follow [canonical Array descriptions](../../ARRAY_STORAGE.en.md#array-profiles).
+For a fixed shaped result, common construction allocates/initializes the valid
+backing directly under the complete evaluated requirement before publication.
+The old `FxSeqAllocate` empty-value-plus-resize helper only serves unconstrained
+linear types; it cannot publish an empty `int[2][3]` or retag a ready generic
+Array. Migrating that prototype is part of this boundary, without a second
+allocator or growth mechanism.
+An operation-local frame/layout is temporary and does not restore a mandatory
+per-Array shape descriptor. A temporary plan may carry dimensions during one
+expression; only the complete published result requirement persists them. Old
+host checks do not validate this TypeRef ABI or its production allocation transitions. It does not evaluate
+the source to infer a type, perform element arithmetic or execute another
+lifting algorithm. The LMX engine obtains one frame, adds `frame.root`,
+allocates only the admitted result layout through `FxArrayResultTree`, and
+runs the common `FxArrayExpressionFill` loop. `FxArrayDepthCell` reads the
+selected arguments and calls `FxArrayDepthBase` once per base application.
+The selected logical axes can be linearized into that loop; no second
+program graph or row-storage hierarchy is constructed. All effect order
+and actual callable failures retain the selected callable's ordinary contract.
+
+At depth 0, `FxArrayDepth` directly delegates to the base method, retaining
+exact R/void. If all original actuals are scalar, the checked frame selects
+the same scalar fixed point. An Array whose required dimensions run out
+cannot silently become a scalar broadcast. For flat rank-2 inputs, depth 1
+selects rows and depth 2 selects scalar coordinates. Ordinary Structure
+paths, including `struct[i]\[j]`, continue to use general reference access;
+they do not declare another container entity. The header remains
+`parent/length/storage`, and the Array/Structure VALUE overload of
+`sys\descriptor` still returns those three field addresses for ordinary values.
+The canonical system-TYPE branch has priority for a TypeRef description and
+returns that same description: `sys\descriptor(typeof(obj))` is not an int-code
+lookup ([contract](../../ARRAY_STORAGE.en.md#type-descriptor)). It allocates no
+second descriptor for an Array.
+
+A wrapper whose depth may change the logical return type cannot keep an
+unconditional scalar R declaration for a lifted result. The existing
+adaptive call preparation must select and admit the full requirement
+before entry. Native dispatch must use the corresponding already prepared
+ABI; this change does not authorize hidden compilation on demand, mutation
+of the source callable description, or universal boxing of every result.
+A statically depth-0 call retains the original exact R/void route.
+
+RAW, DATA, TYPE and PLACE consumers are not routed through this VALUE
+provider merely because they expose the same three input names. Their
+selected receiving contract either implements its own depth behavior or
+reports an unsupported depth as a translator/interpreter diagnostic. Invalid depth, inconsistent required Array levels/shapes and ineligible fusion do not introduce user exceptions or extra throws. Real callback failures retain their existing channels.

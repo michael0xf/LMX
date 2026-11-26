@@ -443,8 +443,8 @@ def verify(root):
     receipts = {}
     receipt_info = {}
     for kind, suffix, filename in (
-        ("workbooks", ".xlsx", "validation/workbook_publication_20261123.json"),
-        ("pdfs", ".pdf", "validation/pdf_generation_20261123.json"),
+        ("workbooks", ".xlsx", f"validation/workbook_publication_{model['edition'].replace('-', '')}.json"),
+        ("pdfs", ".pdf", f"validation/pdf_generation_{model['edition'].replace('-', '')}.json"),
     ):
         receipts[kind], receipt_info[kind] = load_receipt(root, filename, model_hash,
                                                        [stem + suffix for stem, _, _ in outputs], global_checks)

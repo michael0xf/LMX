@@ -401,7 +401,7 @@ oracle in the [derived review case](REVIEW_NOTES.md#open-questions).
 
 A user operand is an ordinary method resolved in the current namespace.
 Its DATA is checked against the structural operand header. Mandatory fields are
-`left`, `right`, `PASS_ARGS_AS_IS`, and `PRIORITY`. Missing properties are not
+`left`, `depth`, `right`, `PASS_ARGS_AS_IS`, and `PRIORITY`. Missing properties are not
 filled by merely checking the template.
 
 The [Expression grouper](LMX_semantics.en.md#expression-structural-grouping) derives priority dependencies and current-level structural sequences from the clean graph. In Expression, a graph reference atom to a Structure forms a group only outside the operand role. Translation rejects ambiguous interpretations before effects. Other reached Structures follow the name/actual-parent rule. Reference resolution never reparents the target. A separate application adapter supplies one left reference/bundle and an Array of right references. The receiving contract selects whole-value or sequence consumption: group assignment accepts bare `copy` or its collector and snapshots RHS values before writes; three sibling RHS groups remain three Structure values. Complete scalar expression groups such as `((2))` yield one value, while TYPE/models, field collectors and returned/reference values keep their actual contracts. There is no extra conditional opening pass, new persistent flag or public two-Array operand ABI. Prefix absence remains absence; there is no automatic fold or right-to-left shift.
@@ -507,12 +507,15 @@ the written import/copy/merge Frames.
 
 ## 12. Memory, explicit editing, and native code
 
-Read a value's physical kind through its record code and the corresponding type
-description, not from its address interval. The interval structure is for ownership.
-Derived array and pointer requirements retain their full descriptions and ordinary
-int codes through the common interner. Do not introduce ad hoc flag bits or a
-separate physical C layout for every user model. A full type requirement and its
-checked TYPE-pair metadata do not create another executable graph.
+Read every graph record's type through its direct TypeRef: a reference to the
+canonical immutable system Structure of the complete normalized LEFT. It is not
+an int counter/index or a packed tag. The pointer prefix is immediately before
+initialized payload: byteAddress(p)-sizeof(TypeRef), loaded once to obtain the
+metadata address. Align both pointer and payload, padding before the prefix;
+uninit contains only TypeRef. Dense elements and arbitrary native locals have
+no individual record prefix. Ownership intervals never determine type.
+[L2 physical ABI](L2_spec_en.md#value-record). A complete type description adds
+no separate C layout per user model and creates no second executable graph.
 
 Structures and reference Arrays share the descriptor and variable-size storage
 contract. Use descriptor/index element references where required for movable
@@ -529,7 +532,7 @@ physical storage and ordinary copy/collection machinery that the current
 contracts still require.
 
 Implement the [zero-payload `uninit` rule](LMX_semantics.en.md#uninit-zero-payload):
-`uninit:T` is its code only, with zero payload. No T cell or complete inner T
+`uninit:T` is its TypeRef only, with zero payload. No T cell or complete inner T
 record is preallocated. `struct\novalue := 5` replaces `{uninit:int}` by `{int 5}`
 at the addressed graph field. Remove tests that require in-place tag changes or
 a stable raw payload address across this replacement. Assignment in the execution
@@ -641,4 +644,72 @@ are carried into the documentation in full; the documentation alone is the norm.
 <a id="unified-20261122"></a>
 ## Current type and sequence rules
 
-Use T[] and T@ postfix type forms. Use an explicit square initializer for an anonymous typed array, preserve arbitrary pointer depth, and distinguish []: pending from @[]: pending. Universal sequence operations inspect actual array layout; they do not cast dense storage to void**. Keep callback defaults and omitted actuals intact. Only the documented one-level right-container opening is permitted; no P0 unwrap and no private array/regex parser. Use Message for concurrency. Runtime graph edits remain ordinary operations independent of optional native compilation. [Normative details and examples](CORE_SEQUENCES_REGEX.en.md).
+Use T[], T[extentExpression] and T@ postfix forms. In TYPE, each [] or [size]
+contributes one axis; VALUE/PLACE brackets remain indexing. Keep a declaration
+colon distinct from atomic := and preserve indexed callable receiver heads.
+Common P0 parses full size expressions; TYPE obtains each occurrence once in
+lexical order and checks a nonnegative integer. `T[](R)` counts unspecified axes;
+T[R] constrains one axis. No initializer still means uninit without allocation.
+
+The normalized complete LEFT alone determines TypeRef. Equal requirements reuse
+one immutable descriptor: int[][] equals `int[](2)`, int[] lengths 2/3 share TYPE,
+and int[2][3] differs from int[3][2]. Runtime int[N] reuses the canonical address
+when its evaluated requirement matches. Names, initializer rows, actual length
+and reserve never specialize type. Type producers, typeof and signature producers
+return references; types returns references to descriptions, not int codes.
+
+int[][3] and six flat elements determine [2,3]. int[][] with six elements is also
+valid but retains two unknown extents, even when explicit rows validated [2,3]
+during construction. A single missing size can be derived from length divided
+by a positive known product when exact; several unknown sizes stay unknown.
+int[0][]: [] and int[][0]: [] are valid incomplete zero shapes; int[2][0]: []
+is fully specified. Reject proven contradictions, irregular explicit rows,
+negative/noninteger sizes and impossible products. Lack of dimension information
+fails only when a reached operation needs it. Never retain hidden per-value shape
+or reconstruct runtime dimensions from discarded initializer rows.
+
+The primary Lmx is always parent/length/storage. Capacity=length means NO secondary
+descriptor, including empty/nD values. Capacity>length has only a compact capacity
+entry in the existing optional association. sys\capacity checks that entry or uses
+length. Reserve/resize preserve TypeRef, element stride and all fixed constraints;
+length-dependent proofs/backing pointers still require valid guards after mutation.
+No capacity-specific TYPE, extra Lmx field or hidden shape storage is allowed.
+
+Compatibility is directed admission between complete descriptions, not pointer
+equality. Receiving an existing ready object through another type does not retag
+or copy it. Generic consumers admit compatible types; they cannot demand equality
+with bare T[] when a fixed-size T[5] also satisfies the intended contract.
+Copy preserves normalized TYPE; restore interns the full description in the
+destination and relocates TypeRefs. Reserve may become length without changing
+type. Same-context attach preserves addresses and keeps metadata alive for every
+live record, saved TYPE or native binding after donor release. Type descriptions
+have finite bootstrapped meta-descriptions with ordinary graph cycles if needed.
+
+sys\typeof(obj) already yields the canonical system Structure reference.
+sys\descriptor(TypeRef) returns that SAME immutable Structure. This more specific
+canonical TYPE contract takes precedence; user field layouts/names do not choose
+it. Ordinary Structure/Array arguments retain the three primary-field addresses;
+the no-argument current-DATA contract is unchanged. There is no integer lookup or
+arbitrary-int pointer cast. Expose only facts of the complete LEFT and common
+storage/compatibility rules; instance capacity remains sys\capacity(obj).
+[TYPE descriptor](ARRAY_STORAGE.en.md#type-descriptor),
+[complete representation](ARRAY_STORAGE.en.md#array-profiles),
+[sized forms and derivation](ARRAY_STORAGE.en.md#sized-postfix).
+
+**Migration gate:** [TYPE_REFERENCES_CHANGE.md](../TYPE_REFERENCES_CHANGE.md)
+identifies unchanged prior-ABI LMX reflection/type-return sources, int-record
+normalizer bridges and the teaching C runtime. Their int[] type sequences,
+return:int type queries, p-4 reads and four-byte tag assertions require source
+migration and regeneration before runtime acceptance. No old native binary or
+fixture receipt validates this ABI. Native entries/loaders must use matching
+TypeRef width/alignment and relocate type addresses rather than serialize them.
+This documentation-only addition is **DOC_SPEC_ADDITION_ONLY**, production
+parser/translator/runtime acceptance **NOT_RUN**.
+
+Use an explicit square initializer for an anonymous typed array, preserve arbitrary
+pointer depth and distinguish []: pending from @[]: pending. Universal sequences
+inspect actual dense/reference storage; they do not cast dense T to void**.
+Keep callback defaults and omitted actuals intact. Only the documented one-level
+right-container opening is permitted; no P0 unwrap or private array/regex parser.
+Use Message for concurrency. Runtime graph editing remains independent of optional
+native compilation. [Normative details](CORE_SEQUENCES_REGEX.en.md).

@@ -26,15 +26,20 @@ def prepare(case,directory):
     errors=validate_variants(case,directory)
     if errors:raise ValueError(case["id"]+": "+"; ".join(errors))
 
-def count_table(listings):
+def green_minimum(value, minimum):
+    return f'<span style="color:#176233"><u>{value}</u></span>' if value==minimum else str(value)
+
+def count_table(listings, comparable=True):
     text="| Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |\n| --- | ---: | ---: | ---: |\n"
+    minimum=min((measure(code)['characters'] for _,code in listings if code.strip()),default=None) if comparable else None
     for label,code in listings:
         m=measure(code)
-        text+=f"| {label} | {m['characters']} | {m['characters_with_whitespace']} | {m['nonblank_lines']} |\n"
+        text+=f"| {label} | {green_minimum(m['characters'],minimum)} | {m['characters_with_whitespace']} | {m['nonblank_lines']} |\n"
     return text
 
 def client_table(case,foreign):
-    return count_table([(LABELS[s],case["lmx_variants"][s]["code"]) for s in STYLES]+[(foreign,case["foreign"])])
+    return count_table([(LABELS[s],case["lmx_variants"][s]["code"]) for s in STYLES]+[(foreign,case["foreign"])],
+                       comparable=case.get('comparison_status','complete_pair')=='complete_pair')
 
 def rows_for(case,foreign):
     rows=[]
@@ -93,8 +98,10 @@ def summary(data,foreign):
         counts={s:case["lmx_variants"][s]["metrics"]["characters"] for s in STYLES}
         counts["foreign"]=measure(case["foreign"])["characters"]
         for s,value in counts.items():totals[s]+=value
-        table+=f"| [{case['id']}. {case['title']}]({case['id']}_comparision.md) | {counts['procedural']} | {counts['functional']} | {counts['foreign']} |\n"
-    table+=f"| **Всего** | **{totals['procedural']}** | **{totals['functional']}** | **{totals['foreign']}** |\n"
+        minimum=min(counts.values()) if case.get('comparison_status','complete_pair')=='complete_pair' else None
+        table+=f"| [{case['id']}. {case['title']}]({case['id']}_comparision.md) | "+' | '.join(green_minimum(counts[s],minimum) for s in (*STYLES,'foreign'))+' |\n'
+    minimum=min(totals.values()) if all(e.get('comparison_status','complete_pair')=='complete_pair' for e in data['examples']) else None
+    table+='| **Всего** | '+' | '.join(green_minimum(totals[s],minimum) for s in (*STYLES,'foreign'))+' |\n'
     return table,totals
 
 def write_overview(directory,data,foreign,implementation_note=""):

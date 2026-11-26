@@ -8,6 +8,7 @@ LMX is an active language and kernel project. Its current goal is the [v3 plan](
 - [L1 and C99 lowering](docs/spec/L1_spec_en.md).
 - [Low-level L2 operations](docs/spec/L2_spec_en.md).
 - [Grammar](docs/spec/LMX_grammar.en.md): P0 rules and original examples, separate from the kernel.
+- [Types and arrays](docs/ARRAY_TYPE_MIGRATION.md), [Expression integration](docs/ARRAY_EXPRESSION_INTEGRATION.md), and the [interpreter and SLJIT design](docs/LMX_INTERPRETER_JIT.md) describe the current migration contracts and the planned execution architecture.
 - [Implementation and migration notes](docs/spec/implementation-notes.en.md): nonnormative code snapshots, translator limits, developer work, and open decisions.
 - [Comparison of previous specifications](docs/spec/source-comparison.en.md).
 - [Parser tests and migration status](tests/parser/README.en.md).

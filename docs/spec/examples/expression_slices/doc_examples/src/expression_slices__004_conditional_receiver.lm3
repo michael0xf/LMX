@@ -1,0 +1,11 @@
+Unselected:
+    return: int
+    fail:
+        throws: NotChosen
+        throw: NotChosen()
+
+ConditionalReceiver:
+    return: int
+    run:
+        throws: copy(Unselected\fail\throws)
+        return: `?:`(0; Unselected\fail(); 42)

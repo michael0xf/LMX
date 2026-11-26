@@ -8,6 +8,7 @@ LMX — действующий проект языка и ядра. Текуща
 - [L1 и понижение в C99](docs/spec/L1_spec_ru.md).
 - [Низкоуровневые операции L2](docs/spec/L2_spec_ru.md).
 - [Грамматика](docs/spec/LMX_grammar.ru.md): правила P0 и исходные примеры, отдельно от ядра.
+- [Типы и массивы](docs/ARRAY_TYPE_MIGRATION.md) и [Expression](docs/ARRAY_EXPRESSION_INTEGRATION.md) — текущие договоры миграции. [Проект интерпретатора и SLJIT](docs/LMX_INTERPRETER_JIT.md) описывает общую основу будущих исполнителей.
 - [Заметки о реализации и миграции](docs/spec/implementation-notes.ru.md): ненормативные срезы кода, ограничения трансляторов, задания разработчикам и открытые решения.
 - [Сравнение прежних спецификаций](docs/spec/source-comparison.ru.md).
 - [Тесты парсера и состояние переноса](tests/parser/README.ru.md).

@@ -79,6 +79,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--baseline-archive", type=Path)
+    parser.add_argument("--reviewed-source-changes", type=Path,
+                        help="Explicit review ledger: paths relative to spec and exact before/after hashes")
     parser.add_argument("--report", type=Path)
     args = parser.parse_args()
     root = args.root.resolve()
@@ -146,13 +148,30 @@ def main():
     revision_path = root / 'patterns/validation/source_revision_20261124.json'
     revision = json.loads(revision_path.read_text()) if revision_path.is_file() else {}
     reviewed_foreign = {'patterns/'+row['path']:row for row in revision.get('foreign_changes',[])}
+    explicitly_reviewed = set()
+    if args.reviewed_source_changes:
+        ledger = json.loads(args.reviewed_source_changes.read_text())
+        for row in ledger.get('foreign_changes', []):
+            relative = Path(row['path'])
+            if relative.is_absolute() or '..' in relative.parts:
+                raise ValueError("Reviewed paths must be inside the specification root")
+            if not row.get('reason') or not all(re.fullmatch(r'[0-9a-f]{64}', row.get(key, ''))
+                                               for key in ('before_sha256', 'after_sha256')):
+                raise ValueError("Every source review needs a reason and exact SHA-256 hashes")
+            reviewed_foreign[relative.as_posix()] = row
+            explicitly_reviewed.add(relative.as_posix())
     if args.baseline_archive:
         baseline = {"file": args.baseline_archive.name, "sha256": hashlib.sha256(args.baseline_archive.read_bytes()).hexdigest()}
+        if args.reviewed_source_changes and ledger.get('base_archive_sha256') != baseline['sha256']:
+            raise ValueError("Source review ledger belongs to a different baseline archive")
         with tarfile.open(args.baseline_archive) as archive:
             for member in archive.getmembers():
-                if not member.isfile() or not member.name.startswith("spec/"):
+                archive_path = member.name.removeprefix("./")
+                prefix = next((p for p in ("docs/spec/", "spec/")
+                               if archive_path.startswith(p)), None)
+                if not member.isfile() or prefix is None:
                     continue
-                relative = Path(member.name).relative_to("spec")
+                relative = Path(archive_path[len(prefix):])
                 if not foreign_source(relative):
                     continue
                 foreign_checked += 1
@@ -160,9 +179,9 @@ def main():
                 before = archive.extractfile(member).read()
                 if not current.is_file() or current.read_bytes() != before:
                     review = reviewed_foreign.get(relative.as_posix(), {})
-                    if (current.is_file() and relative.as_posix() in {
+                    if (current.is_file() and (relative.as_posix() in explicitly_reviewed or relative.as_posix() in {
                         'patterns/09_functional_computation/examples/haskell/085_currying.hs',
-                        'patterns/09_functional_computation/examples/scala/085_currying.scala'}
+                        'patterns/09_functional_computation/examples/scala/085_currying.scala'})
                         and hashlib.sha256(before).hexdigest() == review.get('before_sha256')
                         and hashlib.sha256(current.read_bytes()).hexdigest() == review.get('after_sha256')):
                         foreign_reviewed += 1
@@ -170,10 +189,11 @@ def main():
                         issue("foreign_source_changed", relative, "Change is not covered by the exact reviewed source hashes")
 
     counts["foreign_sources_compared"] = foreign_checked
-    counts["foreign_sources_reviewed_shortening"] = foreign_reviewed
+    counts["foreign_sources_reviewed_changes"] = foreign_reviewed
     report = {
         "scope": "documentation, source names, shared definitions and preserved or explicitly reviewed comparison-language sources",
         "baseline": baseline,
+        "explicit_source_review": args.reviewed_source_changes.name if args.reviewed_source_changes else None,
         "checks": dict(counts),
         "errors": errors,
         "status": "PASS" if not errors else "FAIL",

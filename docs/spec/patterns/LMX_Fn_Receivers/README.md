@@ -1,5 +1,13 @@
 # LMX: единые callable, последовательности и общие Patterns
 
+> **Новая редакция TYPE:** [прямая TypeRef](../../../TYPE_REFERENCES_CHANGE.md)
+> заменяет int-коды в текущих договорах. Отдельные `src/reflection.lmx`,
+> `src/operation_forms.lmx`, normalizer и собранный `LMX_Receivers.lmx` пока
+> сохраняют прежний ABI и требуют согласованной миграции. Метаданные генераторов
+> каталога следует обновить перед их повторным запуском. Старые source/host
+> receipts не являются проверкой нового ABI; перечень переходов приведён в
+> [инструкции дополнения](../../../ARRAY_TYPE_MIGRATION.md).
+
 Current API spellings and their rationale: [naming review](../../NAMING_2026-11-22.md).
 
 Редакция **2026-11-23**, основанная на `23-Nov-2026.tar.gz`, с восстановлением коротких примеров из `22-Nov-2026-3.tar.gz`. Правила и имена берутся из [текущей документации](../../README.md). Все новые функции сразу предназначены для единого ядра.
@@ -20,9 +28,9 @@ Current API spellings and their rationale: [naming review](../../NAMING_2026-11-
 
 `range`, `slice`, `concat`, `map`, `filter` и операции изменения имеют обычную и операндную формы одного алгоритма. Все ресиверы уже допускаются в Expression на уровне P0; транслятор сохраняет роли VALUE, TYPE, NAME, DATA, RAW/BODY и PLACE. Имена без кавычек и в обратных кавычках тождественны, а содержимое точного имени не разбирается заново. Похожие внутренние имена не скрывают разные договоры. Например, публичный slice использует begin/end, старый внутренний helper — start/count; append изменяет тот же target, а прежний append создаёт новый контейнер. Эти различия явно переводятся в делегатах.
 
-Каждая Structure уже является `@[]`. Универсальный @ принимает и плотный T[], и Structure без пользовательского boxing всего массива. Actual storage читается через фактический type-code. Выбор результата сохраняет оговорённый профиль; copy/merge, parent, lifetime и ошибки остаются обычными.
+Каждая Structure уже является `@[]`. Универсальный @ принимает и плотный T[], и Structure без пользовательского boxing всего массива. Actual storage читается по каноническому описанию TypeRef действительного типа. Выбор результата сохраняет оговорённый профиль; copy/merge, parent, lifetime и ошибки остаются обычными.
 
-Общее равенство и `unique(items)` определены в [GENERIC_EQUALITY.md](../../GENERIC_EQUALITY.md); короткие `some(x)` и `bind` всех контейнерных семейств — в [MONADIC_OPERATIONS.md](../../MONADIC_OPERATIONS.md). `then` означает композицию любых Patterns. `->` получает TYPE результата последним, `type` возвращает физический код целого значения. [GENERIC_OPERATIONS.md](../../GENERIC_OPERATIONS.md) задаёт общие профили и единые алгоритмы.
+Общее равенство и `unique(items)` определены в [GENERIC_EQUALITY.md](../../GENERIC_EQUALITY.md); короткие `some(x)` и `bind` всех контейнерных семейств — в [MONADIC_OPERATIONS.md](../../MONADIC_OPERATIONS.md). `then` означает композицию любых Patterns. `->` получает TYPE результата последним, `type` возвращает каноническую TypeRef целого значения. [GENERIC_OPERATIONS.md](../../GENERIC_OPERATIONS.md) задаёт общие профили и единые алгоритмы.
 
 ## Единое ядро и статус исполнения
 

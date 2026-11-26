@@ -17,12 +17,48 @@ L1 resolves its C-like declarations and expressions. Prefix `@x` takes the addre
 <a id="lmx"></a>
 ## 3. Lmx in L1
 
-The target C projection of [L2 §2](L2_spec_en.md#lmx) is a flat `Lmx` header with fields `parent`, `length`, `storage` in precisely this order, without an embedded `VoidArray`. A Structure or Array reference points to the start of the header. An ordinary Structure and `Array<@>` hold `void *` elements in `storage` and are interchangeable in common operations; a numeric `Array<T>` stores T elements directly. Typed storage and common resizing apply to all Arrays; capacity resides in the arena table. This layout is approved; migrating the current generator remains open: [implementation status](implementation-notes.en.md#l2-status), [current implementation contract](kernel-implementation.en.md). Graph records gain no name, model tag, or hidden execution fields. Thread's dynamic child List remains separate.
+The target C projection of [L2 §2](L2_spec_en.md#lmx) is the flat Lmx header
+parent/length/storage, without embedded VoidArray, native, capacity or shape fields.
+A Structure/Array reference points to that header; Structure and Array<@> use
+`void *` slots, while numeric Array<T> uses dense T. Every graph record, including
+primitives, stores a direct TypeRef immediately before its payload. TypeRef points
+to the canonical immutable system Structure of the complete normalized LEFT;
+it is not an int counter/index. Width is `sizeof(TypeRef)`, and padding precedes
+the prefix so both pointer and payload are aligned. Uninit has only TypeRef,
+no payload. Dense elements and native locals have no individual record prefix.
+[L2 physical layout and C illustration](L2_spec_en.md#value-record).
 
-Lowering ordinary receiver [`sys\descriptor`](L2_spec_en.md#get-descriptor) returns a Structure of addresses of the three actual header fields: `Lmx **`, `size_t *`, `void **`. A dereferenced write directly addresses and changes the original field; writing a field of the returned Structure changes its pointer. There is no proxy, delayed writeback, or new opcode. Arbitrary finite pointer depth and Array rank use the common typed path; L1 retains its own “type — name” declaration order.
+Equivalent `int[][]` and `int[](2)` share TypeRef; `int[]` lengths 2 and 3 share it;
+`int[2][3]` and `int[3][2]` differ. Initializer rows and reserve cannot specialize
+TYPE. Metadata contains only written/evaluated constraints; unknown dimensions
+remain unknown unless TYPE plus current length determines them. Every initialized
+Array has the same primary Lmx layout. Capacity=length means no second descriptor,
+even for nD; capacity>length has only a compact capacity entry in the existing
+association. Reserve/resize preserve TypeRef and all fixed constraints. Copy keeps
+the normalized type; restoration interns it in the destination and relocates
+references. Same-context attach retains type metadata for every live dependency.
+Type descriptions use a finite bootstrapped meta-description, with ordinary graph
+cycles if required. [Array contract](L2_spec_en.md#array-capacity).
+
+This is the target ABI, with production acceptance **NOT_RUN**. The generator and
+old int-code listings still require the [TypeRef migration](../TYPE_REFERENCES_CHANGE.md);
+existing receipts do not establish compatibility. [Implementation status](implementation-notes.en.md#l2-status).
+Graph records gain no names or hidden execution fields. Thread's child List remains separate.
+
+Lowering ordinary receiver [`sys\descriptor`](L2_spec_en.md#get-descriptor) with a Structure/Array value returns a Structure of addresses of the three actual header fields: `Lmx **`, `size_t *`, `void **`. A dereferenced write directly addresses and changes the original field; writing a field of the returned Structure changes its pointer. There is no proxy, delayed writeback, or new opcode. Arbitrary finite pointer depth and Array rank use the common typed path; L1 retains its own “type — name” declaration order.
+
+`sys\typeof(obj)` already returns the canonical TypeRef. The more specific
+system-TYPE overload `sys\descriptor(sys\typeof(obj))` returns that **same**
+immutable Structure, with no integer lookup, copied description or per-Array
+allocation. Only the canonical TYPE contract selects this branch; ordinary user
+Structures keep the three-field-address overload. The metadata exposes the full
+LEFT, declared dimensions, storage/compatibility and common capacity access policy.
+Actual capacity still uses `sys\capacity(obj)`. No initializer-specific shape or
+reserve amount enters the shared type. Saved TypeRefs stay valid while needed.
+[TYPE specification](ARRAY_STORAGE.en.md#type-descriptor), production **NOT_RUN**.
 
 Lowering parent/length/sys\storage reads header fields; sys\native obtains the native descriptor from call tables and
-sys\capacity reads the arena capacity table. Every zero-argument form selects current data; code requires an explicit
+sys\capacity consults the optional capacity association and otherwise returns length; the query allocates neither a descriptor nor a table row. Every zero-argument form selects current data; code requires an explicit
 argument. None of these queries builds an auxiliary descriptor. Data (the parent of the selected Structure), code and
 node retain their roles. sys\resize/sys\reserve use common variable-size Arrays. Lmx contains neither native nor
 capacity.
@@ -30,7 +66,7 @@ capacity.
 `sys\descriptor` likewise accepts an explicit S or defaults to the current data
 (the parent of the executed Structure); the former spelling `sys\descriptor() = sys\descriptor(data)` through the special name `data`
 is removed ([what is removed](LMX_semantics.en.md#removed-builtins)). This choice also applies inside nested control bodies;
-lowering either variant returns the selected Structure's field addresses under one contract.
+lowering this ordinary object/default contract returns the selected Structure's field addresses; a canonical TYPE actual selects the more specific identity contract above.
 
 <a id="interpretable-tree"></a>
 ### 3.1. Tree projection
@@ -46,14 +82,20 @@ Use common Structure/Array<@> addressing without an additional index table.
 <a id="type-by-range"></a>
 ## 4. Type by range
 
-The norm (the author's decision of 2026-11-16, [L2 §3](L2_spec_en.md#value-record)): the physical type of a value is the code in its record, standing immediately before the value; an arena has one stream of records, and no type is learned from an address. User models do not create one C type per Structure. An ordinary and an `immutable` Structure differ by the code of the record while retaining a compatible physical record. Today's code still classifies addresses through `LmxRange` and the arena index and keeps separate pools; that is the former scheme, removed by [current implementation contract](kernel-implementation.en.md).
+The norm ([L2 §3](L2_spec_en.md#value-record)) stores a direct TypeRef to the
+canonical complete type Structure before each graph payload. Arena intervals
+identify ownership only; all records share one stream. A model does not create
+another C layout merely through its name. Ordinary and immutable Structures have
+different complete descriptions. Legacy LmxRange classification, separate typed
+pools and integer-prefix listings require migration and are not the current
+implementation of this TypeRef contract ([kernel](kernel-implementation.en.md)).
 
 <a id="pool"></a>
 ## 5. Pool
 
 Records are issued one after another from the chunks of the arena. Growth adds a chunk instead of moving live records through `realloc`. Chunks belong to the arena. Today's `LmxPool` and `LmxChunk`, which allocate cells of one type, are the former scheme. See [L2 §4](L2_spec_en.md#pool).
 
-During incremental self-build, the translator emits C99 access to a graph Array's `void *storage` through a pointer `T *` of the actual element type selected by the code of the Array's record. The storage is allocated for elements of that very type with suitable alignment: a cast does not redefine the effective type of existing backing. Graph-reference slots retain their separate `void **` contract, not an incompatible `T **` access. Thus one common Array Structure lowers to different typed arrays without a new language object for every `T`.
+During incremental self-build, the translator emits C99 access to a graph Array's `void *storage` through a pointer `T *` of the actual element type selected by the TypeRef of the Array's record. The storage is allocated for elements of that very type with suitable alignment: a cast does not redefine the effective type of existing backing. Graph-reference slots retain their separate `void **` contract, not an incompatible `T **` access. Thus one common Array Structure lowers to different typed arrays without a new language object for every `T`.
 
 <a id="method-array"></a>
 ## 6. Native entry and Array
@@ -100,7 +142,7 @@ See [L2 §8.1](L2_spec_en.md#root-close) and the
 <a id="mailbox"></a>
 ## 10. Mailbox
 
-`LmxPost` holds `staged`, `outbox`, and FIFO `inbox`. An incoming slot is the pair `[target, source_arena]`; the recipient owner attaches the donor before releasing the target. The inbox ring uses a common variable-size Array with external capacity, movable storage, and a mailbox monitor. See [L2 §9](L2_spec_en.md#mailbox).
+`LmxPost` holds `staged`, `outbox`, and FIFO `inbox`. An incoming slot is the pair `[target, source_arena]`; the recipient owner attaches the donor before releasing the target. The inbox ring uses a common variable-size Array with the ordinary compact/reserved capacity contract, movable storage, and a mailbox monitor; capacity=length needs no auxiliary descriptor. See [L2 §9](L2_spec_en.md#mailbox).
 
 <a id="own"></a>
 ## 11. Local call frame
@@ -256,7 +298,7 @@ functions, the bridge and the `call` dispatcher do not replace the caller's cont
 language's sources are determined by the program location of the call.
 
 An ordinary native local has no arena header `[type][value]` ([L2 §3](L2_spec_en.md#value-record)): its type cannot be read
-from the four bytes before its address. The type, the access mode, the initialization state and the applicable restrictions of the place follow
+from the a TypeRef prefix before its address. The type, the access mode, the initialization state and the applicable restrictions of the place follow
 the common place representation and the call contract. The four combinations -- native to native, native to walker,
 walker to native, walker to walker -- give one observable behaviour: `x` has one logical type `T`, and a permitted
 write changes the same logical place. For a run-time target unknown at translation the existing
@@ -358,10 +400,7 @@ L1 retains the target platform's C99 representation and numeric semantics. An L1
 
 The table states the target unified spelling; transitional hand-written L1 may still need declaration-order migration. An addressable target needs valid C storage. `value\field` is a pointer step; by-value C aggregate access needs an explicit C form. `const: char@: p` lowers to `const char *p` and protects the characters, not the pointer cell. This is not L3 deep immutability.
 
-L2 indexing, including `array[-1]` and any finite adjacent-index chain, lowers to an offset calculation
-without length/sign/arena checks. L3 uses its own Array-descriptor-reference type with index and one
-final-element check; that reference stores no storage address. L3 primitive pointers also have a separate
-type using the common typed-reference foundations.
+Ordinary Array indexing has no from-end interpretation: `array[-1]` is not a valid way to select the last element. Negative relative offsets should be expressed through a suitable pointer, for example `\(p - 1)`, under its ordinary lifetime/allocation contract. L3 and interpreted L2 apply the existing final-element bounds check. Native L2 omits those automatic checks; their absence does not make an invalid Array access valid. A statically known invalid Array index may be diagnosed during preparation, without adding a native runtime sign/bounds check. A negative slice bound is different: `array[-1:]` selects the last element through the [slice contract](TERNARY_AND_SLICES.en.md#negative-index). Reads, writes and address-taking retain one common address calculation; no per-coordinate bounds checks or hidden row descriptors are added.
 
 <a id="lowlevel-array"></a>
 ## 20. Array and raw C arrays
@@ -402,4 +441,4 @@ mechanism. See [L2 integration](L2_spec_en.md#functional-receiver-abi) and the
 <a id="unified-20261122"></a>
 ## Lowering of current derived types
 
-Lowering consumes the complete head and resolved full type from the same common path as interpretation. It may specialize actual dense layouts or direct calls when proven, while preserving dynamic admission, missing actuals, computed defaults, declared exits, and the source graph. T[] and T@ are int-valued type constructors, not alternate prefixes. No payload is read from uninit:T, and an accepted array requirement does not change its actual stride. See [the current unified contract](CORE_SEQUENCES_REGEX.en.md).
+Lowering consumes the complete head and resolved full type from the same common path as interpretation. It may specialize actual dense layouts or direct calls when proven, while preserving dynamic admission, missing actuals, computed defaults, declared exits, and the source graph. T[] and T@ are TypeRef-valued type constructors, not alternate prefixes. No payload is read from uninit:T, and an accepted array requirement does not change its actual stride. See [the current unified contract](CORE_SEQUENCES_REGEX.en.md).

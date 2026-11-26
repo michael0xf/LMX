@@ -1,0 +1,376 @@
+# ARRAY EXPRESSION ALGORITHMS, 2026-11-26.
+# The public receiver/operand frontend supplies an ordinary prepared context
+# under ARRAY_EXPRESSIONS/FUSION and the shared Expression/PLACE contracts.
+# Preparation is an integration boundary, not implemented by fake bodies here.
+# It supplies checked count/rank/extents, actual Array access, complete result Array
+# type, scalar callbacks, and captures of scalar source occurrences.
+# No rank inference from nested Arrays, pointer depth, first values or length.
+# No program/namespace clone and no permanent expression execution graph.
+# Invalid expression depth/shape/eligibility is a translation/interpreter
+# diagnostic before these checked contexts are consumed, not a catchable throw.
+# Existing scalar/callback/library failures retain their ordinary contract.
+# These LMX bodies are source implementations; production parser/runtime NOT_RUN.
+
+# One output loop shared by elementwise, matrix, depth and fused evaluation.
+# count and target access are already validated by the common interpreter/
+# translator preparation; this body does not invent a catchable shape/depth error.
+# cell(context; index) returns one ordinary typed value record.
+FxArrayExpressionFill:
+    private:
+        @: context
+        @: target
+        @: cell
+        int: count
+        int: store 1
+        @: writer FxSeqStore\write
+        int: validate 1
+    required: context target cell count
+    return: @
+    fill:
+        throws: copy(FxThrows\sequencefixture)
+        if: store != 0 && validate != 0
+            FxSeqInfo\get(target)
+        private: int: i 0
+        while: i < count
+            private: @: value FxApply\apply(cell; FxTwo\make(context; (i record)))
+            if: store != 0
+                FxApply\apply(operation := writer; args := (target; (i record); value))
+            i += 1
+        return: target
+
+FxArrayBuild:
+    private:
+        @: context
+        int: arrayType
+        int: count
+        @: cell
+    required: context arrayType count cell
+    return: @
+    build:
+        throws: copy(FxArrayExpressionFill\fill\throws)
+        private: @: out FxSeqAllocate\make(arrayType; count)
+        return: FxArrayExpressionFill\fill(context; out; cell; count)
+
+# inputs contain prepared entries {isArray, value}; value is an actual Array,
+# a checked logical-axis access map, or a scalar obtained before this loop.
+# The default reader consumes flat elements. Depth's reader consumes selected
+# logical items by descriptor+offset/extents, without allocating row Arrays.
+# scalar is the selected underlying operation, shared by depth-aware forms.
+FxArrayInputsAt:
+    private:
+        @: context
+        int: index
+        @: reader FxSeqRead\read
+    required: context index
+    return: @
+    at:
+        throws: copy(FxThrows\sequencefixture)
+        private: @: values FxSeqAllocate\make(@[]; length(context\inputs))
+        private: int: j 0
+        while: j < length(context\inputs)
+            private: @: input context\inputs[j]
+            private: @: value input\value
+            if: input\isArray != 0
+                value := FxApply\apply(reader; FxTwo\make(input\value; (index record)))
+            values[j] := value
+            j += 1
+        return: values
+
+FxArrayElementCell:
+    private:
+        @: context
+        int: index
+    required: context index
+    return: @
+    at:
+        throws: copy(FxArrayInputsAt\at\throws)
+        return: FxApply\apply(context\scalar; FxArrayInputsAt\at(context; index))
+
+FxArrayElementwise:
+    private: @: context
+    required: context
+    return: @
+    apply:
+        throws: copy(FxArrayElementCell\at\throws)
+        if: context\scalarResult != 0
+            return: FxArrayElementCell\at(context; 0)
+        return: FxArrayBuild\build(context; context\arrayType; context\count; FxArrayElementCell\at)
+
+# Generic opt-in VALUE lifting over logical axes of the ONE flat Array storage.
+# The method receives an already obtained int depth; the common argument
+# transport never expands RAW/PLACE material. context.base is the ordinary
+# source callable. context.level supplies a checked linearized iteration frame
+# {hasArray,count,inputs,read,layout,write}. count is the number of base calls
+# selected by depth, not necessarily the physical cell count. read(map; index)
+# returns a scalar or an operation-local slice descriptor on the same backing.
+# Existing Structure references remain ordinary values, not a nested-array kind.
+# write(output; index; result) admits/stores the prepared scalar or block result.
+# layout describes ONLY actual result storage; no traversal row containers.
+# context.publish preserves full rank/extents in the existing side description.
+# Provenance and every required axis/shape are checked before source callbacks.
+# No callback may infer full R by running the first source element.
+FxArrayDepthBase:
+    private:
+        @: context
+        @: inputs
+    required: context inputs
+    return: @
+    apply:
+        throws: copy(FxThrows\sequencefixture)
+        if: context\hasResult = 0
+            FxApply\apply(context\base; inputs)
+            return: context
+        return: FxApply\apply(context\base; inputs)
+
+FxArrayDepthCell:
+    private:
+        @: context
+        int: index
+    required: context index
+    return: @
+    at:
+        throws: copy(FxThrows\sequencefixture)
+        private: @: inputs FxArrayInputsAt\at(context; index; reader := context\read)
+        return: FxArrayDepthBase\apply(context\root; inputs)
+
+FxArrayDepth:
+    private:
+        @: context
+        int: depth
+        @: inputs
+    required: context depth inputs
+    return: @
+    apply:
+        throws: copy(FxThrows\sequencefixture)
+        if: depth = 0
+            return: FxArrayDepthBase\apply(context; inputs)
+        private: @: frame FxApply\apply(operation := context\level; args := (context; (depth record); inputs))
+        if: frame\hasArray = 0
+            return: FxArrayDepthBase\apply(context; inputs)
+        frame\root := context
+        if: context\hasResult = 0
+            return: FxArrayExpressionFill\fill(frame; context; FxArrayDepthCell\at; frame\count; 0)
+        private: @: result FxArrayResultTree\make(context; frame\layout)
+        return: FxArrayExpressionFill\fill(context := frame; target := result; cell := FxArrayDepthCell\at; count := frame\count; writer := frame\write; validate := 0)
+
+# Ranks 1/2 are prepared as rows x inner by inner x columns. A left vector
+# has rows=1, a right vector columns=1. Their flat Array backing stays flat.
+# count=rows*columns and every address product are checked by common shape
+# preparation for the target profile before the output loop.
+# add/multiply/zero are actual scalar methods with their numeric contexts;
+# zero is required only for an empty contraction, never invented as int 0.
+FxArrayContractionCell:
+    private:
+        @: context
+        int: index
+    required: context index
+    return: @
+    at:
+        throws: copy(FxThrows\sequencefixture)
+        if: context\inner = 0
+            return: FxApply\apply(operation := context\zero; args := ())
+        private: int: row index / context\columns
+        private: int: column index % context\columns
+        private: @: accumulator
+        private: int: k 0
+        while: k < context\inner
+            private: @: left FxSeqRead\read(context\left; row * context\inner + k)
+            private: @: right FxSeqRead\read(context\right; k * context\columns + column)
+            private: @: term FxApply\apply(context\multiply; FxTwo\make(left; right))
+            if: k = 0
+                accumulator := term
+            else:
+                accumulator := FxApply\apply(context\add; FxTwo\make(accumulator; term))
+            k += 1
+        return: accumulator
+
+FxArrayProduct:
+    private: @: context
+    required: context
+    return: @
+    multiply:
+        throws: copy(FxArrayContractionCell\at\throws)
+        if: context\scalarResult != 0
+            return: FxArrayContractionCell\at(context; 0)
+        return: FxArrayBuild\build(context; context\arrayType; context\count; FxArrayContractionCell\at)
+
+# Capture values, not aliases to changing primitive cells. Reference-valued
+# elements retain their target identity under the existing capture contract.
+# The frontend has already obtained the RHS occurrences in written order.
+FxArraySnapshot:
+    private: @: source
+    required: source
+    return: @
+    capture:
+        throws: copy(FxThrows\sequencefixture)
+        FxSeqInfo\get(source)
+        private: @: out FxSeqAllocate\make(@[]; length(source))
+        private: int: i 0
+        while: i < length(source)
+            private: @: value FxSeqRead\read(source; i)
+            out[i] := FxCaptureOne\capture((sys\typeof(value) record); value)
+            i += 1
+        return: out
+
+# Ordinary .: has ONE algorithm for dense Arrays and real PLACE groups.
+# Preparation supplies count, target and actual admission/write callbacks.
+# admit(context; index; value) returns the value accepted by the actual place;
+# write(context; index; ready) performs only the already admitted write.
+# For an Array, the callbacks address target[index] using FxSeqAdmit and
+# FxKernel\arrayWrite. For a group, they use existing real binding/graph places.
+# No list of copied variable values can stand in for those left places.
+# Scalar RHS expansion and shape/count checks are prepared once by the consumer.
+# The checked context guarantees count=length(source) before this body starts.
+FxArrayAssignPrepared:
+    private:
+        @: context
+        @: source
+    required: context source
+    return: @
+    assign:
+        throws: copy(FxArraySnapshot\capture\throws)
+        private: @: captured FxArraySnapshot\capture(source)
+        private: int: i 0
+        while: i < context\count
+            captured[i] := FxApply\apply(operation := context\admit; args := (context; (i record); captured[i]))
+            i += 1
+        i := 0
+        while: i < context\count
+            FxApply\apply(operation := context\write; args := (context; (i record); captured[i]))
+            i += 1
+        return: context\target
+
+# Deep assignment prepares real places and all RHS occurrences first, then
+# reuses the SAME snapshot/admission/write algorithm as depth-1 assignment.
+# open(context; depth; target; source) supplies a checked metadata frame; an
+# invalid depth/shape is an interpreter diagnostic, never a user callback throw:
+# leaf, place/value at a leaf, otherwise count and ordinary access context.
+# child(context; frame; index) supplies one logical-axis target/source pair;
+# it broadcasts a ready scalar but never clones a variable or flattens siblings.
+# For flat rank>1 a target is a real region PLACE, never an invented row pointer
+# slot. Its base assignment admits/writes a compatible block. Every selected
+# RHS cell of every such block is captured before any destination write.
+# These callbacks are the existing PLACE/Array lowering boundary, not fake
+# public functions. Their preparation does not execute user scalar methods.
+FxArrayWriteEntry:
+    @: place
+    @: value
+
+FxArrayDepthCollect:
+    private:
+        @: context
+        @: target
+        int: depth
+        @: source
+        @: entries
+    required: context target depth source entries
+    return: @
+    collect:
+        throws: copy(FxThrows\sequencefixture)
+        private: @: frame FxApply\apply(operation := context\open; args := (context; (depth record); target; source))
+        if: frame\leaf != 0
+            private: @: entry (copy(FxArrayWriteEntry))
+            entry\place := frame\place
+            entry\value := frame\value
+            FxSeqPush\append(entries; entry)
+            return: entries
+        private: int: i 0
+        while: i < frame\count
+            private: @: pair FxApply\apply(operation := context\child; args := (context; frame; (i record)))
+            FxArrayDepthCollect\collect(context; pair\target; depth - 1; pair\source; entries)
+            i += 1
+        return: entries
+
+FxArrayWriteValue:
+    private:
+        @: context
+        int: index
+    required: context index
+    return: @
+    at:
+        throws: copy(FxThrows\sequencefixture)
+        return: context[index]\value
+
+FxArrayDepthAssignPrepared:
+    private:
+        @: context
+        @: target
+        int: depth
+        @: source
+    required: context target depth source
+    return: @
+    assign:
+        throws: copy(FxThrows\sequencefixture)
+        private: @: entries FxSeqAllocate\make(@[]; 0)
+        FxArrayDepthCollect\collect(context; target; depth; source; entries)
+        private: @: values FxArrayBuild\build(entries; @[]; length(entries); FxArrayWriteValue\at)
+        private: @: linear FxApply\apply(operation := context\linearize; args := (context; target; entries))
+        return: FxArrayAssignPrepared\assign(linear; values)
+
+# Result-only Array allocation follows prepared storage shape metadata.
+# A flat rectangular result is ONE Array even when several axes are consumed.
+# children describes only ordinary referenced Structure results required by
+# the selected return contract, never artificial logical-axis row objects.
+# No arithmetic is probed during allocation. publish retains its full shape.
+FxArrayResultTree:
+    private:
+        @: context
+        @: layout
+    required: context layout
+    return: @
+    make:
+        throws: copy(FxThrows\sequencefixture)
+        private: @: out FxSeqAllocate\make(layout\arrayType; layout\count)
+        if: layout\nested != 0
+            private: int: i 0
+            while: i < layout\count
+                private: @: child layout\children[i]
+                if: child\isArray != 0
+                    FxSeqStore\write(out; i; FxArrayResultTree\make(context; child))
+                i += 1
+        ---
+        return: FxApply\apply(operation := context\publish; args := (context; layout; out))
+
+# fuse is RAW; it receives the original live expression plus ready depths.
+# bindOutput resolves real leaf places and verifies shape/alias safety before
+# the first scalar call in the output loop. Dense output may use the Array
+# directly (direct=1); a nested layout may use a compact address descriptor
+# (direct=0). A mandatory list of one PLACE handle per dense cell is not needed.
+# cell keeps ONE shared expression template; it does not clone scalar code per
+# leaf. write(target; index; value) admits that leaf and writes it once.
+FxFuseFill:
+    private:
+        @: context
+        @: output
+    required: context output
+    return: @
+    fill:
+        throws: copy(FxThrows\sequencefixture)
+        private: @: bound FxApply\apply(operation := context\bindOutput; args := (context; output))
+        FxArrayExpressionFill\fill(context := bound; target := bound\target; cell := bound\cell; count := bound\count; writer := bound\write; validate := bound\direct)
+        return: output
+
+FxFusePrepared:
+    private: @: context
+    required: context
+    return: @
+    run:
+        throws: copy(FxThrows\sequencefixture)
+        if: context\scalarResult != 0
+            return: context\scalarValue
+        private: @: output FxArrayResultTree\make(context; context\layout)
+        return: FxFuseFill\fill(context; output)
+
+# Explicit depth-selected target .: fuse(expression) / target .(n): fuse(...).
+# Shape/places/alias are checked before writes; later scalar/admission failure
+# keeps the already written leaf prefix. Ordinary assignment retains all RHS
+# values and checks ALL admissions first, through FxArrayDepthAssignPrepared.
+FxFuseIntoPrepared:
+    private:
+        @: context
+        @: target
+    required: context target
+    return: @
+    run:
+        throws: copy(FxThrows\sequencefixture)
+        return: FxFuseFill\fill(context; target)

@@ -1,8 +1,14 @@
 # Canonical library operations and their two forms
 
+> TYPE-контракты этой документации используют прямую TypeRef. Машинный каталог
+> и связанные отдельные исходники ещё содержат прежние int-интерфейсы; перед
+> пересборкой им требуется миграция по [инструкции дополнения](../../../ARRAY_TYPE_MIGRATION.md).
+
 215 canonical names. Every input export is accounted for in [the migration inventory](CANONICAL_MIGRATION.json). Former names are not callable aliases.
 
 Both forms use the same algorithms and real owner DATA. Complete family/role binding, adaptive capture and exact result projection are defined in [PUBLICATION_CONTRACT.md](PUBLICATION_CONTRACT.md). Runtime execution is **NOT_RUN**.
+
+Operand DATA order is `left`, `int: depth`, `right`, with ready `PASS_ARGS_AS_IS` and `PRIORITY`. `op`, `.op` and `.(expression)op` select one base operation. Ordinary VALUE adapters traverse logical outer axes of the flat Array shape through the shared engine and exact dependent result policy; rank-2 multiplication has matrix / row-dot / scalar profiles at depths 0 / 1 / 2. A Structure is an `@[]`, and indexed reference access introduces no separate array-of-arrays kind. Whole-role profiles admit depth 0 and diagnose unsupported depth before execution. No synthetic language exception is added. PD01 is a required kernel integration, not a passed runtime implementation.
 
 | Name | Ordinary form | Implementations and operand form |
 | --- | --- | --- |
@@ -224,7 +230,7 @@ Both forms use the same algorithms and real owner DATA. Complete family/role bin
 
 ## Roles, results and failures
 
-- **types** — physical field type codes; int[] by language contract. Roles: DECLARED_INPUT_ROLES.
+- **types** — canonical field TypeRef references; @[] by the current language contract. The linked previous-ABI reflection source requires migration. Roles: DECLARED_INPUT_ROLES.
 - **names** — physical canonical names; anonymous entries retain typed absence. Roles: DECLARED_INPUT_ROLES.
 - **signature** — ordinary positional signature description. Roles: DECLARED_INPUT_ROLES.
 - **->** — ordered TYPE tokens, result last; one result TYPE constructs a nullary signature. Roles: TYPE....
@@ -430,7 +436,7 @@ Both forms use the same algorithms and real owner DATA. Complete family/role bin
 - **gcd** — Exact nonnegative bigint Euclidean GCD, including gcd(0;0)=0.. Roles: DECLARED_INPUT_ROLES.
 - **lcm** — Exact nonnegative bigint LCM through gcd; any zero input yields zero.. Roles: DECLARED_INPUT_ROLES.
 - **divMod** — Exact bigint floor quotient and remainder with divisor sign; zero divisor raises NumericDomain.. Roles: DECLARED_INPUT_ROLES.
-- **type** — actual physical type code of one captured whole value. Roles: VALUE_WHOLE.
+- **type** — canonical TypeRef of one captured whole value; the previous int source interface requires migration. Roles: VALUE_WHOLE.
 - **arrayView** — finite typed Array source without copying element records. Roles: VALUE_WHOLE_ARRAY.
 - **element** — one whole typed source element. Roles: VALUE_WHOLE.
 - **equals** — one projection per value followed by the shared equality. Roles: DECLARED_INPUT_ROLES.

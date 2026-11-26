@@ -36,7 +36,7 @@ def render(row,by):
     compared=samples(row);minimum=min(measure(code)['characters'] for _,code in compared)
     table=['| Запись | Непробельные символы | Непустые строки |','| --- | ---: | ---: |']
     for label,code in compared:
-        chars,lines_count=count(code);value=f'**{chars}**' if chars==minimum else str(chars)
+        chars,lines_count=count(code);value=f'<span style="color:#176233"><u>{chars}</u></span>' if chars==minimum else str(chars)
         table += [f'| {label} | {value} | {lines_count} |']
     lines += ['## Подсчёт полного текста','\n'.join(table),
               'Обе LMX-записи сравниваются самостоятельно. Полный текст включает все объявления, локальные helpers и Throws; заголовки и списки ошибок не вычитаются. Общие тела ядра учитываются один раз в отдельных сравнениях. Минимум сопоставимой строки подчёркивается в PDF и XLSX зелёным; при равенстве отмечаются все победители.',
@@ -46,7 +46,7 @@ def render(row,by):
               '## English explanation',row['summary_en'],'**Scenario.** '+row['scenario_en'],'**Expected.** '+row['expected_en'],'**Limits.** '+row['limits_en'],
               'Both complete LMX client styles are counted in full. Foreign controls retain the same scenario; 085 removes unused and single-use locals consistently across languages. Implementation comparisons retain one canonical body. Revised LMX source has not been executed.',
               '## Источники','\n'.join('- ['+s['title']+']('+s['url']+')' for s in row.get('sources',[])),
-              '## Проверка','[Проверка публикации](VALIDATION_2026-11-23.md) проверяет обе записи и зеркала. [Acceptance cases](acceptance_cases.json) — спецификация ожидаемых наблюдений, а не LMX execution receipt.']
+              '## Проверка','[Проверка публикации](VALIDATION_2026-11-26.md) проверяет обе записи и зеркала. [Acceptance cases](acceptance_cases.json) — спецификация ожидаемых наблюдений, а не LMX execution receipt.']
     return '\n\n'.join(x for x in lines if x)+'\n'
 
 def main():
@@ -77,7 +77,7 @@ def main():
     for row,result in zip(items,csvrows):
         values=[result.get(name+'_characters') for name in ['LMX_procedural','LMX_functional','LMX_implementation','Haskell','Scala']]
         minimum=min(v for v in values if v is not None)
-        cells=['—' if v is None else f'**{v}**' if v==minimum else str(v) for v in values]
+        cells=['—' if v is None else f'<span style="color:#176233"><u>{v}</u></span>' if v==minimum else str(v) for v in values]
         table += [f"| {row['id']:03d} | {link(row)} | "+' | '.join(cells)+' |']
     table += ['','[Общие зависимости](IMPLEMENTATION_DEPENDENCIES.md) · [Договор публикации](variant_selection.json) · [Ошибки](FAILURE_BOUNDARIES.md). Runtime LMX: NOT_RUN.']
     (ROOT/'LMX_Comparison_09_functional_computation.md').write_text('\n\n'.join(table[:2])+'\n\n'+'\n'.join(table[2:])+'\n')

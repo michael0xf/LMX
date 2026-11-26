@@ -33,7 +33,7 @@ The high-level algorithms are present in LMX. The hook provider does not impleme
 
 ## 1. Type identity and source policy are separate
 
-`FxSignatures\make` creates the usual ordered type description. The normalizer returns an internal reference to an ordinary canonical **int type-code record**; the code refers to the existing full type/model description. `typeof(code)` remains `int`. A full Structure/callable model is not replaced by the coarse code of `@`, and no public boxed Type object is added. The `inputTypes` sequence can therefore store references to code records while preserving all underlying requirements.
+`FxSignatures\make` creates the usual ordered type description. The normalizer returns a direct **TypeRef to the canonical immutable system Structure describing the complete type**. It does not allocate an int-code record or reinterpret an integer payload as a pointer. `inputTypes` stores these references, preserving complete Structure, callable and Array requirements. Ordinary admission of an already constructed value does not retag it. The existing standalone source normalizer still implements the previous ABI and must be migrated before this contract is executed.
 
 The ordinary `FxInputPolicy` structure contains:
 

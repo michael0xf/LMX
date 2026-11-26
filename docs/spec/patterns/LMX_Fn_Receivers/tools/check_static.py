@@ -140,14 +140,14 @@ for row in catalog:
         if not variant.get('roles') or not variant.get('implementation_contract'):
             errors.append('variant lacks role/actual contract '+row['name'])
 
-for required in ['(a b c) := (b c a)', '(a b c) := copy(s)']:
+for required in ['(a b c) .: (b c a)', '(a b c) .: copy(s)']:
     if required not in code:
         errors.append(f'missing current assignment example: {required}')
 
 kernel_calls = sorted(set(re.findall(r'\bFxKernel\\+(\w+)\s*\(', source)))
-expected_kernel_calls = sorted(['attempt', 'callable', 'fieldNames', 'normalizeType', 'raise', 'renameFields', 'signature', 'signatureData', 'currentCall', 'frameSlot', 'prepare', 'enter', 'releaseCall', 'arrayInfo', 'arrayRead', 'arrayAdmit', 'arrayWrite', 'attemptAccepted', 'acceptsRequirement'])
+expected_kernel_calls = sorted(['attempt', 'callable', 'fieldNames', 'normalizeType', 'raise', 'renameFields', 'signature', 'signatureData', 'currentCall', 'frameSlot', 'prepare', 'enter', 'releaseCall', 'arrayInfo', 'arrayRead', 'arrayAdmit', 'arrayWrite', 'attemptAccepted', 'acceptsRequirement', 'operandDepthContext'])
 if kernel_calls != expected_kernel_calls:
-    errors.append(f'provider calls differ from 19 documented common interfaces: {kernel_calls}')
+    errors.append(f'provider calls differ from 20 documented common interfaces: {kernel_calls}')
 
 for row in catalog:
     if not (ROOT / row['source']).is_file():

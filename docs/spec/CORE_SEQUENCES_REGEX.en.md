@@ -9,9 +9,38 @@ The language contract below is normative for this documentation edition. LMX sou
 <a id="types"></a>
 ## 1. Type expressions and declarations
 
-A type is represented publicly by an ordinary `int` code. `T[]` constructs the interned type of an array whose elements satisfy the complete requirement T. `T@` constructs a pointer type. Repeating postfixes applies them from left to right: `int@[]`, `int[]@`, `int[][]`, and `int@@` are different requirements. Pointer depth is any finite value supported by available resources; there is no language limit of three levels.
+A type is represented by TypeRef: an ordinary direct reference to its canonical
+immutable system Structure. Every `{type value}` record uses this address as its
+type prefix, including primitives; there is no integer type counter or table-index
+token. The normalized complete LEFT alone determines identity. `int[]` of length
+2 or 3 has one TypeRef; `int[][]` and `int[](2)` are equivalent; `int[2][3]` and
+`int[3][2]` are different requirements. Names, initializer rows, current length and
+reserve do not enter the interning key. Equal dynamically obtained requirements
+reuse the same canonical description.
 
-The common TYPE-role normalizer accepts a valid code, a symbolic type atom, an uninitialized typed record, or a full model as appropriate. It preserves complete structural and callable requirements. In `@[]`, the left `@` is the universal reference requirement; the result is the existing Structure/reference-array type. It is not another STRUCT/ARRAY category and allocates no array value. A numeric value that happens to equal a type code does not acquire a type role by itself.
+In TYPE, `T[]` contributes one unspecified axis and `T[extent]` one axis constrained
+to the obtained nonnegative integer. Consecutive axes run outer to inner:
+`int[][3]` has rank two and a final size 3. `T@` constructs a pointer requirement.
+Composition retains order: `int@[]`, `int[]@`, `int[][]` and `int@@` differ.
+Repeated axes describe one flat Array, without allocated row objects. The primary
+Lmx remains parent/length/storage. Declared rank and explicit dimensions belong to
+the shared TYPE description. Capacity=length means no secondary descriptor even
+for nD; reserve beyond length uses an optional compact capacity-only entry, with
+no change of TypeRef ([storage](ARRAY_STORAGE.en.md#array-profiles)). Pointer depth
+has no fixed language limit beyond finite available resources.
+
+The common TYPE normalizer accepts a canonical TypeRef, symbolic type atom,
+uninitialized typed record or full model under its receiving contract and preserves
+complete structural/callable requirements. In `@[]`, the left `@` is the universal
+reference requirement and the result describes the existing Structure/reference
+Array. It allocates no Array value or separate STRUCT/ARRAY kind. An ordinary
+integer does not become a type or metadata address. Normalizing a model introduces
+no special C object layout or second graph.
+
+The [TypeRef ABI and migration](../TYPE_REFERENCES_CHANGE.md) supersede integer-code
+listings. Existing [reflection.lmx](patterns/LMX_Fn_Receivers/src/reflection.lmx), [operation_forms.lmx](patterns/LMX_Fn_Receivers/src/operation_forms.lmx) and int-record normalizer
+contracts in the source package still require the stated migration; their old
+fixtures are not validation of this documentation-only ABI. Production **NOT_RUN**.
 
 | Written form | Meaning |
 | --- | --- |
@@ -33,7 +62,7 @@ The common TYPE-role normalizer accepts a valid code, a symbolic type atom, an u
 | `x@` | Pointer type constructed from x in TYPE role |
 | `@(name)` / `[](name)` | Ordinary compact declarations, equivalent to `@: name` / `[]: name` |
 
-The author-approved structural forms `Model@: p`, `int@: left`, `Model[]: arr`, `int[]: values`, `Model[]: arr [Model Model]`, `Model[]: [Model Model]`, `int[]: values [1 2 3]`, and `int[]: [1 2 3]` are retained explicitly in the [positive-form acceptance matrix](TYPE_DECLARATION_FORMS.md). The complete type is always on the left of the colon. In the Model initializers both elements refer to the existing Model value; construction does not copy its fields, reparent it or replace the complete requirement with a physical reference code. Named and anonymous square initializers share ordinary element admission.
+The author-approved structural forms `Model@: p`, `int@: left`, `Model[]: arr`, `int[]: values`, `Model[]: arr [Model Model]`, `Model[]: [Model Model]`, `int[]: values [1 2 3]`, and `int[]: [1 2 3]` are retained explicitly in the [positive-form acceptance matrix](TYPE_DECLARATION_FORMS.md). The complete type is always on the left of the colon. In the Model initializers both elements refer to the existing Model value; construction does not copy its fields, reparent it or replace the complete requirement with a coarse universal-reference requirement. Named and anonymous square initializers share ordinary element admission.
 
 A sole declaration identifier is consumed as a NAME before lookup; a sole square group supplies anonymous data. A NAME followed by a square group supplies the explicit initializer. An existing same-named value cannot change this classification. The generic receiver path determines argument roles before attaching an initializer group as if it were an index. There is no whitespace-specific array parser.
 
@@ -45,54 +74,214 @@ A typed anonymous array constructor requires its square group. `T[]: copy(S)` is
 constructor. `@[]: [S]` holds one reference to S; `@[]: [copy(S)]` receives the explicitly emitted fields.
 A type expression performs no copy, initializer execution, or compilation.
 
-A written empty suffix `T[]` constructs a type. A suffix containing a written index expression uses indexing, even when that expression later produces an empty stream: `a[()]` and `a[copy(empty)]` do not become type constructors. Original groups and postfix occurrences remain in the source graph.
+The receiving role distinguishes size constraints from indexing. In a TYPE description,
+`T[]` leaves an axis extent unspecified and `T[expression]` supplies its size.
+In VALUE/PLACE, `a[expression]` remains ordinary indexing: `a[()]` and
+`a[copy(empty)]` do not become type constructors when their expression yields
+an empty stream. The common P0 parses the complete bracket region in both
+cases; it does not decide by digits, whitespace, capitalization, or trial
+execution. Original groups and postfix occurrences remain in the source graph.
+A structural colon does not turn every indexed receiver head into a type:
+ordinary indexed callable receivers keep their selected receiving contract.
+
+```lmx
+Struct[2]: [a b]
+Struct[2]: var [a b]
+Struct[]: var [a b]
+Struct[2]:= [a b]
+```
+
+The first three independent lines use the selected TYPE/declaration contract:
+an anonymous value of the length-two Struct-array requirement, a named value
+with that requirement, and a named value with no fixed size constraint.
+Elements a and b must satisfy Struct; no variable is invented for the first
+line. In the last line `:=` is one assignment operand. Its left actual is
+ordinary indexed PLACE `Struct[2]`; there is no declaration colon and no type
+construction. The indexed destination must already exist and admit the RHS.
+The same spelling of Struct in these independent examples does not introduce
+an implicit conversion between an existing value and a type description.
+
+Sized postfixes are a **DOC_SPEC_ADDITION_ONLY** in this package; production
+P0/translator/runtime acceptance is **NOT_RUN**.
+[Full TYPE forms](TYPE_DECLARATION_FORMS.md#sized-postfix).
 
 `Struct@: p` and `(Struct)@: p` each normalize their complete left description; the enclosing group in the latter is not silently removed. Prefix `@Struct` still obtains an address. To address a field, write `@D\field` or `(@D\field)`; bare `@(D\field)` now has ordinary compact-declaration reading, not an address exception.
 
-`sys\typeof` of an int variable containing a type code reports int. A TYPE-role consumer reads that code from the payload. For `uninit:T`, normalization reads its type information without reading absent value bytes. Every uninitialized array or pointer has zero payload bytes; it is neither an empty descriptor nor a null pointer.
+`sys\typeof(value)` returns the canonical TypeRef of the actual consumed value.
+A TYPE result is a reference, not an int containing a type number. Type descriptions
+have a finite bootstrapped meta-description: querying their own type follows
+ordinary graph links and does not allocate an infinite chain. For uninit:T,
+normalization reads the prefix description without absent payload. Every
+uninitialized Array/reference has zero payload; it is neither an empty Lmx nor null.
+
+### Typed initializer rows and independent DATA fields
+
+`int[][]: [a b c; a b d; a b c]` and
+`int[][]: [[a b c] [a b d] [a b c]]` validate the same rectangular 3-by-3
+initializer and store its values in the same flat order. The pairs `[1 2; 3 4; 5 6]`
+and `[[1 2] [3 4] [5 6]]` similarly validate three rows of two. Their TYPE stays
+`int[][]`: the row boundaries neither specialize TypeRef nor persist as hidden
+extents. To retain those dimensions, write `int[3][3]` or `int[3][2]` respectively.
+The typed consumer obtains elements once; common P0 provides each row region.
+Semicolons inside nested regions do not split an outer row; outside initializers
+they retain short-form termination.
+
+Rows of lengths 3/4/5 or 3/3/4 fail the typed constructor's rectangularity check.
+`Struct: [a b c] [a b d] [a b c d]` remains valid and equivalent to
+`Struct: (a b c) (a b d) (a b c d)`: three ordinary anonymous DATA fields,
+not one rank-two typed constructor. No separate nested-array entity is introduced.
+VALUE `[arr2]` retains one whole arr2 field. Grouping and ready-VALUE admission
+do not inspect source-bracket flags.
+[Contract and algorithm](ARRAY_STORAGE.en.md#constructors).
+
+### Explicit and dynamic axis sizes
+
+`int[][3]: var [1 2 3 4 5 6]` obtains shape `[2,3]` from its LEFT and length.
+`int[][]: var [1 2 3; 4 5 6]` and `int[][]: var [[1 2 3] [4 5 6]]` can store
+identical ordered values, but have a different type with two unspecified extents.
+The initializer validates row boundaries without retaining them as runtime shape.
+A line break inside a bounded square initializer adds no row or declaration end.
+Omitting var constructs the corresponding anonymous value.
+
+```lmx
+int: columns 3
+int[][columns]: [1 2 3 4 5 6]
+int[][columns + 1]: [1 2 3 4 5 6 7 8]
+int[2][5]: [[1 2 3 4 5] [1 2 3 4 5]]
+Struct[2][5]: [[a b c d e] [e d c b a]]
+```
+
+The common parser handles full expressions inside every size region. TYPE obtains
+each occurrence once in lexical order and requires a finite nonnegative integer;
+zero is a size, not removal of an axis. Explicit rows are rectangular and match all
+written constraints. One missing extent is derivable from length and a positive
+known product when the quotient is integral. Several missing extents stay unknown:
+`int[][]: [1 2 3 4 5 6]` is valid without guessing a shape. Incomplete zero shapes
+`int[0][]: []` and `int[][0]: []` are valid; `int[2][0]: []` is fully specified.
+Contradictory sizes/rows or impossible length/products fail. Unknown shape alone
+fails only when a reached operation requires unavailable dimension information.
+Without an initializer, the declaration remains uninit even with fixed sizes;
+there is no implicit allocation or zero filling.
+
+`T[](R)` still denotes R unspecified axes; `T[R]` denotes one axis of size R.
+`T@(P)` remains pointer depth. The full algorithm and cases are in
+[sized axes](ARRAY_STORAGE.en.md#sized-postfix) and
+[dimension derivation](ARRAY_STORAGE.en.md#shape-inference). Invalid sizes, proven
+shape contradictions and insufficient information for a reached dimensional
+operation are translator/interpreter diagnostics, without a new user exception family.
 
 ### Interning, admission, and layout
 
-The common type context interns full derived requirements. Length and capacity are properties of values, not distinct array types. Attach must preserve existing record codes and addresses and retain their type metadata. Within contexts whose arena chunks can be attached without recoding, the same code cannot designate incompatible types. Restoration from an independent context resolves the complete type descriptions under the existing rules; accidental numeric equality does not establish type identity.
+The common type context interns the complete normalized LEFT, including evaluated
+explicit size constraints and qualifiers. `T[2]` and `T[3]` differ; `T[]` fixes no
+extent. Unknown dimensions stay unknown. A constructor uses that normalized type;
+an existing value admitted through another requirement retains its actual TypeRef,
+with no alias-induced specialization, retagging or implicit copy.
 
-The directed relation is:
+Complete requirements form a directed compatibility hierarchy. Written fixed sizes
+refine corresponding unsized requirements; generic flat consumers admit compatible
+dimensions. Pointer identity means the same canonical type, not every compatible
+pair. Capacity is an instance property and is absent from the interning key.
+**Capacity=length means no secondary descriptor**, including empty and nD values.
+Only capacity>length uses a compact entry containing capacity; no hidden per-object
+shape exists. Shared metadata keeps only dimensions supplied by the complete LEFT.
+A missing rank-one extent comes from length; one missing nD extent may be derived
+from a positive known product. Multiple unknown extents stay unknown.
+
+All Arrays retain the primary Lmx payload size/alignment and actual element stride.
+Reserve/resize may move backing or change length and optional capacity while keeping
+TypeRef and fixed type constraints. They do not modify an interned description.
+A saved TypeRef remains valid while needed. Pointer/place queries retain their
+ordinary roles without recursive dereference. Type words contain no packed flags.
+
+Same-context attach preserves record/TypeRef identities and keeps metadata alive
+after the donor is released. Copy keeps the complete type. Independent restoration
+interns full descriptions in the destination and relocates TypeRefs; old-process
+addresses are not portable. Reserve may restore as length without changing type.
+Known written dimensions, values and ordinary alias/copy rules are preserved.
+[Complete representation](ARRAY_STORAGE.en.md#array-profiles).
+
+`sys\typeof(obj)` already returns the canonical system type Structure reference.
+The more specific canonical-TYPE contract of `sys\descriptor` returns that same
+reference in `sys\descriptor(sys\typeof(obj))`. It takes precedence for canonical
+TYPE descriptions, not for ordinary Structures guessed by name or fields. The
+ordinary object overload still returns its three live primary-field addresses;
+the no-argument form keeps current DATA. There is no integer lookup, copied type
+object or secondary allocation. Descriptions expose full LEFT, storage rules,
+explicit dimensions and compatibility. `sys\capacity(obj)` remains the actual
+instance query; the description states its common optional-entry-or-length policy.
+Type descriptions have a finite bootstrapped meta-description, with ordinary graph
+cycles where needed. [TYPE descriptor](ARRAY_STORAGE.en.md#type-descriptor):
+**DOC_SPEC_ADDITION_ONLY**, production acceptance **NOT_RUN**.
+
+For otherwise unconstrained corresponding Array axes, the element relation remains:
 
 ```text
 A[] satisfies B[]  iff  A satisfies B
 ```
 
+Explicit axis constraints additionally require the declared rank and every
+specified target extent. Thus `T[2]` supplies a stronger size requirement than
+`T[]`, while the unsized type alone cannot prove length two. A ready value
+with an otherwise admissible unsized type can satisfy the receiving sized
+contract after checking the extents determined by its TYPE and length. Unknown extents cannot be guessed to pass admission. These value-dependent checks are
+not permanent type-pair proofs. The common cache may retain stable relations
+between full requirements, but cannot reuse an old mutable value's shape as
+proof after its contents or shape have changed. Size-changing operations keep
+the existing mutation/admission contract and may not claim a violated size
+requirement still holds. The plain `T[]` contract is not silently frozen to
+the length of its first initializer.
+
 The common kernel maintains a table of completed checked type pairs, with their direction, complete requirements, and applicable conversion context. A repeated check of the same stable pair reuses its completed result, including between calls when the requirements and context remain applicable. An in-progress recursive comparison is not a proven success. Mutable value-dependent tests, concrete field maps, bounds, lifetime, and access rights are still checked where required. This table is type metadata, not a second executable graph or a persistent snapshot of namespaces.
 
-Successful admission does not change actual storage. An admitted Array<A> is read with A's actual layout and stride; a store must be valid for its actual element requirement. Checking types does not execute a user converter. Empty arrays follow the same type relation as nonempty arrays.
+Successful admission does not change actual storage or retag the Array to the receiving requirement. An admitted Array<A> is read with its current actual layout and stride; a store must be valid for its actual element requirement. A cached value-dependent fact or native backing specialization needs a valid guard/proof after a possibly mutating call; TypeRef stays unchanged, while length and reserve remain subject to their contracts. Checking types does not execute a user converter. Empty arrays follow the same type relation as nonempty arrays.
 
 <a id="types-details"></a>
 ### Details of type forms
 
 A written form is processed in one order: its source form and boundaries are kept; the consumer's role for it is established (a declaration name, a type description, or an ordinary value); it is resolved by that common contract; the reached operation then executes in the established order, each once. The outer colon and the postfix parts of a head are determined structurally; a fragment is never executed first and recognized afterwards, by its result or failure, as part of a head or a type description. In the VALUE role the ordinary prefix/postfix mechanism applies inside the boundaries of the argument: at the start of a required expression `@` may begin an address operand; after a completed left operand `@` may be a type postfix. Missing square brackets are not guessed, and no branch is chosen by the success of an evaluation.
 
-The withdrawn readings are not kept as a second standard or a second parser path: the typed `[](T): …` and `@(T): …`, the prefix type codes `@int`, `@@int`, `[]T`, the typed heads `@Struct: p`, `@(Struct): p`, `[]@` as the Structure/reference-array type (now `@[]`), `@(int)` or `@: int` as the type of a pointer to int (now `int@`), `[]: int values …` and `[]: char text` (now `int[]: values …`, `char[]: text`), and `@: p Model Other` (now `Model@: p Other`). Their bytes are read by the common resolver with their ordinary meaning, if any; they are not converted into the new heads. The compact equivalence `@(name)` ≡ `@: name` and `[](name)` ≡ `[]: name` is a property of the ordinary receiver applied to the retained form, not an early textual substitution that loses the form's role or boundaries. A compact declaration with an invalid or occupied name gets the ordinary name diagnostic.
+The withdrawn readings are not kept as a second standard or a second parser path: the typed `[](T): …` and `@(T): …`, the prefix type forms `@int`, `@@int`, `[]T`, the typed heads `@Struct: p`, `@(Struct): p`, `[]@` as the Structure/reference-array type (now `@[]`), `@(int)` or `@: int` as the type of a pointer to int (now `int@`), `[]: int values …` and `[]: char text` (now `int[]: values …`, `char[]: text`), and `@: p Model Other` (now `Model@: p Other`). Their bytes are read by the common resolver with their ordinary meaning, if any; they are not converted into the new heads. The compact equivalence `@(name)` ≡ `@: name` and `[](name)` ≡ `[]: name` is a property of the ordinary receiver applied to the retained form, not an early textual substitution that loses the form's role or boundaries. A compact declaration with an invalid or occupied name gets the ordinary name diagnostic.
 
 ```lmx
 int: value 7
-int: typeCode sys\typeof(@value)
-```
-
-`@typeCode` is the address of the int place `typeCode`; `typeCode@` is the code of the pointer type to the type held in `typeCode`; `typeCode[]` is the code of the array of that type. A payload that happens to equal a known type code does not change the address operation. Adding a colon, `typeCode@: p`, uses the type already determined; it does not switch the meaning of the operator.
-
-Three results are distinct: a type code (`int[]`, `int@` give an ordinary int value), a declared place without a value (`int[]: pending`, `int@: ptr`), and a constructed value (`int[]: [1 2 3]`, an initialized reference place). `sys\typeof` is the one type query; `typeof` in examples denotes the same query, not a second API. There is no user Type box, no new token class and no pointer to a service description in place of the code.
-
-```lmx
-int: numbersType int[]
+@: valueType sys\typeof(value)
+@: numbersType int[]
 int[]: numbers [1 2 3]
 ```
 
-`numbersType` holds the code of the concrete array of int, and the type of `numbers` agrees with that code under ordinary reflection. `sys\typeof(@numbersType)` reports the type of the int place itself. A TYPE-role consumer given an invalid or unavailable code fails with the ordinary type refusal; the number is never treated as an arbitrary address of metadata.
+`valueType` holds the canonical int description. `@valueType` addresses its
+reference-variable cell; `valueType@` constructs pointer-to-int TYPE and
+`valueType[]` constructs Array-of-int TYPE. A colon in `valueType@: p` uses that
+already resolved pointer requirement. It does not change address-operand semantics.
+
+`numbersType` and `sys\typeof(numbers)` are the same canonical reference because
+the constructor's complete LEFT is int[]. Length three and reserve do not change
+that type. A value constructed with `int[3]` has a different, compatible complete
+requirement. `sys\typeof` on a reference-variable place retains the ordinary
+place/value contract; it does not recursively inspect whatever that cell points to.
+
+Three results remain distinct: a TypeRef from `int[]`/`int@`, a declaration without
+a value (`int[]: pending`, `int@: ptr`) and a constructed value (`int[]: [1 2 3]`).
+`typeof` denotes the same query as `sys\typeof`, not another API. TypeRef is an
+ordinary reference to the system description, not a user box, numeric code or new
+lexical token class. Invalid TYPE candidates receive the ordinary type diagnostic.
 
 The compact form exists at every depth: `@@(name)` in the position of a completed Frame is `@@: name`, and so on for `@@@(name)`. It declares a universal reference of that depth and never obtains a type from `name`.
 
-A group to the left of a type postfix keeps its meaning: `(Struct)[]` and `(Struct)@` use the complete requirement the common normalizer obtains from the group; they are not declared equal to `Struct[]` and `Struct@` by removing the parentheses — when `(Struct)` is an anonymous one-element Structure, that is a different structural model, and equality of the normalized requirements is established by the common mechanism. `[]: [Name]` holds a group with one element and is not `[]: Name`. `[]: []` and `int[]: []` hold a present empty group and construct an empty value; a missing initializer is a different state. Empty and one-element groups are kept in the clean graph and in roundtrip. A standalone `[]` with no left form keeps its ordinary literal or receiver-symbol role; it is not the postfix constructor applied to a missing argument.
+A group to the left of a type postfix keeps its meaning: `(Struct)[]` and `(Struct)@` use the complete requirement the common normalizer obtains from the group; they are not declared equal to `Struct[]` and `Struct@` by removing the parentheses — when `(Struct)` is an anonymous one-element Structure, that is a different structural model, and equality of the normalized requirements is established by the common mechanism. `[]: [Name]` holds a group with one element and is not `[]: Name`. `[]: []` and `int[]: []` hold a present empty group and construct an empty value; a missing initializer is a different state. Empty and one-element groups are kept in the clean graph and in roundtrip. Standalone `[]` in VALUE position constructs an ordinary empty Array; `[items]` constructs an anonymous Array as `@[]: [items]` does. The symbolic head `[]:` retains its declaration role. This is not a postfix type constructor applied to an absent left argument.
 
-`int@[]` is an array of pointers to int, `int[]@` a pointer to an array of int, `int[][]` an array of arrays of int, `int@@` a pointer to a pointer to int, `int@@[]` an array of depth-2 pointers to int. A depth beyond the available resources is refused by the ordinary resource failure; a depth is never truncated or wrapped. The depth of a type orders no chain of objects: `int@@@: p 0` initializes one null reference and allocates no intermediate cells.
+`int@[]` is an array of pointers to int, `int[]@` a pointer to an array of int, `int[][]` one flat int Array with two logical axes, `int@@` a pointer to a pointer to int, `int@@[]` an array of depth-2 pointers to int. A depth beyond the available resources is refused by the ordinary resource failure; a depth is never truncated or wrapped. The depth of a type orders no chain of objects: `int@@@: p 0` initializes one null reference and allocates no intermediate cells.
+
+`int[]@[]` is an ordinary composition of reference and Array requirements.
+Structure is already `@[]`, and its field can refer to another ordinary
+Structure; no separate array-of-arrays entity is introduced. When i selects
+struct2 and j selects field, `struct\struct2\field` corresponds to
+`struct[i]\[j]`, while `struct\struct2\field[k]` corresponds to
+`struct[i]\[j]\[k]`. Single `arr[k]` remains flat access at any rank;
+complete `arr[i][j][k]` coordinates access that same flat storage. Rank alone
+does not prohibit one-dimensional operations; their result contract determines
+shape preservation or a new flat selection ([contract](ARRAY_STORAGE.en.md#indexing)).
 
 In the TYPE role, n postfixes `@` mean n levels of pointer, and the nested requirement of each level is kept. In a chain of addressable places
 
@@ -105,24 +294,35 @@ int@@@: p3 @p2
 
 each level addresses the real place of the previous level: `p2` holds the address of the cell `p1`, not the target stored in it, and no level is skipped because machine pointers have one size. The same holds for n > 3.
 
+Standalone `[arr2]` in VALUE position creates one outer element holding the original complete arr2 value. It retains identity, does not expand fields, and enables no implicit singleton broadcasting. Expression does not unwrap `[items]` as a transparent group.
+
 An anonymous constructor yields one Array value and declares no name; an ordinary expression consumes it directly: `2 * (int[]: [1 2 3 4])` gives `[2 4 6 8]` with no internal variable. A named construction uses the ordinary place, scope and admission rules of declarations; its initializer is not executed a second time to obtain the result of an expression.
 
 Collecting a stream into a constructor is not a second copy: `copy` and `merge` keep their deep copy, maps and lexical relations; the container does not become the owner of copied methods and does not run stored bodies. An empty stream in `@[]: [copy(S)]` gives an empty Array, not one empty element. Expressions written to obtain elements execute once, in the established order; consuming a ready graph field does not run its computed declaration.
 
 In DATA, `array(int: first 1; int: second 2)` and its vertical form `array:` with the same fields declare an ordinary named Structure, which is also an Array. Its name keeps the declaration contract of a Structure; it is not an assignable variable holding a reference. In CODE the same forms keep their ordinary role of a call. Sequence operations accept such a Structure directly; its named fields and physical elements stay its ordinary fields and elements. Reading the graph does not execute the receiver forms stored in it, and methods in it do not create a separate callable container. Two separately written groups construct their own values. When two places, one declared with `[]` and one with `@`, receive the same existing Structure, both refer to it: admission through `[]` or `@` performs no copy, creates no wrapper, and does not change `parent`; `sys\typeof` and the descriptor do not distinguish two artificial kinds of object.
 
-In the active arena, obtaining the same derived type with the same complete parameters returns the existing code; a missing type is registered once. The key distinguishes at least the constructor and its complete source requirement: array of T, pointer to T at every depth, and their compositions. `int[]`, `char[]`, `int@` and `int@@` are not merged because their machine sizes are equal. A derived type of a Structure keeps its complete structural requirement; two different requirements are not replaced by the physical code of an ordinary Structure, and no user Structure gets a physical type merely for its name — a derived type is created when a type constructor is actually applied. Codes come from the common code issue of the kernel; a local index of an independent vector is not a code. Two equivalent codes obtained earlier are recognized by the common equivalence mechanism; old records are not rewritten for one number.
+Within the common canonical type context, equal complete normalized requirements
+return the same descriptor address. The key contains constructor, element/model
+requirement, qualifiers, explicit dimensions and pointer composition/depth; it
+contains neither names, row boundaries nor current length/capacity. Unspecified
+axes remain unspecified. `int[]`, `char[]`, `int@` and `int@@` are not merged just
+because their machine sizes match. A full structural/callable requirement is not
+erased to a coarse universal-reference description, and a type description does
+not create a distinct C layout for each named user model. The common interner
+publishes stable immutable descriptions, without local numbering or a second
+registry. Restoration resolves descriptions and relocates TypeRefs in its destination.
 
-One normalization and resolution path serves every consumer: type operands `T[]` and pointer types, typed heads and declarations, `sys\typeof`, code checks and layout access, `satisfies` and complete signatures, the interpreter, native lowering and the common call transports, copy/merge, and saving and restoring values. Prepared native code keeps the same type contract without automatic tracking of graph writes.
+One normalization and resolution path serves every consumer: type operands `T[]` and pointer types, typed heads and declarations, `sys\typeof`, descriptor checks and layout access, `satisfies` and complete signatures, the interpreter, native lowering and the common call transports, copy/merge, and saving and restoring values. Prepared native code keeps the same type contract without automatic tracking of graph writes.
 
-The relation above keeps its direction; it is not equality of the codes of A and B, equality of storage sizes, or a symmetric relation. Complete models, reference requirements, nested Array types and callable signatures remain part of A and B and are not erased to a common Structure or void-pointer tag. For pointer types the existing common contract of correspondence of their complete requirements applies at every level of depth; this edition adds no other rule for pointers. Type compatibility is not a check of a text against a Pattern, a function call, a converter run or a check of mutable object state.
+The relation above keeps its direction; it is not pointer equality of the TypeRefs of A and B, equality of storage sizes, or a symmetric relation. Complete models, reference requirements, nested Array types and callable signatures remain part of A and B and are not erased to a common Structure or void-pointer tag. For pointer types the existing common contract of correspondence of their complete requirements applies at every level of depth; this edition adds no other rule for pointers. Type compatibility is not a check of a text against a Pattern, a function call, a converter run or a check of mutable object state.
 
 <a id="expressions"></a>
 ## 2. One Expression mechanism
 
-`::`, the existing `->` and `record` operand implementations, postfix type construction, and the five pattern words all use the established Expression mechanism. Constant `PASS_ARGS_AS_IS` and `PRIORITY`, ordinary left/right preparation, dependency-demand evaluation, and normal receiver discovery are retained. There is no second operand ABI or regex parser.
+`::`, the existing `->` and `record` operand implementations, postfix type construction, and the five pattern words all use the established Expression mechanism. Constant `PASS_ARGS_AS_IS` and `PRIORITY`, ordinary left/depth/right preparation, dependency-demand evaluation, and normal receiver discovery are retained. There is no second operand ABI or regex parser.
 
-Expression is the ordinary Structure graph interpreted with a [structural grouper](LMX_semantics.en.md#expression-structural-grouping): it determines priorities, complete expression units and streams at the current tree level, independently of source spelling. A separate Expression application adapter packages left as one actual/reference bundle and right as an Array of references. `arg0 operand arg1 arg2 arg3` is the general form; a binary contract uses one right item, with no automatic fold or movement of the first right item into an absent left. The receiving contract selects whole-value or current-level sequence consumption. `(a b c) := (a c b)` therefore has one left bundle and three right values; three sibling RHS groups remain three Structure items. There is no extra conditional unwrapping pass after grouping. The grouper reads the clean graph. In Expression, a graph reference atom to a Structure forms a group only outside the operand role. Translation rejects ambiguous interpretations before effects. Other reached Structures follow the name/actual-parent rule. Reference resolution preserves the actual parent. Whole VALUE/TYPE/DATA material is not automatically reclassified as CODE. `1 + ((2))` is 3; field collectors such as `(copy(Model))` remain containers for zero, one or many fields. `::` and modifiers keep DATA consumption and the common immediate-field reader; they gain no RHS evaluator. P0, ordinary callable W/E and the existing lifetime/effect rules remain intact. See [architecture and acceptance](EXPRESSION_GROUPING.md); execution is **NOT_RUN**.
+Expression is the ordinary Structure graph interpreted with a [structural grouper](LMX_semantics.en.md#expression-structural-grouping): it determines priorities, complete expression units and streams at the current tree level, independently of source spelling. A separate Expression application adapter packages left as one actual/reference bundle and right as an Array of references. `arg0 operand arg1 arg2 arg3` is the general form; a binary contract uses one right item, with no automatic fold or movement of the first right item into an absent left. The receiving contract selects whole-value or current-level sequence consumption. `(a b c) .: (a c b)` therefore has one left bundle and three right values; three sibling RHS groups remain three Structure items. There is no extra conditional unwrapping pass after grouping. The grouper reads the clean graph. In Expression, a graph reference atom to a Structure forms a group only outside the operand role. Translation rejects ambiguous interpretations before effects. Other reached Structures follow the name/actual-parent rule. Reference resolution preserves the actual parent. Whole VALUE/TYPE/DATA material is not automatically reclassified as CODE. `1 + ((2))` is 3; field collectors such as `(copy(Model))` remain containers for zero, one or many fields. `::` and modifiers keep DATA consumption and the common immediate-field reader; they gain no RHS evaluator. P0, ordinary callable W/E and the existing lifetime/effect rules remain intact. See [architecture and acceptance](EXPRESSION_GROUPING.md); execution is **NOT_RUN**.
 
 `map`, `apply`, `partial`, `compose`, `pipe`, sequence mutations and searches
 retain their real receiving contracts in both forms. The parsed role selects
@@ -134,14 +334,28 @@ already enter Expression through P0 and need semantic lowering, not a new
 parser. Library-built VALUE operands reuse `FxAsOperand`. See
 [operation forms](OPERATION_FORMS.md) and [publication](GENERIC_OPERATIONS.md#32-публикация-под-одним-именем-и-пересечение-перегрузок).
 
-Array arithmetic keeps its existing operand names: `*` is elementwise multiplication; `concat` joins sequences; `matmul` is matrix multiplication. Two array inputs must have equal lengths. Array/scalar operations evaluate the scalar once and preserve operand order. When every sequence input is dense, including array/scalar and scalar/array, the operation returns dense R if the scalar contract already establishes one complete result requirement R; otherwise, or with a Structure input, they return a reference-array. They do not execute a probe element to guess a type. Each elementwise comparison produces the scalar predicate result, normally int 0/1; the result array follows the same representation rule. Empty inputs have the selected representation without callback execution. Length and byte-size arithmetic must not overflow. No truncation, singleton broadcasting, implicit float promotion, or inferred multidimensional shape is added.
+Array presence among the consumed actual values selects the applicable array/matrix profile. A Structure is the same freely typed Array, @[], and is not excluded. Ordinary `*` now performs the admitted vector/matrix product (or scalar scaling); `.*` is component multiplication. Equal-shape addition/subtraction and scalar expansion preserve operand order. Dotted arithmetic uses the selected scalar operations, not a fixed int/double implementation. `.=` is elementwise equality; `.:` is elementwise assignment, including `(a b c) .: (b c a)`. Shape comes from the complete TYPE and the extents uniquely derivable with length; several unknown dimensions are never guessed from length, initializer rows or nested-row probing. A reached operation needing missing dimensions fails. The full family, result-storage rules, generic LMX kernels and matrix examples are in [array expressions](ARRAY_EXPRESSIONS.en.md). [fuse](FUSION.en.md) requests one eligible component traversal; it does not turn matrix contraction into an elementwise operation.
 
 <a id="sequences"></a>
 ## 3. Universal sequence operations
 
 A universal `@` points directly to a `{type value}` record. A sequence operation inspects the actual array type. For Structure/@[], reading a slot obtains its stored record reference; for a dense T[], reading obtains T through typed access. Preparing an addressable primitive actual, if necessary, uses the ordinary call/value machinery and a sufficient lifetime. It does not require boxing the whole source or inserting a user-visible `{value: ...}` wrapper.
 
-Every array has variable length and the existing `parent/length/storage` descriptor. Capacity remains in its existing separate table. New selection results have a new outer container; shared referenced targets and their actual parents remain shared. Dense selection copies values. A selection is not a writable view and does not infer a rectangular shape.
+Every Array uses common variable-size storage and primary parent/length/storage.
+Its complete LEFT retains explicit extent constraints; mutation cannot ignore them.
+Capacity comes from the optional association or length, without selecting another
+TypeRef. Dimension information comes only from TYPE and permitted derivation with
+length. New selection results have a new outer container; referenced targets and
+their actual parents stay shared. Dense selection copies values. Selection is not
+a writable view and does not infer a rectangular shape from its result count.
+
+Here preserving the element/storage profile means dense T remains dense T and
+reference slots retain their record references. It does not promise the source's
+reserve or complete fixed Array requirement. A selection's result TYPE is selected
+by the operation's declared result contract before construction; fresh length does
+not specialize an unspecified axis. A flat T[] result may have a different complete
+TYPE from a sized source T[5]. A compact result has no capacity entry even if the
+source had reserve. Admission alone never changes the source TypeRef.
 
 | Receivers | Contract |
 | --- | --- |
@@ -154,7 +368,8 @@ Every array has variable length and the existing `parent/length/storage` descrip
 | `select`, `omit`, `reorder` | Physical indices; selection preserves storage profile; reorder requires a full permutation |
 | `project` | Selection followed by one shared graph copy/map |
 | `range(start; stop; step := 1)` | Materialized half-open range through an explicit step/order profile; the default exact-integer profile retains dense int output and checked extent |
-| `slice(source; begin; end)` | Validated half-open interval; use select with range for a step, without negative-index inference |
+| `slice(source; begin; end)` | Existing strict half-open interval profile |
+| `slice(source; spec)` / `source[start:stop:step]` | Common normalized strided selection, signed slice bounds and distinct omitted endpoints; [contract](TERNARY_AND_SLICES.en.md#slice-contract) |
 | `reverse(source)` | New container in reverse physical order |
 | `concat(parts)` | Same dense T when all parts have the same dense T; otherwise a reference-array |
 | `compress(source; mask)` | Same-length int truth mask, stable selection |
@@ -216,7 +431,7 @@ element requirement. Rounded arithmetic checks actual advancement; the sign of
 the written step alone is not a termination proof. The result is not a lazy
 iterator or a grammatical meaning of colon.
 
-`slice(source; begin; end)` returns a new container of the immediate elements with `begin <= i < end`. It requires `0 <= begin <= end <= length(source)`; an empty interval is allowed, including at the end of the array. A negative index is not counted from the end, and a bound out of range is refused with `ReceiverIndex`, not clipped. The result has the storage profile of the source; a step is written as `select` with `range`.
+`slice(source; begin; end)` returns a new container of the immediate elements with `begin <= i < end`. It requires `0 <= begin <= end <= length(source)`; an empty interval is allowed, including at the end of the array. A negative index is not counted from the end, and a bound out of range is refused with `ReceiverIndex`, not clipped. The result has the storage profile of the source. This strict three-argument profile has no step parameter; use the signed/strided `slice(source; spec)` overload or `source[start:stop:step]`, which share the selection traversal, or explicitly compose `select` with `range`.
 
 `reverse(source)` returns a new outer container in reverse physical order with the storage profile of the source. Empty and one-element sources are allowed. The source does not change; reference targets are neither copied deeply nor reparented.
 
@@ -228,11 +443,11 @@ iterator or a grammatical meaning of colon.
 
 | Condition | Failure |
 | --- | --- |
-| An invalid physical index; invalid bounds of `slice`, `replaceRange` or `splice` | `ReceiverIndex` |
+| An invalid physical index; invalid bounds of strict `slice(source; begin; end)`, `replaceRange` or `splice` | `ReceiverIndex` |
 | Not a complete permutation | `ReceiverPermutation` |
 | Unequal lengths of numeric arrays or of a mask; rows of unequal length | `FxShape` |
 | An invalid or unsupported type token | `FxTypeToken` |
-| A zero `range` step | `SequenceStep` |
+| A zero `range` or signed/strided slice step | `SequenceStep` |
 | A size or length that cannot be represented without overflow | `SequenceSize` |
 | An element not admissible for a dense target; a mask element that is not int | `SequenceElement` |
 | The `accepts` result of a new query is not int | `FxPredicate` |
@@ -347,7 +562,7 @@ The source must remain alive and unchanged during an operation, suspended iterat
 <a id="patterns-details"></a>
 ### Exact pattern contracts
 
-`Pattern`, `RxPreparedSource`, `ArrayView`, `TextView`, `Match` and `Span` are ordinary structural requirements and values. They register no pattern-specific physical type codes, no additional `Lmx` fields, no new pointer category and no instruction language; the arrays and typed references they use get their codes from the common type mechanism. A Pattern is an ordinary callable Structure with a real DATA/parent. Applying it to an input, a position and the current state of captures gives an ordered sequence of possible continuations; a continuation holds the new position and the capture journal of its path. This describes the observable contract: an implementation may enumerate the continuations with an ordinary iterator, keep explicit continuations or use prepared native code. Builders construct ready Pattern values: they match nothing, read no future input and never call the body of a supplied Pattern. A Pattern can be stored, passed, returned and assembled from run-time values; ordinary call and admission rules apply, and no statically fixed arity of the whole Pattern is required. A string in a Pattern position is accepted by the consumer's contract as a literal sequence, and an empty string is equivalent to `emptyPattern`; this is a decision of the consumer, not a P0 transformation or a regex grammar inside the string. A number alone means no character, range or repetition count: its meaning is set by the particular parameter of a receiver. A ready name such as `anyElement` is read as a value; it is not an implicit call without arguments. A `Match` holds at least `source`, `begin`, `end` and `captures`; `source` keeps the original view and its prepared source/profile with the rule for interpreting positions.
+`Pattern`, `RxPreparedSource`, `ArrayView`, `TextView`, `Match` and `Span` are ordinary structural requirements and values. Their complete TYPE requirements use the common TypeRef interner; they introduce no pattern-specific C object kind, extra Lmx fields, new pointer category or instruction language. A Pattern is an ordinary callable Structure with a real DATA/parent. Applying it to an input, a position and the current state of captures gives an ordered sequence of possible continuations; a continuation holds the new position and the capture journal of its path. This describes the observable contract: an implementation may enumerate the continuations with an ordinary iterator, keep explicit continuations or use prepared native code. Builders construct ready Pattern values: they match nothing, read no future input and never call the body of a supplied Pattern. A Pattern can be stored, passed, returned and assembled from run-time values; ordinary call and admission rules apply, and no statically fixed arity of the whole Pattern is required. A string in a Pattern position is accepted by the consumer's contract as a literal sequence, and an empty string is equivalent to `emptyPattern`; this is a decision of the consumer, not a P0 transformation or a regex grammar inside the string. A number alone means no character, range or repetition count: its meaning is set by the particular parameter of a receiver. A ready name such as `anyElement` is read as a value; it is not an implicit call without arguments. A `Match` holds at least `source`, `begin`, `end` and `captures`; `source` keeps the original view and its prepared source/profile with the rule for interpreting positions.
 
 The five word operands use `PASS_ARGS_AS_IS = 0`. Their logical argument list is the written left argument, if any, followed by the elements of `right`; this is an internal rule of the method, and the ABI does not change. `left` is neither moved into `right` nor duplicated, and a string or an array stays one argument:
 
@@ -452,3 +667,7 @@ The LMX implementation keeps adapter algorithms in LMX and isolates access to th
 The core-type scenarios, sequence scenarios, original pattern scenarios, and adapter A01–A20/B01–B11 requirements remain acceptance obligations for interpreter, native, and both transitions. Added cases cover the distinct `replaceRange`/`splice` results and both boundary predicates, including alternatives, overlap, empty boundaries, actual element profiles, and aliasing. They must be run against the actual kernel. This archive separately records source coverage, unresolved integration duties, and reproducible character counts. Neither a documentation link nor a matching source token is a runtime PASS.
 
 Examples retain genuinely different algorithms from the uploaded archive; minor one-line alternatives become notes. Syntax migrations apply to retained algorithms too. A shorter candidate is eligible only when it preserves the complete scenario, fields, effects, failure behavior, and comparable library boundary. LMX usage calls direct core functions from the [common inventory](CORE_FUNCTIONS.md); control-language usage calls actual libraries or native facilities, not our comparison implementations. Implementation comparisons retain complete stated contracts on both sides and count shared dependencies separately. Code length is not a performance measurement.
+
+
+<a id="strided-slice-profile"></a>
+The strict three-argument interval profile remains strict. The new `slice(source; spec)` overload and suffix form use [normalized signed slice bounds](TERNARY_AND_SLICES.en.md#slice-contract) and the same selection traversal. Negative slice bounds are not negative scalar Array indices.

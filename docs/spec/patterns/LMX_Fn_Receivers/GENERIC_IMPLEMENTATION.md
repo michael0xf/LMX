@@ -6,7 +6,7 @@ The implementations derive finite input count and complete type requirements fro
 
 A Structure already is an array of references to value records. Algorithms use it directly, without an items wrapper. Dense Arrays use their real type and stride. A transport @ points to the actual typed record; it does not coerce every semantic type to @ or add a mandatory second box around a referenced Structure.
 
-Postfix type constructors return ordinary int codes. Normalization reads an initialized int's payload as a type-id and an uninitialized token's type without a payload read. References used internally to normalized requirements are references to code records and their existing full type descriptions, not new public Type objects.
+Postfix type constructors return canonical TypeRef references to complete normalized type descriptions. Normalization accepts these system descriptions directly and retains the established uninitialized declaration TYPE form without reading absent payload. An arbitrary initialized int is not a type-id or pointer. Source prototypes still using int-code records require the documented ABI migration; no second box or independent registry is introduced.
 
 ## Source layers
 
@@ -49,7 +49,7 @@ Full algorithms and the exact frame lifecycle are in [ADAPTER_IMPLEMENTATION.md]
 
 ## Whole-value construction, bind and value pipelines
 
-`FxRecordAdapter` is the single input capture algorithm. It accepts the actual complete T once and passes its record to one constructor position. `some/ok/err/done` retain exact reference results; `type` shares capture and then returns its actual physical int code. Internal ready-record calls do not apply capture again. Dynamic binding and copy preserve their ordinary roles.
+`FxRecordAdapter` is the single input capture algorithm. It accepts the actual complete T once and passes its record to one constructor position. `some/ok/err/done` retain exact reference results; `type` shares capture and returns its actual canonical TypeRef. Internal ready-record calls do not apply capture again. Dynamic binding and copy preserve their ordinary roles.
 
 `bind` publishes distinct Maybe, Result and Array requirements under one name. The ordinary and operand paths share each family's existing body. Maybe and Result short-circuit; Array bind concatenates one level into the declared reference-record Array. No field-count test or speculative callback chooses a family. `then` belongs to generic Pattern composition.
 

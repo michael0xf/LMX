@@ -5,6 +5,7 @@ Foreign implementations keep their stated domain profiles. Source copies are
 publication mirrors, never an independent implementation of a core algorithm.
 """
 from pathlib import Path
+import argparse
 import hashlib
 import json
 import re
@@ -114,6 +115,10 @@ def sync_extended(definitions):
 
 
 def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--dependencies-only',action='store_true',
+                        help='Refresh current dependency ledgers without changing examples or historical review receipts')
+    args=parser.parse_args()
     definitions = blocks()
     ledger = []
     for path in sorted(ROOT.glob("[0-9][0-9]_*/patterns.json")):
@@ -178,7 +183,10 @@ def main():
                 97:"Generic retry preserves the actual result and uses explicit retryOn/delay/limit policies."
             }[ident]
             source = path.parent/"examples/lmx"/f"{ident:03d}_{row['slug']}.lm3"
-            source.write_text(code)
+            if args.dependencies_only:
+                if source.read_text().strip()!=code.strip():
+                    raise ValueError(f'{source}: canonical body changed; synchronize this comparison explicitly first')
+            else:source.write_text(code)
             companions = {93:['FxPipeState','FxPipeEngine','FxPipeBuild'],97:['FxRetryValueState','FxRetryValueEngine','FxRetryBuild']}.get(ident,[])
             required = closure(names+companions,definitions)
             ledger.append({
@@ -190,10 +198,11 @@ def main():
                 "runtime_status":"NOT_RUN",
             })
             changed = True
-        if changed:
+        if changed and not args.dependencies_only:
             save(path,data)
-    sync_extended(definitions)
-    sync_reviewed_hashes()
+    if not args.dependencies_only:
+        sync_extended(definitions)
+        sync_reviewed_hashes()
     save(ROOT/"validation/common_operation_dependencies.json",{"scope":"Current source accounting, not runtime execution","components":ledger})
     lines=[
         "# Общие реализации примеров и их зависимости",

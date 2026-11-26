@@ -1,6 +1,6 @@
 # LMX / Haskell
 
-Редакция 24 ноября 2026 года. Полные размеры листингов.
+Редакция 26 ноября 2026 года. Полные размеры листингов.
 
 ## LMX / Haskell
 
@@ -49,11 +49,11 @@ LMX parser/runtime: NOT_RUN для изменённых листингов. Пр
 | ID | Операции | LMX — реализация | Контроль |
 | --- | --- | --- | --- |
 | H01 | apply | 2083 | <span style="color:#176233"><u>79</u></span> |
-| H03 | partial | 16390 | <span style="color:#176233"><u>699</u></span> |
-| H06 | compose | 14403 | <span style="color:#176233"><u>389</u></span> |
-| H07 | lazy, once | 14590 | <span style="color:#176233"><u>1309</u></span> |
+| H03 | partial | 16397 | <span style="color:#176233"><u>699</u></span> |
+| H06 | compose | 14410 | <span style="color:#176233"><u>389</u></span> |
+| H07 | lazy, once | 14597 | <span style="color:#176233"><u>1309</u></span> |
 | H09 | Cycles\iterate | <span style="color:#176233"><u>73</u></span> | 644 |
-| V02 | between | <span style="color:#176233"><u>250</u></span> | 315 |
+| V02 | between | <span style="color:#176233"><u>260</u></span> | 315 |
 | R01 | derive / record composition | <span style="color:#176233"><u>71</u></span> | 108 |
 
 Полные указанные тела сравниваются отдельно от клиентов. Пересекающиеся зависимости нельзя складывать повторно.

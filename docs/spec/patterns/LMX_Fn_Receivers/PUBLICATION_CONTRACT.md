@@ -52,6 +52,7 @@ The library uses the ordinary shared DATA fragment
 FxPreparedOperands:
     private:
         @: left
+        int: depth 0
         @[]: right
     const: int: PASS_ARGS_AS_IS 0
 ```
@@ -114,6 +115,126 @@ The original non-Pattern
 branches of `|` keep their existing contracts. The copied fields contain no matching, collection or adapter
 algorithm. The same bodies are used by both applicable forms.
 
+## Depth is an operand service input
+
+The complete common rule is [OPERATOR_DEPTH.en.md](../../OPERATOR_DEPTH.en.md)
+([Russian](../../OPERATOR_DEPTH.ru.md)).
+
+Every real operand declares the transport inputs in the order **left, depth,
+right**. `op` supplies depth 0; `.op` supplies 1; `.(expression)op` supplies the
+nonnegative `int` produced by the ordinary Expression contract. There is at most
+one prefix dot. The explicit depth expression is evaluated once, only when that
+receiver demands it. No new callable names are registered for depth values.
+In ordinary code tokenization, `.(` always starts an operator/function depth
+modifier; it is not a decimal point. Protected lexical modes remain opaque.
+Array indices and type postfix forms keep their own brackets.
+The receiver spelling uses the quoted **base** name and a named `depth` actual
+of that selected outer operand profile. This is not a reserved identifier: an
+original ordinary function may have its own user input named `depth`; that input
+retains its original owner and receives only its mapped logical argument. The
+outer service input is not a second positional argument of the original function. Prefix absence remains absence, and a present empty right Array
+remains present. `PASS_ARGS_AS_IS` and `PRIORITY` keep their previous roles.
+
+`RxLogicalArguments\collect` deliberately remains an ordinary two-input helper:
+it combines only left and right. It is not an OPERANDS_TEMPLATE implementer.
+Its caller receives depth separately. This prevents `asOperand(add; priority)`
+from accidentally calling the original `add(first; depth; second)`.
+
+### Ordinary VALUE functions: one algorithm and a dependent exact result
+
+`FxAsOperand` constructs the real three-input DATA and delegates to the shared
+`FxOperandValueEngine` in [coreStandardLisp.lmx](src/coreStandardLisp.lmx).
+The engine collects ready logical arguments once. Depth 0 calls the original
+operation through `FxApply`; a positive depth obtains the prepared Array
+context through the explicit **PD01** `FxKernel\operandDepthContext(frame;
+arguments)` provider and invokes the single
+[`FxArrayDepth\apply(context; depth; inputs)`](src/array_expression_ops.lmx)
+algorithm. The original function never receives the depth field as user data.
+
+The builder adds ordinary `operandDepthSource` policy data to `FxOwnPolicy`.
+The same callable preparation and final result admission must honor this policy:
+depth 0 retains the source's complete `R`/void. Positive depth traverses that
+many logical outer axes determined by the canonical type description and length.
+Written dimension constraints belong to TYPE, while real reserve is an optional
+instance capacity association. Initializer rows and reserve do not refine TypeRef.
+Contiguous storage does not reduce a rank-2 matrix to a single logical level;
+unknown dimensions are diagnosed only when the selected operation needs them. Preparation derives the complete
+result requirement and flat output layout from the traversed axes and the base
+result contract, without inserting a separate array-of-arrays storage kind.
+Only an original scalar actual broadcasts across the selected axes. A call whose
+original actuals are all scalar reaches a fixed point without creating synthetic
+singleton dimensions. Original Array provenance persists during traversal: two
+Array inputs with incompatible selected dimensions, or an Array whose logical
+rank is exhausted before the requested depth, produce a translator/interpreter
+diagnostic. A reached scalar from such an Array does not become an original
+broadcast scalar. Shape, qualifiers, models and reference requirements are
+retained; the first element is never called to guess a result type. A
+runtime-selected depth requires the corresponding dependent result preparation.
+An unchanged native scalar-return ABI cannot be reused for an Array result, and
+no implicit native compilation is requested.
+
+The common context contains:
+
+| Field | Contract |
+| --- | --- |
+| `base` | Original ordinary callable, invoked with logical arguments only |
+| `hasResult` | The source's actual value/void contract |
+| `level(context; depth; inputs)` | Checks all selected logical axes and the full result requirement; returns a frame with `hasArray`, `count`, `inputs`, `read`, `layout` and `write` |
+| `publish(context; layout; result)` | Uses the canonical TypeRef of the complete declared/evaluated result requirement. Persistent output axes must be expressed in that requirement; the temporary layout never secretly specializes a generic result type. No second descriptor at capacity=length; optional reserve capacity does not change TypeRef |
+
+The frame's `count` is the number of selected base applications, which need not
+equal the number of physical scalar cells. An input entry contains `isArray`
+and `value`; `value` may be a prepared logical access map. `read(map; index)`
+returns the scalar or slice descriptor for one application, sharing the existing
+storage. The source attaches `root = context` and uses the same fill loop for
+all applications; it does not recursively allocate row containers or require a
+`childDepth` field. `layout` describes only actual result storage, allocated once
+by `FxArrayResultTree`. `write(output; index; result)` admits and writes the
+selected scalar or block result into that storage. Shape preparation never
+executes the user's method to infer a type or layout.
+
+The level inputs distinguish actual Arrays and original broadcast scalar values,
+and retain each original actual's Array/scalar provenance across logical-axis
+traversal. With two flat matrices of shape `(2 2)`, depth 0 invokes matrix `*`,
+depth 1 invokes vector `*` on corresponding rows, and depth 2 invokes scalar `*`
+on corresponding components. Thus `a .* b` is the row-dot profile in that
+matrix example; `a .(2)* b` is its complete scalar componentwise product.
+For rank-1 vectors, `a .* b` already reaches the scalar components.
+
+A Structure is an `@[]`. A reference stored in it may refer to another Array:
+`struct[i]\[j]` first selects that reference and then performs ordinary indexed
+access through it. This uses the existing reference and Array contracts, not a
+separate array-of-arrays entity or a second definition of dimension depth.
+
+An empty traversal obtains its full result type from preparation and performs
+no sample call. A void source executes the same selected
+base calls but allocates no `Array<void>`; `FxWrap` discards the internal engine
+marker and returns ordinary void. It also projects a real value result through
+its full selected requirement. Internal `return: @` on the engine remains a
+transport reference to a typed value record, not the public result declaration.
+
+PD01 is a **required kernel integration boundary, not an implemented provider**.
+The source contains the adapter and the reusable LMX traversal; it does not
+claim that the production parser, translator, dynamic result admission or native
+bridge have passed execution. Their status remains **NOT_RUN**. Invalid depth, incompatible structure/shape and unavailable fusion are
+translator/interpreter diagnostics, not fabricated callable failures. The provider
+prepares existing contracts and shape callbacks; it must not hide a second
+mapping implementation or execute the source's function while preparing them.
+
+### Receivers with whole DATA, TYPE, RAW, PLACE or family contracts
+
+A depth field does not authorize a universal recursive rewrite of these roles.
+The existing `record`, `->`, `type`, Maybe/Result `bind`, Pattern combinators and
+finite comparison helpers here retain their whole-value depth-0 profile.
+A nonzero depth outside that profile is a translator/interpreter diagnostic
+during semantic preparation, before method execution or incompatible typed
+family reception. It is not a new LMX exception and adds no synthetic `throws`.
+Role-aware and adaptive projections, including direct receiver spelling, apply
+that same profile admission. No exported diagnostic helper or eager graph
+rewriter is introduced; depth is not silently ignored. A future profile can explicitly choose the
+common VALUE traversal or define a role-specific meaning. Array `bind`, already
+constructed with `asOperand`, uses the ordinary VALUE lifting policy.
+
 ## Whole values and constructor adapters
 
 The actor context has explicit input routes for:
@@ -124,7 +245,7 @@ The actor context has explicit input routes for:
 | `ok(x)` | `FxRecordAdapter\make(T; FxOk\ok)` | exact `FxResult@` |
 | `err(x)` | `FxRecordAdapter\make(T; FxErr\err)` | exact `FxResult@` |
 | `done(x)` | `FxRecordAdapter\make(T; FxDone\done)` | exact `FxBounce@` |
-| `type(x)` | shared value capture, then `FxValueType\type` | `int` |
+| `type(x)` | shared value capture, then `FxValueType\type` | canonical TypeRef (`@`), direct type description |
 | `literal(x)` / `element(x)` | shared whole-value capture, then their existing constructors | Pattern reference |
 | `arrayView(xs)` | whole Array record, then `RxArrayView\arrayView` | Array view |
 
@@ -141,10 +262,11 @@ that same implementation. Internal constructors already receiving a record
 continue to receive it directly and do not apply a second capture. For example,
 `FxSome\some(value := readyRecord)` is deliberately an internal protocol.
 
-The source `FxRecordConstructor` interface has a reference result. `type` uses
-the shared capture route but returns its actual `int` from `FxValueType`; it
-is not forced through that constructor interface. Source/result ownership
-follows the ordinary arena/native lifetime rules.
+The `FxRecordConstructor` interface has a reference result. `type` uses the
+shared capture route and returns the canonical TypeRef from `FxValueType`.
+The standalone source still has its previous int result and requires migration;
+that old result is not the current contract. Ownership follows the ordinary
+arena/native lifetime rules, with type descriptions kept alive while referenced.
 
 ## Exact public results for value pipelines and retries
 
@@ -182,8 +304,8 @@ retry remains `retryPost`.
 The common Expression grouper resolves priorities, groups and explicit field
 streams from the supplied pure graph, regardless of notation or origin. Its output is a
 structured operation/stream plan. A separate application adapter packages the
-left side as one actual and the current-level right stream as an Array of
-references; the grouper itself does not package `left`. The library collector
+left side as one actual, the evaluated depth as the second service input,
+and the current-level right stream as an Array of references; the grouper itself does not package `left`. The library collector
 and `asOperand` wrapper forward that prepared vector. Their logical argument
 collection is an explicit step inside the operand method body, not a universal
 pre-call binder. An absent left stays absent at method entry; the first right
@@ -192,9 +314,9 @@ with different vectors, and their equivalence belongs to that method, not an
 assignment-specific parser rule. There is no subsequent conditional opening
 pass, textual rewrite or reparsing.
 
-For `(a b c) := (a c b)`, the adapter supplies one whole left argument and the
-right stream `a, c, b`. For `(a b c) := (f g h) (f g h) (f g h)`, it supplies
-three whole right Structures, not nine fields. Direct `(a b c) := copy(d)` uses
+For `(a b c) .: (a c b)`, the adapter supplies one whole left argument and the
+right stream `a, c, b`. For `(a b c) .: (f g h) (f g h) (f g h)`, it supplies
+three whole right Structures, not nine fields. Direct `(a b c) .: copy(d)` uses
 the explicit field stream and needs no enclosing RHS group. Its group-assignment
 effect equals the wrapped spelling; a scalar whole-value `(copy(d))` is retained.
 These outcomes follow from [the common grouper and application adapter](../../LMX_semantics.en.md#expression-structural-grouping).
@@ -224,9 +346,10 @@ implicitly turns the flat signature into a chain of unary callables.
 TYPE contract. `FxToOperand`, `FxToTokens` and `RxLogicalArguments` use the
 projected arguments without signature-specific opening or a second adaptation.
 
-`type(x)` reads the actual physical type code, not an arbitrary semantic model.
-`types(source)` still returns the sequence of field type codes. These operations
-and `return` remain distinct contracts.
+`type(x)` obtains the canonical TypeRef of the actual typed value. Mere admission
+to another model does not replace that descriptor or record all past semantic
+checks. `types(source)` returns @[] TypeRef references for the physical fields.
+These operations and `return` remain distinct contracts.
 
 The four attached update forms have canonical variant names `++var`,
 `var++`, `--var` and `var--`, each with one PLACE. Existing `@` needs no quote.

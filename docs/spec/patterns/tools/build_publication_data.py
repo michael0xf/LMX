@@ -17,7 +17,7 @@ from lmx_style_variants import STYLES, measure, validate_variants
 
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES = ROOT / 'examples'
-DATE = '2026-11-24'
+DATE = '2026-11-26'
 LANGUAGES = ['LMX', 'Python', 'Java', 'C++', 'C#', 'TypeScript', 'Go', 'Rust']
 STATUS = {'complete_pair':'Полная пара', 'related_analogy':'Аналогия', 'lmx_only':'Только LMX'}
 METHOD = (
@@ -40,6 +40,13 @@ RUNTIME = ('LMX parser/runtime: NOT_RUN для изменённых листин
 
 def read(path):
     return json.loads(path.read_text(encoding='utf-8'))
+
+
+def edition_label(edition):
+    year, month, day = edition.split('-')[:3]
+    months = ('января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+              'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря')
+    return f'{int(day)} {months[int(month)-1]} {year}'
 
 
 def write(path, value):
@@ -305,12 +312,14 @@ def md_table(tab):
     return '\n'.join(out)
 
 
-def publish_text(model):
+def publish_text(model, selected_stems=None):
     for doc in model['documents']:
+        if selected_stems is not None and doc['stem'] not in selected_stems:
+            continue
         # Suite-specific narrative/source comparisons belong to their own builders.
         # Only publication summary tables are emitted here.
         target=ROOT/(doc['stem']+'.md')
-        lines=['# '+doc['title'],'Редакция 24 ноября 2026 года. Полные размеры листингов.']
+        lines=['# '+doc['title'],f"Редакция {edition_label(doc['edition'])} года. Полные размеры листингов."]
         for view in doc['sheets']:
             lines.extend(['## '+view['title']])
             for tab in view['tables']:
@@ -340,20 +349,34 @@ def publish_text(model):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--text',action='store_true',help='Also write the publication Markdown/CSV summaries')
+    parser.add_argument('--changed-only',action='store_true',help='Write text summaries only when their published payload changes')
     args=parser.parse_args()
     model=build()
     if model['errors']:
         print(json.dumps({'status':'FAIL','errors':model['errors']},ensure_ascii=False,indent=2))
         return 1
-    expected_clients=96+sum(bool(record.get('lmx_variants'))
+    expected_suite_clients=24+sum(read(EXAMPLES/name/'examples.json').get('expected_client_count',24)
+                                 for name in ('julia_comparison','perl_comparison','SBCL_comparison'))
+    expected_clients=expected_suite_clients+sum(bool(record.get('lmx_variants'))
                             for path in ROOT.glob('[0-9][0-9]_*/patterns.json')
                             for record in read(path)['patterns'])
     if model['lmx_style_clients']!=expected_clients:
         raise ValueError('Publication lost one or more declared style pairs')
+    previous_path=ROOT/'PUBLICATION_DATA.json'
+    previous=read(previous_path) if previous_path.is_file() else {'documents':[]}
+    previous_docs={doc['stem']:doc for doc in previous['documents']}
+    def payload(doc):return {key:value for key,value in doc.items() if key!='edition'}
+    changed_stems=set()
+    for doc in model['documents']:
+        old=previous_docs.get(doc['stem'])
+        if old is not None and payload(doc)==payload(old):
+            doc['edition']=old.get('edition',previous.get('edition',DATE))
+        else:changed_stems.add(doc['stem'])
     write(ROOT/'PUBLICATION_DATA.json',model)
-    if args.text: publish_text(model)
+    if args.text: publish_text(model,changed_stems if args.changed_only else None)
     print(json.dumps({'status':'PASS','documents':len(model['documents']),'mirrors':len(model['mirrors']),
-                      'client_scenarios':model['lmx_style_clients'],'lmx_style_listings':model['lmx_style_listings']},ensure_ascii=False))
+                      'client_scenarios':model['lmx_style_clients'],'lmx_style_listings':model['lmx_style_listings'],
+                      'changed_documents':len(changed_stems)},ensure_ascii=False))
     return 0
 
 

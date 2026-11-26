@@ -16,7 +16,7 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer, PageBreak, CondPageBreak
-from build_publication_data import METHOD, STYLE_METHOD, RUNTIME
+from build_publication_data import METHOD, STYLE_METHOD, RUNTIME, edition_label
 
 ROOT=Path(__file__).resolve().parents[1]
 PAGE=landscape(A4)
@@ -24,6 +24,7 @@ WIDTH=PAGE[0]-72
 INK=colors.HexColor('#17344C')
 GREEN=colors.HexColor('#176233')
 AUDIT=[]
+EDITION_LABEL=''
 
 
 def styles():
@@ -86,7 +87,7 @@ def build_table(tab,sty,document_name,sheet_name):
 def footer(canvas,doc):
     canvas.setStrokeColor(colors.HexColor('#CFD8E0'));canvas.line(36,39,PAGE[0]-36,39)
     canvas.setFillColor(colors.HexColor('#526575'));canvas.setFont('LMX',7)
-    canvas.drawString(36,29,'LMX · полные листинги · 24 ноября 2026')
+    canvas.drawString(36,29,'LMX · полные листинги · '+EDITION_LABEL)
     canvas.drawRightString(PAGE[0]-36,29,str(doc.page))
     canvas.setFont('LMX',6.5)
     canvas.drawString(36,18,'Весь непробельный Unicode-текст; Throws/copy включены. Зелёное подчёркивание — минимум, включая все равенства.')
@@ -94,20 +95,29 @@ def footer(canvas,doc):
 
 
 def main():
+    global EDITION_LABEL
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--only',help='Only document stems containing this text')
     args=parser.parse_args()
     model=json.loads((ROOT/'PUBLICATION_DATA.json').read_text())
+    EDITION_LABEL=edition_label(model['edition'])
     sty=styles();generated=[]
     previous={}
-    target=ROOT/'validation/pdf_generation_20261123.json'
-    if args.only and target.is_file():previous=json.loads(target.read_text())
+    target=ROOT/f"validation/pdf_generation_{model['edition'].replace('-', '')}.json"
+    if args.only:
+        previous_path=target if target.is_file() else next(iter(sorted(
+            (ROOT/'validation').glob('pdf_generation_*.json'),reverse=True)),None)
+        if previous_path:
+            previous=json.loads(previous_path.read_text())
+            for item in previous.get('files',[]):
+                item.setdefault('generation_receipt',previous_path.relative_to(ROOT).as_posix())
+                item.setdefault('generation_edition',previous.get('edition'))
     for source in model['documents']:
         if args.only and args.only not in source['stem']:continue
         story=[]
         for index,view in enumerate(source['sheets']):
             if index:story.append(PageBreak())
-            story.extend([para(view['title'],sty['title']),para('Полные размеры исходников · 24 ноября 2026',sty['note'])])
+            story.extend([para(view['title'],sty['title']),para('Полные размеры исходников · '+EDITION_LABEL,sty['note'])])
             for tab in view['tables']:
                 story.append(CondPageBreak(65))
                 story.append(para(tab['title'],sty['heading']))
@@ -123,11 +133,13 @@ def main():
         doc=SimpleDocTemplate(str(path),pagesize=PAGE,leftMargin=36,rightMargin=36,topMargin=31,bottomMargin=45,
                               title=source['title'],author='LMX',pageCompression=1)
         doc.build(story,onFirstPage=footer,onLaterPages=footer)
-        generated.append({'file':path.relative_to(ROOT).as_posix(),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()})
+        generated.append({'file':path.relative_to(ROOT).as_posix(),'sha256':hashlib.sha256(path.read_bytes()).hexdigest(),
+                          'generation_receipt':target.relative_to(ROOT).as_posix(),'generation_edition':model['edition']})
     for mirror in model['mirrors']:
         if any(x['file']==mirror['source']+'.pdf' for x in generated):
             shutil.copyfile(ROOT/(mirror['source']+'.pdf'),ROOT/(mirror['target']+'.pdf'))
-            generated.append({'file':mirror['target']+'.pdf','byte_identical_to':mirror['source']+'.pdf'})
+            generated.append({'file':mirror['target']+'.pdf','byte_identical_to':mirror['source']+'.pdf',
+                              'generation_receipt':target.relative_to(ROOT).as_posix(),'generation_edition':model['edition']})
     changed={item['file'] for item in generated}
     all_files=[item for item in previous.get('files',[]) if isinstance(item,dict) and item.get('file') not in changed]+generated
     all_tables=[item for item in previous.get('tables',[]) if item.get('file') not in changed]+AUDIT

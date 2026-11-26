@@ -4,7 +4,8 @@
 
 > **Repository note.** This file is the edition of 2026-11-21, transferred verbatim from the author's
 > documentation packet (it lay in `docs/new_parts/newdocs/` and was removed there as a duplicate on the author's
-> order of 2026-11-21); only link targets were adapted to repository paths.
+> order of 2026-11-21). Later normative corrections, including the TypeRef ABI,
+> are integrated below; this is no longer a byte-for-byte copy of that historical packet.
 > The implementation state of this repository is recorded in READ.ME (historical repository reference `../../READ.ME`), the
 > [current implementation contract](kernel-implementation.en.md) and the current pipeline (historical repository reference `../../steps/current.md`), not in this map.
 
@@ -87,11 +88,15 @@ fields inserted into every value.
 
 ### 2.2 Value records and the arena
 
-An arena contains a stream of typed records. For an initialized value, its type
-code immediately precedes its payload; the code occupies four bytes in the
-documented format. `uninit:T` consists of the code alone: `sizeof(value) = 0`,
-without a reserved T cell or inner T record. Physical kind is read from the
-record. Address-range information identifies ownership and does not infer type.
+An arena contains a stream of typed records. For an initialized value, a direct
+TypeRef immediately precedes its payload. This pointer-sized reference addresses
+the canonical immutable system Structure describing the complete normalized type;
+it is not an integer counter or table index. `uninit:T` consists of a TypeRef to
+the absence description alone: `sizeof(value) = 0`, with no reserved T payload.
+The prefix width is `sizeof(TypeRef)` and both prefix and payload alignment are
+maintained by padding before the prefix or between records. Physical access comes
+from the type description; ownership ranges do not infer type. See the
+[detailed TypeRef contract](../TYPE_REFERENCES_CHANGE.md).
 
 [P01 is resolved by the author](implementation-notes.en.md#uninit-layout-conflict).
 Assigning 5 to an explicit graph field holding `{uninit:int}` replaces that
@@ -105,8 +110,10 @@ One Message owns one logical arena, which may consist of several chunks. An
 ordinary reference does not acquire a longer lifetime merely because another
 namespace can see it.
 
-A model is checked through `satisfies`. A user model does not create a new
-per-model C layout, physical kind code, or hidden runtime tag. Primitive cells,
+A model is checked through `satisfies`. A normalized complete type description
+may retain its model requirements without creating a different C layout for each
+model. Merely admitting an existing ready value under a receiving model neither
+retags it nor changes its canonical descriptor. Primitive cells,
 reference cells, descriptors, and typed backing each retain their own access
 contract.
 
@@ -117,8 +124,10 @@ In the clean graph, `parent` and `length` are logically determined from the
 written source relationships; the remaining contents are represented through
 the Structure's array of pointers. This explains their origin, not a rule that
 header fields have no storage or must be recomputed from source text on every access.
-Native descriptors and capacity belong to arena tables, not additional header
-fields. Structure and `Array<@>` are interchangeable under their common
+Native descriptors belong to call tables. Instance capacity uses an optional
+arena association only when it exceeds length; at equality there is no second
+descriptor. Rank and written extents belong to the canonical type description,
+without refinement from initializer rows or reserve. No header field is added. Structure and `Array<@>` are interchangeable under their common
 field/index contract. A numeric `Array<T>` holds actual T elements.
 
 Arrays and service arrays use the common variable-length allocation and capacity
@@ -126,18 +135,23 @@ mechanism. The obsolete fixed-Array/separate-growable-List distinction does not
 define a second active container model. Descriptor addresses stay stable while
 backing storage may move.
 
-L2 indexing is the machine profile's raw offset operation. L3 combines adjacent
-dimensions into one linear index and performs the common bounds check. An L3
+Adjacent dimensions combine into one linear index. Interpreted L2 and L3
+check the reached final element under the common Array contract; native L2
+does not add an automatic bounds check. Deliberate raw negative offsets use
+the pointer contract, not an alternative negative-Array-index rule. An L3
 Array-element reference uses the descriptor and index under its existing
 contract, rather than retaining a stale backing-storage address. An L2 pointer
 remains a raw address under its existing lifetime and memory contract.
 
-`a[i][j]` indexes a rectangular Array. `a[i]\[j]` follows a reference to another
-Array. `S\[N]field` selects the Nth occurrence of a declared name in DATA; it is
+`a[i][j]` indexes a rectangular Array. `a[i]\[j]` follows ordinary indexed Structure fields through their stored
+references; it does not introduce another array-of-arrays entity. `S\[N]field` selects the Nth occurrence of a declared name in DATA; it is
 a different operation from either Array-index form.
 
-`sys\descriptor` returns the actual header-field addresses. Writing a length
-field does not allocate backing. `sys\resize`, `sys\reserve`, and `sys\capacity`
+`sys\descriptor` returns the actual header-field addresses for an ordinary
+Array/Structure. Its more specific canonical system-TYPE contract returns the
+same immutable type description when given TypeRef, including
+`sys\descriptor(typeof(obj))`. This branch does not recognize user objects by
+field-name resemblance. Writing a length field does not allocate backing. `sys\resize`, `sys\reserve`, and `sys\capacity`
 perform their documented storage operations. `parent`, `length`, and
 `sys\storage` read their corresponding values; `sys\native` queries the call
 tables. No-argument forms use the current data role where that role exists.
@@ -407,6 +421,7 @@ input contract and constant properties:
 ~~~lmx
 operand_template:
     @: left
+    int: depth
     @[]: right
     const: int: PASS_ARGS_AS_IS
     const: int: PRIORITY

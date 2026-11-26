@@ -1,6 +1,6 @@
 # Операнды и библиотечные компоненты в сравнениях
 
-Редакция: 22 ноября 2026 года. Эта редакция использует текущие правила языка; новые встроенные операции не вводятся.
+Редакция: 26 ноября 2026 года. Эта редакция использует текущие правила языка; новые встроенные операции не вводятся.
 
 ## Готовый заголовок сравнительного профиля
 
@@ -10,15 +10,46 @@
 sys:
     OPERANDS_TEMPLATE:
         @: left
+        int: depth 0
         @[]: right
         const: int: PASS_ARGS_AS_IS 0
         const: int: PRIORITY priority("+")
 ```
 Операнды этого профиля используют `copy: sys\OPERANDS_TEMPLATE`. Эта строка входит в размер реализации операнда. Общее определение предоставлено один раз и явно требуется соответствующими fixtures; оно не повторяется в каждом клиенте. Шаблон не содержит `return`: конкретная операция задаёт собственный тип результата.
 
-По уточнению автора в этой редакции предпочтительна позиционная передача: **`copy: sys\OPERANDS_TEMPLATE` стоит первым в DATA операнда**, до дополнительных входных полей. Поэтому `left` и `right` занимают первые две входные позиции; остальные поля следуют за готовым заголовком. Имена четырёх полей по-прежнему проверяются структурным требованием. Импорт готовых методов в клиенте сохраняет их исходный DATA и не заменяет это копирование заголовка при реализации самого операнда.
+По уточнению автора в этой редакции предпочтительна позиционная передача: **`copy: sys\OPERANDS_TEMPLATE` стоит первым в DATA операнда**, до дополнительных входных полей. Поэтому `left`, `depth` и `right` занимают первые три входные позиции; остальные поля следуют за готовым заголовком. Имена пяти полей по-прежнему проверяются структурным требованием. Импорт готовых методов в клиенте сохраняет их исходный DATA и не заменяет это копирование заголовка при реализации самого операнда.
 
 Структурное требование `OPERANDS_TEMPLATE` из [нормы](../LMX_semantics.en.md#operand-receiver) и явно предоставленный здесь `sys\OPERANDS_TEMPLATE` выполняют разные роли. Первое проверяет необходимые именованные поля; второе предоставляет конкретные поля с готовыми значениями режима и приоритета. Одна проверка соответствия не добавляет полей, системного объекта или нового API. Этот fixture не доказывает наличие такого объекта в любой среде LMX. Общие библиотечные реализации используют собственный обычный DATA-фрагмент `FxPreparedOperands` и явно задают приоритет каждой операции; [договор публикации](LMX_Fn_Receivers/PUBLICATION_CONTRACT.md#prepared-operand-data) описывает эту независимую реализацию.
+
+## Служебная глубина
+
+[Общее правило глубины](../OPERATOR_DEPTH.ru.md) задаёт этот договор для всех форм.
+
+В приведённом fixture `depth` занимает вторую входную позицию: обычная запись
+`op` передаёт 0, `.op` — 1, `.(expression)op` — результат обычного выражения,
+полученный один раз при достижении потребляющего ресивера. Разрешена одна
+точка; произвольная глубина задаётся в круглых скобках. Она не включается
+в массив пользовательских аргументов исходной функции. Receiver-форма использует
+базовое имя в обратных кавычках и именованный actual `depth`.
+При разборе обычного кода `.(` всегда начинает модификатор глубины операнда
+или функции и не является десятичной точкой. Защищённые лексические режимы
+остаются непрозрачными; квадратные скобки типов и индексов сохраняют своё
+назначение.
+
+Сравнительные методы `add`, `twice`, `withCount` и `withPrice` сохраняют здесь
+свой целый depth-0 профиль. Неподдерживаемая глубина отклоняется диагностикой
+транслятора или интерпретатора при подготовке профиля до входа в метод.
+Это не новое исключение LMX и не дополнительный `throws` в коротком листинге.
+Стандартный VALUE-адаптер `asOperand` имеет отдельный общий механизм подъёма
+полного типа результата, описанный в [договоре публикации](LMX_Fn_Receivers/PUBLICATION_CONTRACT.md#depth-is-an-operand-service-input).
+RAW-режим сам по себе не разрешает разворачивать исходный граф заранее.
+
+Для стандартного VALUE-профиля глубина считается по логическим внешним осям
+плоского массива, заданным в его описании рядом с capacity. У двух матриц rank 2
+умножение при depth 0 — матричное, при depth 1 — скалярные произведения
+соответствующих строк, при depth 2 — произведения скалярных компонентов.
+Structure — это `@[]`; `struct[i]\[j]` использует обычный доступ через выбранную
+ссылку и не вводит отдельный вид «массив массивов».
 
 ## Значения и продолжения
 
@@ -30,7 +61,7 @@ sys:
 
 После P0 группировщик Expression получает чистый граф и по его структуре, приоритетам и договорам операций строит план с отдельным левым участком и правым потоком текущего уровня. Это структурный план, а не строка для повторного разбора. Затем отдельный адаптер применения Expression упаковывает весь левый участок в один actual `left`, а правые элементы — в массив ссылок `right`. Для `op` с выбранным последовательностным договором `(a b) op (c d)` и `(a b) op (((c d)))` передают целую левую группу и два правых элемента c, d. В `(a b) op (((c d))) 7` справа два элемента: нормализованная подгруппа `(c d)` и 7. Группировщик рекурсивно обрабатывает каждую Expression-группу: одна единица прозрачна, несколько единиц представляются одной подгруппой. Для целой вычисляемой единицы сохраняются её границы и приоритеты; правила самого `op` не проверяются группировщиком. Прежняя формулировка об anonymous LEFT и единственной anonymous RIGHT описывает эти результаты группировки и ABI, а не отдельное снятие скобок после них. Три соседние правые группы остаются тремя элементами текущего уровня; адаптер не запускает повторную группировку. Готовое значение в принимающей роли VALUE/TYPE/DATA не становится CODE автоматически. В Expression атом-ссылка по графу на Structure образует группу только вне роли операнда. Трансляция отклоняет неоднозначные чтения до эффектов. Для остальных достигнутых Structure действует правило имени и фактического parent. Для группового случая исходный parent сохраняется и вызов не вводится. Группировщик получает граф без скобок. P0 сохраняет исходный граф. Обычный выбор W/E у callable остаётся самостоятельным правилом. В `Name :: (A B)` справа одна целая Structure, а в `Name :: A B` — два аргумента; все аргументы `::` потребляются в DATA.
 
-Для списка мест `(a b) := copy(Pair)` копирование непосредственно даёт правый поток. Форма `(a b) := (copy(Pair))` даёт здесь тот же результат и не нужна в кратчайшем клиенте. Это не разрешает убирать контейнер из `ptr := (copy(Model))` или разворачивать аргумент-контейнер `partial`: их принимающие договоры и границы значений сохраняются.
+Для списка мест `(a b) .: copy(Pair)` копирование непосредственно даёт правый поток. Форма `(a b) .: (copy(Pair))` даёт здесь тот же результат и не нужна в кратчайшем клиенте. Это не разрешает убирать контейнер из `ptr := (copy(Model))` или разворачивать аргумент-контейнер `partial`: их принимающие договоры и границы значений сохраняются.
 
 Готовый шаблон задаёт приоритет сложения. В демонстрациях порядок связываний при необходимости показан скобками. Повторное объявление одноимённого const-поля в DATA не считается способом заменить свойство скопированного заголовка. Операнд с другими свойствами должен явно и корректно построить своё описание по общим правилам композиции.
 
@@ -67,10 +98,10 @@ Endpoint/route, `application/lmx`, admission, синхронный семант�
 
 This comparison profile explicitly supplies the ordinary DATA fragment `sys\OPERANDS_TEMPLATE`, with prepared-value mode 0 and addition priority and without a forced result type. The structural requirement alone does not create this object or a new system API. The common library independently uses `FxPreparedOperands` and explicit operation priorities. A copied header is counted in each operator implementation. Callable values are references until explicitly invoked. A right-argument Array does not imply an automatic fold.
 
-After P0, the Expression grouper receives a pure graph and uses its structure, operation priorities and contracts to produce a structured plan with a left segment and a right stream at the current level. It does not produce text for reparsing. A separate Expression application adapter packages the entire left segment as one `left` actual and the right items as the `right` Array of references. For an `op` with a selected sequence contract, `(a b) op (c d)` and `(a b) op (((c d)))` supply one whole left group and two right items c and d. `(a b) op (((c d))) 7` instead has two right items: normalized subgroup `(c d)` and 7. The grouper recursively processes each Expression group: one unit is transparent and several units form one subgroup. A complete computable unit retains its boundary and priorities; the grouper does not check the semantics of `op`. The former anonymous-LEFT/sole-anonymous-RIGHT condition describes these grouping and ABI results; it is not a later opening pass. Three adjacent right groups remain three current-level items; the adapter does not repeat grouping. A ready value consumed as VALUE/TYPE/DATA does not automatically become CODE. In a CODE/Expression graph an anonymous Structure is always a group. A named Structure is a group when its parent differs from the current lexical parent; when those parents coincide, ordinary call processing applies. This decision uses the node name and parent, not whether the node was written inline or reached through a reference. The group case preserves the original parent and introduces no call. The grouper receives the graph without parentheses. P0 retains the source graph, and ordinary callable W/E selection remains separate. `Name :: (A B)` has one whole right Structure, while `Name :: A B` has two right arguments; every `::` argument is consumed in DATA.
+After P0, the Expression grouper receives a pure graph and uses its structure, operation priorities and contracts to produce a structured plan with a left segment and a right stream at the current level. It does not produce text for reparsing. A separate Expression application adapter packages the entire left segment as one `left` actual and the right items as the `right` Array of references. For an `op` with a selected sequence contract, `(a b) op (c d)` and `(a b) op (((c d)))` supply one whole left group and two right items c and d. `(a b) op (((c d))) 7` instead has two right items: normalized subgroup `(c d)` and 7. The grouper recursively processes each Expression group: one unit is transparent and several units form one subgroup. A complete computable unit retains its boundary and priorities; the grouper does not check the semantics of `op`. The former anonymous-LEFT/sole-anonymous-RIGHT condition describes these grouping and ABI results; it is not a later opening pass. Three adjacent right groups remain three current-level items; the adapter does not repeat grouping. A ready value consumed as VALUE/TYPE/DATA does not automatically become CODE. In Expression, a graph reference atom to a Structure forms a group only outside the operand role. Translation rejects ambiguous interpretations before effects. Other reached Structures follow the name/actual-parent rule. Reference resolution never reparents the target. The group case preserves the original parent and introduces no call. The grouper receives the graph without parentheses. P0 retains the source graph, and ordinary callable W/E selection remains separate. `Name :: (A B)` has one whole right Structure, while `Name :: A B` has two right arguments; every `::` argument is consumed in DATA.
 
-For a place-list target, `(a b) := copy(Pair)` consumes the copied field stream directly and is equivalent here to `(a b) := (copy(Pair))`. Scalar container assignments such as `ptr := (copy(Model))` and container arguments to `partial` retain their own value boundaries.
+For a place-list target, `(a b) .: copy(Pair)` consumes the copied field stream directly and is equivalent here to `(a b) .: (copy(Pair))`. Scalar container assignments such as `ptr := (copy(Model))` and container arguments to `partial` retain their own value boundaries.
 
-Following the author's clarification, positional supply is preferred and the copied standard header is first in an operand's DATA, before additional input fields. Thus `left` and `right` occupy the first two input positions. The named structural header requirement still applies. Importing a ready method preserves its original DATA.
+Following the author's clarification, positional supply is preferred and the copied standard header is first in an operand's DATA, before additional input fields. Thus `left`, `depth` and `right` occupy the first three input positions. The named structural header requirement still applies. Importing a ready method preserves its original DATA.
 
 Each paired case separates ready-component use from the complete component implementation, with the same boundary in all three languages. Imports refer to the implementation shown in the companion case, not an invented builtin. Shared components are linked to all clients. Message delivery and the existing HTTP profile retain their original semantics.

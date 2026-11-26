@@ -281,11 +281,11 @@
         },
         {
           "name": "FxPreparedOperands",
-          "code": "FxPreparedOperands:\n    private:\n        @: left\n        @[]: right\n    const: int: PASS_ARGS_AS_IS 0\n",
+          "code": "FxPreparedOperands:\n    private:\n        @: left\n        int: depth 0\n        @[]: right\n    const: int: PASS_ARGS_AS_IS 0\n",
           "source": "src/generic_functions.lmx",
-          "characters": 68,
-          "sha256": "0e46786f3f58a70f49606cb5c7fba31d6aa02bd190c9d353a4b5d4137908ea3c",
-          "nonblank_lines": 5
+          "characters": 78,
+          "sha256": "d866b381b8ae556e8cfcecdb7608228799e1764bd81985b138184f9656f3d5a1",
+          "nonblank_lines": 6
         },
         {
           "name": "FxRecordOperands",
@@ -401,11 +401,11 @@
         },
         {
           "name": "FxSourcePolicy",
-          "code": "FxSourcePolicy:\n    private:\n        @: operation\n        @: positions\n        @: boundPositions\n        @: boundValues\n        @: pendingPositions\n    return: @\n    make:\n        throws: copy(FxThrows\\adapter)\n        private: @: info FxKernel\\signature(operation)\n        private: int: n length(info\\inputTypes)\n        if: length(boundPositions) != length(boundValues)\n            throw: FxArity()\n        private: @: covered (copy(()))\n        sys\\resize(covered; n)\n        private: int: i 0\n        while: i < n\n            covered[i] := 0\n            i += 1\n        private: @: groups (positions; boundPositions; pendingPositions)\n        private: int: group 0\n        while: group < length(groups)\n            private: @: values groups[group]\n            private: int: j 0\n            while: j < length(values)\n                private: int: at \\values[j]\n                if: at < 0 || at >= n\n                    throw: FxIndex()\n                if: \\covered[at] != 0\n                    throw: FxArity()\n                covered[at] := 1\n                j += 1\n            ---\n            group += 1\n        i := 0\n        while: i < n\n            if: \\covered[i] = 0\n                throw: FxArity()\n            i += 1\n        private: @: out (copy(FxInputPolicy))\n        out\\source := operation\n        out\\positions := FxSlice\\slice(positions; 0; length(positions))\n        out\\boundPositions := FxSlice\\slice(boundPositions; 0; length(boundPositions))\n        out\\boundValues := FxSlice\\slice(boundValues; 0; length(boundValues))\n        out\\pendingPositions := FxSlice\\slice(pendingPositions; 0; length(pendingPositions))\n        out\\sourcePolicy := 1\n        return: out\n",
+          "code": "FxSourcePolicy:\n    private:\n        @: operation\n        @: positions\n        @: boundPositions\n        @: boundValues\n        @: pendingPositions\n    return: @\n    make:\n        throws: copy(FxThrows\\adapter)\n        private: @: info FxKernel\\signature(operation)\n        private: int: n length(info\\inputTypes)\n        if: length(boundPositions) != length(boundValues)\n            throw: FxArity()\n        private: @: covered (copy(()))\n        sys\\resize(covered; n)\n        private: int: i 0\n        while: i < n\n            covered[i] := 0\n            i += 1\n        private: @: groups (positions; boundPositions; pendingPositions)\n        private: int: group 0\n        while: group < length(groups)\n            private: @: values groups[group]\n            private: int: j 0\n            while: j < length(values)\n                private: int: at \\values[j]\n                if: at < 0 || at >= n\n                    throw: FxIndex()\n                if: \\covered[at] != 0\n                    throw: FxArity()\n                covered[at] := 1\n                j += 1\n            group += 1\n        i := 0\n        while: i < n\n            if: \\covered[i] = 0\n                throw: FxArity()\n            i += 1\n        private: @: out (copy(FxInputPolicy))\n        out\\source := operation\n        out\\positions := FxSlice\\slice(positions; 0; length(positions))\n        out\\boundPositions := FxSlice\\slice(boundPositions; 0; length(boundPositions))\n        out\\boundValues := FxSlice\\slice(boundValues; 0; length(boundValues))\n        out\\pendingPositions := FxSlice\\slice(pendingPositions; 0; length(pendingPositions))\n        out\\sourcePolicy := 1\n        return: out\n",
           "source": "src/adapter_frames.lmx",
-          "characters": 1055,
-          "sha256": "7ec359b5faf7f3769a3887e6a4869db64ae62af8682a84ea5dd0c9cf981a62ac",
-          "nonblank_lines": 48
+          "characters": 1052,
+          "sha256": "72562a123ac93112d869f51bdf4e5e4e9748b137c3601ab4095ae3327e05157b",
+          "nonblank_lines": 47
         },
         {
           "name": "FxStageFailures",
@@ -730,11 +730,11 @@
         },
         {
           "name": "FxPreparedOperands",
-          "code": "FxPreparedOperands:\n    private:\n        @: left\n        @[]: right\n    const: int: PASS_ARGS_AS_IS 0\n",
+          "code": "FxPreparedOperands:\n    private:\n        @: left\n        int: depth 0\n        @[]: right\n    const: int: PASS_ARGS_AS_IS 0\n",
           "source": "src/generic_functions.lmx",
-          "characters": 68,
-          "sha256": "0e46786f3f58a70f49606cb5c7fba31d6aa02bd190c9d353a4b5d4137908ea3c",
-          "nonblank_lines": 5
+          "characters": 78,
+          "sha256": "d866b381b8ae556e8cfcecdb7608228799e1764bd81985b138184f9656f3d5a1",
+          "nonblank_lines": 6
         },
         {
           "name": "FxRecordOperands",
@@ -850,11 +850,11 @@
         },
         {
           "name": "FxSourcePolicy",
-          "code": "FxSourcePolicy:\n    private:\n        @: operation\n        @: positions\n        @: boundPositions\n        @: boundValues\n        @: pendingPositions\n    return: @\n    make:\n        throws: copy(FxThrows\\adapter)\n        private: @: info FxKernel\\signature(operation)\n        private: int: n length(info\\inputTypes)\n        if: length(boundPositions) != length(boundValues)\n            throw: FxArity()\n        private: @: covered (copy(()))\n        sys\\resize(covered; n)\n        private: int: i 0\n        while: i < n\n            covered[i] := 0\n            i += 1\n        private: @: groups (positions; boundPositions; pendingPositions)\n        private: int: group 0\n        while: group < length(groups)\n            private: @: values groups[group]\n            private: int: j 0\n            while: j < length(values)\n                private: int: at \\values[j]\n                if: at < 0 || at >= n\n                    throw: FxIndex()\n                if: \\covered[at] != 0\n                    throw: FxArity()\n                covered[at] := 1\n                j += 1\n            ---\n            group += 1\n        i := 0\n        while: i < n\n            if: \\covered[i] = 0\n                throw: FxArity()\n            i += 1\n        private: @: out (copy(FxInputPolicy))\n        out\\source := operation\n        out\\positions := FxSlice\\slice(positions; 0; length(positions))\n        out\\boundPositions := FxSlice\\slice(boundPositions; 0; length(boundPositions))\n        out\\boundValues := FxSlice\\slice(boundValues; 0; length(boundValues))\n        out\\pendingPositions := FxSlice\\slice(pendingPositions; 0; length(pendingPositions))\n        out\\sourcePolicy := 1\n        return: out\n",
+          "code": "FxSourcePolicy:\n    private:\n        @: operation\n        @: positions\n        @: boundPositions\n        @: boundValues\n        @: pendingPositions\n    return: @\n    make:\n        throws: copy(FxThrows\\adapter)\n        private: @: info FxKernel\\signature(operation)\n        private: int: n length(info\\inputTypes)\n        if: length(boundPositions) != length(boundValues)\n            throw: FxArity()\n        private: @: covered (copy(()))\n        sys\\resize(covered; n)\n        private: int: i 0\n        while: i < n\n            covered[i] := 0\n            i += 1\n        private: @: groups (positions; boundPositions; pendingPositions)\n        private: int: group 0\n        while: group < length(groups)\n            private: @: values groups[group]\n            private: int: j 0\n            while: j < length(values)\n                private: int: at \\values[j]\n                if: at < 0 || at >= n\n                    throw: FxIndex()\n                if: \\covered[at] != 0\n                    throw: FxArity()\n                covered[at] := 1\n                j += 1\n            group += 1\n        i := 0\n        while: i < n\n            if: \\covered[i] = 0\n                throw: FxArity()\n            i += 1\n        private: @: out (copy(FxInputPolicy))\n        out\\source := operation\n        out\\positions := FxSlice\\slice(positions; 0; length(positions))\n        out\\boundPositions := FxSlice\\slice(boundPositions; 0; length(boundPositions))\n        out\\boundValues := FxSlice\\slice(boundValues; 0; length(boundValues))\n        out\\pendingPositions := FxSlice\\slice(pendingPositions; 0; length(pendingPositions))\n        out\\sourcePolicy := 1\n        return: out\n",
           "source": "src/adapter_frames.lmx",
-          "characters": 1055,
-          "sha256": "7ec359b5faf7f3769a3887e6a4869db64ae62af8682a84ea5dd0c9cf981a62ac",
-          "nonblank_lines": 48
+          "characters": 1052,
+          "sha256": "72562a123ac93112d869f51bdf4e5e4e9748b137c3601ab4095ae3327e05157b",
+          "nonblank_lines": 47
         },
         {
           "name": "FxStageFailures",
@@ -1170,11 +1170,11 @@
         },
         {
           "name": "FxInvokeEntries",
-          "code": "FxInvokeEntries:\n    private:\n        @: operation\n        @: entries\n        @: failures\n    return: @\n    attempt:\n        throws: copy(FxThrows\\kernel)\n        private: @: prepared FxKernel\\prepare(operation; entries)\n        finally:\n            FxKernel\\releaseCall(prepared)\n        ---\n        return: FxKernel\\enter(prepared; failures)\n",
+          "code": "FxInvokeEntries:\n    private:\n        @: operation\n        @: entries\n        @: failures\n    return: @\n    attempt:\n        throws: copy(FxThrows\\kernel)\n        private: @: prepared FxKernel\\prepare(operation; entries)\n        finally:\n            FxKernel\\releaseCall(prepared)\n        return: FxKernel\\enter(prepared; failures)\n",
           "source": "src/adapter_frames.lmx",
-          "characters": 232,
-          "sha256": "b757ec33221ee094dce72a2a9d09fffffd3d6edcb9549ca0d53e651349d22463",
-          "nonblank_lines": 13
+          "characters": 229,
+          "sha256": "801d67873c4162e42e403604c51d318082413a7c54c946d5e51dc86df5ef447d",
+          "nonblank_lines": 12
         },
         {
           "name": "FxLabels",
@@ -1226,11 +1226,11 @@
         },
         {
           "name": "FxPreparedOperands",
-          "code": "FxPreparedOperands:\n    private:\n        @: left\n        @[]: right\n    const: int: PASS_ARGS_AS_IS 0\n",
+          "code": "FxPreparedOperands:\n    private:\n        @: left\n        int: depth 0\n        @[]: right\n    const: int: PASS_ARGS_AS_IS 0\n",
           "source": "src/generic_functions.lmx",
-          "characters": 68,
-          "sha256": "0e46786f3f58a70f49606cb5c7fba31d6aa02bd190c9d353a4b5d4137908ea3c",
-          "nonblank_lines": 5
+          "characters": 78,
+          "sha256": "d866b381b8ae556e8cfcecdb7608228799e1764bd81985b138184f9656f3d5a1",
+          "nonblank_lines": 6
         },
         {
           "name": "FxRecordOperands",
@@ -1346,11 +1346,11 @@
         },
         {
           "name": "FxSourcePolicy",
-          "code": "FxSourcePolicy:\n    private:\n        @: operation\n        @: positions\n        @: boundPositions\n        @: boundValues\n        @: pendingPositions\n    return: @\n    make:\n        throws: copy(FxThrows\\adapter)\n        private: @: info FxKernel\\signature(operation)\n        private: int: n length(info\\inputTypes)\n        if: length(boundPositions) != length(boundValues)\n            throw: FxArity()\n        private: @: covered (copy(()))\n        sys\\resize(covered; n)\n        private: int: i 0\n        while: i < n\n            covered[i] := 0\n            i += 1\n        private: @: groups (positions; boundPositions; pendingPositions)\n        private: int: group 0\n        while: group < length(groups)\n            private: @: values groups[group]\n            private: int: j 0\n            while: j < length(values)\n                private: int: at \\values[j]\n                if: at < 0 || at >= n\n                    throw: FxIndex()\n                if: \\covered[at] != 0\n                    throw: FxArity()\n                covered[at] := 1\n                j += 1\n            ---\n            group += 1\n        i := 0\n        while: i < n\n            if: \\covered[i] = 0\n                throw: FxArity()\n            i += 1\n        private: @: out (copy(FxInputPolicy))\n        out\\source := operation\n        out\\positions := FxSlice\\slice(positions; 0; length(positions))\n        out\\boundPositions := FxSlice\\slice(boundPositions; 0; length(boundPositions))\n        out\\boundValues := FxSlice\\slice(boundValues; 0; length(boundValues))\n        out\\pendingPositions := FxSlice\\slice(pendingPositions; 0; length(pendingPositions))\n        out\\sourcePolicy := 1\n        return: out\n",
+          "code": "FxSourcePolicy:\n    private:\n        @: operation\n        @: positions\n        @: boundPositions\n        @: boundValues\n        @: pendingPositions\n    return: @\n    make:\n        throws: copy(FxThrows\\adapter)\n        private: @: info FxKernel\\signature(operation)\n        private: int: n length(info\\inputTypes)\n        if: length(boundPositions) != length(boundValues)\n            throw: FxArity()\n        private: @: covered (copy(()))\n        sys\\resize(covered; n)\n        private: int: i 0\n        while: i < n\n            covered[i] := 0\n            i += 1\n        private: @: groups (positions; boundPositions; pendingPositions)\n        private: int: group 0\n        while: group < length(groups)\n            private: @: values groups[group]\n            private: int: j 0\n            while: j < length(values)\n                private: int: at \\values[j]\n                if: at < 0 || at >= n\n                    throw: FxIndex()\n                if: \\covered[at] != 0\n                    throw: FxArity()\n                covered[at] := 1\n                j += 1\n            group += 1\n        i := 0\n        while: i < n\n            if: \\covered[i] = 0\n                throw: FxArity()\n            i += 1\n        private: @: out (copy(FxInputPolicy))\n        out\\source := operation\n        out\\positions := FxSlice\\slice(positions; 0; length(positions))\n        out\\boundPositions := FxSlice\\slice(boundPositions; 0; length(boundPositions))\n        out\\boundValues := FxSlice\\slice(boundValues; 0; length(boundValues))\n        out\\pendingPositions := FxSlice\\slice(pendingPositions; 0; length(pendingPositions))\n        out\\sourcePolicy := 1\n        return: out\n",
           "source": "src/adapter_frames.lmx",
-          "characters": 1055,
-          "sha256": "7ec359b5faf7f3769a3887e6a4869db64ae62af8682a84ea5dd0c9cf981a62ac",
-          "nonblank_lines": 48
+          "characters": 1052,
+          "sha256": "72562a123ac93112d869f51bdf4e5e4e9748b137c3601ab4095ae3327e05157b",
+          "nonblank_lines": 47
         },
         {
           "name": "FxStageFailures",
@@ -1673,11 +1673,11 @@
         },
         {
           "name": "FxPreparedOperands",
-          "code": "FxPreparedOperands:\n    private:\n        @: left\n        @[]: right\n    const: int: PASS_ARGS_AS_IS 0\n",
+          "code": "FxPreparedOperands:\n    private:\n        @: left\n        int: depth 0\n        @[]: right\n    const: int: PASS_ARGS_AS_IS 0\n",
           "source": "src/generic_functions.lmx",
-          "characters": 68,
-          "sha256": "0e46786f3f58a70f49606cb5c7fba31d6aa02bd190c9d353a4b5d4137908ea3c",
-          "nonblank_lines": 5
+          "characters": 78,
+          "sha256": "d866b381b8ae556e8cfcecdb7608228799e1764bd81985b138184f9656f3d5a1",
+          "nonblank_lines": 6
         },
         {
           "name": "FxProjectValue",
@@ -1793,11 +1793,11 @@
         },
         {
           "name": "FxSourcePolicy",
-          "code": "FxSourcePolicy:\n    private:\n        @: operation\n        @: positions\n        @: boundPositions\n        @: boundValues\n        @: pendingPositions\n    return: @\n    make:\n        throws: copy(FxThrows\\adapter)\n        private: @: info FxKernel\\signature(operation)\n        private: int: n length(info\\inputTypes)\n        if: length(boundPositions) != length(boundValues)\n            throw: FxArity()\n        private: @: covered (copy(()))\n        sys\\resize(covered; n)\n        private: int: i 0\n        while: i < n\n            covered[i] := 0\n            i += 1\n        private: @: groups (positions; boundPositions; pendingPositions)\n        private: int: group 0\n        while: group < length(groups)\n            private: @: values groups[group]\n            private: int: j 0\n            while: j < length(values)\n                private: int: at \\values[j]\n                if: at < 0 || at >= n\n                    throw: FxIndex()\n                if: \\covered[at] != 0\n                    throw: FxArity()\n                covered[at] := 1\n                j += 1\n            ---\n            group += 1\n        i := 0\n        while: i < n\n            if: \\covered[i] = 0\n                throw: FxArity()\n            i += 1\n        private: @: out (copy(FxInputPolicy))\n        out\\source := operation\n        out\\positions := FxSlice\\slice(positions; 0; length(positions))\n        out\\boundPositions := FxSlice\\slice(boundPositions; 0; length(boundPositions))\n        out\\boundValues := FxSlice\\slice(boundValues; 0; length(boundValues))\n        out\\pendingPositions := FxSlice\\slice(pendingPositions; 0; length(pendingPositions))\n        out\\sourcePolicy := 1\n        return: out\n",
+          "code": "FxSourcePolicy:\n    private:\n        @: operation\n        @: positions\n        @: boundPositions\n        @: boundValues\n        @: pendingPositions\n    return: @\n    make:\n        throws: copy(FxThrows\\adapter)\n        private: @: info FxKernel\\signature(operation)\n        private: int: n length(info\\inputTypes)\n        if: length(boundPositions) != length(boundValues)\n            throw: FxArity()\n        private: @: covered (copy(()))\n        sys\\resize(covered; n)\n        private: int: i 0\n        while: i < n\n            covered[i] := 0\n            i += 1\n        private: @: groups (positions; boundPositions; pendingPositions)\n        private: int: group 0\n        while: group < length(groups)\n            private: @: values groups[group]\n            private: int: j 0\n            while: j < length(values)\n                private: int: at \\values[j]\n                if: at < 0 || at >= n\n                    throw: FxIndex()\n                if: \\covered[at] != 0\n                    throw: FxArity()\n                covered[at] := 1\n                j += 1\n            group += 1\n        i := 0\n        while: i < n\n            if: \\covered[i] = 0\n                throw: FxArity()\n            i += 1\n        private: @: out (copy(FxInputPolicy))\n        out\\source := operation\n        out\\positions := FxSlice\\slice(positions; 0; length(positions))\n        out\\boundPositions := FxSlice\\slice(boundPositions; 0; length(boundPositions))\n        out\\boundValues := FxSlice\\slice(boundValues; 0; length(boundValues))\n        out\\pendingPositions := FxSlice\\slice(pendingPositions; 0; length(pendingPositions))\n        out\\sourcePolicy := 1\n        return: out\n",
           "source": "src/adapter_frames.lmx",
-          "characters": 1055,
-          "sha256": "7ec359b5faf7f3769a3887e6a4869db64ae62af8682a84ea5dd0c9cf981a62ac",
-          "nonblank_lines": 48
+          "characters": 1052,
+          "sha256": "72562a123ac93112d869f51bdf4e5e4e9748b137c3601ab4095ae3327e05157b",
+          "nonblank_lines": 47
         },
         {
           "name": "FxStageFailures",
@@ -2098,11 +2098,11 @@
         },
         {
           "name": "FxPreparedOperands",
-          "code": "FxPreparedOperands:\n    private:\n        @: left\n        @[]: right\n    const: int: PASS_ARGS_AS_IS 0\n",
+          "code": "FxPreparedOperands:\n    private:\n        @: left\n        int: depth 0\n        @[]: right\n    const: int: PASS_ARGS_AS_IS 0\n",
           "source": "src/generic_functions.lmx",
-          "characters": 68,
-          "sha256": "0e46786f3f58a70f49606cb5c7fba31d6aa02bd190c9d353a4b5d4137908ea3c",
-          "nonblank_lines": 5
+          "characters": 78,
+          "sha256": "d866b381b8ae556e8cfcecdb7608228799e1764bd81985b138184f9656f3d5a1",
+          "nonblank_lines": 6
         },
         {
           "name": "FxRecordOperands",
@@ -2114,11 +2114,11 @@
         },
         {
           "name": "FxRetryBuild",
-          "code": "FxRetryBuild:\n    private:\n        @: operation\n        @: retryOn\n        int: limit\n        @: delay 0\n        @: arguments ()\n    required: operation retryOn limit\n    return: @\n    make:\n        throws: copy(FxThrows\\adapter)\n        private: @: shape FxKernel\\signature(operation)\n        if: shape\\hasResult = 0 || limit < 1\n            throw: FxArity()\n        private: @: selected FxKernel\\signature(retryOn)\n        if: length(selected\\inputTypes) != 2\n            throw: FxArity()\n        private: @: failures FxFailures\\union(shape\\throws; selected\\throws)\n        if: delay != 0\n            private: @: delayShape FxKernel\\signature(delay)\n            if: length(delayShape\\inputTypes) != 1\n                throw: FxArity()\n            failures := FxFailures\\union(failures; delayShape\\throws)\n        ---\n        private: @: contract FxSignatures\\make((); shape\\resultType)\n        private: @: state (copy(FxRetryValueState))\n        state\\operation := operation\n        state\\retryOn := retryOn\n        state\\limit := limit\n        state\\delay := delay\n        state\\arguments := arguments\n        return: FxWrap\\make(contract; FxRetryValueEngine\\run; state; failures)\n",
+          "code": "FxRetryBuild:\n    private:\n        @: operation\n        @: retryOn\n        int: limit\n        @: delay 0\n        @: arguments ()\n    required: operation retryOn limit\n    return: @\n    make:\n        throws: copy(FxThrows\\adapter)\n        private: @: shape FxKernel\\signature(operation)\n        if: shape\\hasResult = 0 || limit < 1\n            throw: FxArity()\n        private: @: selected FxKernel\\signature(retryOn)\n        if: length(selected\\inputTypes) != 2\n            throw: FxArity()\n        private: @: failures FxFailures\\union(shape\\throws; selected\\throws)\n        if: delay != 0\n            private: @: delayShape FxKernel\\signature(delay)\n            if: length(delayShape\\inputTypes) != 1\n                throw: FxArity()\n            failures := FxFailures\\union(failures; delayShape\\throws)\n        private: @: contract FxSignatures\\make((); shape\\resultType)\n        private: @: state (copy(FxRetryValueState))\n        state\\operation := operation\n        state\\retryOn := retryOn\n        state\\limit := limit\n        state\\delay := delay\n        state\\arguments := arguments\n        return: FxWrap\\make(contract; FxRetryValueEngine\\run; state; failures)\n",
           "source": "src/coreGenericOperations.lmx",
-          "characters": 823,
-          "sha256": "050a4184ffb7246e104417769e516e29ef70e306b92b0e6a5680dc3c68820d41",
-          "nonblank_lines": 32
+          "characters": 820,
+          "sha256": "1e483eaa92940bb395822cce652c91f7e73b858b84d2b28cff7899c8714283e8",
+          "nonblank_lines": 31
         },
         {
           "name": "FxRetryValue",
@@ -2242,11 +2242,11 @@
         },
         {
           "name": "FxSourcePolicy",
-          "code": "FxSourcePolicy:\n    private:\n        @: operation\n        @: positions\n        @: boundPositions\n        @: boundValues\n        @: pendingPositions\n    return: @\n    make:\n        throws: copy(FxThrows\\adapter)\n        private: @: info FxKernel\\signature(operation)\n        private: int: n length(info\\inputTypes)\n        if: length(boundPositions) != length(boundValues)\n            throw: FxArity()\n        private: @: covered (copy(()))\n        sys\\resize(covered; n)\n        private: int: i 0\n        while: i < n\n            covered[i] := 0\n            i += 1\n        private: @: groups (positions; boundPositions; pendingPositions)\n        private: int: group 0\n        while: group < length(groups)\n            private: @: values groups[group]\n            private: int: j 0\n            while: j < length(values)\n                private: int: at \\values[j]\n                if: at < 0 || at >= n\n                    throw: FxIndex()\n                if: \\covered[at] != 0\n                    throw: FxArity()\n                covered[at] := 1\n                j += 1\n            ---\n            group += 1\n        i := 0\n        while: i < n\n            if: \\covered[i] = 0\n                throw: FxArity()\n            i += 1\n        private: @: out (copy(FxInputPolicy))\n        out\\source := operation\n        out\\positions := FxSlice\\slice(positions; 0; length(positions))\n        out\\boundPositions := FxSlice\\slice(boundPositions; 0; length(boundPositions))\n        out\\boundValues := FxSlice\\slice(boundValues; 0; length(boundValues))\n        out\\pendingPositions := FxSlice\\slice(pendingPositions; 0; length(pendingPositions))\n        out\\sourcePolicy := 1\n        return: out\n",
+          "code": "FxSourcePolicy:\n    private:\n        @: operation\n        @: positions\n        @: boundPositions\n        @: boundValues\n        @: pendingPositions\n    return: @\n    make:\n        throws: copy(FxThrows\\adapter)\n        private: @: info FxKernel\\signature(operation)\n        private: int: n length(info\\inputTypes)\n        if: length(boundPositions) != length(boundValues)\n            throw: FxArity()\n        private: @: covered (copy(()))\n        sys\\resize(covered; n)\n        private: int: i 0\n        while: i < n\n            covered[i] := 0\n            i += 1\n        private: @: groups (positions; boundPositions; pendingPositions)\n        private: int: group 0\n        while: group < length(groups)\n            private: @: values groups[group]\n            private: int: j 0\n            while: j < length(values)\n                private: int: at \\values[j]\n                if: at < 0 || at >= n\n                    throw: FxIndex()\n                if: \\covered[at] != 0\n                    throw: FxArity()\n                covered[at] := 1\n                j += 1\n            group += 1\n        i := 0\n        while: i < n\n            if: \\covered[i] = 0\n                throw: FxArity()\n            i += 1\n        private: @: out (copy(FxInputPolicy))\n        out\\source := operation\n        out\\positions := FxSlice\\slice(positions; 0; length(positions))\n        out\\boundPositions := FxSlice\\slice(boundPositions; 0; length(boundPositions))\n        out\\boundValues := FxSlice\\slice(boundValues; 0; length(boundValues))\n        out\\pendingPositions := FxSlice\\slice(pendingPositions; 0; length(pendingPositions))\n        out\\sourcePolicy := 1\n        return: out\n",
           "source": "src/adapter_frames.lmx",
-          "characters": 1055,
-          "sha256": "7ec359b5faf7f3769a3887e6a4869db64ae62af8682a84ea5dd0c9cf981a62ac",
-          "nonblank_lines": 48
+          "characters": 1052,
+          "sha256": "72562a123ac93112d869f51bdf4e5e4e9748b137c3601ab4095ae3327e05157b",
+          "nonblank_lines": 47
         },
         {
           "name": "FxStageFailures",

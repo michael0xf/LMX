@@ -24,14 +24,21 @@
 
 # Ordinary shared DATA fragment for prepared-value operands. Copying it supplies
 # the real fields; structural operand checking supplies nothing implicitly.
+# Input order is left, depth, right. depth is the separately evaluated service
+# input; it is never appended to the logical user arguments. Each receiver
+# retains its own depth policy; the shared fragment performs no lifting.
 # Each consumer adds its own ready PRIORITY and required/result contract.
 # The private transport inputs cannot autofill from a helper's local variables.
 FxPreparedOperands:
     private:
         @: left
+        int: depth 0
         @[]: right
     const: int: PASS_ARGS_AS_IS 0
 
+# Whole-value operand profiles admit depth 0 during semantic preparation.
+# A mismatch is a translator/interpreter diagnostic, never a callable throw.
+# The receiving method remains responsible for its own ordinary contract.
 # Снимок уже принятого значения через существующий prepared operand protocol.
 # Ресивер принимает указатель на значение слева; RHS не разворачивает его.
 # Для postfix (value record) общий handler передаёт present empty right Array.

@@ -16,6 +16,7 @@ PARTS = [
     'src/containers.lmx',
     'src/monadic_forms.lmx',
     'src/sequences_core.lmx',
+    'src/array_expression_ops.lmx',
     'src/sequences_selection.lmx',
     'src/sequences.lmx',
     'src/sequences_mutation.lmx',
@@ -58,10 +59,10 @@ PARTS = [
 ]
 
 HEADER = '''# LMX: ОБЩИЕ ПРЯМЫЕ РЕСИВЕРЫ И КОНТЕЙНЕРЫ
-# Редакция 2026-11-23. Собрано из src/ и явно запускаемых examples/.
+# Редакция 2026-11-26. Собрано из src/ и явно запускаемых examples/.
 # DATA-описания ядра; старые Int-специализации сюда не входят.
 # {public_count} вызовных имён и отдельно готовые Pattern/config/type значения. Каждая Structure — @[].
-# FxKernel: 8 исходных границ + 5 фаз вызова + 4 доступа к Array + AE01 + AR01.
+# FxKernel: 8 исходных границ + 5 фаз вызова + 4 доступа к Array + AE01 + AR01 + PD01.
 # Это проект интеграции; реальное ядро и LMX-fixtures здесь не исполнялись.
 # Name :: DATA и -> строят одинаковый позиционный тип, кроме сохранённого отношения именованной сигнатуры с call.
 # Ни автоматического запуска, ни новой VM, ни автоматической компиляции.

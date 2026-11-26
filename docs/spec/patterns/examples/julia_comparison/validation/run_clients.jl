@@ -19,6 +19,8 @@ function observe(id, value, args)
         return Dict{String,Any}("removed"=>value, "target"=>args[1])
     elseif id == "J20"
         return [Dict{String,Any}("key"=>x.key, "id"=>x.id) for x in value]
+    elseif id == "J27"
+        return Dict{String,Any}("mask"=>Int.(value), "values"=>args[1])
     end
     value
 end
@@ -693,5 +695,140 @@ end
     value = Base.invokelatest(call, args...)
     @test observe("J24", value, args) == [[1, 2], [1, 2]]
     @test args == before
+end
+
+@testset "J25" begin
+    call = loadClient("J25")
+    # Случай 0: подготовка и assertions вне сравниваемого кода.
+    args = ([-2, 0, 3, 5], 2, 1, 5)
+    before = deepcopy(args)
+    value = Base.invokelatest(call, args...)
+    @test observe("J25", value, args) == [7, 11]
+    @test args == before
+    @test value !== args[1]
+    # Случай 1: подготовка и assertions вне сравниваемого кода.
+    args = (Int[], 1, 0, 0)
+    before = deepcopy(args)
+    value = Base.invokelatest(call, args...)
+    @test observe("J25", value, args) == Int[]
+    @test args == before
+    @test value !== args[1]
+    # Случай 2: подготовка и assertions вне сравниваемого кода.
+    args = ([-3, -2], 2, 0, 0)
+    before = deepcopy(args)
+    value = Base.invokelatest(call, args...)
+    @test observe("J25", value, args) == Int[]
+    @test args == before
+    @test value !== args[1]
+    # Случай 3: подготовка и assertions вне сравниваемого кода.
+    args = ([0.0, 1.0, 2.0, 3.0, 4.0], 0.5, 0.25, 0.75)
+    before = deepcopy(args)
+    value = Base.invokelatest(call, args...)
+    @test observe("J25", value, args) == [0.75, 1.25, 1.75, 2.25]
+    @test args == before
+    @test value !== args[1]
+    # Случай 4: подготовка и assertions вне сравниваемого кода.
+    args = ([9, 2, 8], 0, 5, 5)
+    before = deepcopy(args)
+    value = Base.invokelatest(call, args...)
+    @test observe("J25", value, args) == [5, 5, 5]
+    @test args == before
+    @test value !== args[1]
+end
+
+@testset "J26" begin
+    call = loadClient("J26")
+    # Случай 0: подготовка и assertions вне сравниваемого кода.
+    args = ([1, 2, 3, 4, 5, 6], 3, 1)
+    before = deepcopy(args)
+    value = Base.invokelatest(call, args...)
+    @test observe("J26", value, args) == [6, 5, 4]
+    @test args == before
+    @test value !== args[1]
+    # Случай 1: подготовка и assertions вне сравниваемого кода.
+    args = ([1, 2, 3], 0, 1)
+    before = deepcopy(args)
+    value = Base.invokelatest(call, args...)
+    @test observe("J26", value, args) == Int[]
+    @test args == before
+    @test value !== args[1]
+    # Случай 2: подготовка и assertions вне сравниваемого кода.
+    args = ([1, 2, 3], 20, 0)
+    before = deepcopy(args)
+    value = Base.invokelatest(call, args...)
+    @test observe("J26", value, args) == [1, 2, 3]
+    @test args == before
+    @test value !== args[1]
+    # Случай 3: подготовка и assertions вне сравниваемого кода.
+    args = (Int[], 4, 1)
+    before = deepcopy(args)
+    value = Base.invokelatest(call, args...)
+    @test observe("J26", value, args) == Int[]
+    @test args == before
+    @test value !== args[1]
+    # Случай 4: подготовка и assertions вне сравниваемого кода.
+    args = (["red", 7, 2.5], 2, -2)
+    before = deepcopy(args)
+    value = Base.invokelatest(call, args...)
+    @test observe("J26", value, args) == [2.5, 7]
+    @test args == before
+    @test value !== args[1]
+    # Случай 5: подготовка и assertions вне сравниваемого кода.
+    args = ([1, 2], -1, 0)
+    before = deepcopy(args)
+    @test_throws ArgumentError Base.invokelatest(call, args...)
+    @test args == before
+end
+
+@testset "J27" begin
+    call = loadClient("J27")
+    # Случай 0: подготовка и assertions вне сравниваемого кода.
+    args = ([3, 3, 8, 8], 5)
+    before = deepcopy(args)
+    value = Base.invokelatest(call, args...)
+    @test observe("J27", value, args) == Dict{String,Any}("mask"=>[0, 1, 0, 1], "values"=>[5, 3, 3, 8])
+    @test value !== args[1]
+    @test length(args[1]) == length(before[1])
+    @test args[2] == before[2]
+    # Случай 1: подготовка и assertions вне сравниваемого кода.
+    args = (Int[], 4)
+    before = deepcopy(args)
+    value = Base.invokelatest(call, args...)
+    @test observe("J27", value, args) == Dict{String,Any}("mask"=>Int[], "values"=>Int[])
+    @test value !== args[1]
+    @test length(args[1]) == length(before[1])
+    @test args[2] == before[2]
+    # Случай 2: подготовка и assertions вне сравниваемого кода.
+    args = ([9], 9)
+    before = deepcopy(args)
+    value = Base.invokelatest(call, args...)
+    @test observe("J27", value, args) == Dict{String,Any}("mask"=>[1], "values"=>[9])
+    @test value !== args[1]
+    @test length(args[1]) == length(before[1])
+    @test args[2] == before[2]
+    # Случай 3: подготовка и assertions вне сравниваемого кода.
+    args = ([1, 2, 3], 0)
+    before = deepcopy(args)
+    value = Base.invokelatest(call, args...)
+    @test observe("J27", value, args) == Dict{String,Any}("mask"=>[0, 0, 0], "values"=>[0, 1, 2])
+    @test value !== args[1]
+    @test length(args[1]) == length(before[1])
+    @test args[2] == before[2]
+    # Случай 4: подготовка и assertions вне сравниваемого кода.
+    args = ([1.5, 1.5, 2.5], 1.5)
+    before = deepcopy(args)
+    value = Base.invokelatest(call, args...)
+    @test observe("J27", value, args) == Dict{String,Any}("mask"=>[1, 1, 0], "values"=>[1.5, 1.5, 1.5])
+    @test value !== args[1]
+    @test length(args[1]) == length(before[1])
+    @test args[2] == before[2]
+    # Случай 5: подготовка и assertions вне сравниваемого кода.
+    args = ([0, 0, 0], 0)
+    before = deepcopy(args)
+    value = Base.invokelatest(call, args...)
+    @test observe("J27", value, args) == Dict{String,Any}("mask"=>[1, 1, 1], "values"=>[0, 0, 0])
+    @test value !== args[1]
+    @test length(args[1]) == length(before[1])
+    @test args[2] == before[2]
 end
 

@@ -72,7 +72,7 @@ terminate an intended vertical block.
 
 ### 2.4 Author answer: zero-payload uninit and complete replaceable source graph
 
-The author resolved P01 during this review. `uninit:T` is its type code only:
+The author resolved P01 during this review. `uninit:T` contains only a canonical TypeRef to its absence description:
 `sizeof(value) = 0`, with no reserved T cell and no inner T record. Assignment in
 an execution frame changes its selected local place, leaving the clean graph
 unchanged. Explicit graph assignment replaces a fragment at the selected field:
@@ -132,7 +132,7 @@ that representation under an alternative name.
 | Import | Root const declarations, including intrinsically constant user Structures; preserved source identity/parent; multiple sources | Semantics, guide |
 | Copy and merge | One source versus at least two admitted sources; field streams; explicit grouping for one Structure | Semantics, L2, kernel, guide |
 | Stream input and result | Always-CODE input algorithm; source count separate from output count; ordinary W/E; no destination model | All affected contracts and the field-stream observations |
-| Arrays and physical types | Common variable-length descriptor/storage model; type code in the value record; ownership intervals do not determine type | L2, kernel, CORE |
+| Arrays and physical types | Common variable-length descriptor/storage model; direct canonical TypeRef immediately before value; ownership intervals do not determine type | L2, kernel, CORE |
 | Uninitialized graph leaves and graph assignment | `uninit:T` is code only with zero payload; graph assignment replaces fragments; frame assignment leaves source unchanged; P01 resolved by the author | Semantics, L2, kernel, guide |
 | Native/editing | Explicit compilation/update boundary; no restoration of old load-dirty or automatic invalidation mechanisms | Semantics, L2, kernel |
 | Complete program and R0 | Full graph plus compiled-method binary; R0 C method with a local graph pointer; interpreter also uses binary R0; no disguised working graph | CORE, kernel, coding instruction, semantics, L2, guide |
@@ -335,8 +335,8 @@ The root type/sequence/Pattern specifications have been applied to the uploaded 
 
 Два случая `parser-debt:21.12` в приложенном каталоге тоже не означают, что согласованные примеры нужно переписать обратно:
 
-- `LMX_Fn_Receivers__API.b07`: `(a b c) := copy(d)`.
-- `LMX_examples_and_analogies.ru.b17`: `(a b) := copy(Pair)`.
+- `LMX_Fn_Receivers__API.b07`: `(a b c) .: copy(d)`.
+- `LMX_examples_and_analogies.ru.b17`: `(a b) .: copy(Pair)`.
 
 Это явно записанный долг парсера для группового присваивания. Дополнительную оболочку вокруг `copy` ради обхода долга возвращать не нужно. Результаты P0 прочитаны из предоставленного индекса; новый запуск настоящего парсера здесь не производился.
 

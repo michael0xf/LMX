@@ -6,8 +6,9 @@ import unittest
 
 from translator_reference import (
     Actual, AttachedUpdate, FormError, OperationUse, UPDATE_RULES,
-    lowerUpdate, normalizeUse, translateOperation,
+    lowerUpdate, normalizeUse, prepareInvocation, translateOperation,
 )
+from operand_depth_reference import DepthError, DepthExpression
 
 
 @dataclass
@@ -78,10 +79,88 @@ class TranslatorChecks(unittest.TestCase):
         self.runVariant("--", False, "var--", 7, 6)
 
     def test_exact_names_are_opaque(self):
-        for name in ("@", "@name", "++counter", "counter++", "a+b", "a`b", "++var"):
+        for name in ("@", "@name", "++counter", "counter++", "a+b", "a`b", "++var",
+                     ".+", "..+", ".(10)+", ".:"):
             use = self.site(name)
             self.assertIs(normalizeUse(use), use)
             self.assertEqual(normalizeUse(use).name, name)
+
+    def test_named_depth_does_not_shift_receiver_positionals(self):
+        actuals = (Actual(2, self.context), Actual(3, self.context))
+        site = OperationUse("+", actuals, self.context, depth=2)
+        ready = prepareInvocation(site, lambda *args: self.fail("ready depth was evaluated"))
+        self.assertEqual(ready.name, "+")
+        self.assertEqual(ready.depth, 2)
+        self.assertIs(ready.actuals, actuals)
+
+    def test_absent_named_depth_is_ready_zero(self):
+        site = self.site("+")
+        ready = prepareInvocation(site, lambda *args: self.fail("default depth read caller data"))
+        self.assertEqual(ready.depth, 0)
+        self.assertIs(ready.actuals, site.actuals)
+
+    def test_depth_expression_is_not_executed_during_translation(self):
+        expression = object()
+        source = DepthExpression(expression, self.context)
+        site = OperationUse("+", (self.actual,), self.context, source)
+        seen = []
+        class Core:
+            def resolveExistingOperation(self, use):
+                self.assert_base = use.name
+                return "+"
+            def lowerExistingOperation(self, selected, use):
+                seen.append((selected, use.depth))
+                return use
+        self.assertIs(translateOperation(site, Core()), site)
+        self.assertEqual(seen, [("+", source)])
+
+    def test_dynamic_named_depth_obtained_once_in_original_scope(self):
+        expression, context = object(), {"n": 1}
+        site = OperationUse("+", (self.actual,), self.context,
+                            DepthExpression(expression, context))
+        calls = []
+        def obtain(node, source_context):
+            self.assertIs(node, expression)
+            self.assertIs(source_context, context)
+            calls.append(node)
+            return source_context["n"] + 9
+        ready = prepareInvocation(site, obtain)
+        self.assertEqual(ready.depth, 10)
+        self.assertEqual(calls, [expression])
+        self.assertIs(ready.actuals, site.actuals)
+        self.assertIsInstance(site.depth, DepthExpression)
+
+    def test_attached_depth_does_not_become_a_dot_name(self):
+        form = AttachedUpdate("++", True, self.actual, self.context, depth=3)
+        normalized = normalizeUse(form)
+        self.assertEqual(normalized.name, "++var")
+        self.assertEqual(normalized.depth, 3)
+        self.assertEqual(normalized.actuals, (self.actual,))
+
+    def test_invalid_depth_does_not_read_place(self):
+        for bad in (-1, 1.5, True, (1, 2)):
+            site = OperationUse("++var", (self.actual,), self.context, bad)
+            with self.assertRaises(DepthError):
+                prepareInvocation(site, lambda *args: self.fail("ready value has no evaluator"))
+            self.assertEqual(self.cell.value, 7)
+
+    def test_assignment_receiver_uses_base_name_and_named_depth(self):
+        actuals = (Actual("places", self.context), Actual("values", self.context))
+        site = OperationUse(":=", actuals, self.context, 1)
+        ready = prepareInvocation(site, lambda *args: self.fail("literal depth"))
+        self.assertEqual((ready.name, ready.depth), (":=", 1))
+        self.assertIs(ready.actuals, actuals)
+
+    def test_leaf_formal_named_depth_keeps_its_owner_and_value(self):
+        outer_scope, leaf_scope = {"depth": 2}, {"depth": 7}
+        leaf_argument = Actual({"name": "depth", "value": 7}, leaf_scope)
+        site = OperationUse("adaptedFunction", (leaf_argument,), outer_scope,
+                            DepthExpression("depth", outer_scope))
+        ready = prepareInvocation(site, lambda name, scope: scope[name])
+        self.assertEqual(ready.depth, 2)
+        self.assertIs(ready.actuals[0], leaf_argument)
+        self.assertIs(ready.actuals[0].context, leaf_scope)
+        self.assertEqual(ready.actuals[0].node, {"name": "depth", "value": 7})
 
     def test_parameter_name_is_not_part_of_pattern_name(self):
         for actualName in ("x", "counter", "var", "@name"):

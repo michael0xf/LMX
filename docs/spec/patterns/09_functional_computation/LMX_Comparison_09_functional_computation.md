@@ -1,36 +1,16 @@
-# Функциональные вычисления
+# Функциональные вычисления: два LMX-стиля
 
-Редакция 24 ноября 2026 года. Полные размеры листингов.
+Числа — полный текст без пробельных символов. Все объявления и Throws включены. Общие реализации имеют одну LMX-колонку; они не дублируются ради стиля.
 
-## Функциональные вычисления
+| ID | Задача | LMX процедурный | LMX функциональный | LMX общая реализация | Haskell | Scala |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| 082 | [082. Monad](082_monad_comparision.md) | 191 | 180 | — | <span style="color:#176233"><u>125</u></span> | 135 |
+| 091 | [091. Maybe container and bind implementation](091_maybe_container_and_bind_implementation_comparision.md) | — | — | 444 | 271 | <span style="color:#176233"><u>265</u></span> |
+| 083 | [083. Trampoline](083_trampoline_comparision.md) | <span style="color:#176233"><u>82</u></span> | 344 | — | 307 | 265 |
+| 092 | [092. Trampoline container and runner implementation](092_trampoline_container_and_runner_implementation_comparision.md) | — | — | 613 | <span style="color:#176233"><u>198</u></span> | 303 |
+| 084 | [084. Execute Around](084_execute_around_comparision.md) | 709 | 586 | — | 642 | <span style="color:#176233"><u>521</u></span> |
+| 098 | [098. Execute Around implementation](098_execute_around_implementation_comparision.md) | — | — | <span style="color:#176233"><u>313</u></span> | 390 | 836 |
+| 085 | [085. Currying](085_currying_comparision.md) | 493 | 205 | — | <span style="color:#176233"><u>131</u></span> | 169 |
+| 099 | [099. General partial-application implementation](099_integer_partial_application_implementation_comparision.md) | — | — | 533 | 699 | <span style="color:#176233"><u>263</u></span> |
 
-### Два стиля LMX: один договор
-
-| ID | Сценарий | LMX процедурный | LMX функциональный | Haskell | Scala |
-| --- | --- | --- | --- | --- | --- |
-| 082 | Monad | 191 | 180 | <span style="color:#176233"><u>125</u></span> | 135 |
-| 083 | Trampoline | <span style="color:#176233"><u>82</u></span> | 344 | 307 | 265 |
-| 084 | Execute Around | 709 | 586 | 642 | <span style="color:#176233"><u>521</u></span> |
-| 085 | Currying | 493 | 205 | <span style="color:#176233"><u>131</u></span> | 169 |
-| Итого | — | 1475 | 1315 | 1205 | <span style="color:#176233"><u>1090</u></span> |
-
-### Общие реализации библиотеки
-
-| ID | Компонент | LMX — реализация | Haskell | Scala |
-| --- | --- | --- | --- | --- |
-| 091 | Maybe container and bind implementation | 444 | 271 | <span style="color:#176233"><u>265</u></span> |
-| 092 | Trampoline container and runner implementation | 613 | <span style="color:#176233"><u>198</u></span> | 303 |
-| 098 | Execute Around implementation | <span style="color:#176233"><u>316</u></span> | 390 | 836 |
-| 099 | General partial-application implementation | 533 | 699 | <span style="color:#176233"><u>263</u></span> |
-
-Haskell даёт естественный контроль для Maybe/Monad и каррирования. Scala сочетает функциональные приёмы с JVM, явным батутом и обычным управлением ресурсами. Эти языки выбраны за подходящие механизмы, а не для универсального рейтинга краткости.
-
-Четыре задачи имеют две полные LMX-записи: процедурную и функциональную. Haskell и Scala сохраняют контрольные договоры; в 085 также убраны неиспользуемая переменная и одноразовое промежуточное имя. Четыре реализации ядра сравниваются отдельно и имеют по одному общему LMX-телу.
-
-Для функциональных клиентских сценариев опубликованы оба варианта LMX: процедурный с явным алгоритмом и функциональный с общими операциями и композицией. Они сохраняют один наблюдаемый договор. Выбор единственного варианта по краткости не производится. Общие реализации библиотеки учитываются отдельно и не размножаются по стилям.
-
-Считаются все непробельные Unicode-символы полного показанного листинга, включая объявления, локальные вспомогательные методы, комментарии и Throws. Списки ошибок копируются из вызываемых методов там, где это сохраняет контракт; текст copy и всех дополнительных отказов входит в размер. Зелёным подчёркивается минимальное число в сопоставимой строке; при равенстве — все победители.
-
-LMX parser/runtime: NOT_RUN для изменённых листингов. Проверки исходников и публикации не являются исполнением языка. Размер кода не измеряет скорость или расход памяти.
-
-Одинаковые числовые данные используются в Markdown, PDF и XLSX. Машинный источник — PUBLICATION_DATA.json в корне каталога patterns; генератор — tools/build_publication_data.py.
+[Общие зависимости](IMPLEMENTATION_DEPENDENCIES.md) · [Договор публикации](variant_selection.json) · [Ошибки](FAILURE_BOUNDARIES.md). Runtime LMX: NOT_RUN.

@@ -1,6 +1,6 @@
 # Распространённые алгоритмы
 
-Редакция 24 ноября 2026 года. Полные размеры листингов.
+Редакция 26 ноября 2026 года. Полные размеры листингов.
 
 ## Распространённые алгоритмы
 
@@ -10,10 +10,10 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 100 | Lower bound / двоичный поиск границы | 453 | 534 | Python | <span style="color:#176233"><u>182</u></span> | C++ | 328 |
 | 101 | Breadth-first search / поиск в ширину | 970 | 1044 | Python | <span style="color:#176233"><u>293</u></span> | Java | 447 |
-| 102 | Kahn topological sort / порядок зависимостей | 1236 | 1335 | Python | <span style="color:#176233"><u>333</u></span> | Java | 423 |
-| 103 | Union–find / непересекающиеся множества | 1379 | 1279 | C++ | <span style="color:#176233"><u>578</u></span> | Java | 608 |
-| 104 | Levenshtein distance / расстояние редактирования | 799 | 1030 | Python | <span style="color:#176233"><u>296</u></span> | JavaScript | 388 |
-| 105 | Dijkstra / кратчайшие взвешенные пути | 1255 | 1260 | Python | <span style="color:#176233"><u>443</u></span> | C++ | 753 |
+| 102 | Kahn topological sort / порядок зависимостей | 1230 | 1335 | Python | <span style="color:#176233"><u>333</u></span> | Java | 423 |
+| 103 | Union–find / непересекающиеся множества | 1370 | 1279 | C++ | <span style="color:#176233"><u>578</u></span> | Java | 608 |
+| 104 | Levenshtein distance / расстояние редактирования | 793 | 1030 | Python | <span style="color:#176233"><u>296</u></span> | JavaScript | 388 |
+| 105 | Dijkstra / кратчайшие взвешенные пути | 1249 | 1260 | Python | <span style="color:#176233"><u>443</u></span> | C++ | 753 |
 
 Языки выбираются по задаче: generic search и weighted graphs — Python/C++; обходы и зависимости — Python/Java; индексная union-find — C++/Java; обработка токенов — Python/JavaScript.
 

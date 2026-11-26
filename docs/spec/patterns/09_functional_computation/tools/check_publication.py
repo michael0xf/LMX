@@ -25,7 +25,7 @@ def main():
                 check(fences[position]==('lmx',normalize(variant['code'])),f'{ident}/{style}: exact source/JSON/MD')
                 label='процедурный' if style=='procedural' else 'функциональный';m=variant['metrics']
                 line=f"| LMX — {label} | {m['characters']} | {m['nonblank_lines']} |"
-                check(line in md.replace('**',''),f'{ident}/{style}: complete source counts')
+                check(line in re.sub(r'<[^>]+>','',md).replace('**',''),f'{ident}/{style}: complete source counts')
             check(next(x['code'] for x in row['listings'] if x['language']=='LMX')==row['lmx_variants']['functional']['code'],f'{ident}: legacy listing is only the functional mirror')
         else:
             code=next(x['code'] for x in row['listings'] if x['language']=='LMX')
@@ -61,6 +61,14 @@ def main():
     cases=json.loads((ROOT/'acceptance_cases.json').read_text())['cases']
     check(all(c['status']=='NOT_RUN' for c in cases),'acceptance specifications do not claim LMX execution')
     report={'ok':not errors,'checks':len(checks),'errors':errors,'scope':'Dual-style source/JSON/MD integrity and exact common body checks, not parsing or execution.','client_style_pairs':4,'common_implementations':4,'compared_listings':28,'acceptance_cases_prepared':len(cases),'runtime_execution':'NOT_RUN'}
-    (ROOT/'validation_2026-11-23.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
+    (ROOT/'validation_2026-11-26.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
+    (ROOT/'VALIDATION_2026-11-26.md').write_text(
+        '# Проверка функциональных сравнений — 26 ноября 2026\n\n'
+        +f"Статус: **{'PASS' if not errors else 'FAIL'}**, {len(checks)} проверок. "
+        +'Проверены четыре пары полных LMX-стилей, четыре общие реализации, '
+        +'равенство исходников/JSON/Markdown и полные метрики. Контрольные Haskell/Scala-листинги сохранены.\n\n'
+        +'[Машинный отчёт](validation_2026-11-26.json). Это проверка публикации: '
+        +'production P0, транслятор и runtime LMX не запускались. Acceptance cases остаются NOT_RUN.\n'
+        + ('\nОшибки:\n\n'+'\n'.join('- '+x for x in errors)+'\n' if errors else ''))
     print(json.dumps(report,ensure_ascii=False));return bool(errors)
 if __name__=='__main__':raise SystemExit(main())

@@ -1,0 +1,16 @@
+# Entry Main. A reference actual carries its target: the Structure given whole to the input that receives a reference
+# is the caller's own Structure (the reading W; step 21.7 K2). The input of `add` is `target`, a reference to `Box`;
+# `Add\add(Box)` makes the body write into the caller's `Box`: `Box\q` is 11.
+# Norm: the book #structural-call (`C(A)` may take A whole or pass its fields -- the declaration selection decides); a
+# reference passes its target and context.
+Box:
+    int: q 1
+end: Box
+Add:
+    @: target Box
+    add:
+        target\q := target\q + 10
+    end: add
+end: Add
+Main:
+    Add\add(Box)

@@ -1,0 +1,22 @@
+# Entry Main. A supplied actual suppresses the initializer of its input (step 21.7 K2). The input `a` of `Sum` is
+# computed by `bump()`, which counts its calls and gives 9. `Sum\add(7)` adds 72 and does not call `bump`; `Sum\add()`
+# adds 92 with the value `bump()` gives and calls it once. calls 1, `Counter\steps` 164.
+# Norm: the book #structural-call (a supplied actual fills the selected place in a fresh namespace; entry executes no
+# initializers).
+int: calls 0
+fn: bump () int
+    node\calls := node\calls + 1
+    return: 9
+Counter:
+    int: steps 0
+end: Counter
+Sum:
+    int: a bump()
+    int: b 2
+    add:
+        Counter\steps := Counter\steps + a * 10 + b
+    end: add
+end: Sum
+Main:
+    Sum\add(7)
+    Sum\add()

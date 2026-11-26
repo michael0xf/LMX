@@ -1,0 +1,15 @@
+int: before 1
+int: calls 0
+int: after 0
+fn: bump () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 7
+end: bump
+Box:
+    int: q 1
+end: Box
+Step:
+    int: x 5
+    add: (:= (Box \ q) x)
+end: Step
+Main: (:= (node \ before) 1) Step\add((:= data (bump))) (:= (node \ after) 2)

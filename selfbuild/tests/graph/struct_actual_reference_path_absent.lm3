@@ -1,0 +1,26 @@
+# Entry Main. The same universal reference input `@: target Box` admits `Other`; the body is entered (its first line
+# writes `Log\entered`), then the path `target\q` is reached and `Other` has no field `q`: the ordinary refusal of a
+# reached path, after entry -- not a refusal at admission. `Log\entered` 1, `Log\after` 0; answer 3 (step 21.7 K2).
+# Norm: the book #structural-call; L2_spec, reference places (a full requirement belongs in the typed head
+# `Model@`, which this place is not); the ordinary rule of a reached path with an absent field.
+Box:
+    int: q 1
+end: Box
+Other:
+    int: z 1
+    int: w 2
+end: Other
+Log:
+    int: entered 0
+    int: after 0
+end: Log
+Add:
+    @: target Box
+    add:
+        Log\entered := 1
+        target\q := target\q + 10
+    end: add
+end: Add
+Main:
+    Add\add(target := Other)
+    Log\after := 1

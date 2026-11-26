@@ -1,0 +1,25 @@
+# Entry Main. A named actual that names no input of the data admits no form: the structural call is refused with 5
+# before the value of the actual is read (step 21.7 K2). `Step\add(data := bump())`: the inputs of `Step` are `x`
+# alone, there is no input `data`, and a call cannot supply a replacement parent. `bump` counts its calls: BEFORE is
+# written, calls stays 0, AFTER is not.
+# Norm: the book #structural-call (the names of the members of the actuals denote inputs of the data; a call cannot
+# supply a replacement parent); #declaration-selection (an actual that binds no formal fails the pair).
+int: before 0
+int: calls 0
+int: after 0
+fn: bump () int
+    node\calls := node\calls + 1
+    return: 7
+Box:
+    int: q 1
+end: Box
+Step:
+    int: x 5
+    add:
+        Box\q := x
+    end: add
+end: Step
+Main:
+    node\before := 1
+    Step\add(data := bump())
+    node\after := 2

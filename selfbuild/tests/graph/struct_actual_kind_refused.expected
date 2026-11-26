@@ -1,0 +1,14 @@
+int: before 1
+Counter:
+    int: steps 0
+end: Counter
+Sum:
+    int: a 1
+    int: b 2
+    add: (:= (Counter \ steps) (((Counter \ steps) + (a * 10)) + b))
+end: Sum
+Box:
+    int: q 1
+end: Box
+int: after 0
+Main: (:= (node \ before) 1) Sum\add(Box) (:= (node \ after) 2)

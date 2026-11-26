@@ -1,0 +1,19 @@
+# Entry Main. A supplied actual reaches the input of a structural call by name, and the source data keeps its own
+# value: the example of the book #structural-call (step 21.7 K2). `Step\add()`, `Step\add(x := 2)` and `call(Step\add)`
+# execute `add` over its parent `Step`; the first and the third supply nothing and `x` takes its own value 5, the second
+# supplies 2. After the three records `Counter\steps` is 12 and `Step\x` is 5.
+# Norm: the book #structural-call (a supplied actual fills the selected place in a fresh namespace; the source data
+# and code are unchanged; entry executes no initializers); #call-receivers.
+Counter:
+    int: steps 0
+end: Counter
+Step:
+    int: x 5
+    add:
+        Counter\steps := Counter\steps + x
+    end: add
+end: Step
+Main:
+    Step\add()
+    Step\add(x := 2)
+    call(Step\add)

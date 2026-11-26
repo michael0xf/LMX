@@ -1,0 +1,27 @@
+# Entry Main. The paired control of struct_actual_named_unknown_refused: the data declares an input of that name, and
+# the named actual is taken into it -- its value is read once, before the call (step 21.7 K2). `Add` has the inputs
+# `data` and `other`; `Add\add(data := bump())` runs `add` over `Add`: `bump` counts one call, and the body reads the
+# other input of the same data (`other`, 5) and writes it into `Box\q`. The word `data` in code is the data of the
+# call, so the supplied value of the input `data` is not read by its name here.
+# Norm: the book #structural-call (the names of the members of the actuals denote inputs of the data; a supplied actual
+# fills the selected place in a fresh namespace; the source data and code are unchanged).
+int: before 0
+int: calls 0
+int: after 0
+fn: bump () int
+    node\calls := node\calls + 1
+    return: 7
+Box:
+    int: q 1
+end: Box
+Add:
+    int: data 0
+    int: other 5
+    add:
+        Box\q := other
+    end: add
+end: Add
+Main:
+    node\before := 1
+    Add\add(data := bump())
+    node\after := 2

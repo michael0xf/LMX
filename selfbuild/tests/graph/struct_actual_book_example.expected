@@ -1,0 +1,12 @@
+Counter:
+    int: steps 12
+end: Counter
+Step:
+    int: x 5
+    add: (:= (Counter \ steps) ((Counter \ steps) + x))
+end: Step
+Main:
+    Step\add()
+    Step\add((:= x 2))
+    call: (Step \ add)
+end: Main

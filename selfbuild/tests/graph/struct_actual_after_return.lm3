@@ -1,0 +1,17 @@
+# Entry Main. A supplied actual reaches the input of a structural call when `return` stands before that input in the
+# data: the field return describes a result and takes no number among the inputs, and the result it describes is the
+# value of the call (step 21.7 K2). The data of `add` is its parent `Add`; its inputs are `x` alone; the result is int.
+# `Add\add(x := 7)` gives 8, `Add\add(9)` gives 10: the named and the positional supply fill that input alike.
+# Norm: the book #structural-call; #return-in-data; #fn-signature.
+int: named 0
+int: positional 0
+Add:
+    return: int
+    int: x 0
+    add:
+        return: x + 1
+    end: add
+end: Add
+Main:
+    node\named := Add\add(x := 7)
+    node\positional := Add\add(9)

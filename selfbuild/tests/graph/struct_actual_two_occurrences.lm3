@@ -1,0 +1,30 @@
+# Entry Main. Two really different occurrences of one body (step 21.7 K2, the witness Q5): C1 inside D1 and C2
+# inside D2, both `return: base + x`, base 10 / 20, and in D2 a reference to C1. With `x := 7` the calls give 17, 27
+# and 17 through the reference: the data of a call is the parent of the chosen Structure (parent(C2) is D2), C1 and C2
+# are different Structures, and the reference gives C1.
+# Norm: the book #structural-call (C is executed in CODE; its actual parent supplies DATA; a call cannot supply a
+# replacement parent; the same data describe the result by the `return` field); #return-in-data.
+D1:
+    return: int
+    int: base 10
+    int: x 0
+    C1:
+        return: base + x
+    end: C1
+end: D1
+D2:
+    return: int
+    int: base 20
+    int: x 0
+    C2:
+        return: base + x
+    end: C2
+    @: alias D1\C1
+end: D2
+int: r1 0
+int: r2 0
+int: ra 0
+Main:
+    node\r1 := D1\C1(x := 7)
+    node\r2 := D2\C2(x := 7)
+    node\ra := D2\alias(x := 7)

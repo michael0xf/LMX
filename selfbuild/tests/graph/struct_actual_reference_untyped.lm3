@@ -1,0 +1,20 @@
+# Entry Main. A reference input without a first value receives a Structure: `Add` has the reference input
+# `@: target`, and `Add\add(Other)` gives it a Structure. The body writes through the reference into the given
+# Structure: `Other\z` 11 (step 21.7 K2).
+# Norm: the book #structural-call; L2_spec, reference places (`@: p 0` and `@: p Model` are places of a universal
+# reference; the requirement of a reference is written only in the typed head).
+Box:
+    int: q 1
+end: Box
+Other:
+    int: z 1
+    int: w 2
+end: Other
+Add:
+    @: target
+    add:
+        target\z := target\z + 10
+    end: add
+end: Add
+Main:
+    Add\add(Other)

@@ -1,0 +1,20 @@
+# Entry Main. Actuals of a structural call are bound to the inputs of its data as an ordinary call binds them: a
+# positional actual takes the input of its position among the inputs, a named one the input of its outer name (step
+# 21.7 K2). `add` has the inputs `a` (own value 1) and `b` (own value 2) and adds `a * 10 + b` to `Counter\steps`.
+# `Sum\add(7)` adds 72, `Sum\add(b := 3)` adds 13, `Sum\add(b := 3; a := 4)` adds 43: 128.
+# Norm: the book #structural-call (`C(args)`: written actual arguments by the common algorithm; the ordinary positional
+# and named supply apply).
+Counter:
+    int: steps 0
+end: Counter
+Sum:
+    int: a 1
+    int: b 2
+    add:
+        Counter\steps := Counter\steps + a * 10 + b
+    end: add
+end: Sum
+Main:
+    Sum\add(7)
+    Sum\add(b := 3)
+    Sum\add(b := 3; a := 4)

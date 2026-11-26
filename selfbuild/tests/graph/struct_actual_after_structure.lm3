@@ -1,0 +1,25 @@
+# Entry Main. A supplied actual reaches the input of a structural call when a Structure stands before that input in
+# the data: a neighbouring Structure is no input and takes no number, and the named and the positional supply fill
+# that input alike (step 21.7 K2). The data of `add` is its parent `Add`; its inputs are `x` alone. `Add\add(x := 7)`
+# writes 7 into `Box\q`, then `Add\add(9)` writes 9: named 7, positional 9.
+# Norm: the book #structural-call; #fn-signature; #binding-places (Р146: a nested user Structure is not automatically
+# a formal).
+Box:
+    int: q 1
+end: Box
+Add:
+    Box2:
+        int: r 2
+    end: Box2
+    int: x 0
+    add:
+        Box\q := x
+    end: add
+end: Add
+int: named 0
+int: positional 0
+Main:
+    Add\add(x := 7)
+    node\named := Box\q
+    Add\add(9)
+    node\positional := Box\q

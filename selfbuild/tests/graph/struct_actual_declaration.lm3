@@ -1,0 +1,28 @@
+# Entry Main. A declaration written as an actual is one Structure at its position: the name it declares selects no
+# input, its initializer does not run, and an input that receives an int does not admit it -- one reading reached
+# admission and none is admitted, 4 (step 21.7 K2; the book #declaration-arguments, Р157, Р158; as the call of fn in
+# the row c6_decl_folded). `Sum\add(int: b bump())`: the form stands at the position of `a`, whatever name it carries;
+# BEFORE is written, `bump` is not called, `Counter\steps` stays 0, AFTER is not.
+# Norm: the book #structural-call (a supplied declaration keeps its data-Structure contract and is not reduced to its
+# initializer's result during transmission; its receiving place is chosen by position or an explicit outer actual name,
+# never its internal declaration name); #declaration-arguments.
+int: before 0
+int: calls 0
+int: after 0
+fn: bump () int
+    node\calls := node\calls + 1
+    return: 9
+Counter:
+    int: steps 0
+end: Counter
+Sum:
+    int: a 1
+    int: b 2
+    add:
+        Counter\steps := Counter\steps + a * 10 + b
+    end: add
+end: Sum
+Main:
+    node\before := 1
+    Sum\add(int: b bump())
+    node\after := 2

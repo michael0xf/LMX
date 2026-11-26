@@ -1,0 +1,23 @@
+# Entry Main. The one structural actual is opened: its fields are the actuals of the structural call, each bound to
+# the input of its outer name (the reading E; step 21.7 K2). `Sum\add(Args)` with Args = (a 7, b 3) adds 73; a group
+# written in the call gives its field to the input of that name, and the other input keeps its own value:
+# `Sum\add((int: b 4))` adds 14. `Counter\steps` is 87.
+# Norm: the book #structural-call (`C(A)` may take A whole or pass its fields -- the declaration selection decides);
+# #declaration-selection.
+Counter:
+    int: steps 0
+end: Counter
+Sum:
+    int: a 1
+    int: b 2
+    add:
+        Counter\steps := Counter\steps + a * 10 + b
+    end: add
+end: Sum
+Args:
+    int: a 7
+    int: b 3
+end: Args
+Main:
+    Sum\add(Args)
+    Sum\add((int: b 4))

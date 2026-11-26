@@ -1,0 +1,21 @@
+# Entry Main. A reference input is a universal reference: `@: target Box` gives the place `target` its first value
+# (a reference to Box), and that value is no requirement (L2 spec, reference places; the author 2026-11-23). So
+# `Add\add(target := Other)` admits a Structure of another shape, and the body writes through the reference into the
+# given Structure: `Other\z` 11. The first value Box stays as it was: `Box\q` 1 (step 21.7 K2).
+# Norm: the book #structural-call; L2_spec, reference places: a two-argument `@: p Model` initially refers to Model
+# itself; a full requirement belongs in the typed head `Model@`.
+Box:
+    int: q 1
+end: Box
+Other:
+    int: z 1
+    int: w 2
+end: Other
+Add:
+    @: target Box
+    add:
+        target\z := target\z + 10
+    end: add
+end: Add
+Main:
+    Add\add(target := Other)

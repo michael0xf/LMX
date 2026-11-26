@@ -3435,7 +3435,9 @@ fn: lm_graph_emit_evaluated (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: scope; c.Lmx@: 
     return: 0
 
 # Named and expression-headed Frames select one live target before actuals.
-# The same target then uses the common callable binder or ordinary launch.
+# The same target then uses the common callable binder or the ordinary launch: a record without actuals is the direct
+# structural launch (lmx_graph_call_data); a record with actuals is read by the common evaluator when the code runs
+# (lmx_graph_eval_structural; step 21.7 K2) -- one path with the interpreter, and no data is substituted in the image.
 fn: lm_graph_emit_application (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: scope; c.Lmx@: application; int@: temps; char@@: decl_names; size_t@: decl_slots; size_t: decl_n; int: want_result; int@: temp) int
     c.LmxGraphEmitScratch: leave_storage
     char@: leave_failure (cast: (char@) leave_storage\failure)
@@ -3443,12 +3445,11 @@ fn: lm_graph_emit_application (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: scope; c.Lmx@
     char@: name 0
     @: head void 0
     c.Lmx@: actuals 0
-    char@@: formals 0
     size_t: count 0U
     int: structure temps[0]
     int: other structure + 1
     int: finish structure + 2
-    int: data -1
+    int: value 0
     int: result 0
     int: status 0
     if: c.lmx_graph_application_parts(g, (cast: (@) application), @ name, @ head, @ actuals) = 0
@@ -3483,22 +3484,16 @@ fn: lm_graph_emit_application (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: scope; c.Lmx@
     status := lm_graph_emit_call_selected(g, f, scope, actuals, structure, temps, decl_names, decl_slots, decl_n, 0, @ result)
     c.fprintf(f, "        goto: l2_label%d\n        l2_label%d:\n", finish, other)
     if: status = 0
-        formals := (cast: (char@@) c.calloc(count + 1U, sizeof(char@)))
-        status := 4
-        if: formals != 0
-            status := c.lmx_graph_launch_formals(g, 0, actuals, formals)
-        if: status = 5
-            status := 0
-            c.fprintf(f, "        if: 1\n            %s\n", leave_failure)
+        if: count = 0U
+            # [code]: the record alone; it selects its data (lmx_graph_call_data, shorthand).
+            c.fprintf(f, "        if: lmx_graph_call_data(l2_g, 0, (cast: (@: Lmx) l2_v%d), 1) != 0\n            %s\n", structure, leave_failure)
         else:
-            if: status = 0 && count = 1U
-                status := lm_graph_emit_launch_operand(g, f, scope, actuals, 0U, temps, decl_names, decl_slots, decl_n, @ data)
-            if: status = 0 && data >= 0
-                c.fprintf(f, "        if: lmx_graph_call_data(l2_g, (cast: (@: Lmx) l2_v%d), (cast: (@: Lmx) l2_v%d), 0) != 0\n            %s\n", data, structure, leave_failure)
-            if: status = 0 && data < 0
-                c.fprintf(f, "        if: lmx_graph_call_data(l2_g, 0, (cast: (@: Lmx) l2_v%d), 1) != 0\n            %s\n", structure, leave_failure)
+            value := temps[0]
+            temps[0] := temps[0] + 1
+            c.fprintf(f, "        LmxWalkValue: l2_cv%d\n        lmx_walk_value_clear(@ l2_cv%d)\n        if: lmx_graph_eval_structural(l2_g, lmx_call_code, (cast: (@: Lmx) l2_v%d), (cast: (@: Lmx) ", value, value, structure)
+            status := lm_graph_emit_address(g, f, scope, actuals)
+            c.fprintf(f, "), 0, @ l2_cv%d) != 0\n            %s\n", value, leave_failure)
         ---
-        c.free((cast: (@) formals))
     ---
     c.fprintf(f, "        l2_label%d:\n", finish)
     temp[0] := result

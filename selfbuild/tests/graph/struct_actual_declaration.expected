@@ -1,0 +1,16 @@
+int: before 1
+int: calls 0
+int: after 0
+fn: bump () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 9
+end: bump
+Counter:
+    int: steps 0
+end: Counter
+Sum:
+    int: a 1
+    int: b 2
+    add: (:= (Counter \ steps) (((Counter \ steps) + (a * 10)) + b))
+end: Sum
+Main: (:= (node \ before) 1) Sum\add((int b (bump))) (:= (node \ after) 2)

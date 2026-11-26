@@ -1,0 +1,20 @@
+# Entry Main. A reference input is a universal reference, and its first value is no requirement: `Add` has the
+# reference input `@: target Box`, and `Add\add(Box2)` gives it another Structure. The call admits it whatever its
+# shape -- the default `Box` names no model --, and the body writes through the reference into the given Structure:
+# `Box2\q` 15. The default is not written: `Box\q` stays 1 (step 21.7 K2).
+# Norm: the book #structural-call; L2_spec, reference places: a two-argument `@: p Model` initially refers to Model
+# itself; a full requirement belongs in the typed head `Model@`.
+Box:
+    int: q 1
+end: Box
+Box2:
+    int: q 5
+end: Box2
+Add:
+    @: target Box
+    add:
+        target\q := target\q + 10
+    end: add
+end: Add
+Main:
+    Add\add(Box2)

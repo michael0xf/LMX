@@ -605,7 +605,7 @@ The named declaration contract is `R: name [initializer]`, with the complete req
 
 A typed reference declaration is `Model@: ptr Other`, and `Model@: ptr 0` initializes a null pointer of that requirement. The old `@: ptr Model Other` reading is withdrawn. `@: ptr Model: Other` contains a nested call in a CODE-reading position, not a special typed-candidate pair. Normal admission neither writes to Model nor invents an addressable temporary target. The candidate is evaluated once before the ordinary binding/write. An outer `ptr: ...` remains a DATA declaration of a Structure or a CODE call; it does not replace the reference receiver's own declared NAME role.
 
-A bare identifier follows ordinary resolution and the receiving role. In a whole VALUE, TYPE, NAME or DATA position it does not invent a call or an empty actual list: a value/reference is consumed under that position's contract. An incompatible value is rejected rather than repaired by a nullary call. When a resolved Structure is actually reached in CODE/Expression, the [name/actual-parent guard](#expression-structure-parent-guard) applies: anonymous and named different-parent nodes are groups; a named same-parent node uses ordinary receiver/call handling. This is semantic traversal of the existing graph, not a call Frame fabricated by P0. Explicit Frames `A()`, `A(args)` and `call: A` retain their ordinary contracts. Mere value lookup captures no neighboring atoms. In `if: p` the condition's value contract reads p; passing a callable as that value does not call it to manufacture a condition. Admission of that value is a separate check.
+A bare identifier follows ordinary resolution and the receiving role. In a whole VALUE, TYPE, NAME or DATA position it does not invent a call or an empty actual list: a value/reference is consumed under that position's contract. An incompatible value is rejected rather than repaired by a nullary call. When a resolved Structure is actually reached in CODE/Expression, its handling follows the [occurrence-role and name/actual-parent rules](#expression-structure-parent-guard). This is semantic traversal of the existing graph, not a call Frame fabricated by P0. Explicit Frames `A()`, `A(args)` and `call: A` retain their ordinary contracts. Mere value lookup captures no neighboring atoms. In `if: p` the condition's value contract reads p; passing a callable as that value does not call it to manufacture a condition. Admission of that value is a separate check.
 
 
 <a id="colon-declares"></a>
@@ -853,41 +853,51 @@ reclassified as a scalar expression after counting the output. Thus
 place `ptr`; an empty stream and one empty Structure are different values.
 
 <a id="expression-structure-parent-guard"></a>
-The grouper consumes the **clean graph**, not source characters or a
-“written group versus referenced object” flag. After a graph reference is
-resolved, CODE/Expression traversal distinguishes the target's actual name and
-`parent` relative to the **current lexical owner of that traversal**:
+The grouper consumes the **clean graph** and the receiving role of each
+occurrence. Under the author's clarification of 26 November 2026, a graph
+reference atom to a Structure reached in Expression is an Expression group
+only outside the operand role. An occurrence selected as the operand (the
+operation to which arguments are bound) follows that operand's ordinary
+contract. An atom with only a group reading is grouped even when the target
+has the current lexical owner as its parent. A graph reference atom used as
+a group keeps the target's actual
+`parent` and evaluation context. The group's contents execute in place.
 
-| Reached Structure in CODE/Expression | Handling |
+Translation determines these roles by the same strict
+[selection rules as for calls](#declaration-selection). It checks the fields
+of known Structures and the applicable receiving contracts before any effects.
+If more than one interpretation fits, or if one possible value of an unknown
+reference would admit competing interpretations, translation reports an
+error. Role selection does not execute an operand, a candidate body or an
+argument to find out which interpretation works. Preparation for
+interpretation uses the same selection.
+
+Lexical receiver/call resolution retains its ordinary rules. For other
+Structure nodes reached in CODE/Expression, the actual name and `parent`
+relative to the current lexical owner determine the handling:
+
+| Reached Structure outside the graph-reference atom case above | Handling |
 | --- | --- |
 | Anonymous, regardless of its parent | Group; execution is in place, not an anonymous call |
 | Named, actual `parent` differs from the current lexical owner | Group |
 | Named, actual `parent` equals the current lexical owner | Ordinary receiver/call handling under the resolved entity's contract |
 
-Reference resolution itself neither reparents nor copies the target. It also
-does not suppress the third row: “all references are noncalling groups” is
-incorrect. Declaration receivers and other resolved special receivers retain
-their own ordinary actions when that row dispatches them. The check uses the
-actual graph relation, not the presence of parentheses, where the graph was
-created, or the spelling of the reference.
+Reference resolution preserves the graph identity and parent relation.
+Declaration receivers and other resolved special receivers retain their
+ordinary actions under their own contracts. The grouper uses graph occurrences,
+their roles and structural relations independently of source spelling.
 
 A ready Structure consumed as a whole VALUE, TYPE or DATA description keeps
-that receiving contract; it is not automatically reclassified as CODE. The
-table applies when a node is reached **in CODE/Expression**, not to a stored
-callable passed as a value or to formal initializers in a DATA description.
-If that graph is subsequently consumed as CODE/Expression, the same
-name/actual-parent rule applies then. Complete TYPE/model positions retain
-their full requirements without reading a missing primitive payload.
+that receiving contract. If the graph is subsequently consumed as
+CODE/Expression, the corresponding rules above apply at that occurrence.
+Complete TYPE/model positions retain their full requirements without reading
+a missing primitive payload.
 
-With an available `S: a b c d` whose actual `parent` is **different** from the current lexical owner, the grouper treats the reference in
-`print: 1 + S + 2` as the next group, just as in
-`print: 1 + (a b c d) + 2`. The referenced group keeps its actual `parent`
-and lexical/evaluation context. The different-parent condition is necessary for this named-group case; if S has the current lexical owner as its parent, ordinary receiver/call handling applies instead.
-No lexical `S: ...` declaration is substituted at the use site. This equality
-of grouping rules asserts neither that
-the selected `+` admits the material nor a particular numeric result.
-It does not insert `S()`, copy the graph or synthesize a call activation.
-The receiving contracts of `+` and `print` remain their actual contracts.
+If the clean graph for `print: 1 + S + 2` contains a reference atom to
+`S: a b c d` outside the operand role, it occupies the same group position
+as in `print: 1 + (a b c d) + 2`. The referenced group keeps its actual
+`parent` and lexical context. The receiving contracts of `+` and `print`
+determine admission and the result.
 
 Modifiers, including `::`, retain DATA consumption. A DATA template's
 declarations and deferred initializers are not traversed as executable
@@ -903,11 +913,13 @@ fields**:
 ```text
 groupTree(graph, receivingContext):
     retain graph identity, structural levels and evaluation context
+    retain whole VALUE/TYPE/DATA contracts before CODE classification
     resolve graph references without changing their actual parent
-    in CODE/Expression: anonymous or named with a different actual parent -> group
-    in CODE/Expression: named with the current lexical owner as parent -> ordinary receiver/call
-    retain whole VALUE/TYPE/DATA contracts before this CODE classification
-    resolve operation contracts and ready priorities without running bodies
+    resolve admissible operand roles and ready priorities without evaluation
+    reject ambiguous interpretations during translation using ordinary call selection
+    in Expression: graph reference atom to a Structure outside the operand role -> group
+    in Expression: graph reference atom in the operand role -> selected operand
+    for other CODE/Expression Structures: apply the name/actual-parent rule
     recursively group dependencies and complete units in the admitted Expression graph
     represent a group result: one unit is transparent; zero or several units form one subgroup
     retain one enclosing atom boundary, original occurrences and contexts
@@ -1132,7 +1144,7 @@ The required results are 7 for `Example\calculate(2)`, 13 for `Example\calculate
 The same expression analysis determines argument boundaries but supplies references to original occurrences without executing them. Occurrences can contain literals, names, calls, assignments or groups. A handler for arbitrary source forms uses general references `@: left` and `@[]: right`, not a physical-int requirement. Merely reading or retaining such a reference executes nothing. An unconsumed occurrence has no effects; explicit repeated evaluation repeats effects. Written groups do not force eager evaluation or remove the raw contract. Retaining a raw occurrence postpones its consumption; it does not turn its CODE Expression or resolved receiver into a DATA declaration. Restrictions on the admissible source forms are checked without executing them in order to obtain another type.
 
 <a id="expression-eval"></a>
-`sys\eval(fragment)` uses the single expression executor to obtain the ordinary value of a raw occurrence. Literals yield values, names resolve normally, and written calls execute; a callable received as a whole value remains a reference. A Structure reached in CODE/Expression follows the [name/parent guard](#expression-structure-parent-guard), including ordinary receiver/call handling for a named same-parent node. `\fragment` is not shorthand for evaluation. Each explicit `sys\eval` is a new evaluation with once-per-occurrence effects within that evaluation, not a persistent cache.
+`sys\eval(fragment)` uses the single expression executor to obtain the ordinary value of a raw occurrence. Literals yield values, names resolve normally, and written calls execute; a callable received as a whole value remains a reference. A Structure reached in CODE/Expression follows the [name/parent guard](#expression-structure-parent-guard). `\fragment` is not shorthand for evaluation. Each explicit `sys\eval` is a new evaluation with once-per-occurrence effects within that evaluation, not a persistent cache.
 
 The occurrence retains its source evaluation context for the duration of the application, including when passed to a helper. The helper's same-named locals cannot capture it. Embedded assignments keep their receiving-DATA rule, and the original binding/private access is preserved without granting the operand new implicit access to private places. A physical source address alone does not identify a live activation; the existing context transport must retain that distinction. Raw passing extends no activation lifetime and cannot restore a finished frame. Statically known fragments may use the same prepared native implementation; neither a second parser nor a second VM is required. A long-lived computation is formed by an ordinary callable with its DATA and, where needed, by explicit composition/`merge`.
 
@@ -3918,7 +3930,7 @@ errors, not a negative predicate result. See the [unified Pattern contract](CORE
 
 ### Construction, source rules and verification
 
-Expression is the ordinary Structure graph interpreted with a [structural grouper](#expression-structural-grouping): it determines priorities, complete expression units and streams at the current tree level, independently of source spelling. A separate Expression application adapter packages left as one actual/reference bundle and right as an Array of references. `arg0 operand arg1 arg2 arg3` is the general form; a binary contract uses one right item, with no automatic fold or movement of the first right item into an absent left. The receiving contract selects whole-value or current-level sequence consumption. `(a b c) := (a c b)` therefore has one left bundle and three right values; three sibling material RHS groups remain three subgroup items. Recursive in-memory normalization already belongs to the grouper; the application adapter adds no conditional unwrapping pass. The grouper reads the clean graph. In CODE/Expression, anonymous Structures and named Structures whose actual parent differs from the current lexical owner are groups; named same-parent Structures use ordinary receiver/call handling. Reference resolution preserves the actual parent. Whole VALUE/TYPE/DATA material is not automatically reclassified as CODE. `1 + ((2))` is 3; field collectors such as `(copy(Model))` remain containers for zero, one or many fields. `::` and modifiers keep DATA consumption and the common immediate-field reader; they gain no RHS evaluator. P0, ordinary callable W/E and the existing lifetime/effect rules remain intact. See [architecture and acceptance](EXPRESSION_GROUPING.md); execution is **NOT_RUN**.
+Expression is the ordinary Structure graph interpreted with a [structural grouper](#expression-structural-grouping): it determines priorities, complete expression units and streams at the current tree level, independently of source spelling. A separate Expression application adapter packages left as one actual/reference bundle and right as an Array of references. `arg0 operand arg1 arg2 arg3` is the general form; a binary contract uses one right item, with no automatic fold or movement of the first right item into an absent left. The receiving contract selects whole-value or current-level sequence consumption. `(a b c) := (a c b)` therefore has one left bundle and three right values; three sibling material RHS groups remain three subgroup items. Recursive in-memory normalization already belongs to the grouper; the application adapter adds no conditional unwrapping pass. The grouper reads the clean graph. In Expression, a graph reference atom to a Structure forms a group only outside the operand role. Translation rejects ambiguous interpretations before effects. Other reached Structures follow the name/actual-parent rule. Reference resolution preserves the actual parent. Whole VALUE/TYPE/DATA material is not automatically reclassified as CODE. `1 + ((2))` is 3; field collectors such as `(copy(Model))` remain containers for zero, one or many fields. `::` and modifiers keep DATA consumption and the common immediate-field reader; they gain no RHS evaluator. P0, ordinary callable W/E and the existing lifetime/effect rules remain intact. See [architecture and acceptance](EXPRESSION_GROUPING.md); execution is **NOT_RUN**.
 
 Capture and generated source keep actual parents, private state and the normal
 lifetime rules. Code generation must respect blank-line root termination and

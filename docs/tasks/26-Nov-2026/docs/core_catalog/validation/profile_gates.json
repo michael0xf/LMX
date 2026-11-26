@@ -1,0 +1,89 @@
+{
+  "scope": "Force-enable attempts against five unavailable generated native-call gates; no native provider library is linked.",
+  "status": "PASS",
+  "fixtures": [
+    {
+      "component": "platform_extra:apr",
+      "name": "apr_skiplist_init",
+      "entry_id": "capi_21ca28a32df250ae",
+      "availability": "outside_selected_profile",
+      "generated_sha256": "0b2e286f3c1f653d2f01850bb2aa000e8170b6ad0b55431f639aa3134dc959a8"
+    },
+    {
+      "component": "platform_extra:sdl3",
+      "name": "glClear",
+      "entry_id": "capi_86d23852989ac87d",
+      "availability": "not_built_in_target_graphics_api",
+      "generated_sha256": "1d2b2161ba35956b16913fa750910d005d907468a95f24b67cecdb10794a04ac"
+    },
+    {
+      "component": "platform_extra:sdl3",
+      "name": "SDL_main",
+      "entry_id": "capi_293475c79c20503d",
+      "availability": "application_implementation_required",
+      "generated_sha256": "22cfc916545e769a6bf0e1828201606acb747142c2817821ef1b33d2fc22e0e2"
+    },
+    {
+      "component": "numeric_extra:pcg-c",
+      "name": "pcg_rotr_128",
+      "entry_id": "capi_9c57dc7331564dea",
+      "availability": "outside_selected_portable_profile",
+      "generated_sha256": "8f1da6c97d38f85239a96071cf57a5148d1684824565779ecb24175195afddc6"
+    },
+    {
+      "component": "numeric_extra:libtomfloat",
+      "name": "mpf_from_string",
+      "entry_id": "capi_5abf8394302bb334",
+      "availability": "declared_without_implementation",
+      "generated_sha256": "094afd3d205ffecd0a08b4eb2173b116fdd5282c32586608dbf4834c0cbe97a8"
+    }
+  ],
+  "commands": [
+    {
+      "argv": [
+        "cc",
+        "--version"
+      ],
+      "returncode": 0,
+      "stdout": "cc (Debian 14.2.0-19) 14.2.0\nCopyright (C) 2024 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cc",
+        "-std=c99",
+        "-pedantic-errors",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-I",
+        "$CATALOG/bridge",
+        "$BUILD/profile_gates.c",
+        "$CATALOG/bridge/lmx_catalog_bridge.c",
+        "-o",
+        "$BUILD/profile_gates"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "$BUILD/profile_gates"
+      ],
+      "returncode": 0,
+      "stdout": "{\"gates\":5,\"failures\":0}\n",
+      "stderr": ""
+    }
+  ],
+  "not_run": [
+    "LMX runtime",
+    "real native implementations",
+    "other platforms"
+  ],
+  "compiler": "cc (Debian 14.2.0-19) 14.2.0",
+  "execution": {
+    "gates": 5,
+    "failures": 0
+  }
+}

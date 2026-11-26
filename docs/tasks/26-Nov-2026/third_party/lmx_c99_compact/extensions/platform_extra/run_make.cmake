@@ -1,0 +1,12 @@
+# Argument passed directly to make; no shell expansion of its $(...) expression.
+set(_args -j2)
+if(NOT SKIPLIST)
+  list(APPEND _args "OBJECTS=$(filter-out tables/apr_skiplist.lo,$(OBJECTS_unix))")
+endif()
+if(MODE STREQUAL "install")
+  list(APPEND _args install)
+endif()
+execute_process(COMMAND "${MAKE}" ${_args} RESULT_VARIABLE result)
+if(NOT result EQUAL 0)
+  message(FATAL_ERROR "APR make ${MODE} failed: ${result}")
+endif()

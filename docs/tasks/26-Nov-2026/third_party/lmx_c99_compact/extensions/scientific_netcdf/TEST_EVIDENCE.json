@@ -1,0 +1,88 @@
+{
+  "date": "2026-11-26",
+  "components": {
+    "netcdf-c": "4.10.1",
+    "pnetcdf": "1.15.1",
+    "hdf5": "2.3.0",
+    "libxml2": "2.15.4"
+  },
+  "compiler": "GCC 14.2, -std=c99 -pedantic-errors -Os",
+  "original_selected_build": {
+    "formats": "PASS",
+    "nczarr": "PASS",
+    "parallel": "PASS, MPI, 1 rank",
+    "interop": "PASS, MPI, 1 rank"
+  },
+  "retained_selected_build": {
+    "formats": "PASS",
+    "nczarr": "PASS",
+    "parallel": "PASS",
+    "interop": "PASS"
+  },
+  "checks": {
+    "formats": [
+      "CDF1/CDF2/CDF5 physical magic and format ID",
+      "unlimited record dimension extended to 2 and metadata/data exact comparison",
+      "CDF5 UINT64 values 9007199254740993, 18446744073709551614, 12345678901234567890 preserved exactly",
+      "netCDF4 groups, enum member identity, allocated strings/free, chunking+shuffle+DEFLATE metadata, full and hyperslab readback"
+    ],
+    "nczarr": [
+      "file:// directory store, no network",
+      "directory metadata presence, chunked data, global text attribute, hyperslab overwrite/reopen"
+    ],
+    "parallel": [
+      "nc_create_par/nc_open_par with HDF5 parallel dispatch",
+      "nc_create_par/nc_open_par with CDF5 PnetCDF dispatch",
+      "explicit NC_COLLECTIVE access and exact uint64 data above 2^53"
+    ],
+    "interop": [
+      "serial netCDF-C writer -> collective PnetCDF reader",
+      "collective PnetCDF writer -> serial netCDF-C reader",
+      "same test creates both files locally without external fixtures",
+      "exact uint64 values near 2^53 and 2^64, dimension metadata and binary unsigned-byte attribute"
+    ]
+  },
+  "independent_fixture_crossreads": [
+    {
+      "writer": "PnetCDF 1.15.1",
+      "reader": "netCDF-C 4.10.1 serial classic backend",
+      "reader_source": "../scientific_pnetcdf/tests/serial_crossread.c",
+      "fixture_bytes": 560,
+      "fixture_sha256": "ad362230a168390020642390aa034a222198e4825abbbf034e9f11b6c0ab0172",
+      "result": "PASS"
+    },
+    {
+      "writer": "netCDF-C 4.10.1 serial classic backend",
+      "reader": "PnetCDF 1.15.1 collective MPI-I/O",
+      "reader_source": "../scientific_pnetcdf/tests/netcdf_crossread.c",
+      "fixture_bytes": 308,
+      "fixture_sha256": "2160e8d3892ccca03fdc4695597f892ca763fcbf3162d418c3acf21818d6dedd",
+      "result": "PASS",
+      "companion_evidence": "../scientific_pnetcdf/CROSSREAD_VERIFICATION.json"
+    }
+  ],
+  "mpi": {
+    "ranks_exercised": 1,
+    "source_supports_multiple_ranks": true,
+    "multiple_ranks_claimed": false,
+    "launcher": "mpiexec.hydra -launcher fork -n 1",
+    "restricted_host_environment": {
+      "UCX_TLS": "self",
+      "UCX_VFS_ENABLE": "n",
+      "HWLOC_COMPONENTS": "-linux"
+    },
+    "diagnostic": "UCX reports missing /sys/class/net in this host; tested programs return 0 and exact data checks pass"
+  },
+  "dependency_profile": "standalone original/trimmed netCDF prefixes and corresponding HDF5/libxml2/PnetCDF static builds; system curl/zlib for these checks; parent whole-collection proof uses existing vendored targets",
+  "test_files": [
+    "tests/formats.c",
+    "tests/nczarr.c",
+    "tests/parallel.c",
+    "tests/interop.c"
+  ],
+  "not_claimed": [
+    "multi-rank runtime success on restricted host",
+    "S3, remote DAP services or network transport runtime",
+    "all upstream corpora or all possible schema combinations"
+  ]
+}

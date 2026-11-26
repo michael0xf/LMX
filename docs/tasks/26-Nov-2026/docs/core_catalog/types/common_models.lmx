@@ -1,0 +1,214 @@
+# Предлагаемые общие DATA-модели границы L3/L2. Это обычные Structures.
+# Они не регистрируют новые физические типы и не исполняются при чтении.
+# Проверки и профили: README.ru.md и converters.lmx в этой директории.
+# char[] остаётся точной LMX-строкой без завершающего NUL.
+# Все незаданные поля намеренно uninit:T, а не выдуманные нули.
+#
+BridgeData:
+    ScalarCell:
+        @: value
+        int: writable
+#
+    Buffer:
+        @: array
+        size_t: offset
+        size_t: count
+        int: writable
+#
+    Tensor:
+        @: array
+        size_t[]: shape
+        size_t[]: strides
+        size_t: offset
+        char[]: layout
+#
+    Hyperslab:
+        size_t[]: start
+        size_t[]: count
+        size_t[]: stride
+        size_t[]: block
+#
+    Image:
+        BridgeData\Tensor@: pixels
+        char[]: channels
+        char[]: colorSpace
+        char[]: alphaMode
+        char[]: origin
+#
+    Audio:
+        BridgeData\Tensor@: samples
+        size_t: sampleRate
+        char[]: channelLayout
+        char[]: sampleFormat
+#
+    Encoded:
+        BridgeData\Buffer@: bytes
+        char[]: mediaType
+#
+    Time:
+        i64: seconds
+        int: nanoseconds
+        char[]: scale
+#
+    Duration:
+        i64: seconds
+        int: nanoseconds
+#
+    CivilTime:
+        int: year
+        int: month
+        int: day
+        int: hour
+        int: minute
+        int: second
+        int: nanoseconds
+        int: utcOffsetSeconds
+        char[]: calendar
+#
+    Resource:
+        @: owner
+        @: state
+        char[]: kind
+#
+    MpiContext:
+        BridgeData\Resource@: runtime
+        BridgeData\Resource@: communicator
+        BridgeData\Resource@: hints
+        char[]: threadSupport
+        char[]: collectiveMode
+#
+    Callback:
+        @: target
+        @: context
+        @: owner
+        char[]: delivery
+        char[]: lifetime
+#
+    DecimalContext:
+        i64: precision
+        i64: maximumExponent
+        i64: minimumExponent
+        char[]: rounding
+        @: traps
+        int: clamp
+        int: exactRequired
+#
+    NumericBudget:
+        size_t: nativeBytes
+        u64: maximumPrecisionBits
+#
+    RealContext:
+        u64: precisionBits
+        unsigned: exponentBits
+        char[]: rounding
+        @: traps
+        int: subnormals
+        int: exactRequired
+#
+    NumericStatus:
+        @: conditions
+        char[]: backend
+        unsigned: backendBits
+#
+    DbValue:
+        char[]: kind
+        @: value
+#
+    DbRow:
+        char[][]: names
+        @[]: values
+#
+    DbRows:
+        char[][]: names
+        @[]: rows
+#
+    KeyValue:
+        char[]: key
+        @: value
+#
+    ParseNode:
+        char[]: kind
+        @: value
+        @[]: children
+        size_t: begin
+        size_t: end
+#
+    GeoPoint:
+        double: longitude
+        double: latitude
+        double: height
+        char[]: referenceSystem
+#
+    Vector3:
+        double: x
+        double: y
+        double: z
+        char[]: unit
+        char[]: referenceFrame
+#
+    OrbitState:
+        BridgeData\Time@: instant
+        BridgeData\Vector3@: position
+        BridgeData\Vector3@: velocity
+#
+    NetworkAddress:
+        char[]: family
+        u8[]: bytes
+        u16: port
+        u32: scopeId
+        char[]: localName
+#
+    Uri:
+        char[]: scheme
+        char[]: authority
+        char[]: path
+        char[]: query
+        char[]: fragment
+#
+    Packet:
+        BridgeData\Buffer@: bytes
+        @: address
+        @: metadata
+#
+    Error:
+        char[]: domain
+        i64: code
+        char[]: message
+        @: detail
+#
+    CallRequest:
+        @[]: arguments
+        @: context
+#
+    CallResult:
+        int: ok
+        @: value
+        BridgeData\Error@: error
+#
+    Quantization:
+        double: scale
+        i64: zeroPoint
+        char[]: rounding
+        int: saturate
+#
+    RandomState:
+        u64[]: words
+        char[]: algorithm
+#
+    Secret:
+        BridgeData\Buffer@: bytes
+        @: owner
+        char[]: purpose
+#
+    Complex:
+        @: realPart
+        @: imaginaryPart
+#
+    ComplexBuffer:
+        BridgeData\Tensor@: components
+        char[]: layout
+        char[]: profile
+#
+    Rational:
+        @: numerator
+        @: denominator

@@ -1,0 +1,87 @@
+# Canonical compact LMX proposal. Columns are positional; ids are table-local.
+# Reader/schema: ../CATALOG_FORMAT.ru.md. No publication or runtime proof.
+C99Catalog_storage_extra_flashdb:
+    int: schemaVersion 2
+    int: tableChunkSize 32
+    char[]: componentId "storage_extra:flashdb"
+    @: component ("d";(("build_group";("s";"extensions/storage_extra"));("canonical_header_map";("d";(("extensions/storage_extra/config/lmx_flashdb_callbacks.h";("s";"lmx_flashdb_callbacks.h"));("vendor/flashdb/inc/fdb_def.h";("s";"fdb_def.h"));("vendor/flashdb/inc/flashdb.h";("s";"flashdb.h")))));("cmake_targets";("l";(("s";"LMX::flashdb"))));("commit";("s";"6c722f169f27f99f96670ee00c27b2f59b1505e2"));("configuration_headers";("l";(("s";"extensions/storage_extra/config/fdb_cfg.h"))));("download_bytes";("i";7038031));("headers";("l";(("s";"third_party/lmx_c99_compact/extensions/storage_extra/config/lmx_flashdb_callbacks.h");("s";"third_party/lmx_c99_compact/vendor/flashdb/inc/fdb_def.h");("s";"third_party/lmx_c99_compact/vendor/flashdb/inc/flashdb.h"))));("id";("s";"storage_extra:flashdb"));("license";("s";"Apache-2.0"));("licenses_notices";("l";(("s";"vendor/flashdb/LICENSE");("s";"vendor/flashdb/port/fal/LICENSE"))));("not_compiled_optional_sources";("l";(("s";"vendor/flashdb/port/fal"))));("paths";("l";(("s";"vendor/flashdb"))));("public_headers";("l";(("s";"vendor/flashdb/inc/flashdb.h");("s";"vendor/flashdb/inc/fdb_def.h");("s";"extensions/storage_extra/config/lmx_flashdb_callbacks.h"))));("purpose";("s";"Reader/writer of native FlashDB sector KV/time-series representation with CRC and garbage collection; LMX defines the meaning of stored data."));("selected_profile";("s";"KVDB+TSDB, standard C FILE sector backend, no read cache; FAL hardware backend/ports retained as source but not linked."));("source_archive_sha256";("s";"f935e662a512892efe0f77e987fc77f97355ee51aba714027ab17cbcad2e3733"));("source_validation";("s";"source_census_only_not_link_test"));("state_and_reentrancy";("s";"Mutable DB handles and native sector files; caller supplies ownership and locks. libc fflush is not a proof of physical power-loss durability."));("surface_patterns";("l";(("s";"vendor/flashdb/inc/flashdb.h");("s";"vendor/flashdb/inc/fdb_def.h");("s";"extensions/storage_extra/config/lmx_flashdb_callbacks.h"))));("targets";("l";(("s";"LMX::flashdb"))));("upstream_commit_date";("s";"2026-11-16T10:59:46Z"));("urls";("l";(("s";"https://github.com/armink/FlashDB");("s";"https://github.com/armink/FlashDB/commit/6c722f169f27f99f96670ee00c27b2f59b1505e2");("s";"https://codeload.github.com/armink/FlashDB/tar.gz/6c722f169f27f99f96670ee00c27b2f59b1505e2"))));("validation";("s";"VERIFICATION.json: strict C99 Linux x86_64; build from original inputs and clean retained source; other platforms and physical hardware NOT_RUN."));("vendor_modifications";("l";(("s";"Vendor files unchanged. SHA-256 guarded build view removes non-C99 function-pointer/void* conversions. In this selected profile *_CTRL_SET_LOCK/UNLOCK receive the address of a typed callback object or NULL; this is an explicit contract difference from upstream. lmx_fdb_set_callbacks provides the direct typed alternative."))));("version";("s";"2.2.99 header version at pinned snapshot"))))
+    @: models C99Schema\Models
+    Columns:
+        @: Parameters ("cName";"cType";"flags";"declarationMode";"declarationOverride";"model";"extra")
+        @: Specs ("signature";"returnType";"parameterList")
+        @: Origins ("extraction";"availability";"unresolved";"notes";"body";"conditionsPresent")
+        @: Variants ("spec";"source";"line";"conditions";"origin";"extra")
+        @: Profiles ("kind";"header";"targets";"ffiDisposition";"publishCandidate";"pubCandidate";"status";"callable";"direct")
+        @: Placements ("package";"primaryModel";"extra")
+        @: Entries ("symbol";"spec";"source";"line";"conditions";"origin";"profile";"variants";"placement";"extra")
+    ---
+    PropertyKeys:
+        @: k0 ("canonical_header";"classification";"targets";"component";"publication";"macro_replacement";"macro_role";"symbol_kinds";"callback_type_refs";"return_type_original")
+    PropertyValues:
+        @: z0 (("s";"fdb_def.h");("s";"function_macro");("l";(("s";"LMX::flashdb")));("s";"storage_extra:flashdb");("s";"proposal_only");("s";"assert(EXPR);");("s";"runtime_operation");("l";(("s";"function_macro")));("s";"FDB_LOG_PREFIX();FDB_PRINT(\"(%s:%d) \", __FILE__, __LINE__);FDB_PRINT(__VA_ARGS__)");("s";"FDB_LOG_PREFIX();FDB_PRINT(__VA_ARGS__)");("s";"FDB_LOG_PREFIX1();FDB_LOG_PREFIX2()");("s";"FDB_PRINT(\"[FlashDB]\" FDB_LOG_TAG)");("s";"FDB_PRINT(\" \")");("s";"printf(__VA_ARGS__)");("l";(("s";"function")));("l";(("s";"callback")));("l";(("s";"capi_a87c187dc0f8b242")));("l";(("s";"capi_aaa032b8b4304757")));("l";(("s";"capi_13442405e4e06342")));("s";"static inline void");("l";(("s";"static_inline"))))
+    Signatures:
+        @: s0 ("FDB_ASSERT(EXPR)";"FDB_DEBUG(...)";"FDB_INFO(...)";"FDB_LOG_PREFIX()";"FDB_LOG_PREFIX1()";"FDB_LOG_PREFIX2()";"FDB_PRINT(...)";"fdb_blob_t fdb_blob_make ( fdb_blob_t blob , const void * value_buf , size_t buf_len )";"size_t fdb_blob_read ( fdb_db_t db , fdb_blob_t blob )";"uint32_t fdb_calc_crc32 ( uint32_t crc , const void * buf , size_t size )";"typedef fdb_time_t ( * fdb_get_time ) ( void )";"fdb_err_t fdb_kv_del ( fdb_kvdb_t db , const char * key )";"char * fdb_kv_get ( fdb_kvdb_t db , const char * key )";"size_t fdb_kv_get_blob ( fdb_kvdb_t db , const char * key , fdb_blob_t blob )";"fdb_kv_t fdb_kv_get_obj ( fdb_kvdb_t db , const char * key , fdb_kv_t kv )";"bool fdb_kv_iterate ( fdb_kvdb_t db , fdb_kv_iterator_t itr )";"fdb_kv_iterator_t fdb_kv_iterator_init ( fdb_kvdb_t db , fdb_kv_iterator_t itr )";"void fdb_kv_print ( fdb_kvdb_t db )";"fdb_err_t fdb_kv_set ( fdb_kvdb_t db , const char * key , const char * value )";"fdb_err_t fdb_kv_set_blob ( fdb_kvdb_t db , const char * key , fdb_blob_t blob )";"fdb_err_t fdb_kv_set_default ( fdb_kvdb_t db )";"fdb_blob_t fdb_kv_to_blob ( fdb_kv_t kv , fdb_blob_t blob )";"fdb_err_t fdb_kvdb_check ( fdb_kvdb_t db )";"void fdb_kvdb_control ( fdb_kvdb_t db , int cmd , void * arg )";"fdb_err_t fdb_kvdb_deinit ( fdb_kvdb_t db )";"fdb_err_t fdb_kvdb_init ( fdb_kvdb_t db , const char * name , const char * path , struct fdb_default_kv * default_kv , void * user_data )";"void fdb_tsdb_control ( fdb_tsdb_t db , int cmd , void * arg )";"fdb_err_t fdb_tsdb_deinit ( fdb_tsdb_t db )";"fdb_err_t fdb_tsdb_init ( fdb_tsdb_t db , const char * name , const char * path , fdb_get_time get_time , size_t max_len , void * user_data )";"fdb_err_t fdb_tsl_append ( fdb_tsdb_t db , fdb_blob_t blob )";"fdb_err_t fdb_tsl_append_with_ts ( fdb_tsdb_t db , fdb_blob_t blob , fdb_time_t timestamp )";"typedef bool ( * fdb_tsl_cb ) ( fdb_tsl_t tsl , void * arg )")
+        @: s1 ("void fdb_tsl_clean ( fdb_tsdb_t db )";"void fdb_tsl_iter ( fdb_tsdb_t db , fdb_tsl_cb cb , void * cb_arg )";"void fdb_tsl_iter_by_time ( fdb_tsdb_t db , fdb_time_t from , fdb_time_t to , fdb_tsl_cb cb , void * cb_arg )";"void fdb_tsl_iter_reverse ( fdb_tsdb_t db , fdb_tsl_cb cb , void * cb_arg )";"size_t fdb_tsl_max_blob_count ( fdb_tsdb_t db )";"size_t fdb_tsl_query_count ( fdb_tsdb_t db , fdb_time_t from , fdb_time_t to , fdb_tsl_status_t status )";"fdb_err_t fdb_tsl_set_status ( fdb_tsdb_t db , fdb_tsl_t tsl , fdb_tsl_status_t status )";"fdb_blob_t fdb_tsl_to_blob ( fdb_tsl_t tsl , fdb_blob_t blob )";"typedef void ( * lmx_fdb_callback ) ( fdb_db_t db )";"static inline void lmx_fdb_set_callbacks ( fdb_db_t db , lmx_fdb_callback lock , lmx_fdb_callback unlock )";"void ( * lock ) ( fdb_db_t db )";"void ( * unlock ) ( fdb_db_t db )")
+    Types:
+        @: t0 ("fdb_blob_t";"const void *";"size_t";"fdb_db_t";"uint32_t";"fdb_time_t";"fdb_kvdb_t";"const char *";"fdb_err_t";"char *";"fdb_kv_t";"fdb_kv_iterator_t";"bool";"void";"int";"void *";"struct fdb_default_kv *";"fdb_tsdb_t";"fdb_get_time";"fdb_tsl_t";"fdb_tsl_cb";"fdb_tsl_status_t";"lmx_fdb_callback")
+    Sources:
+        @: r0 ("third_party/lmx_c99_compact/vendor/flashdb/inc/fdb_def.h";"third_party/lmx_c99_compact/vendor/flashdb/inc/flashdb.h";"third_party/lmx_c99_compact/extensions/storage_extra/config/lmx_flashdb_callbacks.h")
+    Lists:
+        @: l0 (("ifndef _FDB_DEF_H_";"ifdef FDB_USING_NATIVE_ASSERT");("Function-like macro has no independent C symbol; role: runtime_operation.");("ifndef _FDB_DEF_H_";"else";"ifndef FDB_ASSERT");("LMX::flashdb");("ifndef _FDB_DEF_H_";"ifdef FDB_DEBUG_ENABLE");("ifndef _FDB_DEF_H_";"else");("Function-like macro has no independent C symbol; role: declaration_annotation.");("ifndef _FDB_DEF_H_");("ifndef _FDB_DEF_H_";"ifndef FDB_PRINT");("ifndef _FLASHDB_H_");();("Callback type/slot, not an exported callable.");("Callback typedef parameter(s): fdb_get_time. Use an actor-owned trampoline/lifetime contract.");("Callback typedef parameter(s): fdb_tsl_cb. Use an actor-owned trampoline/lifetime contract.");("ifndef LMX_FLASHDB_CALLBACKS_H");("Callback typedef parameter(s): lmx_fdb_callback. Use an actor-owned trampoline/lifetime contract."))
+    Properties:
+        @: x0 (();((0;0);(1;1);(2;2));((3;3);(4;4));((5;5);(6;6);(7;7));((5;8);(6;6);(7;7));((5;9);(6;6);(7;7));((5;10);(6;6);(7;7));((5;11);(6;6);(7;7));((5;12);(6;6);(7;7));((5;13);(6;6);(7;7));((7;14));((7;15));((8;16));((8;17));((8;18));((9;19);(7;20)))
+    Parameters:
+        @: p0 (("EXPR";-1;0;2;"EXPR";0;0);("...";-1;0;2;"...";7;0);("blob";0;535;1;"";0;0);("value_buf";1;567;1;"";5;0);("buf_len";2;535;1;"";3;0);("db";3;535;1;"";0;0);("crc";4;535;1;"";13;0);("buf";1;567;1;"";5;0);("size";2;535;1;"";3;0);("db";6;535;1;"";0;0);("key";7;567;1;"";6;0);("kv";10;535;1;"";0;0);("itr";11;535;1;"";0;0);("value";7;567;1;"";6;0);("cmd";14;535;1;"";1;0);("arg";15;567;1;"";5;0);("name";7;567;1;"";6;0);("path";7;567;1;"";6;0);("default_kv";16;567;1;"";2;0);("user_data";15;567;1;"";5;0);("db";17;535;1;"";0;0);("get_time";18;695;1;"";4;12);("max_len";2;535;1;"";3;0);("timestamp";5;535;1;"";0;0);("tsl";19;535;1;"";0;0);("cb";20;695;1;"";4;13);("cb_arg";15;567;1;"";5;0);("from";5;535;1;"";0;0);("to";5;535;1;"";0;0);("status";21;535;1;"";0;0);("lock";22;695;1;"";4;14);("unlock";22;695;1;"";4;14))
+    Origins:
+        @: o0 (("balanced_declarator_scan";"declared_source_profile_not_link_checked";1;1;0;1);("balanced_declarator_scan";"declared_source_profile_not_link_checked";0;6;0;1);("balanced_declarator_scan";"declared_source_profile_not_link_checked";0;10;0;1);("balanced_declarator_scan";"callback_contract";0;11;0;1);("balanced_declarator_scan";"declared_source_profile_not_link_checked";0;12;0;1);("balanced_declarator_scan";"declared_source_profile_not_link_checked";0;13;0;1);("balanced_declarator_scan";"declared_source_profile_not_link_checked";0;15;1;1))
+    Variants:
+        @: d0 (((0;-1;(0));0;78;2;0;1);((1;-1;(1));0;69;5;1;1))
+    Profiles:
+        @: f0 (("function_macro";"fdb_def.h";3;"typed_macro_shim";0;0;0;0;0);("function";"flashdb.h";3;"typed_L2_shim_then_L3_wrapper";1;1;2;1;0);("callback";"fdb_def.h";3;"callback_contract_and_actor_trampoline";0;0;0;0;0);("callback";"lmx_flashdb_callbacks.h";3;"callback_contract_and_actor_trampoline";0;0;0;0;0);("static_inline";"lmx_flashdb_callbacks.h";3;"addressable_C_shim";1;1;2;1;0))
+    Placements:
+        @: g0 (("db\\flash";"Resource";2))
+    Entries:
+        @: capi_53bcd0b9fc355642 ("FDB_ASSERT";(0;-1;(0));0;75;0;0;0;(-1;0);0;3)
+        @: capi_2fe97ad25b96acb0 ("FDB_DEBUG";(1;-1;(1));0;67;4;0;0;(-1;1);0;4)
+        @: capi_0374295e913bd9b0 ("FDB_INFO";(2;-1;(1));0;72;7;0;0;(-1);0;5)
+        @: capi_dbff958acd1b6976 ("FDB_LOG_PREFIX";(3;-1;());0;65;7;0;0;(-1);0;6)
+        @: capi_3e254ea0c8cb4cf4 ("FDB_LOG_PREFIX1";(4;-1;());0;63;7;0;0;(-1);0;7)
+        @: capi_c51f7ea559b2073d ("FDB_LOG_PREFIX2";(5;-1;());0;64;7;0;0;(-1);0;8)
+        @: capi_481a286df4b2d479 ("FDB_PRINT";(6;-1;(1));0;61;8;0;0;(-1);0;9)
+        @: capi_4a16a46d0f1341e9 ("fdb_blob_make";(7;0;(2;3;4));1;45;9;2;1;(-1);0;10)
+        @: capi_3d736e02188a006b ("fdb_blob_read";(8;2;(5;2));1;46;9;2;1;(-1);0;10)
+        @: capi_53cb14645e095a52 ("fdb_calc_crc32";(9;4;(6;7;8));1;74;9;2;1;(-1);0;10)
+        @: capi_a87c187dc0f8b242 ("fdb_get_time";(10;5;());0;112;7;3;2;(-1);0;11)
+        @: capi_98e496e51cb69bb3 ("fdb_kv_del";(11;8;(9;10));1;53;9;2;1;(-1);0;10)
+        @: capi_3fc2f12d82f1df10 ("fdb_kv_get";(12;9;(9;10));1;50;9;2;1;(-1);0;10)
+        @: capi_1b5fc2e51410825f ("fdb_kv_get_blob";(13;2;(9;10;2));1;52;9;2;1;(-1);0;10)
+        @: capi_35b1e5bc84f6024a ("fdb_kv_get_obj";(14;10;(9;10;11));1;54;9;2;1;(-1);0;10)
+        @: capi_2ad149b4b16779bc ("fdb_kv_iterate";(15;12;(9;12));1;59;9;2;1;(-1);0;10)
+        @: capi_815edbea5ceb9f87 ("fdb_kv_iterator_init";(16;11;(9;12));1;58;9;2;1;(-1);0;10)
+        @: capi_d2bff7ccd8c25c97 ("fdb_kv_print";(17;13;(9));1;57;9;2;1;(-1);0;10)
+        @: capi_06c2c98d9b511577 ("fdb_kv_set";(18;8;(9;10;13));1;49;9;2;1;(-1);0;10)
+        @: capi_70bb472b684b63b9 ("fdb_kv_set_blob";(19;8;(9;10;2));1;51;9;2;1;(-1);0;10)
+        @: capi_628fca2eb651acab ("fdb_kv_set_default";(20;8;(9));1;56;9;2;1;(-1);0;10)
+        @: capi_c205c0f8b5997740 ("fdb_kv_to_blob";(21;0;(11;2));1;55;9;2;1;(-1);0;10)
+        @: capi_779431ee1686438b ("fdb_kvdb_check";(22;8;(9));1;37;9;2;1;(-1);0;10)
+        @: capi_a5f7f34f4267829a ("fdb_kvdb_control";(23;13;(9;14;15));1;36;9;2;1;(-1);0;10)
+        @: capi_6806010c766cf349 ("fdb_kvdb_deinit";(24;8;(9));1;38;9;2;1;(-1);0;10)
+        @: capi_8a77e48d180e5fbd ("fdb_kvdb_init";(25;8;(9;16;17;18;19));1;34;9;2;1;(-1);0;10)
+        @: capi_53d690312f4cd225 ("fdb_tsdb_control";(26;13;(20;14;15));1;41;9;2;1;(-1);0;10)
+        @: capi_f2202867f1de65bf ("fdb_tsdb_deinit";(27;8;(20));1;42;9;2;1;(-1);0;10)
+        @: capi_ca803d6e3eef0857 ("fdb_tsdb_init";(28;8;(20;16;17;21;22;19));1;39;9;4;1;(-1);0;10)
+        @: capi_623cac68d2242bb3 ("fdb_tsl_append";(29;8;(20;2));1;62;9;2;1;(-1);0;10)
+        @: capi_6bd71d10c64285be ("fdb_tsl_append_with_ts";(30;8;(20;2;23));1;63;9;2;1;(-1);0;10)
+        @: capi_aaa032b8b4304757 ("fdb_tsl_cb";(31;12;(24;15));0;197;7;3;2;(-1);0;11)
+        @: capi_ab0d367b26e8894d ("fdb_tsl_clean";(32;13;(20));1;70;9;2;1;(-1);0;10)
+        @: capi_6895792beda91572 ("fdb_tsl_iter";(33;13;(20;25;26));1;64;9;5;1;(-1);0;10)
+        @: capi_7079b27bf2efbd99 ("fdb_tsl_iter_by_time";(34;13;(20;27;28;25;26));1;66;9;5;1;(-1);0;10)
+        @: capi_6eb072a33ab15218 ("fdb_tsl_iter_reverse";(35;13;(20;25;26));1;65;9;5;1;(-1);0;10)
+        @: capi_f546146fef060058 ("fdb_tsl_max_blob_count";(36;2;(20));1;68;9;2;1;(-1);0;10)
+        @: capi_bd98824c7c76f034 ("fdb_tsl_query_count";(37;2;(20;27;28;29));1;67;9;2;1;(-1);0;10)
+        @: capi_42139e95233cfaf0 ("fdb_tsl_set_status";(38;8;(20;24;29));1;69;9;2;1;(-1);0;10)
+        @: capi_b78d80e43a83c1f6 ("fdb_tsl_to_blob";(39;0;(24;2));1;71;9;2;1;(-1);0;10)
+        @: capi_13442405e4e06342 ("lmx_fdb_callback";(40;13;(5));2;5;14;3;3;(-1);0;11)
+        @: capi_7623fd8e8d7d9abc ("lmx_fdb_set_callbacks";(41;13;(5;30;31));2;7;14;6;4;(-1);0;15)
+        @: capi_9b1152b018a1bf90 ("lock";(42;13;(5));0;295;7;3;2;(-1);0;11)
+        @: capi_d34a3ef07a1b5df4 ("unlock";(43;13;(5));0;296;7;3;2;(-1);0;11)

@@ -1,0 +1,13 @@
+# ICO data begins with a DIB, without the 14-byte BMP file header.
+set(_ns_bmp_view "${CMAKE_CURRENT_BINARY_DIR}/c99-view/libnsbmp.c")
+file(SHA256 "${LMX_NETSURF_VENDOR_DIR}/libnsbmp/src/libnsbmp.c" actual)
+if(NOT actual STREQUAL "9ca745b40b54355403506bd4e14355cce528761124d6c6f708fb47ba71e9b850")
+  message(FATAL_ERROR "NetSurf BMP input changed; review DIB bounds adjustment")
+endif()
+file(READ "${LMX_NETSURF_VENDOR_DIR}/libnsbmp/src/libnsbmp.c" text)
+string(REPLACE "        uint32_t header_size;" "        uint32_t header_size;\n        const uint32_t file_header_size = bmp->ico ? 0 : BMP_FILE_HEADER_SIZE;" text "${text}")
+string(REPLACE "(BMP_FILE_HEADER_SIZE + BITMAPCOREHEADER)" "(file_header_size + BITMAPCOREHEADER)" text "${text}")
+string(REPLACE "(bmp->buffer_size - BMP_FILE_HEADER_SIZE)" "(bmp->buffer_size - file_header_size)" text "${text}")
+string(REPLACE "(14 + header_size)" "(file_header_size + header_size)" text "${text}")
+string(REPLACE "(14 + header_size + ((uint64_t)4 * bmp->colours))" "(file_header_size + header_size + ((uint64_t)4 * bmp->colours))" text "${text}")
+file(WRITE "${_ns_bmp_view}" "${text}")

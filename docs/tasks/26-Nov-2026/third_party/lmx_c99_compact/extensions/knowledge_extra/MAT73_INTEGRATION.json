@@ -1,0 +1,28 @@
+{
+  "date": "2026-11-26",
+  "component": "knowledge_extra:matio",
+  "version": "1.6.0",
+  "change": "MAT73 and HAVE_HDF5 enabled when LMX::hdf5 exists; MAT4/MAT5 default remains; HDF5 target and build dependency reused",
+  "files_changed": [
+    "extensions/knowledge_extra/Formats.cmake",
+    "extensions/knowledge_extra/tests/matio73.c"
+  ],
+  "unchanged_existing_test": "extensions/knowledge_extra/tests/matio.c",
+  "compiler": "GCC 14.2.0, -std=c99 -pedantic-errors",
+  "test_provider": "HDF5 2.3.0 parallel core from verified trimmed prefix; existing compact zlib1.4 built from baseline vendor source",
+  "ctest": {
+    "knowledge_extra.matio": "PASS: MAT4, plain MAT5, zlib MAT5, struct and missing variable",
+    "knowledge_extra.matio73": "PASS: dense, sparse CSC, complex split storage, struct fields with HDF object references, compressed write, close/reopen, exact data comparisons, physical HDF5 signature at byte512 and H5Fis_hdf5"
+  },
+  "static_archive_bytes": 527166,
+  "archive_size_scope": "Own matio objects only; HDF5/zlib/MPI dependencies separate",
+  "internal_symbol_rename": {
+    "lmx_matio_Add_exported": true,
+    "unprefixed_Add_exported": false
+  },
+  "limitations": [
+    "No MATLAB application interoperability run; files read and written with matio and physical HDF5 identified",
+    "HDF5 calls use supported serial-access discipline; no unsupported HDF5 thread-safe+HL override",
+    "Optional absence of LMX::hdf5 retains prior MAT4/MAT5-only profile"
+  ]
+}

@@ -884,21 +884,74 @@ fn: lm_graph_emit_record_diagnosis (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: expre
     ---
     return: lm_graph_emit_structural_diagnosis(g, scope, expression)
 
+# A written anonymous CODE operand has the source occurrence as its target. Start with the no-result R0
+# statement whose body only performs native assignments of literal integers to named graph fields.
+fn: lm_graph_literal_call_target (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: expression) c.Lmx@
+    c.LmxGraphState@: state (cast: (c.LmxGraphState@) c.lmx_graph_state())
+    char@: formal 0
+    c.Lmx@: actual 0
+    @: operand void 0
+    c.Lmx@: body 0
+    c.Lmx@: line 0
+    c.Lmx@: path 0
+    size_t: i 0U
+    if: scope\parent != 0 || expression\parent != scope || lm_graph_level2(g, (cast: (@) scope)) != 0 || c.lmx_graph_count(expression) != 1U
+        return: 0
+    if: c.lmx_graph_name_of(g, (cast: (@) expression)) != state\w_call
+        return: 0
+    if: c.lmx_graph_launch_formals(g, state\w_call, expression, @ formal) != 0 || formal != state\w_code
+        return: 0
+    actual := (cast: (c.Lmx@) c.lmx_graph_get_in(g, expression, 0U))
+    if: c.lmx_graph_kind(g, (cast: (@) actual)) != 4 || c.lmx_graph_count(actual) != 3U
+        return: 0
+    if: actual\parent != expression || c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, actual, 0U)) != state\w_assign
+        return: 0
+    operand := c.lmx_graph_get_in(g, actual, 2U)
+    if: c.lmx_graph_written_group(g, operand) = 0
+        return: 0
+    body := (cast: (c.Lmx@) operand)
+    if: body\parent != actual || c.lmx_graph_count(body) = 0U
+        return: 0
+    while: i < c.lmx_graph_count(body)
+        line := (cast: (c.Lmx@) c.lmx_graph_get_in(g, body, i))
+        if: c.lmx_graph_kind(g, (cast: (@) line)) != 4 || c.lmx_graph_name_of(g, (cast: (@) line)) != 0 || c.lmx_graph_count(line) != 3U
+            return: 0
+        if: c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, line, 0U)) != state\w_assign || c.lmx_graph_kind(g, c.lmx_graph_get_in(g, line, 2U)) != 1
+            return: 0
+        path := (cast: (c.Lmx@) c.lmx_graph_get_in(g, line, 1U))
+        if: c.lmx_graph_kind(g, (cast: (@) path)) != 4 || c.lmx_graph_name_of(g, (cast: (@) path)) != 0 || c.lmx_graph_count(path) != 3U
+            return: 0
+        if: c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, path, 0U)) = 0 || c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, path, 1U)) != state\w_deref || c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, path, 2U)) = 0
+            return: 0
+        i := i + 1U
+    ---
+    return: body
+end: lm_graph_literal_call_target
+
 # call in native code (the book #call-receivers, #structural-call; step 21.7 K2, S3): the whole record is read when the
 # code runs by the one evaluator of the interpreter (lmx_graph_eval_explicit_call) -- the choice of the form and of the
 # reading, the operands in written order, the common binder and the launch of the code over its actual parent --, as
 # the interpreter reads it: no form is repeated here. The consumed call enters through lmx_graph_eval_record
 # (lm_graph_emit_evaluated).
-fn: lm_graph_emit_explicit_call (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: scope; c.Lmx@: expression; int@: temps; char@@: decl_names; size_t@: decl_slots; size_t: decl_n) int
+fn: lm_graph_emit_explicit_call (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: scope; c.Lmx@: expression; int@: temps; size_t: index) int
     c.LmxGraphEmitScratch: leave_storage
     char@: leave_failure (cast: (char@) leave_storage\failure)
     int: status 0
+    c.Lmx@: direct 0
     # The readings are diagnosed before any code of the call (the author's clarification of 2026-11-26).
     status := lm_graph_emit_call_diagnosis(g, scope, expression)
     if: status != 0
         return: status
     ---
     lm_graph_emit_leave_text(leave_failure, temps[1], 1)
+    if: c.lmx_graph_get_in(g, scope, index) = (cast: (@) expression)
+        direct := lm_graph_literal_call_target(g, scope, expression)
+    if: direct != 0
+        # The prepared target belongs to this written occurrence. Keep its actual slot even if the graph shares
+        # it with another occurrence; the native symbol is chosen here, not by reading the callee at run time.
+        c.fprintf(f, "        if: lm_graph_literal%zu(lmx_call_arena, (cast: (@: Lmx) lmx_graph_get_in(l2_g, (cast: (@: Lmx) lmx_graph_get_in(l2_g, (cast: (@: Lmx) lmx_graph_get_in(l2_g, lmx_call_code, %zuU)), 0U)), 2U))) != 0\n            %s\n", index, index, leave_failure)
+        return: 0
+    ---
     c.fputs("        if: lmx_graph_eval_explicit_call(l2_g, lmx_call_code, (cast: (@: Lmx) ", f)
     status := lm_graph_emit_address(g, f, scope, expression)
     if: status != 0
@@ -2036,7 +2089,7 @@ fn: lm_graph_emit_block (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: code; c.Lmx@: body;
             c.fprintf(f, "        if: lmx_graph_result_receive(l2_g, lmx_call_code, @ l2_cv%d) != 0\n            %s\n        c.memcpy(result, @ l2_cv%d, c.sizeof(LmxWalkValue))\n        %s\n", result, leave_failure, result, leave_return)
             return: status
         if: head = state\w_call
-            status := lm_graph_emit_explicit_call(g, f, code, statement, temps, 0, 0, 0U)
+            status := lm_graph_emit_explicit_call(g, f, code, statement, temps, i)
             i := i + 1U
             continue
         # fncall written as a statement: the launch runs and its result is not used.
@@ -2254,6 +2307,34 @@ fn: lm_graph_emit_methods (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: scope; c.Lmx@@: m
     return: status
 end: lm_graph_emit_methods
 
+# Emit each selected written body in its own native function. It opens the activation it needs to access its
+# lexical graph; the caller has already selected the occurrence and passes no universal values or call descriptor.
+fn: lm_graph_emit_literal_bodies (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: code) int
+    c.LmxGraphEmitScratch: scratch
+    int@: temps (cast: (int@) scratch\control)
+    c.Lmx@: expression 0
+    c.Lmx@: body 0
+    size_t: i 0U
+    int: status 0
+    while: i < c.lmx_graph_count(code) && status = 0
+        expression := (cast: (c.Lmx@) c.lmx_graph_get_in(g, code, i))
+        if: c.lmx_graph_kind(g, (cast: (@) expression)) = 4
+            body := lm_graph_literal_call_target(g, code, expression)
+            if: body != 0
+                temps[0] := 0
+                temps[1] := -1
+                temps[2] := -1
+                c.fprintf(f, "external:\n    fn: lm_graph_literal_body%zu (@: LmxGraph l2_g; @: Lmx lmx_call_code) int\n", i)
+                status := lm_graph_emit_block(g, f, body, body, 0U, c.lmx_graph_count(body), 0, -1, -1, -1, temps)
+                c.fprintf(f, "        return: 0\n    end: lm_graph_literal_body%zu\nend: external\n\n", i)
+                c.fprintf(f, "external:\n    fn: lm_graph_literal%zu (@: LmxArena arena; @: Lmx code) int\n        @: LmxGraph g arena\\graph_metadata\n        LmxActivation: activation\n        LmxGraphFrame: frame\n        int: status 0\n        if: g = 0 || lmx_graph_kind(g, code) != 4\n            return: 1\n        status: lmx_activation_push(arena, @ activation, 2, code, 0, 0, 0U, 0)\n        if: status != 0\n            return: status\n        status: lmx_graph_work_open_data(g, code, code\\parent, @ frame)\n        if: status = 0\n            status: lm_graph_literal_body%zu(g, code)\n            status: lmx_graph_work_finish(g, @ frame, status)\n        ---\n        lmx_activation_pop(arena, @ activation)\n        return: status\n    end: lm_graph_literal%zu\nend: external\n\n", i, i, i)
+            ---
+        ---
+        i := i + 1U
+    ---
+    return: status
+end: lm_graph_emit_literal_bodies
+
 # The entry of an image (step 21.6, decision R117): the function lm_graph_entry of the generated program does what
 # `run` does with the entry (lm_graph_call_entry). Every segment of the path is read from the one before it as a call
 # reads the head of a call (lmx_graph_application_head, the first from the code of the file); the body found is
@@ -2356,6 +2437,17 @@ fn: lm_graph_emit_program (c.LmxGraph@: g; c.Lmx@: root; const: (char@: out_path
             return: r
         ---
     ---
+    if: forced = 0 && entry = 0
+        root_context := lm_graph_context_walk(g, code, (cast: (@) code))
+    if: forced = 0 && entry = 0 && code\parent = 0 && root_context = 1
+        r := lm_graph_emit_literal_bodies(g, f, code)
+        if: r != 0
+            c.fclose(f)
+            c.free((cast: (@) methods))
+            c.lmx_graph_space_close(g, opened)
+            return: r
+        ---
+    ---
     if: code != root
         call_text := "lm_graph_file(owner, refs, nargs, dest, out, arena, unit, input, result)"
     if: entry != 0
@@ -2376,7 +2468,6 @@ fn: lm_graph_emit_program (c.LmxGraph@: g; c.Lmx@: root; const: (char@: out_path
         if: forced = 0
             # The code of the file is a callable too: with a receiving context not known at translation it runs by
             # the walker as a whole, as in the forced program (lm_graph_native_methods).
-            root_context := lm_graph_context_walk(g, code, (cast: (@) code))
             if: root_context = 0
                 r := 2
             if: root_context = 1

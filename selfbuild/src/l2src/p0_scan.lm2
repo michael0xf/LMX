@@ -35,11 +35,14 @@ fn: lm_p0_scan_registry_compact_atom_piece (const: (char@: text); size_t: end_in
     # The token `::` (Р143, the book #prepared-operands): one token, never `:` then `:`.
     if: text[start] = 58 && text[start + 1U] = 58
         best := 2U
-    # The depth-one operators `.:` and `.=`: one token each (the grammar's operators section). A trailing `:` or `=`
-    # keeps its old reading (`.::`, `.:=`, `.==`), and the dot before a digit (`.5`) is not an operator.
+    # The depth-one atom `.:` is one token (the grammar's operators section); a trailing `:` keeps its old reading
+    # (`.::`, `.:=`). The other dotted operators are decorators of the parser (lm_p0_depth_decorator_at).
     if: text[start] = 46 && text[start + 1U] = 58 && (start + 2U >= end_index || (text[start + 2U] != 58 && text[start + 2U] != 61))
         best := 2U
-    if: text[start] = 46 && text[start + 1U] = 61 && (start + 2U >= end_index || text[start + 2U] != 61)
+    # The power `**` and its assignment `**=` (LMX_grammar section 21): one token each, the longest match first.
+    if: text[start] = 42 && text[start + 1U] = 42 && start + 2U < end_index && text[start + 2U] = 61
+        return: start + 3U
+    if: text[start] = 42 && text[start + 1U] = 42
         best := 2U
     if: best > 0U
         return: start + best
@@ -104,7 +107,7 @@ fn: lm_p0_scan_number_token (const: (char@: text); size_t: end_index; size_t: st
     while: i < end_index && c.lm_p0_is_decimal_digit(text[i])
         saw_digit := 1
         i := i + 1U
-    if: i < end_index && text[i] = '.'
+    if: i < end_index && text[i] = '.' && (i + 1U >= end_index || text[i + 1U] != '(')
         i := i + 1U
         while: i < end_index && c.lm_p0_is_decimal_digit(text[i])
             saw_digit := 1

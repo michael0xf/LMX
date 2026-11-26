@@ -707,6 +707,16 @@ fn: lm_p0_skip_python_string_unchecked (const: (char@: text); size_t: byte_count
     return: limit_index
 end: lm_p0_skip_python_string_unchecked
 
+# A dot of the leading zone is a level, except the immediate `.(`: it starts an operator/function modifier and changes no
+# level (LMX_grammar section 15). 1 when the dot at index, before end_index, is a level dot.
+fn: lm_p0_level_dot_at (const: (char@: text); size_t: end_index; size_t: index) int
+    if: index >= end_index || text[index] != '.'
+        return: 0
+    if: index + 1U < end_index && text[index + 1U] = '('
+        return: 0
+    return: 1
+end: lm_p0_level_dot_at
+
 # Original: parser.lm1:690 lm_p0_scan_layout_prefix
 sub: lm_p0_scan_layout_prefix (const: (char@: source); size_t: byte_count; size_t: start; size_t@: out_offset; size_t@: out_indent_column; size_t@: out_dot_level)
     size_t: p
@@ -714,7 +724,7 @@ sub: lm_p0_scan_layout_prefix (const: (char@: source); size_t: byte_count; size_
     size_t: dot_level
     lm_p0_scan_indent_column(source, start, byte_count, @ p, @ indent_column)
     dot_level := 0U
-    while: p < byte_count && source[p] = '.'
+    while: lm_p0_level_dot_at(source, byte_count, p) != 0
         dot_level := dot_level + 1U
         p := p + 1U
         while: p < byte_count && c.lm_p0_is_horizontal_space(source[p]) != 0
@@ -2266,7 +2276,7 @@ fn: lm_p0_source_level_after_line_break (c.LmP0Document@: document; c.LmP0Indent
         p := p + 1U
     ---
     dot_level := 0U
-    while: ((p < byte_count) && (text[p] = '.'))
+    while: lm_p0_level_dot_at(text, byte_count, p) != 0
         dot_level := dot_level + 1U
         p := p + 1U
         while: ((p < byte_count) && c.lm_p0_is_horizontal_space(text[p]))
@@ -2587,16 +2597,141 @@ fn: lm_p0_find_colon (c.LmP0Document@: document; const: (char@: text); size_t: b
     return: 0
 end: lm_p0_find_colon
 
-# A depth-one operator `.:` or `.=` starts at index: the cheap filter is a dot followed by `:` or `=`, and the boundary
-# itself is the one of the compact registry (lm_p0_scan_compact_atom_piece, p0_scan.lm2), which reads a two-byte token
-# only where it is one. 1 when that token has length 2.
+# The atom `.:` at index (the assignment family as its own token, LMX_grammar section 21): two bytes; a trailing `:` or `=`
+# keeps its old reading. 1 when that token starts at index. The other dotted operators are decorators (below).
 fn: lm_p0_dot_operator_at (const: (char@: text); size_t: byte_count; size_t: index) int
     if: index + 1U >= byte_count || text[index] != '.'
         return: 0
-    if: text[index + 1U] != ':' && text[index + 1U] != '='
+    if: text[index + 1U] != ':'
         return: 0
     return: (cast: (int) (c.lm_p0_scan_compact_atom_piece(text, byte_count, index, 0) = index + 2U))
 end: lm_p0_dot_operator_at
+
+# The bytes that start an operator designator after a decorator's dot (`.+`, `./`, `.**`, `.=`, `.<<`).
+fn: lm_p0_is_depth_operator_byte (char: value) int
+    return: value = '+' || value = '-' || value = '*' || value = '/' || value = '%' || value = '=' || value = '!' || value = '<' || value = '>' || value = '&' || value = '|' || value = '^' || value = '~'
+end: lm_p0_is_depth_operator_byte
+
+# A depth decorator at index: the dot of `.(E)op` or of `.op` (LMX_grammar section 15, OPERATOR_DEPTH.en.md). The immediate `.(`
+# always decorates. The atom `.:` is its own token (section 30 does not introduce `.:=`); the positive pair is `.::`, which decorates
+# the designator `::`. Another dot decorates before a backquoted exact name, a word byte that does not start a number, or an operator
+# byte. 1 or 0.
+fn: lm_p0_depth_decorator_at (const: (char@: text); size_t: byte_count; size_t: index) int
+    char: next 0
+    if: index + 1U >= byte_count || text[index] != '.'
+        return: 0
+    next := text[index + 1U]
+    if: next = '('
+        return: 1
+    if: next = ':'
+        if: index + 2U < byte_count && text[index + 2U] = ':'
+            return: 1
+        return: 0
+    if: next = 96 || lm_p0_is_word_start_byte(next) != 0
+        return: 1
+    return: lm_p0_is_depth_operator_byte(next)
+end: lm_p0_depth_decorator_at
+
+# A word byte that can start a designator name or a path segment: not a dot, and not a digit (a number starts with a digit).
+fn: lm_p0_is_word_start_byte (char: value) int
+    return: value != '.' && lm_p0_is_word_byte(value) != 0 && (value < '0' || value > '9')
+end: lm_p0_is_word_start_byte
+
+# 1 when the dot at index ends a piece of the head span from start. The compact piece scanner reads the pieces only up to
+# index + 1, so a number token that runs over the dot (`2.` in `a+2.=3`) and a surface atom that runs over it (`c.FILE`) keep
+# the dot, while the number `1.2` before `.foo` and the name `x2` before `.b` end at it.
+fn: lm_p0_dot_ends_piece (const: (char@: text); size_t: byte_count; size_t: start; size_t: index) int
+    size_t: pos
+    size_t: piece_end
+    int: allow_signed
+    pos := start
+    allow_signed := 1
+    while: pos < index
+        # A protected surface atom (`c.FILE`) is read on the whole text: its name lies past the dot.
+        if: c.lm_p0_starts_c_surface_atom(text, byte_count, pos) != 0
+            piece_end := c.lm_p0_scan_c_surface_atom(text, byte_count, pos)
+        else:
+            piece_end := c.lm_p0_scan_compact_atom_piece(text, index + 1U, pos, allow_signed)
+        ---
+        if: piece_end <= pos
+            return: 1
+        if: piece_end > index
+            return: 0
+        if: piece_end = index
+            return: 1
+        pos := piece_end
+        allow_signed := 0
+    ---
+    return: 1
+end: lm_p0_dot_ends_piece
+
+# The stop of a head before a depth decorator at index: always before the immediate `.(`; before another decorator unless
+# the dot is inside a piece of the head (lm_p0_dot_ends_piece). 1 or 0.
+fn: lm_p0_depth_stop_at (const: (char@: text); size_t: byte_count; size_t: start; size_t: index) int
+    if: lm_p0_depth_decorator_at(text, byte_count, index) = 0
+        return: 0
+    if: text[index + 1U] = '('
+        return: 1
+    return: (cast: (int) (lm_p0_dot_ends_piece(text, byte_count, start, index) != 0))
+end: lm_p0_depth_stop_at
+
+# The designator after a decorator's dot, from index: the assignment family `:` or `:=` (canonical `:=`), `::`, or a path
+# of segments joined by backslashes, each a word or a backquoted exact name (`Lib\`operator with spaces\``), or one
+# operator token (the registry's longest match). Nothing usable is refused at its own position (diagnostic 6). 1 or 0.
+fn: lm_p0_depth_designator (c.LmP0Document@: document; const: (char@: text); size_t: byte_count; size_t: index; size_t: line; size_t: column; size_t@: out_end; int@: out_canonical) int
+    size_t: i
+    int: found
+    size_t: diagnostic_line
+    size_t: diagnostic_column
+    found := 0
+    out_canonical[0] := 0
+    out_end[0] := index
+    if: index < byte_count && text[index] = ':'
+        found := 1
+        if: index + 1U < byte_count && text[index + 1U] = ':'
+            out_end[0] := index + 2U
+        else:
+            out_canonical[0] := 1
+            out_end[0] := index + 1U
+        ---
+    ---
+    if: found = 0 && index < byte_count && (text[index] = 96 || lm_p0_is_word_start_byte(text[index]) != 0)
+        i := index
+        if: text[i] = 96
+            if: lm_p0_scan_quoted(document, text, byte_count, @ i, (cast: (char) 96), line, column) = 0
+                return: 0
+            ---
+        else:
+            i := c.lm_p0_scan_compact_atom_piece(text, byte_count, index, 0)
+        ---
+        while: i + 1U < byte_count && text[i] = 92 && (text[i + 1U] = 96 || lm_p0_is_word_start_byte(text[i + 1U]) != 0)
+            if: text[i + 1U] = 96
+                i := i + 1U
+                if: lm_p0_scan_quoted(document, text, byte_count, @ i, (cast: (char) 96), line, column) = 0
+                    return: 0
+                ---
+            else:
+                i := c.lm_p0_scan_compact_atom_piece(text, byte_count, i + 1U, 0)
+            ---
+        ---
+        out_end[0] := i
+        found := 1
+    ---
+    if: found = 0 && index < byte_count && lm_p0_is_depth_operator_byte(text[index]) != 0
+        i := c.lm_p0_scan_compact_atom_piece(text, byte_count, index, 0)
+        if: i > index
+            out_end[0] := i
+            found := 1
+        ---
+    ---
+    if: found = 0
+        lm_p0_position_in_slice(text, byte_count, index, line, column, @ diagnostic_line, @ diagnostic_column)
+        lm_p0_set_diagnostic(document, 6, diagnostic_line, diagnostic_column, "depth decorator without an operation designator")
+        return: 0
+    ---
+    return: 1
+end: lm_p0_depth_designator
+
 
 # A parenthesised counter that directly follows the previous part of a prefix chain -- an empty square (its own trivia
 # allowed) or a pointer series `@` written right before it, with prefix_open = 1 (only prefix constructors precede it) --
@@ -2667,7 +2802,7 @@ fn: lm_p0_scan_head (c.LmP0Document@: document; const: (char@: text); size_t: by
         index[0] := i + 2U
         return: 1
     prefix_open := (cast: (int) (text[i] = '@' || text[i] = '['))
-    while: i < byte_count && c.lm_p0_is_field_space(text[i]) = 0 && c.lm_p0_is_field_separator(text[i]) = 0 && lm_p0_dot_operator_at(text, byte_count, i) = 0 && text[i] != ')' && text[i] != '#' && text[i] != '{' && text[i] != '}' && text[i] != ':'
+    while: i < byte_count && c.lm_p0_is_field_space(text[i]) = 0 && c.lm_p0_is_field_separator(text[i]) = 0 && lm_p0_dot_operator_at(text, byte_count, i) = 0 && lm_p0_depth_stop_at(text, byte_count, start, i) = 0 && text[i] != ')' && text[i] != '#' && text[i] != '{' && text[i] != '}' && text[i] != ':'
         if: text[i] = '('
             if: prefix_open = 0 || (i != square_end && i != pointer_end)
                 break
@@ -2719,6 +2854,8 @@ fn: lm_p0_field_start_looks_explicit_frame (c.LmP0Document@: document; const: (c
     size_t: close_index 0U
     int: quoted_head 0
     if: index >= byte_count
+        return: 0
+    if: lm_p0_depth_decorator_at(text, byte_count, index) != 0
         return: 0
     if: text[i] = '('
         if: lm_p0_find_matching_paren(document, text, byte_count, i, line, column, @ close_index) = 0
@@ -2966,6 +3103,87 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
             start := i
             head_end := i
             p0_node := 0
+            # A depth decorator (`.(E)op`, `.op`): one Frame whose head is the designator (the assignment family `:` is the
+            # canonical `:=`) and whose body is the depth E (LMX_grammar section 15, OPERATOR_DEPTH.en.md). `.op` has no group,
+            # so its body is the Frame's own empty Structure. A multi-line E is a group (lm_p0_parse_group); a single-line E is
+            # the compact frame body on the field stack, resumed at the designator's end (its close index is the last byte of
+            # the designator), while the child's bounds stay inside the real parentheses.
+            if: lm_p0_depth_decorator_at(text, byte_count, i) != 0
+                size_t: depth_close_index
+                size_t: depth_designator_index
+                size_t: depth_designator_end
+                int: depth_canonical
+                int: depth_explicit
+                int: depth_grouped
+                depth_close_index := i
+                depth_designator_index := (i + 1U)
+                depth_explicit := (cast: (int) (text[i + 1U] = '('))
+                depth_grouped := 0
+                if: depth_explicit != 0
+                    if: (lm_p0_find_matching_paren(document, text, byte_count, (i + 1U), line, column, @ depth_close_index) = 0)
+                        return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                    depth_designator_index := (depth_close_index + 1U)
+                ---
+                if: (lm_p0_depth_designator(document, text, byte_count, depth_designator_index, line, column, @ depth_designator_end, @ depth_canonical) = 0)
+                    return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                p0_node := lm_p0_new_node(document, c.LM_P0_NODE_FRAME)
+                if: (p0_node = 0)
+                    return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                p0_node\as\frame\flags := c.LM_P0_FRAME_DEPTH
+                if: depth_canonical != 0
+                    p0_node\as\frame\head\data := ":="
+                    p0_node\as\frame\head\length := 2U
+                else:
+                    p0_node\as\frame\head\data := (text + depth_designator_index)
+                    p0_node\as\frame\head\length := (depth_designator_end - depth_designator_index)
+                ---
+                if: depth_explicit != 0
+                    p0_node\as\frame\flags := (p0_node\as\frame\flags | c.LM_P0_FRAME_INLINE_BODY)
+                ---
+                if: (depth_explicit != 0) && (lm_p0_count_line_breaks(text, (i + 2U), depth_close_index) != 0U)
+                    c.LmP0Structure@: depth_group
+                    if: (lm_p0_parse_group(document, text, byte_count, line, column, (i + 1U), depth_close_index, c.LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS, @ depth_group) = 0)
+                        return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                    p0_node\as\frame\body := depth_group
+                    depth_grouped := 1
+                ---
+                if: (depth_explicit != 0) && (depth_grouped = 0)
+                    child_indent_stack := lm_p0_indent_stack_new_empty()
+                    if: (child_indent_stack = 0)
+                        lm_p0_set_diagnostic(document, 1, line, column, "out of memory while creating indentation stack")
+                        return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                    if: (lm_p0_field_parse_loop_push(document, parse_stack, indent_stack, indent_stack_owned, structure, text, byte_count, line, column, offset, flags, short_source_level, layout_base_level, i, current_source_level, allow_empty_fields, expect_field, headless_group_after_separator, c.LM_P0_FIELD_PARSE_LOOP_COMPACT_FRAME_BODY, p0_node, start, (depth_designator_end - 1U)) = 0)
+                        lm_p0_indent_stack_delete(child_indent_stack)
+                        return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                    structure := p0_node\as\frame\body
+                    text := ((text + (i + 1U)) + 1U)
+                    byte_count := ((depth_close_index - (i + 1U)) - 1U)
+                    column := ((column + (i + 1U)) + 1U)
+                    offset := ((offset + (i + 1U)) + 1U)
+                    flags := (c.LM_P0_FIELD_PARSE_REQUIRE_BOUNDED_SOURCE_LEVEL | c.LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS)
+                    short_source_level := (current_source_level + 1U)
+                    layout_base_level := (current_source_level + 1U)
+                    current_source_level := (current_source_level + 1U)
+                    i := 0U
+                    allow_empty_fields := 1
+                    expect_field := 1
+                    headless_group_after_separator := 0
+                    indent_stack := child_indent_stack
+                    indent_stack_owned := 1
+                    restart_parse_context := 1
+                    break
+                ---
+                p0_node\span\line := line
+                lm_p0_position_in_slice(text, byte_count, start, line, column, (cast: (size_t@) (@ p0_node\span\line)), (cast: (size_t@) (@ p0_node\span\column)))
+                p0_node\span\offset := (offset + start)
+                p0_node\span\length := (depth_designator_end - start)
+                if: (lm_p0_document_register_lazy_text(document, (cast: (const: char@) p0_node\as\frame\head\data), (cast: (size_t) p0_node\as\frame\head\length), (cast: (const: char@@) (@ p0_node\as\frame\head\data)), (cast: (size_t) p0_node\span\line), (cast: (size_t) p0_node\span\column)) = 0)
+                    return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                i := depth_designator_end
+                if: (lm_p0_parse_append_node_and_update(document, structure, p0_node, flags, allow_empty_fields, @ expect_field, @ headless_group_after_separator) = 0)
+                    return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                continue
+            ---
             if: (text[i] = '(')
                 if: (lm_p0_find_matching_paren(document, text, byte_count, i, line, column, @ close_index) = 0)
                     return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
@@ -3190,7 +3408,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                         restart_parse_context := 1
                         break
                     else:
-                        if: (((i < byte_count) && (text[i] = '(')) && (head_end > start))
+                        if: (((i < byte_count) && (text[i] = '(')) && (head_end > start) && (lm_p0_dot_operator_at(text, byte_count, start) = 0))
                             # Operators before a compact call remain fields;
                             # the complete receiver path owns the argument list.
                             # Index expressions are part of that path, so their
@@ -4403,9 +4621,9 @@ fn: lm_p0_disabled_scan_next_event (c.LmP0Document@: document; c.LmP0IndentStack
         if: (((((line[0] = 1U) && (raw_length >= 3U)) && ((cast: (c.uchar) source[p]) = 0xEFU)) && ((cast: (c.uchar) source[(p + 1U)]) = 0xBBU)) && ((cast: (c.uchar) source[(p + 2U)]) = 0xBFU))
             p := p + 3U
         ---
-        if: ((p < (line_start + raw_length)) && (source[p] = '.'))
+        if: lm_p0_level_dot_at(source, line_start + raw_length, p) != 0
             dotted_level := 1
-            while: ((p < (line_start + raw_length)) && (source[p] = '.'))
+            while: lm_p0_level_dot_at(source, line_start + raw_length, p) != 0
                 level := level + 1U
                 p := p + 1U
                 while: ((p < (line_start + raw_length)) && c.lm_p0_is_horizontal_space(source[p]))
@@ -4819,9 +5037,9 @@ fn: lm_p0_parse_stream (c.LmP0Document@: document) int
             mix_prefix_end := (p + prefix_end)
             p := p + prefix_anchor
         ---
-        if: (((group_tail = 0) && (p < (line_start + raw_length))) && (source[p] = '.'))
+        if: ((group_tail = 0) && lm_p0_level_dot_at(source, line_start + raw_length, p) != 0)
             dotted_level := 1
-            while: ((p < (line_start + raw_length)) && (source[p] = '.'))
+            while: lm_p0_level_dot_at(source, line_start + raw_length, p) != 0
                 level := level + 1U
                 p := p + 1U
                 while: ((p < (line_start + raw_length)) && c.lm_p0_is_horizontal_space(source[p]))
@@ -5868,6 +6086,10 @@ fn: lm_p0_lower_types_node (c.LmP0Document@: document; c.LmP0Node@: p0_node) int
     if: p0_node\kind != c.LM_P0_NODE_FRAME || p0_node\as\frame = 0
         return: 1
     frame := p0_node\as\frame
+    if: (frame\flags & c.LM_P0_FRAME_DEPTH) != 0U
+        lm_p0_set_diagnostic(document, 6, p0_node\span\line, p0_node\span\column, "operand depth requires its expression projection")
+        return: 0
+    ---
     body := frame\body
     if: lm_p0_lower_types_structure(document, body) = 0
         return: 0

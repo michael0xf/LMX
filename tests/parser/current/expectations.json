@@ -2739,8 +2739,22 @@
   },
   {
     "path": "tests/parser/current/operand_depth_one_tokens.lmx",
-    "authority": "v3 29.8.1: preserve depth-one assignment and comparison tokens across tight operand boundaries",
+    "authority": "v3 29.8.1: assignment has its written .: atom, and comparison shares the depth modifier and numeric boundary",
     "exit": 0,
-    "stdout_exact": "structure fields=24\n  structure fields=3\n    atom \"a\"\n    atom \"b\"\n    atom \"c\"\n  atom \".:\"\n  frame head=\"f\" body=structure fields=0\n  structure fields=3\n    atom \"a\"\n    atom \"b\"\n    atom \"c\"\n  atom \".:\"\n  frame head=\"f\" body=structure fields=0\n  atom \"a\"\n  atom \".:\"\n  frame head=\"f\" body=structure fields=0\n  structure fields=2\n    atom \"a\"\n    atom \"b\"\n  atom \".:\"\n  structure fields=2\n    atom \"b\"\n    atom \"a\"\n  atom \"a\"\n  atom \".=\"\n  structure fields=1\n    atom \"b\"\n  atom \"a\"\n  atom \".=\"\n  atom \"b\"\n  atom \"a\"\n  atom \".=\"\n  atom \"b\"\n  atom \"2\"\n  atom \".=\"\n  atom \"3\"\n"
+    "flags": true,
+    "stdout_exact": "structure fields=24 ##\n  structure fields=3 ##\n    atom \"a\" ##\n    atom \"b\" ##\n    atom \"c\" ##\n  atom \".:\" ##\n  frame head=\"f\" body=structure fields=0 ## {COMPACT}\n  structure fields=3 ##\n    atom \"a\" ##\n    atom \"b\" ##\n    atom \"c\" ##\n  atom \".:\" ##\n  frame head=\"f\" body=structure fields=0 ## {COMPACT}\n  atom \"a\" ##\n  atom \".:\" ##\n  frame head=\"f\" body=structure fields=0 ## {COMPACT}\n  structure fields=2 ##\n    atom \"a\" ##\n    atom \"b\" ##\n  atom \".:\" ##\n  structure fields=2 ##\n    atom \"b\" ##\n    atom \"a\" ##\n  atom \"a\" ##\n  frame head=\"=\" body=structure fields=0 ## {DEPTH}\n  structure fields=1 ##\n    atom \"b\" ##\n  atom \"a\" ##\n  frame head=\"=\" body=structure fields=0 ## {DEPTH}\n  atom \"b\" ##\n  atom \"a\" ##\n  frame head=\"=\" body=structure fields=0 ## {DEPTH}\n  atom \"b\" ##\n  atom \"2.\" ##\n  atom \"=\" ##\n  atom \"3\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/operand_depth_designators.lmx",
+    "authority": "v3 29.8.1: common operation designators, ordinary number boundaries and one parsed E per explicit depth",
+    "exit": 0,
+    "flags": true,
+    "stdout_exact": "structure fields=47 ##\n  atom \"a\" ##\n  frame head=\"+\" body=structure fields=0 ## {DEPTH}\n  atom \"b\" ##\n  atom \"a\" ##\n  frame head=\"**\" body=structure fields=0 ## {DEPTH}\n  atom \"b\" ##\n  atom \"a\" ##\n  frame head=\"**=\" body=structure fields=0 ## {DEPTH}\n  atom \"b\" ##\n  atom \"a\" ##\n  frame head=\"::\" body=structure fields=0 ## {DEPTH}\n  atom \"b\" ##\n  atom \"a\" ##\n  frame head=\"Lib\\op\" body=structure fields=0 ## {DEPTH}\n  atom \"b\" ##\n  atom \"a\" ##\n  frame head=\"Lib\\`operator with spaces`\" body=structure fields=0 ## {DEPTH}\n  atom \"b\" ##\n  atom \"a\" ##\n  atom \"`.operator`\" ##\n  atom \"b\" ##\n  atom \"a\" ##\n  atom \"+\" ##\n  frame head=\"c.field\" body=structure fields=1 ## {COMPACT}\n    atom \"b\" ##\n  frame head=\"@(N)c.FILE\" body=structure fields=1 ## {COLON INLINE}\n    atom \"p\" ##\n  atom \"1.2\" ##\n  frame head=\"foo\" body=structure fields=0 ## {DEPTH}\n  atom \"0x1p2\" ##\n  frame head=\"foo\" body=structure fields=0 ## {DEPTH}\n  atom \"1\" ##\n  frame head=\"+\" body=structure fields=1 ## {INLINE DEPTH}\n    atom \"3\" ##\n  atom \"2\" ##\n  frame head=\"+\" body=structure fields=1 ## {INLINE DEPTH}\n    atom \"2\" ##\n  atom \"3\" ##\n  atom \"1\" ##\n  frame head=\"+\" body=structure fields=1 ## {INLINE DEPTH}\n    atom \"3\" ##\n  atom \"2\" ##\n  frame head=\"+\" body=structure fields=1 ## {INLINE DEPTH}\n    atom \"2\" ##\n  atom \"3\" ##\n  atom \"a\" ##\n  frame head=\":=\" body=structure fields=1 ## {INLINE DEPTH}\n    atom \"0\" ##\n  frame head=\"f\" body=structure fields=0 ## {COMPACT}\n  atom \"a\" ##\n  frame head=\"Lib\\op\" body=structure fields=1 ## {INLINE DEPTH}\n    frame head=\"probe\" body=structure fields=4 ## {COMPACT}\n      atom \"j\" ##\n      atom \"[\" ##\n      atom \"0\" ##\n      atom \"]\" ##\n  atom \"b\" ##\n  frame head=\"+\" body=structure fields=1 ## {INLINE DEPTH}\n    atom \"3\" ##\n  atom \"2\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/operand_depth_missing_designator.lmx",
+    "authority": "v3 29.8.1: an explicit depth requires a following operation designator",
+    "exit": 1,
+    "diagnostic": "6@1:7"
   }
 ]

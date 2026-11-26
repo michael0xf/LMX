@@ -1,0 +1,16 @@
+DepthSource:
+    int: calls 0
+    return: int
+    get:
+        DepthSource\calls += 1
+        return: 1
+
+Example:
+    return: @
+    run:
+        throws: copy(`+`\throws)
+        DepthSource\calls := 0
+        int: conjunction 0 && (5 .(DepthSource\get())+ 6)
+        int: disjunction 1 || (5 .(DepthSource\get())+ 6)
+        int: chosen 1 ? 42 : (5 .(DepthSource\get())+ 6)
+        return: (conjunction disjunction chosen DepthSource\calls)

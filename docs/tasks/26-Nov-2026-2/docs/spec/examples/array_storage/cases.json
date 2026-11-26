@@ -1,0 +1,325 @@
+{
+  "revision": "2026-11-26",
+  "positive": [
+    {
+      "id": "001_flat_and_coordinates",
+      "inputs": {
+        "arr": {
+          "element_type": "int",
+          "rank": 3,
+          "extents": [
+            2,
+            2,
+            2
+          ],
+          "flat_storage": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        }
+      },
+      "expected": {
+        "value": [
+          8,
+          6,
+          6,
+          3,
+          6
+        ],
+        "source_extents": [
+          2,
+          2,
+          2
+        ],
+        "selection_extents": [
+          3
+        ]
+      },
+      "note_ru": "Плоский доступ и nD-доступ читают одно значение; flat selection не меняет rank исходника.",
+      "source": "001_flat_and_coordinates.lm3",
+      "entry_point": "Example\\run",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "002_same_place",
+      "inputs": {
+        "arr": {
+          "element_type": "int",
+          "rank": 3,
+          "extents": [
+            2,
+            2,
+            2
+          ],
+          "flat_storage": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        }
+      },
+      "expected": {
+        "value": 42,
+        "source_flat_storage": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          42,
+          7,
+          8
+        ],
+        "source_extents": [
+          2,
+          2,
+          2
+        ]
+      },
+      "note_ru": "Запись через линейный индекс видна через координаты того же места.",
+      "source": "002_same_place.lm3",
+      "entry_point": "Example\\run",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "003_inline_whole_value",
+      "inputs": {},
+      "expected": {
+        "value": [
+          1,
+          21,
+          0
+        ],
+        "wrapper_child_identity": "arr2"
+      },
+      "note_ru": "[arr2] сохраняет один целый элемент по ссылке; [] даёт присутствующий пустой Array.",
+      "source": "003_inline_whole_value.lm3",
+      "entry_point": "Example\\run",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "004_ordinary_structure_paths",
+      "inputs": {},
+      "expected": {
+        "value": [
+          21,
+          21,
+          21
+        ],
+        "same_field_identity": true
+      },
+      "note_ru": "Именованные и индексные пути Structure выбирают те же поля; дополнительный k сохранён.",
+      "source": "004_ordinary_structure_paths.lm3",
+      "entry_point": "Example\\run",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "005_axis_depth",
+      "inputs": {
+        "arr": {
+          "element_type": "int",
+          "rank": 3,
+          "extents": [
+            2,
+            2,
+            2
+          ],
+          "flat_storage": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        }
+      },
+      "expected": {
+        "value": [
+          8,
+          6,
+          16,
+          16
+        ],
+        "source_extents": [
+          2,
+          2,
+          2
+        ],
+        "result_extents": [
+          2,
+          2,
+          2
+        ]
+      },
+      "note_ru": "Depth=3 проходит логические оси одного плоского Array; исходный shape сохраняется и для flat-чтения.",
+      "source": "005_axis_depth.lm3",
+      "entry_point": "Example\\run",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "006_rectangular_initializers",
+      "inputs": {},
+      "expected": {
+        "array_extents": [
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            2
+          ],
+          [
+            3,
+            2
+          ]
+        ],
+        "flat_values": [
+          [
+            1,
+            2,
+            3,
+            1,
+            2,
+            4,
+            1,
+            2,
+            3
+          ],
+          [
+            1,
+            2,
+            3,
+            1,
+            2,
+            4,
+            1,
+            2,
+            3
+          ],
+          [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ]
+        ]
+      },
+      "note_ru": "Финальная авторская пара и числовая пара равны по данным и форме; row groups разделены пробелами.",
+      "source": "006_rectangular_initializers.lm3",
+      "entry_point": "Example\\run",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "009_data_structure_groups",
+      "source": "009_data_structure_groups.lm3",
+      "inputs": {},
+      "expected": {
+        "value": [
+          3,
+          3,
+          3,
+          4,
+          4,
+          4
+        ],
+        "data_field_lengths": [
+          3,
+          3,
+          4
+        ],
+        "square_round_fields_equal": true
+      },
+      "note_ru": "В DATA квадратные и круглые формы дают те же три обычные безымянные Structure с независимыми длинами 3/3/4.",
+      "entry_point": "Example\\run",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    }
+  ],
+  "negative": [
+    {
+      "id": "007_unequal_semicolon_rows",
+      "source": "negative/007_unequal_semicolon_rows.lm3",
+      "expected": {
+        "diagnostic": "unequal row lengths 3/4/5",
+        "phase": "translator if statically known, otherwise reached interpreter",
+        "lmx_throw": false
+      },
+      "note_ru": "Отрицательный пример: длины строк различаются. Разделители корректны; ошибка относится к форме.",
+      "entry_point": "Example\\run",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "008_unequal_grouped_rows",
+      "source": "negative/008_unequal_grouped_rows.lm3",
+      "expected": {
+        "diagnostic": "unequal row lengths 3/4/5",
+        "phase": "translator if statically known, otherwise reached interpreter",
+        "lmx_throw": false
+      },
+      "note_ru": "Та же ошибка формы с явно разделёнными вложенными группами; это не ошибка отсутствующего пробела.",
+      "entry_point": "Example\\run",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "010_unequal_three_three_four",
+      "source": "negative/010_unequal_three_three_four.lm3",
+      "expected": {
+        "diagnostic": "unequal row lengths 3/3/4",
+        "phase": "translator if statically known, otherwise reached interpreter",
+        "lmx_throw": false
+      },
+      "note_ru": "Точная отрицательная typed-форма автора: три строки 3/3/4; обычные DATA-поля тех же длин допустимы.",
+      "entry_point": "Example\\run",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    }
+  ],
+  "scope": "Normative source fixtures, not production parser receipts"
+}

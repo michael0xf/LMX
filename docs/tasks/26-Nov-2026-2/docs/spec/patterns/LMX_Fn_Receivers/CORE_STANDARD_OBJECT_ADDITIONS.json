@@ -1,0 +1,786 @@
+{
+  "date": "2026-11-23",
+  "scope": "Standard optional/result/value operations and physical-name object lookup. Existing containers, fieldNames/nil semantics and runtime bridges are reused.",
+  "source": "src/coreStandardObjects.lmx",
+  "public_count_added": 16,
+  "entries": [
+    {
+      "name": "mapOption",
+      "api": "FxMapOption\\mapOption",
+      "source": "coreStandardObjects",
+      "arguments": "input; transform",
+      "scope": "Map one present payload to a new Maybe; absent input skips transform; Some(null) stays present.",
+      "status": "BODY_WITH_BRIDGE",
+      "definition": "FxMapOption",
+      "characters": 237,
+      "sha256": "a7d68e7dcb5f2e01f37d8592c838cd917857a79305c44bc75bfd1c537d05b88b",
+      "source_file": "src/coreStandardObjects.lmx",
+      "family": "default",
+      "call": {
+        "target": "FxMapOption\\mapOption",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\mapOption",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ],
+        "depth_policy": "ordinary-value-lifting"
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardObjects.lmx",
+        "declared_inputs": [
+          "FxMaybe@: input",
+          "@: transform"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "input transform"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxCallFailure",
+          "FxKernelFailure",
+          "FxTypeToken"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxMapOption:\n    private:\n        FxMaybe@: input\n        @: transform\n    required: input transform\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "name": "filterOption",
+      "api": "FxFilterOption\\filterOption",
+      "source": "coreStandardObjects",
+      "arguments": "input; accepts",
+      "scope": "Retain the same present container when an int predicate accepts its payload; absent or rejected input yields absence.",
+      "status": "BODY_WITH_BRIDGE",
+      "definition": "FxFilterOption",
+      "characters": 280,
+      "sha256": "b002a31525418a072a93b84d258663183fc88b15a9de5bafef45b2dbffa75b14",
+      "source_file": "src/coreStandardObjects.lmx",
+      "family": "default",
+      "call": {
+        "target": "FxFilterOption\\filterOption",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\filterOption",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ],
+        "depth_policy": "ordinary-value-lifting"
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardObjects.lmx",
+        "declared_inputs": [
+          "FxMaybe@: input",
+          "@: accepts"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "input accepts"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxCallFailure",
+          "FxKernelFailure",
+          "FxPredicate",
+          "FxTypeToken",
+          "ReceiverIndex"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxFilterOption:\n    private:\n        FxMaybe@: input\n        @: accepts\n    required: input accepts\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "name": "orElse",
+      "api": "FxOrElse\\orElse",
+      "source": "coreStandardObjects",
+      "arguments": "input; fallback",
+      "scope": "Return the existing payload record or an already evaluated fallback record; result is not a Maybe.",
+      "status": "BODY",
+      "definition": "FxOrElse",
+      "characters": 130,
+      "sha256": "fb904d1f16fc8b9ff88b0fd1f481e7687f2d1814e5a565e60473f23fd74e8d15",
+      "source_file": "src/coreStandardObjects.lmx",
+      "family": "default",
+      "call": {
+        "target": "FxOrElse\\orElse",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\orElse",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ],
+        "depth_policy": "ordinary-value-lifting"
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardObjects.lmx",
+        "declared_inputs": [
+          "FxMaybe@: input",
+          "@: fallback"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "input fallback"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxOrElse:\n    private:\n        FxMaybe@: input\n        @: fallback\n    required: input fallback\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "name": "orElseGet",
+      "api": "FxOrElseGet\\orElseGet",
+      "source": "coreStandardObjects",
+      "arguments": "input; fallback",
+      "scope": "Return the payload record; invoke a nullary fallback only when absent.",
+      "status": "BODY_WITH_BRIDGE",
+      "definition": "FxOrElseGet",
+      "characters": 180,
+      "sha256": "63fe4d1b03a3e353fff045d257f72495f0d7c30e435c26bb04c755df34bad5da",
+      "source_file": "src/coreStandardObjects.lmx",
+      "family": "default",
+      "call": {
+        "target": "FxOrElseGet\\orElseGet",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\orElseGet",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ],
+        "depth_policy": "ordinary-value-lifting"
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardObjects.lmx",
+        "declared_inputs": [
+          "FxMaybe@: input",
+          "@: fallback"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "input fallback"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxCallFailure",
+          "FxKernelFailure",
+          "FxTypeToken"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxOrElseGet:\n    private:\n        FxMaybe@: input\n        @: fallback\n    required: input fallback\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "name": "orElseOption",
+      "api": "FxOrElseOption\\orElseOption",
+      "source": "coreStandardObjects",
+      "arguments": "input; fallback",
+      "scope": "Return the original present Maybe, or call the nullary fallback once and return its Maybe unchanged.",
+      "status": "BODY_WITH_BRIDGE",
+      "definition": "FxOrElseOption",
+      "characters": 231,
+      "sha256": "4d6f93638f9f633e6cf3e46297b1f6597f0793172a6498b89815a5b6014bc740",
+      "source_file": "src/coreStandardObjects.lmx",
+      "family": "default",
+      "call": {
+        "target": "FxOrElseOption\\orElseOption",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\orElseOption",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ],
+        "depth_policy": "ordinary-value-lifting"
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardObjects.lmx",
+        "declared_inputs": [
+          "FxMaybe@: input",
+          "@: fallback"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "input fallback"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxCallFailure",
+          "FxKernelFailure",
+          "FxTypeToken"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxOrElseOption:\n    private:\n        FxMaybe@: input\n        @: fallback\n    required: input fallback\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "name": "foldOption",
+      "api": "FxFoldOption\\foldOption",
+      "source": "coreStandardObjects",
+      "arguments": "input; whenEmpty; whenPresent",
+      "scope": "Invoke exactly one branch, a nullary absent branch or unary payload branch; return its typed result record.",
+      "status": "BODY_WITH_BRIDGE",
+      "definition": "FxFoldOption",
+      "characters": 240,
+      "sha256": "b8c073e1c65de4e743264f50881b0a1b7fcc61da0cd0b2dea4d877b30ac3f5a8",
+      "source_file": "src/coreStandardObjects.lmx",
+      "family": "default",
+      "call": {
+        "target": "FxFoldOption\\foldOption",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\foldOption",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ],
+        "depth_policy": "ordinary-value-lifting"
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardObjects.lmx",
+        "declared_inputs": [
+          "FxMaybe@: input",
+          "@: whenEmpty",
+          "@: whenPresent"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "input whenEmpty whenPresent"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxCallFailure",
+          "FxKernelFailure",
+          "FxTypeToken"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxFoldOption:\n    private:\n        FxMaybe@: input\n        @: whenEmpty\n        @: whenPresent\n    required: input whenEmpty whenPresent\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "name": "flattenOption",
+      "api": "FxFlattenOption\\flattenOption",
+      "source": "coreStandardObjects",
+      "arguments": "input",
+      "scope": "Flatten one Maybe-of-Maybe level, retaining the nested container identity; absent outer input skips payload access.",
+      "status": "BODY",
+      "definition": "FxFlattenOption",
+      "characters": 151,
+      "sha256": "cdc9a8e6ff9db27cdf531158d2c6f07bd9363ddcc0e7b9cf265e3b18c128793e",
+      "source_file": "src/coreStandardObjects.lmx",
+      "family": "default",
+      "call": {
+        "target": "FxFlattenOption\\flattenOption",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\flattenOption",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ],
+        "depth_policy": "ordinary-value-lifting"
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardObjects.lmx",
+        "declared_inputs": [
+          "private: FxMaybe@: input"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "input"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxFlattenOption:\n    private: FxMaybe@: input\n    required: input\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "name": "mapResult",
+      "api": "FxMapResult\\mapResult",
+      "source": "coreStandardObjects",
+      "arguments": "input; transform",
+      "scope": "Map only success payload into a fresh ok result; retain the existing error container without invoking transform.",
+      "status": "BODY_WITH_BRIDGE",
+      "definition": "FxMapResult",
+      "characters": 229,
+      "sha256": "12e20f801f4cd59ae1949a3669737543f6f177acf56d190b0cfc15d6a1abac22",
+      "source_file": "src/coreStandardObjects.lmx",
+      "family": "default",
+      "call": {
+        "target": "FxMapResult\\mapResult",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\mapResult",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ],
+        "depth_policy": "ordinary-value-lifting"
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardObjects.lmx",
+        "declared_inputs": [
+          "FxResult@: input",
+          "@: transform"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "input transform"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxCallFailure",
+          "FxKernelFailure",
+          "FxTypeToken"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxMapResult:\n    private:\n        FxResult@: input\n        @: transform\n    required: input transform\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "name": "mapErr",
+      "api": "FxMapErr\\mapErr",
+      "source": "coreStandardObjects",
+      "arguments": "input; transform",
+      "scope": "Map only error payload into a fresh err result; retain the existing success container without invoking transform.",
+      "status": "BODY_WITH_BRIDGE",
+      "definition": "FxMapErr",
+      "characters": 230,
+      "sha256": "9a711be965f51eec56698a6959f035c24bebc31a3e0ef9556bf2f1ac2a8f6144",
+      "source_file": "src/coreStandardObjects.lmx",
+      "family": "default",
+      "call": {
+        "target": "FxMapErr\\mapErr",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\mapErr",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ],
+        "depth_policy": "ordinary-value-lifting"
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardObjects.lmx",
+        "declared_inputs": [
+          "FxResult@: input",
+          "@: transform"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "input transform"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxCallFailure",
+          "FxKernelFailure",
+          "FxTypeToken"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxMapErr:\n    private:\n        FxResult@: input\n        @: transform\n    required: input transform\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "name": "orElseResult",
+      "api": "FxOrElseResult\\orElseResult",
+      "source": "coreStandardObjects",
+      "arguments": "input; fallback",
+      "scope": "Invoke one error-to-Result continuation only on err; return its Result without nesting; success identity retained.",
+      "status": "BODY_WITH_BRIDGE",
+      "definition": "FxOrElseResult",
+      "characters": 250,
+      "sha256": "eeec57ed7b6f94f3c760b64fa89362823ed80b8755cb89874be0af84444dcd4d",
+      "source_file": "src/coreStandardObjects.lmx",
+      "family": "default",
+      "call": {
+        "target": "FxOrElseResult\\orElseResult",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\orElseResult",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ],
+        "depth_policy": "ordinary-value-lifting"
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardObjects.lmx",
+        "declared_inputs": [
+          "FxResult@: input",
+          "@: fallback"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "input fallback"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxCallFailure",
+          "FxKernelFailure",
+          "FxTypeToken"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxOrElseResult:\n    private:\n        FxResult@: input\n        @: fallback\n    required: input fallback\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "name": "foldResult",
+      "api": "FxFoldResult\\foldResult",
+      "source": "coreStandardObjects",
+      "arguments": "input; onError; onSuccess",
+      "scope": "Invoke exactly one unary branch with the corresponding typed payload; return its result record.",
+      "status": "BODY_WITH_BRIDGE",
+      "definition": "FxFoldResult",
+      "characters": 308,
+      "sha256": "8ac4e803f6971107d7eacf897153eecf86d82fc4b48c2af3955c36199dd9381c",
+      "source_file": "src/coreStandardObjects.lmx",
+      "family": "default",
+      "call": {
+        "target": "FxFoldResult\\foldResult",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\foldResult",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ],
+        "depth_policy": "ordinary-value-lifting"
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardObjects.lmx",
+        "declared_inputs": [
+          "FxResult@: input",
+          "@: onError",
+          "@: onSuccess"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "input onError onSuccess"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxCallFailure",
+          "FxKernelFailure",
+          "FxTypeToken"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxFoldResult:\n    private:\n        FxResult@: input\n        @: onError\n        @: onSuccess\n    required: input onError onSuccess\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "name": "attempt",
+      "api": "FxAttemptResult\\attempt",
+      "source": "coreStandardObjects",
+      "arguments": "operation; args=()",
+      "scope": "Invoke through existing FxTry; return ok(result record) or err(typed reference record to full original FxOutcome); kernel/admission failures propagate.",
+      "status": "BODY_WITH_BRIDGE",
+      "definition": "FxAttemptResult",
+      "characters": 292,
+      "sha256": "206b92e5aea649c38dc8067101b75d88526c5075b30dd358b6c296a23c0e7bb7",
+      "source_file": "src/coreStandardObjects.lmx",
+      "family": "default",
+      "call": {
+        "target": "FxAttemptResult\\attempt",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\attempt",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ],
+        "depth_policy": "ordinary-value-lifting"
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardObjects.lmx",
+        "declared_inputs": [
+          "@: operation",
+          "@: args ()"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "operation"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxKernelFailure",
+          "FxRecordArity",
+          "FxTypeToken"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxAttemptResult:\n    private:\n        @: operation\n        @: args ()\n    required: operation\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "name": "tap",
+      "api": "FxTap\\tap",
+      "source": "coreStandardObjects",
+      "arguments": "value; action",
+      "scope": "Call one effect with the actual typed payload and return the exact original value record; no deep copying or swallowing failure.",
+      "status": "BODY_WITH_BRIDGE",
+      "definition": "FxTap",
+      "characters": 138,
+      "sha256": "bf306338f4891d56dadb646a211d05877ed28c6d5a24bf122013b49da0512ae6",
+      "source_file": "src/coreStandardObjects.lmx",
+      "family": "default",
+      "call": {
+        "target": "FxTap\\tap",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\tap",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ],
+        "depth_policy": "ordinary-value-lifting"
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardObjects.lmx",
+        "declared_inputs": [
+          "@: value",
+          "@: action"
+        ],
+        "declaration_copies": [],
+        "required": [
+          "value action"
+        ],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxCallFailure",
+          "FxKernelFailure",
+          "FxTypeToken"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxTap:\n    private:\n        @: value\n        @: action\n    required: value action\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "name": "findField",
+      "api": "FxFindField\\findField",
+      "source": "coreStandardObjects",
+      "arguments": "source; label; occurrence",
+      "scope": "Maybe of the selected physical field record; required zero-based occurrence counts equal ready names only; no payload evaluation.",
+      "status": "BODY_WITH_BRIDGE",
+      "definition": "FxFindField",
+      "characters": 413,
+      "sha256": "63beb710a95852789c94bf6632bd684ae66283bdf1d124613d4701fa97a64888",
+      "source_file": "src/coreStandardObjects.lmx",
+      "family": "default",
+      "call": {
+        "target": "FxFindField\\findField",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\findField",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ],
+        "depth_policy": "ordinary-value-lifting"
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardObjects.lmx",
+        "declared_inputs": [],
+        "declaration_copies": [
+          "copy(FxFieldArguments)"
+        ],
+        "required": [],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxIndex",
+          "FxKernelFailure",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "SequenceSize"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxFindField:\n    copy(FxFieldArguments)\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "name": "hasField",
+      "api": "FxHasField\\hasField",
+      "source": "coreStandardObjects",
+      "arguments": "source; label; occurrence",
+      "scope": "Whether that physical named occurrence exists; named uninitialized payloads count as present; no payload evaluation.",
+      "status": "BODY_WITH_BRIDGE",
+      "definition": "FxHasField",
+      "characters": 177,
+      "sha256": "5d71e0af50a1eb380f12eefbfff49743d005cb9d71b9a2dc32314d52d6690dc5",
+      "source_file": "src/coreStandardObjects.lmx",
+      "family": "default",
+      "call": {
+        "target": "FxHasField\\hasField",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\hasField",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ],
+        "depth_policy": "ordinary-value-lifting"
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardObjects.lmx",
+        "declared_inputs": [],
+        "declaration_copies": [
+          "copy(FxFieldArguments)"
+        ],
+        "required": [],
+        "result_declaration": "int",
+        "declared_throws": [
+          "FxIndex",
+          "FxKernelFailure",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "SequenceSize"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxHasField:\n    copy(FxFieldArguments)\n    return: int"
+      },
+      "runtime_status": "NOT_RUN"
+    },
+    {
+      "name": "getField",
+      "api": "FxGetField\\getField",
+      "source": "coreStandardObjects",
+      "arguments": "source; label; occurrence",
+      "scope": "Return the existing selected field record; missing or negative occurrence raises FxIndex; no payload evaluation.",
+      "status": "BODY_WITH_BRIDGE",
+      "definition": "FxGetField",
+      "characters": 206,
+      "sha256": "622361ec0a8762b82ab4af68e4167d1db9baaf49593e8f8d218fc91c963c5ac1",
+      "source_file": "src/coreStandardObjects.lmx",
+      "family": "default",
+      "call": {
+        "target": "FxGetField\\getField",
+        "route": "existing-receiver",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ]
+      },
+      "operand": {
+        "target": "StandardOperands\\getField",
+        "route": "asOperand",
+        "argument_roles": [
+          "DECLARED_INPUT_ROLES"
+        ],
+        "depth_policy": "ordinary-value-lifting"
+      },
+      "implementation_contract": {
+        "source": "src/coreStandardObjects.lmx",
+        "declared_inputs": [],
+        "declaration_copies": [
+          "copy(FxFieldArguments)"
+        ],
+        "required": [],
+        "result_declaration": "@",
+        "declared_throws": [
+          "FxIndex",
+          "FxKernelFailure",
+          "FxTypeToken",
+          "ReceiverIndex",
+          "SequenceSize"
+        ],
+        "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
+        "source_declaration": "FxGetField:\n    copy(FxFieldArguments)\n    return: @"
+      },
+      "runtime_status": "NOT_RUN"
+    }
+  ],
+  "new_kernel_primitives": [],
+  "lmx_runtime_executed": false,
+  "support_definitions": [
+    {
+      "definition": "FxFieldArguments",
+      "purpose": "One ordinary copied input contract shared by findField/hasField/getField",
+      "characters": 89,
+      "sha256": "b7b971d4f72645af86233da08fd952ca4318aa999cafe55512c6c54459a838ba",
+      "source_file": "src/coreStandardObjects.lmx"
+    }
+  ],
+  "definitions_nonwhitespace_characters": 3781,
+  "complete_source_nonwhitespace_characters": 5162,
+  "record_contract": "Ordinary true-result admission follows FxBind/FxBindResult. No unconditional dereference of container results and no mandatory extra @ box.",
+  "source_sha256": "646d1ae1a2e7eca17ac82f7bdf046ec11aacb72bf1ede99b6a1174d7011d0593",
+  "canonical_inventory": "catalog.json",
+  "canonical_migration": "CANONICAL_MIGRATION.json",
+  "runtime_executed": false
+}

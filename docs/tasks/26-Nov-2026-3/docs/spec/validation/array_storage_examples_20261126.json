@@ -1,0 +1,390 @@
+{
+  "revision": "2026-11-26",
+  "status": "SOURCE_MD_SYNC_PASS",
+  "scope": "Additive Array-storage cohort; no production execution",
+  "examples": 10,
+  "places": 20,
+  "positive": 7,
+  "negative": 3,
+  "cases": [
+    {
+      "id": "array_storage__001_flat_and_coordinates",
+      "inputs": {
+        "arr": {
+          "element_type": "int",
+          "rank": 3,
+          "extents": [
+            2,
+            2,
+            2
+          ],
+          "flat_storage": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        }
+      },
+      "expected": {
+        "value": [
+          8,
+          6,
+          6,
+          3,
+          6
+        ],
+        "source_extents": [
+          2,
+          2,
+          2
+        ],
+        "selection_extents": [
+          3
+        ]
+      },
+      "note_ru": "Плоский доступ и nD-доступ читают одно значение; flat selection не меняет rank исходника.",
+      "source": "spec/examples/array_storage/001_flat_and_coordinates.lm3",
+      "entry_point": "Example\\run",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN",
+      "category": "positive",
+      "sha256": "95eca89ce72a72d74a610751f8f8a1c375e994497127453a15eb712e8dd178ad",
+      "markdown": "spec/examples/array_storage/README.md",
+      "block": 6,
+      "line": 123,
+      "source_markdown_sync": "PASS"
+    },
+    {
+      "id": "array_storage__002_same_place",
+      "inputs": {
+        "arr": {
+          "element_type": "int",
+          "rank": 3,
+          "extents": [
+            2,
+            2,
+            2
+          ],
+          "flat_storage": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        }
+      },
+      "expected": {
+        "value": 42,
+        "source_flat_storage": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          42,
+          7,
+          8
+        ],
+        "source_extents": [
+          2,
+          2,
+          2
+        ]
+      },
+      "note_ru": "Запись через линейный индекс видна через координаты того же места.",
+      "source": "spec/examples/array_storage/002_same_place.lm3",
+      "entry_point": "Example\\run",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN",
+      "category": "positive",
+      "sha256": "0cfadcd43a1e3498062ca0a6ab28fce32559b8c311ed8d3df8c2c532e8d3aee9",
+      "markdown": "spec/examples/array_storage/README.md",
+      "block": 7,
+      "line": 137,
+      "source_markdown_sync": "PASS"
+    },
+    {
+      "id": "array_storage__003_inline_whole_value",
+      "inputs": {},
+      "expected": {
+        "value": [
+          1,
+          21,
+          0
+        ],
+        "wrapper_child_identity": "arr2"
+      },
+      "note_ru": "[arr2] сохраняет один целый элемент по ссылке; [] даёт присутствующий пустой Array.",
+      "source": "spec/examples/array_storage/003_inline_whole_value.lm3",
+      "entry_point": "Example\\run",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN",
+      "category": "positive",
+      "sha256": "4a05bfc1a568bb6d5cfeec0c50f6f7faac99bd33b3b211c8e4b1b50ee859d0a0",
+      "markdown": "spec/examples/array_storage/README.md",
+      "block": 8,
+      "line": 150,
+      "source_markdown_sync": "PASS"
+    },
+    {
+      "id": "array_storage__004_ordinary_structure_paths",
+      "inputs": {},
+      "expected": {
+        "value": [
+          21,
+          21,
+          21
+        ],
+        "same_field_identity": true
+      },
+      "note_ru": "Именованные и индексные пути Structure выбирают те же поля; дополнительный k сохранён.",
+      "source": "spec/examples/array_storage/004_ordinary_structure_paths.lm3",
+      "entry_point": "Example\\run",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN",
+      "category": "positive",
+      "sha256": "95facd22d1b2de8819ee931c234d49fc1f9d86810ccaf7eedf905465e6f2fde8",
+      "markdown": "spec/examples/array_storage/README.md",
+      "block": 9,
+      "line": 165,
+      "source_markdown_sync": "PASS"
+    },
+    {
+      "id": "array_storage__005_axis_depth",
+      "inputs": {
+        "arr": {
+          "element_type": "int",
+          "rank": 3,
+          "extents": [
+            2,
+            2,
+            2
+          ],
+          "flat_storage": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ]
+        }
+      },
+      "expected": {
+        "value": [
+          8,
+          6,
+          16,
+          16
+        ],
+        "source_extents": [
+          2,
+          2,
+          2
+        ],
+        "result_extents": [
+          2,
+          2,
+          2
+        ]
+      },
+      "note_ru": "Depth=3 проходит логические оси одного плоского Array; исходный shape сохраняется и для flat-чтения.",
+      "source": "spec/examples/array_storage/005_axis_depth.lm3",
+      "entry_point": "Example\\run",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN",
+      "category": "positive",
+      "sha256": "113a14c3f9edf99104fa936a28b1cae95ba1f1f22b0abee434a04c1fa05b7d17",
+      "markdown": "spec/examples/array_storage/README.md",
+      "block": 10,
+      "line": 189,
+      "source_markdown_sync": "PASS"
+    },
+    {
+      "id": "array_storage__006_rectangular_initializers",
+      "inputs": {},
+      "expected": {
+        "array_extents": [
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            2
+          ],
+          [
+            3,
+            2
+          ]
+        ],
+        "flat_values": [
+          [
+            1,
+            2,
+            3,
+            1,
+            2,
+            4,
+            1,
+            2,
+            3
+          ],
+          [
+            1,
+            2,
+            3,
+            1,
+            2,
+            4,
+            1,
+            2,
+            3
+          ],
+          [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ]
+        ]
+      },
+      "note_ru": "Финальная авторская пара и числовая пара равны по данным и форме; row groups разделены пробелами.",
+      "source": "spec/examples/array_storage/006_rectangular_initializers.lm3",
+      "entry_point": "Example\\run",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN",
+      "category": "positive",
+      "sha256": "7536315f7cd9aed894458176a9978ea17d121975e29b58a26cdf1c59acedf439",
+      "markdown": "spec/examples/array_storage/README.md",
+      "block": 11,
+      "line": 203,
+      "source_markdown_sync": "PASS"
+    },
+    {
+      "id": "array_storage__009_data_structure_groups",
+      "source": "spec/examples/array_storage/009_data_structure_groups.lm3",
+      "inputs": {},
+      "expected": {
+        "value": [
+          3,
+          3,
+          3,
+          4,
+          4,
+          4
+        ],
+        "data_field_lengths": [
+          3,
+          3,
+          4
+        ],
+        "square_round_fields_equal": true
+      },
+      "note_ru": "В DATA квадратные и круглые формы дают те же три обычные безымянные Structure с независимыми длинами 3/3/4.",
+      "entry_point": "Example\\run",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN",
+      "category": "positive",
+      "sha256": "a2d3b68e2bde5a69fdeb625469c19cbfab622996cadabadd416828b402523ce1",
+      "markdown": "spec/examples/array_storage/README.md",
+      "block": 12,
+      "line": 222,
+      "source_markdown_sync": "PASS"
+    },
+    {
+      "id": "array_storage__007_unequal_semicolon_rows",
+      "source": "spec/examples/array_storage/negative/007_unequal_semicolon_rows.lm3",
+      "expected": {
+        "diagnostic": "unequal row lengths 3/4/5",
+        "phase": "translator if statically known, otherwise reached interpreter",
+        "lmx_throw": false
+      },
+      "note_ru": "Отрицательный пример: длины строк различаются. Разделители корректны; ошибка относится к форме.",
+      "entry_point": "Example\\run",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN",
+      "category": "negative",
+      "sha256": "e5d61b145064f9ad1fe895974296f0c3ed62d7f14c7fac2383786a87c725ebfa",
+      "markdown": "spec/examples/array_storage/README.md",
+      "block": 13,
+      "line": 241,
+      "source_markdown_sync": "PASS"
+    },
+    {
+      "id": "array_storage__008_unequal_grouped_rows",
+      "source": "spec/examples/array_storage/negative/008_unequal_grouped_rows.lm3",
+      "expected": {
+        "diagnostic": "unequal row lengths 3/4/5",
+        "phase": "translator if statically known, otherwise reached interpreter",
+        "lmx_throw": false
+      },
+      "note_ru": "Та же ошибка формы с явно разделёнными вложенными группами; это не ошибка отсутствующего пробела.",
+      "entry_point": "Example\\run",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN",
+      "category": "negative",
+      "sha256": "6e72f35038f3139e30ef3dd2cc03cd6d2fd90f8e1988c9d6e1e55dacb23bd91c",
+      "markdown": "spec/examples/array_storage/README.md",
+      "block": 14,
+      "line": 257,
+      "source_markdown_sync": "PASS"
+    },
+    {
+      "id": "array_storage__010_unequal_three_three_four",
+      "source": "spec/examples/array_storage/negative/010_unequal_three_three_four.lm3",
+      "expected": {
+        "diagnostic": "unequal row lengths 3/3/4",
+        "phase": "translator if statically known, otherwise reached interpreter",
+        "lmx_throw": false
+      },
+      "note_ru": "Точная отрицательная typed-форма автора: три строки 3/3/4; обычные DATA-поля тех же длин допустимы.",
+      "entry_point": "Example\\run",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN",
+      "category": "negative",
+      "sha256": "9ad6db6579c96743199c7f244451e34153fb4fb439c3004cf55d113d4a0fa5cd",
+      "markdown": "spec/examples/array_storage/README.md",
+      "block": 15,
+      "line": 273,
+      "source_markdown_sync": "PASS"
+    }
+  ],
+  "production_execution": "NOT_RUN",
+  "normalization": "LF and exactly one final LF; all other source bytes retained"
+}

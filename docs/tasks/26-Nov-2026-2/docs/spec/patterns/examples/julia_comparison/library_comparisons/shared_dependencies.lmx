@@ -1,0 +1,478 @@
+FxApply:
+    private:
+        @: operation
+        @: args
+    return: @
+    apply:
+        throws: copy(FxThrows\call)
+        private: @: outcome FxTry\attempt(operation := operation; args := args)
+        if: outcome\ok = 0
+            throw: FxCallFailure(outcome)
+        return: outcome\value
+
+FxEqualFields:
+    private:
+        @: first
+        @: second
+        @: same 0
+    required: first second
+    return: int
+    equalFields:
+        throws: copy(FxThrows\predicate)
+        FxSeqInfo\get(first)
+        FxSeqInfo\get(second)
+        if: length(first) != length(second)
+            return: 0
+        return: FxSequenceDifference\find(
+            first := first;
+            second := second;
+            same := same;
+            count := length(first)
+        ) < 0
+
+FxEqualityTypes:
+    array:
+        []: value
+
+FxOne:
+    private: @: value
+    return: @
+    make:
+        private: @: out (copy(()))
+        sys\resize(out; 1)
+        out[0] := value
+        return: out
+
+FxPreparedOperands:
+    private:
+        @: left
+        int: depth 0
+        @[]: right
+    const: int: PASS_ARGS_AS_IS 0
+
+FxProjectValue:
+    private:
+        @: value
+        @: projection 0
+    required: value
+    return: @
+    get:
+        throws: copy(FxThrows\call)
+        if: projection = 0
+            return: value
+        return: FxApply\apply(projection; FxOne\make(value))
+
+FxSeqAdmit:
+    private:
+        @: target
+        @: value
+    required: target value
+    return: @
+    admit:
+        throws: FxKernelFailure FxTypeToken SequenceElement
+        return: FxKernel\arrayAdmit(target := target; value := value)
+
+FxSeqAllocate:
+    private:
+        int: arrayType
+        int: count
+    required: arrayType count
+    return: @
+    make:
+        throws: FxKernelFailure FxTypeToken SequenceSize
+        if: count < 0
+            throw: SequenceSize()
+        private: @: out (arrayType: [])
+        private: @: info FxSeqInfo\get(out)
+        if: count > info\maxLength
+            throw: SequenceSize()
+        sys\resize(out; count)
+        return: out
+
+FxSeqBounds:
+    private:
+        @: source
+        int: begin
+        int: end
+    required: source begin end
+    return: int
+    count:
+        throws: FxKernelFailure FxTypeToken ReceiverIndex
+        FxSeqInfo\get(source)
+        if: begin < 0 || end < begin || end > length(source)
+            throw: ReceiverIndex()
+        return: end - begin
+
+FxSeqInfo:
+    private: @: source
+    required: source
+    return: @
+    get:
+        throws: copy(FxThrows\kernel)
+        return: FxKernel\arrayInfo(source := source)
+
+FxSeqInteger:
+    private: @: value
+    required: value
+    return: int
+    read:
+        throws: SequenceElement
+        private: int: sample 0
+        if: sys\typeof(value) != sys\typeof(@sample)
+            throw: SequenceElement()
+        return: \value
+
+FxSeqLast:
+    private:
+        @: items
+        int: count
+    required: items count
+    return: @
+    last:
+        throws: copy(FxStdCut\drop\throws)
+        FxSeqInfo\get(items)
+        if: count < 0
+            throw: SequenceSize()
+        return: FxStdCut\drop(items; length(items) - count)
+
+FxSeqPredicate:
+    private: @: value
+    required: value
+    return: int
+    truth:
+        throws: FxPredicate
+        private: int: sample 0
+        if: sys\typeof(value) != sys\typeof(@sample)
+            throw: FxPredicate()
+        private: int: flag \value
+        return: flag != 0
+
+FxSeqPush:
+    private:
+        @: target
+        @: value
+    required: target value
+    return: @
+    append:
+        throws: copy(FxThrows\mutation)
+        private: @: info FxSeqInfo\get(target)
+        private: @: ready FxSeqAdmit\admit(target; value)
+        private: int: oldSize length(target)
+        private: int: newSize FxSeqSize\sum(oldSize; 1; info\maxLength)
+        sys\resize(target; newSize)
+        FxKernel\arrayWrite(target := target; index := oldSize; value := ready)
+        return: target
+
+FxSeqRead:
+    private:
+        @: source
+        int: index
+    required: source index
+    return: @
+    read:
+        throws: FxKernelFailure FxTypeToken ReceiverIndex
+        return: FxKernel\arrayRead(source := source; index := index)
+
+FxSeqSize:
+    private:
+        int: base
+        int: extra
+        int: limit
+    required: base extra limit
+    return: int
+    sum:
+        throws: SequenceSize
+        if: base < 0 || extra < 0 || base > limit
+            throw: SequenceSize()
+        if: extra > limit - base
+            throw: SequenceSize()
+        return: base + extra
+
+FxSeqStore:
+    private:
+        @: target
+        int: index
+        @: value
+    required: target index value
+    write:
+        throws: FxKernelFailure FxTypeToken ReceiverIndex SequenceElement
+        private: @: ready FxSeqAdmit\admit(target; value)
+        FxKernel\arrayWrite(target := target; index := index; value := ready)
+
+FxSequenceDifference:
+    private:
+        @: first
+        @: second
+        @: same 0
+        int: firstStart 0
+        int: count
+        int: secondStart 0
+    required: first second count
+    return: int
+    find:
+        throws: copy(FxThrows\predicate)
+        FxSeqInfo\get(first)
+        FxSeqInfo\get(second)
+        if: firstStart < 0 || secondStart < 0 || count < 0
+            throw: ReceiverIndex()
+        if: firstStart > length(first) || secondStart > length(second)
+            throw: ReceiverIndex()
+        if: count > length(first) - firstStart || count > length(second) - secondStart
+            throw: ReceiverIndex()
+        private: int: i 0
+        while: i < count
+            if: FxValueSame\test(
+                FxSeqRead\read(first; firstStart + i);
+                FxSeqRead\read(second; secondStart + i);
+                same
+            ) = 0
+                return: i
+            i += 1
+        return: -1
+
+FxStdCut:
+    private:
+        @: items
+        int: count
+    required: items count
+    return: @
+    take:
+        throws: copy(FxThrows\sequence)
+        return: FxSeqSlice\slice(items; 0; FxStdCutIndex\get(items; count))
+    drop:
+        throws: copy(FxThrows\sequence)
+        return: FxSeqSlice\slice(items; FxStdCutIndex\get(items; count); length(items))
+    splitAt:
+        throws: copy(FxThrows\sequence)
+        return: FxStdPair\make(take(items; count); drop(items; count))
+
+FxStdCutIndex:
+    private:
+        @: items
+        int: count
+    required: items count
+    return: int
+    get:
+        throws: copy(FxThrows\kernel)
+        FxSeqInfo\get(items)
+        if: count < 0
+            return: 0
+        if: count > length(items)
+            return: length(items)
+        return: count
+
+FxStdPair:
+    private:
+        @: first
+        @: second
+    required: first second
+    return: @
+    make:
+        private: @: pair (copy(FxPair))
+        pair\first := first
+        pair\second := second
+        return: pair
+
+FxSum:
+    private:
+        @: items
+        @: initial (0 record)
+    return: @
+    sum:
+        throws: FxRecordArity
+        return: ((+ \initial copy(items)) record)
+
+FxThrows:
+    adapter:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    call:
+        FxCallFailure
+        FxKernelFailure
+        FxTypeToken
+    capture:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    fixture:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+    kernel:
+        FxKernelFailure
+        FxTypeToken
+    lazyfixture:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxLazyCycle
+        FxRecordArity
+        FxTypeToken
+    mutation:
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        SequenceElement
+        SequenceSize
+    mutationfixture:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+        ReceiverIndex
+        SequenceElement
+        SequenceSize
+    permutation:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        ReceiverPermutation
+        SequenceSize
+    predicate:
+        FxCallFailure
+        FxKernelFailure
+        FxPredicate
+        FxTypeToken
+        ReceiverIndex
+    rangefixture:
+        FxArity
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+        SequenceSize
+        SequenceStep
+    recordcall:
+        FxCallFailure
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+    reorder:
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        ReceiverPermutation
+        SequenceSize
+    retry:
+        FxArity
+        FxCallFailure
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    selection:
+        FxIndex
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    sequence:
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    sequencefixture:
+        FxArity
+        FxCallFailure
+        FxIndex
+        FxKernelFailure
+        FxPredicate
+        FxRecordArity
+        FxShape
+        FxTypeToken
+        ReceiverIndex
+        ReceiverPermutation
+        SequenceElement
+        SequenceSize
+        SequenceStep
+    snapshot:
+        FxCallFailure
+        FxIndex
+        FxKernelFailure
+        FxRecordArity
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    traversal:
+        FxCallFailure
+        FxKernelFailure
+        FxTypeToken
+        ReceiverIndex
+        SequenceSize
+    pattern:
+        FxArity
+        FxCallFailure
+        FxIndex
+        FxKernelFailure
+        FxPredicate
+        FxRecordArity
+        FxShape
+        FxTypeToken
+        ReceiverIndex
+        SequenceElement
+        SequenceSize
+        PatternArgument
+        PatternEncoding
+        PatternPosition
+
+FxTry:
+    private:
+        @: operation
+        @: args
+    return: @
+    attempt:
+        throws: copy(FxThrows\kernel)
+        private: @: info FxKernel\signature(subject := operation)
+        return: FxKernel\attempt(operation; args; info\throws)
+
+FxTwo:
+    private:
+        @: first
+        @: second
+    return: @
+    make:
+        private: @: out (copy(()))
+        sys\resize(out; 2)
+        out[0] := first
+        out[1] := second
+        return: out
+
+FxValueSame:
+    private:
+        @: first
+        @: second
+        @: same 0
+    required: first second
+    return: int
+    test:
+        throws: copy(FxThrows\predicate)
+        if: same != 0
+            return: FxSeqPredicate\truth(FxApply\apply(same; FxTwo\make(first; second)))
+        private: int: firstArray FxKernel\acceptsRequirement(
+            candidate := first;
+            requirement := FxEqualityTypes\array[0]
+        )
+        private: int: secondArray FxKernel\acceptsRequirement(
+            candidate := second;
+            requirement := FxEqualityTypes\array[0]
+        )
+        if: firstArray != secondArray
+            return: 0
+        if: firstArray != 0
+            return: FxEqualFields\equalFields(first; second)
+        return: \first = \second

@@ -1,0 +1,75 @@
+# Canonical compact LMX proposal. Columns are positional; ids are table-local.
+# Reader/schema: ../CATALOG_FORMAT.ru.md. No publication or runtime proof.
+C99Catalog_knowledge_extra_libxls:
+    int: schemaVersion 2
+    int: tableChunkSize 32
+    char[]: componentId "knowledge_extra:libxls"
+    @: component ("d";(("capabilities";("l";(("s";"read legacy XLS BIFF/OLE workbooks");("s";"file and memory buffer entry points");("s";"cell values, sheets, metadata"))));("cmake_targets";("l";(("s";"LMX::xls"))));("commit";("n"));("headers";("l";(("s";"third_party/lmx_c99_compact/vendor/libxls/include/libxls/xlsstruct.h");("s";"third_party/lmx_c99_compact/vendor/libxls/include/libxls/xlstool.h");("s";"third_party/lmx_c99_compact/vendor/libxls/include/libxls/xlstypes.h");("s";"third_party/lmx_c99_compact/vendor/libxls/include/xls.h"))));("id";("s";"knowledge_extra:libxls"));("license";("s";"BSD-2-Clause"));("licenses_notices";("l";(("s";"vendor/libxls/LICENSE"))));("mandatory_lmx_dependency";("b";0));("packages";("l";(("s";"document\\spreadsheet\\xls"))));("paths";("l";(("s";"vendor/libxls"))));("profile";("s";"Read-only; no XLSX; no workbook writing or formula evaluation. No external iconv: BIFF8 UTF-16 converts through UTF-8 locale; legacy BIFF5 codepage bytes are not normalized. Locale API needs OS support (POSIX or Windows)."));("public_headers";("l";(("s";"vendor/libxls/include/xls.h");("s";"vendor/libxls/include/libxls/xlsstruct.h");("s";"vendor/libxls/include/libxls/xlstypes.h");("s";"vendor/libxls/include/libxls/xlstool.h"))));("source";("s";"Offline retained production tree; C99 profile and tests in extensions/knowledge_extra. No fetching during configure or build."));("source_archive_bytes";("i";335944));("source_archive_sha256";("s";"4e696731266e9475e93941746548a4180385b54cc649a221ea6a2729e7cb1ab6"));("source_validation";("s";"source_census_only_not_link_test"));("surface_patterns";("l";(("s";"vendor/libxls/include/xls.h");("s";"vendor/libxls/include/libxls/xlsstruct.h");("s";"vendor/libxls/include/libxls/xlstypes.h");("s";"vendor/libxls/include/libxls/xlstool.h"))));("targets";("l";(("s";"LMX::xls"))));("urls";("l";(("s";"https://codeload.github.com/libxls/libxls/tar.gz/refs/tags/v1.6.4"))));("version";("s";"1.6.4"))))
+    @: models C99Schema\Models
+    Columns:
+        @: Parameters ("cName";"cType";"flags";"declarationMode";"declarationOverride";"model";"extra")
+        @: Specs ("signature";"returnType";"parameterList")
+        @: Origins ("extraction";"availability";"unresolved";"notes";"body";"conditionsPresent")
+        @: Variants ("spec";"source";"line";"conditions";"origin";"extra")
+        @: Profiles ("kind";"header";"targets";"ffiDisposition";"publishCandidate";"pubCandidate";"status";"callable";"direct")
+        @: Placements ("package";"primaryModel";"extra")
+        @: Entries ("symbol";"spec";"source";"line";"conditions";"origin";"profile";"variants";"placement";"extra")
+    PropertyKeys:
+        @: k0 ("component";"publication";"symbol_kinds";"return_type_original";"callback_type_refs")
+    PropertyValues:
+        @: z0 (("s";"knowledge_extra:libxls");("s";"proposal_only");("l";(("s";"function")));("s";"extern \"C\" { typedef enum { LIBXLS_OK , LIBXLS_ERROR_OPEN , LIBXLS_ERROR_SEEK , LIBXLS_ERROR_READ , LIBXLS_ERROR_PARSE , LIBXLS_ERROR_MALLOC , LIBXLS_ERROR_UNSUPPORTED_ENCRYPTION , LIBXLS_ERROR_NULL_ARGUMENT } xls_error_t ; const char * xls_getVersion ( void ) ; const char * xls_getError ( xls_error_t code ) ; int xls ( int debug ) ; void xls_set_formula_hander ( xls_formula_handler handler ) ; xls_error_t xls_parseWorkBook ( xlsWorkBook * pWB ) ; xls_error_t xls_parseWorkSheet ( xlsWorkSheet * pWS ) ; xlsWorkBook * xls_open_file ( const char * file , const char * charset , xls_error_t * outError ) ; xlsWorkBook * xls_open_buffer ( const unsigned char * data , size_t data_len , const char * charset , xls_error_t * outError ) ; void xls_close_WB ( xlsWorkBook * pWB ) ; xlsWorkBook * xls_open ( const char * file , const char * charset ) ; xlsWorkSheet * xls_getWorkSheet ( xlsWorkBook * pWB , int num ) ; void xls_close_WS ( xlsWorkSheet * pWS ) ; xlsSummaryInfo * xls_summaryInfo ( xlsWorkBook * pWB ) ; void xls_close_summaryInfo ( xlsSummaryInfo * pSI ) ; xlsRow * xls_row ( xlsWorkSheet * pWS , WORD cellRow ) ; xlsCell *");("l";(("s";"callback")));("l";(("s";"capi_43a3505d3f02cebd"))))
+    Signatures:
+        @: s0 ("char * codepage_decode ( const char * s , size_t len , xlsWorkBook * pWB )";"char * get_string ( const char * s , size_t len , BYTE is2 , xlsWorkBook * pWB )";"char * transcode_utf16_to_utf8 ( const char * s , size_t len )";"char * unicode_decode ( const char * s , size_t len , xlsWorkBook * pWB )";"void verbose ( char * str )";"int xls ( int debug )";"extern \"C\" { typedef enum { LIBXLS_OK , LIBXLS_ERROR_OPEN , LIBXLS_ERROR_SEEK , LIBXLS_ERROR_READ , LIBXLS_ERROR_PARSE , LIBXLS_ERROR_MALLOC , LIBXLS_ERROR_UNSUPPORTED_ENCRYPTION , LIBXLS_ERROR_NULL_ARGUMENT } xls_error_t ; const char * xls_getVersion ( void ) ; const char * xls_getError ( xls_error_t code ) ; int xls ( int debug ) ; void xls_set_formula_hander ( xls_formula_handler handler ) ; xls_error_t xls_parseWorkBook ( xlsWorkBook * pWB ) ; xls_error_t xls_parseWorkSheet ( xlsWorkSheet * pWS ) ; xlsWorkBook * xls_open_file ( const char * file , const char * charset , xls_error_t * outError ) ; xlsWorkBook * xls_open_buffer ( const unsigned char * data , size_t data_len , const char * charset , xls_error_t * outError ) ; void xls_close_WB ( xlsWorkBook * pWB ) ; xlsWorkBook * xls_open ( const char * file , const char * charset ) ; xlsWorkSheet * xls_getWorkSheet ( xlsWorkBook * pWB , int num ) ; void xls_close_WS ( xlsWorkSheet * pWS ) ; xlsSummaryInfo * xls_summaryInfo ( xlsWorkBook * pWB ) ; void xls_close_summaryInfo ( xlsSummaryInfo * pSI ) ; xlsRow * xls_row ( xlsWorkSheet * pWS , WORD cellRow ) ; xlsCell * xls_cell ( xlsWorkSheet * pWS , WORD cellRow , WORD cellCol ) ; }";"xlsCell * xls_cell ( xlsWorkSheet * pWS , WORD cellRow , WORD cellCol )";"void xls_close_WB ( xlsWorkBook * pWB )";"void xls_close_WS ( xlsWorkSheet * pWS )";"void xls_close_summaryInfo ( xlsSummaryInfo * pSI )";"typedef void ( * xls_formula_handler ) ( WORD bof , WORD len , BYTE * formula )";"char * xls_getCSS ( xlsWorkBook * pWB )";"DWORD xls_getColor ( const WORD color , WORD def )";"const char * xls_getError ( xls_error_t code )";"const char * xls_getVersion ( void )";"xlsWorkSheet * xls_getWorkSheet ( xlsWorkBook * pWB , int num )";"char * xls_getfcell ( xlsWorkBook * pWB , struct st_cell_data * cell , BYTE * label )";"xlsWorkBook * xls_open ( const char * file , const char * charset )";"xlsWorkBook * xls_open_buffer ( const unsigned char * data , size_t data_len , const char * charset , xls_error_t * outError )";"xlsWorkBook * xls_open_file ( const char * file , const char * charset , xls_error_t * outError )";"xls_error_t xls_parseWorkBook ( xlsWorkBook * pWB )";"xls_error_t xls_parseWorkSheet ( xlsWorkSheet * pWS )";"xlsRow * xls_row ( xlsWorkSheet * pWS , WORD cellRow )";"void xls_set_formula_hander ( xls_formula_handler handler )";"void xls_showBOF ( BOF * bof )";"void xls_showBookInfo ( xlsWorkBook * pWB )";"void xls_showCell ( struct st_cell_data * cell )";"void xls_showColinfo ( struct st_colinfo_data * col )";"void xls_showFont ( struct st_font_data * font )";"void xls_showFormat ( struct st_format_data * format )";"void xls_showROW ( struct st_row_data * row )")
+        @: s1 ("void xls_showXF ( XF8 * xf )";"xlsSummaryInfo * xls_summaryInfo ( xlsWorkBook * pWB )")
+    Types:
+        @: t0 ("const char *";"size_t";"xlsWorkBook *";"char *";"BYTE";"void";"int";"xlsWorkSheet *";"WORD";"\"C\" { enum { LIBXLS_OK , LIBXLS_ERROR_OPEN , LIBXLS_ERROR_SEEK , LIBXLS_ERROR_READ , LIBXLS_ERROR_PARSE , LIBXLS_ERROR_MALLOC , LIBXLS_ERROR_UNSUPPORTED_ENCRYPTION , LIBXLS_ERROR_NULL_ARGUMENT } xls_error_t ; const char * xls_getVersion ( void ) ; const char * xls_getError ( xls_error_t code ) ; int xls ( int debug ) ; void xls_set_formula_hander ( xls_formula_handler handler ) ; xls_error_t xls_parseWorkBook ( xlsWorkBook * pWB ) ; xls_error_t xls_parseWorkSheet ( xlsWorkSheet * pWS ) ; xlsWorkBook * xls_open_file ( const char * file , const char * charset , xls_error_t * outError ) ; xlsWorkBook * xls_open_buffer ( const unsigned char * data , size_t data_len , const char * charset , xls_error_t * outError ) ; void xls_close_WB ( xlsWorkBook * pWB ) ; xlsWorkBook * xls_open ( const char * file , const char * charset ) ; xlsWorkSheet * xls_getWorkSheet ( xlsWorkBook * pWB , int num ) ; void xls_close_WS ( xlsWorkSheet * pWS ) ; xlsSummaryInfo * xls_summaryInfo ( xlsWorkBook * pWB ) ; void xls_close_summaryInfo ( xlsSummaryInfo * pSI ) ; xlsRow * xls_row ( xlsWorkSheet * pWS , WORD cellRow ) ; xlsCell *";"xlsCell *";"xlsSummaryInfo *";"BYTE *";"const WORD";"DWORD";"xls_error_t";"struct st_cell_data *";"const unsigned char *";"xls_error_t *";"xlsRow *";"xls_formula_handler";"BOF *";"struct st_colinfo_data *";"struct st_font_data *";"struct st_format_data *";"struct st_row_data *";"XF8 *")
+    Sources:
+        @: r0 ("third_party/lmx_c99_compact/vendor/libxls/include/libxls/xlstool.h";"third_party/lmx_c99_compact/vendor/libxls/include/xls.h";"third_party/lmx_c99_compact/vendor/libxls/include/libxls/xlsstruct.h")
+    Lists:
+        @: l0 (("ifndef XLS_TOOL_INC");();("LMX::xls");("isolated header preprocessing; dependency includes masked");("ifndef XLS_INCLUDE");("Callback type/slot, not an exported callable.");("ifndef XLS_STRUCT_INC");("Callback typedef parameter(s): xls_formula_handler. Use an actor-owned trampoline/lifetime contract."))
+    Properties:
+        @: x0 (();((0;0);(1;1));((2;2));((3;3);(2;4));((2;4));((4;5)))
+    Parameters:
+        @: p0 (("s";0;567;1;"";6;0);("len";1;535;1;"";3;0);("pWB";2;567;1;"";2;0);("is2";4;535;1;"";0;0);("str";3;567;1;"";5;0);("debug";6;535;1;"";1;0);("pWS";7;567;1;"";2;0);("cellRow";8;535;1;"";0;0);("cellCol";8;535;1;"";0;0);("pSI";11;567;1;"";2;0);("bof";8;535;1;"";0;0);("len";8;535;1;"";0;0);("formula";12;567;1;"";2;0);("color";13;535;1;"";0;0);("def";8;535;1;"";0;0);("code";15;535;1;"";0;0);("num";6;535;1;"";1;0);("cell";16;567;1;"";2;0);("label";12;567;1;"";2;0);("file";0;567;1;"";6;0);("charset";0;567;1;"";6;0);("data";17;567;1;"";6;0);("data_len";1;535;1;"";3;0);("outError";18;567;1;"";2;0);("handler";20;695;1;"";4;5);("bof";21;567;1;"";2;0);("col";22;567;1;"";2;0);("font";23;567;1;"";2;0);("format";24;567;1;"";2;0);("row";25;567;1;"";2;0);("xf";26;567;1;"";2;0))
+    Origins:
+        @: o0 (("balanced_declarator_scan";"declared_source_profile_not_link_checked";0;1;0;1);("gcc_isolated_header_macro_expansion";"declared_source_profile_not_link_checked";0;1;0;1);("balanced_declarator_scan";"callback_contract";0;5;0;1);("gcc_isolated_header_macro_expansion";"declared_source_profile_not_link_checked";0;7;0;1))
+    Variants:
+    Profiles:
+        @: f0 (("function";"libxls/xlstool.h";2;"typed_L2_shim_then_L3_wrapper";1;1;2;1;0);("function";"xls.h";2;"typed_L2_shim_then_L3_wrapper";1;1;1;1;1);("callback";"xls.h";2;"callback_contract_and_actor_trampoline";0;0;0;0;0);("function";"xls.h";2;"typed_L2_shim_then_L3_wrapper";1;1;2;1;0);("callback";"libxls/xlsstruct.h";2;"callback_contract_and_actor_trampoline";0;0;0;0;0))
+    Placements:
+        @: g0 (("document\\sheet";"DbRows";1))
+    Entries:
+        @: capi_f91225f3e3679465 ("codepage_decode";(0;3;(0;1;2));0;42;0;0;0;(-1);0;2)
+        @: capi_4d6e3214891075f1 ("get_string";(1;3;(0;1;3;2));0;45;0;0;0;(-1);0;2)
+        @: capi_01b131cd2962fa7a ("transcode_utf16_to_utf8";(2;3;(0;1));0;44;0;0;0;(-1);0;2)
+        @: capi_be2c6a85a71d6ef9 ("unicode_decode";(3;3;(0;1;2));0;43;0;0;0;(-1);0;2)
+        @: capi_7c4fafdf5f185b00 ("verbose";(4;5;(4));0;40;0;0;0;(-1);0;2)
+        @: capi_98e5bc973eafaddd ("xls";(5;6;(5));1;69;3;1;1;(-1);0;2)
+        @: capi_4d9d894897a65e53 ("xls_cell";(6;9;(6;7;8));1;94;4;2;2;(-1);0;3)
+        @: capi_1f58092a9bb2c740 ("xls_cell";(7;10;(6;7;8));1;94;3;1;3;(-1);0;2)
+        @: capi_d67d553341954d94 ("xls_close_WB";(8;5;(2));1;80;3;1;3;(-1);0;2)
+        @: capi_1821ddb66162cc4a ("xls_close_WS";(9;5;(6));1;87;3;1;3;(-1);0;2)
+        @: capi_bea9aa3ea4ae67f0 ("xls_close_summaryInfo";(10;5;(9));1;90;3;1;3;(-1);0;2)
+        @: capi_43a3505d3f02cebd ("xls_formula_handler";(11;5;(10;11;12));2;547;6;2;4;(-1);0;4)
+        @: capi_d84bf9d1ce5965e3 ("xls_getCSS";(12;3;(2));0;56;0;0;0;(-1);0;2)
+        @: capi_ae34785fdcd44863 ("xls_getColor";(13;14;(13;14));0;46;0;0;0;(-1);0;2)
+        @: capi_2cacd2a0f64e557d ("xls_getError";(14;0;(15));1;67;3;1;3;(-1);0;2)
+        @: capi_30011475b41714eb ("xls_getVersion";(15;0;());1;66;3;1;3;(-1);0;2)
+        @: capi_ebc55cf8cb3dc39b ("xls_getWorkSheet";(16;7;(2;16));1;86;3;1;3;(-1);0;2)
+        @: capi_6cfd47a35de98340 ("xls_getfcell";(17;3;(2;17;18));0;55;0;0;0;(-1);0;2)
+        @: capi_522df0bb30c79432 ("xls_open";(18;2;(19;20));1;83;3;1;3;(-1);0;2)
+        @: capi_fd9de24b3fa4b246 ("xls_open_buffer";(19;2;(21;22;20;23));1;78;3;1;3;(-1);0;2)
+        @: capi_c3173d4f986fb965 ("xls_open_file";(20;2;(19;20;23));1;77;3;1;3;(-1);0;2)
+        @: capi_cb8934b986ec8584 ("xls_parseWorkBook";(21;15;(2));1;72;3;1;3;(-1);0;2)
+        @: capi_3dc46c6009dda7cf ("xls_parseWorkSheet";(22;15;(6));1;73;3;1;3;(-1);0;2)
+        @: capi_57b635c37b2d674b ("xls_row";(23;19;(6;7));1;93;3;1;3;(-1);0;2)
+        @: capi_4a03f59f5356a653 ("xls_set_formula_hander";(24;5;(24));1;70;3;3;3;(-1);0;2)
+        @: capi_8a0df3afbdacee4a ("xls_showBOF";(25;5;(25));0;57;0;0;0;(-1);0;2)
+        @: capi_b918a3a435f86934 ("xls_showBookInfo";(26;5;(2));0;48;0;0;0;(-1);0;2)
+        @: capi_c7c4829f272a522e ("xls_showCell";(27;5;(17));0;51;0;0;0;(-1);0;2)
+        @: capi_51680f100faddefa ("xls_showColinfo";(28;5;(26));0;50;0;0;0;(-1);0;2)
+        @: capi_350c63804c7d8663 ("xls_showFont";(29;5;(27));0;52;0;0;0;(-1);0;2)
+        @: capi_61d28ee1b1af92fa ("xls_showFormat";(30;5;(28));0;54;0;0;0;(-1);0;2)
+        @: capi_b1c61a26b91b3cbd ("xls_showROW";(31;5;(29));0;49;0;0;0;(-1);0;2)
+        @: capi_dedeebe76c3fb80a ("xls_showXF";(32;5;(30));0;53;0;0;0;(-1);0;2)
+        @: capi_530214781561285b ("xls_summaryInfo";(33;11;(2));1;89;3;1;3;(-1);0;2)

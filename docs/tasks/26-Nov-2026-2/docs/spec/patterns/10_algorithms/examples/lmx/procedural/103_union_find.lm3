@@ -1,0 +1,18 @@
+DsuProcedural:
+    return: int
+    run:
+        throws: copy(DsuInitialize\run\throws) copy(DsuJoin\run\throws) copy(DsuEmit\run\throws)
+        int: vertex 0
+        while: vertex < n
+            DsuInitialize\run(vertex)
+            vertex += 1
+        int: count n
+        int: i 0
+        while: i < length(pairs)
+            count := DsuJoin\run(count; pairs[i])
+            i += 1
+        vertex := 0
+        while: vertex < n
+            DsuEmit\run(vertex)
+            vertex += 1
+        return: count

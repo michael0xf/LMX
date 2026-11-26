@@ -1,0 +1,48 @@
+# Canonical compact LMX proposal. Columns are positional; ids are table-local.
+# Reader/schema: ../CATALOG_FORMAT.ru.md. No publication or runtime proof.
+C99Catalog_science_extra_liblsoda:
+    int: schemaVersion 2
+    int: tableChunkSize 32
+    char[]: componentId "science_extra:liblsoda"
+    @: component ("d";(("build_group";("s";"extensions/science_extra"));("build_view_adjustments";("l";(("s";"C99 variadic macros replace GNU comma-swallow syntax; diagnostics keep message but omit source location prefix");("s";"Internal printf allocator reserves the NUL byte, checks negative formatting length and allocation failure"))));("cmake_targets";("l";(("s";"LMX::lsoda"))));("headers";("l";(("s";"third_party/lmx_c99_compact/vendor/liblsoda/src/lsoda.h"))));("id";("s";"science_extra:liblsoda"));("license";("s";"MIT"));("licenses_notices";("l";(("s";"vendor/liblsoda/LICENSE"))));("paths";("l";(("s";"vendor/liblsoda"))));("public_headers";("l";(("s";"vendor/liblsoda/src/lsoda.h"))));("purpose";("s";"Adaptive ODE integration with automatic stiff/nonstiff method switching"));("selected_profile";("s";"double, dense finite-difference Jacobian; C99 diagnostic adapter"));("source_archives";("l";(("d";(("download_bytes";("i";113235));("retained_in_delivery";("b";0));("sha256";("s";"b94e3b584b5a7357fc4cb395f198e7136135915c46ec35e7359ca54144a392b5"));("url";("s";"https://codeload.github.com/sdwfrost/liblsoda/tar.gz/refs/heads/master")))))));("source_validation";("s";"source_census_only_not_link_test"));("state_and_reentrancy";("s";"Solver state is in caller contexts; read-only coefficient table is shared. Tested interleaved independent solves, not concurrent threads. Dense Jacobian memory grows quadratically in equation count; caller must budget dimension and lifetime."));("surface_patterns";("l";(("s";"vendor/liblsoda/src/lsoda.h"))));("targets";("l";(("s";"LMX::lsoda"))));("urls";("l";(("s";"https://github.com/sdwfrost/liblsoda");("s";"https://codeload.github.com/sdwfrost/liblsoda/tar.gz/refs/heads/master"))));("vendor_modifications";("l";()));("version";("s";"master snapshot retrieved 2026-11-25"))))
+    @: models C99Schema\Models
+    Columns:
+        @: Parameters ("cName";"cType";"flags";"declarationMode";"declarationOverride";"model";"extra")
+        @: Specs ("signature";"returnType";"parameterList")
+        @: Origins ("extraction";"availability";"unresolved";"notes";"body";"conditionsPresent")
+        @: Variants ("spec";"source";"line";"conditions";"origin";"extra")
+        @: Profiles ("kind";"header";"targets";"ffiDisposition";"publishCandidate";"pubCandidate";"status";"callable";"direct")
+        @: Placements ("package";"primaryModel";"extra")
+        @: Entries ("symbol";"spec";"source";"line";"conditions";"origin";"profile";"variants";"placement";"extra")
+    PropertyKeys:
+        @: k0 ("component";"publication";"symbol_kinds")
+    PropertyValues:
+        @: z0 (("s";"science_extra:liblsoda");("s";"proposal_only");("l";(("s";"callback")));("l";(("s";"function"))))
+    Signatures:
+        @: s0 ("typedef int ( * _lsoda_f ) ( double , double * , double * , void * )";"int lsoda ( struct lsoda_context_t * ctx , double * y , double * t , double tout )";"struct lsoda_context_t * lsoda_create_ctx ( )";"struct lsoda_opt_t * lsoda_create_opt ( )";"void lsoda_free ( struct lsoda_context_t * ctx )";"void lsoda_free_opt ( struct lsoda_opt_t * opt )";"int lsoda_prepare ( struct lsoda_context_t * ctx , struct lsoda_opt_t * opt )";"void lsoda_reset ( struct lsoda_context_t * ctx )")
+    Types:
+        @: t0 ("double";"double *";"void *";"int";"struct lsoda_context_t *";"struct lsoda_opt_t *";"void")
+    Sources:
+        @: r0 ("third_party/lmx_c99_compact/vendor/liblsoda/src/lsoda.h")
+    Lists:
+        @: l0 (("ifndef _LSODA_H_");("Callback type/slot, not an exported callable.";"Internal helper or private header surface; keep out of direct L3 publication.");("LMX::lsoda");())
+    Properties:
+        @: x0 (();((0;0);(1;1));((2;2));((2;3)))
+    Parameters:
+        @: p0 (("arg1";0;23;0;"";8;0);("arg2";1;55;0;"";5;0);("arg3";1;55;0;"";5;0);("arg4";2;55;0;"";5;0);("ctx";4;567;1;"";2;0);("y";1;567;1;"";5;0);("t";1;567;1;"";5;0);("tout";0;535;1;"";8;0);("opt";5;567;1;"";2;0))
+    Origins:
+        @: o0 (("balanced_declarator_scan";"internal_header_surface";0;1;0;1);("balanced_declarator_scan";"declared_source_profile_not_link_checked";0;3;0;1))
+    Variants:
+    Profiles:
+        @: f0 (("callback";"lsoda.h";2;"callback_contract_and_actor_trampoline";0;0;0;0;0);("function";"lsoda.h";2;"typed_L2_shim_then_L3_wrapper";1;1;2;1;0))
+    Placements:
+        @: g0 (("math\\ode";"Tensor";1))
+    Entries:
+        @: capi_e9fcbdc39a40859a ("_lsoda_f";(0;3;(0;1;2;3));0;23;0;0;0;(-1);0;2)
+        @: capi_beaed5e4b0c57a46 ("lsoda";(1;3;(4;5;6;7));0;39;0;1;1;(-1);0;3)
+        @: capi_186995b9895bbc05 ("lsoda_create_ctx";(2;4;());0;43;0;1;1;(-1);0;3)
+        @: capi_989a0dc62724e5e0 ("lsoda_create_opt";(3;5;());0;44;0;1;1;(-1);0;3)
+        @: capi_fce998da4c5b1e9d ("lsoda_free";(4;6;(4));0;40;0;1;1;(-1);0;3)
+        @: capi_8a5ab182ea4a8ad6 ("lsoda_free_opt";(5;6;(8));0;41;0;1;1;(-1);0;3)
+        @: capi_a540549d3eed5b8a ("lsoda_prepare";(6;3;(4;8));0;37;0;1;1;(-1);0;3)
+        @: capi_d9932705793db47b ("lsoda_reset";(7;6;(4));0;38;0;1;1;(-1);0;3)

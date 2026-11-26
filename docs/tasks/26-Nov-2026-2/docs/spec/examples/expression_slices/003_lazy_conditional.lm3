@@ -1,0 +1,11 @@
+Unselected:
+    return: int
+    fail:
+        throws: NotChosen
+        throw: NotChosen()
+
+LazyConditional:
+    return: int
+    run:
+        throws: copy(Unselected\fail\throws)
+        return: 1 ? 42 : Unselected\fail()

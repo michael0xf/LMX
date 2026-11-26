@@ -342,6 +342,7 @@ Haskell (`patterns/examples/haskell_comparision/A01, H01–H09, M01, M05, R01–
 | 34 | 2026-11-26 | коммит этой строки | `docs/spec/**` (29 файлов), `provenance/grammar.json`, `provenance/semantics-book.md`, `LMX_blog/2026-11-26-expression-reference-atoms.md` | уточнение автора: атом-ссылка на Structure в Expression — группа только вне роли операнда; конкурирующие чтения — ошибка трансляции до вычисления; запись 34 |
 | 35 | 2026-11-26 | коммит этой строки | `docs/spec/LMX_semantics.en.md`, `.ru.md`, `docs/spec/EXPRESSION_ALGORITHM.md`, `docs/spec/EXPRESSION_GROUPING.md`, `docs/spec/LMX_grammar.en.md`, `.ru.md`, `provenance/grammar.json`, `provenance/semantics-book.md`, `LMX_blog/2026-11-26-expression-reference-atoms.md` | уточнение автора: роль атома-ссылки в Expression задаёт обычный `satisfies` по шаблону операнда при трансляции; запись 35 |
 | 36 | 2026-11-26 | коммит этой строки | `docs/core_catalog/**`, `docs/c99_archive/**`, `third_party/lmx_c99_compact/**`, `.gitattributes` | каталог и коллекция C99 расширены до 180 компонентов; запись 36 |
+| 37 | 2026-11-26 | коммит этой строки | `docs/core_catalog/tools/extract_inventory.py` | исправлено извлечение описи C API под Windows; запись 37 |
 
 Запись 28: рабочая коллекция взята из пакета 3. Из 2861 изменённых путей 2854 новых и 7 заменённых; 2526 хранятся
 байтами автора, остальные 335 текстов (2 779 499 → 2 733 078 байт, 46 421 перевод CRLF; `vendor/softfloat` 307,
@@ -432,6 +433,14 @@ opening`, все числа равны проверке 308, отслежива�
 CMake 3.22 под WSL не удовлетворяет требованию 3.26. Под Windows CMake 3.30 записывает CRLF в
 генерируемый `packet.c` из прежнего адаптера libssh2. После нормализации к LF SHA-256 результата
 совпадает с ожидаемым. Исходник libssh2 и адаптер в этом слиянии не менялись.
+
+Запись 37. Перенесено проверенное исправление Haiku. Для директивы `#line` и сопоставления
+путей в маркерах GCC используется один путь с прямыми косыми чертами. Оба вызова
+препроцессора читают вывод как UTF-8 с заменой некорректных последовательностей.
+Рабочие `extract_inventory.py` и `validate_inventory.py` прошли под Windows с MinGW GCC.
+Результат извлечения побайтно совпал с контрольным прогоном Haiku.
+Валидатор подтвердил все 100 проверок, включая 180 компонентов, 1 592 заголовка,
+54 261 запись API и 33 048 кандидатов на вызов.
 
 ## Порядок
 

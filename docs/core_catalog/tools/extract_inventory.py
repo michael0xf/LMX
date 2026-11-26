@@ -712,8 +712,8 @@ def supplement_isolated_headers(r,out,entries,headers,diagnostics,component_macr
                 parts.extend([clean[last:a],''.join('\n' if c=='\n' else ' ' for c in part)]);last=b
         parts.append(clean[last:]);clean=''.join(parts)
         clean=re.sub(r'@[^@\n]+@','0',clean)
-        source='#line 1 "'+str(r/rel)+'"\n'+clean
-        p=subprocess.run(['gcc','-E','-x','c','-std=c99','-nostdinc','-D_XOPEN_SOURCE=700','-'],input=source,text=True,capture_output=True)
+        source='#line 1 "'+(r/rel).as_posix()+'"\n'+clean
+        p=subprocess.run(['gcc','-E','-x','c','-std=c99','-nostdinc','-D_XOPEN_SOURCE=700','-'],input=source,encoding='utf-8',errors='replace',capture_output=True)
         return h, p
     added=collections.Counter();errors=[]
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
@@ -729,7 +729,7 @@ def supplement_isolated_headers(r,out,entries,headers,diagnostics,component_macr
             text=''.join(pieces)
             for d in declarations(text):
                 at=text.count('\n',0,d.pop('offset'));src,lno=locations[min(at,len(locations)-1)] if locations else (None,0)
-                if src!=str(r/rel):continue
+                if src!=(r/rel).as_posix():continue
                 d.update(component=cid,source={'path':h['path'],'line':lno},conditions=['isolated header preprocessing; dependency includes masked'],targets=h['targets'],extraction='gcc_isolated_header_macro_expansion',canonical_header=canonical_header(rel),classification=d.pop('kind'))
                 classify(d,cid.split(':',1)[1],rel,component_macros.get(cid,()))
                 key=(cid,d['name'],d['classification'])
@@ -752,7 +752,7 @@ def supplement_preprocessor(r,out,entries,diagnostics):
             source=out/'preprocessed_inputs'/Path(rel).name[:-3];source.parent.mkdir(exist_ok=True)
             source.write_text(re.sub(r'@[^@\n]+@','0',original))
         cmd=['gcc','-E','-x','c','-std=c99','-D_XOPEN_SOURCE=700','-I'+str(r/'vendor/cglm/include')]+defines+[str(source)]
-        p=subprocess.run(cmd,text=True,capture_output=True)
+        p=subprocess.run(cmd,encoding='utf-8',errors='replace',capture_output=True)
         diagnostics.append({'operation':'preprocess','component':cid,'header':PREFIX+rel,'return_code':p.returncode,'diagnostic':p.stderr[:2000]})
         # Turn line markers into an offset map while preserving newlines.
         pieces=[];loc=[];current=None;lineno=0

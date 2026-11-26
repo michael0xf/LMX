@@ -1,5 +1,8 @@
 # LMX
 
+All implementation agents, including Opus when assigned, start with the
+[current first task in plan v3](next_core_tasks_v3.md#grammar-first-20261126).
+
 Read and follow [the mandatory guide for all models](READ.ME), then [current working instructions](steps/current.md) and the mandatory [component build policy](to_fable2_fast_build.md). This policy supersedes older requirements for a whole bootstrap or full suite on every slice. Archive in `LMX_blog/` only the author’s technical language clarifications that directly affect the specification; exclude organizational messages. Follow the quotation rules in READ.ME.
 
 Working agents (except the `lmx_uds` courier): read [the LMX development services instructions](tools/lmx_dev/USAGE.md). Use the `lmx-dev` MCP tools for current-rule lookup and coordinated checks; if this session has not loaded MCP yet, use the same documented CLI. The project lead, `coder`, delegates to `helper` and owns the single compiler/test/docs pipeline and compiler permits. Coder sends every project question he would raise with the author to Sol (`codex`). Sol asks Astra (`astra`) if he cannot resolve it. Only Astra asks the author, and only if she cannot answer. The lead does not wait for a new message to continue: after a finished slice the next step of `next_core_tasks_v3.md` is taken at once, and a question sent to Sol does not stop the work that does not depend on its answer. See the [current handoff](to_sol.md). An unavailable phase or closed service window is not a successful check; executors must not bypass it with uncoordinated runs. The coordinator may use author-authorized official producers for another agreed closure (such as W4) under the shared lock while the W3 service permit stays closed.

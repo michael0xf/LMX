@@ -34,6 +34,7 @@ predef: "l2src/lmx_arena.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_array_owned.h.lm1"
+predef: "l2src/lmx_types.h.lm1"
 predef: "l2src/lmx_checks.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
 predef: "l2src/lmx_walk.h.lm1"
@@ -2801,6 +2802,34 @@ end: lmx_graph_dump_selector
 # `(int name)` and a reference place as `(@ name target)`; an Lmx in parentheses -- a Frame (an Lmx named by its head,
 # §3.3) as `(head arguments)`, an anonymous Structure or an expression as `(fields)` -- or by its name when it is on the
 # path of the print already (lmx_graph_dump_on_path). 0, or 1 when a cell is none of the graph's or without memory.
+fn: lmx_graph_dump_type_head (c.LmxArena@: arena; c.Lmx@: type_ref; c.FILE@: f) int
+    size_t@: axes 0
+    size_t: rank 0U
+    size_t: depth 0U
+    if: c.lmx_types_reference_parts(arena, (cast: (@) type_ref), @ axes, @ rank, @ depth) = 0
+        return: 1
+    ---
+    size_t: i 0U
+    while: i < rank
+        if: axes = 0 || axes[i] = (cast: (size_t) -1)
+            c.fputs("[]", f)
+        else:
+            c.fprintf(f, "[%zu]", axes[i])
+        ---
+        i := i + 1U
+    ---
+    if: depth = 0U
+        c.fputs("int", f)
+    else:
+        if: depth = 1U
+            c.fputc('@', f)
+        else:
+            c.fprintf(f, "@(%zu)", depth)
+        ---
+    ---
+    return: 0
+end: lmx_graph_dump_type_head
+
 fn: lmx_graph_dump_token (c.LmxGraph@: g; @: value; c.FILE@: f; @@: path) int
     c.LmxGraphState@: state lmx_graph_state()
     int: kind lmx_graph_kind(g, value)
@@ -2812,6 +2841,40 @@ fn: lmx_graph_dump_token (c.LmxGraph@: g; @: value; c.FILE@: f; @@: path) int
     size_t: n 0U
     int: printed 0
     int: status 0
+    if: kind = 4 && c.lmx_types_reference_parts(g\arena, value, 0, 0, 0) != 0
+        c.fputs("sys\\descriptor(", f)
+        lmx_graph_dump_type_head((cast: (c.LmxArena@) g\arena), (cast: (c.Lmx@) value), f)
+        c.fputc(')', f)
+        return: 0
+    ---
+    if: kind = 0
+        c.Lmx@: type_ref c.lmx_types_record_reference(g\arena, value)
+        if: type_ref != 0
+            c.fputc('(', f)
+            lmx_graph_dump_type_head((cast: (c.LmxArena@) g\arena), type_ref, f)
+            c.fputc(':', f)
+            name := lmx_graph_name_of(g, value)
+            if: name != 0
+                c.fprintf(f, " %s", name)
+            ---
+            if: c.lmx_range_type_of(g\arena, value) = c.LMX_TYPE_ARRAY_OF_INT
+                c.LmxArray@: array (cast: (c.LmxArray@) value)
+                c.VoidArray@: payload @ array\array
+                int@: values (cast: (int@) payload\data)
+                c.fputs(" [", f)
+                while: i < payload\size
+                    if: i != 0U
+                        c.fputc(' ', f)
+                    ---
+                    c.fprintf(f, "%d", values[i])
+                    i := i + 1U
+                ---
+                c.fputc(']', f)
+            ---
+            c.fputc(')', f)
+            return: 0
+        ---
+    ---
     if: kind = 2
         text := lmx_graph_word_text(g, value)
         if: text = 0
@@ -3225,6 +3288,14 @@ fn: lmx_graph_dump_at (c.LmxGraph@: g; c.Lmx@: lmx; c.FILE@: f; int: depth; @@: 
             continue
         kind := lmx_graph_kind(g, value)
         lmx_graph_dump_indent(f, depth)
+        if: (kind = 0 && c.lmx_types_record_reference(g\arena, value) != 0) || (kind = 4 && c.lmx_types_reference_parts(g\arena, value, 0, 0, 0) != 0)
+            if: lmx_graph_dump_token(g, value, f, path) != 0
+                return: 1
+            ---
+            c.fputc(10, f)
+            i := i + 1U
+            continue
+        ---
         if: kind = 4
             if: lmx_graph_dump_on_path(path, value) != 0
                 lmx_graph_dump_again(g, value, f)
@@ -3613,11 +3684,20 @@ return: c.lmx_graph_node_in((cast: (c.LmxArena@) g\arena), address)
 # the pointer of a field without a value, a nested Structure, a word, a reference place. 0 and the reference in out; 4
 # for a value that stands for no Structure, or without memory; 7 for an index outside its fields.
 fn: lmx_graph_index_parts (c.LmxGraph@: g; @: value; ullong: magnitude; int: negative; @@: out) int
-    c.Lmx@: inner lmx_graph_index_node(g, value)
     @: cell void 0
     c.LmxPointerCellRead: read 0
     c.LmxPointerCellWrite: write 0
     int: status 0
+    if: out != 0 && c.lmx_range_type_of(g\arena, value) = c.LMX_TYPE_ARRAY_OF_INT
+        c.LmxArray@: array (cast: (c.LmxArray@) value)
+        c.VoidArray@: payload @ array\array
+        if: negative != 0 || magnitude >= (cast: (ullong) payload\size)
+            return: 7
+        ---
+        out[0] := c.lmx_array_cell_in(g\arena, array, (cast: (size_t) magnitude))
+        return: (cast: (int) (out[0] = 0)) * 4
+    ---
+    c.Lmx@: inner lmx_graph_index_node(g, value)
     if: out = 0 || inner = 0
         return: 4
     # The access to the element is checked against the current length (lmx_check_index).
@@ -3710,6 +3790,15 @@ end: lmx_graph_index_store
 # stands for no Structure.
 fn: lmx_graph_length (c.LmxGraph@: g; @: value; int@: out) int
     @: base void lmx_graph_target(g, value)
+    if: out != 0 && c.lmx_range_type_of(g\arena, base) = c.LMX_TYPE_ARRAY_OF_INT
+        c.LmxArray@: array (cast: (c.LmxArray@) base)
+        c.VoidArray@: payload @ array\array
+        if: payload\size > (cast: (size_t) c.INT_MAX)
+            return: 4
+        ---
+        out[0] := (cast: (int) payload\size)
+        return: 0
+    ---
     if: out = 0 || lmx_graph_kind(g, base) != 4
         return: 4
     out[0] := (cast: (int) lmx_graph_count((cast: (c.Lmx@) base)))

@@ -3,6 +3,7 @@
 # no new graph field, name lookup, arena singleton or C shim.
 predef: "l2src/lmx_reparent.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
+predef: "l2src/lmx_types.h.lm1"
 predef: "l2src/lmx_graph_copy_owned.lm1"
 predef: "l2src/lmx_primitive.h.lm1"
 predef: "l2src/lmx_list_owned.lm1"
@@ -276,6 +277,11 @@ fn: lmx_reparent_graph_preflight (c.LmxArena@: arena; c.Lmx@: graph; c.LmxThread
         kind := c.lmx_range_classify(arena, value)
         if: kind = c.LMX_KIND_NONE
             # An opaque external address is not an imported eternal branch.
+            continue
+        ---
+        if: kind = c.LMX_KIND_STRUCT && c.lmx_types_reference_parts(arena, value, 0, 0, 0) != 0
+            # Canonical type descriptions belong to the process. Their sealed
+            # ranges outlive both the old and proposed Message ancestry.
             continue
         ---
         if: c.lmx_copy_map_put(@ seen, value, value) != 0

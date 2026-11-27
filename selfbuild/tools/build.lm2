@@ -1154,7 +1154,7 @@ fn: decl_lmx (c.FILE@: f) int
         return: 1
     if: c.fputs("    LMX_TYPE_ARRAY_OF_DESC 11\n    # k.4 (2026-09-25): the LmxMethod pool/array is gone with LmxMethod itself; reserved.\n    LMX_TYPE_RESERVED_12 12\n    # an Lmx header: the Structure domain itself\n    LMX_TYPE_STRUCT 13\n    # SPEC 11.2.1 / ABI 3.3: the L2 form `@: ptr char \"hello\"` stores a child pointer into a\n    # typed array of char * values, each pointing directly at a C string.  No length,\n    # no Array record.  Kind PRIMITIVE, stride sizeof(char *).\n    LMX_TYPE_CHAR_PTR 14\n    # Appended so existing numeric ABI values stay stable.  `unsigned` is a distinct\n    # primitive address domain; it is not SIZE_T even on hosts where their widths\n    # happen to match.\n    LMX_TYPE_UNSIGNED 15\n    # Appended independently of the scalar SIZE_T domain: this identifies Array\n    # descriptors whose backing cells are size_t values.\n    LMX_TYPE_ARRAY_OF_SIZE_T 16\n    # A C typedef of unsigned char remains distinct from plain char.\n    LMX_TYPE_UNSIGNED_CHAR 17\n    LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR 18\n    LMX_TYPE_ULONG 19\n    LMX_TYPE_ARRAY_OF_ULONG 20\n    # Independent source-name service storage; never a graph child/value tag.\n    # 21..34 are the existing LMX_DOMAIN_* values; do not reuse them.\n    LMX_TYPE_SOURCE_NAME 35\n", f) < 0
         return: 1
-    if: c.fputs("    # Identity-only source symbol occurrence. Spelling lives in the external\n    # name table, not in this cell; it is not a machine operation record.\n    LMX_TYPE_SOURCE_SYMBOL 36\n    # The clean graph (slice 309, docs/kernel-implementation.*.md, section 2.2): a word primitive is a cell holding the\n    # canonical address of an interned spelling; a NAME row is {address, name} of the address -> name table.\n    LMX_TYPE_WORD 37\n    LMX_TYPE_NAME 38\n    # The bytes of interned spellings (section 4): char cells of the arena that owns the string state.\n    LMX_TYPE_TEXT 39\n    # Exact C scalar objects use the pool ABI, never a source-row number.\n    LMX_TYPE_FOREIGN 40\n    # Scalar pointer variables live in pointer cells.  The concrete source pointer\n    # type is encoded as LMX_TYPE_POINTER_BASE + a closed-unit type id, so @T and @@T\n    # occupy distinct address domains.\n    LMX_TYPE_POINTER_BASE 1024\n    # The pointer primitive of a place without a value -- int without initialization (the author, 2026-11-08 19:02Z;\n    # the spec, section 3.2): a pointer cell of the pointer domain pointing at the not yet written int cell of its place.\n    LMX_TYPE_UNINIT_INT 1001024\n    # The clean graph's initialized pointer to an int cell. Physical address typing, not a language opcode.\n    LMX_TYPE_GRAPH_INT_REF 1001025\n    # The clean graph's initialized pointer to an Lmx: a reference to a Structure or a callable (slice 329).\n    LMX_TYPE_GRAPH_LMX_REF 1001026\n    # The clean graph's untyped reference -- the address a slot of a Structure holds, the value its index `S[i]` reads\n    # (the author, 2026-11-10; the book, structure-index): a pointer cell holding any address of the arena.\n    LMX_TYPE_GRAPH_REF 1001027\n    # Service links to pre-existing typed reference cells, without an initial-address promise.\n    LMX_TYPE_UNINIT_GRAPH_INT_REF 1001028\n    LMX_TYPE_UNINIT_GRAPH_LMX_REF 1001029\n    # The Message reference -- a pointer cell holding a Message record's address, a letter's\n    # sender -- is LMX_TYPE_POINTER_BASE + 29 (29 is l2trans's l2_msg_ref_ty()).  Named once here:\n    # the kernel, the driver, the selftests and the cells the translator emits all say\n    # LMX_TYPE_MSG_REF.  (An L1 enum value is one literal; the sum is written out.)\n    LMX_TYPE_MSG_REF 1053\n    # Slice 261 (design 4.5 B2b-2d, P1-PTR-COVERAGE): the kernel's own pointer code for the address of a cell that no\n    # pointer code of the table expresses -- a graph or Array reference cell, a pointer cell of a translator code, an\n    # unsigned char cell, an element place: LMX_TYPE_POINTER_BASE + 64, below the translator's foreign band (POINTER_BASE +\n    # 100 and up) and above its fixed codes.  The pointee is read from the addressed cell or its owning record\n    # (lmx_walk_value_deref_actual), never from this code (lmx_type_pointee gives NONE); a typed pointer place receives such\n    # an address by the actual pointees (lmx_walk_value_receive_pointer).\n    LMX_TYPE_CELL_POINTER 1088\n    # Array<@T> descriptors have their own exact address domain.  For the same\n    # closed-unit T id, backing cells use POINTER_BASE + id and the descriptor uses\n    # ARRAY_OF_POINTER_BASE + id.  Array length is dynamic; these values classify\n    # types, not storage slots or capacity.\n    LMX_TYPE_ARRAY_OF_POINTER_BASE 1048576\n    # The first code the type context gives (lmx_types.lm2, Р155): above every fixed code and below INT_MAX; the\n    # codes from it up are interned types, numbered by a counter that only grows.\n    LMX_TYPE_TYPES_BASE 4194304\nend: LmxType\n\n", f) < 0
+    if: c.fputs("    # Identity-only source symbol occurrence. Spelling lives in the external\n    # name table, not in this cell; it is not a machine operation record.\n    LMX_TYPE_SOURCE_SYMBOL 36\n    # The clean graph (slice 309, docs/kernel-implementation.*.md, section 2.2): a word primitive is a cell holding the\n    # canonical address of an interned spelling; a NAME row is {address, name} of the address -> name table.\n    LMX_TYPE_WORD 37\n    LMX_TYPE_NAME 38\n    # The bytes of interned spellings (section 4): char cells of the arena that owns the string state.\n    LMX_TYPE_TEXT 39\n    # Exact C scalar objects use the pool ABI, never a source-row number.\n    LMX_TYPE_FOREIGN 40\n    # Scalar pointer variables live in pointer cells.  The concrete source pointer\n    # type is encoded as LMX_TYPE_POINTER_BASE + a closed-unit type id, so @T and @@T\n    # occupy distinct address domains.\n    LMX_TYPE_POINTER_BASE 1024\n    # The pointer primitive of a place without a value -- int without initialization (the author, 2026-11-08 19:02Z;\n    # the spec, section 3.2): a pointer cell of the pointer domain pointing at the not yet written int cell of its place.\n    LMX_TYPE_UNINIT_INT 1001024\n    # The clean graph's initialized pointer to an int cell. Physical address typing, not a language opcode.\n    LMX_TYPE_GRAPH_INT_REF 1001025\n    # The clean graph's initialized pointer to an Lmx: a reference to a Structure or a callable (slice 329).\n    LMX_TYPE_GRAPH_LMX_REF 1001026\n    # The clean graph's untyped reference -- the address a slot of a Structure holds, the value its index `S[i]` reads\n    # (the author, 2026-11-10; the book, structure-index): a pointer cell holding any address of the arena.\n    LMX_TYPE_GRAPH_REF 1001027\n    # Service links to pre-existing typed reference cells, without an initial-address promise.\n    LMX_TYPE_UNINIT_GRAPH_INT_REF 1001028\n    LMX_TYPE_UNINIT_GRAPH_LMX_REF 1001029\n    LMX_TYPE_UNINIT_ARRAY 1001030\n    # The Message reference -- a pointer cell holding a Message record's address, a letter's\n    # sender -- is LMX_TYPE_POINTER_BASE + 29 (29 is l2trans's l2_msg_ref_ty()).  Named once here:\n    # the kernel, the driver, the selftests and the cells the translator emits all say\n    # LMX_TYPE_MSG_REF.  (An L1 enum value is one literal; the sum is written out.)\n    LMX_TYPE_MSG_REF 1053\n    # Slice 261 (design 4.5 B2b-2d, P1-PTR-COVERAGE): the kernel's own pointer code for the address of a cell that no\n    # pointer code of the table expresses -- a graph or Array reference cell, a pointer cell of a translator code, an\n    # unsigned char cell, an element place: LMX_TYPE_POINTER_BASE + 64, below the translator's foreign band (POINTER_BASE +\n    # 100 and up) and above its fixed codes.  The pointee is read from the addressed cell or its owning record\n    # (lmx_walk_value_deref_actual), never from this code (lmx_type_pointee gives NONE); a typed pointer place receives such\n    # an address by the actual pointees (lmx_walk_value_receive_pointer).\n    LMX_TYPE_CELL_POINTER 1088\n    # Array<@T> descriptors have their own exact address domain.  For the same\n    # closed-unit T id, backing cells use POINTER_BASE + id and the descriptor uses\n    # ARRAY_OF_POINTER_BASE + id.  Array length is dynamic; these values classify\n    # types, not storage slots or capacity.\n    LMX_TYPE_ARRAY_OF_POINTER_BASE 1048576\n    # The first code the type context gives (lmx_types.lm2, Р155): above every fixed code and below INT_MAX; the\n    # codes from it up are interned types, numbered by a counter that only grows.\n    LMX_TYPE_TYPES_BASE 4194304\nend: LmxType\n\n", f) < 0
         return: 1
     if: c.fputs("enum: LmxKind\n    # not a classifiable high-level value\n    LMX_KIND_NONE 0\n    # primitive pool entry, e.g. all_chars_array\n    LMX_KIND_PRIMITIVE 1\n    # k.4 (2026-09-25): LmxMethod is gone (Lmx.native replaces it); reserved.\n    LMX_KIND_RESERVED_2 2\n    # typed graph Array pool entry (the common Lmx header)\n    LMX_KIND_ARRAY 3\n    # a Structure's void * child-pointer array: a storage location, not a value\n    LMX_KIND_CHILDREN 4\n    # pointer-valued array element; type is T\n    LMX_KIND_REF 5\n    # an ordinary Lmx header {parent, native, array}\n    LMX_KIND_STRUCT 6\n    # independent L1 dynamic container (VoidArray); not an Array.  lmx_range_classify\n    # answers LmxKind and the domain kinds (lmx_implements.h.lm1, 7..20) in ONE number space,\n    # so this value follows the last domain kind: 7 was LMX_DOMAIN_KIND_MSG_RECORD, and a\n    # Thread/Message record classified as a List.\n    LMX_KIND_LIST 21\n    # Weak address-keyed source payloads outside the graph's child arrays.\n    LMX_KIND_SOURCE_NAME 22\n    LMX_KIND_SOURCE_SYMBOL 23\n    # Physical field-address backing. Each void * cell holds the ALREADY\n", f) < 0
         return: 1
@@ -1321,7 +1321,7 @@ fn: decl_types (c.FILE@: f) int
         return: 1
     if: c.fputs("# code_dead removed ones); the counters and the next code.\n", f) < 0
         return: 1
-    if: c.fputs("struct: LmxTypes\n    @: LmxArena type_arena\n    @: Lmx int_type_ref\n    @: Lmx int_array_type_ref\n    @: LmxTypeRow rows\n    size_t: cap\n    size_t: used\n", f) < 0
+    if: c.fputs("struct: LmxTypeRefRow\n    @: LmxTypeRefRow next\n    @: LmxArena arena\n    @: Lmx description\n    @: size_t axes\n    size_t: rank\n    size_t: depth\nend: LmxTypeRefRow\n\nstruct: LmxTypes\n    @: LmxArena type_arena\n    @: Lmx int_type_ref\n    @: Lmx int_array_type_ref\n    @: LmxTypeRefRow type_refs\n    @: LmxTypeRow rows\n    size_t: cap\n    size_t: used\n", f) < 0
         return: 1
     if: c.fputs("    size_t: free_head\n    @: size_t by_key\n    @: size_t by_model\n", f) < 0
         return: 1
@@ -1332,6 +1332,8 @@ fn: decl_types (c.FILE@: f) int
     if: c.fputs("    size_t: index_rebuilds\n    int: next_code\nend: LmxTypes\n\nprototype:\n", f) < 0
         return: 1
     if: c.fputs("    fn: lmx_types_context () @: LmxTypes\n    fn: lmx_types_reference (@: LmxArena arena; int: type) @: Lmx\n    fn: lmx_types_record_reference (@: LmxArena arena; @: void value) @: Lmx\n", f) < 0
+        return: 1
+    if: c.fputs("    fn: lmx_types_composed_reference (@: LmxArena arena; size_t: depth; const: @(size_t axes); size_t: rank) @: Lmx\n    fn: lmx_types_reference_parts (@: LmxArena arena; @: void value; @@: size_t axes; @: size_t rank; @: size_t depth) int\n    fn: lmx_types_uninit_array (@: LmxArena arena; @: Lmx type_ref) @: void\n", f) < 0
         return: 1
     if: c.fputs("    fn: lmx_types_intern (int: ctor; int: operand) int\n", f) < 0
         return: 1
@@ -2339,12 +2341,12 @@ fn: bld_kernel_l2 (c.FILE@: rec; char@: repo; char@: stage; char@: base; char@: 
     char@@: chars_owned_names c.calloc(2U, sizeof(char@))
     char@@: array_ref_names c.calloc(4U, sizeof(char@))
     char@@: refs_names c.calloc(15U, sizeof(char@))
-    char@@: array_names c.calloc(7U, sizeof(char@))
+    char@@: array_names c.calloc(8U, sizeof(char@))
     char@@: scratch_names c.calloc(5U, sizeof(char@))
     char@@: value_names c.calloc(64U, sizeof(char@))
     char@@: source_names c.calloc(16U, sizeof(char@))
     char@@: ids_names c.calloc(6U, sizeof(char@))
-    char@@: types_names c.calloc(14U, sizeof(char@))
+    char@@: types_names c.calloc(17U, sizeof(char@))
     char@@: gc_graph_names c.calloc(5U, sizeof(char@))
     char@@: implements_names c.calloc(78U, sizeof(char@))
     char@@: copy_names c.calloc(32U, sizeof(char@))
@@ -3309,6 +3311,7 @@ fn: bld_kernel_l2 (c.FILE@: rec; char@: repo; char@: stage; char@: base; char@: 
     array_names[4] := "lmx_array_new_typed_child_profiled"
     array_names[5] := "lmx_array_cell_in"
     array_names[6] := "lmx_array_new_positive_owned"
+    array_names[7] := "lmx_array_new_int_with_reference"
     scratch_names[0] := "lmx_scratch_open"
     scratch_names[1] := "lmx_scratch_take"
     scratch_names[2] := "lmx_scratch_mark"
@@ -3414,6 +3417,9 @@ fn: bld_kernel_l2 (c.FILE@: rec; char@: repo; char@: stage; char@: base; char@: 
     types_names[11] := "lmx_types_arena_next"
     types_names[12] := "lmx_types_reference"
     types_names[13] := "lmx_types_record_reference"
+    types_names[14] := "lmx_types_composed_reference"
+    types_names[15] := "lmx_types_reference_parts"
+    types_names[16] := "lmx_types_uninit_array"
     gc_graph_names[0] := "lmx_gc_note"
     gc_graph_names[1] := "lmx_gc_cells"
     gc_graph_names[2] := "lmx_gc_mark_value"
@@ -3440,7 +3446,7 @@ fn: bld_kernel_l2 (c.FILE@: rec; char@: repo; char@: stage; char@: base; char@: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_arena_refs", refs_names, 15, 1) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_array_owned", array_names, 7, 1) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_array_owned", array_names, 8, 1) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_scratch", scratch_names, 5, 0) != 0
         return: 1
@@ -3463,7 +3469,7 @@ fn: bld_kernel_l2 (c.FILE@: rec; char@: repo; char@: stage; char@: base; char@: 
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_ids", ids_names, 6, 0) != 0
         return: 1
     # The type context (Р155) declares its functions itself: decls_write_all wrote lmx_types.h.lm1.
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_types", types_names, 14, 0) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_types", types_names, 17, 0) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_source_names", source_names, 16, 0) != 0
         return: 1

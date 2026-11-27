@@ -18,6 +18,8 @@
 predef: "l1src/p0.h.lm1"
 predef: "l1src/parser.lm1"
 predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_types.h.lm1"
+predef: "l2src/lmx_array_owned.h.lm1"
 predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_graph_run.h.lm1"
 predef: "l2src/lmx_source_names.h.lm1"
@@ -918,6 +920,272 @@ fn: lm_graph_build_typed_place (c.LmxGraph@: g; c.LmP0Frame@: fr; char@: head; @
     return: 0
 end: lm_graph_build_typed_place
 
+# Consume a bounded integer from the ordinary P0 tree. Unsupported expressions
+# stay for the general TYPE consumer; they are never run by the graph builder.
+fn: lm_graph_type_integer (c.LmP0Node@: region; int@: value) int
+    if: region = 0 || region\kind != c.LM_P0_NODE_STRUCTURE
+        return: 0
+    ---
+    c.LmP0Structure@: body lm_graph_p0_structure(region)
+    if: body = 0 || lm_graph_count_active(body) != 1U
+        return: 0
+    ---
+    c.LmP0Node@: field lm_graph_p0_value(lm_graph_next_active(lm_graph_p0_first(body)))
+    if: field\kind != c.LM_P0_NODE_ATOM
+        return: 0
+    ---
+    return: lm_graph_int_literal(lm_graph_p0_atom(field), value)
+end: lm_graph_type_integer
+
+fn: lm_graph_type_adjacent (c.LmP0Node@: left; c.LmP0Node@: right) int
+    return: right != 0 && right\span\offset = left\span\offset + left\span\length
+end: lm_graph_type_adjacent
+
+# Read a complete TYPE from the parsed fields. Array axes are outermost first.
+# A terminal address run, counted or repeated, supplies its own implicit base.
+fn: lm_graph_build_type_reference (c.LmxGraph@: g; c.LmP0Structure@: source) c.Lmx@
+    if: source = 0
+        return: 0
+    ---
+    c.LmP0Field@: field lm_graph_next_active(lm_graph_p0_first(source))
+    if: field = 0
+        return: 0
+    ---
+    c.LmP0Node@: nd lm_graph_p0_value(field)
+    c.LmP0Node@: following 0
+    size_t@: axes 0
+    size_t: rank 0U
+    size_t: depth 0U
+    c.Lmx@: reference 0
+    if: nd = 0
+        return: 0
+    ---
+    while: nd != 0 && (nd\flags & c.LM_P0_NODE_SQUARE) != 0U
+        int: value 0
+        size_t: extent (cast: (size_t) -1)
+        size_t: repeat 1U
+        if: lm_graph_count_active(lm_graph_p0_structure(nd)) != 0U
+            if: lm_graph_type_integer(nd, @ value) = 0 || value < 0
+                break
+            ---
+            extent := (cast: (size_t) value)
+        ---
+        field := lm_graph_next_active(lm_graph_p0_next(field))
+        if: field = 0
+            break
+        ---
+        following := lm_graph_p0_value(field)
+        if: extent = (cast: (size_t) -1) && following != 0 && following\kind = c.LM_P0_NODE_STRUCTURE && (following\flags & c.LM_P0_NODE_SQUARE) = 0U
+            if: lm_graph_type_adjacent(nd, following) = 0 || lm_graph_type_integer(following, @ value) = 0 || value <= 0
+                break
+            ---
+            repeat := (cast: (size_t) value)
+            nd := following
+            field := lm_graph_next_active(lm_graph_p0_next(field))
+            if: field = 0
+                break
+            ---
+            following := lm_graph_p0_value(field)
+        ---
+        if: lm_graph_type_adjacent(nd, following) = 0 || repeat > ((cast: (size_t) -1) / c.sizeof(c.size_t)) - rank
+            break
+        ---
+        size_t@: grown (cast: (size_t@) c.realloc((cast: (@) axes), (rank + repeat) * c.sizeof(c.size_t)))
+        if: grown = 0
+            break
+        ---
+        axes := grown
+        while: repeat != 0U
+            axes[rank] := extent
+            rank := rank + 1U
+            repeat := repeat - 1U
+        ---
+        nd := following
+    ---
+    if: nd != 0 && nd\kind = c.LM_P0_NODE_ATOM
+        c.LmP0Text@: base lm_graph_p0_atom(nd)
+        const: (char@: bytes lm_graph_p0_data(base))
+        size_t: width lm_graph_p0_length(base)
+        while: depth < width && bytes[depth] = '@'
+            depth := depth + 1U
+        ---
+        field := lm_graph_next_active(lm_graph_p0_next(field))
+        if: depth != 0U && depth = width
+            if: field != 0
+                int: count 0
+                following := lm_graph_p0_value(field)
+                if: lm_graph_type_adjacent(nd, following) != 0 && lm_graph_type_integer(following, @ count) != 0 && count > 0
+                    depth := depth - 1U + (cast: (size_t) count)
+                    field := lm_graph_next_active(lm_graph_p0_next(field))
+                ---
+            ---
+            if: field = 0
+                reference := c.lmx_types_composed_reference(g\arena, depth, axes, rank)
+            ---
+        else:
+            if: field = 0 && width = 3U && c.memcmp((cast: (const: @) bytes), "int", 3U) = 0
+                reference := c.lmx_types_composed_reference(g\arena, 0U, axes, rank)
+            ---
+        ---
+    ---
+    c.free((cast: (@) axes))
+    return: reference
+end: lm_graph_build_type_reference
+
+fn: lm_graph_initializer_ints (c.LmP0Node@: nd; const: (size_t@: axes); size_t@: shape; size_t: level; size_t: rank; int@: values; size_t@: cursor) int
+    if: nd = 0 || nd\kind != c.LM_P0_NODE_STRUCTURE
+        return: 0
+    ---
+    c.LmP0Structure@: body lm_graph_p0_structure(nd)
+    if: body = 0
+        return: 0
+    ---
+    size_t: count lm_graph_count_active(body)
+    size_t: unknown (cast: (size_t) -1)
+    if: (axes != 0 && axes[level] != unknown && axes[level] != count) || (shape[level] != unknown && shape[level] != count)
+        return: 0
+    ---
+    shape[level] := count
+    c.LmP0Field@: field lm_graph_next_active(lm_graph_p0_first(body))
+    while: field != 0
+        c.LmP0Node@: item lm_graph_p0_value(field)
+        if: level + 1U = rank
+            int: number 0
+            if: item\kind != c.LM_P0_NODE_ATOM || lm_graph_int_literal(lm_graph_p0_atom(item), @ number) = 0
+                return: -1
+            ---
+            if: cursor[0] = unknown
+                return: 0
+            ---
+            if: values != 0
+                values[cursor[0]] := number
+            ---
+            cursor[0] := cursor[0] + 1U
+        else:
+            int: admitted lm_graph_initializer_ints(item, axes, shape, level + 1U, rank, values, cursor)
+            if: admitted != 1
+                return: admitted
+            ---
+        ---
+        field := lm_graph_next_active(lm_graph_p0_next(field))
+    ---
+    return: 1
+end: lm_graph_initializer_ints
+
+fn: lm_graph_flat_array_extent (const: (size_t@: axes); size_t: rank; size_t: item_count) int
+    if: axes = 0
+        return: 1
+    ---
+    int: missing 0
+    size_t: product 1U
+    size_t: i 0U
+    while: i < rank
+        if: axes[i] = (cast: (size_t) -1)
+            missing := 1
+        else:
+            if: axes[i] = 0U
+                return: item_count = 0U
+            ---
+            if: product > ((cast: (size_t) -1) / axes[i])
+                return: 0
+            ---
+            product := product * axes[i]
+        ---
+        i := i + 1U
+    ---
+    if: missing != 0
+        return: item_count % product = 0U
+    ---
+    return: item_count = product
+end: lm_graph_flat_array_extent
+
+fn: lm_graph_build_array_place (c.LmxGraph@: g; c.Lmx@: parent; c.LmP0Frame@: frame; @@: out) int
+    c.LmP0Text@: head lm_graph_p0_head(frame)
+    const: (char@: bytes lm_graph_p0_data(head))
+    size_t: width lm_graph_p0_length(head)
+    if: width < 3U || bytes[0] != '[' || (frame\flags & c.LM_P0_FRAME_COLON) = 0U || frame\trailer != 0
+        return: 0
+    ---
+    c.LmP0Document@: parsed 0
+    if: c.lm_p0_parse_bytes(bytes, width, @ parsed) != 0 || parsed = 0
+        return: 2
+    ---
+    c.LmP0Node@: root (cast: (c.LmP0Node@) c.lm_p0_document_root(parsed))
+    c.Lmx@: reference lm_graph_build_type_reference(g, lm_graph_p0_structure(root))
+    c.lm_p0_document_destroy(parsed)
+    if: reference = 0
+        return: 0
+    ---
+    size_t: rank 0U
+    size_t: depth 0U
+    size_t@: axes 0
+    if: c.lmx_types_reference_parts(g\arena, (cast: (@) reference), @ axes, @ rank, @ depth) = 0 || rank = 0U
+        return: 2
+    ---
+    c.LmP0Field@: field lm_graph_next_active(lm_graph_p0_first(lm_graph_p0_body(frame)))
+    c.LmP0Node@: item 0
+    c.LmP0Text@: name 0
+    if: field != 0
+        item := lm_graph_p0_value(field)
+        if: item\kind = c.LM_P0_NODE_ATOM
+            name := lm_graph_p0_atom(item)
+            field := lm_graph_next_active(lm_graph_p0_next(field))
+            item := 0
+            if: field != 0
+                item := lm_graph_p0_value(field)
+            ---
+        ---
+    ---
+    if: field != 0 && lm_graph_next_active(lm_graph_p0_next(field)) != 0
+        return: 2
+    ---
+    if: item = 0
+        out[0] := c.lmx_types_uninit_array(g\arena, reference)
+    else:
+        if: depth != 0U || (item\flags & c.LM_P0_NODE_SQUARE) = 0U
+            return: 2
+        ---
+        size_t@: shape (cast: (size_t@) c.malloc(rank * c.sizeof(c.size_t)))
+        if: shape = 0
+            return: 1
+        ---
+        c.memset((cast: (@) shape), 255, rank * c.sizeof(c.size_t))
+        size_t: initializer_rank rank
+        size_t@: initializer_axes axes
+        c.LmP0Field@: first lm_graph_next_active(lm_graph_p0_first(lm_graph_p0_structure(item)))
+        c.LmP0Node@: first_item 0
+        if: first != 0
+            first_item := lm_graph_p0_value(first)
+        ---
+        if: rank > 1U && (first_item = 0 || first_item\kind = c.LM_P0_NODE_ATOM)
+            initializer_rank := 1U
+            initializer_axes := 0
+        ---
+        size_t: count 0U
+        int: admitted lm_graph_initializer_ints(item, initializer_axes, shape, 0U, initializer_rank, 0, @ count)
+        if: admitted != 1 || (initializer_rank != rank && lm_graph_flat_array_extent(axes, rank, count) = 0)
+            c.free((cast: (@) shape))
+            if: admitted < 0
+                return: 0
+            ---
+            return: 2
+        ---
+        c.LmxArray@: array c.lmx_array_new_int_with_reference(g\arena, parent, reference, count)
+        if: array != 0
+            c.VoidArray@: data @ array\array
+            int@: values (cast: (int@) data\data)
+            count := 0U
+            lm_graph_initializer_ints(item, initializer_axes, shape, 0U, initializer_rank, values, @ count)
+            out[0] := (cast: (@) array)
+        ---
+        c.free((cast: (@) shape))
+    ---
+    if: out[0] = 0 || (name != 0 && c.lmx_graph_name_address(g, out[0], lm_graph_p0_name_word(name)) != 0)
+        return: 1
+    ---
+    return: 0
+end: lm_graph_build_array_place
+
 fn: lm_graph_build_node (c.LmxGraph@: g; c.Lmx@: parent; c.LmP0Node@: nd; int: described; @@: out) int
     c.LmxGraphState@: state (cast: (c.LmxGraphState@) c.lmx_graph_state())
     c.LmP0Text@: text 0
@@ -969,6 +1237,18 @@ fn: lm_graph_build_node (c.LmxGraph@: g; c.Lmx@: parent; c.LmP0Node@: nd; int: d
         if: (frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U
             return: lm_graph_build_assignment(g, parent, frame, out)
         text := lm_graph_p0_head(frame)
+        if: described = 0
+            status := lm_graph_build_array_place(g, parent, frame, out)
+            if: status != 0 || out[0] != 0
+                return: status
+            ---
+        ---
+        if: lm_graph_p0_length(text) = 14U && c.memcmp((cast: (const: @) lm_graph_p0_data(text)), "sys\\descriptor", 14U) = 0
+            out[0] := (cast: (@) lm_graph_build_type_reference(g, lm_graph_p0_body(frame)))
+            if: out[0] != 0
+                return: 0
+            ---
+        ---
         # Preserve every selector used as the head of a formed Frame. The
         # same selector builder handles paths and attached indices.
         if: lm_graph_path_text(lm_graph_p0_data(text), lm_graph_p0_length(text)) != 0 || lm_graph_index_text(lm_graph_p0_data(text), lm_graph_p0_length(text)) != 0 || c.memchr((cast: (const: @) lm_graph_p0_data(text)), 96, lm_graph_p0_length(text)) != 0

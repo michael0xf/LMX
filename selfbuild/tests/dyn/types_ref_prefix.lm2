@@ -7,6 +7,7 @@ predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_graph_copy_owned.h.lm1"
 include: "<string.h>"
+include: "<stdlib.h>"
 
 fn: type_ref_prefix_check () int
     c.LmxArena: arena
@@ -86,6 +87,47 @@ fn: type_ref_prefix_check () int
     ---
     if: c.lmx_types_reference(@ other, c.LMX_TYPE_ARRAY_OF_INT) != type_ref || c.lmx_types_record_reference(@ other, empty) != type_ref || c.lmx_types_record_reference(@ other, b) != type_ref || data[1] != 37
         return: 108
+    ---
+    size_t@: axes (cast: (size_t@) c.calloc(2U, c.sizeof(c.size_t)))
+    if: axes = 0
+        return: 119
+    ---
+    axes[0] := (cast: (size_t) -1)
+    axes[1] := (cast: (size_t) -1)
+    c.Lmx@: address_array c.lmx_types_composed_reference(@ other, 3U, axes, 2U)
+    if: address_array = 0 || c.lmx_types_composed_reference(@ other, 3U, axes, 2U) != address_array
+        return: 119
+    ---
+    @: absent void c.lmx_types_uninit_array(@ other, address_array)
+    if: absent = 0 || c.lmx_types_record_reference(@ other, absent) != address_array || c.lmx_range_stride(@ other, absent) != sizeof(@)
+        return: 120
+    ---
+    axes[0] := 2U
+    axes[1] := 3U
+    c.Lmx@: matrix_type c.lmx_types_composed_reference(@ other, 0U, axes, 2U)
+    c.free((cast: (@) axes))
+    size_t@: actual_axes 0
+    size_t: dimension_count 0U
+    size_t: address_depth 0U
+    if: matrix_type = 0 || matrix_type = address_array || matrix_type = type_ref || c.lmx_types_reference_parts(@ other, matrix_type, @ actual_axes, @ dimension_count, @ address_depth) != 1
+        return: 121
+    ---
+    if: dimension_count != 2U || address_depth != 0U || actual_axes = 0 || actual_axes[0] != 2U || actual_axes[1] != 3U
+        return: 122
+    ---
+    c.LmxArray@: matrix c.lmx_array_new_int_with_reference(@ other, 0, matrix_type, 6U)
+    if: matrix = 0 || c.lmx_types_record_reference(@ other, matrix) != matrix_type
+        return: 123
+    ---
+    if: c.lmx_graph_node_in(@ other, address_array) != address_array || c.lmx_graph_count(address_array) != 5U
+        return: 124
+    ---
+    graph := c.lmx_graph_open(@ other)
+    if: graph = 0 || c.lmx_graph_write_slot(graph, address_array, 1U, 0) = 0 || c.lmx_graph_get_in(graph, address_array, 1U) = 0
+        return: 125
+    ---
+    if: c.lmx_graph_close(graph) != 0
+        return: 126
     ---
     if: c.lmx_arena_release(@ other) != 0
         return: 109

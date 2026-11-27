@@ -29,12 +29,11 @@ fn: lmx_array_new_owned (int: type; size_t: count; c.LmxArena@: arena) c.LmxArra
     return: lmx_array_new_profiled(type, count, arena, 0)
 end: lmx_array_new_owned
 
-fn: lmx_array_new_physical_profiled (int: type; size_t: count; c.LmxArena@: arena; c.Lmx@: array_profile; size_t: pointer_stride; c.LmxPointerCellRead: read; c.LmxPointerCellWrite: write; c.Lmx@: parent) c.LmxArray@
+fn: lmx_array_new_physical_profiled (int: type; size_t: count; c.LmxArena@: arena; c.Lmx@: array_profile; size_t: pointer_stride; c.LmxPointerCellRead: read; c.LmxPointerCellWrite: write; c.Lmx@: parent; c.Lmx@: type_ref) c.LmxArray@
     size_t: stride 0U
     int: base_type c.lmx_type_base(type)
     int: element_type c.lmx_type_element(type)
     c.LmxArray@: desc 0
-    c.Lmx@: type_ref 0
     c.VoidArray@: va 0
     @: backing void 0
     ulong: ulong_probe 0U
@@ -85,7 +84,9 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; c.LmxArena@: aren
     # backing is `count` consecutive cells of the array of that element type.  Both are
     # the arena's arrays: found if the arena has them, made here if it does not.
     if: type = c.LMX_TYPE_ARRAY_OF_INT
-        type_ref := c.lmx_types_reference(arena, type)
+        if: type_ref = 0
+            type_ref := c.lmx_types_reference(arena, type)
+        ---
         if: type_ref = 0
             return: 0
         ---
@@ -114,15 +115,24 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; c.LmxArena@: aren
 end: lmx_array_new_physical_profiled
 
 fn: lmx_array_new_profiled (int: type; size_t: count; c.LmxArena@: arena; c.Lmx@: array_profile) c.LmxArray@
-    return: lmx_array_new_physical_profiled(type, count, arena, array_profile, sizeof(@), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write, 0)
+    return: lmx_array_new_physical_profiled(type, count, arena, array_profile, sizeof(@), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write, 0, 0)
 end: lmx_array_new_profiled
+
+fn: lmx_array_new_int_with_reference (c.LmxArena@: arena; c.Lmx@: parent; c.Lmx@: type_ref; size_t: count) c.LmxArray@
+    size_t: rank 0U
+    size_t: depth 0U
+    if: c.lmx_types_reference_parts(arena, (cast: (@) type_ref), 0, @ rank, @ depth) = 0 || rank = 0U || depth != 0U
+        return: 0
+    ---
+    return: lmx_array_new_physical_profiled(c.LMX_TYPE_ARRAY_OF_INT, count, arena, 0, 0U, 0, 0, parent, type_ref)
+end: lmx_array_new_int_with_reference
 
 # A lexical child is constructed with its actual graph parent. Neither a
 # later alias store nor the allocation profile reparents an existing Array.
 fn: lmx_array_new_child_profiled (c.Lmx@: parent; int: type; size_t: count; c.LmxArena@: arena; c.Lmx@: array_profile) c.LmxArray@
     if: parent = 0
         return: 0
-    return: lmx_array_new_physical_profiled(type, count, arena, array_profile, sizeof(@), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write, parent)
+    return: lmx_array_new_physical_profiled(type, count, arena, array_profile, sizeof(@), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write, parent, 0)
 end: lmx_array_new_child_profiled
 
 # Array<@T> uses the exact physical T * backing contract supplied by its
@@ -131,13 +141,13 @@ end: lmx_array_new_child_profiled
 fn: lmx_array_new_typed_profiled (int: type; size_t: count; c.LmxArena@: arena; c.Lmx@: array_profile; size_t: stride; c.LmxPointerCellRead: read; c.LmxPointerCellWrite: write) c.LmxArray@
     if: c.lmx_type_base(type) < c.LMX_TYPE_ARRAY_OF_POINTER_BASE || stride = 0U || read = 0 || write = 0
         return: 0
-    return: lmx_array_new_physical_profiled(type, count, arena, array_profile, stride, read, write, 0)
+    return: lmx_array_new_physical_profiled(type, count, arena, array_profile, stride, read, write, 0, 0)
 end: lmx_array_new_typed_profiled
 
 fn: lmx_array_new_typed_child_profiled (c.Lmx@: parent; int: type; size_t: count; c.LmxArena@: arena; c.Lmx@: array_profile; size_t: stride; c.LmxPointerCellRead: read; c.LmxPointerCellWrite: write) c.LmxArray@
     if: parent = 0 || c.lmx_type_base(type) < c.LMX_TYPE_ARRAY_OF_POINTER_BASE || stride = 0U || read = 0 || write = 0
         return: 0
-    return: lmx_array_new_physical_profiled(type, count, arena, array_profile, stride, read, write, parent)
+    return: lmx_array_new_physical_profiled(type, count, arena, array_profile, stride, read, write, parent, 0)
 end: lmx_array_new_typed_child_profiled
 
 # A backing element is addressed with its actual arena-pool stride.

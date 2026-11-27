@@ -17,6 +17,7 @@
 predef: "l1src/p0.h.lm1"
 predef: "l1src/parser.lm1"
 predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_types.h.lm1"
 predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_graph_run.h.lm1"
 predef: "l2src/lmx_source_names.h.lm1"
@@ -98,6 +99,43 @@ fn: lm_graph_emit_node (c.LmxGraph@: g; c.FILE@: f; @: value; c.LmxCopyMap@: map
     # Reserve and allocate before following any edge: a pointer target or a
     # lexical parent may lead back to this very cell or Structure.
     c.fprintf(f, "        @: void l2_gv%zu 0\n", id)
+    if: kind = 4 && lm_graph_emit_type_reference(g, f, value, id) != 0
+        return: 0
+    ---
+    if: kind = 0
+        c.Lmx@: type_ref c.lmx_types_record_reference(g\arena, value)
+        if: type_ref != 0
+            status := lm_graph_emit_node(g, f, (cast: (@) type_ref), map, next, @ target)
+            if: status != 0 || target = 0U
+                return: 1
+            ---
+            if: c.lmx_range_type_of(g\arena, value) = c.LMX_TYPE_UNINIT_ARRAY
+                c.fprintf(f, "        l2_gv%zu: lmx_types_uninit_array(arena, (cast: (@: Lmx) l2_gv%zu))\n", id, target)
+            else:
+                c.LmxArray@: array (cast: (c.LmxArray@) value)
+                c.VoidArray@: payload @ array\array
+                int@: values (cast: (int@) payload\data)
+                c.fprintf(f, "        @: LmxArray l2_arr%zu lmx_array_new_int_with_reference(arena, 0, (cast: (@: Lmx) l2_gv%zu), %zuU)\n        if: l2_arr%zu = 0\n            return: 1\n        ---\n        l2_gv%zu: (cast: (@: void) l2_arr%zu)\n", id, target, (cast: (size_t) payload\size), id, id, id)
+                if: payload\size != 0U
+                    c.fprintf(f, "        @: VoidArray l2_payload%zu @ l2_arr%zu\\array\n        @: int l2_data%zu (cast: (@: int) l2_payload%zu\\data)\n", id, id, id, id)
+                ---
+                while: j < payload\size
+                    c.fprintf(f, "        l2_data%zu[%zu]: %d\n", id, j, values[j])
+                    j := j + 1U
+                ---
+                if: array\parent != 0
+                    status := lm_graph_emit_node(g, f, (cast: (@) array\parent), map, next, @ target)
+                    if: status != 0 || target = 0U
+                        return: 1
+                    ---
+                    c.fprintf(f, "        l2_arr%zu\\parent: (cast: (@: Lmx) l2_gv%zu)\n", id, target)
+                ---
+            ---
+            c.fprintf(f, "        if: l2_gv%zu = 0\n            return: 1\n", id)
+            c.snprintf(local, 64U, "l2_gv%zu", id)
+            return: lm_graph_emit_name_row(g, f, value, local)
+        ---
+    ---
     if: kind = 1
         c.fprintf(f, "        l2_gv%zu: lmx_graph_int(l2_g, %d)\n", id, c.lmx_int_value_known(value))
     if: kind = 2
@@ -187,6 +225,40 @@ fn: lm_graph_emit_node (c.LmxGraph@: g; c.FILE@: f; @: value; c.LmxCopyMap@: map
     return: status
 end: lm_graph_emit_node
 
+fn: lm_graph_emit_type_reference (c.LmxGraph@: g; c.FILE@: f; @: value; size_t: id) int
+    size_t@: axes 0
+    size_t: rank 0U
+    size_t: depth 0U
+    if: c.lmx_types_reference_parts(g\arena, value, @ axes, @ rank, @ depth) = 0
+        return: 0
+    ---
+    if: axes = 0
+        int: word c.LMX_TYPE_INT
+        if: rank != 0U
+            word := c.LMX_TYPE_ARRAY_OF_INT
+        ---
+        c.fprintf(f, "        l2_gv%zu: (cast: (@: void) lmx_types_reference(arena, %d))\n", id, word)
+    else:
+        if: rank = 0U
+            c.fprintf(f, "        l2_gv%zu: (cast: (@: void) lmx_types_composed_reference(arena, %zuU, 0, 0U))\n", id, depth)
+        else:
+            c.fprintf(f, "        []: size_t l2_axes%zu %zu\n", id, rank)
+            size_t: i 0U
+            while: i < rank
+                if: axes[i] = (cast: (size_t) -1)
+                    c.fprintf(f, "        l2_axes%zu[%zu]: (cast: (size_t) -1)\n", id, i)
+                else:
+                    c.fprintf(f, "        l2_axes%zu[%zu]: %zuU\n", id, i, axes[i])
+                ---
+                i := i + 1U
+            ---
+            c.fprintf(f, "        l2_gv%zu: (cast: (@: void) lmx_types_composed_reference(arena, %zuU, l2_axes%zu, %zuU))\n", id, depth, id, rank)
+        ---
+    ---
+    c.fprintf(f, "        if: l2_gv%zu = 0\n            return: 1\n", id)
+    return: 1
+end: lm_graph_emit_type_reference
+
 # A field edge uses the same map as every pointer and lexical parent edge.
 fn: lm_graph_emit_value (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: source; @: value; char@: holder; size_t: k; c.LmxCopyMap@: map; size_t@: next) int
     size_t: id 0U
@@ -216,7 +288,7 @@ fn: lm_graph_emit_parents (c.LmxGraph@: g; c.FILE@: f; c.LmxCopyMap@: map; size_
     if: ordered = 0
         return: 1
     while: i < keys\capacity
-        if: sources[i] != 0 && c.lmx_graph_kind(g, sources[i]) = 4
+        if: sources[i] != 0 && c.lmx_graph_kind(g, sources[i]) = 4 && c.lmx_types_reference_parts(g\arena, sources[i], 0, 0, 0) = 0
             ordered[(cast: (size_t) labels[i])] := (cast: (c.Lmx@) sources[i])
         i := i + 1U
     while: id < limit
@@ -701,6 +773,25 @@ fn: lm_graph_emit_number (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: scope; c.Lmx@: hol
             return: lm_graph_emit_application(g, f, scope, expression, temps, decl_names, decl_slots, decl_n, 1, temp)
         count := c.lmx_graph_count(expression)
         word := c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, expression, 1U))
+        if: count = 3U && word = state\w_eq
+            @: first void c.lmx_graph_get_in(g, expression, 0U)
+            @: second void c.lmx_graph_get_in(g, expression, 2U)
+            if: c.lmx_types_reference_parts(g\arena, first, 0, 0, 0) != 0 && c.lmx_types_reference_parts(g\arena, second, 0, 0, 0) != 0
+                status := lm_graph_emit_received_operand(g, f, scope, expression, 0U, 2, -1, temps, decl_names, decl_slots, decl_n, @ left)
+                if: status != 0
+                    return: status
+                ---
+                status := lm_graph_emit_received_operand(g, f, scope, expression, 2U, 2, -1, temps, decl_names, decl_slots, decl_n, @ right)
+                if: status != 0
+                    return: status
+                ---
+                value := temps[0]
+                temps[0] := value + 1
+                c.fprintf(f, "        int: l2_t%d (cast: (int) (l2_v%d = l2_v%d))\n", value, left, right)
+                temp[0] := value
+                return: 0
+            ---
+        ---
         if: c.lmx_expr_is_chain(g, raw) != 0
             return: lm_graph_emit_chain(g, f, scope, expression, temps, decl_names, decl_slots, decl_n, temp)
         word := c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, expression, 0U))
@@ -1799,6 +1890,14 @@ fn: lm_graph_emit_declaration (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: code; c.Lmx@:
     int: result 0
     int: status 0
     lm_graph_emit_leave_text(leave_failure, temps[1], 1)
+    if: kind = 0 && c.lmx_types_record_reference(g\arena, raw) != 0
+        if: mode = 0 && c.lmx_graph_slot_name(g, holder, index) != 0
+            number := temps[0]
+            temps[0] := number + 1
+            return: lm_graph_emit_site(g, f, code, holder, index, number, temps)
+        ---
+        return: 0
+    ---
     if: kind = 1 || kind = 3
         name := c.lmx_graph_slot_name(g, holder, index)
         if: name != 0 && mode = 0
@@ -1932,7 +2031,7 @@ fn: lm_graph_emit_block (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: code; c.Lmx@: body;
         # interpreter (plan M11 5a, B5, B10): a literal declaration writes into the activation's place what stands in its
         # slot when the line runs -- read from the graph then, not the value the translation saw --, a place without a
         # value is checked; in an inline body of the root the root's place is written.
-        if: kind = 1 || kind = 3 || kind = 5 || kind = 6 || kind = 8 || kind = 9
+        if: kind = 1 || kind = 3 || kind = 5 || kind = 6 || kind = 8 || kind = 9 || (kind = 0 && c.lmx_types_record_reference(g\arena, raw) != 0)
             status := lm_graph_emit_declaration(g, f, code, body, i, 0, 0U, mode, temps)
             if: status != 0
                 return: status
@@ -2418,6 +2517,7 @@ fn: lm_graph_emit_program (c.LmxGraph@: g; c.Lmx@: root; const: (char@: out_path
         return: 5
     c.fputs("# Generated by the graph tool of slice 309 (src/l2src/l2_graph_tool.lm2): the program of a clean graph.\n", f)
     c.fputs("predef: \"l2src/lmx_arena_refs.h.lm1\" \"l2src/lmx_value_owned.h.lm1\" \"l2src/lmx.h.lm1\" \"l2src/lmx_message.h.lm1\" \"l2src/lmx_root.h.lm1\" \"l2src/lmx_call.h.lm1\" \"l2src/lmx_clock.h.lm1\" \"l2src/lmx_ids.h.lm1\" \"l2src/lmx_arena.h.lm1\" \"l2src/lmx_graph.h.lm1\" \"l2src/lmx_graph_run.h.lm1\" \"l2src/lmx_walk_values.h.lm1\" \"l2src/lmx_source_names.h.lm1\"\n", f)
+    c.fputs("predef: \"l2src/lmx_types.h.lm1\" \"l2src/lmx_array_owned.h.lm1\"\n", f)
     if: check_root != 0
         c.fputs("predef: \"l2src/lmx_thread.h.lm1\" \"l2src/lmx_turn.h.lm1\"\n", f)
     c.fputs("include: \"<string.h>\"\n", f)

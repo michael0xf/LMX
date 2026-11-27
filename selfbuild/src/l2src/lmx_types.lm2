@@ -574,11 +574,193 @@ fn: lmx_types_reference (c.LmxArena@: arena; int: type) c.Lmx@
     return: result
 end: lmx_types_reference
 
+# One immutable requirement, keyed by address depth and ordered axis constraints.
+# Depth zero denotes int. An axis equal to SIZE_MAX is unspecified.
+fn: lmx_types_composed_row (c.LmxTypes@: ctx; size_t: depth; const: (size_t@: axes); size_t: rank; c.Lmx@: element) c.LmxTypeRefRow@
+    c.LmxTypeRefRow@: row ctx\type_refs
+    size_t: width rank * c.sizeof(c.size_t)
+    while: row != 0
+        if: row\depth = depth && row\rank = rank && (rank = 0U || c.memcmp((cast: (const: @) row\axes), (cast: (const: @) axes), width) = 0)
+            return: row
+        ---
+        row := row\next
+    ---
+    row := (cast: (c.LmxTypeRefRow@) c.calloc(1U, c.sizeof(c.LmxTypeRefRow) + width))
+    if: row = 0
+        return: 0
+    ---
+    c.LmxArena@: owned (cast: (c.LmxArena@) c.calloc(1U, c.sizeof(c.LmxArena)))
+    if: owned = 0 || c.lmx_arena_open(owned) != 0
+        c.free((cast: (@) owned))
+        c.free((cast: (@) row))
+        return: 0
+    ---
+    c.Lmx@: description lmx_types_composed_description(owned, depth, axes, rank, element)
+    if: description = 0
+        c.lmx_arena_release(owned)
+        c.free((cast: (@) owned))
+        c.free((cast: (@) row))
+        return: 0
+    ---
+    c.LmxPool@: pool (cast: (c.LmxPool@) owned\arrays)
+    while: pool != 0
+        c.lmx_pool_seal(pool)
+        pool := pool\next
+    ---
+    row\axes := (cast: (size_t@) (row + 1U))
+    if: rank != 0U
+        c.memcpy((cast: (@) row\axes), (cast: (const: @) axes), width)
+    ---
+    row\arena := owned
+    row\description := description
+    row\rank := rank
+    row\depth := depth
+    row\next := ctx\type_refs
+    ctx\type_refs := row
+    return: row
+end: lmx_types_composed_row
+
+fn: lmx_types_composed_description (c.LmxArena@: arena; size_t: depth; const: (size_t@: axes); size_t: rank; c.Lmx@: element) c.Lmx@
+    char@: label "@"
+    size_t: width 1U
+    size_t: count 2U
+    if: rank != 0U
+        label := "Array"
+        width := 5U
+        count := 3U + rank
+    ---
+    c.Lmx@: description (cast: (c.Lmx@) c.lmx_arena_take(arena, c.sizeof(c.Lmx), c.LMX_KIND_STRUCT, 0 - c.LMX_TYPE_STRUCT))
+    c.Lmx@: name (cast: (c.Lmx@) c.lmx_arena_take(arena, c.sizeof(c.Lmx), c.LMX_KIND_ARRAY, 0 - c.LMX_TYPE_ARRAY_OF_CHAR))
+    @: bytes void c.lmx_arena_take_n(arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, 0 - c.LMX_TYPE_CHAR, width)
+    size_t@: number (cast: (size_t@) c.lmx_arena_take(arena, c.sizeof(c.size_t), c.LMX_KIND_PRIMITIVE, 0 - c.LMX_TYPE_SIZE_T))
+    if: description = 0 || name = 0 || bytes = 0 || number = 0 || c.lmx_arena_refs_open_owned(arena, description, count) != 0
+        return: 0
+    ---
+    c.memcpy(bytes, (cast: (const: @) label), width)
+    c.VoidArray@: text @ name\array
+    text\size := width
+    text\data := bytes
+    name\parent := description
+    c.VoidArray@: fields @ description\array
+    @@: slots void (cast: (@@) fields\data)
+    slots[0] := (cast: (@) name)
+    if: rank = 0U
+        number[0] := depth
+        slots[1] := (cast: (@) number)
+        return: description
+    ---
+    number[0] := rank
+    slots[1] := (cast: (@) element)
+    slots[2] := (cast: (@) number)
+    size_t: i 0U
+    while: i < rank
+        if: axes[i] != (cast: (size_t) -1)
+            number := (cast: (size_t@) c.lmx_arena_take(arena, c.sizeof(c.size_t), c.LMX_KIND_PRIMITIVE, 0 - c.LMX_TYPE_SIZE_T))
+            if: number = 0
+                return: 0
+            ---
+            number[0] := axes[i]
+            slots[3U + i] := (cast: (@) number)
+        ---
+        i := i + 1U
+    ---
+    return: description
+end: lmx_types_composed_description
+
+fn: lmx_types_composed_reference (c.LmxArena@: arena; size_t: depth; const: (size_t@: axes); size_t: rank) c.Lmx@
+    if: arena = 0 || (rank != 0U && axes = 0) || rank > (((cast: (size_t) -1) - c.sizeof(c.LmxTypeRefRow)) / c.sizeof(c.size_t))
+        return: 0
+    ---
+    if: depth = 0U && rank = 0U
+        return: lmx_types_reference(arena, c.LMX_TYPE_INT)
+    ---
+    if: depth = 0U && rank = 1U && axes[0] = (cast: (size_t) -1)
+        return: lmx_types_reference(arena, c.LMX_TYPE_ARRAY_OF_INT)
+    ---
+    c.Lmx@: element 0
+    if: rank != 0U
+        element := lmx_types_composed_reference(arena, depth, 0, 0U)
+        if: element = 0
+            return: 0
+        ---
+    ---
+    c.Lmx@: result 0
+    lmx_types_enter()
+    c.LmxTypes@: ctx lmx_types_state()
+    if: ctx != 0
+        c.LmxTypeRefRow@: row lmx_types_composed_row(ctx, depth, axes, rank, element)
+        if: row != 0 && (c.lmx_range_classify(arena, (cast: (@) row\description)) = c.LMX_KIND_STRUCT || c.lmx_range_import(arena, row\arena) = 0)
+            result := row\description
+        ---
+    ---
+    lmx_types_leave()
+    return: result
+end: lmx_types_composed_reference
+
+fn: lmx_types_reference_parts (c.LmxArena@: arena; @: value; size_t@@: axes; size_t@: rank; size_t@: depth) int
+    if: arena = 0 || c.lmx_range_type_of(arena, value) != (0 - c.LMX_TYPE_STRUCT)
+        return: 0
+    ---
+    int: found 0
+    lmx_types_enter()
+    c.LmxTypes@: ctx lmx_types_state()
+    if: ctx != 0
+        found := (cast: (int) (value = (cast: (@) ctx\int_type_ref) || value = (cast: (@) ctx\int_array_type_ref)))
+        if: found != 0
+            if: rank != 0
+                rank[0] := (cast: (size_t) (value = (cast: (@) ctx\int_array_type_ref)))
+            ---
+            if: axes != 0
+                axes[0] := 0
+            ---
+            if: depth != 0
+                depth[0] := 0U
+            ---
+        ---
+        c.LmxTypeRefRow@: row ctx\type_refs
+        while: found = 0 && row != 0
+            if: value = (cast: (@) row\description)
+                found := 1
+                if: axes != 0
+                    axes[0] := row\axes
+                ---
+                if: rank != 0
+                    rank[0] := row\rank
+                ---
+                if: depth != 0
+                    depth[0] := row\depth
+                ---
+            ---
+            row := row\next
+        ---
+    ---
+    lmx_types_leave()
+    return: found
+end: lmx_types_reference_parts
+
+fn: lmx_types_uninit_array (c.LmxArena@: arena; c.Lmx@: type_ref) @
+    size_t: rank 0U
+    if: lmx_types_reference_parts(arena, (cast: (@) type_ref), 0, @ rank, 0) = 0 || rank = 0U
+        return: 0
+    ---
+    @@: record void (cast: (@@) c.lmx_arena_pointer_cells_profiled(arena, c.LMX_TYPE_UNINIT_ARRAY, 0, sizeof(@), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write, 1U))
+    if: record != 0
+        record[0] := (cast: (@) type_ref)
+    ---
+    return: (cast: (@) record)
+end: lmx_types_uninit_array
+
 # An exact live payload of the typed pool has a readable TypeRef prefix.
 fn: lmx_types_record_reference (c.LmxArena@: arena; @: value) c.Lmx@
     c.LmxPool@: pool c.lmx_range_cell_pool(arena, value)
     c.Lmx@@: prefix 0
-    if: pool = 0 || pool\type_ref = 0
+    if: pool = 0
+        return: 0
+    ---
+    if: pool\type = c.LMX_TYPE_UNINIT_ARRAY
+        return: (cast: (c.Lmx@) c.lmx_arena_pointer_void_read(value))
+    ---
+    if: pool\type_ref = 0
         return: 0
     ---
     prefix := (cast: (c.Lmx@@) ((cast: (char@) value) - sizeof(@)))

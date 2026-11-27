@@ -31,6 +31,7 @@ predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_source_names.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
 predef: "l2src/lmx_array_owned.h.lm1"
+predef: "l2src/lmx_types.h.lm1"
 predef: "l2src/lmx_message.h.lm1"
 predef: "l2src/lmx_thread.h.lm1"
 predef: "l2src/lmx_child.h.lm1"
@@ -623,7 +624,8 @@ fn: lmx_graph_work_local_declared (c.LmxGraph@: g; c.LmxGraphFrame@: frame; char
         i := 0U
         while: i < c.lmx_graph_count(scope)
             raw := c.lmx_graph_get_in(g, scope, i)
-            if: (lmx_graph_own_kind(g, raw) = 1 || lmx_graph_own_kind(g, raw) = 5 || lmx_graph_own_kind(g, raw) = 6 || lmx_graph_scalar_pool(g, raw) != 0) && lmx_graph_own_name(g, raw) = name
+            int: kind lmx_graph_own_kind(g, raw)
+            if: (kind = 1 || kind = 5 || kind = 6 || kind = 10 || lmx_graph_scalar_pool(g, raw) != 0) && lmx_graph_own_name(g, raw) = name
                 return: 1
             i := i + 1U
         ---
@@ -1715,7 +1717,7 @@ fn: lmx_graph_place_site (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: holder; size_t: 
     int: status 0
     if: name != 0
         return: lmx_graph_place_name(g, code, name, token, kind)
-    if: token = 0 || kind = 0 || (required != 1 && required != 5 && required != 6)
+    if: token = 0 || kind = 0 || (required != 1 && required != 5 && required != 6 && required != 10)
         return: 4
     if: active = 0 || active\code != code || active\frame = 0
         return: 5
@@ -2290,6 +2292,10 @@ fn: lmx_graph_binding_name (c.LmxGraph@: g; c.Lmx@: owner; @: value; int: mode; 
     if: kind = 1 || kind = 5 || kind = 6 || lmx_graph_scalar_pool(g, value) != 0 || (kind = 2 && head != 0)
         place[0] := 1
         return: head
+    if: kind = 0 && c.lmx_types_record_reference(g\arena, value) != 0
+        place[0] := 1
+        return: head
+    ---
     if: kind != 4
         return: 0
     declared := c.lmx_graph_declaration_place_name(g, value)
@@ -5092,6 +5098,9 @@ fn: lmx_graph_block_declaration (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: holder; s
             ---
         return: status
     required_kind := kind
+    if: kind = 0 && c.lmx_types_record_reference(g\arena, raw) != 0
+        required_kind := 10
+    ---
     if: kind = 8 || kind = 9
         required_kind := kind - 3
     if: mode = 0
@@ -5187,7 +5196,7 @@ fn: lmx_graph_block_body (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: body; size_t: fr
             continue
         raw := c.lmx_graph_binding_leaf(g, raw)
         kind := c.lmx_graph_kind(g, raw)
-        if: kind = 1 || kind = 3 || kind = 5 || kind = 6 || kind = 8 || kind = 9
+        if: kind = 1 || kind = 3 || kind = 5 || kind = 6 || kind = 8 || kind = 9 || (kind = 0 && c.lmx_types_record_reference(g\arena, raw) != 0)
             status := lmx_graph_block_declaration(g, code, body, i, 0, mode)
             i := i + 1U
             continue
@@ -6031,6 +6040,17 @@ fn: lmx_graph_eval_record (c.LmxGraph@: g; c.Lmx@: scope; @: raw; c.LmxWalkValue
     return: 0
 end: lmx_graph_eval_record
 
+fn: lmx_graph_array_typeof (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: expression) c.Lmx@
+    if: c.lmx_graph_count(expression) != 1U
+        return: 0
+    ---
+    @: operand void c.lmx_graph_get_in(g, expression, 0U)
+    if: c.lmx_graph_kind(g, operand) = 2
+        operand := lmx_graph_resolve(g, scope, c.lmx_graph_word_text(g, operand))
+    ---
+    return: c.lmx_types_record_reference(g\arena, operand)
+end: lmx_graph_array_typeof
+
 fn: lmx_graph_eval_value (c.LmxGraph@: g; c.Lmx@: scope; @: raw; @@: out) int
     c.LmxGraphState@: state (cast: (c.LmxGraphState@) c.lmx_graph_state())
     c.Lmx@: expression 0
@@ -6047,6 +6067,13 @@ fn: lmx_graph_eval_value (c.LmxGraph@: g; c.Lmx@: scope; @: raw; @@: out) int
     if: out = 0
         return: 2
     if: kind = 0
+        if: c.lmx_range_type_of(g\arena, raw) = c.LMX_TYPE_ARRAY_OF_INT
+            out[0] := raw
+            return: 0
+        ---
+        if: c.lmx_range_type_of(g\arena, raw) = c.LMX_TYPE_UNINIT_ARRAY
+            return: 5
+        ---
         if: lmx_graph_scalar_pool(g, raw) = 0
             return: 2
         return: lmx_graph_scalar_operand(g, raw, out)
@@ -6062,6 +6089,13 @@ fn: lmx_graph_eval_value (c.LmxGraph@: g; c.Lmx@: scope; @: raw; @@: out) int
             if: c.lmx_graph_name_of(g, raw) = state\w_merge
                 return: lmx_graph_eval_merge(g, scope, (cast: (c.Lmx@) raw), out)
             word := c.lmx_graph_name_of(g, raw)
+            if: word = state\w_typeof
+                c.Lmx@: type_ref lmx_graph_array_typeof(g, scope, (cast: (c.Lmx@) raw))
+                if: type_ref != 0
+                    out[0] := (cast: (@) type_ref)
+                    return: 0
+                ---
+            ---
             if: word != state\w_typeof && word != state\w_length
                 c.lmx_walk_value_clear(@ result)
                 if: word = state\w_fncall
@@ -6160,6 +6194,9 @@ fn: lmx_graph_eval_value (c.LmxGraph@: g; c.Lmx@: scope; @: raw; @@: out) int
                 ---
             ---
         ---
+    ---
+    if: c.lmx_range_type_of(g\arena, value) = c.LMX_TYPE_UNINIT_ARRAY
+        return: 5
     ---
     if: snapshot != 0 && lmx_graph_scalar_pool(g, value) != 0
         return: lmx_graph_scalar_operand(g, value, out)
@@ -6302,6 +6339,14 @@ fn: lmx_graph_eval_number (c.LmxGraph@: g; c.Lmx@: scope; @: raw; int@: out) int
     if: c.lmx_graph_application_parts(g, raw, 0, 0, 0) != 0
         return: lmx_graph_eval_application(g, scope, expression, 1, out)
     word := c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, expression, 1U))
+    if: count = 3U && word = state\w_eq
+        @: first void c.lmx_graph_get_in(g, expression, 0U)
+        @: second void c.lmx_graph_get_in(g, expression, 2U)
+        if: c.lmx_types_reference_parts(g\arena, first, 0, 0, 0) != 0 && c.lmx_types_reference_parts(g\arena, second, 0, 0, 0) != 0
+            out[0] := (cast: (int) (first = second))
+            return: 0
+        ---
+    ---
     # A field path gives the int of its place; the index of a Structure gives an address, which has no int (answer 1).
     if: count = 3U && (word = state\w_deref || word = state\w_index)
         status := lmx_graph_eval_value(g, scope, raw, @ value)
@@ -9269,6 +9314,10 @@ fn: lmx_graph_own_kind (c.LmxGraph@: g; @: value) int
     int: kind c.lmx_graph_kind(g, value)
     value := c.lmx_graph_binding_leaf(g, value)
     kind := c.lmx_graph_kind(g, value)
+    if: kind = 0 && c.lmx_types_record_reference(g\arena, value) != 0
+        # Physical Array declaration, initialized or represented by its TypeRef alone.
+        return: 10
+    ---
     if: kind = 3 || kind = 8 || kind = 9
         return: c.lmx_graph_kind(g, c.lmx_arena_pointer_void_read(value))
     if: kind != 4

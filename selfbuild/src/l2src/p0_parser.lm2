@@ -2632,6 +2632,58 @@ fn: lm_p0_depth_decorator_at (const: (char@: text); size_t: byte_count; size_t: 
     return: lm_p0_is_depth_operator_byte(next)
 end: lm_p0_depth_decorator_at
 
+# A field of the level counts only when its value is active: a disabled node or an inactive node is not a field (LMX_grammar section 30).
+fn: lm_p0_active_node (c.LmP0Node@: p0_node) int
+    if: p0_node = 0
+        return: 0
+    ---
+    if: p0_node\kind = c.LM_P0_NODE_DISABLED
+        return: 0
+    ---
+    if: (p0_node\flags & c.LM_P0_NODE_INACTIVE) != 0U
+        return: 0
+    ---
+    return: 1
+end: lm_p0_active_node
+
+# 1 when p0_node is an atom of exactly the one byte mark (`?` or `:`).
+fn: lm_p0_node_is_mark (c.LmP0Node@: p0_node; char: wanted) int
+    if: p0_node = 0
+        return: 0
+    ---
+    if: p0_node\kind != c.LM_P0_NODE_ATOM || p0_node\as\atom\length != 1U
+        return: 0
+    ---
+    return: (cast: (int) (p0_node\as\atom\data[0] = wanted))
+end: lm_p0_node_is_mark
+
+# The open conditional questions of a structural level (LMX_grammar section 30): the `?` marks among its active fields already
+# parsed, less the conditional `:` marks that closed them. A `?` inside a group, a formed Frame, a protected name or a bracket is
+# not a field of this level, so it never counts here.
+fn: lm_p0_pending_conditionals (c.LmP0Structure@: structure) int
+    c.LmP0Field@: field
+    c.LmP0Node@: value
+    int: pending
+    pending := 0
+    if: structure = 0
+        return: 0
+    ---
+    field := structure\first_field
+    while: field != 0
+        value := field\value
+        if: lm_p0_active_node(value) != 0
+            if: lm_p0_node_is_mark(value, '?') != 0
+                pending := pending + 1
+            ---
+            if: lm_p0_node_is_mark(value, ':') != 0 && pending > 0
+                pending := pending - 1
+            ---
+        ---
+        field := field\next
+    ---
+    return: pending
+end: lm_p0_pending_conditionals
+
 # A word byte that can start a designator name or a path segment: not a dot, and not a digit (a number starts with a digit).
 fn: lm_p0_is_word_start_byte (char: value) int
     return: value != '.' && lm_p0_is_word_byte(value) != 0 && (value < '0' || value > '9')
@@ -2802,7 +2854,7 @@ fn: lm_p0_scan_head (c.LmP0Document@: document; const: (char@: text); size_t: by
         index[0] := i + 2U
         return: 1
     prefix_open := (cast: (int) (text[i] = '@' || text[i] = '['))
-    while: i < byte_count && c.lm_p0_is_field_space(text[i]) = 0 && c.lm_p0_is_field_separator(text[i]) = 0 && lm_p0_dot_operator_at(text, byte_count, i) = 0 && lm_p0_depth_stop_at(text, byte_count, start, i) = 0 && text[i] != ')' && text[i] != '#' && text[i] != '{' && text[i] != '}' && text[i] != ':'
+    while: i < byte_count && c.lm_p0_is_field_space(text[i]) = 0 && c.lm_p0_is_field_separator(text[i]) = 0 && lm_p0_dot_operator_at(text, byte_count, i) = 0 && lm_p0_depth_stop_at(text, byte_count, start, i) = 0 && text[i] != ')' && text[i] != '?' && text[i] != '#' && text[i] != '{' && text[i] != '}' && text[i] != ':'
         if: text[i] = '('
             if: prefix_open = 0 || (i != square_end && i != pointer_end)
                 break
@@ -3090,6 +3142,14 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                 # The separator stays in the model as the mark of the field before it (BARE-DEREF-ACTUAL-MERGED): spacing is style, a separator is a boundary (the author, 2026-10-27).
                 if: ((structure\last_field != 0) && (structure\last_field\value != 0))
                     structure\last_field\value\flags := (structure\last_field\value\flags | c.LM_P0_NODE_SEPARATOR_AFTER)
+                # A semicolon closes the short form, and no conditional question may cross it (LMX_grammar section 30).
+                if: (separator = ';') && (lm_p0_pending_conditionals(structure) > 0)
+                    size_t: semicolon_line
+                    size_t: semicolon_column
+                    lm_p0_position_in_slice(text, byte_count, separator_index, line, column, @ semicolon_line, @ semicolon_column)
+                    lm_p0_set_diagnostic(document, 6, semicolon_line, semicolon_column, "conditional question without its colon before the separator")
+                    return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                ---
                 if: (c.lm_p0_is_short_form_separator(separator) && ((flags & c.LM_P0_FIELD_PARSE_STOP_ON_SEMICOLON) != 0U))
                     break
                 if: (allow_empty_fields && expect_field)
@@ -3192,7 +3252,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                 size_t: suffix_end
                 size_t: suffix_count
                 suffix_end := lm_p0_scan_suffix_run(text, byte_count, close_index + 1U, @ suffix_count)
-                if: ((suffix_end < byte_count) && (text[suffix_end] = ':') && (((suffix_end + 1U) >= byte_count) || ((text[(suffix_end + 1U)] != ':') && (text[(suffix_end + 1U)] != '='))))
+                if: ((suffix_end < byte_count) && (text[suffix_end] = ':') && (((suffix_end + 1U) >= byte_count) || ((text[(suffix_end + 1U)] != ':') && (text[(suffix_end + 1U)] != '=')))) && (lm_p0_pending_conditionals(structure) = 0)
                     size_t: body_index
                     unsigned: body_flags
                     int: has_inline_body
@@ -3374,7 +3434,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                         restart_parse_context := 1
                         break
                     ---
-                    if: ((((i < byte_count) && (text[i] = ':')) && (head_end > start)) && (((i + 1U) >= byte_count) || (text[(i + 1U)] != ':')))
+                    if: ((((i < byte_count) && (text[i] = ':')) && (head_end > start)) && (((i + 1U) >= byte_count) || (text[(i + 1U)] != ':'))) && (lm_p0_pending_conditionals(structure) = 0)
                         size_t: body_index
                         unsigned: body_flags
                         int: has_inline_body
@@ -3494,6 +3554,26 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                             # The token `::` (Р143): a field that starts with two colons, not three, is the atom `::`.
                             if: ((head_end = start) && ((start + 1U) < byte_count) && (text[start] = ':') && (text[(start + 1U)] = ':') && (((start + 2U) >= byte_count) || (text[(start + 2U)] != ':')))
                                 head_end := (start + 2U)
+                            # An ordinary `?` at a field start is the conditional question (LMX_grammar section 30): one atom; the head scan
+                            # stops before it, so the question is counted only among the fields already parsed.
+                            if: ((head_end = start) && (start < byte_count) && (text[start] = '?'))
+                                if: (lm_p0_append_atom_slice(document, structure, text, byte_count, line, column, offset, start, (start + 1U)) = 0)
+                                    return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                                ---
+                                i := (start + 1U)
+                                expect_field := 0
+                                continue
+                            ---
+                            # A structural colon at a field start is the conditional colon while a `?` is open at this level (LMX_grammar
+                            # section 30): one atom, and the arms follow as fields. `::` and `:=` keep their own readings.
+                            if: ((head_end = start) && (start < byte_count) && (text[start] = ':') && (((start + 1U) >= byte_count) || ((text[(start + 1U)] != ':') && (text[(start + 1U)] != '='))) && (lm_p0_pending_conditionals(structure) > 0))
+                                if: (lm_p0_append_atom_slice(document, structure, text, byte_count, line, column, offset, start, (start + 1U)) = 0)
+                                    return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                                ---
+                                i := (start + 1U)
+                                expect_field := 0
+                                continue
+                            ---
                             if: (head_end = start)
                                 size_t: diagnostic_line
                                 size_t: diagnostic_column
@@ -5530,6 +5610,107 @@ sub: lm_p0_close_empty_by_end_in_structure (c.LmP0Structure@: structure)
 end: lm_p0_close_empty_by_end_in_structure
 
 # Original: parser.lm1:4367 lm_p0_parse_bytes
+# 1 when the source has a `?` byte. A document without one has no conditional question, so its tree is not walked.
+fn: lm_p0_source_has_question (const: (char@: source); size_t: source_length) int
+    size_t: index
+    index := 0U
+    while: index < source_length
+        if: source[index] = '?'
+            return: 1
+        ---
+        index := index + 1U
+    ---
+    return: 0
+end: lm_p0_source_has_question
+
+# The conditional boundaries of one level (LMX_grammar section 30), checked after a successful parse and before any effect. Only the
+# active fields count. A `?` needs a condition: it cannot be the first active field, nor follow a `?`, a `:`, or a field that carries a
+# separator mark. A `:` needs both arms: its then-arm is the field before it (not a `?`), it carries no separator mark, and its
+# else-arm is the next active field, which must exist and be neither `:` nor `?`. A `?` still open at the end of the level is refused.
+fn: lm_p0_check_conditionals_structure (c.LmP0Document@: document; c.LmP0Structure@: structure) int
+    c.LmP0Field@: field
+    c.LmP0Node@: value
+    c.LmP0Node@: prior_node
+    c.LmP0Node@: last_question
+    int: pending
+    if: structure = 0
+        return: 1
+    ---
+    pending := 0
+    prior_node := 0
+    last_question := 0
+    field := structure\first_field
+    while: field != 0
+        value := field\value
+        if: lm_p0_active_node(value) != 0
+            if: lm_p0_check_conditionals_node(document, value) = 0
+                return: 0
+            ---
+            if: lm_p0_node_is_mark(value, '?') != 0
+                if: prior_node = 0 || lm_p0_node_is_mark(prior_node, '?') != 0 || lm_p0_node_is_mark(prior_node, ':') != 0 || (prior_node\flags & c.LM_P0_NODE_SEPARATOR_AFTER) != 0U
+                    lm_p0_set_diagnostic(document, 6, value\span\line, value\span\column, "conditional question without a condition")
+                    return: 0
+                ---
+                pending := pending + 1
+                last_question := value
+            ---
+            if: lm_p0_node_is_mark(value, ':') != 0
+                if: prior_node = 0 || lm_p0_node_is_mark(prior_node, '?') != 0
+                    lm_p0_set_diagnostic(document, 6, value\span\line, value\span\column, "empty conditional then-arm")
+                    return: 0
+                ---
+                if: lm_p0_node_is_mark(prior_node, ':') != 0
+                    lm_p0_set_diagnostic(document, 6, value\span\line, value\span\column, "empty conditional else-arm")
+                    return: 0
+                ---
+                if: (value\flags & c.LM_P0_NODE_SEPARATOR_AFTER) != 0U
+                    lm_p0_set_diagnostic(document, 6, value\span\line, value\span\column, "empty conditional else-arm before a separator")
+                    return: 0
+                ---
+                if: pending > 0
+                    pending := pending - 1
+                ---
+            ---
+            prior_node := value
+        ---
+        field := field\next
+    ---
+    if: prior_node != 0 && lm_p0_node_is_mark(prior_node, ':') != 0
+        lm_p0_set_diagnostic(document, 6, prior_node\span\line, prior_node\span\column, "conditional colon without an else arm")
+        return: 0
+    ---
+    if: pending > 0
+        lm_p0_set_diagnostic(document, 6, last_question\span\line, last_question\span\column, "conditional question without its colon")
+        return: 0
+    ---
+    return: 1
+end: lm_p0_check_conditionals_structure
+
+# The conditional check of one node: a structure, a formed Frame body and its trailer body; other nodes have none.
+fn: lm_p0_check_conditionals_node (c.LmP0Document@: document; c.LmP0Node@: p0_node) int
+    c.LmP0Frame@: frame
+    c.LmP0Structure@: body
+    if: p0_node = 0
+        return: 1
+    ---
+    if: p0_node\kind = c.LM_P0_NODE_STRUCTURE && p0_node\as\structure != 0
+        body := p0_node\as\structure
+        return: lm_p0_check_conditionals_structure(document, body)
+    ---
+    if: p0_node\kind = c.LM_P0_NODE_FRAME && p0_node\as\frame != 0
+        frame := p0_node\as\frame
+        body := frame\body
+        if: lm_p0_check_conditionals_structure(document, body) = 0
+            return: 0
+        ---
+        if: frame\trailer != 0
+            body := frame\trailer\body
+            return: lm_p0_check_conditionals_structure(document, body)
+        ---
+    ---
+    return: 1
+end: lm_p0_check_conditionals_node
+
 fn: lm_p0_parse_bytes (const: (char@: source); size_t: source_length; c.LmP0Document@@: out_document) int
     c.LmP0Document@: document
     if: (out_document = 0)
@@ -5554,6 +5735,9 @@ fn: lm_p0_parse_bytes (const: (char@: source); size_t: source_length; c.LmP0Docu
     if: lm_p0_parse_stream(document)
         if: lm_p0_postprocess_node(document, (cast: (c.LmP0Node@) document\root))
             lm_p0_close_empty_by_end_in_node((cast: (c.LmP0Node@) document\root))
+        ---
+        if: (document\diagnostic\code = 0) && lm_p0_source_has_question(source, source_length) != 0
+            lm_p0_check_conditionals_node(document, (cast: (c.LmP0Node@) document\root))
         ---
     if: (document\diagnostic\code = 0)
         if: (c.lm_own_tree_cut(document\tree_arena) != 0)
@@ -6083,6 +6267,11 @@ fn: lm_p0_lower_types_node (c.LmP0Document@: document; c.LmP0Node@: p0_node) int
             body := group\trailer\body
             return: lm_p0_lower_types_structure(document, body)
         return: 1
+    # The legacy path has no conditional operator: a `?` atom is refused at its coordinate, as a depth form is (LMX_grammar section 30).
+    if: p0_node\kind = c.LM_P0_NODE_ATOM && p0_node\as\atom\length = 1U && p0_node\as\atom\data[0] = '?'
+        lm_p0_set_diagnostic(document, 6, p0_node\span\line, p0_node\span\column, "conditional operator requires its expression projection")
+        return: 0
+    ---
     if: p0_node\kind != c.LM_P0_NODE_FRAME || p0_node\as\frame = 0
         return: 1
     frame := p0_node\as\frame

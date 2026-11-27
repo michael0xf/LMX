@@ -935,6 +935,9 @@ fn: lm_graph_build_node (c.LmxGraph@: g; c.Lmx@: parent; c.LmP0Node@: nd; int: d
     out[0] := 0
     if: nd\kind = c.LM_P0_NODE_ATOM
         text := lm_graph_p0_atom(nd)
+        if: lm_graph_p0_length(text) = 1U && text\data[0] = '?'
+            c.fprintf(c.stderr, "graph: %zu:%zu: conditional expression requires its Expression projection\n", (cast: (size_t) nd\span\line), (cast: (size_t) nd\span\column))
+            return: 2
         if: lm_graph_int_literal(text, @ number) != 0
             value := c.lmx_graph_int(g, number)
         else:

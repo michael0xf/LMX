@@ -34,6 +34,13 @@ class SpecTests(unittest.TestCase):
                 source = answer["source"]
                 lines = (ROOT / source["file"]).read_bytes().decode("utf-8-sig").splitlines(keepends=True)
                 self.assertEqual(answer["text"], "".join(lines[source["lineStart"]-1:source["lineEnd"]]))
+        for topic, examples in (("tensor.depth", (".(2)op", ".(0)op")),
+                                ("tensor.assignment", ("(a b c) := f()", ".:", "broadcast"))):
+            with self.subTest(topic=topic):
+                answer = index.search(topic)
+                self.assertEqual(answer["status"], "found", answer)
+                for example in examples:
+                    self.assertIn(example, answer["text"])
         answer = index.search("then")
         self.assertEqual(answer["status"], "ambiguous")
         self.assertEqual({x["ruleId"] for x in answer["candidates"]}, {"operations.bind", "patterns.then"})

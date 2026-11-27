@@ -1602,6 +1602,16 @@ fn: lm_p0_new_node (c.LmP0Document@: document; c.LmP0NodeKind: kind) c.LmP0Node@
     return: p0_node
 end: lm_p0_new_node
 
+sub: lm_p0_link_field (c.LmP0Structure@: structure; c.LmP0Field@: field)
+    if: structure\last_field = 0
+        structure\first_field := field
+    else:
+        structure\last_field\next := field
+    ---
+    structure\last_field := field
+    structure\field_count := structure\field_count + 1U
+end: lm_p0_link_field
+
 # Original: parser.lm1:1477 lm_p0_append_field
 fn: lm_p0_append_field (c.LmP0Document@: document; c.LmP0Structure@: structure; c.LmP0Node@: p0_node) int
     c.LmP0Field@: field
@@ -1622,15 +1632,92 @@ fn: lm_p0_append_field (c.LmP0Document@: document; c.LmP0Structure@: structure; 
         lm_p0_set_diagnostic(document, 1, lm_p0_tmp_14, lm_p0_tmp_15, "out of memory while allocating parser field")
         return: 0
     field\value := p0_node
-    if: (structure\last_field = 0)
-        structure\first_field := field
-    else:
-        structure\last_field\next := field
-    ---
-    structure\last_field := field
-    structure\field_count := structure\field_count + 1U
+    lm_p0_link_field(structure, field)
     return: 1
 end: lm_p0_append_field
+
+# A semicolon that closed a short Frame belongs to that Frame. A positional
+# skip remains a field of the containing group.
+fn: lm_p0_segment_standalone (c.LmP0Node@: value) int
+    if: (value\flags & c.LM_P0_NODE_POSITIONAL_SKIP) != 0U
+        return: 1
+    ---
+    return: (value\kind = c.LM_P0_NODE_FRAME) && ((value\as\frame\flags & c.LM_P0_FRAME_SEPARATOR_CLOSED) != 0U)
+end: lm_p0_segment_standalone
+
+# Finish the anonymous segments of a written round or square group. A short
+# form already handled its own semicolon. Compact argument lists also keep
+# their own field contract. Relink the parsed fields without reading text again.
+fn: lm_p0_group_segments (c.LmP0Document@: document; c.LmP0Structure@: structure) int
+    c.LmP0Field@: first structure\first_field
+    c.LmP0Field@: last first
+    c.LmP0Field@: following 0
+    c.LmP0Node@: value 0
+    c.LmP0Node@: initial 0
+    c.LmP0Node@: next_value 0
+    c.LmP0Node@: segment 0
+    c.LmP0Structure@: body 0
+    size_t: count 0U
+    unsigned: boundary 0U
+    while: last != 0
+        value := last\value
+        if: (value\flags & c.LM_P0_NODE_SEMICOLON_AFTER) != 0U && lm_p0_segment_standalone(value) = 0
+            break
+        ---
+        last := last\next
+    ---
+    if: last = 0
+        return: 1
+    ---
+    structure\first_field := 0
+    structure\last_field := 0
+    structure\field_count := 0U
+    while: first != 0
+        initial := first\value
+        if: lm_p0_segment_standalone(initial) != 0
+            following := first\next
+            first\next := 0
+            lm_p0_link_field(structure, first)
+            first := following
+            continue
+        ---
+        count := 1U
+        last := first
+        following := last\next
+        value := initial
+        while: following != 0 && (value\flags & c.LM_P0_NODE_SEMICOLON_AFTER) = 0U
+            next_value := following\value
+            if: lm_p0_segment_standalone(next_value) != 0
+                break
+            ---
+            last := following
+            following := last\next
+            value := next_value
+            count := count + 1U
+        ---
+        segment := lm_p0_new_node(document, c.LM_P0_NODE_STRUCTURE)
+        if: segment = 0
+            return: 0
+        ---
+        segment\span\line := initial\span\line
+        segment\span\column := initial\span\column
+        segment\span\offset := initial\span\offset
+        segment\span\length := value\span\offset + value\span\length - segment\span\offset
+        boundary := value\flags & c.LM_P0_NODE_SEMICOLON_AFTER
+        value\flags := value\flags - boundary
+        segment\flags := boundary
+        body := segment\as\structure
+        body\first_field := first
+        body\last_field := last
+        body\field_count := count
+        last\next := 0
+        if: lm_p0_append_field(document, structure, segment) = 0
+            return: 0
+        ---
+        first := following
+    ---
+    return: 1
+end: lm_p0_group_segments
 
 # Original: parser.lm1:1503 lm_p0_pointer_source_offset
 fn: lm_p0_pointer_source_offset (const: (c.LmP0Document@: document); const: (char@: pointer); size_t@: out_offset) int
@@ -2241,12 +2328,16 @@ fn: lm_p0_index_content (c.LmP0Document@: document; c.LmP0Structure@: structure;
     separators := 0
     pending := 0
     field := index_structure\first_field
-    if: document_index != 0
-        field := 0
-    ---
     while: field != 0
         value := field\value
         if: lm_p0_active_node(value) != 0
+            if: (value\flags & c.LM_P0_NODE_SEMICOLON_AFTER) != 0U
+                marked := 1
+            ---
+            if: document_index != 0
+                field := field\next
+                continue
+            ---
             if: lm_p0_node_is_mark(value, '?') != 0
                 pending := pending + 1
                 marked := 1
@@ -3296,6 +3387,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
     int: indent_stack_owned
     int: restart_parse_context
     int: question_seen
+    int: closed_on_semicolon
     parse_stack := lm_p0_field_parse_loop_stack_new(document, line, column)
     # One scan per call (child contexts are subsets of this text, so a child can only lose a question, never gain one):
     # conservative: this text has a `?` byte, or the level already holds fields (an earlier logical line may hold a question).
@@ -3322,6 +3414,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
     restart_parse_context := 1
     while: restart_parse_context
         restart_parse_context := 0
+        closed_on_semicolon := 0
         while: (i < byte_count)
             int: stopped_by_source_level
             if: (lm_p0_skip_field_space(document, indent_stack, structure, text, byte_count, @ i, line, column, flags, short_source_level, layout_base_level, @ current_source_level, @ stopped_by_source_level) = 0)
@@ -3416,12 +3509,19 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                     lm_p0_set_diagnostic(document, 6, semicolon_line, semicolon_column, "conditional question without its colon before the separator")
                     return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                 ---
-                if: (c.lm_p0_is_short_form_separator(separator) && ((flags & c.LM_P0_FIELD_PARSE_STOP_ON_SEMICOLON) != 0U))
+                if: (separator = ';') && ((flags & c.LM_P0_FIELD_PARSE_STOP_ON_SEMICOLON) != 0U)
+                    closed_on_semicolon := 1
                     break
+                ---
                 if: (allow_empty_fields && expect_field)
                     if: (lm_p0_append_positional_skip(document, structure, text, byte_count, line, column, offset, separator_index) = 0)
                         return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                     ---
+                # A semicolon ends the current segment. Keep that boundary apart from the ordinary field separator.
+                # A short form reports the same boundary at the enclosing level when it is appended below.
+                if: (separator = ';') && (structure\last_field != 0)
+                    structure\last_field\value\flags := structure\last_field\value\flags | c.LM_P0_NODE_SEMICOLON_AFTER
+                ---
                 expect_field := allow_empty_fields
                 continue
             if: (text[i] = ')')
@@ -3560,6 +3660,8 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                         c.LmP0Structure@: group_structure
                         if: (lm_p0_parse_group(document, text, byte_count, line, column, i, close_index, c.LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS, @ group_structure) = 0)
                             return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                        if: lm_p0_group_segments(document, group_structure) = 0
+                            return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                         p0_node\as\structure := group_structure
                         p0_node\span\line := line
                         lm_p0_position_in_slice(text, byte_count, start, line, column, (cast: (size_t@) (@ p0_node\span\line)), (cast: (size_t@) (@ p0_node\span\column)))
@@ -3607,6 +3709,8 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                     if: (lm_p0_count_line_breaks(text, (i + 1U), close_index) != 0U)
                         c.LmP0Structure@: group_structure
                         if: (lm_p0_parse_group(document, text, byte_count, line, column, i, close_index, c.LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS, @ group_structure) = 0)
+                            return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                        if: lm_p0_group_segments(document, group_structure) = 0
                             return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                         p0_node\as\structure := group_structure
                         p0_node\span\line := line
@@ -3971,20 +4075,24 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                 lm_p0_position_in_slice(text, byte_count, start, line, column, (cast: (size_t@) (@ p0_node\span\line)), (cast: (size_t@) (@ p0_node\span\column)))
                 p0_node\span\offset := (offset + start)
                 p0_node\span\length := (child_index - start)
+                if: closed_on_semicolon != 0
+                    p0_node\flags := p0_node\flags | c.LM_P0_NODE_SEMICOLON_AFTER
+                ---
                 if: (lm_p0_append_field(document, structure, p0_node) = 0)
                     lm_p0_free_node(p0_node)
                     c.lm_own_delete(frame, 0)
                     return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                 expect_field := 0
-                headless_group_after_separator := ((((flags & c.LM_P0_FIELD_PARSE_ALLOW_HEADLESS_AFTER_SEPARATOR) != 0U) && (child_index > 0U)) && c.lm_p0_is_short_form_separator(text[(child_index - 1U)]))
+                headless_group_after_separator := ((flags & c.LM_P0_FIELD_PARSE_ALLOW_HEADLESS_AFTER_SEPARATOR) != 0U) && (closed_on_semicolon != 0)
                 i := child_index
             ---
             c.lm_own_delete(frame, 0)
             restart_parse_context := 1
             continue
         if: (frame\continuation = c.LM_P0_FIELD_PARSE_LOOP_COLON_FRAME_BODY)
-            if: ((child_index > 0U) && c.lm_p0_is_short_form_separator(text[(child_index - 1U)]))
+            if: closed_on_semicolon != 0
                 p0_node\as\frame\flags := p0_node\as\frame\flags | c.LM_P0_FRAME_SEPARATOR_CLOSED
+                p0_node\flags := p0_node\flags | c.LM_P0_NODE_SEMICOLON_AFTER
             ---
             p0_node\span\line := line
             lm_p0_position_in_slice(text, byte_count, start, line, column, (cast: (size_t@) (@ p0_node\span\line)), (cast: (size_t@) (@ p0_node\span\column)))
@@ -4001,6 +4109,11 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
             restart_parse_context := 1
             continue
         if: (frame\continuation = c.LM_P0_FIELD_PARSE_LOOP_BOUNDED_STRUCTURE)
+            c.LmP0Structure@: group_structure p0_node\as\structure
+            if: lm_p0_group_segments(document, group_structure) = 0
+                c.lm_own_delete(frame, 0)
+                return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+            ---
             p0_node\span\line := line
             lm_p0_position_in_slice(text, byte_count, start, line, column, (cast: (size_t@) (@ p0_node\span\line)), (cast: (size_t@) (@ p0_node\span\column)))
             p0_node\span\offset := (offset + start)
@@ -6329,7 +6442,7 @@ fn: lm_p0_lower_types_base (c.LmP0Document@: document; c.LmP0Structure@: structu
     if: read\first_field = 0
         lm_p0_set_diagnostic(document, 34, line, column, "the base of the typed head has no fields")
         return: 0
-    mark := after\value\flags & c.LM_P0_NODE_SEPARATOR_AFTER
+    mark := after\value\flags & (c.LM_P0_NODE_SEPARATOR_AFTER | c.LM_P0_NODE_SEMICOLON_AFTER)
     after\value\flags := after\value\flags - mark
     last := read\last_field
     tail := last\value
@@ -6402,7 +6515,7 @@ fn: lm_p0_lower_types_bare (c.LmP0Document@: document; c.LmP0Node@: p0_node) int
     made := lm_p0_lower_types_reference(document, run, run_size, operand, only, run_size)
     if: made = 0
         return: 0
-    made\flags := made\flags | (only\flags & c.LM_P0_NODE_SEPARATOR_AFTER)
+    made\flags := made\flags | (only\flags & (c.LM_P0_NODE_SEPARATOR_AFTER | c.LM_P0_NODE_SEMICOLON_AFTER))
     slot\value := made
     return: 1
 
@@ -6452,7 +6565,7 @@ fn: lm_p0_lower_cast_pointer (c.LmP0Document@: document; c.LmP0Structure@: body)
     made := lm_p0_lower_types_reference(document, (cast: (char@) spelling\data), spelling\length, base, prefix, span_length)
     if: made = 0
         return: 0
-    separator := base\flags & c.LM_P0_NODE_SEPARATOR_AFTER
+    separator := base\flags & (c.LM_P0_NODE_SEPARATOR_AFTER | c.LM_P0_NODE_SEMICOLON_AFTER)
     made\flags := made\flags | separator
     base\flags := base\flags - separator
     field\value := made
@@ -6548,7 +6661,7 @@ fn: lm_p0_lower_types_frame (c.LmP0Document@: document; c.LmP0Node@: p0_node) in
         made\span\column := made\span\column + base_start
         made\span\offset := made\span\offset + base_start
         # The separator the name carries (`int@: q, v`) stands after the type atom, as `@: q int, v` has it.
-        mark := first\value\flags & c.LM_P0_NODE_SEPARATOR_AFTER
+        mark := first\value\flags & (c.LM_P0_NODE_SEPARATOR_AFTER | c.LM_P0_NODE_SEMICOLON_AFTER)
         made\flags := made\flags | mark
         first\value\flags := first\value\flags - mark
         if: lm_p0_lower_types_insert(document, body, first, made) = 0
@@ -6608,7 +6721,7 @@ fn: lm_p0_lower_types_structure (c.LmP0Document@: document; c.LmP0Structure@: st
                     ---
                 walk := walk\next
             ---
-            made\flags := made\flags | (item\flags & c.LM_P0_NODE_SEPARATOR_AFTER)
+            made\flags := made\flags | (item\flags & (c.LM_P0_NODE_SEPARATOR_AFTER | c.LM_P0_NODE_SEMICOLON_AFTER))
             run_first\value := made
             removed := 0U
             walk := run_first\next

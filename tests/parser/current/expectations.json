@@ -2650,7 +2650,7 @@
     "flags": true,
     "exit": 0,
     "authority": "Step 23.7a: a semicolon closes the inline body of the Frame before it (SEPCLOSED) and marks its last field (SEP); the Frame after it is closed by the group",
-    "stdout_exact": "structure fields=1 ##\n  frame head=\"fn\" body=structure fields=3 ## {COLON INLINE}\n    atom \"f\" ##\n    structure fields=2 ##\n      frame head=\"@\" body=structure fields=2 ## {COLON INLINE SEPCLOSED}\n        atom \"a\" ##\n        atom \"int\" ## [SEP]\n      frame head=\"@\" body=structure fields=2 ## {COLON INLINE}\n        atom \"b\" ##\n        atom \"int\" ##\n    atom \"int\" ##\n"
+    "stdout_exact": "structure fields=1 ##\n  frame head=\"fn\" body=structure fields=3 ## {COLON INLINE}\n    atom \"f\" ##\n    structure fields=2 ##\n      frame head=\"@\" body=structure fields=2 ## [SEMICOLON] {COLON INLINE SEPCLOSED}\n        atom \"a\" ##\n        atom \"int\" ## [SEP]\n      frame head=\"@\" body=structure fields=2 ## {COLON INLINE}\n        atom \"b\" ##\n        atom \"int\" ##\n    atom \"int\" ##\n"
   },
   {
     "path": "tests/parser/current/t237_a05_flags_tail_cutter.lmx",
@@ -2685,7 +2685,7 @@
     "flags": true,
     "exit": 0,
     "authority": "Step 23.7a: a head with its fields in parentheses is a compact Frame (COMPACT), no colon; the semicolon marks the field before it (SEP)",
-    "stdout_exact": "structure fields=1 ##\n  frame head=\"f\" body=structure fields=2 ## {COMPACT}\n    atom \"x\" ## [SEP]\n    atom \"y\" ##\n"
+    "stdout_exact": "structure fields=1 ##\n  frame head=\"f\" body=structure fields=2 ## {COMPACT}\n    atom \"x\" ## [SEP SEMICOLON]\n    atom \"y\" ##\n"
   },
   {
     "path": "tests/parser/current/t237_a13_flags_inactive.lmx",
@@ -2939,5 +2939,33 @@
     "exit": 0,
     "flags": true,
     "stdout_exact": "structure fields=5 ##\n  frame head=\"[5]T\" body=structure fields=1 ## {COLON INLINE}\n    atom \"items\" ##\n  frame head=\"r\" body=structure fields=4 ## {COLON INLINE}\n    atom \"T\" ##\n    atom \"[\" ##\n    atom \"5\" ##\n    atom \"]\" ##\n  frame head=\"r\" body=structure fields=6 ## {COLON INLINE}\n    atom \"S\" ##\n    atom \"\\\" ##\n    atom \"[\" ##\n    atom \"5\" ##\n    atom \"]\" ##\n    atom \"name\" ##\n  frame head=\"T[5]\" body=structure fields=1 ## {COLON INLINE}\n    atom \"args\" ##\n  frame head=\"T[5]\" body=structure fields=1 ## {INLINE ASSIGN}\n    atom \"value\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/semicolon_anonymous_segments.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "Common P0: bare delimiters group semicolon-separated segments and keep a comma-separated field list",
+    "stdout_file": "tests/parser/current/semicolon_anonymous_segments.tree"
+  },
+  {
+    "path": "tests/parser/current/semicolon_short_tail.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "Common P0: semicolon closes an open short form and leaves compact call arguments as fields",
+    "stdout_file": "tests/parser/current/semicolon_short_tail.tree"
+  },
+  {
+    "path": "tests/parser/current/semicolon_nested_segments.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "Common P0: square and round groups share segments, and nested calls, indexes and protected text keep their own bounds",
+    "stdout_file": "tests/parser/current/semicolon_nested_segments.tree"
+  },
+  {
+    "path": "tests/parser/current/semicolon_vertical_tail.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "Common P0: an indented print body accepts semicolons and a physical blank line closes to the document root",
+    "stdout_file": "tests/parser/current/semicolon_vertical_tail.tree"
   }
 ]

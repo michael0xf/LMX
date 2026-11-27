@@ -1,0 +1,18 @@
+# Complete text documents for a supplied context containing runtime, scope,
+# Work and the ordinary LmxServer* methods. Their names resolve during ordinary
+# source preparation. These are DATA strings; this example does not execute them.
+# The transport frame or MCP request encloses the complete string unchanged.
+
+LmxServerExampleRemoteDocuments:
+    []char: inspect "LmxServerInspect\\inspect(runtime := runtime; scope := scope; target := Work; projection := (\"name\"; \"type\"; \"value\"))"
+    []char: insert "LmxServerInsert\\insert(runtime := runtime; scope := scope; target := Work; source := \"PlusOne:\\n    int: x\\n    return: int\\n    apply:\\n        return: x + 1\")"
+    []char: step "LmxServerStep\\step(runtime := runtime; scope := scope; execution := paused; action := \"next\")"
+
+# Real local invocation of the same whole-document entry.
+LmxServerExampleNativeRequest:
+    @LmxServerService: service
+    required: service
+    return: []char
+    inspect:
+        throws: copy(LmxServerPortThrows)
+        return: LmxServerNativeCommand\exchange(service := service; document := LmxServerExampleRemoteDocuments\inspect)

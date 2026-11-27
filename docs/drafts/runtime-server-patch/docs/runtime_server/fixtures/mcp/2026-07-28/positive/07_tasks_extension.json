@@ -1,0 +1,119 @@
+{
+  "fixture": {
+    "profile": "2026-07-28",
+    "kind": "protocol-reference",
+    "runtimeStatus": "NOT_RUN",
+    "requires": [
+      "tools provider",
+      "durable Tasks2026 provider; negotiated extension io.modelcontextprotocol/tasks"
+    ],
+    "note": "Expected wire shape; this does not advertise or prove implemented capabilities."
+  },
+  "transport": "stdio",
+  "exchange": [
+    {
+      "direction": "client-to-server",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": "task-call-1",
+        "method": "tools/call",
+        "params": {
+          "_meta": {
+            "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+            "io.modelcontextprotocol/clientCapabilities": {
+              "extensions": {
+                "io.modelcontextprotocol/tasks": {}
+              }
+            },
+            "io.modelcontextprotocol/clientInfo": {
+              "name": "lmx-fixture-client",
+              "version": "0.1.0"
+            }
+          },
+          "name": "lmx",
+          "arguments": {
+            "document": "1 + 2"
+          }
+        }
+      }
+    },
+    {
+      "direction": "server-to-client",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": "task-call-1",
+        "result": {
+          "resultType": "task",
+          "taskId": "task-fixture-1",
+          "status": "working",
+          "createdAt": "2026-11-27T00:00:00Z",
+          "lastUpdatedAt": "2026-11-27T00:00:00Z",
+          "ttlMs": 60000,
+          "pollIntervalMs": 1000
+        }
+      }
+    },
+    {
+      "direction": "client-to-server",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": "task-get-1",
+        "method": "tasks/get",
+        "params": {
+          "_meta": {
+            "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+            "io.modelcontextprotocol/clientCapabilities": {
+              "extensions": {
+                "io.modelcontextprotocol/tasks": {}
+              }
+            },
+            "io.modelcontextprotocol/clientInfo": {
+              "name": "lmx-fixture-client",
+              "version": "0.1.0"
+            }
+          },
+          "taskId": "task-fixture-1"
+        }
+      }
+    },
+    {
+      "direction": "server-to-client",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": "task-get-1",
+        "result": {
+          "resultType": "complete",
+          "taskId": "task-fixture-1",
+          "status": "completed",
+          "createdAt": "2026-11-27T00:00:00Z",
+          "lastUpdatedAt": "2026-11-27T00:00:01Z",
+          "ttlMs": 60000,
+          "pollIntervalMs": 1000,
+          "result": {
+            "resultType": "complete",
+            "content": [
+              {
+                "type": "text",
+                "text": "int: result 3"
+              },
+              {
+                "type": "text",
+                "text": "{\"format\":\"application/lmx\",\"document\":\"int: result 3\"}"
+              }
+            ],
+            "structuredContent": {
+              "format": "application/lmx",
+              "document": "int: result 3"
+            },
+            "isError": false
+          }
+        }
+      }
+    }
+  ],
+  "constraints": [
+    "Extension enabled by both peers.",
+    "Task must be durable before CreateTaskResult is returned.",
+    "Task id is an exported task handle, not a global runtime object id."
+  ]
+}

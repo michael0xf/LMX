@@ -1,0 +1,193 @@
+# A bounded ordinary Message conversation, not another scheduler.
+# Copy an AgentJob in the agent's owning Message; retain that graph and parents
+# until all prepared post routes settle. A stack-only callback is not valid.
+# All writes below address the actual owning graph via node/parent(node).
+# private filters implicit binding; it does not hide data from graph access.
+
+LmxServerAgentJob:
+    private:
+        @LmxServerService: service
+        @LmxServerModelPort: model
+        @LmxServerEventSinkAPI: sink
+        @LmxServerExchange: exchange
+        @LmxServerModelAnswer: activeModelAnswer
+        int: remaining
+        int: timeoutMs
+        int: stopped 0
+        int: eventUndelivered 0
+        @LmxServerEvent: lastEvent
+    dispatch:
+        private: @: job node
+        if: job\private\stopped != 0
+            return
+        if: job\private\remaining <= 0
+            job\Stop\finish(kind := "budget"; payload := job\private\exchange)
+            return
+        job\private\remaining -= 1
+        private: @LmxServerModelPort: provider job\private\model
+        post:
+            ask:
+                provider\complete(exchange := job\private\exchange)
+            answer:
+                OnModel\accept
+            timeout:
+                ms:
+                    int: time job\private\timeoutMs
+            ---
+            undelivered:
+                ModelDelivery\undelivered()
+            unanswered:
+                ModelDelivery\unanswered()
+            catch: LmxServerPortFailure (@: cause)
+                PortFailure\model(cause := cause)
+    ---
+    OnModel:
+        @LmxServerModelAnswer: answer
+        required: answer
+        accept:
+            private: @: job parent(node)
+            if: job\private\stopped != 0
+                job\Events\emit(kind := "late-model-answer"; payload := answer)
+                return
+            if: answer\complete != 1
+                job\Stop\finish(kind := "incomplete-model-answer"; payload := answer)
+                return
+            job\private\activeModelAnswer := answer
+            private: @LmxServerService: service job\private\service
+            post:
+                ask:
+                    service\submitText(source := answer\text)
+                answer:
+                    OnReceipt\accept
+                timeout:
+                    ms:
+                        int: time job\private\timeoutMs
+                ---
+                undelivered:
+                    CommandDelivery\undelivered()
+                unanswered:
+                    CommandDelivery\unanswered()
+                catch: LmxServerPortFailure (@: cause)
+                    PortFailure\command(cause := cause)
+    ---
+    OnReceipt:
+        @LmxServerReceipt: receipt
+        required: receipt
+        accept:
+            private: @: job parent(node)
+            if: job\private\stopped != 0
+                job\Events\emit(kind := "late-runtime-receipt"; payload := receipt)
+                return
+            if: receipt\ok != 1
+                job\Stop\finish(kind := "runtime-outcome"; payload := receipt)
+                return
+            if: satisfies(receipt\payload; LmxServerDecision) = 0
+                job\Stop\finish(kind := "invalid-decision"; payload := receipt)
+                return
+            private: @LmxServerDecision: decision receipt\payload
+            if: decision\finished = 1
+                job\Stop\finish(kind := "finished"; payload := receipt)
+                return
+            if: decision\finished != 0
+                job\Stop\finish(kind := "invalid-decision"; payload := receipt)
+                return
+            job\private\exchange := LmxServerExchangeMake\make(kind := "observation"; payload := receipt; previous := job\private\exchange)
+            job\Events\emit(kind := "observation"; payload := receipt)
+            job\dispatch()
+    ---
+    ModelDelivery:
+        undelivered:
+            private: @: job parent(node)
+            job\Stop\finish(kind := "model-undelivered"; payload := job\private\exchange)
+        unanswered:
+            private: @: job parent(node)
+            job\Stop\finish(kind := "model-unanswered"; payload := job\private\exchange)
+    ---
+    CommandDelivery:
+        undelivered:
+            private: @: job parent(node)
+            job\Stop\finish(kind := "command-undelivered"; payload := job\private\activeModelAnswer)
+        unanswered:
+            private: @: job parent(node)
+            job\Stop\finish(kind := "command-unanswered"; payload := job\private\activeModelAnswer)
+    ---
+    PortFailure:
+        @: cause
+        required: cause
+        model:
+            private: @: job parent(node)
+            job\Stop\finish(kind := "model-failure"; payload := cause)
+        command:
+            private: @: job parent(node)
+            job\Stop\finish(kind := "command-failure"; payload := cause)
+    ---
+    Stop:
+        []char: kind
+        @: payload
+        required: kind payload
+        finish:
+            private: @: job parent(node)
+            if: job\private\stopped != 0
+                job\Events\emit(kind := "late-outcome"; payload := payload)
+                return
+            job\private\stopped := 1
+            job\Events\emit(kind := kind; payload := payload)
+    ---
+    Events:
+        []char: kind
+        @: payload
+        required: kind payload
+        emit:
+            private: @: job parent(node)
+            private: @: event (copy(LmxServerEvent))
+            event\kind := kind
+            event\payload := payload
+            job\private\lastEvent := event
+            private: @LmxServerEventSinkAPI: sink job\private\sink
+            post:
+                ask:
+                    sink(event := event)
+                undelivered:
+                    Delivery\missed()
+    ---
+    Delivery:
+        missed:
+            private: @: job parent(node)
+            job\private\eventUndelivered := 1
+    ---
+    Control:
+        @: reason
+        required: reason
+        cancel:
+            private: @: job parent(node)
+            job\Stop\finish(kind := "agent-stopped"; payload := reason)
+    ---
+    Observation:
+        return: @LmxServerEvent
+        read:
+            private: @: job parent(node)
+            return: job\private\lastEvent
+
+# The question is ordinary LMX data, usually []char, but may include a Table
+# or tree. The empty history root is an explicitly chosen empty Structure;
+# it is not a substitute for a missing runtime result.
+LmxServerAgent:
+    @LmxServerService: service
+    @LmxServerModelPort: model
+    @LmxServerEventSinkAPI: sink
+    @: question
+    int: roundLimit
+    int: timeoutMs
+    required: service model sink question roundLimit timeoutMs
+    return: @LmxServerAgentJob
+    ask:
+        private: @: job (copy(LmxServerAgentJob))
+        job\private\service := service
+        job\private\model := model
+        job\private\sink := sink
+        job\private\remaining := roundLimit
+        job\private\timeoutMs := timeoutMs
+        job\private\exchange := LmxServerExchangeMake\make(kind := "question"; payload := question; previous := (copy(())))
+        job\Events\emit(kind := "started"; payload := job\private\exchange)
+        job\dispatch()
+        return: job

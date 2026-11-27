@@ -1,0 +1,127 @@
+# ONE preparation/execution path. sourceKind 0=text, 1=ready graph reference.
+# prepareText uses the common parser, including its [] subparser; this file
+# contains no method-name evaluator, second parser, hidden executable graph,
+# or object-ID registry. All integration providers are declared in ports.lmx.
+
+LmxServerApply:
+    @LmxServerRuntimePort: runtime
+    @LmxServerStage: stage
+    required: runtime stage
+    return: @LmxServerReceipt
+    apply:
+        throws: copy(LmxServerPortThrows)
+        if: stage\ready = 0
+            return: stage\payload
+        if: stage\ready = 1
+            return: runtime\execute(prepared := stage\payload)
+        throw: LmxServerPortFailure(stage)
+
+LmxServerDispatch:
+    @LmxServerRuntimePort: runtime
+    @: scope
+    int: sourceKind
+    @: source
+    required: runtime scope sourceKind source
+    return: @LmxServerReceipt
+    execute:
+        throws: copy(LmxServerPortThrows)
+        if: sourceKind = 0
+            private: @LmxServerStage: stage runtime\prepareText(source := \source; scope := scope)
+            return: LmxServerApply\apply(runtime := runtime; stage := stage)
+        if: sourceKind = 1
+            private: @LmxServerStage: stage runtime\prepareGraph(graph := source; scope := scope)
+            return: LmxServerApply\apply(runtime := runtime; stage := stage)
+        private: @: diagnostic (copy(LmxServerSourceDiagnostic))
+        diagnostic\sourceKind := sourceKind
+        diagnostic\source := source
+        throw: LmxServerPortFailure(diagnostic)
+
+# The mutable slot contains the selected CODE itself, not its DATA owner.
+# These entries execute on this Service's owner lane. Read node\handler here,
+# after delivery; a sender must post submitText/submitGraph, not the slot.
+# The physical fields are ordinary graph state. They are not security secrets.
+LmxServerService:
+    @LmxServerRuntimePort: runtime
+    @: scope
+    @LmxServerHandlerAPI: handler LmxServerDispatch\execute
+    []char: source
+    @: graph
+    @LmxServerHandlerAPI: replacement
+    return: @LmxServerReceipt
+    submitText:
+        throws: copy(LmxServerPortThrows)
+        required: source
+        private: @LmxServerHandlerAPI: selected node\handler
+        return: selected(runtime := node\runtime; scope := node\scope; sourceKind := 0; source := source)
+    submitGraph:
+        throws: copy(LmxServerPortThrows)
+        required: graph
+        private: @LmxServerHandlerAPI: selected node\handler
+        return: selected(runtime := node\runtime; scope := node\scope; sourceKind := 1; source := graph)
+    replaceHandler:
+        throws: copy(LmxServerPortThrows)
+        required: replacement
+        private: @LmxServerHandlerAPI: admitted node\runtime\admitHandler(candidate := replacement; scope := node\scope)
+        node\handler := admitted
+        return: LmxServerReceiptMake\make(ok := 1; payload := node\handler)
+
+LmxServerCreate:
+    @LmxServerRuntimePort: runtime
+    @: scope
+    required: runtime scope
+    return: @LmxServerService
+    create:
+        throws: copy(LmxServerPortThrows)
+        private: @: service (copy(LmxServerService))
+        service\runtime := runtime
+        service\scope := scope
+        service\handler := runtime\admitHandler(candidate := LmxServerDispatch\execute; scope := scope)
+        return: service
+
+# Ordinary application facades from normative section 36.
+# insert places source and does not invoke a newly declared callable.
+# copyTo means ordinary copy plus explicit placement, not a transaction.
+# step acts on the supplied execution, not on an implicit global debugger.
+LmxServerInspect:
+    @LmxServerRuntimePort: runtime
+    @: scope
+    @: target
+    @: projection
+    required: runtime scope target projection
+    return: @LmxServerReceipt
+    inspect:
+        throws: copy(runtime\inspect\throws)
+        return: runtime\inspect(scope := scope; target := target; projection := projection)
+
+LmxServerInsert:
+    @LmxServerRuntimePort: runtime
+    @: scope
+    @: target
+    @: source
+    required: runtime scope target source
+    return: @LmxServerReceipt
+    insert:
+        throws: copy(runtime\insert\throws)
+        return: runtime\insert(scope := scope; target := target; source := source)
+
+LmxServerCopyTo:
+    @LmxServerRuntimePort: runtime
+    @: scope
+    @: target
+    @: source
+    required: runtime scope target source
+    return: @LmxServerReceipt
+    copyTo:
+        throws: copy(runtime\copyTo\throws)
+        return: runtime\copyTo(scope := scope; target := target; source := source)
+
+LmxServerStep:
+    @LmxServerRuntimePort: runtime
+    @: scope
+    @: execution
+    []char: action
+    required: runtime scope execution action
+    return: @LmxServerReceipt
+    step:
+        throws: copy(runtime\step\throws)
+        return: runtime\step(scope := scope; execution := execution; action := action)

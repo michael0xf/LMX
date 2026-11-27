@@ -1,0 +1,28 @@
+# Bind the three real references at deployment. There are no provider mocks.
+# The user calls Chat\ask(question := "Inspect Work and explain its state.").
+# Instantiating/retaining Chat is ordinary owner-graph work, not a new API table.
+
+Chat:
+    private:
+        @LmxServerService: service
+        @LmxServerModelPort: model
+        @LmxServerEventSinkAPI: sink
+    []char: question
+    required: question
+    return: @LmxServerAgentJob
+    ask:
+        return: LmxServerAgent\ask(service := node\private\service; model := node\private\model; sink := node\private\sink; question := question; roundLimit := 4; timeoutMs := 30000)
+
+# The callable's DATA is Receiver: exactly one formal event. State is in the
+# enclosing ordinary owner, so it does not add hidden signature positions.
+LmxServerExampleSink:
+    State:
+        int: count 0
+        @LmxServerEvent: last
+    Receiver:
+        @LmxServerEvent: event
+        required: event
+        accept:
+            private: @: owner parent(node)
+            owner\State\count += 1
+            owner\State\last := event

@@ -1,0 +1,533 @@
+[
+  {
+    "query": "00_validate",
+    "parameters": {},
+    "status": "PASS",
+    "rows": []
+  },
+  {
+    "query": "01_publication",
+    "parameters": {},
+    "status": "PASS",
+    "rows": [
+      {
+        "record_kind": "attribute",
+        "predicate": "basis",
+        "name": null,
+        "value_text": "compile-input",
+        "evidence": "written"
+      },
+      {
+        "record_kind": "attribute",
+        "predicate": "compile-token",
+        "name": null,
+        "value_text": "fixture-compile-1",
+        "evidence": "written"
+      },
+      {
+        "record_kind": "attribute",
+        "predicate": "graph-root-key",
+        "name": null,
+        "value_text": "n:root",
+        "evidence": "written"
+      },
+      {
+        "record_kind": "attribute",
+        "predicate": "published-at",
+        "name": null,
+        "value_text": "2026-11-27T00:00:00Z",
+        "evidence": "written"
+      },
+      {
+        "record_kind": "attribute",
+        "predicate": "runtime-execution",
+        "name": null,
+        "value_text": "NOT_RUN",
+        "evidence": "written"
+      },
+      {
+        "record_kind": "coverage",
+        "predicate": "call-targets",
+        "name": null,
+        "value_text": "partial",
+        "evidence": "written"
+      },
+      {
+        "record_kind": "coverage",
+        "predicate": "disk-source",
+        "name": null,
+        "value_text": "partial",
+        "evidence": "written"
+      },
+      {
+        "record_kind": "coverage",
+        "predicate": "effects",
+        "name": null,
+        "value_text": "partial",
+        "evidence": "written"
+      },
+      {
+        "record_kind": "coverage",
+        "predicate": "graph-topology",
+        "name": null,
+        "value_text": "complete",
+        "evidence": "written"
+      },
+      {
+        "record_kind": "coverage",
+        "predicate": "runtime-lmx",
+        "name": null,
+        "value_text": "unavailable",
+        "evidence": "written"
+      },
+      {
+        "record_kind": "coverage",
+        "predicate": "tests",
+        "name": null,
+        "value_text": "partial",
+        "evidence": "written"
+      },
+      {
+        "record_kind": "snapshot",
+        "predicate": "active",
+        "name": "fixture-L3Thread-owner",
+        "value_text": "fixture-snapshot-1",
+        "evidence": "written"
+      }
+    ]
+  },
+  {
+    "query": "02_name",
+    "parameters": {
+      "name": "total"
+    },
+    "status": "PASS",
+    "rows": [
+      {
+        "record_key": "n:total",
+        "name": "total",
+        "type_name": "Structure",
+        "evidence": "graph-observed",
+        "snapshot": "fixture-snapshot-1"
+      }
+    ]
+  },
+  {
+    "query": "02_name",
+    "parameters": {
+      "name": "Total"
+    },
+    "status": "PASS",
+    "rows": []
+  },
+  {
+    "query": "03_type",
+    "parameters": {
+      "type_name": "int"
+    },
+    "status": "PASS",
+    "rows": [
+      {
+        "record_key": "n:acc",
+        "name": "accumulator",
+        "type_name": "int",
+        "evidence": "graph-observed",
+        "payload_lmx": "int: accumulator 0"
+      },
+      {
+        "record_key": "n:value3",
+        "name": "value",
+        "type_name": "int",
+        "evidence": "graph-observed",
+        "payload_lmx": "int: value 3"
+      },
+      {
+        "record_key": "n:value5",
+        "name": "value",
+        "type_name": "int",
+        "evidence": "graph-observed",
+        "payload_lmx": "int: value 5"
+      }
+    ]
+  },
+  {
+    "query": "04_callers",
+    "parameters": {
+      "callee_key": "n:reduce"
+    },
+    "status": "PASS",
+    "rows": [
+      {
+        "fact_key": "r:total-reduce",
+        "caller_key": "n:total",
+        "caller": "total",
+        "callee_key": "n:reduce",
+        "callee": "reduce",
+        "evidence": "resolved-for-this-compilation",
+        "evidence_key": "e:compile",
+        "reason": null
+      },
+      {
+        "fact_key": "r:callback-reduce",
+        "caller_key": "n:callback",
+        "caller": "callback",
+        "callee_key": "n:reduce",
+        "callee": "reduce",
+        "evidence": "runtime-observed",
+        "evidence_key": "e:trace",
+        "reason": null
+      }
+    ]
+  },
+  {
+    "query": "05_callees",
+    "parameters": {
+      "caller_key": "n:total"
+    },
+    "status": "PASS",
+    "rows": [
+      {
+        "fact_key": "r:total-reduce",
+        "callee_key": "n:reduce",
+        "callee": "reduce",
+        "call_site": "reduce(values)",
+        "evidence": "resolved-for-this-compilation",
+        "evidence_key": "e:compile",
+        "reason": null
+      },
+      {
+        "fact_key": "r:total-dynamic",
+        "callee_key": null,
+        "callee": null,
+        "call_site": "selectedHandler(values)",
+        "evidence": "dynamic-unresolved",
+        "evidence_key": null,
+        "reason": "Target depends on a runtime receiver; no complete static target set is claimed."
+      }
+    ]
+  },
+  {
+    "query": "06_impact",
+    "parameters": {
+      "changed_key": "n:reduce"
+    },
+    "status": "PASS",
+    "rows": [
+      {
+        "record_key": "n:reduce",
+        "name": "reduce",
+        "type_name": "Structure",
+        "reachability_evidence": "resolved-for-this-compilation",
+        "snapshot": "fixture-snapshot-1",
+        "unresolved_relations_in_snapshot": 1,
+        "effects_coverage": "partial"
+      },
+      {
+        "record_key": "n:test",
+        "name": "test_total",
+        "type_name": "Structure",
+        "reachability_evidence": "resolved-for-this-compilation",
+        "snapshot": "fixture-snapshot-1",
+        "unresolved_relations_in_snapshot": 1,
+        "effects_coverage": "partial"
+      },
+      {
+        "record_key": "n:total",
+        "name": "total",
+        "type_name": "Structure",
+        "reachability_evidence": "resolved-for-this-compilation",
+        "snapshot": "fixture-snapshot-1",
+        "unresolved_relations_in_snapshot": 1,
+        "effects_coverage": "partial"
+      }
+    ]
+  },
+  {
+    "query": "07_native_exports",
+    "parameters": {},
+    "status": "PASS",
+    "rows": [
+      {
+        "node_key": "n:total",
+        "name": "total",
+        "binding_ordinal": 0,
+        "native_module": "fixture_math",
+        "native_entry": "lmx_total_fixture",
+        "native_abi": "fixture-abi-v1",
+        "native_state": "not-linked",
+        "evidence": "written",
+        "evidence_key": null
+      }
+    ]
+  },
+  {
+    "query": "08_related_tests",
+    "parameters": {
+      "changed_key": "n:reduce"
+    },
+    "status": "PASS",
+    "rows": [
+      {
+        "test_key": "n:test",
+        "test_name": "test_total",
+        "association_evidence": "written",
+        "execution_status": "not-run",
+        "execution_evidence": "written"
+      }
+    ]
+  },
+  {
+    "query": "09_documentation",
+    "parameters": {
+      "term": "последовательности"
+    },
+    "status": "PASS",
+    "rows": [
+      {
+        "text_key": "doc:total",
+        "node_key": "n:total",
+        "name": "total",
+        "predicate": "documentation",
+        "text": "Сумма последовательности. При изменении reduce проверь связанный test_total.",
+        "evidence": "written"
+      }
+    ]
+  },
+  {
+    "query": "10_ordered_fields",
+    "parameters": {
+      "owner_key": "n:shared"
+    },
+    "status": "PASS",
+    "rows": [
+      {
+        "occurrence_key": "f:shared:0",
+        "ordinal": 0,
+        "field_name": "value",
+        "value_key": "n:value3",
+        "type_name": "int",
+        "slot_kind": "node",
+        "realparent_key": "n:shared",
+        "evidence": "graph-observed"
+      },
+      {
+        "occurrence_key": "f:shared:1",
+        "ordinal": 1,
+        "field_name": "value",
+        "value_key": "n:value5",
+        "type_name": "int",
+        "slot_kind": "node",
+        "realparent_key": "n:shared",
+        "evidence": "graph-observed"
+      },
+      {
+        "occurrence_key": "f:shared:2",
+        "ordinal": 2,
+        "field_name": "value",
+        "value_key": "n:value3",
+        "type_name": "int",
+        "slot_kind": "node",
+        "realparent_key": "n:shared",
+        "evidence": "graph-observed"
+      },
+      {
+        "occurrence_key": "f:shared:3",
+        "ordinal": 3,
+        "field_name": null,
+        "value_key": null,
+        "type_name": null,
+        "slot_kind": "null-slot",
+        "realparent_key": null,
+        "evidence": "graph-observed"
+      }
+    ]
+  },
+  {
+    "query": "10_ordered_fields",
+    "parameters": {
+      "owner_key": "n:values"
+    },
+    "status": "PASS",
+    "rows": [
+      {
+        "occurrence_key": "f:values:0",
+        "ordinal": 0,
+        "field_name": "shared",
+        "value_key": "n:shared",
+        "type_name": "Structure",
+        "slot_kind": "node",
+        "realparent_key": "n:root",
+        "evidence": "graph-observed"
+      }
+    ]
+  },
+  {
+    "query": "11_signatures",
+    "parameters": {
+      "callable_key": "n:total"
+    },
+    "status": "PASS",
+    "rows": [
+      {
+        "predicate": "parameter",
+        "ordinal": 0,
+        "name": "values",
+        "type_name": "Structure",
+        "value_text": "in",
+        "payload_lmx": null,
+        "evidence": "written",
+        "evidence_key": null
+      },
+      {
+        "predicate": "parameter",
+        "ordinal": 1,
+        "name": "initial",
+        "type_name": "int",
+        "value_text": "in",
+        "payload_lmx": null,
+        "evidence": "written",
+        "evidence_key": null
+      },
+      {
+        "predicate": "parameter-default",
+        "ordinal": 1,
+        "name": "initial",
+        "type_name": "int",
+        "value_text": null,
+        "payload_lmx": "int: initial 0",
+        "evidence": "written",
+        "evidence_key": null
+      },
+      {
+        "predicate": "return",
+        "ordinal": 0,
+        "name": null,
+        "type_name": "int",
+        "value_text": "result",
+        "payload_lmx": null,
+        "evidence": "written",
+        "evidence_key": null
+      },
+      {
+        "predicate": "throws",
+        "ordinal": 0,
+        "name": null,
+        "type_name": "FixtureDomainError",
+        "value_text": "declared; not proof of exhaustive thrown values",
+        "payload_lmx": null,
+        "evidence": "written",
+        "evidence_key": null
+      },
+      {
+        "predicate": "body-role",
+        "ordinal": null,
+        "name": "fixture call context",
+        "type_name": null,
+        "value_text": "CODE",
+        "payload_lmx": null,
+        "evidence": "resolved-for-this-compilation",
+        "evidence_key": "e:compile"
+      }
+    ]
+  },
+  {
+    "query": "12_unresolved",
+    "parameters": {},
+    "status": "PASS",
+    "rows": [
+      {
+        "record_key": "r:total-dynamic",
+        "subject_key": "n:total",
+        "subject_name": "total",
+        "predicate": "calls",
+        "site": "selectedHandler(values)",
+        "evidence": "dynamic-unresolved",
+        "reason": "Target depends on a runtime receiver; no complete static target set is claimed."
+      }
+    ]
+  },
+  {
+    "query": "13_graph_cycle",
+    "parameters": {
+      "start_key": "n:cycle"
+    },
+    "status": "PASS",
+    "rows": [
+      {
+        "forward_cycle_reaches_start": 1
+      }
+    ]
+  },
+  {
+    "query": "13_graph_cycle",
+    "parameters": {
+      "start_key": "n:shared"
+    },
+    "status": "PASS",
+    "rows": [
+      {
+        "forward_cycle_reaches_start": 0
+      }
+    ]
+  },
+  {
+    "query": "14_admit_key",
+    "parameters": {
+      "expected_snapshot": "fixture-snapshot-1",
+      "node_key": "n:total"
+    },
+    "status": "PASS",
+    "rows": [
+      {
+        "status": "ok",
+        "snapshot": "fixture-snapshot-1",
+        "basis": "compile-input"
+      }
+    ]
+  },
+  {
+    "query": "14_admit_key",
+    "parameters": {
+      "expected_snapshot": "older-snapshot",
+      "node_key": "n:total"
+    },
+    "status": "PASS",
+    "rows": [
+      {
+        "status": "catalogue-stale",
+        "snapshot": "fixture-snapshot-1",
+        "basis": "compile-input"
+      }
+    ]
+  },
+  {
+    "query": "14_admit_key",
+    "parameters": {
+      "expected_snapshot": "fixture-snapshot-1",
+      "node_key": "missing:key"
+    },
+    "status": "PASS",
+    "rows": [
+      {
+        "status": "catalogue-key-not-found",
+        "snapshot": "fixture-snapshot-1",
+        "basis": "compile-input"
+      }
+    ]
+  },
+  {
+    "query": "14_admit_key",
+    "parameters": {
+      "expected_snapshot": null,
+      "node_key": "n:total"
+    },
+    "status": "PASS",
+    "rows": [
+      {
+        "status": "catalogue-snapshot-required",
+        "snapshot": "fixture-snapshot-1",
+        "basis": "compile-input"
+      }
+    ]
+  }
+]

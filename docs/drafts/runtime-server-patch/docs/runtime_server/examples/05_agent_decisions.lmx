@@ -1,0 +1,15 @@
+# Agent completion is an explicit ordinary result protocol. General native/MCP
+# command clients may return any result; only this agent expects Decision.
+# Bind Work to an actual runtime observation in the supplied command context.
+
+LmxServerExampleAgentDocuments:
+    []char: observe "LmxServerDecide\\make(finished := 0; observation := LmxServerInspect\\inspect(runtime := runtime; scope := scope; target := Work; projection := (\"name\"; \"type\"; \"value\")))"
+    []char: finish "LmxServerDecide\\make(finished := 1; observation := Work)"
+
+# The return is a real reference to the supplied data, without a JSON round trip.
+LmxServerExampleFinish:
+    @: observation
+    required: observation
+    return: @LmxServerDecision
+    finish:
+        return: LmxServerDecide\make(finished := 1; observation := observation)

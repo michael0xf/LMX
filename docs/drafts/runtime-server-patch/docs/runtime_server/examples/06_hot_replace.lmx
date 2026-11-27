@@ -1,0 +1,41 @@
+# Example policy change: a new handler permits whole-text commands only.
+# Its signature exactly matches HandlerAPI; state is not an extra formal.
+# Deploy this as a NEW ordinary callable with no ready native entry. Existing
+# compiled entries remain unchanged. No automatic invalidation is claimed.
+
+LmxServerExampleTextOnlyHandler:
+    @LmxServerRuntimePort: runtime
+    @: scope
+    int: sourceKind
+    @: source
+    required: runtime scope sourceKind source
+    return: @LmxServerReceipt
+    execute:
+        throws: copy(LmxServerPortThrows)
+        if: sourceKind != 0
+            throw: LmxServerPortFailure(source)
+        return: LmxServerDispatch\execute(runtime := runtime; scope := scope; sourceKind := sourceKind; source := source)
+
+LmxServerExampleReplace:
+    @LmxServerService: service
+    required: service
+    return: @LmxServerReceipt
+    replace:
+        throws: copy(LmxServerPortThrows)
+        return: service\replaceHandler(replacement := LmxServerExampleTextOnlyHandler\execute)
+
+# A local agent posts the stable replace entry to the Service owner lane.
+# Calls subsequently reaching submitText/submitGraph read the new slot there.
+# A request that already selected the old CODE keeps that selected reference.
+LmxServerExamplePostReplace:
+    @LmxServerService: service
+    @: sink
+    required: service sink
+    replace:
+        post:
+            ask:
+                service\replaceHandler(replacement := LmxServerExampleTextOnlyHandler\execute)
+            answer:
+                sink\Receiver\accept
+            catch: LmxServerPortFailure (@: cause)
+                sink\Failure\accept(cause := cause)

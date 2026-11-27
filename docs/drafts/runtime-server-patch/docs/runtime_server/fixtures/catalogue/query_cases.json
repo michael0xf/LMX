@@ -1,0 +1,262 @@
+{
+  "status": "SYNTHETIC_SQL_FIXTURE",
+  "runtime_status": "NOT_RUN",
+  "cases": [
+    {
+      "query": "00_validate",
+      "parameters": {},
+      "expect": {
+        "rows": 0
+      }
+    },
+    {
+      "query": "01_publication",
+      "parameters": {},
+      "expect": {
+        "snapshot": "fixture-snapshot-1",
+        "basis": "compile-input"
+      }
+    },
+    {
+      "query": "02_name",
+      "parameters": {
+        "name": "total"
+      },
+      "expect": {
+        "keys": [
+          "n:total"
+        ]
+      }
+    },
+    {
+      "query": "02_name",
+      "parameters": {
+        "name": "Total"
+      },
+      "expect": {
+        "keys": []
+      }
+    },
+    {
+      "query": "03_type",
+      "parameters": {
+        "type_name": "int"
+      },
+      "expect": {
+        "keys": [
+          "n:acc",
+          "n:value3",
+          "n:value5"
+        ]
+      }
+    },
+    {
+      "query": "04_callers",
+      "parameters": {
+        "callee_key": "n:reduce"
+      },
+      "expect": {
+        "callers": [
+          "n:total",
+          "n:callback"
+        ],
+        "evidence": [
+          "resolved-for-this-compilation",
+          "runtime-observed"
+        ]
+      }
+    },
+    {
+      "query": "05_callees",
+      "parameters": {
+        "caller_key": "n:total"
+      },
+      "expect": {
+        "callees": [
+          "n:reduce",
+          null
+        ],
+        "evidence": [
+          "resolved-for-this-compilation",
+          "dynamic-unresolved"
+        ]
+      }
+    },
+    {
+      "query": "06_impact",
+      "parameters": {
+        "changed_key": "n:reduce"
+      },
+      "expect": {
+        "keys": [
+          "n:reduce",
+          "n:test",
+          "n:total"
+        ],
+        "unresolved_count": 1
+      }
+    },
+    {
+      "query": "07_native_exports",
+      "parameters": {},
+      "expect": {
+        "entries": [
+          "lmx_total_fixture"
+        ],
+        "native_state": "not-linked"
+      }
+    },
+    {
+      "query": "08_related_tests",
+      "parameters": {
+        "changed_key": "n:reduce"
+      },
+      "expect": {
+        "tests": [
+          "n:test"
+        ],
+        "status": "not-run"
+      }
+    },
+    {
+      "query": "09_documentation",
+      "parameters": {
+        "term": "последовательности"
+      },
+      "expect": {
+        "subjects": [
+          "n:total"
+        ]
+      }
+    },
+    {
+      "query": "10_ordered_fields",
+      "parameters": {
+        "owner_key": "n:shared"
+      },
+      "expect": {
+        "names": [
+          "value",
+          "value",
+          "value",
+          null
+        ],
+        "targets": [
+          "n:value3",
+          "n:value5",
+          "n:value3",
+          null
+        ],
+        "ordinals": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "slot_kinds": [
+          "node",
+          "node",
+          "node",
+          "null-slot"
+        ]
+      }
+    },
+    {
+      "query": "10_ordered_fields",
+      "parameters": {
+        "owner_key": "n:values"
+      },
+      "expect": {
+        "names": [
+          "shared"
+        ],
+        "targets": [
+          "n:shared"
+        ],
+        "ordinals": [
+          0
+        ],
+        "realparents": [
+          "n:root"
+        ]
+      }
+    },
+    {
+      "query": "11_signatures",
+      "parameters": {
+        "callable_key": "n:total"
+      },
+      "expect": {
+        "rows": 6,
+        "default_lmx": "int: initial 0"
+      }
+    },
+    {
+      "query": "12_unresolved",
+      "parameters": {},
+      "expect": {
+        "facts": [
+          "r:total-dynamic"
+        ]
+      }
+    },
+    {
+      "query": "13_graph_cycle",
+      "parameters": {
+        "start_key": "n:cycle"
+      },
+      "expect": {
+        "cycle": 1
+      }
+    },
+    {
+      "query": "13_graph_cycle",
+      "parameters": {
+        "start_key": "n:shared"
+      },
+      "expect": {
+        "cycle": 0
+      }
+    },
+    {
+      "query": "14_admit_key",
+      "parameters": {
+        "expected_snapshot": "fixture-snapshot-1",
+        "node_key": "n:total"
+      },
+      "expect": {
+        "admission_status": "ok"
+      }
+    },
+    {
+      "query": "14_admit_key",
+      "parameters": {
+        "expected_snapshot": "older-snapshot",
+        "node_key": "n:total"
+      },
+      "expect": {
+        "admission_status": "catalogue-stale"
+      }
+    },
+    {
+      "query": "14_admit_key",
+      "parameters": {
+        "expected_snapshot": "fixture-snapshot-1",
+        "node_key": "missing:key"
+      },
+      "expect": {
+        "admission_status": "catalogue-key-not-found"
+      }
+    },
+    {
+      "query": "14_admit_key",
+      "parameters": {
+        "expected_snapshot": null,
+        "node_key": "n:total"
+      },
+      "expect": {
+        "admission_status": "catalogue-snapshot-required"
+      }
+    }
+  ]
+}

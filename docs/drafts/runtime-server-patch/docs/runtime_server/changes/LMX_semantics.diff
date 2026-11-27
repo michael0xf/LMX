@@ -1,0 +1,494 @@
+--- a/docs/spec/LMX_semantics.en.md
++++ b/docs/spec/LMX_semantics.en.md
+@@ -157,7 +157,7 @@
+ Checks return diagnostics and use the working builder's code. They execute neither the inspected program,
+ initializers, nor user test. `sys\translate(S)` lowers a Structure to **L1 text**, returning an ordinary
+ Structure with `l1` and `errors`; on errors there is no completed L1 result. This is not LMX output:
+-`sys\toLmx` serializes current graph state and `sys\fromLmx` parses LMX. Translate neither installs native
++`sys\toLmx` emits LMX code from any Structure or L3Thread; `sys\fromLmx` produces a clean graph suitable for compilation. Translate neither installs native
+ nor executes S; it performs necessary checks through shared code without a required separate check call.
+ The builder is the initial implementation; needed parts move into runtime for these concrete operations,
+ without another builder, universal wrappers, or extra states.
+@@ -421,7 +421,7 @@
+ 
+ The actual candidate is supplied to the checker as an ordinary argument. Structural suitability for the checker's own accesses is checked before execution; no `@` is added merely to transport a Structure, which already travels by reference. A checker returns an ordinary `int`: 1 for success, 0 for failure. An expected failure uses ordinary `catch`; an arbitrary `throw` is not success.
+ 
+-Running a check completes admission already in progress rather than starting that same admission over again. A cycle of unfinished checks is not success. The written association and checking body reside in the same graph for `sys\toLmx`, copying and execution until changed by an explicit write; there is no separate test catalogue, auxiliary graph, additional runtime variable-binding table or hidden typing-disabled mode. Test calls use ordinary native/walker dispatch and do not force every call to be walked.
++Running a check completes admission already in progress rather than starting that same admission over again. A cycle of unfinished checks is not success. The written association and checking body reside in the same graph for `sys\toLmx`, copying and execution until changed by an explicit write; there is no separate authoritative test catalogue, auxiliary execution graph, additional runtime variable-binding table or hidden typing-disabled mode. A [compilation catalogue](#edit-api-catalogue) may project written test relations and actual results for search; this projection does not control admission, binding or test discovery. Test calls use ordinary native/walker dispatch and do not force every call to be walked.
+ 
+ <a id="admission-recipes"></a>
+ ## 8. Obtaining a required guarantee: fourteen practical cases
+@@ -3293,11 +3293,11 @@
+ <a id="source-codec"></a>
+ ### Current-graph serialization: sys\toLmx
+ 
+-`sys\toLmx` emits LMX text of the current graph with canonical names and retained comments. All receiver records and written grouping boundaries are preserved; namespace stream expansion does not replace source import/copy/merge records. Terminal primitive declarations are reconstructed from type, value and name. Formatting inserts blank lines only at intended full document-root boundaries so reparsing retains structure. An explicitly overwritten construct is emitted in its current form; neither history nor native reconstructs earlier source. Local execution does not publish its frame or replace the initializer in source data. This serialization differs from `sys\translate`, which returns L1 text for subsequent compilation and lowering errors.
++`sys\toLmx` emits LMX code from any Structure and any L3Thread, preserving the current graph with canonical names and retained comments. All receiver records and written grouping boundaries are preserved; namespace stream expansion does not replace source import/copy/merge records. Terminal primitive declarations are reconstructed from type, value and name. Formatting inserts blank lines only at intended full document-root boundaries so reparsing retains structure. An explicitly overwritten construct is emitted in its current form; neither history nor native reconstructs earlier source. Local execution does not publish its frame or replace the initializer in source data. This serialization differs from `sys\translate`, which returns L1 text for subsequent compilation and lowering errors.
+ 
+ The argument of `sys\toLmx(S)` selects the saved Structure. For an L3 Thread it also saves all tables of that Thread's arena, including call tables and native descriptors. The arena owns these tables; they are not fields of R0, and R0 is not the only eligible Thread. External arena tables are not silently attached to an arbitrary S. Preserve order and empty positions, shared references, cycles, names, and typed values: this is a reconstructable current graph, not merely source-like output. The clean graph holds no hidden data: all data lie in the `void *` storage of its Structures and are mapped by `toLmx` in an elementary way, while `length` and `parent` are derived from the text it forms (the author's decision of 2026-11-17). The table of names is restored by `fromLmx` from the text; it and the other tables of the kernel are data of the kernel itself, which builds itself and is written in L2 and L3 -- that is, the same Structures of the clean graph, not hidden data beside it. All program material, these tables included, lies in the clean LMX graph. The separate binary contains the compiled methods, including R0 and the interpreter; R0 accesses its graph through a local pointer. Portable C is generated for those method implementations along L3/L2 -> L1 -> C and does not supply a hidden static-data mirror of the graph. The translator is written in L2 and L3, and the L1 inserts are removed in the end too.
+ 
+-`sys\fromLmx` parses the saved graph through shared construction code and interns names in the receiving arena. Restoring a clean graph after restart on the same platform does not require retranslating the whole program. `sys\fromLmx(text)` builds the complete graph through the existing parser and builder. The result is an ordinary value: it can be read, composed, edited and interpreted at run time with no `sys\compile`, separate check or endturn, and changing an existing graph needs no roundtrip through `toLmx` and `fromLmx`. The interpreter checks the operations and calls it reaches; branches not executed, computed defaults and arbitrary tests are not run in advance to give the graph a global "checked" status. Saved native descriptors bind to ready binary modules and entry names for the corresponding ABI; old machine addresses are not copied. L1/C paths remain ordinary data but do not replace a binary-module and entry reference. Restoration preserves the value and its normalized full type requirement, interning equivalent system descriptions in the receiving context and relocating TypeRefs. Process addresses are not persistent type IDs. It may choose capacity=length with no secondary descriptor, or retain an allowed reserve through its capacity entry; neither choice changes the normalized type. Written dimensions are preserved and missing dimensions are not guessed. Same-context attach retains existing references under their ownership and lifetime contract. This is an implementation requirement, not a claim that the present graph dumper is complete.
++`sys\fromLmx` parses the saved graph through shared construction code and interns names in the receiving arena. Restoring a clean graph after restart on the same platform does not require retranslating the whole program. `sys\fromLmx(text)` builds the complete clean graph through the existing parser and builder. This is the ordinary representation suitable for compilation, not a server-specific AST. Suitability for compilation is a representation contract, not a promise that later dynamic operations or compilation checks will succeed. The result is an ordinary value: it can be read, composed, edited and interpreted at run time with no `sys\compile`, separate check or endturn, and changing an existing graph needs no roundtrip through `toLmx` and `fromLmx`. The interpreter checks the operations and calls it reaches; branches not executed, computed defaults and arbitrary tests are not run in advance to give the graph a global "checked" status. Saved native descriptors bind to ready binary modules and entry names for the corresponding ABI; old machine addresses are not copied. L1/C paths remain ordinary data but do not replace a binary-module and entry reference. Restoration preserves the value and its normalized full type requirement, interning equivalent system descriptions in the receiving context and relocating TypeRefs. Process addresses are not persistent type IDs. It may choose capacity=length with no secondary descriptor, or retain an allowed reserve through its capacity entry; neither choice changes the normalized type. Written dimensions are preserved and missing dimensions are not guessed. Same-context attach retains existing references under their ownership and lifetime contract. This is an implementation requirement, not a claim that the present graph dumper is complete.
+ 
+ <a id="memory"></a>
+ ## 22. Ownership, reachability and lifetime
+@@ -3689,9 +3689,9 @@
+ Streaming, secret streams, HSM/TPM, KEM/PQC, remote key services and protected-envelope formats are outside the profile defined here.
+ 
+ <a id="edit-api"></a>
+-## 36. Mutating debug API for an AI chat
+-
+-This chapter defines the required behavior of an application interface for inspecting, extending, copying and stepping a live LMX application. It is not a claim of completed implementation and not a new LMX level; the general language contracts are those of this specification, the [L2 specification](L2_spec_en.md) and the [grammar](LMX_grammar.en.md).
++## 36. Mutating debug API and the runtime's own LMX/MCP server
++
++This chapter defines an LMX application that inspects, extends, copies and steps its live runtime, serves it through native LMX and MCP, and runs local or model-driven agents. It is not a claim of completed implementation and not a new LMX level; the general language contracts are those of this specification, the [L2 specification](L2_spec_en.md) and the [grammar](LMX_grammar.en.md).
+ 
+ 
+ <a id="edit-api-status"></a>
+@@ -3702,7 +3702,7 @@
+ <a id="edit-api-goal"></a>
+ ### Goal
+ 
+-A simple AI chat sends a complete LMX command document and receives an actual LMX result. It needs no second JSON command language, IDE protocol, or catalogue of model-specific tools. The minimum actions are to inspect permitted state, insert new source, copy an already prepared Structure, and advance a specific interpreter execution.
++A user requests work through LMX; an LMX agent calls a model API, receives complete command documents and returns actual runtime results. The runtime is also its own MCP server; local agents send ordinary Message calls. These paths share the same language and execution mechanism. The minimum actions are to inspect permitted state, insert new source, copy an already prepared Structure, and advance a specific interpreter execution.
+ 
+ <a id="edit-api-constraints"></a>
+ ### Fixed constraints
+@@ -3717,7 +3717,7 @@
+ <a id="edit-api-chat-cycle"></a>
+ ### One exchange
+ 
+-The adapter supplies the model with the task, language rules, permitted references, and actual observations. A completed model answer is treated as one **whole** command document; a truncated answer is not executed by using a plausible prefix. After parsing, translation, and admission, the owner performs the operations and returns the actual result or diagnostic. The model's next answer uses that evidence. One chat answer, one LMX command, and one Thread turn need not coincide.
++The adapter supplies the model with the task, language rules, permitted references, and actual observations. A completed model answer is treated as one **whole** command document; a truncated answer is not executed by using a plausible prefix. After kernel fromLmx construction and ordinary preparation/admission, the owner performs the operations and returns the actual result or diagnostic. The model's next answer uses that evidence. One chat answer, one LMX command, and one Thread turn need not coincide.
+ 
+ <a id="edit-api-addressing"></a>
+ ### Addressing
+@@ -3739,14 +3739,11 @@
+ 
+ `insert` accepts exact LMX text, a placement target, and explicit context. New text follows ordinary parsing, translation, admission, and owner-side placement. Declaring a callable does not execute its body. An error before placement does not authorize changing the target; already completed ordinary external effects are not rolled back by an invented transaction. The result contains a real reference to the placed value or a diagnostic, not only “done.”
+ 
+-```text
+-insert:
+-. target: workPlace
+-. source: "PlusOne:\n    int: x\n    return: int\n    apply:\n        return: x + 1"
+-end: insert
++```lmx
++LmxServerInsert\insert(runtime := runtime; scope := scope; target := workPlace; source := "PlusOne:\n    int: x\n    return: int\n    apply:\n        return: x + 1")
+ ```
+ 
+-This illustrates the application request, parsed through ordinary Frames. The inserted Structure has input `x`, result `int`, and executable child `apply`; it can be called as `PlusOne\apply(1)`. A named `name :: data` would describe a signature only. The source's last ordinary block closes at EOF. Blank physical lines may appear only where full block closure is intended.
++This is an ordinary call to the supplied LMX facade with real runtime, scope and target references. The inserted Structure has input `x`, result `int`, and executable child `apply`; it can be called as `PlusOne\apply(1)`. A named `name :: data` would describe a signature only. The source's last ordinary block closes at EOF. Blank physical lines may appear only where full block closure is intended.
+ 
+ <a id="edit-api-copy"></a>
+ ### Copy a prepared Structure
+@@ -3785,15 +3782,11 @@
+ <a id="edit-api-interpreter"></a>
+ ### Interpreter control
+ 
+-```text
+-interpreter:
+-. target: graph_name
+-. mode: debug
+-. action: next
+-end: interpreter
++```lmx
++LmxServerStep\step(runtime := runtime; scope := scope; execution := execution; action := "next")
+ ```
+ 
+-This is an application request to a **specific** Thread/continuation, not merely a shared program listing. `debug` and `next` are operation values, not new LMX keywords. One `next` advances the real continuation to a supported observation point, not necessarily the next physical line. A native call may be indivisible; debug does not zero native or replace it with walker execution. Other Threads are not automatically paused. A longer scenario can be an ordinary LMX program over this operation.
++This is an application request to a **specific** Thread/continuation, not merely a shared program listing. `next` is an application action value, not a new LMX keyword. One `next` advances the real continuation to a supported observation point, not necessarily the next physical line. A native call may be indivisible; debug does not zero native or replace it with walker execution. Other Threads are not automatically paused. A longer scenario can be an ordinary LMX program over this operation.
+ 
+ <a id="edit-api-step-result"></a>
+ ### Step result
+@@ -3823,12 +3816,113 @@
+ <a id="edit-api-provider"></a>
+ ### Online model
+ 
+-The external provider needs only text request and response. HTTP, JSON, SDK, credentials, model, and price are adapter configuration, not part of the LMX graph or language semantics. A local model uses the same text contract.
++The provider accepts text and returns a complete answer with actual completion/failure metadata. HTTP, JSON, SDK, credentials, model and limits are adapter configuration, represented by ordinary LMX data or explicit provider references where appropriate; they do not define language semantics. A local model uses the same contract. This outbound provider is separate from incoming MCP.
++
++
++<a id="edit-api-runtime-server"></a>
++### Runtime as its own server
++
++The server is an ordinary LMX application over the runtime that it serves. Its state, service bodies, model loop, catalogue query logic and local agents are expressed in LMX. Existing kernel receivers and narrow platform I/O bindings supply graph operations, invocation, storage and transport. The server does not introduce another evaluator, authoritative AST, graph serializer, agent scheduler or global object registry.
++
++Three entry paths share ordinary preparation, admission and owner-side invocation:
++
++| Entry | Input | Boundary |
++| --- | --- | --- |
++| Native LMX | One complete LMX document | A framed text transport or an ordinary local text call |
++| Local LMX | Actual typed values and prepared references | Ordinary call or Message/post to a stable service entry |
++| MCP | Standard JSON-RPC messages of an explicitly selected MCP version | A wire binding maps the admitted request to the same service calls |
++
++The native document is a program in LMX. Tables and hierarchical values retain their ordinary meaning. A local ready graph is not serialized and reparsed merely to use the service. Transport correlation IDs, SQL row keys and MCP resource URIs are not runtime object identities; a live operation still receives an ordinarily resolved real reference or PLACE in its permitted context.
++
++<a id="edit-api-shared-codec"></a>
++### One parser and the kernel codecs
++
++`sys\fromLmx(text)` produces a **clean graph suitable for compilation**. The same ordinary graph can be inspected, composed, edited or interpreted without first compiling it. A compile-ready representation does not imply that every future call is already admitted or that computed defaults and arbitrary tests have executed. Explicit `sys\compile` remains separate.
++
++`sys\toLmx(value)` produces LMX code from **any Structure and any L3Thread**, according to the complete [source codec contract](#source-codec). A Thread export includes the arena tables required by that contract. The live graph and this kernel receiver are the basis for inspection and export; a disk source file is optional provenance or a saved export. The server calls these kernel receivers and does not maintain its own serializer.
++
++There is one main LMX parser containing the square-bracket subparser. INDEX forms such as `var[arg:arg2:arg3]` use that component. In a position permitting a square operation, compact `[op` without a space after `[` selects it; spaced groups, TYPE prefixes and VALUE constructors retain their specified contexts. Once the subparser recognizes the start of an expression, it calls the main parser. It also delegates `{...}` to the main parser: it neither interprets that content itself nor searches ahead for the closing brace or the end of a delegated expression. It resumes at the exact returned position. All consumers then use **one shared grouping implementation**. Duplicate parsers, binding algorithms, precedence tables and adapter workarounds must be removed. Framing and JSON decoding do not perform this language work.
++
++<a id="edit-api-service-contract"></a>
++### Concrete service contract
++
++The [LMX source package](../runtime_server/README.md) supplies ordinary models and service bodies; required integrations are explicit typed slots. Its [API](../runtime_server/docs/API.ru.md) distinguishes contracts from implementations.
++
++| Entry | Contract |
++| --- | --- |
++| `service\submitText(source)` | Prepare the whole document through kernel `fromLmx` and the normal language path; execute on the service owner |
++| `service\submitGraph(graph)` | Admit and execute a ready graph without a text roundtrip |
++| `service\replaceHandler(replacement)` | Admit and write the real callable slot on the same owner |
++| `runtime\inspect(scope; target; projection)` | Return the requested actual observation through the common graph/codec path |
++| `runtime\insert(scope; target; source)` | Insert exact source with ordinary owner-side placement; do not invoke a newly declared body |
++| `runtime\copyTo(scope; target; source)` | Copy one prepared source and explicitly place it through common copy/lifetime rules |
++| `runtime\step(scope; execution; action)` | Advance the specified execution to a supported observation point |
++| `model\complete(exchange)` | Return a whole model answer or the actual incomplete/failure outcome |
++
++`LmxServerStage` carries `ready` and `payload`: either the prepared invocation or the real diagnostic receipt. `LmxServerReceipt` carries `ok` and `payload`: a real result, an explicit ordinary void result, supported execution state or actual diagnostics. Neither an uninitialized reference nor numeric zero substitutes for a missing result. These are application models, not kernel categories.
++
++<a id="edit-api-agent-loop"></a>
++### User request and model loop
++
++The user invokes an ordinary LMX agent method. The agent calls its explicit model provider, receives a complete LMX document, submits it to the same runtime service, and supplies the actual receipt to the next model round when needed. The provider does not execute commands itself.
++
++The source package defines an optional agent-result profile: the executed program returns an ordinary `LmxServerDecision` with `finished` and `observation`. The agent admits this structural requirement before reading the fields. A generic native command or MCP tool is not forced to return that application-specific type. The agent has a finite round budget and uses existing Message/post callbacks and waits. Exhausted budget, incomplete text, unsupported result, uncertain delivery and runtime failure remain distinct outcomes. Late answers retain the ordinary Message contract. Completion depends on the actual result, not the model's claim.
++
++<a id="edit-api-live-handler"></a>
++### Behavior changes without recompilation
++
++A stable service entry reads a **real mutable callable reference** on its owner's lane at each new invocation. `replaceHandler` admits the replacement and writes the real slot through ordinary graph assignment. A new callable without native association follows the interpreter branch of the common dispatcher. Its actual DATA, parent and CODE remain intact. Adding and selecting this interpreted behavior needs no compilation.
++
++Already selected callables, formed Message calls and active frames retain their chosen reference and normal lifetime. A sender wanting the behavior current at service time posts to the stable entry, which reads the slot after delivery; a Message to an earlier resolved handler is not retargeted. Replacement does not rewrite direct native A→B calls, clear native descriptors, force walker execution, track graph writes or retry failed native work. Explicit compilation and a successful `endturn` remain the separate native-update contract.
++
++<a id="edit-api-catalogue"></a>
++### Compilation catalogue and live source
++
++Compilation may catalogue any useful facts it actually has about the supplied clean graph. The initial storage profile is one principal SQLite facts table per L3Thread with indexes and query projections; provider code owns table namespaces. This is a searchable projection of a stated compilation scope, not another authoritative program representation or Thread membership registry.
++
++Each result identifies its compilation/snapshot basis, owner partition, scope, coverage and evidence. Snapshot-local keys preserve links; duplicate field names and unnamed occurrences are not merged. Such a key is never an unrestricted runtime address. A current operation still uses contextual resolution or a retained actual reference and normal admission.
++
++<a id="edit-api-catalogue-facts"></a>
++### Useful catalogue facts
++
++| Category | Useful information | Precision boundary |
++| --- | --- | --- |
++| Graph inventory | Nodes, typed values, ordered field occurrences, empty/uninitialized slots, links, sharing, cycles, actual parents | Preserve snapshot identity; names alone are not keys |
++| Call contracts | Written/normalized types, roles, signatures, named parameters, required/default/absence, result, declared throws | Do not execute a deferred initializer for indexing |
++| Definitions and uses | Declarations, occurrences, lexical context, bindings and paths | Identify the preparation for which resolution is known |
++| Calls and effects | Written calls, resolved targets, candidates or unknown heads, potential reads/writes, explicit throw sites | Possible is not executed; no found edge is not proof of purity |
++| Dependencies | Import/copy sources, type relations, static caller/callee and native units | Support explicit impact/compilation planning, not automatic invalidation |
++| Native association | Actual module/entry/ABI and available artifact evidence | No portable machine-address identity or promise of matching later edits |
++| Documentation | Author comments, descriptions, examples, provenance, optional file/span/hash | Runtime-created graphs need no fictitious disk file |
++| Tests and observations | Declared tests separately from actual run results and diagnostics with their basis | A test declaration or successful build is not a passed-test receipt |
++| Coverage | Traversed scope, analyses performed, unresolved and unsupported facts | Full topology and full effect knowledge are different claims |
++
++Evidence distinguishes `written`, `graph-observed`, `resolved-for-this-compilation`, `runtime-observed`, `dynamic-unresolved` and `not-analysed`. Derived analysis preserves its basis and does not replace author data. SQL does not become another binding engine, overload selector, test-discovery mechanism or dependency scheduler.
++
++The [SQLite design and executable fixtures](../runtime_server/docs/CATALOGUE_SQLITE.ru.md) specify storage, queries and publication validation. Answers may be ordinary LMX tables or hierarchical structures. Full `payload_lmx` comes from kernel `toLmx`; a search snippet is explicitly not a complete export.
++
++<a id="edit-api-catalogue-publication"></a>
++### Compilation, endturn and catalogue publication
++
++The candidate catalogue is prepared during explicit compilation and published by a real owner lifecycle hook at the corresponding successful `endturn` boundary. `endturn` does not return: calling publication after it does not implement this contract. By itself it neither compiles, discovers edits nor refreshes the catalogue.
++
++Compilation facts describe the graph/representation actually consumed by that compilation. Interpreted build tests can have normal effects; later `toLmx` output must not be mislabeled as earlier lowering input. Compilation input and an optional post-test current observation are distinct named bases.
++
++An SQL transaction atomically publishes only the SQL projection. It does not combine graph stores, native installation, mail, files and network effects into one transaction. Integration reports prepared, pending, published or failed/recovery outcomes according to the actual stage. Database failure does not imply runtime rollback or a refreshed catalogue. The minimal profile keeps one active projection per owner; history is optional.
++
++After an interpreted edit without compilation, the old catalogue still describes its stated compilation. It cannot prove that a new live object is absent. Current LMX remains available through `toLmx` on the actual Structure or L3Thread. No write watcher, automatic recompilation or dependency on disk source is introduced to make the index look current.
++
++<a id="edit-api-mcp"></a>
++### MCP compatibility
++
++“Superset” means standard MCP plus native LMX and local Message paths; MCP retains its standard JSON-RPC wire. The [versioned design](../runtime_server/docs/MCP_COMPATIBILITY.ru.md) maps discovery, tools, resources, templates, prompts, completion, additional input, notifications and optional tasks to the same service layer. An advertised capability requires real implementation.
++
++The current [MCP 2026-07-28 specification](https://modelcontextprotocol.io/specification/2026-07-28) uses stateless requests, `server/discover`, per-request protocol/capability metadata and defined result patterns. A separately selected 2025-11-25 binding retains its own initialization/session rules. These profiles do not mix envelopes, cancellation rules or task shapes. Resource URIs select exposed resources and do not become global graph identities. The runtime's outbound model API remains a separate typed dependency.
+ 
+ <a id="edit-api-walkthrough"></a>
+ ### Short walkthrough
+ 
+-Inspect `toLmx(workPlace)` → choose an existing prepared component for `copy` or supply fresh text to `insert` → receive the real reference and state → if needed, send `interpreter ... next` to a specific execution → inspect the new observation. No step is considered performed solely because the model proposed it.
++Inspect `toLmx(workPlace)` → choose an existing prepared component for `copy` or supply fresh text to `insert` → receive the real reference and state → if needed, call `step` with `action := "next"` for a specific execution → inspect the new observation. No step is considered performed solely because the model proposed it.
+ 
+ <a id="edit-api-bootstrap"></a>
+ ### Instruction to an AI client
+@@ -3849,6 +3943,17 @@
+ 9. Inspection/serialization keeps source receivers and written groups; namespace acceptance does not replace them with emitted fields.
+ 10. One-source copy, multi-source merge, explicit grouping, and independent operation maps follow the common contracts without special adapter behavior.
+ 
++11. Native LMX, local Message and MCP reach the same admitted owner-side behavior; transport and JSON code do not parse LMX.
++12. fromLmx yields a clean compile-ready graph; toLmx covers any Structure and any L3Thread through common kernel code.
++13. A newly selected interpreted handler runs without compilation; selected calls and active frames retain their earlier callable.
++14. Catalogue rows preserve order, duplicate names, types, sharing, cycles and parents, with scope and snapshot-local keys.
++15. Written, resolved, observed and unresolved facts remain distinct; indexing never runs deferred initializers.
++16. Publication has a real successful endturn hook; SQL failure is not reported as runtime rollback.
++17. A later interpreted edit is visible live while the compilation catalogue remains an explicitly named snapshot.
++18. Compilation input and post-test observation are distinct; declared tests are not passed-test receipts.
++19. MCP fixtures and capabilities follow their selected version; unsupported profiles return actual protocol failures.
++20. The agent rejects incomplete text, admits its Decision result, respects the budget and never blindly repeats an uncertain effect.
++
+ This matrix states acceptance requirements. A documentation edit or successful build alone is not a report that they pass.
+ 
+ <a id="edit-api-source-conflicts"></a>
+@@ -3859,7 +3964,7 @@
+ <a id="edit-api-non-goals"></a>
+ ### Non-goals
+ 
+-No mandatory IDE, arbitrary editing of active machine instructions, global pause of all Threads, transfer of RAM addresses between machines, automatic undo, second persistent graph, or provider-specific command language is implied.
++No mandatory IDE, arbitrary editing of active machine instructions, global pause of all Threads, transfer of RAM addresses between machines, automatic undo, second authoritative program graph, or provider-specific command language is implied.
+ 
+ <a id="functional-receivers"></a>
+ ## 37. General functional receivers and containers
+--- a/docs/spec/LMX_semantics.ru.md
++++ b/docs/spec/LMX_semantics.ru.md
+@@ -133,7 +133,7 @@
+ 
+ Вспомогательные операции объединяются в группу `sys\` и вызываются обычным путём. Имена её членов не становятся глобальными зарезервированными словами. В группу входят `sys\check(S)` (проверки чистого графа: имена и статически известные требования), `sys\checkL3(S)` (принадлежность тела уровню L3: операции L2 в нём), `sys\translate(S)`, `sys\compile(S)`, `sys\endturn()`, а также `sys\native`, `sys\storage`, `sys\descriptor`, `sys\capacity`, `sys\resize`, `sys\reserve`, `sys\typeof`, `sys\toLmx`, `sys\fromLmx`, `sys\assert`, `sys\indexof`, `sys\name`, `sys\priority` и `sys\eval`. `length` остаётся общедоступным по решению автора; `parent` сохраняется рядом как обычная навигация. Поля заголовка Lmx — parent/length/storage; native и capacity в него не входят.
+ 
+-Проверки возвращают диагностики и используют работающий код сборщика. Они не исполняют проверяемую программу, инициализаторы или пользовательские test. `sys\translate(S)` понижает Structure в **текст L1** и возвращает обычную Structure с полями `l1` и `errors`; при ошибках готового L1 нет. Это не вывод LMX: `sys\toLmx` сериализует текущее состояние графа, `sys\fromLmx` разбирает LMX. Translate не устанавливает native и не исполняет S; необходимые проверки выполняет общим кодом без обязательного отдельного вызова check. Сборщик — первая реализация; нужные части выносятся в runtime для этих конкретных операций, без второго построителя, универсальных обёрток или дополнительных состояний. Это нормативные контракты ресиверов, а не отчёт о доступности runtime.
++Проверки возвращают диагностики и используют работающий код сборщика. Они не исполняют проверяемую программу, инициализаторы или пользовательские test. `sys\translate(S)` понижает Structure в **текст L1** и возвращает обычную Structure с полями `l1` и `errors`; при ошибках готового L1 нет. Это не вывод LMX: `sys\toLmx` выдаёт LMX-код из любой Structure или L3Thread, `sys\fromLmx` возвращает чистый граф, пригодный для компиляции. Translate не устанавливает native и не исполняет S; необходимые проверки выполняет общим кодом без обязательного отдельного вызова check. Сборщик — первая реализация; нужные части выносятся в runtime для этих конкретных операций, без второго построителя, универсальных обёрток или дополнительных состояний. Это нормативные контракты ресиверов, а не отчёт о доступности runtime.
+ 
+ Компиляция — это вся явно запрошенная цепочка: построение и проверка чистого графа, понижение в L1 и C, машинная компиляция и регистрация получившихся записей. `sys\compile(S)` применяет её к выбранному корню S и возвращает результат и диагностики общим механизмом; при неудаче новый native не устанавливается. Она не запускает точку входа приложения S и не выполняется автоматически при записи. После построения чистого графа и порождения L1/C отдельная обязательная фаза сборочных тестов интерпретирует принимаемый граф и может исполнить проверочные выражения и кандидатные вызовы, которые они явно делают; машинная компиляция следует, только если тесты прошли ([фазы тестов](#admission)). Это не проход инициализаторов. `sys\translate` по-прежнему возвращает только L1 и не исполняет ни приложение, ни эти сборочные тесты. [Контракт native и граница хода](#explicit-compilation).
+ 
+@@ -382,7 +382,7 @@
+ 
+ Проверяющему выражению передаётся фактический кандидат обычным аргументом. Пригодность структуры для его собственных обращений проверяется до исполнения; `@` не добавляется ради передачи Structure, уже передаваемой ссылкой. Проверка возвращает обычный `int`: 1 — успех, 0 — неуспех. Ожидаемый отказ проверяется обычным `catch`, а произвольный `throw` не считается успехом.
+ 
+-Исполнение проверки завершает уже начатый допуск, не начинает тот же допуск заново. Цикл незавершённых проверок не является успехом. Написанная связь и тело проверки находятся в том же графе для `sys\toLmx`, копирования и исполнения, пока не изменены явной записью; отдельного каталога тестов, вспомогательного графа, дополнительной runtime-таблицы связывания имён и скрытого отключения типизации нет. Тесты вызывают методы через обычную диспетчеризацию native/обходчика и не принуждают всё исполнение к обходу.
++Исполнение проверки завершает уже начатый допуск, не начинает тот же допуск заново. Цикл незавершённых проверок не является успехом. Написанная связь и тело проверки находятся в том же графе для `sys\toLmx`, копирования и исполнения, пока не изменены явной записью; нет отдельного авторитетного каталога тестов, вспомогательного графа исполнения, дополнительной runtime-таблицы связывания имён и скрытого отключения типизации. [Каталог компиляции](#edit-api-catalogue) может проецировать написанные связи tests и результаты запусков для поиска; эта проекция не управляет допуском, связыванием или обнаружением тестов. Тесты вызывают методы через обычную диспетчеризацию native/обходчика и не принуждают всё исполнение к обходу.
+ 
+ <a id="admission-recipes"></a>
+ ## 8. Как получить требуемую гарантию: четырнадцать практических случаев
+@@ -3097,11 +3097,11 @@
+ <a id="source-codec"></a>
+ ### Вывод текущего графа: sys\toLmx
+ 
+-`sys\toLmx` выводит LMX-текст текущего графа с каноническими именами и сохранёнными комментариями. Все записи ресиверов и записанные границы группировки сохраняются; расширение потока namespace не заменяет исходные записи import/copy/merge. Терминальные примитивные объявления восстанавливаются из типа, значения и имени. Форматирование вставляет пустые строки только на задуманных границах полного корня документа, чтобы повторный разбор сохранял структуру. Явно перезаписанная конструкция выводится в своём текущем виде; ни история, ни native не восстанавливают более ранний исходный текст. Локальное выполнение не публикует свой frame и не заменяет инициализатор в исходных данных. Эта сериализация отличается от `sys\translate`, который возвращает текст L1 для последующей компиляции и ошибок понижения.
++`sys\toLmx` выдаёт LMX-код из любой Structure и любого L3Thread, сохраняя текущий граф, канонические имена и комментарии. Все записи ресиверов и записанные границы группировки сохраняются; расширение потока namespace не заменяет исходные записи import/copy/merge. Терминальные примитивные объявления восстанавливаются из типа, значения и имени. Форматирование вставляет пустые строки только на задуманных границах полного корня документа, чтобы повторный разбор сохранял структуру. Явно перезаписанная конструкция выводится в своём текущем виде; ни история, ни native не восстанавливают более ранний исходный текст. Локальное выполнение не публикует свой frame и не заменяет инициализатор в исходных данных. Эта сериализация отличается от `sys\translate`, который возвращает текст L1 для последующей компиляции и ошибок понижения.
+ 
+ Аргумент `sys\toLmx(S)` задаёт сохраняемую структуру. Для L3 Thread сохраняются также все таблицы его арены, включая таблицы call и native-дескрипторы. Таблицами владеет арена: они не являются полями R0, и R0 — не единственный подходящий Thread. К произвольной S внешние таблицы арены скрыто не добавляются. Сохраняются порядок и пустые позиции, общие ссылки, циклы, имена и типизированные значения: это восстанавливаемый текущий граф, не только печать похожего исходника. Скрытых данных в чистом графе нет: все данные лежат в `void *`-хранилище его Structure и отображаются `toLmx` элементарно, а `length` и `parent` выводятся из сформированного им текста (решение автора 2026-11-17). Таблицу имён `fromLmx` восстанавливает из текста; она и остальные таблицы ядра — данные самого ядра, которое собирает само себя и написано на L2 и L3, то есть такие же Structure чистого графа, а не скрытые данные рядом с ним. Весь программный материал, включая эти таблицы, лежит в чистом графе LMX. Отдельный бинарник содержит скомпилированные методы, включая R0 и интерпретатор; R0 обращается к своему графу через локальный указатель. Переносимый C генерируется для реализаций этих методов по пути L3/L2 → L1 → C и не поставляет скрытого зеркала статических данных графа. Транслятор написан на L2 и L3, и вставки L1 в итоге тоже убираются.
+ 
+-`sys\fromLmx` разбирает сохранённый граф общим кодом построения и интернирует имена в принимающей арене. Восстановление чистого графа после перезапуска на той же платформе не требует заново транслировать всю программу. `sys\fromLmx(text)` строит полный граф существующим парсером и построителем. Результат — обычное значение: его можно читать, составлять, править и интерпретировать во время выполнения без `sys\compile`, отдельной проверки или endturn, а для изменения существующего графа не нужен круговой обход через `toLmx` и `fromLmx`. Интерпретатор проверяет достигнутые им операции и вызовы; неисполненные ветви, вычисляемые значения по умолчанию и произвольные тесты заранее не запускаются, чтобы присвоить графу глобальный статус "проверен". Сохранённые native-дескрипторы связываются с готовым бинарным модулем и именами входов соответствующего ABI; прежние машинные адреса не копируются. Пути к L1/C сохраняются как данные, но не заменяют ссылку на бинарник и вход. Восстановление сохраняет значение и полное нормализованное требование типа: эквивалентные системные описания интернируются в принимающем контексте, а TypeRef перемещаются. Адрес процесса не является вечным идентификатором типа. Можно выбрать capacity=length без второго дескриптора либо сохранить допустимый резерв через запись capacity; нормализованный тип от этого не меняется. Записанные размеры сохраняются, незаданные не угадываются. Attach в том же контексте сохраняет существующие ссылки по договору владения и времени жизни. Это задача реализации, а не утверждение готовности нынешнего графового dumper.
++`sys\fromLmx` разбирает сохранённый граф общим кодом построения и интернирует имена в принимающей арене. Восстановление чистого графа после перезапуска на той же платформе не требует заново транслировать всю программу. `sys\fromLmx(text)` строит полный чистый граф существующим парсером и построителем. Это обычное представление, пригодное для компиляции, а не особый AST сервера. Пригодность к компиляции — договор представления, не обещание успеха последующих динамических операций или проверок компиляции. Результат — обычное значение: его можно читать, составлять, править и интерпретировать во время выполнения без `sys\compile`, отдельной проверки или endturn, а для изменения существующего графа не нужен круговой обход через `toLmx` и `fromLmx`. Интерпретатор проверяет достигнутые им операции и вызовы; неисполненные ветви, вычисляемые значения по умолчанию и произвольные тесты заранее не запускаются, чтобы присвоить графу глобальный статус "проверен". Сохранённые native-дескрипторы связываются с готовым бинарным модулем и именами входов соответствующего ABI; прежние машинные адреса не копируются. Пути к L1/C сохраняются как данные, но не заменяют ссылку на бинарник и вход. Восстановление сохраняет значение и полное нормализованное требование типа: эквивалентные системные описания интернируются в принимающем контексте, а TypeRef перемещаются. Адрес процесса не является вечным идентификатором типа. Можно выбрать capacity=length без второго дескриптора либо сохранить допустимый резерв через запись capacity; нормализованный тип от этого не меняется. Записанные размеры сохраняются, незаданные не угадываются. Attach в том же контексте сохраняет существующие ссылки по договору владения и времени жизни. Это задача реализации, а не утверждение готовности нынешнего графового dumper.
+ 
+ <a id="memory"></a>
+ ## 22. Владение, достижимость и срок жизни
+@@ -3493,9 +3493,9 @@
+ Streaming, secret streams, HSM/TPM, KEM/PQC, удалённые ключевые сервисы и формат защищённого конверта не входят в определённый здесь профиль.
+ 
+ <a id="edit-api"></a>
+-## 36. Mutating debug API для AI-чата
+-
+-Эта глава задаёт требуемое поведение прикладного интерфейса просмотра, вставки, копирования и пошагового исполнения работающего приложения LMX. Это не утверждение о готовой реализации и не новый уровень LMX; общие языковые контракты задают эта спецификация, [спецификация L2](L2_spec_ru.md) и [грамматика](LMX_grammar.ru.md).
++## 36. Mutating debug API и собственный LMX/MCP-сервер runtime
++
++Эта глава задаёт приложение LMX, которое просматривает, расширяет, копирует и пошагово исполняет живой runtime, предоставляет его через native LMX и MCP и исполняет местных либо управляемых моделью агентов. Это не утверждение о готовой реализации и не новый уровень LMX; общие языковые контракты задают эта спецификация, [спецификация L2](L2_spec_ru.md) и [грамматика](LMX_grammar.ru.md).
+ 
+ 
+ <a id="edit-api-status"></a>
+@@ -3506,7 +3506,7 @@
+ <a id="edit-api-goal"></a>
+ ### Цель
+ 
+-Простой AI-чат передаёт законченный текст команд LMX и получает фактический результат LMX. Не нужны второй язык JSON-команд, IDE-протокол или каталог специальных инструментов модели. Минимальные действия: посмотреть разрешённое состояние, вставить новый исходник, скопировать уже подготовленную Structure, продвинуть конкретное исполнение интерпретатора.
++Пользователь просит о работе через LMX; агент на LMX вызывает API модели, получает законченные документы команд и возвращает фактические результаты runtime. Runtime одновременно является собственным MCP-сервером; местные агенты отправляют обычные Message-вызовы. Все пути используют один язык и механизм исполнения. Минимальные действия: посмотреть разрешённое состояние, вставить новый исходник, скопировать уже подготовленную Structure, продвинуть конкретное исполнение интерпретатора.
+ 
+ <a id="edit-api-constraints"></a>
+ ### Неизменные ограничения
+@@ -3521,7 +3521,7 @@
+ <a id="edit-api-chat-cycle"></a>
+ ### Один обмен
+ 
+-Адаптер предоставляет модели задачу, правила языка, разрешённые ссылки и фактическое наблюдение. Законченный ответ модели принимается как **целый** документ команд; обрезанный ответ не исполняется по правдоподобному префиксу. После разбора, трансляции и допуска владелец выполняет операции и возвращает фактический результат или диагностику. Следующий ответ модели опирается на этот результат. Один ответ чата, одна команда LMX и один такт Thread не обязаны совпадать.
++Адаптер предоставляет модели задачу, правила языка, разрешённые ссылки и фактическое наблюдение. Законченный ответ модели принимается как **целый** документ команд; обрезанный ответ не исполняется по правдоподобному префиксу. После построения графа ядровым fromLmx и обычной подготовки/допуска владелец выполняет операции и возвращает фактический результат или диагностику. Следующий ответ модели опирается на этот результат. Один ответ чата, одна команда LMX и один такт Thread не обязаны совпадать.
+ 
+ <a id="edit-api-addressing"></a>
+ ### Адресация
+@@ -3543,14 +3543,11 @@
+ 
+ `insert` принимает точный текст LMX, место и явный контекст. Новый текст проходит обычные разбор, трансляцию, допуск и размещение у владельца. Объявление callable не исполняет его тело. Ошибка до размещения не разрешает менять цель; уже совершённые обычные внешние эффекты не откатываются выдуманной транзакцией. Результат содержит действительную ссылку размещённого значения или диагностику, не только строку «готово».
+ 
+-```text
+-insert:
+-. target: workPlace
+-. source: "PlusOne:\n    int: x\n    return: int\n    apply:\n        return: x + 1"
+-end: insert
+-```
+-
+-Это иллюстрация запроса приложения, разбираемого обычными Frame. Вставленная Structure имеет вход `x`, результат `int` и исполняемый дочерний элемент `apply`; её можно вызвать как `PlusOne\apply(1)`. Именованный `name :: data` описывал бы только сигнатуру. Последний обычный блок исходника закрывается концом текста (EOF). Пустые физические строки допустимы только там, где подразумевается полное закрытие блока.
++```lmx
++LmxServerInsert\insert(runtime := runtime; scope := scope; target := workPlace; source := "PlusOne:\n    int: x\n    return: int\n    apply:\n        return: x + 1")
++```
++
++Это обычный вызов поставленного LMX-фасада с настоящими ссылками runtime, scope и target. Вставленная Structure имеет вход `x`, результат `int` и исполняемый дочерний элемент `apply`; её можно вызвать как `PlusOne\apply(1)`. Именованный `name :: data` описывал бы только сигнатуру. Последний обычный блок исходника закрывается концом текста (EOF). Пустые физические строки допустимы только там, где подразумевается полное закрытие блока.
+ 
+ <a id="edit-api-copy"></a>
+ ### Копирование подготовленной Structure
+@@ -3589,15 +3586,11 @@
+ <a id="edit-api-interpreter"></a>
+ ### Управление интерпретатором
+ 
+-```text
+-interpreter:
+-. target: graph_name
+-. mode: debug
+-. action: next
+-end: interpreter
+-```
+-
+-Это запрос приложения к **конкретному** Thread/продолжению, а не к одному общему тексту программы. `debug` и `next` — значения операции, не новые ключевые слова LMX. Один `next` продвигает настоящее продолжение до поддерживаемой точки наблюдения, не обязательно до следующей физической строки. Нативный вызов может быть неделимым; debug не обнуляет native и не подменяет исполнение обходчиком. Остальные Threads не останавливаются автоматически. Более длинный сценарий можно выразить обычной программой LMX над этой операцией.
++```lmx
++LmxServerStep\step(runtime := runtime; scope := scope; execution := execution; action := "next")
++```
++
++Это запрос приложения к **конкретному** Thread/продолжению, а не к одному общему тексту программы. `next` — прикладное значение действия, не новое ключевое слово LMX. Один `next` продвигает настоящее продолжение до поддерживаемой точки наблюдения, не обязательно до следующей физической строки. Нативный вызов может быть неделимым; debug не обнуляет native и не подменяет исполнение обходчиком. Остальные Threads не останавливаются автоматически. Более длинный сценарий можно выразить обычной программой LMX над этой операцией.
+ 
+ <a id="edit-api-step-result"></a>
+ ### Результат шага
+@@ -3627,12 +3620,113 @@
+ <a id="edit-api-provider"></a>
+ ### Онлайн-модель
+ 
+-Внешнему провайдеру достаточно текстового запроса и ответа. HTTP, JSON, SDK, ключи, модель и цена являются настройками адаптера, не частью LMX-графа или семантики языка. Локальная модель пользуется тем же текстовым контрактом.
++Провайдер принимает текст и возвращает целый ответ с фактическими сведениями о завершении/отказе. HTTP, JSON, SDK, ключи, модель и ограничения — настройки адаптера, при необходимости представленные обычными данными LMX или явными ссылками на провайдеров; они не задают семантику языка. Локальная модель использует тот же контракт. Этот исходящий провайдер отделён от входного MCP.
++
++
++<a id="edit-api-runtime-server"></a>
++### Runtime как собственный сервер
++
++Сервер — обычное приложение LMX поверх runtime, который он обслуживает. Состояние, тела сервиса, цикл модели, запросы к каталогу и местные агенты описываются на LMX. Ресиверы ядра и узкие платформенные I/O-подключения предоставляют операции над графом, вызов, хранилище и транспорт. Отдельных evaluator, авторитетного AST, сериализатора графа, планировщика агентов или глобального реестра объектов у сервера нет.
++
++Три входа используют общие подготовку, допуск и вызов у владельца:
++
++| Вход | Данные | Граница |
++| --- | --- | --- |
++| Native LMX | Один законченный документ LMX | Текстовый транспорт с определёнными границами либо обычный местный вызов |
++| Местный LMX | Настоящие типизированные значения и подготовленные ссылки | Обычный вызов или Message/post стабильному входу сервиса |
++| MCP | Стандартные JSON-RPC сообщения явно выбранной версии MCP | Версионное подключение переводит допущенный запрос в те же вызовы сервиса |
++
++Native-документ — программа на LMX. Таблицы и иерархические значения сохраняют обычный смысл. Готовый местный граф не сериализуется и не разбирается повторно ради доступа к сервису. Транспортные correlation ID, ключи SQL и MCP resource URI не являются идентификаторами объектов runtime: действие с живым графом получает обычно разрешённую настоящую ссылку или PLACE в разрешённом контексте.
++
++<a id="edit-api-shared-codec"></a>
++### Один парсер и ресиверы кодека ядра
++
++`sys\fromLmx(text)` возвращает **чистый граф, пригодный для компиляции**. Тот же обычный граф можно просматривать, составлять, изменять и интерпретировать без предварительной компиляции. Пригодность представления к компиляции не означает заранее успешный допуск любого будущего вызова, исполнение вычисляемых defaults или произвольных тестов. Явный `sys\compile` остаётся отдельной операцией.
++
++`sys\toLmx(value)` выдаёт LMX-код из **любой Structure и любого L3Thread** согласно полному [контракту кодека](#source-codec). Вывод Thread включает предусмотренные контрактом таблицы его арены. Живой граф и этот ресивер ядра — основание просмотра и экспорта; файл исходника на диске является необязательным происхождением или сохранённым экспортом. Сервер вызывает ресиверы ядра и не поддерживает собственный сериализатор.
++
++В LMX один основной парсер с квадратным подпарсером. INDEX-формы, включая `var[arg:arg2:arg3]`, используют этот компонент. В позиции квадратной операции компактное начало `[op` без пробела после `[` вызывает его; группы с пробелом, префиксы TYPE и конструкторы VALUE сохраняют свои контексты. Определив начало выражения, подпарсер вызывает основной парсер. Текст `{...}` он также передаёт основному: сам содержимое не разбирает и не ищет заранее ни закрывающую фигурную скобку, ни конец делегированного выражения. Работа продолжается с точной позиции, возвращённой основным парсером. Все потребители затем используют **одну общую реализацию группировки**. Дублирующие парсеры, алгоритмы связывания, таблицы приоритетов и адаптерные обходы должны быть удалены. Выделение транспортных сообщений и JSON-кодек не выполняют эту языковую работу.
++
++<a id="edit-api-service-contract"></a>
++### Конкретный контракт сервиса
++
++[Пакет исходников LMX](../runtime_server/README.md) содержит обычные модели и тела сервиса; требуемые подключения представлены явными типизированными полями. В [API](../runtime_server/docs/API.ru.md) различаются контракты и реализации.
++
++| Вход | Контракт |
++| --- | --- |
++| `service\submitText(source)` | Подготовить целый документ через ядровой `fromLmx` и обычный языковой путь; исполнить у владельца сервиса |
++| `service\submitGraph(graph)` | Допустить и исполнить готовый граф без текстового кругового преобразования |
++| `service\replaceHandler(replacement)` | Допустить и изменить настоящее поле со ссылкой на callable у того же владельца |
++| `runtime\inspect(scope; target; projection)` | Вернуть фактическое наблюдение через общий графовый код и кодек ядра |
++| `runtime\insert(scope; target; source)` | Вставить точный исходник с обычным размещением у владельца; не запускать новое объявленное тело |
++| `runtime\copyTo(scope; target; source)` | Скопировать один готовый источник и явно разместить результат по общим правилам copy/lifetime |
++| `runtime\step(scope; execution; action)` | Продвинуть указанное исполнение до поддержанной точки наблюдения |
++| `model\complete(exchange)` | Вернуть целый ответ модели либо действительный незавершённый/ошибочный исход |
++
++`LmxServerStage` содержит `ready` и `payload`: подготовленное исполнение либо фактический receipt диагностики. `LmxServerReceipt` содержит `ok` и `payload`: настоящий результат, явно представленный обычный void-результат, поддержанное состояние исполнения либо диагностику. Неинициализированная ссылка и числовой ноль не заменяют отсутствующий результат. Это прикладные модели, а не категории ядра.
++
++<a id="edit-api-agent-loop"></a>
++### Просьба пользователя и цикл модели
++
++Пользователь вызывает обычный LMX-метод агента. Агент обращается к явно переданному провайдеру модели, получает законченный документ LMX, отправляет его тому же сервису runtime и при необходимости передаёт фактический receipt следующему раунду модели. Провайдер не исполняет команды сам.
++
++Пакет исходников задаёт необязательный профиль результата агента: исполненная программа возвращает обычный `LmxServerDecision` с `finished` и `observation`. Агент допускает результат по структурному требованию до чтения полей. Обычная native-команда или инструмент MCP не обязаны возвращать этот прикладной тип. У агента конечный бюджет раундов; он использует существующие callbacks и ожидания Message/post. Исчерпанный бюджет, неполный текст, неподдержанный результат, неопределённая доставка и ошибка runtime — разные исходы. Поздние ответы сохраняют обычный контракт Message. Завершение определяется фактическим результатом, а не утверждением модели.
++
++<a id="edit-api-live-handler"></a>
++### Изменение поведения без перекомпиляции
++
++Стабильный вход сервиса при каждом новом вызове на полосе владельца читает **настоящую изменяемую ссылку на callable**. `replaceHandler` допускает замену и пишет реальное поле обычным присваиванием графа. Новый callable без native association работает через интерпретируемую ветку общего dispatcher. Его настоящие DATA, parent и CODE сохраняются. Добавление и выбор такого поведения не требуют компиляции.
++
++Уже выбранный callable, сформированное Message и активный frame сохраняют ссылку и обычное время жизни. Отправитель, которому нужно поведение на момент обслуживания, отправляет письмо стабильному входу: тот читает поле после доставки. Письмо ранее разрешённому handler не перенаправляется автоматически. Замена не переписывает прямые native-вызовы A→B, не очищает native descriptor, не принуждает к обходчику, не отслеживает записи графа и не повторяет упавшую native-работу. Явная компиляция и успешный `endturn` сохраняют отдельный договор обновления машинного кода.
++
++<a id="edit-api-catalogue"></a>
++### Каталог компиляции и живой исходник
++
++Компиляция может каталогизировать любые полезные факты, которыми действительно располагает о переданном чистом графе. Начальный профиль хранения — одна главная таблица фактов SQLite на L3Thread с индексами и проекциями запросов; пространства SQL-таблиц задаёт провайдер. Это поисковая проекция указанной области компиляции, а не второе авторитетное представление программы или реестр состава Thread.
++
++Ответ сообщает основу компиляции/снимка, раздел владельца, область, покрытие и доказательность. Локальные ключи снимка сохраняют связи; повторные имена полей и безымянные вхождения не сливаются. Такой ключ не является неограниченным адресом runtime. Действие с нынешним объектом использует обычное разрешение в контексте либо удержанную настоящую ссылку и допуск.
++
++<a id="edit-api-catalogue-facts"></a>
++### Полезные сведения каталога
++
++| Категория | Нужные сведения | Граница точности |
++| --- | --- | --- |
++| Состав графа | Узлы, типизированные значения, порядок вхождений полей, пустые/неинициализированные позиции, ссылки, sharing, циклы, настоящие parents | Сохранять идентичность внутри снимка; имя само по себе не ключ |
++| Договоры вызова | Написанные/нормализованные типы, роли, сигнатуры, именованные параметры, required/default/absence, результат, объявленные throws | Не исполнять отложенный initializer ради индекса |
++| Определения и использования | Объявления, вхождения, лексический контекст, связывания и пути | Указать подготовку, для которой известно разрешение |
++| Вызовы и эффекты | Написанные вызовы, разрешённые цели, кандидаты или неизвестные heads, потенциальные чтения/записи, явные throw | Возможный эффект не равен исполненному; отсутствие ребра не доказывает чистоту |
++| Зависимости | Источники import/copy, типовые связи, статические caller/callee и native units | Явный анализ влияния и план компиляции, без автоматического invalidation |
++| Native association | Настоящие module/entry/ABI и доступные свидетельства артефактов | Без машинного адреса как portable identity или обещания соответствия последующим правкам |
++| Документация | Авторские комментарии, описания, примеры, происхождение, необязательные file/span/hash | Созданному в runtime графу не нужен выдуманный файл |
++| Проверки и наблюдения | Объявленные tests отдельно от результатов запусков и диагностик с их основой | Объявление test и успешная сборка не равны пройденному тесту |
++| Покрытие | Обойдённая область, выполненный анализ, неизвестные и неподдержанные факты | Полнота топологии и знание всех эффектов — разные утверждения |
++
++Происхождение различает `written`, `graph-observed`, `resolved-for-this-compilation`, `runtime-observed`, `dynamic-unresolved` и `not-analysed`. Производный анализ сохраняет основание и не подменяет авторские данные. SQL не становится новым механизмом связывания, выбора перегрузки, обнаружения тестов или планирования зависимостей.
++
++[Проект SQLite и исполнимые fixtures](../runtime_server/docs/CATALOGUE_SQLITE.ru.md) задают хранение, запросы и проверку публикации. Ответы могут быть обычными таблицами или иерархическими структурами LMX. Полный `payload_lmx` получается из ядрового `toLmx`; поисковая выдержка явно не является полным экспортом.
++
++<a id="edit-api-catalogue-publication"></a>
++### Компиляция, endturn и публикация каталога
++
++Кандидат каталога готовится при явной компиляции и публикуется настоящим hook жизненного цикла владельца на соответствующем успешном `endturn`. `endturn` не возвращается: вызов публикации после него не реализует договор. Сам по себе он не компилирует, не обнаруживает правки и не обновляет каталог.
++
++Факты компиляции описывают граф/представление, действительно потреблённое этой компиляцией. Интерпретируемые build tests могут иметь обычные эффекты; поздний вывод `toLmx` нельзя назвать прежним входом lowering. Вход компиляции и необязательное текущее наблюдение после тестов — разные названные основы.
++
++SQL-транзакция атомарно публикует только SQL-проекцию. Она не объединяет записи графа, установку native, почту, файлы и сеть в общую транзакцию. Подключение сообщает prepared, pending, published либо failed/recovery по действительной стадии. Отказ базы не означает откат runtime или обновлённый каталог. Минимальный профиль хранит одну действующую проекцию на владельца; история необязательна.
++
++После интерпретируемой правки без компиляции прежний каталог описывает указанную компиляцию. Он не доказывает отсутствие нового живого объекта. Текущий LMX доступен через `toLmx` настоящей Structure или L3Thread. Ради видимости свежего индекса не вводятся наблюдатель записей, автоматическая перекомпиляция или зависимость от исходного файла.
++
++<a id="edit-api-mcp"></a>
++### Совместимость с MCP
++
++«Надмножество» означает стандартный MCP вместе с native LMX и местным Message; стандартный JSON-RPC wire MCP сохраняется. [Версионный проект](../runtime_server/docs/MCP_COMPATIBILITY.ru.md) отображает discovery, tools, resources, templates, prompts, completion, дополнительный ввод, notifications и необязательные tasks в тот же слой сервиса. Объявленная capability требует настоящей реализации.
++
++Действующая [спецификация MCP 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28) использует stateless-запросы, `server/discover`, protocol/capability metadata каждого запроса и заданные формы результата. Отдельно выбранное подключение 2025-11-25 сохраняет свои правила инициализации/сессии. Профили не смешивают envelopes, отмену и формы tasks. Resource URI выбирают опубликованные ресурсы и не становятся глобальными идентификаторами графа. Исходящий API модели runtime остаётся отдельной типизированной зависимостью.
+ 
+ <a id="edit-api-walkthrough"></a>
+ ### Короткий сценарий
+ 
+-Посмотреть `toLmx(workPlace)` → выбрать существующий подготовленный компонент для `copy` либо передать новый текст в `insert` → получить ссылку и фактическое состояние → при необходимости отправить `interpreter ... next` конкретному исполнению → проверить новое наблюдение. Ни один шаг не считается выполненным только потому, что модель его предложила.
++Посмотреть `toLmx(workPlace)` → выбрать существующий подготовленный компонент для `copy` либо передать новый текст в `insert` → получить ссылку и фактическое состояние → при необходимости вызвать `step` с `action := "next"` для конкретного исполнения → проверить новое наблюдение. Ни один шаг не считается выполненным только потому, что модель его предложила.
+ 
+ <a id="edit-api-bootstrap"></a>
+ ### Инструкция AI-клиенту
+@@ -3653,6 +3747,17 @@
+ 9. Просмотр/сериализация сохраняют исходные ресиверы и написанные группы; приём в namespace не заменяет их выданными полями.
+ 10. Копирование из одного источника, merge из нескольких, явная группировка и независимые карты операций следуют общим контрактам без особого поведения адаптера.
+ 
++11. Native LMX, местный Message и MCP приводят к одному допущенному поведению у владельца; транспорт и JSON не разбирают LMX.
++12. fromLmx возвращает чистый пригодный к компиляции граф; toLmx охватывает любую Structure и любой L3Thread общим кодом ядра.
++13. Новый выбранный интерпретируемый handler работает без компиляции; выбранные вызовы и активные frames сохраняют прежний callable.
++14. Каталог сохраняет порядок, повторные имена, типы, sharing, циклы и parents с областью и локальными ключами снимка.
++15. Написанные, разрешённые, наблюдаемые и неизвестные факты различаются; индексирование не запускает отложенные initializers.
++16. Публикация имеет настоящий hook успешного endturn; отказ SQL не объявляется откатом runtime.
++17. Последующая интерпретируемая правка видна вживую, а каталог компиляции остаётся явно названным снимком.
++18. Вход компиляции и наблюдение после tests различаются; объявленные tests не считаются пройденными.
++19. MCP fixtures и capabilities следуют выбранной версии; неподдержанные профили дают действительные протокольные отказы.
++20. Агент отклоняет неполный текст, допускает Decision, соблюдает бюджет и не повторяет неопределённый эффект вслепую.
++
+ Эта матрица формулирует приёмочные требования. Правка документации или успешная сборка сами по себе не служат отчётом о том, что они выполнены.
+ 
+ <a id="edit-api-source-conflicts"></a>
+@@ -3663,7 +3768,7 @@
+ <a id="edit-api-non-goals"></a>
+ ### Не входит в контракт
+ 
+-Нет обязательной IDE, произвольного редактирования активных машинных инструкций, глобальной остановки всех Threads, переноса RAM-адресов между машинами, автоматического undo, второго постоянного графа или особого языка команд провайдера.
++Нет обязательной IDE, произвольного редактирования активных машинных инструкций, глобальной остановки всех Threads, переноса RAM-адресов между машинами, автоматического undo, второго авторитетного графа программы или особого языка команд провайдера.
+ 
+ <a id="functional-receivers"></a>
+ ## 37. Общие функциональные ресиверы и контейнеры

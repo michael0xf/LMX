@@ -1,0 +1,96 @@
+{
+  "status": "PASS",
+  "checked_at_utc": "2026-11-27T22:12:37.676697+00:00",
+  "engine": "SQLite via Python sqlite3 host binding",
+  "sqlite_version": "3.53.1",
+  "database": "sample.sqlite3",
+  "main_tables": [
+    "lmx_catalogue"
+  ],
+  "fact_count": 76,
+  "query_cases_passed": 21,
+  "negative_cases_passed": 10,
+  "negative_cases": [
+    {
+      "case": "duplicate-field-position",
+      "status": "REJECTED",
+      "sqlite_error": "UNIQUE constraint failed: lmx_catalogue.subject_key, lmx_catalogue.ordinal"
+    },
+    {
+      "case": "second-realparent",
+      "status": "REJECTED",
+      "sqlite_error": "UNIQUE constraint failed: lmx_catalogue.subject_key"
+    },
+    {
+      "case": "invalid-ordinal-type",
+      "status": "REJECTED",
+      "sqlite_error": "cannot store TEXT value in INTEGER column lmx_catalogue.ordinal"
+    },
+    {
+      "case": "unknown-evidence-label",
+      "status": "REJECTED",
+      "sqlite_error": "CHECK constraint failed: evidence IN\n        ('graph-observed', 'written', 'resolved-for-this-compilation',\n         'runtime-observed', 'dynamic-unresolved', 'not-analysed')"
+    },
+    {
+      "case": "dynamic-target-presented-as-resolved",
+      "status": "REJECTED",
+      "sqlite_error": "CHECK constraint failed: record_kind <> 'relation' OR evidence <> 'dynamic-unresolved'\n        OR object_key IS NULL"
+    },
+    {
+      "case": "invalid-basis",
+      "status": "REJECTED",
+      "sqlite_error": "CHECK constraint failed: record_kind <> 'attribute' OR subject_key <> '@snapshot'\n        OR predicate <> 'basis' OR (value_text IS NOT NULL\n            AND value_text IN ('compile-input', 'post-tests-current'))"
+    },
+    {
+      "case": "null-coverage",
+      "status": "REJECTED",
+      "sqlite_error": "CHECK constraint failed: record_kind <> 'coverage' OR (value_text IS NOT NULL AND value_text IN\n        ('complete', 'partial', 'unavailable', 'not-applicable'))"
+    },
+    {
+      "case": "unmarked-null-slot",
+      "status": "REJECTED",
+      "sqlite_error": "CHECK constraint failed: record_kind <> 'field' OR\n        (predicate IS 'field' AND ordinal IS NOT NULL AND\n            ((object_key IS NOT NULL AND value_text IS NULL)\n             OR (object_key IS NULL AND value_text IS 'null-slot')))"
+    },
+    {
+      "case": "dangling-target",
+      "status": "REJECTED_BY_PROVIDER_GATE",
+      "issues": [
+        {
+          "issue": "dangling-object",
+          "record_key": "r:total-reduce"
+        }
+      ]
+    },
+    {
+      "case": "invented-full-toLmx-capture",
+      "status": "REJECTED_BY_PROVIDER_GATE",
+      "issues": [
+        {
+          "issue": "complete-lmx-without-payload",
+          "record_key": "@snapshot"
+        }
+      ]
+    }
+  ],
+  "publication_atomicity": {
+    "status": "PASS",
+    "rollback_preserves_previous_publication": true,
+    "separate_reader_sees_old_before_commit": true,
+    "separate_reader_sees_new_after_commit": true,
+    "old_publication_key_rejected_after_replacement": true,
+    "runtime_native_atomicity": "NOT_CLAIMED"
+  },
+  "fts5_optional": {
+    "host_status": "PASS",
+    "runtime_provider_status": "NOT_IMPLEMENTED_BY_THIS_FIXTURE",
+    "rows": [
+      {
+        "record_key": "doc:total"
+      }
+    ]
+  },
+  "integrity_check": "ok",
+  "LMX_compiler_execution": "NOT_RUN",
+  "kernel_toLmx_capture": "NOT_RUN",
+  "endturn_integration": "NOT_IMPLEMENTED_BY_THIS_FIXTURE"
+}

@@ -1,0 +1,71 @@
+{
+  "fixture": {
+    "profile": "2026-07-28",
+    "kind": "protocol-reference",
+    "runtimeStatus": "NOT_RUN",
+    "requires": [
+      "tools provider registered; server capability tools enabled"
+    ],
+    "note": "Expected wire shape; this does not advertise or prove implemented capabilities."
+  },
+  "transport": "stdio",
+  "request": {
+    "jsonrpc": "2.0",
+    "id": "tools-1",
+    "method": "tools/list",
+    "params": {
+      "_meta": {
+        "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+        "io.modelcontextprotocol/clientCapabilities": {},
+        "io.modelcontextprotocol/clientInfo": {
+          "name": "lmx-fixture-client",
+          "version": "0.1.0"
+        }
+      }
+    }
+  },
+  "response": {
+    "jsonrpc": "2.0",
+    "id": "tools-1",
+    "result": {
+      "resultType": "complete",
+      "tools": [
+        {
+          "name": "lmx",
+          "description": "Submit one complete LMX document to the explicitly configured and admitted runtime context.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "document": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "document"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "format": {
+                "type": "string",
+                "const": "application/lmx"
+              },
+              "document": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "format",
+              "document"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "ttlMs": 0,
+      "cacheScope": "private"
+    }
+  }
+}

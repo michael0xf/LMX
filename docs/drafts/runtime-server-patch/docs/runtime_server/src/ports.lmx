@@ -1,0 +1,79 @@
+# REQUIRED INTEGRATION CONTRACTS; NO PROVIDER BODIES OR FAKE SUCCESS.
+# Bind these slots to real runtime/model/transport/codec implementations.
+# PortFailure is an application boundary failure carrying the actual diagnostic.
+# Syntax/translation rejection is a Stage with ready=0 and a real Receipt;
+# an implicit runtime failure remains an implicit runtime failure.
+# Named signatures constrain ordered input/result types, NOT finite throws.
+# Assembly must admit every actual provider's full call/exit/ownership contract;
+# the only allowed recoverable port exit here is LmxServerPortFailure(@cause).
+# Declaration of that name here is not proof about an unbound implementation.
+
+LmxServerPortThrows:
+    LmxServerPortFailure
+
+LmxServerPrepareTextAPI :: ([]char: source; @: scope; return: @LmxServerStage; throws: copy(LmxServerPortThrows))
+
+LmxServerPrepareGraphAPI :: (@: graph; @: scope; return: @LmxServerStage; throws: copy(LmxServerPortThrows))
+
+LmxServerExecuteAPI :: (@: prepared; return: @LmxServerReceipt; throws: copy(LmxServerPortThrows))
+
+LmxServerPresentAPI :: (@LmxServerReceipt: receipt; return: []char; throws: copy(LmxServerPortThrows))
+
+LmxServerInspectAPI :: (@: scope; @: target; @: projection; return: @LmxServerReceipt; throws: copy(LmxServerPortThrows))
+
+LmxServerInsertAPI :: (@: scope; @: target; @: source; return: @LmxServerReceipt; throws: copy(LmxServerPortThrows))
+
+LmxServerCopyToAPI :: (@: scope; @: target; @: source; return: @LmxServerReceipt; throws: copy(LmxServerPortThrows))
+
+LmxServerStepAPI :: (@: scope; @: execution; []char: action; return: @LmxServerReceipt; throws: copy(LmxServerPortThrows))
+
+LmxServerAdmitHandlerAPI :: (@: candidate; @: scope; return: @LmxServerHandlerAPI; throws: copy(LmxServerPortThrows))
+
+# prepareText uses sys\fromLmx, producing the ordinary clean graph suitable for
+# compilation, then the common command preparation and admission mechanism.
+# present and inspect use sys\toLmx, the kernel codec for ANY ordinary Structure
+# and ANY L3Thread. There is no server-specific AST, parser or serializer.
+# admitHandler uses common input/result AND concrete Consumer admission, verifies
+# actual finite throws are a subset of PortThrows, and checks owner/lifetime.
+# It returns the SAME selected candidate CODE reference. No call-body execution,
+# copy, reparenting, native invalidation or automatic recompilation is permitted.
+LmxServerRuntimePort:
+    @LmxServerPrepareTextAPI: prepareText
+    @LmxServerPrepareGraphAPI: prepareGraph
+    @LmxServerExecuteAPI: execute
+    @LmxServerPresentAPI: present
+    @LmxServerInspectAPI: inspect
+    @LmxServerInsertAPI: insert
+    @LmxServerCopyToAPI: copyTo
+    @LmxServerStepAPI: step
+    @LmxServerAdmitHandlerAPI: admitHandler
+
+LmxServerModelCompleteAPI :: (@LmxServerExchange: exchange; return: @LmxServerModelAnswer; throws: copy(LmxServerPortThrows))
+
+LmxServerModelPort:
+    @LmxServerModelCompleteAPI: complete
+
+LmxServerReadDocumentAPI :: (@: connection; return: []char; throws: copy(LmxServerPortThrows))
+
+LmxServerWriteDocumentAPI :: (@: connection; []char: document; throws: copy(LmxServerPortThrows))
+
+LmxServerTransportPort:
+    @LmxServerReadDocumentAPI: readDocument
+    @LmxServerWriteDocumentAPI: writeDocument
+
+# This is only the LMX-command adapter of a negotiated MCP profile.
+# The provider owns JSON decoding, request admission, method/profile checking,
+# and a complete MCP result/error envelope. No JSON parser is claimed here.
+# Discovery, resources, prompts and other negotiated MCP methods are described
+# in the companion protocol specification; they are not guessed by this slot.
+LmxServerMcpDecodeCommandAPI :: (@: request; return: []char; throws: copy(LmxServerPortThrows))
+
+LmxServerMcpEncodeReceiptAPI :: (@: request; @LmxServerReceipt: receipt; return: @; throws: copy(LmxServerPortThrows))
+
+LmxServerMcpPort:
+    @LmxServerMcpDecodeCommandAPI: decodeCommand
+    @LmxServerMcpEncodeReceiptAPI: encodeReceipt
+
+LmxServerHandlerAPI :: (@LmxServerRuntimePort: runtime; @: scope; int: sourceKind; @: source; return: @LmxServerReceipt; throws: copy(LmxServerPortThrows))
+
+LmxServerEventSinkAPI :: (@LmxServerEvent: event)

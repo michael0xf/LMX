@@ -1,0 +1,24 @@
+# These are ordinary calls with real inputs, not a simulated successful runtime.
+# The post is to the agent owner's Control, not to a parallel cancellation loop.
+# Cancellation stops new model/command submissions; it does not interrupt native
+# code, reverse earlier graph writes, release live routes or suppress late results.
+
+LmxServerExampleStop:
+    @LmxServerAgentJob: job
+    @: reason
+    required: job reason
+    stop:
+        post:
+            ask:
+                job\Control\cancel(reason := reason)
+
+# Review helper: normal transport uses the already prepared OnReceipt route.
+# Invoke this only with a real retained Receipt, on the job's own lane.
+# If the job is stopped, OnReceipt emits late-runtime-receipt and does not run
+# its command again. ok!=1 while active produces runtime-outcome and stops.
+LmxServerExampleObserveActualReceipt:
+    @LmxServerAgentJob: job
+    @LmxServerReceipt: receipt
+    required: job receipt
+    observe:
+        job\OnReceipt\accept(receipt := receipt)

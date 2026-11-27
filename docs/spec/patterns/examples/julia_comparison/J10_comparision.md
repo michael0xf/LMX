@@ -37,7 +37,7 @@
 | Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
 | --- | ---: | ---: | ---: |
 | LMX процедурный | 304 | 487 | 17 |
-| LMX функциональный | 230 | 328 | 11 |
+| LMX функциональный | 226 | 324 | 11 |
 | Julia | <span style="color:#176233"><u>149</u></span> | 183 | 5 |
 
 Обе LMX-формы опубликованы и считаются независимо. Все определения, обработчики и ссылки на throws входят в полный размер. Выбор единственного LMX-варианта по длине не выполняется.
@@ -78,11 +78,11 @@ Example:
         throws: copy(compress\throws) copy(fuse\throws) SequenceSize
         if: length(left) != length(right)
             throw: SequenceSize()
-        @: scores fuse(2 .* left .+ right .* right)
-        return: compress(scores; scores .>= limit)
+        @: scores fuse(2 * left + right * right)
+        return: compress(scores; scores >= limit)
 ```
 
-[Полный исходник](source/lmx/J10.lm3). 230 непробельных символов; 11 непустых строк. Все объявления и Throws включены.
+[Полный исходник](source/lmx/J10.lm3). 226 непробельных символов; 11 непустых строк. Все объявления и Throws включены.
 
 ## Julia
 

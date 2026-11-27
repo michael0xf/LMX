@@ -14,4 +14,4 @@ shape diagnostic по нормативному контракту, но её ф�
 
 Повторная синхронизация: `python spec/tools/register_array_storage_examples.py`
 из docs; проверка без записи — та же команда с `--check`.
-SHA-256, категории и наблюдения: [отчёт](../../../validation/array_storage_examples_20261126.json).
+SHA-256, категории и наблюдения: [отчёт](../../../validation/array_storage_examples_20261127.json).

@@ -4,7 +4,7 @@
 # e: [2,2] = [1 2 3 4]
 # MatrixExpression gives [59 66 142 158] with shape [2,2].
 # ElementwiseExpression instead requires all three full shapes to be equal
-# and rank two: depth two reaches scalar cells in the retained flat axes.
+# and rank two; ordinary operators select scalar cells at maximum depth (explicit depth zero).
 # Production parser/runtime: NOT_RUN.
 
 MatrixExpression:
@@ -13,8 +13,8 @@ MatrixExpression:
     @: e
     return: @
     run:
-        throws: copy(`*`\throws) copy(`+`\throws)
-        return: a * b + e
+        throws: copy(`[*]`\throws) copy(`+`\throws)
+        return: a [*] b + e
 
 ElementwiseExpression:
     @: a
@@ -23,7 +23,7 @@ ElementwiseExpression:
     return: @
     run:
         throws: copy(fuse\throws) copy(`*`\throws) copy(`+`\throws)
-        return: fuse(a .(2)* b .(2)+ e)
+        return: fuse(a * b + e)
 
 SameCoordinates:
     @: left
@@ -31,4 +31,4 @@ SameCoordinates:
     return: @
     run:
         throws: copy(`=`\throws)
-        return: left .= right
+        return: left = right

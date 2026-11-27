@@ -147,7 +147,7 @@ Before search, the public role selects `RxReplacementLiteral\accept` or `RxRepla
 
 ## Operand integration
 
-The established five short Pattern words use `PASS_ARGS_AS_IS = 0`, private `left/right`, an optional left and required right. The runtime supplies an explicitly empty right vector for a postfix form. `then` has the ready priority obtained from `sys\priority("+")`; the four repetition words use `sys\priority("*")`. Their order is left-to-right. The existing priority, binding, modifiers and defaults of `|` remain unchanged.
+The established five short Pattern words use `PASS_ARGS_AS_IS = 0`, private `left`, optional `depth`, `right`, an optional left and required right. The runtime supplies an explicitly empty right vector for a postfix form. `then` has the ready priority obtained from `sys\priority("+")`; the four repetition words use `sys\priority("*")`. Their logical input order is left-to-right. Absent depth keeps the whole Pattern contract; an explicit modifier requires a compatible declared role profile. The existing priority, binding, modifiers and defaults of `|` remain unchanged.
 
 An operand method explicitly calls `RxLogicalArguments` inside its body when its own algorithm needs a logical argument sequence. The helper appends the **whole** supplied left reference, if present, followed by the already prepared right elements. It does not reopen a group, unwrap an Array, fold a right tail automatically, re-evaluate any occurrence or inspect written arity to consume neighboring expressions. The parser and transport preserve an absent left and never move the first right argument into it; this method-owned collection is not a universal pre-call binder.
 

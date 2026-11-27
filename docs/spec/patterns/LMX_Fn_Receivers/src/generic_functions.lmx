@@ -22,23 +22,25 @@
 # FxKernel\callable(contract; labels; bodyGraph; state; failures; policy) формирует
 # обычный граф; внутри тела node\private\state даёт именно переданный state.
 
-# Ordinary shared DATA fragment for prepared-value operands. Copying it supplies
-# the real fields; structural operand checking supplies nothing implicitly.
-# Input order is left, depth, right. depth is the separately evaluated service
-# input; it is never appended to the logical user arguments. Each receiver
-# retains its own depth policy; the shared fragment performs no lifting.
-# Each consumer adds its own ready PRIORITY and required/result contract.
-# The private transport inputs cannot autofill from a helper's local variables.
+# Ordinary shared DATA for prepared operands: left, optional depth, right.
+# Presence is read from the prepared occurrence, never autofilled from a distant
+# dynamic field of the same name. No depth default is installed by this template.
+# Explicit depth 0 selects all logical axes; positive d selects d outer axes.
+# Positive d above an actual Array rank is diagnosed before the base call.
+# The selected base invocation does not re-enter automatic Array mapping.
+# An absent depth preserves the selected receiver's ordinary contract.
+# These private service inputs never become positional user-function arguments.
+# Consumers retain their own ready PRIORITY, required, roles and result policy.
 FxPreparedOperands:
     private:
         @: left
-        int: depth 0
+        int: depth
         []@: right
     const: int: PASS_ARGS_AS_IS 0
 
-# Whole-value operand profiles admit depth 0 during semantic preparation.
-# A mismatch is a translator/interpreter diagnostic, never a callable throw.
-# The receiving method remains responsible for its own ordinary contract.
+# DATA/TYPE/RAW/PLACE and whole-family profiles retain their consuming roles.
+# An explicit depth requires a declared applicable profile; a mismatch is a
+# translator/interpreter diagnostic, never an invented callable throw.
 # Снимок уже принятого значения через существующий prepared operand protocol.
 # Ресивер принимает указатель на значение слева; RHS не разворачивает его.
 # Для postfix (value record) общий handler передаёт present empty right Array.
@@ -164,8 +166,8 @@ FxSlice:
 
 # Name :: DATA создаёт описание сигнатуры, не исполняемое тело.
 # Used by the existing -> operand and the general factories.
-# Normalized @ references point to canonical int type-code records; the current
-# type registry retains full models, and no public boxed Type kind is added.
+# Normalized values are direct canonical TypeRef descriptions with complete
+# models; no integer code lookup or new public boxed Type kind is added.
 FxSignatures:
     private:
         @: inputs

@@ -1,6 +1,6 @@
 # Inclusive range: usage and implementation are separate
 
-Edition: 2026-11-26. Client: [V02](../haskell_comparision/source/lmx/V02.lm3), [scenario](../../LMX_examples_and_analogies.ru.md#v02).
+Edition: 2026-11-27. Client: [V02](../haskell_comparision/source/lmx/V02.lm3), [scenario](../../LMX_examples_and_analogies.ru.md#v02).
 
 ## Contract
 
@@ -55,7 +55,7 @@ between value (lower, upper) = lower <= value && value <= upper
 | Source boundary | Nonwhitespace characters | Nonblank lines | UTF-8 bytes |
 | --- | ---: | ---: | ---: |
 | LMX entry definitions shown above | 182 | 9 | 260 |
-| All reachable LMX source roots, counted once | 260 | 15 | 384 |
+| All reachable LMX source roots, counted once | 259 | 15 | 382 |
 | Complete Haskell comparison module | 315 | 6 | 373 |
 
 Every declaration, complete Throws list and copy reference is included in the full source size. Shared definitions are counted once in the declared complete dependency boundary.

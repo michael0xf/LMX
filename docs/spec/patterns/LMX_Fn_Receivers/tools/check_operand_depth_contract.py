@@ -30,11 +30,11 @@ def main():
     def body(name):
         return roots.get(name, ('', ''))[1]
 
-    expected = r'@: left\s+int: depth(?: 0)?\s+@\[\]: right'
+    expected = r'@: left\s+int: depth\s+\[\]@: right'
     for name in ['FxPreparedOperands', 'FxOperandInputTypes', 'RxThenOperand', 'RxRepeatOperands']:
         require(name + ' input order', re.search(expected, body(name)), roots.get(name, ('MISSING',))[0])
     require('typed bind tail keeps depth before right',
-            re.search(r'int: depth 0\s+@\[\]: right', body('FxBindOperandTail')),
+            re.search(r'int: depth\s+\[\]@: right', body('FxBindOperandTail')),
             'src/monadic_forms.lmx')
     require('logical collector has no service depth',
             not re.search(r'(?m)^\s+int: depth', body('RxLogicalArguments')),
@@ -59,7 +59,7 @@ def main():
             'RxLogicalArguments\\collect(left := left; right := \\right)' in engine and
             'FxApply\\apply(state; args)' in engine,
             'Only logical args reach the original callable')
-    require('positive-depth route shares Array executor',
+    require('explicit depth including zero shares Array executor',
             'FxKernel\\operandDepthContext(frame; args)' in engine and
             'FxArrayDepth\\apply(context; depth; args)' in engine,
             'One lifting body, no per-dot aliases')
@@ -76,29 +76,45 @@ def main():
             ['left', 'depth', 'right'], 'operation_definitions.json')
     require('explicit depth uses round modifier syntax',
             set(definitions['operand_contract']['depth_syntax']) ==
-            {'op', '.op', '.(expression)op'} and
+            {'op', '.(expression)op'} and
             definitions['operand_contract'].get('depth_modifier_start') == '.(' and
             'never a decimal point' in definitions['operand_contract'].get('depth_modifier_role', ''),
             'The .( sequence starts an operator/function modifier; Array/type brackets are unchanged')
     axis = definitions['operand_contract'].get('axis_depth', {})
-    require('metadata uses logical flat Array axes',
-            'logical outer axes' in axis.get('basis', '') and
-            axis.get('flat_matrix_shape_2x2') == {
-                '0': 'whole matrix multiplication',
-                '1': 'corresponding row-vector dot products',
-                '2': 'scalar componentwise products'},
-            'One flat rank-2 Array; depth does not count allocated row containers')
-    require('Structure and reference indexing use ordinary contracts',
-            'Structure is []@' in axis.get('structure', '') and
+    require('metadata uses explicit outer depth and maximum zero',
+            'leading d logical Array axes' in axis.get('basis', '') and
+            axis.get('flat_matrix_shape_2x2', {}).get('plain *') == 'scalar elementwise product' and
+            axis.get('flat_matrix_shape_2x2', {}).get('depth 0 *') == 'maximum scalar elementwise product' and
+            axis.get('flat_matrix_shape_2x2', {}).get('plain [*]') == 'whole matrix multiplication' and
+            axis.get('flat_matrix_shape_2x2', {}).get('depth 1 [*]') == 'corresponding row-vector dot products',
+            'Positive d counts leading axes, zero is maximum; selected base does not implicitly remap')
+    require('Structure participates and reference indexing stays ordinary',
+            'Structure is []@ and participates' in axis.get('structure', '') and
             r'struct[i]\[j]' in axis.get('structure', ''),
-            'No separate array-of-arrays kind is introduced')
+            'No []@ exception or separate array-of-arrays kind')
+    require('optional depth tested before demand',
+            'depthSlot\\supplied = 0' in engine and
+            engine.index('depthSlot\\supplied = 0') < engine.index('FxFrameRead\\read(frame; 1)') and
+            'required: depth right' not in builder,
+            'Missing modifier is not unconditional zero or dynamic autofill')
+    require('zero depth has no whole-call bypass',
+            'if: depth = 0' not in body('FxArrayDepth'),
+            'Explicit zero selects scalar cells')
+    indexed = body('FxArrayIndexedCell')
+    require('stop precedes the next term evaluation',
+            'context\\hasStop' in indexed and
+            indexed.index('context\\hasStop') < indexed.index('private: @: term'),
+            'A stopped reduction must not invoke later kernels')
+    require('minimal fuse has no implicit streaming store',
+            'FxFuseIntoPrepared' not in roots and 'FxFusePrepared' in roots,
+            'External assignment follows the fresh final result')
     for row in definitions['operations']:
         for variant in row['variants']:
             route = variant['operand']['route']
             policy = variant['operand'].get('depth_policy')
-            expected_policy = ('ordinary-value-lifting' if route == 'asOperand' or
+            expected_policy = ('explicit-depth-value' if route == 'asOperand' or
                                variant['operand']['target'] == 'ArrayBinding\\bind'
-                               else 'whole-value-depth0')
+                               else 'declared-role-contract')
             require(row['name'] + '/' + variant['family'] + ' policy',
                     policy == expected_policy, 'operation_definitions.json')
     source = '\n'.join(texts.values())
@@ -108,11 +124,10 @@ def main():
             not re.search(r'(?m)^\s+@:\s+`?\.\.?\w', texts['src/public_operands.lmx']),
             'Canonical public names remain base names')
     contract = (ROOT / 'PUBLICATION_CONTRACT.md').read_text()
-    require('publication contract follows the logical-axis profile',
-            'rank metadata of a flat matrix is not an' not in contract and
-            'depth 1 invokes vector `*` on corresponding rows' in contract and
-            'a .(2)* b' in contract,
-            'Source contract and publication guide must not retain the superseded flat=one-level rule')
+    require('publication contract follows outer depth and optional presence',
+            'Explicit depth 0 means' in contract and
+            'A .(1)[*] B' in contract and 'slot 1 without demanding it' in contract,
+            'The authored guide retains the source transport and selection contract')
     failed = [check for check in checks if not check['passed']]
     report = {'status': 'FAIL' if failed else 'PASS', 'kind': 'limited_source_and_metadata_checks',
               'checks': len(checks), 'failed': failed,

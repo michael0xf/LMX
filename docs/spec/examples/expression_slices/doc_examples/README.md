@@ -16,4 +16,4 @@ PASS не являются результатом P0, трансляции ил�
 
 Повторная регистрация: `python spec/tools/register_expression_slices_examples.py`
 из docs; проверка без записи — та же команда с `--check`.
-Машиночитаемые ожидания и SHA-256: [отчёт](../../../validation/expression_slices_examples_20261126.json).
+Машиночитаемые ожидания и SHA-256: [отчёт](../../../validation/expression_slices_examples_20261127.json).

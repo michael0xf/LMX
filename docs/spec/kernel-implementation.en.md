@@ -1,5 +1,15 @@
 # LMX kernel implementation specification: graph, namespace, storage, and execution
 
+<a id="interpreter-jit-stages"></a>
+## Shared interpreter operations and the runtime SLJIT stage
+
+Complete the common parser and Expression grouper first. The kernel then completes one program graph, Message/Thread, directed `satisfies`, the Message-local primitive conversion table, the `test` receiver and the migration of every project script to L3. Share target selection, argument reception, physical places, owner/root lifetime, result and exit handling. Keep actor-local data out of shared machine code. Preserve level-specific checks, hidden ABI arguments, calls with a known target, and cleanup on `return`, failure, `finally` and `endturn`. The interpreter visits the chosen arm; a generator emits both control-flow arms without executing user code. Choose a walker before body entry so effects are observed once.
+
+Every build excludes `third_party` until kernel acceptance. Full runtime SLJIT follows that boundary. Its acceptance covers all four interpreter/native call directions, explicit compilation with interpreted build tests before installation, direct known calls, fallback on unsupported targets, and separate measurements of generation time, code size, memory and run time. [Interpreter/JIT design](../LMX_INTERPRETER_JIT.md#kernel-before-jit) · [Implementation sequence](../TENSOR_IMPLEMENTATION_PLAN.md#integration-v3).
+
+
+**Shared implementation requirement, 2026-11-27.** The target has one main LMX parser containing the square subparser, which calls that same main parser for every expression and `{...}` region and resumes at its returned position. After parsing, every Expression consumer calls one shared implementation of semantic grouping. Duplicate parsers, independent binding algorithms and their tables are removed; independent scale adapters do not satisfy this requirement. Backend emission and actual preparation consume the common grouping result. [Architecture contract](EXPRESSION_ALGORITHM.md#single-parser-and-grouper).
+
 **Current extension:** [types, universal sequences, generic patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
 
 This is the implementation target for the standalone Fable acceptance package, reconciled through
@@ -458,6 +468,8 @@ opcode, `LmxOp`, or special code-memory type is introduced. Written Frames, grou
 parent/order/length relationships survive parsing. A path-head call and a path assignment are
 distinguished through the common structural form and consuming role, not a private parser.
 
+**Numeric power clarification, 2026-11-27:** `sys\priority("**") = 131`, with derived RHS minimum `131`; the common grouper admits equal-level power on the right. This value is `max(110, 130) + 1`, strictly above multiplication and the prefix-sign argument threshold. `2 ** 3 ** 2` is `512`, `2 * 3 ** 2` is `18`, and `2 ** 3 * 4` is `32`; existing unary asymmetry and low assignment priority are retained. [Derivation and implementation status](EXPRESSION_ALGORITHM.md#power-priority).
+
 After P0, common expression analysis determines grouping, priorities, and value dependencies in
 the namespace. Supported operators follow C relative precedence/associativity; `**` groups to the
 right and has the accepted asymmetric relation to unary operations. Assignment has low priority
@@ -481,12 +493,14 @@ emission uses this same analysis and may order statically known dependencies dir
 ### 3.3.1. Ordinary methods used as operands
 
 A method's own resolved name is its operator name. Its actual parent DATA must satisfy the
-ordinary structural header with named inputs `left` (reference), `depth` (nonnegative integer), `right` (Array of references),
+ordinary structural header with named inputs `left` (reference), `depth` (optional integer actual; the selected profile defines its meaning), `right` (Array of references),
 `PASS_ARGS_AS_IS` (ready constant int 0 or 1), and `PRIORITY` (ready constant integer). All five
 must exist; checking a template does not add a missing field or copy a template default into the
 candidate. Mode and priority are independent. The minimal header does not impose one result type;
 the method declares its ordinary result and the expression consumer checks it. A procedure
 without a result cannot supply an expression value merely by matching that header.
+The header fields describe the interface; left and depth actuals may be absent.
+Depth absence is retained until the chosen method supplies its own default.
 
 There is no `sys\operand` registration, separate name registry, universal operand fn-signature,
 or different dispatch path. Import, references, shadowing, two-way private, and ordinary admission
@@ -500,7 +514,7 @@ of references to right values in source order. `(1 foo 2 3 4)` has one left and 
 `(foo 1 2 3 4)` omits left and has four right values. The ordinary call contract decides whether
 that omission is allowed. A whole-value container stays one item under its receiving contract; a dense numeric Array is never cast to Array<@>. Prefix application does not shift the first right value into left or add a has-left flag.
 
-Expression is the ordinary Structure graph interpreted with a [structural grouper](LMX_semantics.en.md#expression-structural-grouping): it determines priorities, complete expression units and streams at the current tree level, independently of source spelling. A separate Expression application adapter packages left as one actual/reference bundle and right as an Array of references. `arg0 operand arg1 arg2 arg3` is the general form; a binary contract uses one right item, with no automatic fold or movement of the first right item into an absent left. The receiving contract selects whole-value or current-level sequence consumption. `(a b c) .: (a c b)` therefore has one left bundle and three right values; three sibling RHS groups remain three Structure items. There is no extra conditional unwrapping pass after grouping. The grouper reads the clean graph. In Expression, a graph reference atom to a Structure supplies one Array value when its target fails the operand template check. Translation rejects ambiguous interpretations before effects. Other reached Structures follow the name/actual-parent rule. Reference resolution preserves the actual parent. Whole VALUE/TYPE/DATA material is not automatically reclassified as CODE. `1 + ((2))` is 3; field collectors such as `(copy(Model))` remain containers for zero, one or many fields. `::` and modifiers keep DATA consumption and the common immediate-field reader; they gain no RHS evaluator. P0, ordinary callable W/E and the existing lifetime/effect rules remain intact. See [architecture and acceptance](EXPRESSION_GROUPING.md); execution is **NOT_RUN**.
+Expression is the ordinary Structure graph interpreted with a [structural grouper](LMX_semantics.en.md#expression-structural-grouping): it determines priorities, complete expression units and streams at the current tree level, independently of source spelling. A separate Expression application adapter packages left as one actual/reference bundle and right as an Array of references. `arg0 operand arg1 arg2 arg3` is the general form; a binary contract uses one right item, with no automatic fold or movement of the first right item into an absent left. The receiving contract selects whole-value or current-level sequence consumption. `(a b c) := (a c b)` therefore has one left bundle and three right values; three sibling RHS groups remain three Structure items. There is no extra conditional unwrapping pass after grouping. The grouper reads the clean graph. In Expression, a graph reference atom to a Structure supplies one Array value when its target fails the operand template check. Translation rejects ambiguous interpretations before effects. Other reached Structures follow the name/actual-parent rule. Reference resolution preserves the actual parent. Whole VALUE/TYPE/DATA material is not automatically reclassified as CODE. `1 + ((2))` is 3; field collectors such as `(copy(Model))` remain containers for zero, one or many fields. `::` and modifiers keep DATA consumption and the common immediate-field reader; they gain no RHS evaluator. P0, ordinary callable W/E and the existing lifetime/effect rules remain intact. See [architecture and acceptance](EXPRESSION_GROUPING.md); execution is **NOT_RUN**.
 
 Operand references point to genuine typed values/descriptors, with the TypeRef immediately before
 the value. Untagged native temporaries use the ordinary result/storage bridge when a typed record
@@ -1021,7 +1035,7 @@ original declaration/owner identity; copy and merge deeply copy the used graph a
 corresponding copied owners through their operation map. Every source import/copy/merge receiver remains
 in place; direct source-path reads and serialization expose that written record, not its result.
 
-For [group positional assignment](LMX_semantics.en.md#group-assign), `(a b) .: copy(Pair)` and `(a b) .: (copy(Pair))` consume the same two emitted fields when the source and targets satisfy the contract. The collector is optional for this sequence consumer. The grouper preserves current-level items; application adaptation packages the left PLACE sequence as one actual. Three sibling RHS groups remain three Structure values, not a recursively flattened stream. Obtain and retain all RHS values and check their count before the first target write; RHS names do not reorder targets and previous RHS effects are not rolled back. A function-returned Structure remains one value. Scalar `ptr := (copy(Pair))` still receives one collected Structure.
+For [group positional assignment](LMX_semantics.en.md#group-assign), `(a b) := copy(Pair)` and `(a b) := (copy(Pair))` consume the same two emitted fields when the source and targets satisfy the contract. The collector is optional for this sequence consumer. The grouper preserves current-level items; application adaptation packages the left PLACE sequence as one actual. Three sibling RHS groups remain three Structure values, not a recursively flattened stream. Obtain and retain all RHS values and check their count before the first target write; RHS names do not reorder targets and previous RHS effects are not rolled back. A function-returned Structure remains one value. Scalar `ptr := (copy(Pair))` still receives one collected Structure.
 
 ### 6.5. Explicit compilation and turn boundaries
 
@@ -1363,8 +1377,21 @@ Implement prefix type construction, declaration-head resolution, normalization, 
 The integrated [array operations](ARRAY_EXPRESSIONS.en.md), [ternary/slice rules](TERNARY_AND_SLICES.en.md) and [fuse contract](FUSION.en.md) use the existing graph and admission/PLACE mechanisms. A ternary reaches only its selected branch; a slice retains omitted endpoints separately from -1; component assignment retains RHS values before writes; fuse has an explicit eligible one-output traversal. The implementation must preserve actual Array layout and scalar contracts. A temporary plan for one operation is not a saved namespace or executable program replica. Ordinary runtime effects, roots and compile/endturn remain unchanged.
 
 <a id="operand-depth-entry"></a>
-### Common depth entry
+### Shared depth and index-plan preparation
 
-Operand argument slots are left, depth, right. Prepare depth from the original general expression occurrence once when demanded; name discovery and priority inspection must not evaluate it. A missing left remains absent and right keeps only original logical arguments. Base names are canonical: receiver forms pass named depth; dots belong to expression surface forms, not to a second set of exports. The assignment surface table retains `.:` and `.(expression):` for base `:=`. See [OPERATOR_DEPTH](OPERATOR_DEPTH.en.md).
+The common template retains **left, depth, right**. The transport admits an integer, including negative values; a custom method may interpret it without using Map. The following traversal checks belong to the selected standard Array profile, not universal argument transport. Omitted depth is not replaced
+with zero before profile selection; an explicit expression is obtained once in
+its occurrence context. `FxKernel\operandDepthContext` selects all K axes for depth=0 or the first d axes for positive depth=d in an iterated Array of rank K. It rejects d>K, validates matching frames and establishes the complete result requirement before entering the kernel. Each selected cell reaches the base body without automatic remapping. VALUE uses FxArrayDepth; DATA/TYPE/NAME/RAW/PLACE keep their own consumers. Rank denotes the Array axis count.
 
-The common value adapter delegates all positive-depth traversal to FxArrayDepth and resolves the dependent result requirement before entry. PD01 prepares this operation-local context and retains shape; it neither probes the leaf callable nor runs a second lifting algorithm. RAW/TYPE/DATA/PLACE profiles retain their own consumer rules. The required provider is documented in [kernel requirements](patterns/LMX_Fn_Receivers/KERNEL_REQUIREMENTS.md#pd01); its production implementation is not included in this docs-only archive.
+Ordinary elementwise operations use maximum-depth Map; explicit depth=0 selects the same depth. `[*]`, `[/]` and `[\]` choose whole profiles.
+`[op rules]` uses FxArrayIndexed with kernel, reduce, state and finish described
+by ordinary LMX Structures. Absent axisRules differs from present empty rules.
+No second runtime-name registry or exact-name string parser is introduced.
+
+Pointwise `:=` and slice-broadcast `.:` share snapshot/admission/write through
+FxArrayAssignPrepared, with distinct prepared RHS maps. Minimum fuse accepts
+Scalar/Map with a fresh result; unsupported plans are diagnostics.
+The `[op` subparser is described in [BRACKET_SUBPARSER](BRACKET_SUBPARSER.en.md);
+its production implementation is not part of this documentation archive.
+See [TENSOR_EXPRESSIONS](TENSOR_EXPRESSIONS.md), [traversal depth](OPERATOR_DEPTH.en.md)
+and [provider PD01](patterns/LMX_Fn_Receivers/KERNEL_REQUIREMENTS.md#pd01).

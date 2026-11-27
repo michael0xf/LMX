@@ -266,7 +266,7 @@ including permitted cycles, without an infinite tower of allocations. See
 
 Pointer depth and Array rank are independent arbitrary finite quantities; the language has no fixed limit. A typed reference's indirection level is distinct from prefix `@`, which explicitly obtains a numeric address under the selected level's address contract; ordinary Structure and method references need no prefix `@`. Dereferencing follows the reference or admitted address contract without calling its target. An explicit write through `S\field` or a typed dereference follows the place's general requirement, including references and function pointers. Restrictions on assignment through a bare Structure or function name and on implicit external lookup do not prohibit such explicit writes.
 
-An Array uses the common graph descriptor and its actual element storage type. A Structure is exactly the general reference-array `[]@`; it is not an artificial separate kind. Dense `[]T` stores T directly, while `[]@` stores references to value records. `[]: pending` requires any Array and is distinct from `[]@: pending`. All use one length/capacity mechanism; size requirements constrain admitted values without another storage family. The leftmost prefix is the outermost constructor; a consecutive run of `[]` or `[extent]` specifies axes of one flat Array: `[][][]int: arr` requires rank 3, while `[][3]int` requires rank 2 with second-axis size 3. Independent referenced Arrays use `[]@` or a typed reference composition such as `[]@[]char` for independently stored strings; `[]@int` differs from `@[]int`. The canonical type description records the normalized complete left requirement, including rank and written axis constraints. A single missing extent may be derived from current length when unique; initializer rows do not become hidden shape metadata. Capacity=length needs no secondary descriptor, and a larger reserve needs only its optional capacity entry without changing TypeRef. Neither kind of information is a user Structure field. The header remains `parent/length/storage`. Flat one-dimensional traversal and rank-aware multidimensional operations remain available on the same storage under their receiving contracts. Rank is not inferred from length or a pointer's depth. Operator `depth` uses the retained logical dimensions of this flat storage; it does not require row objects. An ordinary field may reference another Structure, without a separate array-of-arrays entity. For the corresponding fields, `struct\struct2\field` is indexed as `struct[i]\[j]`, and `struct\struct2\field[k]` as `struct[i]\[j]\[k]`; these are forms of the common access path. See [Array storage and rank](ARRAY_STORAGE.en.md). Strings are exact-length `[]char` values without an implied trailing NUL; the C door has its own representation. The current forms and complete type requirements are specified in [the unified type contract](CORE_SEQUENCES_REGEX.en.md#types).
+An Array uses the common graph descriptor and its actual element storage type. A Structure is exactly the general reference-array `[]@`; it is not an artificial separate kind. Dense `[]T` stores T directly, while `[]@` stores references to value records. `[]: pending` requires any Array and is distinct from `[]@: pending`. All use one length/capacity mechanism; size requirements constrain admitted values without another storage family. The leftmost prefix is the outermost constructor; a consecutive run of `[]` or `[extent]` specifies axes of one flat Array: `[][][]int: arr` requires rank 3, while `[][3]int` requires rank 2 with second-axis size 3. Independent referenced Arrays use `[]@` or a typed reference composition such as `[]@[]char` for independently stored strings; `[]@int` differs from `@[]int`. The canonical type description records the normalized complete left requirement, including rank and written axis constraints. A single missing extent may be derived from current length when unique; initializer rows do not become hidden shape metadata. Capacity=length needs no secondary descriptor, and a larger reserve needs only its optional capacity entry without changing TypeRef. Neither kind of information is a user Structure field. The header remains `parent/length/storage`. Flat one-dimensional traversal and rank-aware multidimensional operations remain available on the same storage under their receiving contracts. Rank is not inferred from length or a pointer's depth. Operator depth uses the retained logical dimensions: 0 selects maximum traversal, positive d selects d external axes, and d above the iterated Array rank is rejected. It requires no row objects and adds no automatic second lifting of selected cells. An ordinary field may reference another Structure, without a separate array-of-arrays entity. For the corresponding fields, `struct\struct2\field` is indexed as `struct[i]\[j]`, and `struct\struct2\field[k]` as `struct[i]\[j]\[k]`; these are forms of the common access path. See [Array storage and rank](ARRAY_STORAGE.en.md). Strings are exact-length `[]char` values without an implied trailing NUL; the C door has its own representation. The current forms and complete type requirements are specified in [the unified type contract](CORE_SEQUENCES_REGEX.en.md#types).
 
 An empty Structure is a present value with zero fields. It differs from an absent field, numeric zero, and `void`, which denotes no primitive-cell content. A Frame's argument list is itself a Structure; an anonymous Structure in it remains a distinct value also when it alone occupies the entire list: P0 does not unwrap it, whether it is empty or not (author's decision of 2026-11-10). Thus in the parse tree `f()`, `f:`, and an explicitly closed empty vertical body are one tree with an empty body, `f: ()` and `f(())` are one tree with one field, an empty Structure; `f(a b)` and `f: a b` are one tree with two fields, `f((a b))` and `f: (a b)` one tree with one Structure field. This is said of the tree only; in the clean graph the form lies as it is written, too. What a form does is determined in translation and interpretation -- by the role of the form ([the roles `data` and `code`](#data-code-roles)) and by the kind of the receiver ([two kinds of receivers](#two-kinds-of-receivers)). In a call of a callable and of a receiver that takes its arguments as `code`, the four forms `f: a b`, `f(a b)`, `f: (a b)` and `f((a b))` are one and the same call when reading E is selected: the sole Structure among the arguments is expanded into the chain of its fields, once and only when the call is processed; reading W accepts it as a whole, and the two readings are equal ([choosing the declaration by the call](#declaration-selection), [the whole argument structure](#whole-arguments)). A receiver that takes its arguments as `data` receives exactly what is written; in the role of `data` the forms do not change either, and nothing is unwrapped: `f: (a b)` declares `f` with one anonymous Structure inside it, while `f(a b)` and `f: a b` declare a Structure with the fields `a` and `b` (the author's clarification of 2026-11-18). See [empty bodies](LMX_grammar.en.md#empty-colon).
 
@@ -667,7 +667,7 @@ Holder:
         return: r
 ```
 
-`Holder\anon()` returns 4: the unnamed block executes in that activation. A standalone `()` does nothing. On the left of `.:`, an unnamed Structure is a sequence of places for [elementwise group assignment](#group-assign).
+`Holder\anon()` returns 4: the unnamed block executes in that activation. A standalone `()` does nothing. On the left of `:=`, an unnamed Structure is a sequence of places for [elementwise group assignment](#group-assign).
 
 An assignment updates resolved primitive or reference-variable places. Names of structural declarations are constant bindings and are not assignable variables: `Model := KnownStruct` is invalid when `Model` names a Structure. `@: ptr KnownStruct` declares a reference variable; `ptr := Other` can update it. `Model: KnownStruct` in DATA contains a reference atom without copying or reparenting `KnownStruct`; in CODE it calls `Model` ([colon declares](#colon-declares)).
 
@@ -793,30 +793,35 @@ Repeated declarations remain allowed. Executing a repeated variable receiver ret
 <a id="assignment-inside-expression"></a>
 ### Expressions, assignment and demand
 
-P0 is the only parser. It preserves the written head/tail graph, groups and source order; it does not apply precedence, remove containers, or rewrite `parent` and `length`. After parsing, the common expression mechanism resolves heads, priorities and dependencies in the namespace. A written operator is a receiver head: `(1 + 2 + 3 + 4)` has the corresponding chain of `plus` forms, whereas `(+ 1 2 3 4)` and `(1 + 2 3 4)` contain one variadic application. The ordinary mathematical form `(+ 2 - 3)` yields −1. These readings introduce no operator-specific parser.
+**Shared implementation requirement, 2026-11-27.** The target has one main LMX parser containing the square subparser, which calls that same main parser for every expression and `{...}` region and resumes at its returned position. After parsing, every Expression consumer calls one shared implementation of semantic grouping. Duplicate parsers, independent binding algorithms and their tables are removed; independent scale adapters do not satisfy this requirement. Backend emission and actual preparation consume the common grouping result. [Architecture contract](EXPRESSION_ALGORITHM.md#single-parser-and-grouper).
 
-A dotted operator retains its scalar counterpart's precedence and associativity, including the asymmetric power rule for `.**`. The attached dotted forms belong to the same left/right-attached class as `++`/`--`. See [the complete operation families](ARRAY_EXPRESSIONS.en.md#dotted).
+P0 is the only parser. It preserves the written head/tail graph, groups and source order; it does not apply precedence, remove containers, or rewrite `parent` and `length`. After parsing, the common expression mechanism resolves heads, priorities and dependencies in the namespace. A written operator is a receiver head: `(1 + 2 + 3 + 4)` has the corresponding chain of `plus` forms, whereas `(+ 1 2 3 4)` and `(1 + 2 3 4)` contain one syntactic operand application; the selected method still checks its own arity. Ordinary `+` does not infer a fold from extra right items. The ordinary mathematical form `(+ 2 - 3)` yields −1. These readings introduce no operator-specific parser.
 
-Supported operations have the following relative precedence, strongest first. The scale is shared by built-in and user operands; these rows do not prescribe numeric priority codes.
+An explicitly modified operator retains its base operation's ready precedence, associativity and attached class. Generic `.op` aliases are removed. Whole/indexed square methods use their declared base-family precedence; source delimiters do not evaluate their configuration. See [array expressions](ARRAY_EXPRESSIONS.en.md).
+
+Supported operations have the following relative precedence, strongest first; the directional relation between power and prefix operations is specified separately below. The scale is shared by built-in and user operands. This edition fixes the numeric power priority below without renumbering the other levels.
 
 | Level | Operations | Associativity |
 | --- | --- | --- |
-| Postfix | call, index/slice, field access, postfix `++`, `--`, `.++`, `.--` | left to right |
-| Unary | prefix `+`, `-`, `!`, `~`, `++`, `--`, dotted signs/bitwise/update forms, existing address operations | right to left |
-| Multiplicative | `*`, `/`, `%` and `.*`, `./`, `.%` | left to right |
-| Additive | `+`, `-` and `.+`, `.-` | left to right |
-| Shift | `<<`, `>>` and `.<<`, `.>>` | left to right |
-| Relational | `<`, `<=`, `>`, `>=` and `.<`, `.<=`, `.>`, `.>=` | left to right |
-| Equality | `=`, `!=` and `.=`, `.!=` | left to right |
-| Bitwise AND | `&`, `.&` | left to right |
-| Bitwise XOR | `^`, `.^` | left to right |
-| Bitwise OR | `\|`, `.\|` | left to right |
+| Postfix | call, index/slice, field access, postfix `++`, `--` | left to right |
+| Unary | prefix `+`, `-`, `!`, `~`, `++`, `--`, existing address operations | right to left |
+| Multiplicative | `*`, `/`, `%`; square methods of these families | left to right |
+| Additive | `+`, `-`; square methods of these families | left to right |
+| Shift | `<<`, `>>` | left to right |
+| Relational | `<`, `<=`, `>`, `>=` | left to right |
+| Equality | `=`, `!=` | left to right |
+| Bitwise AND | `&` | left to right |
+| Bitwise XOR | `^` | left to right |
+| Bitwise OR | `\|` | left to right |
 | Logical AND | `&&` | left to right |
 | Logical OR | `\|\|` | left to right |
 | Conditional | `? :` | right to left; only the selected RAW branch is consumed |
-| Assignment | `:=`, `.:` and supported ordinary/dotted compound assignments | right to left |
+| Assignment | `:=`, `.:` and supported compound assignments | right to left |
 
-The special power rule remains: `**` groups right, binds below call/index/field access and above multiplication, binds tighter than unary `+`, `-`, `~` on its left, and admits a unary operand on its right. Thus `-2 ** 2` is −4, `(-2) ** 2` is 4, `2 ** -2` groups as `2 ** (-2)`, and `2 ** 3 ** 2` is 512. Numerical admissibility remains the selected LMX numeric contract. `=` is comparison, corresponding to C `==`; `:=` is assignment. Commas and semicolons keep their structural roles. The conditional `a ? b : c` uses the [lazy RAW-branch contract](TERNARY_AND_SLICES.en.md#conditional); no C comma operator is introduced. The numeric result of `2 ** -2` and its admissible types are determined by the LMX numeric contract; the whole numeric semantics of Python is not carried over automatically. This asymmetric rule cannot be replaced by the single line «power is above all unary operations»; for the other unary operations, which have no such analogue in Python, no invented Python behavior is assigned: the existing LMX relations are kept and shown explicitly in the full implementation table. The existing type conversions and `sizeof` of the machine profile agree with the corresponding relations of the C grammar. The table sets the relative order, not concrete numeric priorities; the basis for the comparison with C is the expression grammar of ISO/IEC 9899:1999 with corrigenda (WG14 N1256) §§6.5.2–6.5.16, and for short-circuiting §§6.5.13–6.5.14.
+<a id="power-priority"></a>
+**Power priority, 2026-11-27.** Standard `**` has `sys\priority("**") = 131`, with a derived right-hand minimum of `131`. Larger numbers bind more strongly. On the existing scale, multiplication has level `110` and prefix `+`/`-` use argument threshold `130`; the least integer strictly above both is `max(110, 130) + 1 = 131`, still below the existing `!` argument threshold `140`. A right-hand minimum equal to the operator's level includes the next equal-priority power, giving `a ** b ** c` → `a ** (b ** c)`. Raising the number while retaining a strict RHS threshold would still group left. The internal binding pair `(131, 131)` expresses the common binding policy; it adds no public operand field and does not encode associativity in a sign or bit of `PRIORITY`. The same level and right grouping apply to `.(depth)**` and `[**]`. Compound `**=` remains at assignment priority. The [derivation, examples and source audit](EXPRESSION_ALGORITHM.md#power-priority) distinguish this normative addition from the inspected selfbuild implementation, which does not yet implement `**`.
+
+Power binds below call/index/field access and above multiplication, binds tighter than unary `+`, `-`, `~` on its left, and admits a unary operand on its right. Thus `-2 ** 2` is −4, `(-2) ** 2` is 4, `2 ** -2` groups as `2 ** (-2)`, and `2 ** 3 ** 2` is 512. Mixed forms give `2 * 3 ** 2` → `2 * (3 ** 2)` = 18 and `2 ** 3 * 4` → `(2 ** 3) * 4` = 32. Numerical admissibility remains the selected LMX numeric contract. `=` is comparison, corresponding to C `==`; `:=` is assignment. Commas and semicolons keep their structural roles. The conditional `a ? b : c` uses the [lazy RAW-branch contract](TERNARY_AND_SLICES.en.md#conditional); no C comma operator is introduced. The numeric result of `2 ** -2` and its admissible types are determined by the LMX numeric contract; the whole numeric semantics of Python is not carried over automatically. This asymmetric rule cannot be replaced by the single line «power is above all unary operations»; existing relations for other unary operations are retained. The existing type conversions and `sizeof` of the machine profile agree with the corresponding relations of the C grammar. Apart from the explicit power clarification, the table records relative order; the basis for the comparison with C is the expression grammar of ISO/IEC 9899:1999 with corrigenda (WG14 N1256) §§6.5.2–6.5.16, and for short-circuiting §§6.5.13–6.5.14.
 
 Before a receiver executes, the values it actually needs are obtained. A needed result can require executing another receiver of lower priority; the producer's own operands retain their written and priority-defined boundaries. This does not raise the producer's priority. An assignment head is tied to the place written immediately to its left: `1 + v := 2 + 3` must not be reparsed as assignment to `1 + v`. Here the first addition needs the result of that assignment; its RHS computes 5, the assignment writes `v = 5`, and the addition returns 6. The prior value of `v` does not replace the result of this occurrence. A mere coincidence of the name with a formal does not establish this binding. `1 + (v := 2 * 3)` gives the same result and the same effect as `1 + v := 2 * 3`; this is a coincidence of two concrete computations, and the form without parentheses gets no new anonymous container in P0. Precedence and the rules of obtaining values change, the basic structural grammar is kept; the permissibility of additional LMX forms that C forbids does not by itself contradict the agreement of results on the common subset.
 
@@ -848,7 +853,7 @@ A declaration *executed inside an expression* retains ordinary declaration/admis
 
 Every receiver is already structurally admitted in Expression. Translation
 routes its parsed occurrence to the existing semantic consumer; ordinary
-receiver and operand forms share one canonical operation and one algorithm, with depth supplied as an input.
+receiver and operand forms share one canonical operation and one algorithm, with an optional depth actual supplied in the middle input.
 VALUE, NAME, TYPE, DATA, BODY/RAW and PLACE roles remain distinct, and void,
 field-stream, control-transfer and suspension results keep their own contracts.
 No eager VALUE conversion or extra callable activation is inserted merely to
@@ -869,19 +874,59 @@ operand_template:
     const: int: PRIORITY
 ```
 
-All five named fields must be present in the candidate's DATA. `left` is the first reference input, `depth` the second input (a nonnegative integer), and `right` the third input (an Array of references). `PASS_ARGS_AS_IS` must give a ready constant integer 0 or 1; `PRIORITY` must give a ready constant integer on the common expression scale before grouping is settled. Missing fields are not supplied by template checking, even if a template writes defaults. Ordinary explicit composition can construct them; `satisfies` only checks the actual result. Ready properties are not replaced by caller locals, and reading them executes no operator body. Cyclic or unavailable properties cannot be resolved by trial execution. A missing `PASS_ARGS_AS_IS` does not mean `0`, and a missing `PRIORITY` receives no implicit level. The mandatory fields do not make every actual mandatory: omission of the left or right actual, defaults, `required` and admissible binding follow the ordinary method contract; the operator form supplies `left/depth/right` and reads `PASS_ARGS_AS_IS` and `PRIORITY` from the chosen description, and the constant fields form no separate category outside DATA. Mode and priority are set independently: no mode is encoded as a special number in the priority field, and the right tail gets no invisible parentheses by being passed through `right` — the common analysis first determines its argument occurrences, then the mode decides whether they are executed before the method is entered.
+All five named fields must be present in the candidate's DATA. `left` is the first reference input, `depth` the second input (an integer when present), and `right` the third input (an Array of references). `PASS_ARGS_AS_IS` must give a ready constant integer 0 or 1; `PRIORITY` must give a ready constant integer on the common expression scale before grouping is settled. Missing fields are not supplied by template checking, even if a template writes defaults. Ordinary explicit composition can construct them; `satisfies` only checks the actual result. Ready properties are not replaced by caller locals, and reading them executes no operator body. Cyclic or unavailable properties cannot be resolved by trial execution. A missing `PASS_ARGS_AS_IS` does not mean `0`, and a missing `PRIORITY` receives no implicit level. The mandatory fields do not make every actual mandatory: omission of the left, depth or right actual, defaults, `required` and admissible binding follow the ordinary method contract; the operator form supplies `left/depth/right` and reads `PASS_ARGS_AS_IS` and `PRIORITY` from the chosen description, and the constant fields form no separate category outside DATA. Mode and priority are set independently: no mode is encoded as a special number in the priority field, and the right tail gets no invisible parentheses by being passed through `right` — the common analysis first determines its argument occurrences, then the mode decides whether they are executed before the method is entered.
 
 The header is an ordinary structural requirement: its names and entire explicitly stated tree matter. It does not constrain the result to `@`. A concrete method declares its normal result, such as `return: int` or `return: @`; a procedure cannot supply an expression value merely because its DATA matches the header. An optional specialized template can add `@int: left`, `[]@int: right`, and `return: int`. Such typed references require actual addressable integers; they do not mean unevaluated code that might later return an integer. The full names of the service operations are `sys\priority`, `sys\name` and `sys\eval`; `PASS_ARGS_AS_IS` and `PRIORITY` are fields of a method's description, not additional receivers. Operands get no special exceptions to the existing rules of ordinary Structures, `private`, DATA/CODE and native admission.
 
 A positional callable-signature requirement remains a different check. For example, `TripleSignature :: (@: first; int: level; []@: rest; return: int)` can admit compatible inputs named `lhs/level/rhs`, but this does not establish the named structural header `left/depth/right/PASS_ARGS_AS_IS/PRIORITY`. A callable reference is not called just because a consumer needs a value: `@: ptr add` stores the method reference, `add(...)` calls it explicitly, `a add b` applies its operator contract, and `\ptr` only dereferences.
 
 
-The common [depth contract](OPERATOR_DEPTH.en.md#abi) defines the new middle input. An undotted occurrence supplies 0, a single-dot occurrence supplies 1, and `.(expression)` supplies one accepted result of the general expression evaluator. Only one dot is admitted; arbitrary depths use brackets, including explicit `.(0)`. Discovery does not evaluate depth. RAW left/right remain RAW, the right Array contains no hidden depth item, and a missing left is not filled from right. Structural receiver forms use the base name and the named input `depth`; the assignment family retains `:=` / `.:` / `.(expression):`. Exact names in backticks are never decoded as depth syntax.
+The common [depth contract](OPERATOR_DEPTH.en.md#abi) defines the middle actual. The only attached form is `.(expression)op`, including `.(expression)[op …]` and `.(expression)myFunc(A; B)`. Plain `.op`, repeated-dot forms and the former square modifier are not aliases. A receiver uses the same canonical method and the ordinary named field `depth`. Exact identifiers are never reparsed as modifiers or configurations.
+
+**In the standard Array profile, explicit depth=0 means maximum depth.** For each iterated Array of rank K, it traverses all K logical axes. Positive depth=d traverses exactly the first d axes and supplies a cell of rank K−d; d>K is an error, not clipping. Rank continues to mean the number of Array axes, independent of operation depth. A scalar actual adds no frame and retains ordinary scalar expansion. A held `$x` is obtained once and passed whole, excluded from the external frame. All iterated frames must agree exactly; axes of length 1 are not implicitly stretched.
+
+The selected base body runs once per selected cell **without a second automatic Array lifting step**. On a matrix, scalar base + receives rows at depth=1 and rejects that use unless an appropriate whole-row body is declared; depth=2 and depth=0 supply scalar elements. A custom body may explicitly consume rows or invoke another ordinary Array operation. This is not implicit recursive traversal of referenced Structures or type/parent metadata.
+
+Absence of the modifier is preserved as absence of the actual, not globally replaced by 0 or a caller's same-named field. The ordinary elementwise arithmetic default is maximum traversal, so default and explicit 0 coincide there. A whole `[op]`, reduction, or DATA/TYPE/RAW consumer retains its own default. Thus `A [*] B` receives whole arguments under its matrix contract, while `A .(0)[*] B` first selects scalar elements and must pass its base body's admission. Absence and 0 remain distinguishable even where their default behavior happens to agree.
+
+Discovery and grouping do not evaluate depth. The normal namespace obtains a present expression once on demand; a skipped conditional/logical branch causes no depth-expression effects. RAW left/right remain RAW, the right Array contains no hidden depth item, and right[0] never fills an absent left. A direct custom-operand call uses its declared left/depth/right, while a wrapped ordinary function keeps its own unrelated same-named formals. A noninteger actual fails the declared integer admission. The standard Map profile separately rejects negative depth, insufficient Array rank and mismatched frames; these are translator/interpreter diagnostics without a new catchable depth exception. A custom method may give a negative integer its own valid meaning.
+
+The common syntax and transport pass the integer; they do not impose the standard Map interpretation on every custom operand. A method may interpret depth as another setting and need no automatic Array lifting. The following custom method returns its control input, so the expression returns -1; its integer is not checked against an Array rank:
+
+```lmx
+DepthProbe:
+    @: left
+    int: depth
+    []@: right
+    const: int: PASS_ARGS_AS_IS 0
+    const: int: PRIORITY sys\priority("+")
+    return: int
+    read:
+        return: depth
+
+Example:
+    return: int
+    run:
+        return: 1 .(-1)DepthProbe\read 2
+```
+
+This is a normative LMX example, not a claim of production parser/runtime execution.
+
+Ordinary `:=` is elementwise assignment, while `.:` is a separate slice-broadcast assignment; neither is a decorated alias of the other. The [square subparser](BRACKET_SUBPARSER.en.md) preserves method/configuration occurrences and returns to the common parser after its own `]`; it does not interpret expressions or search through nested `{...}`. The later grouper consumes only the clean graph.
 
 <a id="expression-structural-grouping"></a>
 ### Expression: structural grouping and operand application
 
 There are exactly two argument-placement forms: `operand arg0 arg1 arg2` with no left atom, and `arg0 operand arg1 arg2` with one left atom. A structural group occupies that same single position. Both forms retain a right tail; no free left sequence or arbitrary operand position is introduced.
+
+<a id="expression-notation"></a>
+#### Local prefix and infix notation
+
+The `prefix` and `infix` operators select a notation for the following Expression region. Parentheses first delimit nested regions. Inside its region a notation operator binds before every ordinary operation, including `**`. The selection lasts to the end of that region. With no separate parentheses the enclosing expression parser supplies the boundary. Leaving the region restores the outer mode.
+
+In `prefix` the operation precedes its arguments. Strict prefix parsing makes no priority comparisons. Groups and uniquely determined application boundaries supply nesting. In `infix` the ordinary LMX grouper applies its precedence, associativity and ordinary prefix applications. Both notations use the same graph, operand selection and `left/depth/right` contract. The mode neither supplies a left argument nor changes the method's formals. An ambiguous role or boundary is refused at translation or during interpreted preparation before effects.
+
+For example, `prefix (op a (sub b c))` passes two right occurrences to `op`, `a` and the result of the `sub` group, with `left` absent. In `prefix (op a (infix (b + c * d)))` multiplication binds before addition inside the `infix` region. Ordinary `a ** b ** c` keeps its right grouping. Test this rule by comparing trees before user operations execute.
 
 Expression uses the ordinary LMX Structure graph and a semantic **grouper**.
 The grouper handles both operator priorities and groups in that graph; it is
@@ -1154,6 +1199,8 @@ The [common grouper](#expression-structural-grouping) determines structured
 left/right plans from the clean graph, resolved graph references, ready priorities and receiving contracts.
 Expression application adaptation supplies one reference/bundle to `left` and
 an Array of references to the current-level right items, in source order.
+The optional depth actual is retained between those inputs; it is not an item
+of right and is not globally defaulted to zero.
 Needed occurrences are evaluated once, preserving their non-VALUE roles.
 `(1 foo 2 3 4)` supplies one left and three right references.
 `(foo 1 2 3 4)` has no written left actual and four right items; it does not
@@ -1165,7 +1212,7 @@ An expression group contributes one expression result; a material sequence is
 read only at the level required by the receiving contract. Application
 adaptation performs no second group-opening pass and does not duplicate left
 in right. `a foo b` cannot be textually replaced by `foo(a; b)`: the operand's
-second input is an Array of references. A binary implementation checks its one
+third input is an Array of references; its second input is the optional depth actual. A binary implementation checks its one
 right item under ordinary admission; the ABI does not imply a fold.
 
 <a id="operand-right-only-opening"></a>
@@ -1178,7 +1225,7 @@ Expression application adapter packages the left sequence as one actual.
 The container needed for that one left slot belongs to application adaptation,
 not to the grouper. P0 remains unchanged.
 
-For example, the analysis of `(a b c) .: (a c b)` has the structural sequences
+For example, the analysis of `(a b c) := (a c b)` has the structural sequences
 `a b c` and `a c b` around the assignment operation. These are plan units, not
 a replacement source string. The application then delivers one left bundle
 `(a b c)` and three right references. Three sibling RHS groups instead remain
@@ -1189,13 +1236,13 @@ elements; application adaptation does not restart that recursion.
 
 | Written expression | Receiving contract / one left actual | Right sequence or whole item |
 | --- | --- | --- |
-| `(a b c) .: (a c b)` | One bundle of three PLACE targets | Three value occurrences `a`, `c`, `b` |
-| `(a b c) .: (f g h) (f g h) (f g h)` | One bundle of three PLACE targets | Three Structure values, one for each written group |
-| `(a b) .: (((x y)))` | One bundle of two PLACE targets | Values `x`, `y` after normalization of the sole group |
-| `(a b) .: (((x y))) z` | One bundle of two PLACE targets | Subgroup `(x y)` and value `z` |
-| `(a b c) .: (x + 1) (y * 2) (z - 3)` | One bundle of three PLACE targets | Three computable units with their inner operations processed |
-| `(a b) .: copy(Pair)` | Two-place sequence consumer | The emitted field stream |
-| `(a b) .: (copy(Pair))` | The same two-place consumer | The same current-level fields, with the collector preserved in P0 |
+| `(a b c) := (a c b)` | One bundle of three PLACE targets | Three value occurrences `a`, `c`, `b` |
+| `(a b c) := (f g h) (f g h) (f g h)` | One bundle of three PLACE targets | Three Structure values, one for each written group |
+| `(a b) := (((x y)))` | One bundle of two PLACE targets | Values `x`, `y` after normalization of the sole group |
+| `(a b) := (((x y))) z` | One bundle of two PLACE targets | Subgroup `(x y)` and value `z` |
+| `(a b c) := (x + 1) (y * 2) (z - 3)` | One bundle of three PLACE targets | Three computable units with their inner operations processed |
+| `(a b) := copy(Pair)` | Two-place sequence consumer | The emitted field stream |
+| `(a b) := (copy(Pair))` | The same two-place consumer | The same current-level fields, with the collector preserved in P0 |
 | `ptr := (copy(Pair))` | One ordinary reference place | One collected Structure |
 | `(1) + (2 * 3)` | The ordinary scalar numeric contract | One complete inner Expression, result 6 |
 | `Name :: A B` | One declaration NAME | Two external DATA occurrences |
@@ -1513,16 +1560,16 @@ failure without returning a partial success.
 The literal `var` in the canonical operation name denotes one argument slot;
 it is not a wildcard for lookup and is independent of x's actual name.
 
-The compound assignments `+=`, `-=`, `*=`, `/=`, `%=`, `<<=`, `>>=`, `&=`, `^=`, `|=`, `**=` and the power operator `**` for expressions join `:=`. A compound assignment writes a place already known with the result of the operation over its current value and the right operand: `a += b` corresponds to `a := (a + b)`, `a -= b` to `a := (a - b)`, `a *= b` to `a := (a * b)`, `a /= b` to `a := (a / b)`, `a %= b` to `a := (a % b)`, `a <<= b` to `a := (a << b)`, `a >>= b` to `a := (a >> b)`, `a &= b` to `a := (a & b)`, `a ^= b` to `a := (a ^ b)`, `a |= b` to `a := (a | b)`, `a **= b` to `a := (a ** b)`; the author's spelling of these equivalences with a C-like `=` is kept in the journal, and in LMX `=` stays a comparison. The left side is a place already known under every rule of `:=`, the `satisfies` admission and the error of an unknown left side included; `:=` keeps its general narrow meaning of writing a known place, method references and the named supply included, and is not narrowed to numbers. `**` is the power; `^` stays the bitwise exclusive or. The associativity and precedence of `**` are Python's (the author's clarification of 2026-11-07): `**` groups to the right -- `a ** b ** c` is `a ** (b ** c)`; it binds tighter than `*`, `/`, `%`, `+` and `-`; a call, an index and a field access form the operand before `**`; on its left `**` binds tighter than the unary `+`, `-`, `~`, on its right a unary operand is admitted -- `-2 ** 2` is `-(2 ** 2)`, `(-2) ** 2` keeps its parentheses, `2 ** -2` is `2 ** (-2)`, `2 * 3 ** 2` is `2 * (3 ** 2)`; the right side of `**=` groups the same way. Grouping and execution are distinct: reached effects follow the common LMX demand and written-order rules, not C's unspecified operand order. A compound assignment evaluates its destination once and obtains the operation result before the write; the equivalences are not textual macros that repeat destination effects. Numeric types and conversions of `**` and `**=`, negative or fractional exponents, `0 ** 0`, numeric failures and atomicity follow the selected numeric and write contracts. The selected numeric contract of integers (the author's decision of 2026-11-22): the interpreter refuses whenever the exact result of an operation does not fit the type -- `2147483647 + 1` over `int` refuses; the machine profile of L2 computes under the machine contract ([L2](L2_spec_en.md)). Numeric operations, the types of expressions and admission are not tied to `int`: the analysis and the types of expressions are the ordinary ones of typed languages, for every numeric type (the same decision). Only power grouping is taken from Python; no other Python numeric policy is implied. Implementation must preserve these results on each supported execution path; this specification is not an implementation report.
+The compound assignments `+=`, `-=`, `*=`, `/=`, `%=`, `<<=`, `>>=`, `&=`, `^=`, `|=`, `**=` and the power operator `**` for expressions join `:=`. A compound assignment writes a place already known with the result of the operation over its current value and the right operand: `a += b` corresponds to `a := (a + b)`, `a -= b` to `a := (a - b)`, `a *= b` to `a := (a * b)`, `a /= b` to `a := (a / b)`, `a %= b` to `a := (a % b)`, `a <<= b` to `a := (a << b)`, `a >>= b` to `a := (a >> b)`, `a &= b` to `a := (a & b)`, `a ^= b` to `a := (a ^ b)`, `a |= b` to `a := (a | b)`, `a **= b` to `a := (a ** b)`; the author's spelling of these equivalences with a C-like `=` is kept in the journal, and in LMX `=` stays a comparison. The left side is a place already known under every rule of `:=`, the `satisfies` admission and the error of an unknown left side included; `:=` keeps its general narrow meaning of writing a known place, method references and the named supply included, and is not narrowed to numbers. `**` is the power; `^` stays the bitwise exclusive or. The [numeric priority clarification](#power-priority) of 2026-11-27 sets `PRIORITY = 131` and derived RHS minimum `131`; `**=` remains at assignment priority. The associativity and relative precedence of `**` retain the author's Python-like clarification of 2026-11-07: `**` groups to the right -- `a ** b ** c` is `a ** (b ** c)`; it binds tighter than `*`, `/`, `%`, `+` and `-`; a call, an index and a field access form the operand before `**`; on its left `**` binds tighter than the unary `+`, `-`, `~`, on its right a unary operand is admitted -- `-2 ** 2` is `-(2 ** 2)`, `(-2) ** 2` keeps its parentheses, `2 ** -2` is `2 ** (-2)`, `2 * 3 ** 2` is `2 * (3 ** 2)`; the right side of `**=` groups the same way. Grouping and execution are distinct: reached effects follow the common LMX demand and written-order rules, not C's unspecified operand order. A compound assignment evaluates its destination once and obtains the operation result before the write; the equivalences are not textual macros that repeat destination effects. Numeric types and conversions of `**` and `**=`, negative or fractional exponents, `0 ** 0`, numeric failures and atomicity follow the selected numeric and write contracts. The selected numeric contract of integers (the author's decision of 2026-11-22): the interpreter refuses whenever the exact result of an operation does not fit the type -- `2147483647 + 1` over `int` refuses; the machine profile of L2 computes under the machine contract ([L2](L2_spec_en.md)). Numeric operations, the types of expressions and admission are not tied to `int`: the analysis and the types of expressions are the ordinary ones of typed languages, for every numeric type (the same decision). Only power grouping is taken from Python; no other Python numeric policy is implied. Implementation must preserve these results on each supported execution path; this specification is not an implementation report.
 
 
 <a id="group-assign"></a>
 #### Group positional assignment
 
-Use `(a b c) .: f()` to assign a call result to a group of places.
-The operand `.:` selects depth 1 of `:=`. Its left side may be an unnamed
+Use `(a b c) := f()` to assign a call result to a group of places.
+The ordinary operand `:=` assigns corresponding elements. Its left side may be an unnamed
 Structure of at least one PLACE:
-`(a b c) .: (c a b)` assigns by position. The [common grouper and application
+`(a b c) := (c a b)` assigns by position. The [common grouper and application
 adapter](#expression-structural-grouping) expose the current-level RHS sequence
 and deliver the whole left PLACE sequence as **one** operand actual.
 The grouper does not build that left ABI bundle and P0 does not lose the
@@ -1539,17 +1586,17 @@ preserved; an explicit path does not make an undeclared bare name visible.
 
 | Source | Prepared values before writes |
 | --- | --- |
-| `(a b c) .: (a c b)` | Three snapshot values; swaps `b` and `c` |
-| `(a b c) .: (f g h) (f g h) (f g h)` | Three Structure values, not nine fields |
-| `(a b) .: copy(Pair)` | The two emitted fields of `Pair` |
-| `(a b) .: (copy(Pair))` | The same two fields through the explicit collector |
-| `(a b) .: (((x y)))` | Values `x`, `y` for two targets |
-| `(a b c) .: (((x y)))` | Two values for three targets; refusal before the first write |
-| `(a b c) .: f()` | One returned Array value reaches the method intact; `.:` consumes its immediate elements |
+| `(a b c) := (a c b)` | Three snapshot values; swaps `b` and `c` |
+| `(a b c) := (f g h) (f g h) (f g h)` | Three Structure values, not nine fields |
+| `(a b) := copy(Pair)` | The two emitted fields of `Pair` |
+| `(a b) := (copy(Pair))` | The same two fields through the explicit collector |
+| `(a b) := (((x y)))` | Values `x`, `y` for two targets |
+| `(a b c) := (((x y)))` | Two values for three targets; refusal before the first write |
+| `(a b c) := f()` | One returned Array value reaches the method intact; `:=` consumes its corresponding elements |
 
 The two `copy` forms are equivalent for this sequence-consuming assignment
 when `Pair` supplies the two admitted fields. The outer collector is optional;
-the former prohibition of bare `(a b) .: copy(Pair)` and the former requirement
+the former prohibition of bare `(a b) := copy(Pair)` and the former requirement
 that every group assignment have exactly one written RHS group are superseded
 by the author's clarification of 2026-11-24. Several current-level RHS items
 are allowed. Their groups are processed recursively: single-unit wrappers
@@ -1561,14 +1608,18 @@ collected Structure. Bare `ptr := copy(Pair)` remains a field stream and follows
 that place's actual receiving contract; it is not silently boxed as one object.
 `ptr := (copy(()))` supplies one present empty Structure, not an absent actual.
 
-In `(c b d a) .: (a b c d)`, starting with a=1, b=2, c=3, d=4, the final values
+In `(c b d a) := (a b c d)`, starting with a=1, b=2, c=3, d=4, the final values
 are c=1, b=2, d=3, a=4. Unknown target names and names of nonassignable Structures
 or functions remain errors. The earlier colon spelling of this operation is
 historical: a grouped head before `:` follows the [head grammar](LMX_grammar.en.md#structure)
 and does not acquire assignment semantics. The empty head `()` retains its
 separate existing meaning; this contract requires at least one PLACE.
 
-The same `.:` consumer accepts an ordinary Array or a slice PLACE. Its sole RHS Array supplies its immediate elements; several sibling RHS groups remain several values. Shape and target admission are checked after the RHS snapshot and before the first store. A scalar RHS is expanded under the [elementwise assignment contract](ARRAY_EXPRESSIONS.en.md#assignment). The explicit `target .: fuse(expression)` form has a separate [streamed-write contract](FUSION.en.md): it admits each computed cell immediately before that cell's write and may retain an already written prefix after a scalar failure. `.=` is elementwise equality and never writes.
+The same `:=` consumer accepts an ordinary Array or a slice PLACE. A sole Array RHS is admitted against the exact destination shape; several sibling RHS groups remain several values. A scalar RHS may fill the selected places, but a one-element Array is not a scalar. The destination shape and length are preserved. Shape and target admission are checked after obtaining the required RHS and before the first store; overlapping sources retain pre-write values.
+
+`.:` is a distinct **slice assignment with broadcasting** to the fixed selected shape. RHS axes align on the right; each must have the target extent or extent 1, and missing leading axes repeat. For a `(2,3)` matrix, `matrix[:][:] .: row` admits a length-3 row, while `matrix[:][:] := row` rejects its different shape. Both methods share coordinate mapping and the ordinary store algorithm. [Full assignment contract](TENSOR_EXPRESSIONS.md#assignment-contract).
+
+In the required initial `fuse` profile, `target := fuse(expression)` or `slice .: fuse(expression)` obtains the complete fresh result before the ordinary assignment. A streamed or in-place store requires separately declared executor support; it is not silently enabled and does not weaken preflight failure guarantees. Ordinary `=` is elementwise equality and never writes.
 
 <a id="qualification"></a>
 ## 10. const, immutable and independent
@@ -2190,7 +2241,7 @@ The `h(Arg)` case does not mean E requires multiple inputs. Conversely `h((5))` 
 For a one-input receiver such as `length`, `parent`, `return`, or a suitable `sys` query, a Structure is passed whole only when W is the uniquely admitted reading. A one-field Structure can also fit E and cause ambiguity. The one DATA template of the expression `Name :: DATA` does not enter this ordinary-call CODE selection algorithm; its left identifier is consumed as the declaration name. Arity of `copy`, `merge` and `import` is checked on the admitted **input sources**, never on the number of fields they output.
 
 <a id="structure-result"></a>
-A call's result may be a Structure with several fields, described by a nested return block in its DATA, for example return with `int: x`, `int: y`, and `int: z`. Return describes no shared mutable result cell. A Structure returned from a function is one value. The expression grouper does not splice that value into the surrounding stream. An elementwise consumer such as `.:` may consume the immediate elements of that one Array under its own [receiving contract](#group-assign); ordinary `:=` stores the value as a whole. Result-expression construction and ordinary receiving places follow their existing contract; transfer by return itself neither copies a returned reference nor creates a second container. A return tail `return: 1 2 3` supplies the described result fields in order. No separate `fm` receiver is introduced. An explicitly grouped copy result uses `return: (copy(A))` when one Structure is required.
+A call's result may be a Structure with several fields, described by a nested return block in its DATA, for example return with `int: x`, `int: y`, and `int: z`. Return describes no shared mutable result cell. A Structure returned from a function is one value. The expression grouper does not splice that value into the surrounding stream. The ordinary elementwise `:=` may consume the corresponding elements of that one Array under its [receiving contract](#group-assign). A selected scalar reference place still stores one whole reference value; the destination contract determines this distinction. Result-expression construction and ordinary receiving places follow their existing contract; transfer by return itself neither copies a returned reference nor creates a second container. A return tail `return: 1 2 3` supplies the described result fields in order. No separate `fm` receiver is introduced. An explicitly grouped copy result uses `return: (copy(A))` when one Structure is required.
 
 The shorthand with the callable's name to the left of `:=`, such as `square := x * x` inside `square`, is rejected: nothing is assigned to the name of a callable -- the names of Structures are not assigned ([the roles `data` and `code`](#data-code-roles)). The former condition of its admissibility -- the receiving `fn` defines a same-named local result cell -- is never fulfilled under the norm of 2026-11-19: there is no executable `fn`, and the `return` field in data describes the result and is not a cell named as the callable (a consequence of the norm, the executor's reading). Structural closing with `end: f` adds no implicit value return; the result is passed by explicit `return: value`.
 
@@ -3000,12 +3051,16 @@ An Array copy has separate backing; passing a reference does not itself create i
 <a id="array-expression-revision"></a>
 ### Array expressions, conditional expressions and slices
 
-The [array contract](ARRAY_EXPRESSIONS.en.md) defines ordinary matrix `a * b + e`, component arithmetic, `.=` comparison, `.:` assignment and common implementations. The [conditional/slice contract](TERNARY_AND_SLICES.en.md) defines lazy `a ? b : c` and `source[start:stop:step]`, including `[::-1]`. [fuse](FUSION.en.md) consumes the original expression as RAW and produces one eligible output traversal. All use the same live graph, roles and normal scalar contracts.
+The [array contract](ARRAY_EXPRESSIONS.en.md) defines ordinary elementwise `a * b + e`, comparison `=`, assignment `:=` and the distinct slice-broadcast `.:`. Matrix multiplication is explicitly `a [*] b`; general square methods and axis rules are specified in [TENSOR_EXPRESSIONS](TENSOR_EXPRESSIONS.md). The [conditional/slice contract](TERNARY_AND_SLICES.en.md) defines lazy `a ? b : c` and `source[start:stop:step]`, including `[::-1]`. [fuse](FUSION.en.md) consumes RAW and initially guarantees only supported Scalar/Map plans with a fresh result; other plan classes require declared support. All use the same live graph and ordinary receiving roles.
 
 <a id="array-operations"></a>
 ## 18. Array operations
 
-Array presence among the consumed actual values selects the applicable array/matrix profile. A Structure is the same freely typed Array, []@, and is not excluded. Ordinary `*` now performs the admitted vector/matrix product (or scalar scaling); `.*` applies the base operation at logical depth 1. For a flat rank-2 Array it operates on logical rows; scalar coordinate multiplication is `.(2)*`. The [common depth rule](OPERATOR_DEPTH.en.md) uses retained dimensions without allocating row objects. Equal-shape addition/subtraction and scalar expansion preserve operand order. Dotted arithmetic uses the selected scalar operations, not a fixed int/double implementation. `.=` is elementwise equality; `.:` is elementwise assignment, including `(a b c) .: (b c a)`. Shape comes from the existing description, never from pointer depth, total length alone, or nested-row probing. The full family, result-storage rules, generic LMX kernels and matrix examples are in [array expressions](ARRAY_EXPRESSIONS.en.md). [fuse](FUSION.en.md) requests one eligible component traversal; it does not turn matrix contraction into an elementwise operation.
+Array presence among consumed actual values selects an admitted Array contract. Structure is exactly the general Array `[]@` and participates in this mechanism with the actual types of its elements. Ordinary `+`, `-`, `*`, `/`, power and comparisons are elementwise; ordinary `*` does not silently become a matrix product. Whole `[op]` and explicit indexed `[op rules]` have the contracts in [TENSOR_EXPRESSIONS](TENSOR_EXPRESSIONS.md#indexed-family). An absent axisRules list keeps the method's default; present `()` is an explicit empty indexed list. Options alone do not create that list.
+
+`A [*] B` performs the declared matrix product; `A [* ()] B` forms an outer product. Binary indexed `i:j` combines a pair kernel with a reducer; only `*` defaults to addition. `[+ axis:]` sums and `[* axis:]` multiplies. Whole `[/]`/`[\]` solve their declared equations; explicit indexed division is a separate declared method profile. Shape comes from the existing type/access description, not pointer depth, total length alone or nested-row probing. `:=` is elementwise assignment and `.:` explicitly broadcasts into a slice. No generic dotted `.op` family is retained.
+
+A standalone View is an ordinary Array whose system parent supplies its instance source/access context; this is distinct from immutable shared typeof metadata. A copied VALUE slice keeps its current copying contract. View/source, axis mapping and numerical options are ordinary Structures and method references, not new permanent fields of every Array. The detailed retention, access and validation contracts are in [geometry and parent](TENSOR_EXPRESSIONS.md#geometry-and-parent).
 
 `reduce` and inclusive/exclusive `scan` retain their explicitly selected numeric contracts. The ordinary `map`, `filter`, `foldl`, `scanl`, `zip`, `zipWith`, `bind`, `traverse`, `groupBy`, and `transpose` receivers now accept dense Arrays and Structures through one universal @ access path. Their callbacks run sequentially, left to right, in one Message, preserving effects, defaults, and failures. Pure arithmetic/numeric profiles may optimize only while preserving their own observables. `scanl` includes the seed and all accumulated values; it differs from the inclusive numeric scan example.
 
@@ -3093,7 +3148,7 @@ An ordinary `f(args)` source is a CODE call whenever `merge` consumes it and mus
 | Initialize a reference with one result | `@: result (merge(A B))` |
 | Assign one result to an existing reference variable | `result := (copy(A))` |
 | Return one copied Structure | `return: (copy(A))` under return's ordinary admission |
-| Consume two fields positionally | `(a b) .: (copy(Pair))` |
+| Consume two fields positionally | `(a b) := (copy(Pair))` |
 
 Without grouping, `result := copy(A)` still has a stream RHS. Its validity follows the ordinary assignment consumer; it is not automatically the old one-container assignment and is not universally a syntax error. `result` here must be an assignable reference variable, not the constant name of a Structure declaration.
 
@@ -3161,7 +3216,7 @@ These are the verifiable differences of the model. For the CODE cases the source
 | P03 | `f(arg0 := (copy(A)))` | The whole Structure is passed to the named formal without E |
 | P04 | `copy(Empty)` / `(copy(Empty))` | An empty stream differs from one empty structural result |
 | P05 | `struct := (copy(A))` | One structural value is assigned to a variable that admits it |
-| S01 | `(c b d a) .: (a b c d)` | All right values are read before the writes; the correspondence is positional |
+| S01 | `(c b d a) := (a b c d)` | All right values are read before the writes; the correspondence is positional |
 | S02 | A wrong number of values in a group assignment | Refusal before the first write into the left places |
 | C01 | Two fields of one operation refer to one mutable node | In the copy they refer to one corresponding copy |
 | C02 | A source contains a cycle | The cycle is kept; no infinite copying and no third instances |
@@ -4254,7 +4309,7 @@ errors, not a negative predicate result. See the [unified Pattern contract](CORE
 
 ### Construction, source rules and verification
 
-Expression is the ordinary Structure graph interpreted with a [structural grouper](#expression-structural-grouping): it determines priorities, complete expression units and streams at the current tree level, independently of source spelling. A separate Expression application adapter packages left as one actual/reference bundle and right as an Array of references. `arg0 operand arg1 arg2 arg3` is the general form; a binary contract uses one right item, with no automatic fold or movement of the first right item into an absent left. The receiving contract selects whole-value or current-level sequence consumption. `(a b c) .: (a c b)` therefore has one left bundle and three right values; three sibling material RHS groups remain three subgroup items. Recursive in-memory normalization already belongs to the grouper; the application adapter adds no conditional unwrapping pass. The grouper reads the clean graph. In Expression, a graph reference atom to a Structure supplies one Array value when its target fails the operand template check. Translation rejects ambiguous interpretations before effects. Other reached Structures follow the name/actual-parent rule. Reference resolution preserves the actual parent. Whole VALUE/TYPE/DATA material is not automatically reclassified as CODE. `1 + ((2))` is 3; field collectors such as `(copy(Model))` remain containers for zero, one or many fields. `::` and modifiers keep DATA consumption and the common immediate-field reader; they gain no RHS evaluator. P0, ordinary callable W/E and the existing lifetime/effect rules remain intact. See [architecture and acceptance](EXPRESSION_GROUPING.md); execution is **NOT_RUN**.
+Expression is the ordinary Structure graph interpreted with a [structural grouper](#expression-structural-grouping): it determines priorities, complete expression units and streams at the current tree level, independently of source spelling. A separate Expression application adapter packages left as one actual/reference bundle and right as an Array of references. `arg0 operand arg1 arg2 arg3` is the general form; a binary contract uses one right item, with no automatic fold or movement of the first right item into an absent left. The receiving contract selects whole-value or current-level sequence consumption. `(a b c) := (a c b)` therefore has one left bundle and three right values; three sibling material RHS groups remain three subgroup items. Recursive in-memory normalization already belongs to the grouper; the application adapter adds no conditional unwrapping pass. The grouper reads the clean graph. In Expression, a graph reference atom to a Structure supplies one Array value when its target fails the operand template check. Translation rejects ambiguous interpretations before effects. Other reached Structures follow the name/actual-parent rule. Reference resolution preserves the actual parent. Whole VALUE/TYPE/DATA material is not automatically reclassified as CODE. `1 + ((2))` is 3; field collectors such as `(copy(Model))` remain containers for zero, one or many fields. `::` and modifiers keep DATA consumption and the common immediate-field reader; they gain no RHS evaluator. P0, ordinary callable W/E and the existing lifetime/effect rules remain intact. See [architecture and acceptance](EXPRESSION_GROUPING.md); execution is **NOT_RUN**.
 
 Capture and generated source keep actual parents, private state and the normal
 lifetime rules. Code generation must respect blank-line root termination and
@@ -4590,7 +4645,7 @@ result.
 
 The actual parent defines DATA and `private` acts in both directions of binding;
 direct indexing of a Structure keeps the ordinary restrictions of access, graph
-changes and lifetime. For elementwise assignment, `(a b c) .: producer()` lets `.:` consume the immediate elements of the returned Array without an extra `copy` or temporary. The grouper still retains the returned Array as one VALUE. An explicit `copy(result)` remains available when its copy/field-stream semantics are wanted. The LMX text generator respects blank-line reset of levels 1 and above to level 0; it emits cutters only where the boundary otherwise requires them, never a redundant `---` immediately before that reset.
+changes and lifetime. For elementwise assignment, `(a b c) := producer()` lets `:=` consume the corresponding elements of the returned Array without an extra `copy` or temporary. The grouper still retains the returned Array as one VALUE. An explicit `copy(result)` remains available when its copy/field-stream semantics are wanted. The LMX text generator respects blank-line reset of levels 1 and above to level 0; it emits cutters only where the boundary otherwise requires them, never a redundant `---` immediately before that reset.
 
 <a id="receiver-name-sources"></a>
 ### Sources of the names

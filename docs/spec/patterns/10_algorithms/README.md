@@ -27,7 +27,7 @@
 
 ```lmx
 AlgorithmArray:
-    int: arrayType
+    @: arrayType
     int: size
     @: value
     return: @

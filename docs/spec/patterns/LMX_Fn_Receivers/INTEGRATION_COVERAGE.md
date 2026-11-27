@@ -1,6 +1,6 @@
 # Canonical library integration coverage
 
-The current package publishes **212 canonical operation names in 224 semantic
+The current package publishes **215 canonical operation names in 227 semantic
 variants**. The [migration inventory](CANONICAL_MIGRATION.json) accounts for all
 212 input exports, with the exact input catalog SHA-256. Renamed exports are
 not retained as callable aliases. `pipe` denotes immediate value application;
@@ -40,8 +40,8 @@ graph data. It does not by itself prove those production hooks are connected.
 - All seven addition manifests point to existing canonical variants and contain
   refreshed implementation hashes. Shared definitions remain in their source
   files and are assembled once.
-- [LMX_Receivers.lmx](LMX_Receivers.lmx) contains 48 source/fixture parts. The
-  package retains the existing 19 explicitly named kernel provider interfaces.
+- [LMX_Receivers.lmx](LMX_Receivers.lmx) contains 52 source/fixture parts. The
+  package retains the 20 explicitly named kernel provider interfaces.
 
 ## Verification and required runtime observations
 
@@ -49,14 +49,15 @@ graph data. It does not by itself prove those production hooks are connected.
 variant coverage, two forms, unique public projections, source existence,
 balanced literals/brackets, indentation/cutters, qualified root coverage,
 documented external provider identities and exact assembly equality. These
-checks cover 610 active Fx/Rx root definitions and 221 prepared assertions.
+checks cover 637 active Fx/Rx root definitions and 221 prepared assertions.
 They also reject undocumented system-template imports and missing explicit
 priorities on the shared prepared-operand fragment's consumers.
 
-`tools/sync_effects.py --check` resolves **390 recorded contracts, including 369
+`tools/sync_effects.py --check` resolves **410 recorded contracts, including 389
 explicit declarations and 20 shared lists**, without changing their authored
-form. [The explicit declaration change record](tests/effect_contract_changes.json)
-describes the integration changes. This is neither an effect inference engine
+form. [The earlier explicit declaration change record](tests/effect_contract_changes.json)
+and [the current tensor source revision](tests/tensor_effect_revision_20261127.json)
+describe the integration changes. This is neither an effect inference engine
 nor proof of all dynamic call/catch paths.
 
 `tools/check_standard_objects.py` passes its 44 source/hash/metadata checks.
@@ -66,8 +67,8 @@ are not parser failures or runtime results.
 
 The permanent original core matrix retains **181 cases** (58 type, 82 sequence,
 41 Pattern). [The generic matrix](tests/generic_operations_acceptance.json)
-adds **295 observations**, including one ordinary/operand equivalence obligation
-for every one of the 224 variants. Representative LMX source fixtures live in
+adds **327 observations**, including one ordinary/operand equivalence obligation
+for every one of the 227 variants. Representative LMX source fixtures live in
 [generic_operations.lmx](tests/generic_operations.lmx). All four interpreter/native
 execution modes remain **NOT_RUN**: no LMX parser/compiler/runtime executable
 was included in this package.

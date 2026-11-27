@@ -154,8 +154,8 @@ FxNone:
 - `FxSeqIndex` — [patterns/LMX_Fn_Receivers/src/sequences.lmx](../../../LMX_Fn_Receivers/src/sequences.lmx), SHA-256 `22227604f0bf6fc90aff292e178e982ca54056678eea94ef212ee58ca841b1dd`.
 - `FxRecordOperands` — [patterns/LMX_Fn_Receivers/src/generic_functions.lmx](../../../LMX_Fn_Receivers/src/generic_functions.lmx), SHA-256 `bc9eea7b1ed13fbf19ba9dab65a8d66ba156fb32509a24c21eacc0144df7a51a`.
 - `FxMaybe` — [patterns/LMX_Fn_Receivers/src/containers.lmx](../../../LMX_Fn_Receivers/src/containers.lmx), SHA-256 `664720047844572e08d51e3c2c789c38ae145175e1ebefa63cc034bdecf2f2b5`.
-- `FxSome` — [patterns/LMX_Fn_Receivers/src/containers.lmx](../../../LMX_Fn_Receivers/src/containers.lmx), SHA-256 `fb78deb916d609a09a4dbefa2e8207df6d8ffca340107df945c3a7feacc63b24`.
-- `FxNone` — [patterns/LMX_Fn_Receivers/src/containers.lmx](../../../LMX_Fn_Receivers/src/containers.lmx), SHA-256 `c93c036c8fbbde7bfa342be789407c605f3e7978914b1fc099b949d094e31065`.
+- `FxSome` — [patterns/LMX_Fn_Receivers/src/containers.lmx](../../../LMX_Fn_Receivers/src/containers.lmx), SHA-256 `84bc6fe73bd29e188ba084f94cf685602a130e0a169f3112991d428b85133c9d`.
+- `FxNone` — [patterns/LMX_Fn_Receivers/src/containers.lmx](../../../LMX_Fn_Receivers/src/containers.lmx), SHA-256 `db7c7b45b474d620f5b8e32ff269e9cf7ff095fba9849bec92af3d18ef09a3cd`.
 
 ## Первичные источники Common Lisp
 

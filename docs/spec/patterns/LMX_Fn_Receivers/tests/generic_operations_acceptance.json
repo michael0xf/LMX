@@ -797,7 +797,7 @@
     {
       "id": "DEPTH001",
       "scenario": "three service inputs and original user arity",
-      "expected": "The operand receives left/depth/right in that order; the wrapped ordinary source receives only logical arguments, including its own user field named depth when declared",
+      "expected": "left/depth/right; optional depth belongs to this wrapper occurrence, not the ordinary source logical arguments",
       "modes": {
         "interpreter_interpreter": "NOT_RUN",
         "interpreter_native": "NOT_RUN",
@@ -807,8 +807,8 @@
     },
     {
       "id": "DEPTH002",
-      "scenario": "op, .op and .(expression)op",
-      "expected": "One base operation, depths 0/1/evaluated n; .(0) equals op; repeated leading dots are not depth syntax; .( always starts an operator/function depth modifier and is never a decimal point; Array indices and [](N)T/@(N)T type forms retain their own syntax",
+      "scenario": "absent depth and an outer dynamic depth field",
+      "expected": "Absence keeps the ordinary method contract and does not read slot 1 or autofill from a same-named outer field",
       "modes": {
         "interpreter_interpreter": "NOT_RUN",
         "interpreter_native": "NOT_RUN",
@@ -818,8 +818,8 @@
     },
     {
       "id": "DEPTH003",
-      "scenario": "effectful or unused depth expression",
-      "expected": "Ordinary P0/Expression semantics; evaluate once on the reached receiver demand, never while grouping or in a skipped RAW branch",
+      "scenario": "explicit depth zero",
+      "expected": "Supplied slot 1 is read once; zero selects maximum logical-axis traversal, never whole-argument invocation",
       "modes": {
         "interpreter_interpreter": "NOT_RUN",
         "interpreter_native": "NOT_RUN",
@@ -829,8 +829,8 @@
     },
     {
       "id": "DEPTH004",
-      "scenario": "negative or non-int depth",
-      "expected": "Translator/interpreter profile-admission diagnostic before any leaf operation or destination write; no new LMX exception, coercion or truncation",
+      "scenario": "op and .(expression)op",
+      "expected": "Only absent or explicit modifier; .op/repeated dots are removed; .( is never a decimal point",
       "modes": {
         "interpreter_interpreter": "NOT_RUN",
         "interpreter_native": "NOT_RUN",
@@ -840,7 +840,40 @@
     },
     {
       "id": "DEPTH005",
-      "scenario": "flat shape (2 2), depth 0/1/2 multiplication",
+      "scenario": "effectful or skipped depth expression",
+      "expected": "Demand once in its original context; no evaluation during grouping or a skipped RAW branch",
+      "modes": {
+        "interpreter_interpreter": "NOT_RUN",
+        "interpreter_native": "NOT_RUN",
+        "native_interpreter": "NOT_RUN",
+        "native_native": "NOT_RUN"
+      }
+    },
+    {
+      "id": "DEPTH006",
+      "scenario": "non-int transport or negative standard Map depth",
+      "expected": "Non-int violates the shared int formal; negative is rejected by standard Map, not by generic transport; no truncation, synthetic exception or extra throws",
+      "modes": {
+        "interpreter_interpreter": "NOT_RUN",
+        "interpreter_native": "NOT_RUN",
+        "native_interpreter": "NOT_RUN",
+        "native_native": "NOT_RUN"
+      }
+    },
+    {
+      "id": "DEPTH007",
+      "scenario": "custom depth meaning",
+      "expected": "Direct custom method receives the int actual, including a negative integer if its own contract permits; no automatic PD01/Map, zero reinterpretation or Array-rank check",
+      "modes": {
+        "interpreter_interpreter": "NOT_RUN",
+        "interpreter_native": "NOT_RUN",
+        "native_interpreter": "NOT_RUN",
+        "native_native": "NOT_RUN"
+      }
+    },
+    {
+      "id": "DEPTH008",
+      "scenario": "flat shape (2 2), ordinary arithmetic and explicit depth",
       "expected": {
         "inputs": {
           "A": {
@@ -868,31 +901,7 @@
             ]
           }
         },
-        "depth0": {
-          "profile": "matrix multiplication",
-          "shape": [
-            2,
-            2
-          ],
-          "values": [
-            19,
-            22,
-            43,
-            50
-          ]
-        },
-        "depth1": {
-          "profile": "corresponding row-vector dot products",
-          "shape": [
-            2
-          ],
-          "values": [
-            17,
-            53
-          ]
-        },
-        "depth2": {
-          "profile": "scalar componentwise products",
+        "plain_and_depth_0_or_2_times": {
           "shape": [
             2,
             2
@@ -904,7 +913,29 @@
             32
           ]
         },
-        "storage": "One flat Array and logical dimension metadata; no allocated row Arrays or separate array-of-arrays kind"
+        "depth1_times": "Pass row cells to base; scalar-only numeric * rejects them unless a compatible row base contract is declared; never implicitly remap",
+        "plain_matmul": {
+          "shape": [
+            2,
+            2
+          ],
+          "values": [
+            19,
+            22,
+            43,
+            50
+          ]
+        },
+        "depth1_matmul": {
+          "shape": [
+            2
+          ],
+          "values": [
+            17,
+            53
+          ]
+        },
+        "storage": "Flat backing with logical axes; no row-storage hierarchy"
       },
       "modes": {
         "interpreter_interpreter": "NOT_RUN",
@@ -914,42 +945,9 @@
       }
     },
     {
-      "id": "DEPTH006",
-      "scenario": "logical axes and original scalar fixed point",
-      "expected": "Each step consumes the next outer axis from the ordinary shape descriptor. Only original scalar actuals broadcast; incompatible selected dimensions or exhausted Array rank diagnose before a leaf or write. All-original-scalar inputs reach a fixed point without synthetic dimensions",
-      "modes": {
-        "interpreter_interpreter": "NOT_RUN",
-        "interpreter_native": "NOT_RUN",
-        "native_interpreter": "NOT_RUN",
-        "native_native": "NOT_RUN"
-      }
-    },
-    {
-      "id": "DEPTH007",
-      "scenario": "Structure []@ and explicit referenced indexing",
-      "expected": "struct[i] selects a reference; struct[i]\\[j] indexes its target under the ordinary reference and Array contracts. This does not introduce an array-of-arrays entity or an alternative definition of axis depth",
-      "modes": {
-        "interpreter_interpreter": "NOT_RUN",
-        "interpreter_native": "NOT_RUN",
-        "native_interpreter": "NOT_RUN",
-        "native_native": "NOT_RUN"
-      }
-    },
-    {
-      "id": "DEPTH008",
-      "scenario": "exact value result at runtime-selected depth",
-      "expected": "PD01 derives the complete actual result requirement from depth and admitted shape; never promise scalar R for an Array result or erase all public returns to @",
-      "modes": {
-        "interpreter_interpreter": "NOT_RUN",
-        "interpreter_native": "NOT_RUN",
-        "native_interpreter": "NOT_RUN",
-        "native_native": "NOT_RUN"
-      }
-    },
-    {
       "id": "DEPTH009",
-      "scenario": "empty lifted Array and void source",
-      "expected": "Empty result type comes from the full contract without a probe call; void performs reached effects without Array<void> allocation",
+      "scenario": "positive depth above Array rank",
+      "expected": "Reject before a base call or destination write; scalar/held actuals do not add axes",
       "modes": {
         "interpreter_interpreter": "NOT_RUN",
         "interpreter_native": "NOT_RUN",
@@ -959,8 +957,8 @@
     },
     {
       "id": "DEPTH010",
-      "scenario": "whole TYPE/RAW/PLACE/Maybe/Pattern profile",
-      "expected": "Preserve the receiver role and declared depth policy; an unsupported positive depth is a translator/interpreter diagnostic, never a synthetic throw or an eager generic graph traversal",
+      "scenario": "no second automatic Map",
+      "expected": "After outer traversal call the selected base directly; unsupported cells diagnose, while explicit nested operations retain their ordinary contracts",
       "modes": {
         "interpreter_interpreter": "NOT_RUN",
         "interpreter_native": "NOT_RUN",
@@ -970,8 +968,8 @@
     },
     {
       "id": "DEPTH011",
-      "scenario": "prefix absence and empty right",
-      "expected": "Keep missing left distinct from a present value and from an empty right Array; do not move right[0] into left before the method",
+      "scenario": "frame matching and held values",
+      "expected": "Iterated frames match exactly; original scalars and held actuals add none; a one-element Array is not a scalar",
       "modes": {
         "interpreter_interpreter": "NOT_RUN",
         "interpreter_native": "NOT_RUN",
@@ -981,8 +979,195 @@
     },
     {
       "id": "DEPTH012",
-      "scenario": "native result ABI and dependent preparation",
-      "expected": "Do not reuse a scalar native return ABI for a lifted Array or implicitly compile; require the real dependent result/provider integration before claiming native execution",
+      "scenario": "Structure []@ and actual references",
+      "expected": "Typed-record slots supply actual values; real references remain references; no []@ exclusion or blind pointer traversal",
+      "modes": {
+        "interpreter_interpreter": "NOT_RUN",
+        "interpreter_native": "NOT_RUN",
+        "native_interpreter": "NOT_RUN",
+        "native_native": "NOT_RUN"
+      }
+    },
+    {
+      "id": "DEPTH013",
+      "scenario": "exact result at runtime-selected depth",
+      "expected": "PD01 derives full R and frame+resultCellShape without probing source code; heterogeneous outputs may use ordinary Structure assembly",
+      "modes": {
+        "interpreter_interpreter": "NOT_RUN",
+        "interpreter_native": "NOT_RUN",
+        "native_interpreter": "NOT_RUN",
+        "native_native": "NOT_RUN"
+      }
+    },
+    {
+      "id": "DEPTH014",
+      "scenario": "empty frame and void source",
+      "expected": "No callback or sample call for empty frame, no Array<void>; frame () has one application",
+      "modes": {
+        "interpreter_interpreter": "NOT_RUN",
+        "interpreter_native": "NOT_RUN",
+        "native_interpreter": "NOT_RUN",
+        "native_native": "NOT_RUN"
+      }
+    },
+    {
+      "id": "DEPTH015",
+      "scenario": "whole TYPE/RAW/PLACE/Maybe/Pattern profile",
+      "expected": "Absent modifier retains consuming roles; an explicit depth requires a compatible profile. Explicit zero does not denote whole",
+      "modes": {
+        "interpreter_interpreter": "NOT_RUN",
+        "interpreter_native": "NOT_RUN",
+        "native_interpreter": "NOT_RUN",
+        "native_native": "NOT_RUN"
+      }
+    },
+    {
+      "id": "DEPTH016",
+      "scenario": "prefix absence and empty right",
+      "expected": "Missing left differs from a present value and present empty right; equivalence belongs to the selected method",
+      "modes": {
+        "interpreter_interpreter": "NOT_RUN",
+        "interpreter_native": "NOT_RUN",
+        "native_interpreter": "NOT_RUN",
+        "native_native": "NOT_RUN"
+      }
+    },
+    {
+      "id": "DEPTH017",
+      "scenario": "native result ABI",
+      "expected": "Require dependent result admission and the matching ABI; no hidden compilation or universal boxing",
+      "modes": {
+        "interpreter_interpreter": "NOT_RUN",
+        "interpreter_native": "NOT_RUN",
+        "native_interpreter": "NOT_RUN",
+        "native_native": "NOT_RUN"
+      }
+    },
+    {
+      "id": "INDEX001",
+      "scenario": "missing versus empty axisRules",
+      "expected": "Missing chooses whole/automatic profile; present empty structure selects independent outer axes",
+      "modes": {
+        "interpreter_interpreter": "NOT_RUN",
+        "interpreter_native": "NOT_RUN",
+        "native_interpreter": "NOT_RUN",
+        "native_native": "NOT_RUN"
+      }
+    },
+    {
+      "id": "INDEX002",
+      "scenario": "binary product versus min-plus",
+      "expected": "Same indexed term loop, independent kernel/reducer: */+ versus +/min; no inference of min or max from +",
+      "modes": {
+        "interpreter_interpreter": "NOT_RUN",
+        "interpreter_native": "NOT_RUN",
+        "native_interpreter": "NOT_RUN",
+        "native_native": "NOT_RUN"
+      }
+    },
+    {
+      "id": "INDEX003",
+      "scenario": "unary sums, products and diagonal",
+      "expected": "[+ axis:] and [+ i:j] sum; [* axis:] and [* i:j] multiply; geometry forms do not reduce",
+      "modes": {
+        "interpreter_interpreter": "NOT_RUN",
+        "interpreter_native": "NOT_RUN",
+        "native_interpreter": "NOT_RUN",
+        "native_native": "NOT_RUN"
+      }
+    },
+    {
+      "id": "INDEX004",
+      "scenario": "whole and indexed division",
+      "expected": "[/] solves X B=A; explicit [/ rules] applies the declared pairwise division plan, not solve",
+      "modes": {
+        "interpreter_interpreter": "NOT_RUN",
+        "interpreter_native": "NOT_RUN",
+        "native_interpreter": "NOT_RUN",
+        "native_native": "NOT_RUN"
+      }
+    },
+    {
+      "id": "INDEX005",
+      "scenario": "empty reduction with S different from R",
+      "expected": "Identity/seed/factory starts still pass through finish S->R; first requires admission/mapToState Z->S",
+      "modes": {
+        "interpreter_interpreter": "NOT_RUN",
+        "interpreter_native": "NOT_RUN",
+        "native_interpreter": "NOT_RUN",
+        "native_native": "NOT_RUN"
+      }
+    },
+    {
+      "id": "INDEX006",
+      "scenario": "short circuit before next term",
+      "expected": "An explicitly allowed stop state is checked before the next term/kernel invocation; skipped callbacks and errors remain skipped",
+      "modes": {
+        "interpreter_interpreter": "NOT_RUN",
+        "interpreter_native": "NOT_RUN",
+        "native_interpreter": "NOT_RUN",
+        "native_native": "NOT_RUN"
+      }
+    },
+    {
+      "id": "INDEX007",
+      "scenario": "empty output frame versus empty reduced domain",
+      "expected": "Zero free axis gives no outputs/callbacks; an existing output with zero reduced terms needs its declared empty contract",
+      "modes": {
+        "interpreter_interpreter": "NOT_RUN",
+        "interpreter_native": "NOT_RUN",
+        "native_interpreter": "NOT_RUN",
+        "native_native": "NOT_RUN"
+      }
+    },
+    {
+      "id": "INDEX008",
+      "scenario": "ordinary profile copy and context",
+      "expected": "copy/merge combine real fields and method references, preserving ordinary parent/dynamic scope; no string registry or per-symbol loop",
+      "modes": {
+        "interpreter_interpreter": "NOT_RUN",
+        "interpreter_native": "NOT_RUN",
+        "native_interpreter": "NOT_RUN",
+        "native_native": "NOT_RUN"
+      }
+    },
+    {
+      "id": "TENSOR001",
+      "scenario": "elementwise := rotation",
+      "expected": "Capture all RHS values and complete admissions before writes; preserve real places and snapshot result",
+      "modes": {
+        "interpreter_interpreter": "NOT_RUN",
+        "interpreter_native": "NOT_RUN",
+        "native_interpreter": "NOT_RUN",
+        "native_native": "NOT_RUN"
+      }
+    },
+    {
+      "id": "TENSOR002",
+      "scenario": "slice .: broadcasting",
+      "expected": "Right-align RHS axes to the fixed slice shape, allow explicit singleton-axis repetition and original scalar expansion; do not reevaluate RHS",
+      "modes": {
+        "interpreter_interpreter": "NOT_RUN",
+        "interpreter_native": "NOT_RUN",
+        "native_interpreter": "NOT_RUN",
+        "native_native": "NOT_RUN"
+      }
+    },
+    {
+      "id": "TENSOR003",
+      "scenario": "minimal fuse result then assignment",
+      "expected": "Scalar/Map fresh result with no intermediate Array; external := or .: then keeps ordinary snapshot assignment",
+      "modes": {
+        "interpreter_interpreter": "NOT_RUN",
+        "interpreter_native": "NOT_RUN",
+        "native_interpreter": "NOT_RUN",
+        "native_native": "NOT_RUN"
+      }
+    },
+    {
+      "id": "TENSOR004",
+      "scenario": "unsupported fuse reduction/contraction/store",
+      "expected": "Diagnostic unless a separate capability is implemented; no hidden materialization, implicit streaming store or partial-write behavior",
       "modes": {
         "interpreter_interpreter": "NOT_RUN",
         "interpreter_native": "NOT_RUN",
@@ -1007,7 +1192,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -1019,10 +1204,10 @@
           ],
           "declaration_copies": [],
           "required": [],
-          "result_declaration": "[]int",
+          "result_declaration": "[]@",
           "declared_throws": [],
           "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
-          "source_declaration": "RxTypes:\n    private: @: source\n    return: []int"
+          "source_declaration": "RxTypes:\n    private: @: source\n    return: []@"
         },
         "observation": "Same existing body/owner and actual result, evaluation order, accepted argument mapping, finite effects and short-circuit behavior"
       },
@@ -1050,7 +1235,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -1096,7 +1281,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -1145,7 +1330,7 @@
           "argument_roles": [
             "TYPE..."
           ],
-          "depth_policy": "whole-value-depth0"
+          "depth_policy": "declared-role-contract"
         },
         "roles": [
           "TYPE..."
@@ -1197,7 +1382,7 @@
           "argument_roles": [
             "CALLABLE"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "CALLABLE"
@@ -1247,7 +1432,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -1297,7 +1482,7 @@
             "CALLABLE",
             "ACTUAL_RECORDS"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "CALLABLE",
@@ -1354,7 +1539,7 @@
             "TYPE",
             "FAILURE_NAMES"
           ],
-          "depth_policy": "whole-value-depth0"
+          "depth_policy": "declared-role-contract"
         },
         "roles": [
           "CALLABLE",
@@ -1407,7 +1592,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -1458,7 +1643,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -1509,7 +1694,7 @@
           "argument_roles": [
             "TYPE"
           ],
-          "depth_policy": "whole-value-depth0"
+          "depth_policy": "declared-role-contract"
         },
         "roles": [
           "TYPE"
@@ -1558,7 +1743,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -1610,7 +1795,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -1662,7 +1847,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -1714,7 +1899,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -1765,7 +1950,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -1818,7 +2003,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -1873,7 +2058,7 @@
             "FAMILY_VALUE",
             "CALLABLE"
           ],
-          "depth_policy": "whole-value-depth0"
+          "depth_policy": "declared-role-contract"
         },
         "roles": [
           "FAMILY_VALUE",
@@ -1926,7 +2111,7 @@
             "FAMILY_VALUE",
             "CALLABLE"
           ],
-          "depth_policy": "whole-value-depth0"
+          "depth_policy": "declared-role-contract"
         },
         "roles": [
           "FAMILY_VALUE",
@@ -1979,7 +2164,7 @@
             "FAMILY_VALUE",
             "CALLABLE"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "FAMILY_VALUE",
@@ -2032,7 +2217,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -2084,7 +2269,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -2137,7 +2322,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -2188,7 +2373,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -2239,7 +2424,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -2290,7 +2475,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -2340,7 +2525,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -2392,7 +2577,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -2443,7 +2628,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -2487,7 +2672,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -2531,7 +2716,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -2578,7 +2763,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -2624,7 +2809,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -2668,7 +2853,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -2719,7 +2904,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -2774,7 +2959,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -2824,7 +3009,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -2871,7 +3056,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -2921,7 +3106,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -2975,7 +3160,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -3024,7 +3209,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -3084,7 +3269,7 @@
             "CALLABLE",
             "ACTUALS?"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "CALLABLE",
@@ -3139,7 +3324,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -3190,7 +3375,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -3243,7 +3428,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -3295,7 +3480,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -3347,7 +3532,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -3397,7 +3582,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -3448,7 +3633,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -3499,7 +3684,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -3551,7 +3736,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -3597,7 +3782,7 @@
           "argument_roles": [
             "VALUE_WHOLE"
           ],
-          "depth_policy": "whole-value-depth0"
+          "depth_policy": "declared-role-contract"
         },
         "roles": [
           "VALUE_WHOLE"
@@ -3644,7 +3829,7 @@
           "argument_roles": [
             "VALUE_WHOLE"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "VALUE_WHOLE"
@@ -3689,7 +3874,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -3730,7 +3915,7 @@
           "argument_roles": [
             "VALUE_WHOLE"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "VALUE_WHOLE"
@@ -3775,7 +3960,7 @@
           "argument_roles": [
             "VALUE_WHOLE"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "VALUE_WHOLE"
@@ -3820,7 +4005,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -3870,7 +4055,7 @@
           "argument_roles": [
             "VALUE_WHOLE"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "VALUE_WHOLE"
@@ -3915,7 +4100,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -3962,7 +4147,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -4009,7 +4194,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -4061,7 +4246,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -4118,7 +4303,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -4170,7 +4355,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -4220,7 +4405,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -4270,7 +4455,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -4323,7 +4508,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -4375,7 +4560,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -4427,7 +4612,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -4480,7 +4665,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -4532,7 +4717,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -4586,7 +4771,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -4640,7 +4825,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -4692,7 +4877,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -4745,7 +4930,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -4798,7 +4983,7 @@
           "argument_roles": [
             "VALUE_WHOLE_SEQUENCE"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "VALUE_WHOLE_SEQUENCE"
@@ -4843,7 +5028,7 @@
           "argument_roles": [
             "VALUE_WHOLE_SEQUENCE"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "VALUE_WHOLE_SEQUENCE"
@@ -4888,7 +5073,7 @@
           "argument_roles": [
             "VALUE_WHOLE_SEQUENCE"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "VALUE_WHOLE_SEQUENCE"
@@ -4937,7 +5122,7 @@
             "VALUE_WHOLE",
             "CALLABLE?"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "VALUE_WHOLE",
@@ -4986,7 +5171,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -5046,7 +5231,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -5106,7 +5291,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -5151,7 +5336,7 @@
           "argument_roles": [
             "PATTERN_OR_LITERAL..."
           ],
-          "depth_policy": "whole-value-depth0"
+          "depth_policy": "declared-role-contract"
         },
         "roles": [
           "PATTERN_OR_LITERAL..."
@@ -5211,7 +5396,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -5271,7 +5456,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -5334,7 +5519,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -5394,7 +5579,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -5455,7 +5640,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -5515,7 +5700,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -5575,7 +5760,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -5635,7 +5820,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -5695,7 +5880,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -5740,7 +5925,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -5785,7 +5970,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -5847,7 +6032,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -5908,7 +6093,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -5969,7 +6154,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -6030,7 +6215,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -6091,7 +6276,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -6152,7 +6337,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -6213,7 +6398,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -6274,7 +6459,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -6319,7 +6504,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -6364,7 +6549,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -6410,7 +6595,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -6456,7 +6641,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -6502,7 +6687,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -6552,7 +6737,7 @@
             "PATTERN_OR_LITERAL",
             "REPLACEMENT_ROLE"
           ],
-          "depth_policy": "whole-value-depth0"
+          "depth_policy": "declared-role-contract"
         },
         "roles": [
           "SOURCE_VIEW",
@@ -6620,7 +6805,7 @@
             "PATTERN_OR_LITERAL",
             "REPLACEMENT_ROLE"
           ],
-          "depth_policy": "whole-value-depth0"
+          "depth_policy": "declared-role-contract"
         },
         "roles": [
           "SOURCE_VIEW",
@@ -6684,7 +6869,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -6745,7 +6930,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "whole-value-depth0"
+          "depth_policy": "declared-role-contract"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -6754,7 +6939,7 @@
           "source": "src/regex/operands.lmx",
           "declared_inputs": [
             "@: left",
-            "int: depth 0",
+            "int: depth",
             "[]@: right"
           ],
           "declaration_copies": [],
@@ -6779,7 +6964,7 @@
             "SequenceSize"
           ],
           "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
-          "source_declaration": "RxRepeatOperands:\n    private:\n        @: left\n        int: depth 0\n        []@: right\n    required: right\n    const: int: PASS_ARGS_AS_IS 0\n    const: int: PRIORITY sys\\priority(\"*\")\n    return: @"
+          "source_declaration": "RxRepeatOperands:\n    private:\n        @: left\n        int: depth\n        []@: right\n    required: right\n    const: int: PASS_ARGS_AS_IS 0\n    const: int: PRIORITY sys\\priority(\"*\")\n    return: @"
         },
         "observation": "Same existing body/owner and actual result, evaluation order, accepted argument mapping, finite effects and short-circuit behavior"
       },
@@ -6807,7 +6992,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "whole-value-depth0"
+          "depth_policy": "declared-role-contract"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -6816,7 +7001,7 @@
           "source": "src/regex/operands.lmx",
           "declared_inputs": [
             "@: left",
-            "int: depth 0",
+            "int: depth",
             "[]@: right"
           ],
           "declaration_copies": [],
@@ -6841,7 +7026,7 @@
             "SequenceSize"
           ],
           "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
-          "source_declaration": "RxRepeatOperands:\n    private:\n        @: left\n        int: depth 0\n        []@: right\n    required: right\n    const: int: PASS_ARGS_AS_IS 0\n    const: int: PRIORITY sys\\priority(\"*\")\n    return: @"
+          "source_declaration": "RxRepeatOperands:\n    private:\n        @: left\n        int: depth\n        []@: right\n    required: right\n    const: int: PASS_ARGS_AS_IS 0\n    const: int: PRIORITY sys\\priority(\"*\")\n    return: @"
         },
         "observation": "Same existing body/owner and actual result, evaluation order, accepted argument mapping, finite effects and short-circuit behavior"
       },
@@ -6869,7 +7054,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "whole-value-depth0"
+          "depth_policy": "declared-role-contract"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -6878,7 +7063,7 @@
           "source": "src/regex/operands.lmx",
           "declared_inputs": [
             "@: left",
-            "int: depth 0",
+            "int: depth",
             "[]@: right"
           ],
           "declaration_copies": [],
@@ -6903,7 +7088,7 @@
             "SequenceSize"
           ],
           "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
-          "source_declaration": "RxRepeatOperands:\n    private:\n        @: left\n        int: depth 0\n        []@: right\n    required: right\n    const: int: PASS_ARGS_AS_IS 0\n    const: int: PRIORITY sys\\priority(\"*\")\n    return: @"
+          "source_declaration": "RxRepeatOperands:\n    private:\n        @: left\n        int: depth\n        []@: right\n    required: right\n    const: int: PASS_ARGS_AS_IS 0\n    const: int: PRIORITY sys\\priority(\"*\")\n    return: @"
         },
         "observation": "Same existing body/owner and actual result, evaluation order, accepted argument mapping, finite effects and short-circuit behavior"
       },
@@ -6931,7 +7116,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "whole-value-depth0"
+          "depth_policy": "declared-role-contract"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -6940,7 +7125,7 @@
           "source": "src/regex/operands.lmx",
           "declared_inputs": [
             "@: left",
-            "int: depth 0",
+            "int: depth",
             "[]@: right"
           ],
           "declaration_copies": [],
@@ -6965,7 +7150,7 @@
             "SequenceSize"
           ],
           "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
-          "source_declaration": "RxRepeatOperands:\n    private:\n        @: left\n        int: depth 0\n        []@: right\n    required: right\n    const: int: PASS_ARGS_AS_IS 0\n    const: int: PRIORITY sys\\priority(\"*\")\n    return: @"
+          "source_declaration": "RxRepeatOperands:\n    private:\n        @: left\n        int: depth\n        []@: right\n    required: right\n    const: int: PASS_ARGS_AS_IS 0\n    const: int: PRIORITY sys\\priority(\"*\")\n    return: @"
         },
         "observation": "Same existing body/owner and actual result, evaluation order, accepted argument mapping, finite effects and short-circuit behavior"
       },
@@ -6993,7 +7178,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -7045,7 +7230,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -7098,7 +7283,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -7151,7 +7336,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -7205,7 +7390,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "whole-value-depth0"
+          "depth_policy": "declared-role-contract"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -7252,7 +7437,7 @@
             "RAW_ITERATION",
             "RAW_BODY"
           ],
-          "depth_policy": "whole-value-depth0"
+          "depth_policy": "declared-role-contract"
         },
         "roles": [
           "RAW_ITERATION",
@@ -7301,7 +7486,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -7354,7 +7539,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -7408,7 +7593,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -7459,7 +7644,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -7510,7 +7695,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -7561,7 +7746,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -7614,7 +7799,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -7667,7 +7852,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -7720,7 +7905,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -7780,7 +7965,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -7840,7 +8025,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -7895,7 +8080,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -7950,7 +8135,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -8002,7 +8187,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -8054,7 +8239,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -8106,7 +8291,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -8156,7 +8341,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -8217,7 +8402,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -8278,7 +8463,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -8331,7 +8516,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -8384,7 +8569,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -8437,7 +8622,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -8490,7 +8675,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -8543,7 +8728,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -8604,7 +8789,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -8654,7 +8839,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -8706,7 +8891,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -8758,7 +8943,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -8810,7 +8995,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -8862,7 +9047,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -8915,7 +9100,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -8969,7 +9154,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -9030,7 +9215,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -9091,7 +9276,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -9152,7 +9337,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -9213,7 +9398,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -9274,7 +9459,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -9335,7 +9520,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -9385,7 +9570,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -9437,7 +9622,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -9483,7 +9668,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -9533,7 +9718,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -9583,7 +9768,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -9634,7 +9819,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -9679,7 +9864,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -9729,7 +9914,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -9779,7 +9964,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -9829,7 +10014,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -9880,7 +10065,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -9930,7 +10115,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -9980,7 +10165,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -10029,7 +10214,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -10078,7 +10263,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -10127,7 +10312,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -10182,7 +10367,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -10235,7 +10420,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -10289,7 +10474,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -10346,7 +10531,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -10402,7 +10587,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -10456,7 +10641,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -10508,7 +10693,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -10562,7 +10747,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -10617,7 +10802,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -10673,7 +10858,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -10727,7 +10912,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -10781,7 +10966,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -10834,7 +11019,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -10885,7 +11070,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -10941,7 +11126,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -10992,7 +11177,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -11048,7 +11233,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -11099,7 +11284,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -11155,7 +11340,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -11203,7 +11388,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -11255,7 +11440,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -11303,7 +11488,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -11355,7 +11540,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -11412,7 +11597,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -11462,7 +11647,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -11515,7 +11700,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -11568,7 +11753,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -11621,7 +11806,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -11671,7 +11856,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -11721,7 +11906,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -11767,7 +11952,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -11813,7 +11998,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -11862,7 +12047,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -11911,7 +12096,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -11960,7 +12145,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -12009,7 +12194,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -12058,7 +12243,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -12102,7 +12287,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -12146,7 +12331,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -12190,7 +12375,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -12237,7 +12422,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -12280,7 +12465,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -12324,7 +12509,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -12368,7 +12553,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -12414,7 +12599,7 @@
           "argument_roles": [
             "VALUE_WHOLE"
           ],
-          "depth_policy": "whole-value-depth0"
+          "depth_policy": "declared-role-contract"
         },
         "roles": [
           "VALUE_WHOLE"
@@ -12428,10 +12613,10 @@
           "required": [
             "value"
           ],
-          "result_declaration": "int",
+          "result_declaration": "@",
           "declared_throws": [],
           "throws_scope": "explicit source declaration only; publication adds reached adapter/target failures",
-          "source_declaration": "FxValueType:\n    private: @: value\n    required: value\n    return: int"
+          "source_declaration": "FxValueType:\n    private: @: value\n    required: value\n    return: @"
         },
         "observation": "Same existing body/owner and actual result, evaluation order, accepted argument mapping, finite effects and short-circuit behavior"
       },
@@ -12459,7 +12644,7 @@
           "argument_roles": [
             "VALUE_WHOLE_ARRAY"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "VALUE_WHOLE_ARRAY"
@@ -12519,7 +12704,7 @@
           "argument_roles": [
             "VALUE_WHOLE"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "VALUE_WHOLE"
@@ -12564,7 +12749,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -12621,7 +12806,7 @@
             "VALUE_WHOLE",
             "CALLABLE_SEQUENCE"
           ],
-          "depth_policy": "whole-value-depth0"
+          "depth_policy": "declared-role-contract"
         },
         "roles": [
           "VALUE_WHOLE",
@@ -12675,7 +12860,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "whole-value-depth0"
+          "depth_policy": "declared-role-contract"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -12732,7 +12917,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -12783,7 +12968,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"
@@ -12836,7 +13021,7 @@
           "argument_roles": [
             "DECLARED_INPUT_ROLES"
           ],
-          "depth_policy": "ordinary-value-lifting"
+          "depth_policy": "explicit-depth-value"
         },
         "roles": [
           "DECLARED_INPUT_ROLES"

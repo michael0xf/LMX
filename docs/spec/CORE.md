@@ -1,5 +1,8 @@
 # LMX core architecture
 
+The active kernel milestone completes one graph, Message, `satisfies`, the receiving `test`, the primitive conversion table reachable in each Message, and every project script on L3. First finish grammar, parsing and Expression grouping. All builds exclude `third_party` through kernel acceptance. Full runtime SLJIT and the remaining integrations follow. [Kernel acceptance](../TENSOR_IMPLEMENTATION_PLAN.md#integration-v3) · [Interpreter and JIT](kernel-implementation.en.md#interpreter-jit-stages).
+
+
 **Current extension:** [types, universal sequences, generic patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
 
 > **Repository note.** This file is the edition of 2026-11-21, transferred verbatim from the author's
@@ -431,6 +434,17 @@ Both constant properties are mandatory. `PASS_ARGS_AS_IS` is 0 or 1; `PRIORITY`
 is an independently defined constant priority. Checking the template does not
 fill missing properties. The generic template does not force `return: @`:
 the method returns its ordinary declared result type.
+
+The common depth transport accepts a signed integer and preserves absence. A custom method may interpret it as another setting and need no Map. Zero-as-maximum, nonnegative depth and the d<=Array-rank check belong to the selected standard Array traversal profile; they are not universal syntax or transport restrictions.
+
+The middle actual depth is optional: its absence remains distinct from explicit 0.
+Explicit 0 means maximum traversal; positive d selects the first d logical Array
+axes and rejects d above the iterated Array rank. The selected base body receives
+each cell without automatic remapping. Plain elementwise operations default to
+maximum traversal; a whole `[op]` method retains its own default. Rank continues
+to mean the Array axis count. [Full contract](OPERATOR_DEPTH.en.md).
+
+**Shared implementation requirement, 2026-11-27.** The target has one main LMX parser containing the square subparser, which calls that same main parser for every expression and `{...}` region and resumes at its returned position. After parsing, every Expression consumer calls one shared implementation of semantic grouping. Duplicate parsers, independent binding algorithms and their tables are removed; independent scale adapters do not satisfy this requirement. Backend emission and actual preparation consume the common grouping result. [Architecture contract](EXPRESSION_ALGORITHM.md#single-parser-and-grouper).
 
 The [Expression grouper](LMX_semantics.en.md#expression-structural-grouping) derives priority dependencies and current-level structural sequences from the clean graph. In Expression, a graph reference atom to a Structure supplies one Array value when its target fails the operand template check. Translation rejects ambiguous interpretations before effects. Other reached Structures follow the name/actual-parent rule. Reference resolution never reparents the target. A separate application adapter supplies one left reference/bundle and an Array of right references. The receiving contract selects whole-value or sequence consumption: group assignment accepts bare `copy` or its collector and snapshots RHS values before writes; three sibling RHS groups remain three Structure values. Complete scalar expression groups such as `((2))` yield one value, while TYPE/models, field collectors and returned/reference values keep their actual contracts. There is no extra conditional opening pass, new persistent flag or public two-Array operand ABI. Prefix absence remains absence; there is no automatic fold or right-to-left shift.
 

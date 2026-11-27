@@ -80,7 +80,7 @@ DsuJoin:
         if: a = b
             return: count
         if: size[a] < size[b]
-            (a b) .: (b a)
+            (a b) := (b a)
         parent[b] := a
         size[a] += size[b]
         return: count - 1
@@ -223,8 +223,8 @@ final class UnionFindExample {
 
 | Запись | Непробельные символы | Непустые строки |
 | --- | ---: | ---: |
-| LMX — процедурный | 1370 | 77 |
-| LMX — функциональный | 1279 | 68 |
+| LMX — процедурный | 1368 | 77 |
+| LMX — функциональный | 1277 | 68 |
 | C++ | <span style="color:#176233"><u>578</u></span> | 23 |
 | Java | 608 | 28 |
 

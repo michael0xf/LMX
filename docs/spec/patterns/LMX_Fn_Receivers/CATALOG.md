@@ -1,14 +1,10 @@
 # Canonical library operations and their two forms
 
-> TYPE-контракты этой документации используют прямую TypeRef. Машинный каталог
-> и связанные отдельные исходники ещё содержат прежние int-интерфейсы; перед
-> пересборкой им требуется миграция по [инструкции дополнения](../../../ARRAY_TYPE_MIGRATION.md).
-
 215 canonical names. Every input export is accounted for in [the migration inventory](CANONICAL_MIGRATION.json). Former names are not callable aliases.
 
 Both forms use the same algorithms and real owner DATA. Complete family/role binding, adaptive capture and exact result projection are defined in [PUBLICATION_CONTRACT.md](PUBLICATION_CONTRACT.md). Runtime execution is **NOT_RUN**.
 
-Operand DATA order is `left`, `int: depth`, `right`, with ready `PASS_ARGS_AS_IS` and `PRIORITY`. `op`, `.op` and `.(expression)op` select one base operation. Ordinary VALUE adapters traverse logical outer axes of the flat Array shape through the shared engine and exact dependent result policy; rank-2 multiplication has matrix / row-dot / scalar profiles at depths 0 / 1 / 2. A Structure is an `[]@`, and indexed reference access introduces no separate array-of-arrays kind. Whole-role profiles admit depth 0 and diagnose unsupported depth before execution. No synthetic language exception is added. PD01 is a required kernel integration, not a passed runtime implementation.
+Operand DATA order is `left`, optional `int: depth`, `right`, with ready `PASS_ARGS_AS_IS` and `PRIORITY`. Absent depth preserves the ordinary method contract. Explicit `.(expression)op` uses zero for maximum logical-axis traversal and positive d for d outer axes. Positive d above an Array rank is diagnosed. The selected base entry is called without re-entering automatic Array Map. Ordinary operations are elementwise; [*] is matmul and .(1)[*] gives row dot products. There is no .op shorthand or array-of-arrays primitive. Structure/[]@ and text participate through actual types. Whole/RAW/DATA/TYPE/PLACE profiles retain their consuming roles. PD01 is required production integration, not a passed runtime implementation. Settings are ordinary LMX structures. See [source tensor contracts](TENSOR_OPERATIONS_IMPLEMENTATION.md).
 
 | Name | Ordinary form | Implementations and operand form |
 | --- | --- | --- |
@@ -230,7 +226,7 @@ Operand DATA order is `left`, `int: depth`, `right`, with ready `PASS_ARGS_AS_IS
 
 ## Roles, results and failures
 
-- **types** — canonical field TypeRef references; []@ by the current language contract. The linked previous-ABI reflection source requires migration. Roles: DECLARED_INPUT_ROLES.
+- **types** — canonical field TypeRef references in an ordinary []@, preserving field order and descriptor identity. Roles: DECLARED_INPUT_ROLES.
 - **names** — physical canonical names; anonymous entries retain typed absence. Roles: DECLARED_INPUT_ROLES.
 - **signature** — ordinary positional signature description. Roles: DECLARED_INPUT_ROLES.
 - **->** — ordered TYPE tokens, result last; one result TYPE constructs a nullary signature. Roles: TYPE....
@@ -436,7 +432,7 @@ Operand DATA order is `left`, `int: depth`, `right`, with ready `PASS_ARGS_AS_IS
 - **gcd** — Exact nonnegative bigint Euclidean GCD, including gcd(0;0)=0.. Roles: DECLARED_INPUT_ROLES.
 - **lcm** — Exact nonnegative bigint LCM through gcd; any zero input yields zero.. Roles: DECLARED_INPUT_ROLES.
 - **divMod** — Exact bigint floor quotient and remainder with divisor sign; zero divisor raises NumericDomain.. Roles: DECLARED_INPUT_ROLES.
-- **type** — canonical TypeRef of one captured whole value; the previous int source interface requires migration. Roles: VALUE_WHOLE.
+- **type** — canonical direct TypeRef of one captured whole value, without reading an uninitialized payload. Roles: VALUE_WHOLE.
 - **arrayView** — finite typed Array source without copying element records. Roles: VALUE_WHOLE_ARRAY.
 - **element** — one whole typed source element. Roles: VALUE_WHOLE.
 - **equals** — one projection per value followed by the shared equality. Roles: DECLARED_INPUT_ROLES.

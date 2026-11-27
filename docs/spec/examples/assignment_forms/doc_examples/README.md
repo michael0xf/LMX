@@ -13,5 +13,5 @@ docs отсутствовал; чужие тексты или старые PASS 
 
 Повторная регистрация: `python spec/tools/register_assignment_examples.py`
 из docs; проверка без записи: та же команда с `--check`.
-SHA-256, входы и ожидания: [машиночитаемый отчёт](../../../validation/assignment_forms_examples_20261126.json).
+SHA-256, входы и ожидания: [машиночитаемый отчёт](../../../validation/assignment_forms_examples_20261127.json).
 Совпадение текстов не является запуском production LMX.

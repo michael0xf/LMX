@@ -86,6 +86,7 @@ def main():
     root = args.root.resolve()
     errors = []
     counts = Counter()
+    task_provenance = []
 
     def issue(kind, path, details):
         errors.append({"check": kind, "path": str(path), "details": details})
@@ -110,9 +111,45 @@ def main():
         text = path.read_text(encoding="utf-8")
         counts[path.suffix[1:] + "_files"] += 1
         if path.suffix in {".md", ".json", ".lmx", ".lm3"}:
-            links = sorted(set(TASK_REFERENCE.findall(text)))
+            reference_text = text
+            if path.suffix == ".json" and "validation" in path.parts:
+                try:
+                    record = json.loads(text)
+                except ValueError:
+                    record = None  # The JSON syntax check below reports it.
+                provenance = record.get("historical_provenance", {}) if isinstance(record, dict) else {}
+                source_task = provenance.get("source_task") if isinstance(provenance, dict) else None
+                source_hash = provenance.get("source_task_baseline_sha256", "") if isinstance(provenance, dict) else ""
+                if isinstance(source_task, str):
+                    local = Path(source_task)
+                    # A provenance record may name the supplied in-tree task.
+                    # Exclude only that complete JSON string, after verifying
+                    # its path and the baseline-hash shape. Other tasks/ uses,
+                    # old TZ names and missing targets remain diagnostics.
+                    if (not local.is_absolute() and ".." not in local.parts
+                            and local.parts[:2] == ("docs", "tasks")
+                            and local.suffix == ".md"
+                            and isinstance(source_hash, str)
+                            and re.fullmatch(r"[0-9a-f]{64}", source_hash)
+                            and (root.parent.parent / local).is_file()):
+                        record["historical_provenance"] = dict(provenance)
+                        del record["historical_provenance"]["source_task"]
+                        reference_text = json.dumps(record, ensure_ascii=False)
+                        counts["local_task_provenance_records"] += 1
+                        task_provenance.append((relative, source_task, source_hash))
+            links = sorted(set(TASK_REFERENCE.findall(reference_text)))
             if links:
-                issue("external_assignment_reference", relative, links)
+                # An inventory of filenames and a preserved dated receipt do
+                # not make an old task a normative dependency of current text.
+                historical_receipt = (
+                    path.suffix == ".json" and "validation" in path.parts
+                    and (stamp := re.search(r"20\d{6}", path.name))
+                    and stamp[0] < "20261127"
+                )
+                if relative == "ARCHIVE_MANIFEST.json" or historical_receipt:
+                    counts["historical_or_inventory_reference_records"] += 1
+                else:
+                    issue("external_assignment_reference", relative, links)
         if path.suffix == ".md":
             try:
                 for language, line, code in code_blocks(text):
@@ -165,6 +202,12 @@ def main():
         if args.reviewed_source_changes and ledger.get('base_archive_sha256') != baseline['sha256']:
             raise ValueError("Source review ledger belongs to a different baseline archive")
         with tarfile.open(args.baseline_archive) as archive:
+            members = {member.name.removeprefix("./"): member for member in archive.getmembers()}
+            for record_path, source_task, expected_hash in task_provenance:
+                member = members.get(source_task)
+                if (member is None or not member.isfile()
+                        or hashlib.sha256(archive.extractfile(member).read()).hexdigest() != expected_hash):
+                    issue("task_provenance_baseline", record_path, source_task)
             for member in archive.getmembers():
                 archive_path = member.name.removeprefix("./")
                 prefix = next((p for p in ("docs/spec/", "spec/")

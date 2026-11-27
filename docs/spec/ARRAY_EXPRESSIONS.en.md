@@ -1,125 +1,50 @@
-# Array arithmetic, dotted operations and elementwise assignment
+# Array expressions, operation depth and indexed operations
 
-This is the integrated language contract of 2026-11-26, including the
-[general depth mechanism](OPERATOR_DEPTH.en.md). The depth-1 spellings are
-`.=` for elementwise equality and `.:` for elementwise assignment. Neither
-`.=` nor `.:=` is an assignment alias. The implementation bodies are in
-[array_expression_ops.lmx](patterns/LMX_Fn_Receivers/src/array_expression_ops.lmx);
-the executable host reference is
-[array_expression_reference.py](tools/array_expression_reference.py).
-Host reference checks do not claim a production LMX parser/native run.
+This chapter is the Array-facing entry to the complete normative [tensor specification](TENSOR_EXPRESSIONS.md). Written operator bodies follow the [bracket subparser](BRACKET_SUBPARSER.en.md); ordinary expressions, names, roles and live graph traversal retain their common rules. These are documentation and implementation contracts, not a claim that production parsing or execution has passed.
 
-## 1. Selection and representation
+## 1. Values, types and selection
 
-The ordinary receiver first obtains its actual operands under the common
-Expression/argument contract. If an obtained value is an Array, its array
-profile participates in selection. An ordinary Structure is exactly an
-Array of freely typed elements, `[]@`; it is not excluded because its fields
-have names. No separate Matrix class, annotation or spelling is required.
-Array detection does not recursively inspect arbitrary nested fields and
-does not turn several right actuals into a single implicit argument.
+An ordinary Structure is the Array type `[]@`. It participates in Array operations with the actual typed records of its elements; it is not excluded because it contains references or named fields. A method that cannot add, multiply or otherwise consume particular element types diagnoses that application. It does not ban the entire container class. Text is likewise an Array with its declared character element type. Whole-text and whole-object methods keep their own receiving contracts.
 
-Actual physical storage and complete element requirements come from the current
-value and its canonical TypeRef description. The complete normalized constructing
-type determines rank and explicit axis constraints. `[][][]int` supplies rank
-three, while `[2][2][2]int` supplies all three extents. Initializer row boundaries
-validate and flatten data but do not persist unknown extents or refine TypeRef.
-A rank-aware operation uses explicit or uniquely derivable dimensions from TYPE
-plus length; insufficient information is diagnosed only when needed.
+The Array header remains `parent/length/storage`. TypeRef points directly to a canonical immutable type description. The complete normalized left declaration determines that type: `[2][3]int` retains shape `(2,3)`, whereas `[][]int` retains two unspecified extents. Initializer rows validate rectangularity and flatten data without silently specializing `[][]int`. An operation obtains dimensions from the actual type, uniquely derivable information and its available instance access context; missing required dimensions cause a diagnostic. Flat operations remain valid when they do not need those dimensions.
 
-At capacity=length there is no secondary descriptor, including for a multidimensional
-Array. Real reserve has an optional capacity entry and does not change TypeRef.
-The `parent/length/storage` header is unchanged. See
-[canonical types and compatibility](ARRAY_STORAGE.en.md#array-profiles).
-Structure remains the ordinary `[]@`: stored references retain identity and
-ordinary field/index access without a separate array-of-arrays kind.
+The system parent provides the complete instance descriptor/context, including a View's source and access map when needed. It is constructed with ordinary Structure templates and copy/merge. No extra LMX header field or second type system is introduced. Equality of length and capacity removes the need for extra reserve information; it does not forbid a parent context needed for lifetime or access. [Storage](ARRAY_STORAGE.en.md) distinguishes type, capacity and instance context.
 
-Flat and dimensional operations remain available on the same value. A flat
-consumer reads length/storage without reshaping, retagging or constructing a
-rank-one proxy. A fresh linear selection has its own declared linear result.
+Stored references and ordinary graph identity are preserved. `struct[i]\[j]` is ordinary indexed path traversal, not evidence of another flat axis. A Structure containing Arrays can be consumed by methods that accept those values, but a rectangular tensor extent is not inferred from arbitrary nested fields or the first element.
 
-A result obtains the TypeRef of its complete declared/evaluated result requirement.
-An operation that promises persistent output extents includes them in that
-requirement. It cannot secretly refine a generic `[][]T` from output data.
-During `a * b + e`, a temporary expression plan may carry the product's `(m,n)`
-shape to `+`; allocation by flat count alone does not preserve those dimensions
-beyond the operation. Publication follows the actual full result requirement,
-without hidden shape fields or row objects.
+A result is assembled under its complete declared/evaluated requirement. A dense result with persistent output extents must retain those extents through that requirement or an explicitly defined access context. Variable-shaped results may be ordinary Structures. Empty results use the declared result contract; the implementation does not invoke a made-up first cell to guess a type.
 
-All arithmetic uses the selected scalar operations. Machine integers,
-floating-point profiles, bigint, decimal, real and other admitted scalar
-models are not silently reduced to int or double. A contraction requires
-compatible multiplication, addition, and a correctly typed additive zero.
-The output requirement is established before traversal, including for empty
-inputs; no first-element probe is allowed. Dense inputs produce dense R only
-when the full R is established; a free-element Structure is handled through
-the ordinary reference-array access path.
+## 2. Ordinary operations are elementwise
 
-## 2. Ordinary arithmetic with Arrays
-
-| Operation | Array profile |
+| Ordinary form | Array contract |
 | --- | --- |
-| `a + b`, `a - b` | Equal shapes: component addition/subtraction. One scalar: expand that scalar over the Array, preserving operand order. |
-| `scalar * a`, `a * scalar` | Scale each component; the scalar is obtained once. |
-| `a * b`, both rank 1 | Bilinear dot product, in increasing component order. |
-| `a * b`, ranks 2 and 1 | Matrix-vector product. |
-| `a * b`, ranks 1 and 2 | Vector-matrix product; the rank-1 left value is the left vector. |
-| `a * b`, both rank 2 | Matrix product: `(m,k) * (k,n) -> (m,n)`. |
-| `a / scalar` | Component division with the original scalar division contract. |
-| `a / b` with two Arrays, or scalar / Array | No matrix inverse/linear solve is guessed. Select scalar division at the required depth (`./` for rank 1, `.(2)/` for rank 2), or use an explicitly selected solver profile. |
-| `a ** exponent` with Array a | Only an explicitly supplied algebraic power profile. Select scalar powers at the required depth (`.**` for rank 1); this edition does not invent an inverse or a matrix-power algorithm. |
-| `%` and the available integer bitwise/shift profiles | Their admitted component profile; the dotted form makes component application explicit. |
+| `A + B`, `A - B`, `-A` | Corresponding scalar arithmetic at every admitted cell |
+| `A * B` | Component multiplication; never an implicit dot or matrix product |
+| `A / B`, `A % B`, `A ** B` | Corresponding scalar operation with its actual types and domain |
+| `A = B`, `A != B`, ordering comparisons | Component predicates and their declared result type |
+| Bitwise, shift and logical methods | Their admitted component contracts, preserving demand and roles |
+| `A := B` | Ordinary pointwise assignment to real places |
+| `slice .: source` | Dedicated slice assignment with explicit RHS broadcasting |
 
-Higher-rank contraction requires an explicit admitted contract; it is not
-silently flattened into a matrix or broadcast. Multiplication of two
-vectors is therefore no longer the former component product: write `a .* b`.
-Scalar arithmetic keeps its established meaning.
-
-The matrix kernel computes each output cell in row-major order. For a nonempty inner dimension, each
-cell starts with its first product, then adds subsequent products in increasing
-inner-index order. The selected additive zero is requested only for an empty
-inner dimension and then supplies every output cell. No implicit conjugation, reassociation, FMA,
-parallel reduction or numerical promotion is introduced. A numerical
-profile may explicitly permit stronger transformations.
-
-For example, with shapes a=(2,3), b=(3,2), e=(2,2):
-
-| Input | Rows |
-| --- | --- |
-| a | [1 2 3]; [4 5 6] |
-| b | [7 8]; [9 10]; [11 12] |
-| e | [1 1]; [1 1] |
-| `a * b + e` | [59 65]; [140 155] |
-
-The shapes here are part of the admitted input descriptions, not a proposal
-to reinterpret an Array of separately allocated rows as a flat rectangle.
+Iterated Array shapes/frames match exactly. Scalars contribute no axes and can be supplied to each application when the selected method admits them. An Array of length one is still an Array and does not silently stretch to another extent. Scalar division, overflow, result admission, comparison and short-circuit contracts are not replaced by generic machine-double arithmetic.
 
 ```lmx
-MatrixExample:
-    @: a
-    @: b
-    @: e
-    return: @
-    run:
-        throws: copy(`*`\throws) copy(`+`\throws)
-        return: a * b + e
+[2][2]int: A [1 2; 3 4]
+[2][2]int: B [5 6; 7 8]
+@: components A * B
+# [5 12; 21 32]
+@: matrices A [*] B
+# [19 22; 43 50]
+@: mask A > 2
+# [0 0; 1 1]
 ```
 
-The ordinary receiver form `` `*`(a; b) `` uses the same implementation as
-the operand. A backend's technical name such as matmul is not a second
-algorithm. Existing explicitly profiled dot/contract/outer operations keep
-their stated contracts; different conjugation or contraction is not merged
-merely because names look related.
+`=` is equality, `^` is XOR, and `**` is power. Power has `sys\priority("**") = 131` and derived RHS minimum `131`: `A ** B ** C` groups as `A ** (B ** C)`. The same grouping policy applies to `.(depth)**` and `[**]`, subject to each method's type and shape admission. `**=` retains assignment priority. [Numeric derivation](EXPRESSION_ALGORITHM.md#power-priority). No general `.op`, `..op` or `...op` aliases remain. Quoted receiver names retain their exact spelling; there is no parallel family of dotted callable names.
 
 <a id="inline"></a>
-### 2.1. Inline Array values and an ordinary chain
+### 2.1. Inline Array values
 
-In VALUE position `[items]` constructs one anonymous freely typed `[]@` through
-common P0. It is an explicit Array VALUE, not an anonymous grouping node that
-Expression may unwrap. Elements are obtained once in the established order;
-the first element does not determine a dense type. A typed constructor, such as
-`[]int: [10 20]`, gets its element contract from the receiver and need not create
-an intermediate `[]@` for conversion.
+In VALUE position `[items]` constructs one anonymous freely typed `[]@` through common P0. This is one explicit Array VALUE, not an anonymous grouping node to unwrap. Its elements are obtained in the ordinary demand order; its first element does not select a dense primitive type. A typed constructor such as `[]int: [10 20]` uses the declared element requirement directly.
 
 ```lmx
 int: a 1
@@ -127,292 +52,162 @@ int: b 2
 int: d 4
 @: result a + b + [10 20] + d
 # [17 27], with grouping ((a + b) + [10 20]) + d.
-```
 
-`a + b` is obtained once before its Array-consuming parent operation. With
-effects or ordinary numeric failures, later literal elements and operands are
-not moved ahead of a dependency that may fail. The explicit typed variant
-`a + b + ([]int: [10 20]) + d` obeys the same expression priorities.
-
-```lmx
-@: arr0 [[1 2]]
-@: arr1 [[10 20]]
+@: arr0 [1 2]
+@: arr1 [10 20]
 @: arr2 [100 200]
-@: result arr0 .+ arr1 .+ [arr2]
-# [[111 222]]; all three outer operands have length 1.
+@: totals arr0 + arr1 + arr2
+# [111 222]
 ```
 
-`[arr2]` contains exactly one whole value, the same arr2. It neither copies nor
-flattens arr2, and it does not request singleton broadcasting. An outer extent
-greater than one on the left therefore diagnoses a mismatch with `[arr2]`.
-This is an ordinary Structure reference in an element, not another Array kind.
-The typed rank-two initializer `[][]int: [1 2; 3 4]` (equivalently
-`[][]int: [[1 2] [3 4]]`) has a different receiving contract: it prepares one
-flat rectangular backing of rank two. The rows validate rectangularity but do
-not persist extents in `[][]int`; use `[2][2]int` to retain the 2×2 shape. That
-contract does not globally flatten standalone `[arr2]`.
+`[arr2]` contains one whole arr2 reference. It does not flatten or copy arr2, request broadcasting, or add a dimensional claim to its element. An operation consuming it receives the actual element under its own contract. A typed rectangle `[2][2]int: [1 2; 3 4]` instead constructs one flat backing and validates equal row lengths. Both `[1 2; 3 4]` and `[[1 2] [3 4]]` are admitted row forms in that typed constructor.
 
-A translator can use known shape, lifetime and scalar contracts to remove
-unobservable construction or intermediate storage. It must prove preservation
-of identity, demand/effect/failure order and numerical grouping. No reassociation,
-implicit FMA, silent eager-to-fused error-order change or program-graph clone is
-authorized by the presence of brackets. [Complete examples](examples/array_expressions/README.md)
-and the host reference keep these limits explicit.
+Construction or intermediate storage may be removed only when identity, lifetime, scalar types, demand and failure order remain unchanged. Merely seeing an inline Array does not authorize reassociation, FMA or eager execution of later occurrences.
 
+<a id="depth"></a>
 <a id="dotted"></a>
-## 3. Arithmetic as a profile of common operator depth
+## 3. Depth and held actuals
 
-Depth belongs to [all operator families](OPERATOR_DEPTH.en.md), not a separate
-set of arithmetic names. `op` means depth 0, `.op` means depth 1, and
-`.(EXPR)op` supplies an explicit depth, including 0 or 1. The parentheses contain
-an ordinary parsed Expression: a literal, name, operation or call is obtained
-once when this operation is demanded. Further levels use this parenthesized form,
-not repeated dots. The operator method receives `left`, **`int: depth`**, `right`;
-the argument transport does not flatten its operands beforehand.
-The lexical sequence `.(` always starts an operator/function depth modifier;
-it is never a decimal point. Array constructors and index/slice brackets keep
-their square-bracket syntax. For example, `1 .(3)+ 2 .(2)+ 3` is valid and
-returns 6 under the ordinary scalar fixed-point and addition rules.
+`.(expression)op` supplies **depth of one external traversal**. Positive d visits d outer logical axes; explicit zero means maximum depth. For an Array of rank K, d>0 requires d≤K and leaves K−d axes in each cell. Depth zero reaches scalar elements of that Array. Original scalar or explicitly held actuals do not acquire axes. The number is not cell rank and is not a reduction-axis selector.
 
-The standard arithmetic VALUE profile consumes one **logical leading axis**
-at each positive depth. Its size and the remaining extents come from the
-retained descriptor. Selecting a row or plane uses an operation-local
-descriptor over the same backing; no row Array, pointer slot or graph node is
-allocated for the traversal. Selected extents must agree. At remaining depth
-zero the base operation consumes the complete selected scalar, vector or block
-according to its own contract.
+A custom operand receives the declared int depth and may define its own meaning. Standard Map restrictions, including nonnegativity and depth>K, apply only when that profile is selected, not globally to every method.
 
-An original scalar input may broadcast. An original Array that reaches a
-scalar before the requested depth cannot silently supply another Array's
-missing axis. Excess or incompatible required depth is diagnosed. Entirely
-scalar original operands are fixed points. An ordinary Structure stored in a
-field remains the same value and can be consumed through the same general
-Array mechanism; it is not a special nested-array model.
+Absent depth remains absent and selects the method's default. Ordinary arithmetic defaults to maximum pointwise application. A whole matrix method without a modifier gets its whole inputs; explicit zero instead requests maximum depth. The two cases must not be globally conflated.
 
 ```lmx
-[2][2]int: a [1 2; 3 4]
-[2][2]int: b [[5 6] [7 8]]
-@: matrix a * b
-# shape (2,2): [19 22 43 50]
-@: rowProducts a .* b
-# shape (2): [17 53], the base * contracts each pair of rows.
-@: cells a .(2)* b
-# shape (2,2): [5 12 21 32], scalar multiplication at every coordinate.
+@: cells A .(0)* B
+# [5 12; 21 32]
+@: explicitCells A .(2)* B
+# [5 12; 21 32]
+@: rowDots A .(1)[*] B
+# [17 53]
+@: wholeProduct A [*] B
+# [19 22; 43 50]
 ```
 
-Thus `.op` always means depth one; it does **not** promise scalar application
-at every rank. For rank r, `.(r)op` reaches scalar cells when the declared
-elements are scalar. A rank-three value has three logical axes in its one
-flat storage. `a .(1)* rowScalars` can select valid vector/scalar scaling;
-`a .(2)* rowScalars` cannot invent the missing second axis of rank-one rowScalars.
+These examples use the rank-two A and B above. After selecting cells, the wrapper calls the **base handler without re-entering automatic Map**. `A .(1)* B` therefore does not silently map the row inputs again or reinterpret them as dot products: a scalar base `*` diagnoses them unless it has a separately admitted whole-cell contract. `A .(3)* B` fails because three outer axes do not exist. `A .(0)[*] B` likewise needs a base-product contract accepting scalar cells; absence of the modifier is the normal whole-product form.
 
-The table gives convenient depth-1 spellings, not separately named bodies:
+The explicit depth expression is obtained once on demand in its original context, not during grouping, priority calculation or candidate inspection. Common transport is left/depth/right, with missing left preserved. The operand itself establishes any prefix/infix equivalence.
 
-| Scalar family | Depth-1 spellings |
+`$x` or `$(expression)` holds an actual whole for the current traversal, obtaining it once without copying. For Z `(rows,cols)` and bias `(cols)`, `Z .(1)rowAdd $bias` passes a row and the whole bias. A declared rowAdd can explicitly write ordinary `+` in its body; the wrapper does not introduce that second Map automatically. With depth 0 it passes one Z element and the whole bias, never hidden bias[j].
+
+Frames of iterated Arrays agree exactly. Zero frame extents call no kernels. An empty frame tuple means one call. DATA, TYPE, RAW, NAME, PLACE and void consumers retain their declared roles. Internal axis rules of `.(d)[op ...]` address the remaining cell. See [operation depth](OPERATOR_DEPTH.en.md) for the complete contract.
+
+## 4. General indexed operations and matrix contracts
+
+`[op rules]` belongs to one common family. Its ordinary LMX configuration selects the scalar/cell kernel, optional reducer, initial state, result builder and numeric/access policies. These are structures and callable references, not a new options registry or an implicit implementation of algorithms.
+
+| Rule | Meaning |
 | --- | --- |
-| Binary arithmetic | `.+ .- .* ./ .% .**` |
-| Unary signs | `.+ .-` in their unary position |
-| Integer bitwise and shifts | `.& .\| .^ .~ .<< .>>` |
-| Comparisons | `.= .!= .< .<= .> .>=` |
-| Compound arithmetic updates | `.+= .-= .*= ./= .%= .**=` |
-| Compound bitwise/shift updates | `.&= .\|= .^= .<<= .>>=` |
-| Attached updates | Prefix/postfix `.++`, `.--` in the corresponding attached class |
-| Assignment family | `.:`, the depth-1 surface of `:=` |
+| `i:j` | Equal input coordinates, reduced together; equal extents required |
+| `i=j` | Shared retained coordinate; equal extents, no singleton expansion |
+| `i*j` | Independent coordinates merged into extent `dim(A,i)*dim(B,j)` |
+| Unmentioned axis | Free independent output axis |
+| `-> positions` | Permutation of the canonical output-axis list |
 
-The canonical attached receiver names are `++var`, `var++`, `--var`, `var--`;
-`depth := 1` selects the forms in the table. Prefix returns updated values;
-postfix returns a snapshot at the selected depth. One shared update algorithm
-serves both. This table invents neither a character-count limit nor a rotation
-meaning for an otherwise unprovided `<<<`/`>>>`.
-
-Selected leading extents must match; at remaining depth zero the base contract
-checks the remaining whole values and block shapes. Equal total counts alone
-are insufficient. There is no
-singleton-axis broadcasting, truncation, recursive sibling flattening or
-implicit numeric conversion. Comparison produces a correspondingly shaped
-result of scalar predicates, normally int 0/1, without reducing it to one
-truth value. Use an explicitly selected `all`/`any` reduction when needed.
+An input axis appears in at most one relation. Canonical output order is retained `=` axes in rule order, composite `*` axes in rule order, free A axes, then free B axes. Every output position appears exactly once in a permutation. Explicit rules disable automatic batch inference. Options alone do not create a rule list.
 
 ```lmx
-[]@: a [1 2 3]
-[]@: b [1 8 3]
-@: equal a .= b
-# equal = [1 0 1]; a and b are unchanged.
-a .: b
-# a = [1 8 3]; its outer identity is preserved.
+@: matrix A [*] B
+@: outer A [* ()] B
+@: sums A [+ ()] B
+@: shortest A [+ 1:0; reduce := min] B
+# [6 7; 8 9]
 ```
 
-Receiver examples use **base names and the same named depth**:
-`` `+`(a; b; depth := 1) ``, `` `=`(a; b; depth := 1) `` and
-`` `:=`(a; b; depth := 1) ``. A quoted identifier containing a dot remains that
-literal identifier; it is not an alias or a request to decode a depth.
-The assignment family's agreed surface mapping is `:=` at depth 0,
-`.:` at depth 1 and `.(EXPR):` for explicit depth. In particular `.(0):`
-performs the base whole-place assignment; `.:=` is not a spelling of this family.
+Absent rules select the named method's default; present empty rules select no links. Therefore `A [*] B` is automatic matrix multiplication and `A [* ()] B` is an outer product. `A [+ ()] B` combines all independent pairs by addition. Binary contraction uses a separately chosen reducer; `+` alone does not mean min-plus. With no reduced axes, default reducer/state configuration is unused and no identity is requested; an explicitly supplied inappropriate reduce actual is diagnosed.
 
-Logical, TYPE, DATA, RAW, PLACE and other receivers retain their own consuming
-contracts and select a supported depth policy. A common decorator does not
-turn short-circuiting into eager calls or force recursive VALUE lifting onto
-signatures, addresses or Pattern composition. See [roles and ABI](OPERATOR_DEPTH.en.md#abi).
+Unary arithmetic is distinct from the geometry-only `[*]` forms:
+
+```lmx
+[2][3]int: M [1 2 3; 4 5 6]
+@: rowSums [+ 1:] M
+# [6 15]
+@: rowProducts [* 1:] M
+# [6 120]
+@: traceValue [+ 0:1] A
+# 5
+@: diagonalProduct [* 0:1] A
+# 4
+@: diagonal [* 0=1] A
+# [1 4]
+@: transposed [* -> 1, 0] M
+# [1 4; 2 5; 3 6]
+```
+
+The numeric contracts preserve separate kernel output, accumulator state and final result types. Identity is a neutral of the state algebra; an arbitrary seed is not renamed identity. A first-item reduction needs its admitted conversion into state. Each mutable accumulator is independent. Empty identity or seed results pass through the selected finish method. Min/max retain the first selected typed record on ties. Parallelization needs actual algebraic and numerical permission, including overflow, NaN, signed zero and rounding policies.
+
+### 4.1. Whole matrix operations
+
+| Operation | Whole-object contract |
+| --- | --- |
+| `[+]`, `[-]` | Matrix addition/subtraction; unary `[-]` gives the opposite matrix |
+| `[*]` | Automatic vector/matrix product or explicit indexed contraction |
+| `[\]` | Left solve `A X = B` |
+| `[/]` | Right solve `X B = A` |
+| `[**]` | Integer matrix power under its numerical contract |
+| `[=]`, `[!=]` | One whole-matrix equality/inequality result |
+| `inv`, `transpose`, `adjoint` | Inverse, transpose, conjugate transpose |
+| `det`, `trace`, `rank`, `norm`, `cond` | Whole-object characteristics with declared conventions |
+| `lu`, `qr`, `cholesky`, `eig`, `svd`, `schur` | Structured factorizations and spectral results |
+| `pinv`, `nullspace`, `leastSquares`, `kron` | Explicit generalized inverse, kernel basis, least squares and Kronecker product |
+| `math\linear\exp`, `log`, `sqrt`, `sin`, `cos` | Matrix functions in the stated namespace |
+
+No inverse is inferred from scalar `/`, `~` or `!`. Solve is not an indexed reduction of scalar divisions. Real/complex domains, rectangular or singular inputs, tolerance, empty shapes, branches, mutation and failure contracts are specified individually in [the full matrix chapter](TENSOR_EXPRESSIONS.md#matrix-contracts). The complete 529-entry operation catalogue is in the same normative document; catalogued or future-imported capability does not imply a completed implementation.
 
 <a id="assignment"></a>
-## 4. Elementwise assignment and permutations
+## 5. Assignment, slices and overlap
 
-`destination .: source` consumes the left occurrence as real target places
-at depth one. For rank one these are actual element slots; for rank two they
-are logical row regions of the same flat backing. For a written
-group of places, the common PLACE consumer obtains those real places:
-the group is still a Structure/Array of freely typed elements, not a tuple
-object and not a copy of the variables.
-
-The target is resolved once. RHS occurrences are consumed once in their
-established order; their values are retained before the first target write.
-Shape/count and each actual target's admission are checked before the write
-phase in checked execution. The assignment preserves target count, shape
-and outer identity. It returns the assigned target under the ordinary
-result contract, without making a second copy of the assigned data.
-
-For `destination .(n): source`, these rules apply to the actual places
-selected through n logical axes. All RHS values in all selected branches are
-captured before any write; checking only the first child is insufficient.
-An original scalar source may fill the selected levels. A source Array must
-provide the required levels and shapes; its missing children are not scalar
-broadcast. At reached depth 0 a target PLACE accepts a whole value, including
-an Array reference or a different admitted type. Its old value's nesting and
-an uninitialized old value do not obstruct ordinary whole-place assignment.
-The syntax `reference .(0): other` is therefore the base `reference := other`.
-A logical row/plane region has no independent pointer slot to rebind. Its
-base assignment admits a complete compatible block of the same tail shape,
-retains all source cells, then writes the real region without resizing it.
-For a scalar fill of a rank-two matrix use `matrix .(2): scalar`; `matrix .: scalar`
-selects whole rows and does not bypass their ordinary block admission.
+`destination := source` retains ordinary pointwise assignment. The destination is resolved once. Array shapes match exactly; an admitted scalar may fill its selected places. RHS values and all target admissions are established before stores. A group of places is not copied into unrelated variables:
 
 ```lmx
 int: a 1
 int: b 2
 int: c 3
-(a b c) .: (b c a)
+(a b c) := (b c a)
 # a=2, b=3, c=1
 ```
 
-Both `(a b c) .: copy(d)` and `(a b c) .: (copy(d))` use the existing
-group/field-stream consumer. No new post-grouping flattening pass is added.
-Sibling structural RHS values remain separate items. A scalar RHS can fill
-all selected targets; an actual Array/field stream must match the selected
-shape/count. A copied Structure remains subject to ordinary graph-copy
-identity, parent and ownership rules.
+`(a b c) := copy(d)` uses the established group/field-stream consumer; extra parentheses are not required. No post-call global flattening pass is added. A ready Array destination retains its count, shape and identity. A declared reference PLACE keeps its separate ordinary reference-assignment admission; real row/plane regions do not have fictitious pointer slots to rebind.
 
-Aliasing never makes a permutation sequentially overwrite the next value.
-The general operation retains the required RHS values before writes.
-For compound updates, the old target values and RHS are obtained before
-commit; `a .+= b` uses the same component addition and assignment machinery
-as `a .: a .+ b`, but resolves a only once. A target failure or RHS failure
-does not undo effects already performed while obtaining the arguments.
-This does not add a general transaction or rollback mechanism.
-
-`destination .: fuse(expression)` explicitly selects the streaming fused-output
-contract: shape, places and alias safety are prepared before writes, but each
-scalar result and its value admission are obtained at that coordinate. A later
-scalar/admission failure can leave an already written prefix. This exception
-is requested by `fuse`; the compiler cannot silently replace the ordinary
-complete-RHS assignment above with that behavior. See [fusion](FUSION.en.md).
-
-`a[start:stop:step]` as VALUE produces a fresh selection. In the PLACE
-position of `.:` it denotes selected real target cells for that operation;
-it does not introduce a persistent view type. Resizing remains
-`replaceRange`/`splice`. See [slices](TERNARY_AND_SLICES.en.md).
-
-
-### Shared compound and attached update algorithm
-
-Compound and attached updates compose the component evaluator and the same
-ordinary assignment body; they do not contain another write loop:
-
-```text
-compound(targetOccurrence, rhsOccurrence, baseOperation, depth):
-    target = resolvePlaceOnce(targetOccurrence)
-    old, rhs = captureRequiredValuesInWrittenDemandOrder(target, rhsOccurrence)
-    values = applyAtDepth(baseOperation, old, rhs, depth)
-    return ordinaryAssignmentAtDepth(target, values, depth)
-
-attached(targetOccurrence, baseOperation, depth, resultPosition):
-    target = resolvePlaceOnce(targetOccurrence)
-    old = snapshotSelectedLevels(target, depth)
-    if old has elements:
-        unit = selectedScalarProfile.unit()
-        values = applyAtDepth(baseOperation, old, unit, depth)
-        ordinaryAssignmentAtDepth(target, values, depth)
-    return old if resultPosition is postfix else target
-```
-
-Here the lowercase helper names describe integration steps, not new exported
-LMX functions. The shared LMX bodies are `FxArrayDepth\apply` and
-`FxArrayDepthAssignPrepared\assign`, which reuses `FxArrayAssignPrepared\assign`; the executable contract model implements
-`compound` and `increment` in [array_expression_reference.py](tools/array_expression_reference.py).
-Postfix update snapshots the selected levels so deeper writes cannot change
-the saved old values; prefix returns the updated target. References below the
-selected boundary retain their ordinary identity. At depth 0 the base result
-contract applies. The scalar profile supplies the unit, so an implicit
-`int` conversion is not introduced.
-
-## 5. Priorities, roles and fusion
-
-Dotted arithmetic/comparison has the corresponding scalar operation's
-priority, arity and associativity. `.**` keeps the directional power rule.
-`.=` has equality priority; `.:` and dotted compound updates have assignment
-priority. The written left PLACE remains tied to its occurrence as in
-ordinary assignment. Attached updates retain the common attached-operator
-class. Names containing punctuation use the existing backtick identifier
-rule in receiver form.
-
-`fuse(expression)` explicitly requests the eligible one-traversal component
-profile. Its argument is RAW; it is not evaluated into temporary Arrays
-before planning. See [fusion](FUSION.en.md) for scalar capture, selected
-ternary branches, alias admission and error order. A matrix contraction
-does not become elementwise merely because it is inside fuse.
+`slice .: source` broadcasts the RHS to the already selected destination shape. Align source axes to the right, pad missing leading axes with one, and require each source extent to equal its target extent or be one. Extent 1 may expand to zero; extent zero cannot expand to a positive length. The destination is not resized.
 
 ```lmx
-@: scores fuse(2 .* left .+ right .* right)
-@: mask scores .>= limit
+[2][3]int: matrix [0 0 0; 0 0 0]
+[3]int: row [10 20 30]
+[2][1]int: column [100; 200]
+
+matrix[:][:] .: row
+# [10 20 30; 10 20 30]
+matrix[:][:] .: column
+# [100 100 100; 200 200 200]
+```
+
+`matrix[:][:] := row` is a shape error. `matrix[:][:] .: [1 2]` is a broadcast error. A flat `matrix[:]` has one selected axis; chained `matrix[:][:]` retains two selected axes. The PLACE slice's shape, not its punctuation alone, determines broadcasting.
+
+### Depth on slice assignment
+
+`.(N).:` keeps the name **depth**; rank is the number of axes in the resulting target slice. For `(2,3,4)`, positive depth 1 selects `(3,4)`, depth 2 selects `(4)`, and zero means maximum and individual places. Its PLACE profile first prepares one RHS broadcast map to the **complete original target shape**. Depth then controls traversal granularity over those prepared places. It does not run generic exact-frame VALUE Map on raw RHS shapes. Thus RHS `(4)` is admitted for `(2,3,4)` at depth 0, 1 or 2; shape admission and the assignment map are unchanged. Prepared scalar places at depth zero are not rejected as non-slices. No extra ban on broadcasting inside a cell is introduced. All needed RHS values across the entire frame are retained before the first store.
+
+Both assignment contracts share preparation, snapshot, admission and store. Overlap uses pre-write RHS values; broadcasting need not materialize a repeated destination-sized RHS. Duplicate physical target addresses require an explicitly supported deterministic scatter/reduce rule, otherwise they are rejected. Compound updates resolve the target once, compute with the corresponding base operation, then reuse this writer. Prefix/postfix updates keep their ordinary result identity and pre-update snapshot rules.
+
+A VALUE slice retains its ordinary fresh-selection contract unless a View is explicitly selected. A PLACE slice supplies actual cells for this operation. Range resizing remains the separate replace/splice contract. Negative direct Array indexes remain invalid; use pointer arithmetic for a valid relative-address task. [Slices and ternary](TERNARY_AND_SLICES.en.md) define defaults and checked/native boundaries.
+
+## 6. Minimal fusion and implementation boundary
+
+```lmx
+@: scores fuse(2 * left + right * right)
+@: mask scores >= limit
 return: compress(scores; mask)
 ```
 
-Here left/right are rank-one sequences. For a rank-two scalar kernel select
-depth two explicitly, for example `fuse(a .(2)* b .(2)+ e)`.
+`fuse` consumes RAW Expression. Its initial guarantee covers Scalar and Map→Map with a fresh final result and no materialized intermediate Array results. Supported input access maps, actual types, numerical boundaries, demand and observable failure order are preserved. Matrix products, reductions, arbitrary callbacks, streaming stores and all View maps are not automatically admitted.
 
-The benefit is one output traversal and no intermediate component-result
-Arrays for an eligible expression. This is a structural execution guarantee,
-not a measured promise that every input or backend runs faster.
+`destination := fuse(expression)` and `slice .: fuse(expression)` first obtain the final fresh result, then perform ordinary assignment. A late arithmetic failure cannot silently leave a prefix written merely because fuse appears on the RHS. [Fusion](FUSION.en.md) defines the exact minimum and unsupported-plan diagnostics.
 
 <a id="implementation"></a>
-## 6. Runtime integration and admission
+Preparation selects actual methods, roles, complete result requirements, dimensions and access maps. Ordinary structures/templates and copy/merge carry these settings and parent context. The executor still has to read and implement them. The graph is live; there is no expanded program clone, alternate namespace or eager evaluation during candidate discovery.
 
-The scalar operation is selected under its actual full contract. Shared
-preparation obtains shape, source access, result representation and the
-declared scalar operations; the LMX algorithm performs traversal. Temporary
-operation-local layout/plan values do not replace the live program graph.
-No persistent expanded namespace, shadow data or implicit graph copy is
-introduced. Direct known native calls and the current compile/endturn
-contract remain unchanged.
+Malformed depth, unavailable required dimensions, incompatible shapes, invalid axis rules and unsupported plans are translator diagnostics when known, otherwise interpreter diagnostics at the reached operation. User expressions, scalar methods and external library failures retain their existing throws contracts. Error lists are copied from actual base methods, not fictitious dotted aliases.
 
-Invalid requested depth, missing required logical axes, incompatible Array-expression
-shapes and ineligible fuse are translator diagnostics when known, otherwise
-interpreter diagnostics at the reached operation. They are not catchable LMX
-exceptions and introduce no new throw entry. Ordinary scalar/callback errors,
-ordinary target admission and existing allocator/library failures retain their
-own contracts. Declared errors are copied from the **base** methods, for example
-``copy(`*`\throws)``, rather than from a fictitious dotted callable name.
-
-The common VALUE bridge supplies the actual source, depth, original-scalar
-provenance, checked level access and full result/void requirement. Special
-receivers consume depth themselves. [Implementation contracts](FUSION.en.md#implementation)
-describe `level`, `publish`, actual deep PLACE collection and the fused leaf
-writer. They are explicit integration requirements; production execution is
-not claimed. [Source examples](examples/assignment_forms/README.md) include
-rebinding, nested assignment, dynamic depth and separate diagnostic fixtures.
-
-These are common semantic preconditions. L3 and interpreted L2 use the
-existing checked wrappers. Native L2 does not gain automatic bounds checks:
-invalid access is not made valid by their absence. Relative address
-arithmetic should use an appropriate pointer, not negative Array indexing.
-The detailed indexing distinction is in [slices](TERNARY_AND_SLICES.en.md).
+The [host contract model](tools/array_expression_reference.py) and [tests](tools/test_array_expression_reference.py) check selected contracts; they are not a production LMX implementation. Parser, translator and runtime acceptance remains **NOT_RUN** until exercised by project tools. Numeric acceleration or imported library support must preserve the complete selected contract.

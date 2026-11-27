@@ -53,7 +53,9 @@ do not turn a resolved example or an unspecified host fixture profile into anoth
 language-approval gate. Ask the author only when applicable current requirements
 actually contradict one another, with both clauses and the distinguishing case.
 
-## 2. One source graph and one parser
+## 2. One source graph, one parser, and one grouper
+
+**Shared implementation requirement, 2026-11-27.** The target has one main LMX parser containing the square subparser, which calls that same main parser for every expression and `{...}` region and resumes at its returned position. After parsing, every Expression consumer calls one shared implementation of semantic grouping. Duplicate parsers, independent binding algorithms and their tables are removed; independent scale adapters do not satisfy this requirement. Backend emission and actual preparation consume the common grouping result. [Architecture contract](EXPRESSION_ALGORITHM.md#single-parser-and-grouper).
 
 **All receiver records remain in the source graph as written. Computations and
 semantic transformations take place exclusively in namespace. Terminal primitive

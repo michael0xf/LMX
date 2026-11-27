@@ -1,6 +1,6 @@
 # Apply: usage and implementation are separate
 
-Edition: 2026-11-26. Client: [H01](../haskell_comparision/source/lmx/H01.lm3), [scenario](../../LMX_examples_and_analogies.ru.md#h01).
+Edition: 2026-11-27. Client: [H01](../haskell_comparision/source/lmx/H01.lm3), [scenario](../../LMX_examples_and_analogies.ru.md#h01).
 
 ## Contract
 

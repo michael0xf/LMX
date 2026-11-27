@@ -1,6 +1,6 @@
 # Conditional expressions and sequence slices
 
-Revision 26 November 2026. This is a normative addition to the common Expression grammar and semantics. The [executable reference model](tools/ternary_slices_reference.py) checks normalization and consumption contracts separately from the production LMX parser, translator and runtime; those production executions remain **NOT_RUN**.
+Revision 27 November 2026. This is the current conditional/slice contract of the common Expression grammar and [tensor specification](TENSOR_EXPRESSIONS.md). The [executable reference model](tools/ternary_slices_reference.py) checks normalization and consumption contracts separately from the production LMX parser, translator and runtime; those production executions remain **NOT_RUN**.
 
 <a id="conditional"></a>
 ## 1. Conditional expression `condition ? yes : no`
@@ -20,7 +20,7 @@ return: flag ? (x := first) : (x := second)
 return: `?:`(flag; first; second)
 ```
 
-The second example is `flag ? first : (second ? other : fallback)`. The third executes one selected assignment. The operand has one left condition occurrence and two right RAW arm occurrences. The common public header has `left`, integer `depth`, `right`, followed by constant `PASS_ARGS_AS_IS` and `PRIORITY`; this conditional form adds no form-specific fields. Its ordinary application supplies depth=0 and mode 1. A depth expression is obtained only on demand, so the unselected arm cannot cause depth effects either; see [operation depth](OPERATOR_DEPTH.en.md#evaluation). A missing-left operand application remains a distinct actual vector and can be admitted or interpreted only by the method, not by a parser rewrite. The receiver adapter supplies three explicit roles to the shared body.
+The second example is `flag ? first : (second ? other : fallback)`. The third executes one selected assignment. The operand has one left condition occurrence and two right RAW arm occurrences. The common public header has `left`, optional actual `depth`, `right`, followed by constant `PASS_ARGS_AS_IS` and `PRIORITY`; the conditional adds no form-specific field. Its ordinary application leaves depth absent and retains RAW mode 1. An explicit depth expression is obtained only on demand; a skipped arm cannot cause its effects. Absence of depth is not globally replaced by 0. See [depth](OPERATOR_DEPTH.en.md). A missing-left application remains a distinct actual vector, interpreted only by the method. The receiver adapter supplies the same three roles to the shared body.
 
 <a id="colon-contexts"></a>
 ## 2. Colon contexts and graph boundaries
@@ -36,14 +36,16 @@ P0 preserves written occurrences and pairs delimiters by structural nesting, wit
 | `a[::2]` | Two slice separators with omitted start/stop |
 | `a[(flag ? 1 : 2):6]` | Nested conditional and an outer slice separator |
 | `a[flag ? 1 : 2:6]` | The first colon belongs to `?`; the second separates slice fields |
-| `flag ? (a .: b) : c` | `.:` is one assignment token, not an arm delimiter |
+| `flag ? (a := b) : c` | `:=` is one assignment token, not an arm delimiter |
 
-At the current level of an index suffix, `::` supplies two slice separators, not a signature token. A nested group has its ordinary context, including `::`. Outside an index suffix the signature token is unchanged. Strings and exact identifiers still shield their contents. Longest-token recognition preserves `.:`, `:=` and other compound operator tokens before structural single-colon handling; `.=` is elementwise comparison, not assignment.
+At the current level of an index suffix, `::` supplies two slice separators, not a signature token. A nested group has its ordinary context, including `::`. Outside an index suffix the signature token is unchanged. Strings and exact identifiers still shield their contents. Longest-token recognition preserves `.:`, `:=` and other compound operator tokens before structural single-colon handling. Ordinary `=` is elementwise comparison; a generic dotted `.=` form is not introduced. `.:` has the separate slice-broadcast assignment contract below.
 
 A short colon receiver inside an arm must be bounded, as in `flag ? (f: x) : (g: y)`, or written compactly as `flag ? f(x) : g(y)`. Otherwise a colon at that level already closes the conditional arm. Unmatched questions, absent arms and surplus delimiters fail preparation before effects. P0 handles source punctuation. The Expression grouper receives graph boundaries and source references, never searches for textual parentheses, and accepts equivalent graph-created applications.
 
 <a id="slice-contract"></a>
 ## 3. `[start:stop:step]`
+
+The [square-form subparser](BRACKET_SUBPARSER.en.md) is a delegated part of the common parser, entered at `[`. It owns only the current square form's separators and `]`. Every bound expression, nested group, string and `{...}` region is parsed by the common parser, which returns `nextPosition`; the helper never scans for a nested `}`. In particular, the common parser consumes a ternary's colon before exposing an outer slice colon. Full expressions are admitted in every present field; syntax success does not replace integer admission.
 
 An attached index suffix containing one or two slice separators selects a slice. Any field can be explicitly absent. Absence is distinct from zero, -1, null, an empty Structure, or a request for dynamic autofill.
 
@@ -63,15 +65,36 @@ Obtain the source once, then each present start, stop and step once in written o
 
 As a VALUE, a slice is a new outer container with the source's actual storage profile. Dense elements retain their type; reference elements retain their existing targets and parents. There is no deep copying or reparenting. Slice `[]char` in its element units without implicit Unicode decoding. The result is an ordinary Array, not a new hidden view kind or persistent execution representation.
 
-As the destination of `.:`, the same index selection denotes real places in the source Array. The selection plan belongs to that operation. Obtain all required RHS values before the first store so overlapping selections, including `a[::-1] .: a`, are correct. Preflight count/shape and write admission. Destination length does not change. If RHS preparation changes its shape relative to the selected places, fail before stores. Existing const/immutable, ownership and actual-stride contracts apply.
+In PLACE, the same index selection denotes real places in the source Array. Ordinary `:=` assigns corresponding elements: an Array RHS requires exactly the destination shape; a scalar RHS can fill the selected places. A one-element Array is not a scalar. `.:` is a separate **slice assignment with broadcasting** to the fixed destination shape, not an alias for `:=` with depth=1.
 
 ```lmx
-(a b c) .: (b c a)
-values[1:5:2] .: (8 9)
-values[::-1] .: values
+(a b c) := (b c a)
+values[1:5:2] := (8 9)
+values[::-1] := values
+values[:] := 0
 ```
 
-A Structure is an Array of unrestricted element types, so the first line uses the same elementwise assignment. Capturing the RHS before stores makes the rotation correct. Existing current-level sequence consumption and single-left packaging remain; no tuple type is added. Scalar `x := value` keeps its own contract. Python-style resizing through slice `:=` is not introduced; use the existing explicit `replaceRange`/`splice` operations for resizing.
+Structure is Array `[]@`, so the first example uses ordinary elementwise assignment under the actual place/value types. Preserve all required RHS values before stores, validate count/shape and store admission, then write. Overlapping selections read the pre-write values. Destination length and shape do not change, and effects of obtaining RHS do not silently retarget a stale selection. Existing const/immutable, lifetime and access contracts remain in force. Resizing requires an explicit operation such as `replaceRange` or `splice` under its own contract.
+
+For `.:`, align Array RHS axes on the right of the selected destination shape. RHS rank cannot exceed destination rank. Each matched RHS extent must equal the destination extent or be 1; absent leading RHS axes and extent-1 axes repeat. A scalar fills the slice. The destination never grows. Extent 1 may map to a zero target extent; extent 0 may map only to extent 0. An empty target causes no element writes or element reads for stores; obtaining demanded actuals retains ordinary effects.
+
+```lmx
+[2][3]int: matrix [0 0 0; 0 0 0]
+[3]int: row [10 20 30]
+[2][1]int: column [100; 200]
+
+matrix[:][:] .: row
+# [10 20 30; 10 20 30]
+
+matrix[:][:] .: column
+# [100 100 100; 200 200 200]
+
+matrix[:][:] := row    # error: exact shapes (2,3) and (3) differ
+matrix[:][:] .: [1 2]  # error: last extent 2 does not match 3 or 1
+values[:] .: values[0:1] # overlapping RHS is stabilized before writing
+```
+
+Ordinary assignment and broadcast assignment share one store traversal with different coordinate maps. Broadcasting does not re-evaluate RHS once per output element and does not require an expanded RHS buffer. Unsupported shape/rank or write-access contracts are translator/interpreter diagnostics under [the assignment contract](TENSOR_EXPRESSIONS.md#assignment-contract).
 
 A single `array[start:stop:step]` suffix selects the flat sequence by total
 length at any rank. The new flat selection has one axis; source rank/extents
@@ -95,7 +118,7 @@ a separate receiving contract and does not replace that scalar policy.
 <a id="slice-receiver"></a>
 ## 5. One `slice` name, explicit profiles
 
-The suffix uses `slice(source; spec)`, where spec is an ordinary Structure with independently present start/stop/step. An explicitly supplied description is not completed from similarly named caller variables. Presence can be represented by ordinary flags and uninitialized fields; never read an absent field's nonexistent payload. This is an operation argument description, not a second program graph.
+The suffix uses `slice(source; spec)`, where spec is an ordinary Structure with independently present start/stop/step. An explicitly supplied description is not completed from similarly named caller variables. Presence is the ordinary presence of the explicitly supplied field; a missing field has no payload to read. No new mandatory presence flags or dynamic fallback are introduced. This is an operation argument description, not a second program graph.
 
 Both roles of `slice(source; spec)` are **VALUE/VALUE**: spec is a ready
 Structure value, not a DATA declaration. The suffix retains RAW source/bound
@@ -247,11 +270,16 @@ consumeSelection(source, sourceShape, plan, VALUE):
 consumeSelection(source, sourceShape, plan, PLACE):
     return operation-local original-place selection (source, sourceShape, plan)
 
-elementwiseStore(selectedPlaces, incoming):
-    obtain and retain all required right values
-    verify unchanged destination shape, count/shape and store admission
-    store retained values into the selected original places
-    return the target under the ordinary .: result contract
+assignSelected(selectedPlaces, incoming, selectedMethod):
+    obtain and retain the required RHS actual once
+    if selectedMethod is :=:
+        use scalar fill or exact Array shape correspondence
+    otherwise if selectedMethod is `.:`:
+        require a slice destination and construct right-aligned broadcast map
+    verify unchanged destination geometry and store admission
+    stabilize all required source values before the first write
+    write through the shared selected-place traversal and coordinate map
+    return under the selected method's ordinary result contract
 ```
 
 The loop never reads an empty result and never increments after its final
@@ -259,8 +287,14 @@ read. Multiple axes use the composition in §4 and the common shape traversal;
 this one-dimensional body does not flatten a matrix. `readElement` preserves
 references and `parent`; VALUE produces an independent outer Array. PLACE
 does not allocate a user-visible Array copy. When one RHS value is a returned
-Array, `.:` selects its immediate elements; three sibling Arrays remain three
+Array, `:=` admits its corresponding elements under the destination contract; three sibling Arrays remain three
 source elements. The grouper does not execute or expand a returned value.
+
+### Source/instance context and fusion
+
+A copied VALUE slice is not silently a retained View. An explicitly requested View is an ordinary Array whose system `parent` supplies the instance access/source context; its immutable type descriptor supplies type/rank/extents, not per-instance backing or alias information. Copying a reference does not reparent its target. The common accessor must preserve the source and validate the current geometry; no new Array user field is introduced. [View contract](TENSOR_EXPRESSIONS.md#geometry-and-parent).
+
+`destination := fuse(expression)` and `slice .: fuse(expression)` first obtain the fresh final result under the initial Scalar/Map `fuse` contract, then perform ordinary assignment. Merging the store, a reduction, or a contraction requires a separately supported capability and cannot be promised from syntax alone. Production support of the new square-source parser and these new execution contracts remains **NOT_RUN**.
 
 ## Sources for the adopted slicing policy
 

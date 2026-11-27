@@ -140,7 +140,7 @@ for row in catalog:
         if not variant.get('roles') or not variant.get('implementation_contract'):
             errors.append('variant lacks role/actual contract '+row['name'])
 
-for required in ['(a b c) .: (b c a)', '(a b c) .: copy(s)']:
+for required in ['(a b c) := (b c a)', '(a b c) := copy(s)']:
     if required not in code:
         errors.append(f'missing current assignment example: {required}')
 

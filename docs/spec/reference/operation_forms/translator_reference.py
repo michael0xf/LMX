@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
-from operand_depth_reference import admit_depth, resolve_depth
+from operand_depth_reference import ABSENT, admit_depth, resolve_depth
 
 
 class FormError(ValueError):
@@ -27,7 +27,7 @@ class OperationUse:
     name: str
     actuals: tuple[Actual, ...]
     context: object
-    depth: object = 0
+    depth: object = ABSENT
 
 
 @dataclass(frozen=True)
@@ -37,7 +37,7 @@ class AttachedUpdate:
     operatorBeforeAtom: bool
     atom: Actual
     context: object
-    depth: object = 0
+    depth: object = ABSENT
 
 
 def normalizeUse(use):
@@ -93,10 +93,10 @@ UPDATE_RULES = {
 
 
 def lowerUpdate(rule, site, backend):
-    # The zero-level scalar body, called after operation/PLACE selection.
-    # Shared lifting lowers deeper applications before invoking this body.
-    if admit_depth(site.depth) != 0:
-        raise FormError("nonzero depth requires the shared lifting boundary")
+    # The scalar leaf body, called after operation/PLACE selection.
+    # Shared Map prepares scalar places before invoking this body.
+    if site.depth is not ABSENT:
+        admit_depth(site.depth)
     if len(site.actuals) != 1:
         raise FormError("update expects one PLACE argument")
     place = backend.resolvePlace(site.actuals[0], site.context)

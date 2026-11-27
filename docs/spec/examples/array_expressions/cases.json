@@ -1,5 +1,5 @@
 {
-  "revision": "2026-11-26",
+  "revision": "2026-11-27",
   "production_execution": "NOT_RUN",
   "cases": [
     {
@@ -41,9 +41,9 @@
     {
       "id": "array_expressions__002_fused_update",
       "source": "fused_update.lm3",
-      "title": "Один проход с реальным назначением и ленивой ветвью",
+      "title": "Свежий Scalar/Map результат, последующее присваивание и ленивая ветвь",
       "negative": false,
-      "note": "values одномерен; scale=2, bias=1 доступны обычным динамическим связыванием. FusedUpdate сохраняет identity values. В ConditionalFusion получается только выбранная ветвь. Поздний обычный отказ fused-записи может оставить записанный префикс.",
+      "note": "Для всех трёх вызовов динамический контекст задаёт scale=2 и bias=1. fuse создаёт свежий результат без промежуточных Arrays внутри Scalar/Map плана; затем обычный := проверяет весь RHS до записи. При отказе построения результата назначение не меняется. ConditionalFusion получает только выбранную ветвь.",
       "entries": [
         {
           "call": "FusedUpdate\\run([1 2 3])",
@@ -91,9 +91,9 @@
     {
       "id": "array_expressions__004_flat_depth",
       "source": "flat_depth.lm3",
-      "title": "Один flat rank2 на глубинах 0, 1 и 2",
+      "title": "Целая матрица, обход строк depth=1 и максимальный поэлементный обход",
       "negative": false,
-      "note": "Две формы typed initializer создают прямоугольные flat Array. Результат первого * — матрица, второго — вектор row-dot, третьего — координатное умножение. Полный scalar fuse у матриц требует depth=2. Числа int лишь делают эту демонстрацию проверяемой вручную; общие алгоритмы тип не сужают.",
+      "note": "Array формы 2×2 задан левым TYPE. [*] даёт матричное произведение, .(1)[*] — по одному скалярному произведению строк, обычный * — координатное умножение. Минимальный fuse поддерживает последнее с последующим Map.",
       "entries": [
         {
           "call": "FlatDepth\\run()",
@@ -155,9 +155,9 @@
     {
       "id": "array_expressions__005_inline_array_chains",
       "source": "inline_array_chains.lm3",
-      "title": "Inline Array в обычной цепочке; один whole child",
+      "title": "Inline Array в числовой цепочке и typed initializer в матричной цепочке",
       "negative": false,
-      "note": "InlineChain сохраняет группировку ((a+b)+literal)+d: scalar a+b получается один раз. WholeChildChain имеет внешнюю длину 1; [arr2] содержит сам arr2 и не раскрывается. Удаление ненаблюдаемого промежуточного хранения требует доказанной эквивалентности identity, порядка эффектов и ошибок; переассоциация/FMA не разрешены автоматически.",
+      "note": "InlineChain сохраняет скалярный a+b и порядок цепочки. InlineMatrixChain складывает три плоские матрицы формы 1×2 посредством whole [+]; последний actual создаётся inline TYPE-конструктором. Вложенный Array не передаётся скалярному + в надежде на повторный автоматический Map. Нет автоматической переассоциации или FMA.",
       "entries": [
         {
           "call": "InlineChain\\run()",
@@ -167,13 +167,17 @@
           ]
         },
         {
-          "call": "WholeChildChain\\run()",
-          "expected": [
-            [
+          "call": "InlineMatrixChain\\run()",
+          "expected": {
+            "shape": [
+              1,
+              2
+            ],
+            "flat": [
               111,
               222
             ]
-          ]
+          }
         }
       ]
     },
@@ -182,7 +186,7 @@
       "source": "negative/inline_singleton_mismatch.lm3",
       "title": "Отдельный отказ: whole child не означает singleton broadcast",
       "negative": true,
-      "note": "Первое .+ допустимо, внешняя длина его результата равна 2. Единственный arr2 справа содержится во внешнем Array длины 1; это несовпадение выбранной оси. Группировщик не удаляет оболочку явного конструктора.",
+      "note": "Первое сложение двух числовых векторов даёт [11 22]. Затем внешний Array длины 2 не согласуется с [arr2] длины 1: ordinary + требует равные frames. [arr2] остаётся контейнером из одной ссылки на целый arr2, не становится скаляром и не включает broadcasting.",
       "entries": [
         {
           "call": "InlineSingletonMismatch\\run()",

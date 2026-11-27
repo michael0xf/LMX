@@ -1,266 +1,138 @@
-# fuse: one traversal of the selected output leaves
+# fuse: minimal Scalar and Map contract
 
-`fuse(expression)` is a standard receiver consuming **one RAW expression**
-through the common Expression mechanism. It retains the live expression and
-requests an eligible computation in one output traversal. An eager function
-with an ordinary `@: expression` input does not implement that contract.
+`fuse(expression)` is a standard receiver consuming one **RAW Expression** through the common mechanism. It requires a supported plan without materializing the plan's intermediate Array results. The final result, scalar values and small access descriptions are allowed. It does not promise no RAM traffic, mandatory register allocation or faster elapsed time for every input.
 
-The [common operator-depth contract](OPERATOR_DEPTH.en.md) applies inside the
-expression: the undecorated operation has depth 0, `.op` has depth 1, and
-`.(EXPR)op` carries one obtained nonnegative integer. A receiver uses its base
-name with the named `depth` input, for example `` `*`(a; b; depth := 2) ``.
-Backticks preserve an identifier; they do not decode decorated names.
-`.=` compares; `.:` assigns, as the depth-1 surface of base `:=`.
+The complete normative contract is [TENSOR_EXPRESSIONS.md](TENSOR_EXPRESSIONS.md#fuse-contract). Ordinary Array operations are elementwise. `.(d)op` specifies one outer traversal; explicit depth 0 means maximum depth and scalar cells. `[op ...]` retains its selected indexed/whole-object contract inside fuse. General `.op` abbreviations and depth-based callable aliases are not used.
 
-## 1. Eligible computation
+## 1. Initial capability boundary
 
-```lmx
-return: fuse(a .* b .+ e)
-```
+**The mandatory initial set is Scalar and Map→Map producing a fresh result.** Coordinates, actual scalar types, methods and result assembly must be supported. An ordinary settings Structure describes actual capabilities; a field does not implement an algorithm by itself.
 
-For matching **rank-one** Array descriptions, each coordinate performs scalar
-multiplication followed by scalar addition. No intermediate `a .* b` Array is
-created. Only result storage is allocated. An original scalar input expands
-at the admitted levels but is obtained once before traversal.
-
-```lmx
-return: fuse(values .* scale() .+ bias())
-```
-
-`scale()` and `bias()` run once each in their established order, including for
-an empty result. A wholly scalar subtree is also obtained once. Two written
-occurrences remain two evaluations; no cache is keyed by a callable or source
-text. Depth expressions are obtained by ordinary demanded Expression evaluation,
-not by a numeric-literal parser or by rerunning the expression at every leaf.
-
-For flat rank-two Arrays, the corresponding scalar-cell form is:
-
-```lmx
-return: fuse(a .(2)* b .(2)+ bias)
-```
-
-Depth consumes retained logical axes of the same flat storage. At depth one,
-a rank-two input supplies logical rows; base `*` on two rows is vector
-contraction. At depth two it supplies scalar cells. Row access uses temporary
-address/shape descriptors, not allocated row Arrays or graph nodes. Requested
-axes must exist under the admitted description. An Array-derived scalar cannot
-silently supply a missing axis of another Array operand. Only an original
-scalar operand may broadcast while lifting still needs another axis.
-At remaining depth zero the base receiving contract takes over; it may itself
-have an Array/scalar profile. Completely scalar original operands need no
-synthetic Array levels.
-
-| Selected operation | Eligibility |
+| Plan | Initial contract |
 | --- | --- |
-| Pure arithmetic, bitwise or comparison applied to compatible output leaves | Yes |
-| An admitted ordinary Array/scalar component profile | Yes |
-| Ordinary `a * b` selecting vector/matrix contraction | No |
-| `a .* b` over rank-two matrices | No: each pair of logical rows selects vector contraction |
-| `a .(2)* b` over rank-two matrices | Yes: the base operation receives scalar cells |
-| I/O, mutation, yield or unknown effects in the leaf kernel | No |
-| Scalar captures outside the leaf kernel | Once per demanded written occurrence |
-| A wholly scalar expression | One ordinary scalar evaluation, no Array or speed promise |
-
-The compatibility check belongs to the actual selected contracts. An unknown
-or ineligible request is diagnosed; it never selects an eager fallback.
-Ordinary matrix `a * b + e` and coordinatewise
-`a .(2)* b .(2)+ e` remain different. For rank-one inputs the scalar form
-remains `a .* b .+ e`.
-
-## 2. Conditional, diagnostics and ordinary failures
+| Scalar | Supported when the selected ordinary scalar computation is admitted |
+| Map→Map | Supported for compatible coordinates, types, roles and order |
+| Geometry read inside Map | Only an already implemented, validated access map |
+| Map→Reduce | Requires a separate tested implementation; not initial |
+| Contraction→Map | Requires a separate executor/epilogue; not initial |
+| Contraction→Contraction | Requires a separately proven plan; not a mathematical impossibility |
+| Streaming write into an existing target | Not initial; needs place, alias and failure contracts |
+| General solve, factorization or matrix function | Not initial; needs its numerical/workspace contract |
 
 ```lmx
-return: fuse(enabled ? a .* b : e .+ bias())
+FuseMinimum:
+    int: scalar 1
+    int: map 1
+    int: mapReduce 0
+    int: contractionMap 0
+    int: streamingWrite 0
+    int: preserveScalarTypes 1
+    int: preserveDemand 1
+    int: reassociate 0
 ```
 
-This short example uses rank-one inputs. Rank-two inputs select depth two
-where scalar arithmetic is intended. No depth is inferred from punctuation.
-
-Only the selected arm is obtained and planned. An inactive arm performs no
-calls and does not evaluate its depth expressions. The condition is scalar;
-an Array of predicates does not implicitly become a truth mask. Results and
-references follow the ordinary ternary contract.
-
-Invalid depth/type of the depth expression, missing required logical axes,
-incompatible selected shapes and an ineligible `fuse` expression are
-**translator diagnostics when known, otherwise interpreter diagnostics at the
-reached operation**. They are not catchable LMX exceptions and add no `FxDepth`,
-`FxShape` or `FxKernelFailure` outcome to these forms. A host-model diagnostic
-class is not a proposed language exception. A thrown error from a user depth
-expression or from a normally selected numeric/callback operation keeps that
-operation's existing failure contract.
-
-After captures and validation, output leaves are visited in structural order,
-with the last coordinate varying fastest inside each actual Array. Scalar
-expression-tree order is preserved within a leaf. No reassociation, implicit
-FMA, precision change or conversion of decimal/real into machine double occurs.
-A pure scalar operation may still fail. Explicit fusion selects the first such
-failure by leaf order followed by expression-tree order. Eager whole-Array
-operations may encounter another first failure; a compiler cannot silently
-substitute one order for the other.
-
-## 3. Assignment, depth and aliasing
+These are ordinary fields. Setting mapReduce to 1 does not create a reducer or authorize a backend that cannot fulfill the promise. Implementation references, supported type domains and policy data are ordinary LMX structures and methods, not a second metadata language.
 
 ```lmx
-values .: fuse(values .* scale .+ bias)
+[2][3]int: A [1 2 3; 4 5 6]
+[2][3]int: B [2 2 2; 2 2 2]
+@: result fuse(A * B + 1)
+# [3 5 7; 9 11 13]
 ```
 
-For a rank-two destination, select its scalar-cell depth as well:
+No Array of component products is materialized. One final Array is permitted. The inner multiplication is ordinary pointwise `*`; a matrix product must be written `[*]` and does not enter the initial whitelist.
+
+Structure `[]@` is not excluded by container type. The plan checks actual element types, kernel capability and output construction. A specific unsupported Structure-valued result or unknown callback produces a diagnostic for that plan.
+
+## 2. Preparation, captures and demand
+
+Preparation retains the live expression occurrences, actual requirements and access descriptions. It does not clone the program graph, rewrite source punctuation into a new namespace, or evaluate arbitrary bodies while inspecting candidates. The argument is RAW, so eager evaluation into intermediate Arrays before planning is not an implementation of fuse.
+
+Demanded input values, held actuals, depth expressions and axis parameters are obtained once in their original contexts. A captured occurrence is not called again for every output coordinate. Two written occurrences remain two occurrences; no cache is keyed merely by their spelling or callable identity. An inactive branch does not obtain its parameters early.
 
 ```lmx
-values .(2): fuse(values .(2)* scale .(2)+ bias)
+return: fuse(enabled ? A * B : C + bias())
 ```
 
-The destination selects real places. Shape, required levels and alias safety
-are prepared before the first write. A complete scalar result is obtained and
-admitted immediately before its leaf is written. A later ordinary scalar or
-admission failure can therefore leave a written prefix. This streaming behavior
-is requested explicitly by `fuse` and is not a replacement for ordinary
-snapshot assignment.
+The scalar condition selects the reached arm. The other arm performs no calls and no depth-expression evaluations. An Array of predicates does not become a scalar truth value by accident; a mask/select operation has its own contract.
 
-Disjoint source storage and the same source/destination leaf map are admitted.
-A source map that reads a different future destination cell, including across
-logical regions or shared Structure fields, is rejected before writes in this profile. Repeated actual
-destination places are likewise not a safe fused map. An explicit value snapshot
-can establish a different valid source. Validation does not execute all scalar
-arithmetic in advance and promises no rollback of earlier argument effects.
+A held `$value` remains one whole actual under the selected map. It does not synthesize indexes into that value. Explicit depth uses the [ordinary traversal contract](OPERATOR_DEPTH.en.md): positive d removes d outer axes, d=0 selects all, and d>K is an error for iterated Arrays. The base handler is called without a second automatic Map. Unsupported remaining whole-cell work is diagnosed; depth does not promise a scalar emitter for every method.
 
-Ordinary `.:` or `.(n):` first retains **all selected RHS values across all
-branches**, then admits every actual target, then writes in selected order.
-This handles overlapping logical row regions and shared Structure fields.
-At reached depth zero, a true binding PLACE accepts a whole new value under
-its own type; its old value does not restrict rebinding. A logical row region
-has no independent reference slot: whole region assignment admits a compatible
-block and writes its existing cells. Scalar fill of rank r therefore selects
-depth r unless the selected base block contract explicitly admits that scalar.
+An empty final frame executes no cell kernels. The type and empty result come from the declared result requirement rather than a test invocation. Source occurrences that are required to determine shape or select a reached plan still follow ordinary demand; a zero output is not permission to skip arbitrary required source effects.
+
+## 3. Numeric and observable order
+
+Coordinates of the fresh output are visited with the final axis varying fastest. For each coordinate, preserve the ordinary scalar expression tree and demand. Intermediate numeric boundaries still admit and round to their declared types even when no intermediate Array is allocated:
+
+```text
+intermediate = admitAndRound(scalarResult, declaredIntermediateType)
+result = evaluateNextScalarOperation(intermediate)
+```
+
+No implicit promotion to machine double, reassociation, FMA or parallel reduction is authorized. A selected numeric contract may explicitly allow particular transformations. The initial plan only accepts known operations whose observable effect and failure requirements can be preserved. Purity alone does not make exceptions disappear.
+
+If eager whole-Array evaluation would produce a different observable failure/effect order, a backend must prove preservation or reject the requested fusion. Writing fuse is not silent permission to choose a different first exception. Input captures, numeric domain checks and target admission cannot be arbitrarily reordered across observable failures.
+
+A depth expression is obtained once per demanded occurrence, not while grouping or calculating priority. Names in backticks remain exact names. New unsupported grammar/plan/shape conditions are translator diagnostics when statically known, otherwise interpreter diagnostics at the reached operation. User expressions and selected scalar methods keep their ordinary throws contracts.
+
+## 4. Final result and assignment
+
+The initial profile publishes a fresh final result after success. It does not mutate existing input or destination storage during scalar evaluation.
 
 ```lmx
-(a b c) .: (b c a)
+result := fuse(A * B + C)
+values[:] .: fuse(values * scale + bias)
 ```
 
-From `1,2,3` the result is `2,3,1`. A sole returned Array is opened into immediate
-values by the assignment consumer at the selected level. Several sibling
-structural values stay several values. The grouper performs no post-call
-flattening. A slice in VALUE role produces a fresh selection; a slice consumed
-as PLACE selects real cells for this operation without a persistent view type.
+Each RHS first obtains its final fresh Array, then ordinary assignment executes. `:=` uses exact pointwise correspondence; `.:` broadcasts to the selected slice. The presence of fuse on the RHS does not insert the outer store into the fused loop and does not select a written-prefix failure behavior.
 
-## 4. One live graph and result storage
+Ordinary assignment obtains required pre-write RHS values and validates all actual target admissions before stores. Overlapping permutations therefore use a snapshot:
 
-The operation retains references to actual expression occurrences, obtained
-scalar/depth values, full requirements, shape descriptions and admitted address
-maps. This is local metadata, not a copied namespace, rewritten source graph or
-second executable program. The scalar expression template is shared by output
-leaves rather than cloned once per element. A scalar result reused by an admitted
-base profile can remain in a scalar register for its current structural position.
+```lmx
+int: a 1
+int: b 2
+int: c 3
+(a b c) := (b c a)
+```
 
-The result uses the canonical TypeRef of its complete declared/evaluated
-requirement. Persistent output extents belong in that requirement; the operation
-must not refine a generic result type from initializer rows, reserve or the
-observed payload. A temporary expression-local shape plan may carry dimensions
-to the next operation, but is not a hidden per-Array descriptor.
-`FxSeqAllocate(arrayType; count)` is the existing unsized linear helper; count
-does not recover axes. A fixed shaped result must use common construction
-immediately under its complete evaluated type, with valid count and initialized
-backing before publication. Empty-value-plus-resize and retagging a ready `[]T`
-are not substitutes; this is a required migration of the old source prototype.
-At capacity=length there is no secondary descriptor. Real reserve uses an
-optional capacity entry and never changes TypeRef merely for that reserve.
-No field is added to `Lmx`. [Canonical Array types](ARRAY_STORAGE.en.md#array-profiles)
-govern publication; missing dimensions needed by fusion are diagnosed.
+A future terminal-write executor may eliminate the final temporary only under its declared exact assignment/failure contract. It must handle actual alias maps: current-cell read, shifted read, transpose, broadcast reuse and duplicate writes are different cases. Unknown dependencies are not made safe by equal shapes. An explicit streaming capability must not silently replace RHS-before-first-write with partial visible stores.
 
-Flat rectangular input and result storage
-stay flat through axis traversal. If a result contract actually returns
-Structures in fields, those are ordinary required result values; they are not
-a separate nested-array kind or temporary row objects.
+## 5. Storage, views and result context
 
-An inline `[items]` is a common-P0 Array constructor, never a grouping node.
-`[arr2]` retains one whole arr2 reference. Eligible fusion may capture such a
-constructor once; that explicitly requested source value is distinct from an
-intermediate result of an arithmetic operator. Removing its allocation is an
-optional proof-based optimization preserving identity, lifetime and failure
-order. There is no singleton broadcast or permission to reassociate a chain.
-See [inline Array expressions](ARRAY_EXPRESSIONS.en.md#inline).
+The result is built under its full declared/evaluated type requirement. Persistent shape is not invented from payload or forgotten initializer rows. A temporary operation context may describe dimensions needed by the next operation; publication obeys its actual result/access contract. TypeRef remains a canonical type pointer, capacity remains independent reserve information, and the Array header remains parent/length/storage.
 
-A walker may use the common leaf consumer and a native translator may emit the
-same traversal. MLIR, a new program graph and implicit compilation are not
-required. Existing explicit compilation and `endturn` boundaries remain.
+The system parent contains a complete instance context where needed. It supplies source/owner, mapping, lifetime and access data using ordinary structures and copy/merge. Depth-selected cells can refer to flat regions without allocating row Arrays. A saved cell or persistent View needs a retained context or materialization; this is already expressible by the existing parent mechanism.
+
+A supported View map is a read capability, not a promise that all possible offset/stride/window/gather expressions can be fused. Read-only is the initial persistent-View default. A retained owner prevents invalidating backing/shape changes for that View. Maps first respect the source's logical region and then the owner's allocation bounds. Repeated reads are valid; duplicate target writes require a separately declared deterministic policy.
+
+An inline `[items]` is an explicit input value with ordinary identity, not a grouping node or an arithmetic intermediate. Capturing it once may be supported. Eliminating that explicit construction requires a separate proof preserving identity, lifetime, demand and failures. `[arr2]` remains one whole reference and does not grant singleton-axis broadcasting.
 
 <a id="implementation"></a>
-## 5. Shared LMX bodies and integration boundary
+## 6. Shared implementation algorithm
 
-Source: [array_expression_ops.lmx](patterns/LMX_Fn_Receivers/src/array_expression_ops.lmx).
+The following steps describe integration, not newly exported `sys` functions:
 
-| Shared body | Work performed |
-| --- | --- |
-| `FxArrayExpressionFill` | One output loop; selected writer or void traversal |
-| `FxArrayInputsAt` | One common collection with the selected flat or logical-axis reader |
-| `FxArrayDepthBase` / `FxArrayDepthCell` / `FxArrayDepth` | Whole base call and one linearized traversal of the depth-selected logical items |
-| `FxArrayElementCell` / `FxArrayElementwise` | The established direct scalar component profile |
-| `FxArrayContractionCell` / `FxArrayProduct` | Ordered multiply/add contraction; provider zero only for an empty contraction |
-| `FxArraySnapshot` / `FxArrayAssignPrepared` | Shared complete-RHS capture, all-target admission and writes |
-| `FxArrayDepthCollect` / `FxArrayDepthAssignPrepared` | Select actual deep places, then reuse the same assignment body |
-| `FxArrayResultTree` | Allocate only described result containers |
-| `FxFuseFill` / `FxFusePrepared` / `FxFuseIntoPrepared` | One shared leaf loop for a new result or an existing target |
-
-`FxArrayDepth\apply(context; depth; inputs)` receives a ready numerical depth,
-not flattened replacement arguments. Its context supplies:
-
-| Context member | Required contract |
-| --- | --- |
-| `base`, `hasResult` | Actual source callable and exact result/void contract |
-| `level(context; depth; inputs)` | Checked axis selection, original-scalar provenance and complete result/void policy; returns `{hasArray,count,inputs,read,layout,write}` |
-| `read(map; index)` in that frame | One selected scalar, Structure value or logical slice descriptor on the existing backing; no row storage |
-| `write(output; index; value)` in that frame | Admit/store one base result into its prepared scalar/block result region |
-| `publish(context; layout; result)` | Retain the actual result's full type and rank/extents description |
-
-The full selected depth/shape contract is prepared before source callbacks.
-`count` is the number of base applications after consuming the selected axes,
-not necessarily the flat scalar count. This linearization implements the same
-ordered recursive axis rule without allocating containers at intermediate axes.
-The body adds `frame.root = context`. For a value result, `FxArrayResultTree`
-allocates/publishes only the full prepared output layout, then the shared loop
-obtains inputs through `read`, calls the base once and stores through `write`.
-The ordinary scalar reader remains the default for direct flat operations.
-
-At depth zero, and for entirely original scalar inputs, the base fast path
-preserves the exact R/void and invokes the source once without an Array.
-A void source uses the same loop
-without result allocation or `Array<void>`; the wrapper preserves the absence
-of a public result. RAW, PLACE, TYPE and other special receivers choose their
-own depth policy rather than entering VALUE lifting by accident.
-
-Depth-selected assignment preparation supplies real `open`/`child` place access and a
-`linearize` view over its selected entries. `FxArrayAssignPrepared` then uses
-`admit(context; index; value)` and `write(context; index; ready)` once each as
-specified. These are genuine place handles/maps, not copies of caller variables.
-Logical row/plane PLACE is an addressable region, not a synthetic pointer slot.
-Fusion's `bindOutput` supplies checked `target/count/cell/write/direct`; dense
-output may use its Array directly, while other real places may use a compact
-address map. It need not allocate a PLACE handle per dense cell. These callbacks are
-explicit bridges to common type/Expression/PLACE preparation, not new public
-functions with empty bodies or claimed completed runtime integration.
-
-## 6. Verification and performance claim
-
-The [host reference](tools/array_expression_reference.py) reuses
-[common depth transport](tools/operand_depth_reference.py), not a second parser.
-[Tests](tools/test_array_expression_reference.py) cover base-versus-lifted
-products at flat rank-two depths 0/1/2, rank-three axes, demanded dynamic depth,
-real-place rebinding, block snapshots, inline constructors and ordinary chain
-order, shape/depth diagnostics, generic scalar contexts,
-void, alias maps, lazy branches, ordinary failures and output/allocation counts.
-Production parser, translator and LMX runtime remain **NOT_RUN**; the actual
-host result is [recorded separately](tools/array_expression_reference_results.json).
-
-```sh
-python docs/spec/tools/test_array_expression_reference.py \
-  --json docs/spec/tools/array_expression_reference_results.json
+```text
+prepareFuse(rawOccurrence, actualContext):
+    inspect roles and supported method capabilities without running bodies
+    obtain the reached demanded inputs and dynamic parameters once
+    derive compatible output coordinates and complete result requirement
+    validate input access maps, scalar numeric boundaries and demand/failure order
+    reject any unsupported operation or guarantee
+    allocate only the final result and allowed compact access metadata
+    for each output coordinate in canonical order:
+        obtain required scalar inputs through their checked access maps
+        evaluate the original scalar tree, including intermediate admission
+        store into the unpublished fresh result
+    publish the result under its complete type and parent-context contract
 ```
 
-The rank-one `fuse(a .* b .+ e)` model has one output pass and one result Array,
-versus two passes and two result Arrays for eager composition. Flat rank-two
-`fuse(a .(2)* b .(2)+ e)` likewise allocates one flat result with retained shape;
-traversing logical rows allocates no row storage. Ordinary Structure values
-required by a result contract are allocated once. Compatible in-place fusion
-allocates no intermediate result Array. These are algorithmic counts, not a
-native benchmark or a universal elapsed-time guarantee.
+Scalar-only work uses the selected ordinary scalar evaluation. A Map→Map plan shares one scalar tree and access maps rather than allocating a tree or row storage per coordinate. Settings are ordinary data; the executor must contain the actual reader, scalar emitter and result builder. The selected scalar rules, lazy demand and complete result types are not replaced by metadata declarations.
+
+If the plan is unsupported, the translator/interpreter reports it. It cannot fall back to eager materialization, claim an unimplemented View, or silently run a general matrix library inside an advertised scalar plan. Reduce, contraction, accelerator, BLAS/GraphBLAS and C-import support are separate implementation work. A two-contraction plan is outside the initial capability set, not inherently impossible.
+
+## 7. Verification and performance scope
+
+The [host reference](tools/array_expression_reference.py) and [tests](tools/test_array_expression_reference.py) model the explicit minimum and its rejection paths. They use [depth transport](tools/operand_depth_reference.py). They do not prove production LMX parser, translator or native execution; that status remains **NOT_RUN** until checked with the project's tools.
+
+For an admitted `fuse(A * B + C)`, the structural guarantee is no intermediate product Array and one final result. It is not a benchmark, mandatory SIMD, zero RAM access or a universal speed promise. Scalar values with their own variable-sized storage retain that type's allocation semantics. Future executors must state working-memory budgets; a full intermediate Array does not become a small tile merely by being renamed.

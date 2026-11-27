@@ -17,7 +17,7 @@ from lmx_style_variants import STYLES, measure, validate_variants
 
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES = ROOT / 'examples'
-DATE = '2026-11-26'
+DATE = '2026-11-27'
 LANGUAGES = ['LMX', 'Python', 'Java', 'C++', 'C#', 'TypeScript', 'Go', 'Rust']
 STATUS = {'complete_pair':'Полная пара', 'related_analogy':'Аналогия', 'lmx_only':'Только LMX'}
 METHOD = (
@@ -346,6 +346,21 @@ def publish_text(model, selected_stems=None):
                     writer.writerow([])
 
 
+def retain_document_editions(model, previous):
+    """Keep publication dates when every published field is unchanged."""
+    previous_docs = {doc['stem']: doc for doc in previous.get('documents', [])}
+    def payload(doc):
+        return {key: value for key, value in doc.items() if key != 'edition'}
+    changed_stems = set()
+    for doc in model['documents']:
+        old = previous_docs.get(doc['stem'])
+        if old is not None and payload(doc) == payload(old):
+            doc['edition'] = old.get('edition', previous.get('edition', DATE))
+        else:
+            changed_stems.add(doc['stem'])
+    return changed_stems
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--text',action='store_true',help='Also write the publication Markdown/CSV summaries')
@@ -364,14 +379,7 @@ def main():
         raise ValueError('Publication lost one or more declared style pairs')
     previous_path=ROOT/'PUBLICATION_DATA.json'
     previous=read(previous_path) if previous_path.is_file() else {'documents':[]}
-    previous_docs={doc['stem']:doc for doc in previous['documents']}
-    def payload(doc):return {key:value for key,value in doc.items() if key!='edition'}
-    changed_stems=set()
-    for doc in model['documents']:
-        old=previous_docs.get(doc['stem'])
-        if old is not None and payload(doc)==payload(old):
-            doc['edition']=old.get('edition',previous.get('edition',DATE))
-        else:changed_stems.add(doc['stem'])
+    changed_stems=retain_document_editions(model,previous)
     write(ROOT/'PUBLICATION_DATA.json',model)
     if args.text: publish_text(model,changed_stems if args.changed_only else None)
     print(json.dumps({'status':'PASS','documents':len(model['documents']),'mirrors':len(model['mirrors']),

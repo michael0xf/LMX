@@ -135,7 +135,8 @@ def bridge_rows(project):
         'Callable': 'callable', 'Attempt': 'attempt', 'Raise': 'raise', 'FieldNames': 'fieldNames',
         'RenameFields': 'renameFields', 'AcceptsRequirement': 'acceptsRequirement',
         'CurrentCall': 'currentCall', 'FrameSlot': 'frameSlot', 'Prepare': 'prepare',
-        'Enter': 'enter', 'ReleaseCall': 'releaseCall', 'ArrayInfo': 'arrayInfo',
+        'Enter': 'enter', 'ReleaseCall': 'releaseCall', 'OperandDepthContext': 'operandDepthContext',
+        'ArrayInfo': 'arrayInfo',
         'ArrayRead': 'arrayRead', 'ArrayAdmit': 'arrayAdmit', 'ArrayWrite': 'arrayWrite'
     }
     rows = []
@@ -149,15 +150,17 @@ def bridge_rows(project):
                      signature='attemptAccepted(form) -> FxOutcome; current receiving activation; gate AE01',
                      source=str(LIB/'CORE_EXAMPLE_HELPERS.md'), sourceLine=1,
                      status='REQUIRED_KERNEL_INTERFACE_NOT_IMPLEMENTED', cSymbol='', executed=False))
-    if len(rows) != 19:
-        raise ValueError(f'Expected 19 bridge records, found {len(rows)}')
+    if len(rows) != len(names) + 1 or len({row['name'] for row in rows}) != len(rows):
+        raise ValueError('Kernel bridge declarations do not match the explicit provider map')
     return rows
 
 
 def system_rows(project):
     rel = Path('docs/spec/LMX_semantics.en.md')
     lines = (project/rel).read_text().splitlines()
-    text = '\n'.join(lines[145:154])
+    start = next(i for i, line in enumerate(lines) if line == '### Auxiliary sys receivers')
+    end = next(i for i in range(start + 1, len(lines)) if lines[i].startswith('`length` stays'))
+    text = '\n'.join(lines[start:end])
     names = list(dict.fromkeys(re.findall(r'sys\\([A-Za-z][A-Za-z0-9]*)', text)))
     rows = []
     signatures = {
@@ -240,7 +243,7 @@ def profile_role_rows(project):
             rows.append(dict(role=cells[0],package='crypto',signature=cells[1],contract=cells[2],
                              source=str(rel),sourceLine=i,status='SEMANTIC_PROFILE_ROLE; CONCRETE_BINDING_REQUIRED',executed=False))
     for name,package,anchor,contract in [
-        ('matmul','tensor','## 18. Array operations','Matrix/vector product profile of * at depth 0; logical-axis depth 1 gives row-dot for rank 2, depth 2 gives scalar componentwise multiplication'),
+        ('matmul','tensor','## 18. Array operations','Whole matrix/vector product profile [*]; .(1)[*] gives row-dot for rank-2 Arrays. Ordinary * is pointwise; depth 0 means maximum and positive depth traverses that many leading axes.'),
         ('dot','tensor','## 18. Array operations','Dot product; explicit selected numeric profile'),
         ('contract','tensor','## 18. Array operations','Tensor contraction; distinct from call/contract'),
         ('outer','tensor','## 18. Array operations','Outer product; explicit selected numeric profile'),
@@ -312,19 +315,30 @@ def main():
         value_records.append(dict(name=row['name'],target=row['target'],role=row['role'],source=str(LIB/row['source']),
                                   package='pattern',bareNameCalls=False))
     emit_records(out/'values.lmx','CoreValues',value_records)
-    emit_records(out/'kernel_bridges.lmx','KernelBridges',bridge_rows(project))
+    bridges=bridge_rows(project)
+    emit_records(out/'kernel_bridges.lmx','KernelBridges',bridges)
     systems=system_rows(project);emit_records(out/'system_receivers.lmx','SystemReceivers',systems)
     forms=language_form_rows(project);emit_records(out/'language_forms.lmx','LanguageFormRoles',forms)
     profiles=profile_role_rows(project);emit_records(out/'profile_roles.lmx','PlannedProfileRoles',profiles)
-    runtime=runtime_rows(project);emit_records(out/'selfbuild_index.lmx','HistoricalSelfbuildFunctions',runtime)
+    # A documentation-only archive carries the historical index, but not the
+    # selfbuild sources. Preserve that snapshot instead of replacing it with an
+    # empty index merely because the source tree was outside the archive.
+    if (project/'selfbuild').is_dir():
+        runtime=runtime_rows(project)
+        emit_records(out/'selfbuild_index.lmx','HistoricalSelfbuildFunctions',runtime)
+    else:
+        historical_index=out/'selfbuild_index.lmx'
+        if not historical_index.is_file():
+            raise FileNotFoundError('Neither selfbuild sources nor a historical selfbuild_index.lmx are available')
+        runtime=project_records(historical_index)
     stats={'canonical_names':len(original),'semantic_variants':len(records),'noncallable_symbols':len(values),
-           'internal_kernel_interfaces':19,'system_and_language_receiver_entries':len(systems),
+           'internal_kernel_interfaces':len(bridges),'system_and_language_receiver_entries':len(systems),
            'historical_selfbuild_declarations':len(runtime),
            'language_form_families':len(forms),'planned_profile_role_groups':len(profiles),
            'packages':{k:len(v) for k,v in sorted(packages.items())},
            'runtime_executed':False,'source_catalog_sha256':hashlib.sha256((project/LIB/'catalog.json').read_bytes()).hexdigest()}
     (out/'summary.json').write_text(json.dumps(stats,ensure_ascii=False,indent=2)+'\n')
-    md=['# Каталог функций ядра', '',
+    md=['# Каталог функций ядра', '', '**Редакция 2026-11-27:** [единый тензорный договор](../../spec/TENSOR_EXPRESSIONS.md) разделяет обычные поэлементные операции, матричные/индексные `[op …]`, `:=` и присваивание срезу с транслированием `.:`. Depth 0 означает максимум, положительное N — N внешних осей без повторного автоматического Map; rank остаётся числом осей Array. Каталог C-функций — источник будущих адаптеров, наличие записи не подтверждает их подключение. Production-интеграция новых профилей — **NOT_RUN**.', '',
         'Исходная опись — [inventory.lmx](inventory.lmx); [JSON-проекция](inventory.json) удобна для инструментария и не вводит JSON в runtime языка.', '',
         f'В исходном каноническом каталоге **{len(original)} имён и {len(records)} семантических вариантов**. Предложенная группировка сохраняет все тела, роли аргументов, сигнатуры и declared failures. Самосборщик не использовался как замена действующей спецификации.', '',
         '| Пакет | Канонических имён в пакете |', '|---|---:|']
@@ -333,7 +347,7 @@ def main():
        '[publication.lmx](publication.lmx) содержит ссылки на исходные CODE-occurrences и operand-формы. Он требует штатной публикации семейств из [PUBLICATION_CONTRACT](../../spec/patterns/LMX_Fn_Receivers/PUBLICATION_CONTRACT.md), не вызывает тела и не меняет их `parent`.', '',
        'Отдельные реестры:', '',
        '- [values.lmx](values.lmx): 24 значения, требования и именованных исхода; они не прибавляются к количеству функций.',
-       '- [kernel_bridges.lmx](kernel_bridges.lmx): 19 требуемых внутренних интерфейсов ядра; объявления не считаются реализованными C-функциями.',
+       f'- [kernel_bridges.lmx](kernel_bridges.lmx): {len(bridges)} требуемых внутренних интерфейсов ядра; объявления не считаются реализованными C-функциями.',
        '- [system_receivers.lmx](system_receivers.lmx): системные и базовые языковые receiver-контракты, сохраняющие текущие роли.',
        '- [language_forms.lmx](language_forms.lmx): полная матрица классов ресиверов/операндов из OPERATION_FORMS; управляющие формы и объявления не превращены в обычные VALUE-callables.',
        '- [profile_roles.lmx](profile_roles.lmx): математические, тензорные, криптографические и отладочные контракты спецификации вне каталога 215 имён; семантическая роль отделена от будущего точного имени и ABI.',

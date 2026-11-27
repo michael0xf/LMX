@@ -12,6 +12,8 @@ L1 is the generated intermediate representation used to lower the kernel to C99.
 <a id="translator"></a>
 ## 2. Translator
 
+LMX source parsing and Expression grouping in the target L1 pipeline use the same single parser and the same shared grouper as the other LMX consumers. The square helper delegates expressions and `{...}` back to that parser. L1 generation consumes the resulting grouping and introduces no independent precedence algorithm or scale adapter. [Shared-code requirement](EXPRESSION_ALGORITHM.md#single-parser-and-grouper).
+
 L1 resolves its C-like declarations and expressions. Prefix `@x` takes the address of C cell `x`, prefix `\p` loads through a pointer, and `p\field` accesses a field through a pointer. Declarative `@ⁿ:` sets the corresponding C pointer depth. The historical argument order for pointer declarations in hand-written L1 is not a permanent exception: target intermediate L1 must follow the shared L2/L3 order “name, requirement, value.” Foreign C symbols use explicit `c.name`.
 
 <a id="lmx"></a>

@@ -1,0 +1,702 @@
+{
+  "revision": "2026-11-27",
+  "status": "SOURCE_MD_SYNC_PASS",
+  "scope": "Additive assignment_forms cohort; no production execution",
+  "examples": 23,
+  "positive_examples": 17,
+  "negative_fixtures": 6,
+  "places": 46,
+  "normalization": "LF and one final LF; all other bytes retained",
+  "cases": [
+    {
+      "id": "assignment_forms__001_scalar_place",
+      "source": "spec/examples/assignment_forms/001_scalar_place.lm3",
+      "title": "Скалярное := меняет одно существующее место",
+      "entrypoint": "ScalarPlace\\run()",
+      "inputs": [],
+      "expected": {
+        "value": 42
+      },
+      "note": "Права́я часть читает прежнее значение total=36; запись не создаёт новую переменную и возвращает присвоенное значение. Пример возвращает окончательную сумму.",
+      "negative": false,
+      "sha256": "807ebc5ca36f62f5b895e5907c4c79e03cc2cb26e1e0ab55fce38b9f99d7c34f",
+      "markdown": "spec/examples/assignment_forms/README.md",
+      "block": 1,
+      "line": 68,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "assignment_forms__002_reference_rebinding",
+      "source": "spec/examples/assignment_forms/002_reference_rebinding.lm3",
+      "title": "Присваивание := перепривязывает переменную-ссылку",
+      "entrypoint": "ReferenceRebinding\\run()",
+      "inputs": [],
+      "expected": {
+        "value": [
+          1,
+          1,
+          70,
+          70
+        ]
+      },
+      "note": "selected начинает указывать на other. Ссылка original по-прежнему ведёт на source; копирования содержимого двух массивов здесь нет. Четыре наблюдения показывают обе сохранённые идентичности.",
+      "negative": false,
+      "sha256": "cee23f42e45109b559147df0bd5469f0f4a7c9a8a0bac3273e0ee811b8c0eaa2",
+      "markdown": "spec/examples/assignment_forms/README.md",
+      "block": 2,
+      "line": 88,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "assignment_forms__003_element_assignment_identity",
+      "source": "spec/examples/assignment_forms/003_element_assignment_identity.lm3",
+      "title": "Поэлементное := сохраняет массив назначения и его алиасы",
+      "entrypoint": "ElementAssignmentIdentity\\run()",
+      "inputs": [],
+      "expected": {
+        "value": [
+          7,
+          80,
+          7,
+          80,
+          8
+        ]
+      },
+      "note": "Обычный := копирует значения элементов в существующий Array; прежний alias видит изменения, отдельный other сохраняет свои данные.",
+      "negative": false,
+      "sha256": "b0786833f5bcd70762a8ffc1024bf210222fdcbd0e26eee8d4c3ee8d8b25e496",
+      "markdown": "spec/examples/assignment_forms/README.md",
+      "block": 3,
+      "line": 110,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "assignment_forms__004_place_rotation",
+      "source": "spec/examples/assignment_forms/004_place_rotation.lm3",
+      "title": "Перестановка трёх настоящих переменных",
+      "entrypoint": "PlaceRotation\\run()",
+      "inputs": [],
+      "expected": {
+        "value": [
+          2,
+          3,
+          1
+        ]
+      },
+      "note": "Левая группа содержит настоящие PLACE, не копии их значений. Вся RHS удерживается до первой записи, поэтому исходное a=1 не теряется.",
+      "negative": false,
+      "sha256": "4be4c3abe8205f22c7f5394f467790d27a894e89fa2fd3a6a107b6b8cf251f40",
+      "markdown": "spec/examples/assignment_forms/README.md",
+      "block": 4,
+      "line": 131,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "assignment_forms__005_scalar_fill",
+      "source": "spec/examples/assignment_forms/005_scalar_fill.lm3",
+      "title": "Транслирование singleton RHS на срез",
+      "entrypoint": "ScalarFill\\run()",
+      "inputs": [],
+      "expected": {
+        "value": [
+          7,
+          8,
+          7
+        ]
+      },
+      "note": "Срезовое .: транслирует Array длины 1 на длину назначения. Это разрешение принадлежит .:, а обычный := такого broadcasting Array не выполняет.",
+      "negative": false,
+      "sha256": "32bebd60a45ebaad976a8fb8e9da110b963cc20656840488cadadca7fa99651c",
+      "markdown": "spec/examples/assignment_forms/README.md",
+      "block": 5,
+      "line": 151,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "assignment_forms__006_compound_updates",
+      "source": "spec/examples/assignment_forms/006_compound_updates.lm3",
+      "title": "Обычное += обновляет скаляр и элементы массива",
+      "entrypoint": "CompoundUpdates\\run()",
+      "inputs": [],
+      "expected": {
+        "value": [
+          13,
+          15,
+          17
+        ]
+      },
+      "note": "Обычный += использует общие поэлементное сложение и присваивание, разрешая назначение один раз.",
+      "negative": false,
+      "sha256": "6c7ef7daa9dc17699188bb81f6b5df41808cde55b16d188462edf36daba6c659",
+      "markdown": "spec/examples/assignment_forms/README.md",
+      "block": 6,
+      "line": 170,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "assignment_forms__007_overlap_shift",
+      "source": "spec/examples/assignment_forms/007_overlap_shift.lm3",
+      "title": "Сдвиг вправо с перекрывающимися участками",
+      "entrypoint": "OverlapShift\\run()",
+      "inputs": [],
+      "expected": {
+        "value": [
+          0,
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      "note": "Левый срез задаёт места записи, правый — источник. Общий снимок всех RHS до stores сохраняет значения перекрывающихся областей.",
+      "negative": false,
+      "sha256": "6052c0711e8ad1af4e7450ec1f65299b7f95d1b398d4eb0784695a86c0e38490",
+      "markdown": "spec/examples/assignment_forms/README.md",
+      "block": 7,
+      "line": 190,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "assignment_forms__008_reverse_places",
+      "source": "spec/examples/assignment_forms/008_reverse_places.lm3",
+      "title": "Обратный порядок целевых мест и полный снимок источника",
+      "entrypoint": "ReversePlaces\\run()",
+      "inputs": [],
+      "expected": {
+        "value": [
+          4,
+          3,
+          2,
+          1
+        ]
+      },
+      "note": "Срез .: сохраняет снимок исходного массива перед записью по обратным адресам; shape назначения не меняется.",
+      "negative": false,
+      "sha256": "5aa6fe4fa37e07256e5975845bfc029870b9ca5e4f060e05ccaf6d35bfa36a22",
+      "markdown": "spec/examples/assignment_forms/README.md",
+      "block": 8,
+      "line": 208,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "assignment_forms__009_returned_array",
+      "source": "spec/examples/assignment_forms/009_returned_array.lm3",
+      "title": "Элементы возвращённого Array получает потребитель :=",
+      "entrypoint": "ReturnedArray\\run()",
+      "inputs": [],
+      "expected": {
+        "value": [
+          20,
+          30,
+          10
+        ]
+      },
+      "note": "Функция возвращает одно Array-значение; непосредственные элементы читает договор :=, не группировщик.",
+      "negative": false,
+      "sha256": "28c9785e83ba463c1262a32e68aa9461c81fd15153c0f88d45746e37a014ce18",
+      "markdown": "spec/examples/assignment_forms/README.md",
+      "block": 9,
+      "line": 226,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "assignment_forms__010_sibling_groups",
+      "source": "spec/examples/assignment_forms/010_sibling_groups.lm3",
+      "title": "Три соседние группы остаются тремя структурными значениями",
+      "entrypoint": "SiblingGroups\\run()",
+      "inputs": [],
+      "expected": {
+        "value": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "assigned_values": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            5,
+            6
+          ]
+        ]
+      },
+      "note": "Три целевых поля типа @ принимают три Structure-значения; sibling группы не превращаются в шесть полей.",
+      "negative": false,
+      "sha256": "e35519a321d027ee4da7155c2e9c9a52eae85b5df173da1288f942accdcd63e1",
+      "markdown": "spec/examples/assignment_forms/README.md",
+      "block": 10,
+      "line": 252,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "assignment_forms__011_conditional_rhs",
+      "source": "spec/examples/assignment_forms/011_conditional_rhs.lm3",
+      "title": "Условная RHS выбирает массив либо скалярное заполнение",
+      "entrypoint": "ConditionalAssignment\\run(chooseFill)",
+      "inputs": [
+        {
+          "chooseFill": 0
+        },
+        {
+          "chooseFill": 1
+        }
+      ],
+      "expected": {
+        "inputs": [
+          0,
+          1
+        ],
+        "values": [
+          [
+            7,
+            8,
+            9
+          ],
+          [
+            5,
+            5,
+            5
+          ]
+        ]
+      },
+      "note": "Условие скалярное. Результат выбранной ветви поступает целиком: Array даёт непосредственные элементы, скаляр — заполнение. Неактивная ветвь не вычисляется.",
+      "negative": false,
+      "sha256": "b0e6c2dfb7494e99abc2281456f2dc93e086914dc5049eb8b2d6b47b23b6c9f6",
+      "markdown": "spec/examples/assignment_forms/README.md",
+      "block": 11,
+      "line": 274,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "assignment_forms__012_fused_assignment",
+      "source": "spec/examples/assignment_forms/012_fused_assignment.lm3",
+      "title": "Свежий результат fuse и обычное присваивание в исходный массив",
+      "entrypoint": "FusedAssignment\\run(values; scale; bias)",
+      "inputs": [
+        {
+          "values": [
+            1,
+            2,
+            3
+          ],
+          "scale": 2,
+          "bias": 1
+        }
+      ],
+      "expected": {
+        "value": [
+          3,
+          5,
+          7
+        ],
+        "target_identity": "preserved",
+        "fuse_final_arrays": 1,
+        "fuse_internal_intermediate_arrays": 0
+      },
+      "note": "Минимальный fuse создаёт один свежий финальный Array без внутренних промежуточных Arrays. Обычный := затем получает снимок и проверяет назначение; streaming store и частично записанный префикс здесь не обещаются.",
+      "negative": false,
+      "sha256": "598268b7f643b0eea285aabf45f05f2284e4cb22431b8cf6b60b189691817ed3",
+      "markdown": "spec/examples/assignment_forms/README.md",
+      "block": 12,
+      "line": 296,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "assignment_forms__013_comparison_is_not_assignment",
+      "source": "spec/examples/assignment_forms/013_comparison_is_not_assignment.lm3",
+      "title": "= сравнивает, := меняет значения",
+      "entrypoint": "ComparisonAndAssignment\\run()",
+      "inputs": [],
+      "expected": {
+        "value": [
+          [
+            1,
+            0,
+            1
+          ],
+          [
+            1,
+            1,
+            1
+          ]
+        ]
+      },
+      "note": "Первое сравнение создаёт [1 0 1], не изменяя left. После присваивания новый результат сравнения — [1 1 1]. Два массива сравнения возвращаются двумя целыми значениями и не превращаются в скалярное условие.",
+      "negative": false,
+      "sha256": "39c38a2f8260c9a2e7af294e8381389761a4fe299dc29239aa2a8246f6e54e3d",
+      "markdown": "spec/examples/assignment_forms/README.md",
+      "block": 13,
+      "line": 316,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "assignment_forms__017_nested_places",
+      "source": "spec/examples/assignment_forms/017_nested_places.lm3",
+      "title": "Запись двух ссылочных элементов и отдельная перепривязка скалярного @",
+      "entrypoint": "NestedPlaces\\run()",
+      "inputs": [],
+      "expected": {
+        "value": [
+          [
+            [
+              3,
+              4
+            ],
+            [
+              1,
+              2
+            ]
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            1,
+            2
+          ]
+        ]
+      },
+      "note": "Обычный := меняет два поля внешней Structure. first/second сохраняют ссылки на прежние внутренние Structure; присваивание скалярному полю @ selected меняет только его ссылочное значение. Отдельного примитива массива массивов нет.",
+      "negative": false,
+      "sha256": "3ceca40b1b9f0b55bed020a293e693433ef98383681eb0cf45374810e3091400",
+      "markdown": "spec/examples/assignment_forms/README.md",
+      "block": 14,
+      "line": 337,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "assignment_forms__018_dynamic_depth",
+      "source": "spec/examples/assignment_forms/018_dynamic_depth.lm3",
+      "title": "Выражение глубины extra - 1 и скалярный множитель",
+      "entrypoint": "DynamicDepth\\run(extra)",
+      "inputs": [
+        {
+          "extra": 1
+        }
+      ],
+      "expected": {
+        "value": [
+          [
+            10,
+            20
+          ],
+          [
+            30,
+            40
+          ]
+        ],
+        "obtained_depth": 0
+      },
+      "note": "extra=1 даёт depth=0 через общее выражение extra-1. depth=0 запускает максимальный Map и обрабатывает скалярные ячейки плоского Array формы 2×2 и сохраняет его форму.",
+      "negative": false,
+      "sha256": "9c41793213ee0a458c654901808237a75e502ff6678890d47b2ab4a1862e2da7",
+      "markdown": "spec/examples/assignment_forms/README.md",
+      "block": 15,
+      "line": 361,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "assignment_forms__021_flat_row_places",
+      "source": "spec/examples/assignment_forms/021_flat_row_places.lm3",
+      "title": "Строки flat матрицы как регионы PLACE, затем скалярное изменение",
+      "entrypoint": "FlatRowPlaces\\run()",
+      "inputs": [],
+      "expected": {
+        "shape": [
+          2,
+          2
+        ],
+        "flat_values": [
+          13,
+          14,
+          11,
+          12
+        ],
+        "returned_references_same_identity": true
+      },
+      "note": "Явный прямоугольный RHS меняет порядок строк, затем обычный += добавляет 10 к координатам. Shape 2×2 определена TYPE, values и alias сохраняют один объект.",
+      "negative": false,
+      "sha256": "26c0274bfc7209145f93fdd7019fa6ad573b667d4de991a96cfd3c2426a30ee7",
+      "markdown": "spec/examples/assignment_forms/README.md",
+      "block": 16,
+      "line": 379,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "assignment_forms__022_flat_fused_places",
+      "source": "spec/examples/assignment_forms/022_flat_fused_places.lm3",
+      "title": "Свежий fuse-результат для плоской матрицы и запись через :=",
+      "entrypoint": "FlatFusedPlaces\\run()",
+      "inputs": [],
+      "expected": {
+        "shape": [
+          2,
+          2
+        ],
+        "flat_values": [
+          3,
+          5,
+          7,
+          9
+        ],
+        "returned_references_same_identity": true,
+        "fuse_final_arrays": 1,
+        "fuse_internal_intermediate_arrays": 0
+      },
+      "note": "Обе записи прямоугольного initializer создают плоский Array. Scalar/Map fuse имеет свежий результат; обычный := сохраняет identity назначения и проверяет RHS до записей.",
+      "negative": false,
+      "sha256": "43d0458980f19a766ef21bf9f273b50bb91cdcc2169ae226be3e8b73f207ad9e",
+      "markdown": "spec/examples/assignment_forms/README.md",
+      "block": 17,
+      "line": 400,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "assignment_forms__014_shape_mismatch",
+      "source": "spec/examples/assignment_forms/negative/014_shape_mismatch.lm3",
+      "title": "Отказ: число элементов не совпадает; singleton Array не скаляр",
+      "entrypoint": "ShapeMismatch\\run(values; useSingleton)",
+      "inputs": [
+        {
+          "values": [
+            1,
+            2,
+            3
+          ],
+          "useSingleton": 0
+        },
+        {
+          "values": [
+            1,
+            2,
+            3
+          ],
+          "useSingleton": 1
+        }
+      ],
+      "expected": {
+        "diagnostic": "translator if known, otherwise interpreter when reached",
+        "catchable_lmx_exception": false,
+        "target_after_diagnostic": [
+          1,
+          2,
+          3
+        ]
+      },
+      "note": "При входной длине 3 не подходят ни два элемента, ни Array из одного элемента. Во втором случае нельзя применять правило скалярного заполнения. Диагностика возникает до первой записи.",
+      "negative": true,
+      "sha256": "8dc4e9c638095e5bb46ddb8d03b9b678a33c01ad8fe18d849706481e948ce490",
+      "markdown": "spec/examples/assignment_forms/README.md",
+      "block": 18,
+      "line": 423,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "assignment_forms__015_admission_before_writes",
+      "source": "spec/examples/assignment_forms/negative/015_admission_before_writes.lm3",
+      "title": "Отказ допуска второго элемента до любых записей",
+      "entrypoint": "AdmissionBeforeWrites\\run(values)",
+      "inputs": [
+        {
+          "values": [
+            1,
+            2,
+            3
+          ],
+          "actual_array_requirement": "[]int"
+        }
+      ],
+      "expected": {
+        "failure": "ordinary int target admission",
+        "target_after_failure": [
+          1,
+          2,
+          3
+        ]
+      },
+      "note": "Проверяемый профиль: values — []int длины 3, строка \"bad\" не допускается его типом и явного конвертера нет. Число элементов верно, но второй элемент не проходит admission. Даже первый элемент назначения остаётся 1.",
+      "negative": true,
+      "sha256": "dd5245d54de2bd8dd2b0669bffc9086d0b27f068ecf756f58e9a43f43a3ab0f5",
+      "markdown": "spec/examples/assignment_forms/README.md",
+      "block": 19,
+      "line": 446,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "assignment_forms__016_fuse_contraction",
+      "source": "spec/examples/assignment_forms/negative/016_fuse_contraction.lm3",
+      "title": "Отказ: fuse не превращает свёртку в поэлементное умножение",
+      "entrypoint": "FuseContraction\\run(values; factors)",
+      "inputs": [
+        {
+          "values": [
+            1,
+            2
+          ],
+          "factors": [
+            3,
+            4
+          ]
+        }
+      ],
+      "expected": {
+        "diagnostic": "ineligible contraction in fuse; translator/interpreter",
+        "catchable_lmx_exception": false,
+        "target_after_diagnostic": [
+          1,
+          2
+        ]
+      },
+      "note": "[*] выбирает скалярное произведение векторов. Минимальный Scalar/Map fuse не поддерживает contraction и диагностирует план без запасного eager-пути.",
+      "negative": true,
+      "sha256": "d2b9f36211472f7e99c8a1582736271a7ee99e17e58b93c354d3f5080fbab066",
+      "markdown": "spec/examples/assignment_forms/README.md",
+      "block": 20,
+      "line": 466,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "assignment_forms__019_depth_mismatch",
+      "source": "spec/examples/assignment_forms/negative/019_frame_mismatch.lm3",
+      "title": "При depth=1 внешние frames имеют разные размеры",
+      "entrypoint": "FrameMismatch\\run()",
+      "inputs": [],
+      "expected": {
+        "diagnostic": "incompatible frames (2) vs (3)",
+        "catchable_lmx_exception": false
+      },
+      "note": "При depth=1 строки обоих Arrays имеют длину 2 и подходят базовому векторному [*], но frames равны (2) и (3). Несовместимые frames не транслируются неявно; ошибка возникает до вызова [*].",
+      "negative": true,
+      "sha256": "00138ac34d654ee8cc2902c6368f9ef837b5e9c7c72049ad87821eb9f59f246d",
+      "markdown": "spec/examples/assignment_forms/README.md",
+      "block": 21,
+      "line": 485,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "assignment_forms__020_excess_depth",
+      "source": "spec/examples/assignment_forms/negative/020_excess_depth.lm3",
+      "title": "Глубина обхода 2 превышает rank=1 входного Array",
+      "entrypoint": "ExcessDepth\\run()",
+      "inputs": [],
+      "expected": {
+        "diagnostic": "depth exceeds the actual Array rank",
+        "catchable_lmx_exception": false
+      },
+      "note": "У values одна логическая ось. Стандартный Map не обрезает положительный depth=2 до rank=1: применение диагностируется до базового сложения. Максимальный обход здесь задаётся depth=0 или depth=1. Пользовательский метод без Map сохраняет собственный договор числа.",
+      "negative": true,
+      "sha256": "bc9e789175b8dfea566f32aa4b2b8219d9344d063089c09540481318172a4ec5",
+      "markdown": "spec/examples/assignment_forms/README.md",
+      "block": 22,
+      "line": 503,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "assignment_forms__023_scalar_to_row",
+      "source": "spec/examples/assignment_forms/negative/023_broadcast_mismatch.lm3",
+      "title": "Несовместимый broadcast RHS среза",
+      "entrypoint": "BroadcastMismatch\\run()",
+      "inputs": [],
+      "expected": {
+        "diagnostic": "slice broadcast shape mismatch",
+        "catchable_lmx_exception": false,
+        "target_shape": [
+          2,
+          2
+        ],
+        "target_flat_after_failure": [
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "note": "Срез имеет четыре места, RHS — три элемента. В .: размер RHS должен совпадать с размером оси либо быть 1; 3 в 4 не транслируется.",
+      "negative": true,
+      "sha256": "9c854a82554fc35c3587e5ea6dfc041e864b37ac4ff86a31cb241ca0ca0a88de",
+      "markdown": "spec/examples/assignment_forms/README.md",
+      "block": 23,
+      "line": 520,
+      "source_markdown_sync": "PASS",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    }
+  ]
+}

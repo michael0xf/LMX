@@ -19,7 +19,7 @@
 | [J07. Последовательные списания и возвраты с нижней границей](J07_comparision.md) | 131 | 227 | <span style="color:#176233"><u>95</u></span> |
 | [J08. История отрицательных остатков](J08_comparision.md) | 225 | 207 | <span style="color:#176233"><u>90</u></span> |
 | [J09. Общий дефицит по сопоставленным позициям склада](J09_comparision.md) | 153 | 234 | <span style="color:#176233"><u>121</u></span> |
-| [J10. Пороговый отбор калиброванных оценок](J10_comparision.md) | 304 | 230 | <span style="color:#176233"><u>149</u></span> |
+| [J10. Пороговый отбор калиброванных оценок](J10_comparision.md) | 304 | 226 | <span style="color:#176233"><u>149</u></span> |
 | [J11. Уникальные позиции вокруг событий](J11_comparision.md) | 297 | 277 | <span style="color:#176233"><u>110</u></span> |
 | [J12. Группировка уникальных ID по разделам](J12_comparision.md) | 407 | 158 | <span style="color:#176233"><u>90</u></span> |
 | [J13. Сигнал только после двух превышений подряд](J13_comparision.md) | 112 | 212 | <span style="color:#176233"><u>94</u></span> |
@@ -34,10 +34,10 @@
 | [J22. Последние четыре цифры нормализованного номера](J22_comparision.md) | 315 | 155 | <span style="color:#176233"><u>72</u></span> |
 | [J23. Обратный порядок операций из сохранённых пачек](J23_comparision.md) | 730 | 102 | <span style="color:#176233"><u>82</u></span> |
 | [J24. Пары покупок в пределах бюджета](J24_comparision.md) | 261 | 307 | <span style="color:#176233"><u>78</u></span> |
-| [J25. Калибровка сигнала и отбор по порогу](J25_comparision.md) | 330 | 215 | <span style="color:#176233"><u>93</u></span> |
+| [J25. Калибровка сигнала и отбор по порогу](J25_comparision.md) | 330 | 212 | <span style="color:#176233"><u>93</u></span> |
 | [J26. Хвостовое окно истории в выбранном направлении](J26_comparision.md) | 402 | 201 | <span style="color:#176233"><u>172</u></span> |
-| [J27. Сдвиг истории на месте и маска неизменившихся позиций](J27_comparision.md) | 241 | 187 | <span style="color:#176233"><u>130</u></span> |
-| **Всего** | 10104 | 4858 | <span style="color:#176233"><u>2752</u></span> |
+| [J27. Сдвиг истории на месте и маска неизменившихся позиций](J27_comparision.md) | 241 | 203 | <span style="color:#176233"><u>130</u></span> |
+| **Всего** | 10104 | 4867 | <span style="color:#176233"><u>2752</u></span> |
 
 [Единые библиотечные реализации](library_comparisons/README.md) JI01–JI04 и [общие зависимости](validation/implementation_dependencies.json) учитываются отдельно.
 

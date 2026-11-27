@@ -132,12 +132,12 @@ FxSeqConcat:
         throws: copy(FxThrows\sequence)
         FxSeqInfo\get(parts)
         private: int: count length(parts)
-        private: int: arrayType []@
-        private: int: elementType 0
+        private: @: arrayType []@
+        private: @: elementType
         private: int: allDense 1
         private: int: i 0
         # Inspect all parts, including empty dense parts. Comparison uses
-        # canonical full element codes from the common type resolver.
+        # canonical full element TypeRef references from the common type resolver.
         while: i < count
             private: @: part FxSeqRead\read(parts; i)
             private: @: info FxSeqInfo\get(part)
@@ -333,7 +333,7 @@ end
 
 | Полный исходник | Непробельные символы | Все Unicode-символы | Непустые строки |
 | --- | ---: | ---: | ---: |
-| LMX | 4233 | 6661 | 191 |
+| LMX | 4240 | 6668 | 191 |
 | Julia | <span style="color:#176233"><u>2529</u></span> | 3417 | 114 |
 
 Общие зависимости считаются один раз; отдельные style-копии библиотечных тел не создаются. Runtime execution: NOT_RUN.

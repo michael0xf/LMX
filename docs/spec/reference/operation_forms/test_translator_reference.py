@@ -8,7 +8,7 @@ from translator_reference import (
     Actual, AttachedUpdate, FormError, OperationUse, UPDATE_RULES,
     lowerUpdate, normalizeUse, prepareInvocation, translateOperation,
 )
-from operand_depth_reference import DepthError, DepthExpression
+from operand_depth_reference import DepthError, DepthExpression, ABSENT
 
 
 @dataclass
@@ -93,10 +93,10 @@ class TranslatorChecks(unittest.TestCase):
         self.assertEqual(ready.depth, 2)
         self.assertIs(ready.actuals, actuals)
 
-    def test_absent_named_depth_is_ready_zero(self):
+    def test_absent_named_depth_is_not_zero(self):
         site = self.site("+")
         ready = prepareInvocation(site, lambda *args: self.fail("default depth read caller data"))
-        self.assertEqual(ready.depth, 0)
+        self.assertIs(ready.depth, ABSENT)
         self.assertIs(ready.actuals, site.actuals)
 
     def test_depth_expression_is_not_executed_during_translation(self):
@@ -141,7 +141,8 @@ class TranslatorChecks(unittest.TestCase):
         for bad in (-1, 1.5, True, (1, 2)):
             site = OperationUse("++var", (self.actual,), self.context, bad)
             with self.assertRaises(DepthError):
-                prepareInvocation(site, lambda *args: self.fail("ready value has no evaluator"))
+                ready = prepareInvocation(site, lambda *args: self.fail("ready value has no evaluator"))
+                lowerUpdate(UPDATE_RULES[ready.name], ready, Backend())
             self.assertEqual(self.cell.value, 7)
 
     def test_assignment_receiver_uses_base_name_and_named_depth(self):

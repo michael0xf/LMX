@@ -22,7 +22,7 @@ StreamProbe:
     run:
         int: a 0
         int: b 0
-        (a b) .: copy(Pair)
+        (a b) := copy(Pair)
         return: a * 10 + b
 ```
 

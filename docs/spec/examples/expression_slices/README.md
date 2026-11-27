@@ -89,7 +89,7 @@ OverlapReverse:
     run:
         throws: copy(slice\throws) copy(`:=`\throws)
         []int: nums [0 1 2 3 4 5 6]
-        nums[::-1] .: nums
+        nums[::-1] := nums
         return: nums
 ```
 
@@ -103,7 +103,7 @@ GroupRotation:
         int: a 1
         int: b 2
         int: c 3
-        (a b c) .: (b c a)
+        (a b c) := (b c a)
         return: (a b c)
 ```
 

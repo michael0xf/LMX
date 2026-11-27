@@ -1,0 +1,18 @@
+numeric_ops:
+    @int: left
+    int: depth
+    []@int: right
+    const: int: PASS_ARGS_AS_IS 0
+    const: int: PRIORITY sys\priority("+")
+    return: int
+    subtract:
+        return: \left - \right[0]
+
+arithmetic:
+    return: int
+    precedence:
+        import: numeric_ops
+        return: 30 subtract 4 * 3
+    association:
+        import: numeric_ops
+        return: 30 subtract 4 subtract 3

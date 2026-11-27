@@ -40,7 +40,7 @@ def expected_files():
             ])
             note = ("Expected shape diagnostic; production NOT_RUN" if category == "negative"
                     else "Normative source; P0/translator/LMX runtime NOT_RUN")
-            index.append([ident, "fragment", 2, "-", "-", "-", "не проверен", "2026-11-26", note])
+            index.append([ident, "fragment", 2, "-", "-", "-", "не проверен", "2026-11-27", note])
             receipts.append({
                 **case, "id": ident, "category": category,
                 "source": source.relative_to(DOCS).as_posix(),
@@ -69,10 +69,10 @@ shape diagnostic по нормативному контракту, но её ф�
 
 Повторная синхронизация: `python spec/tools/register_array_storage_examples.py`
 из docs; проверка без записи — та же команда с `--check`.
-SHA-256, категории и наблюдения: [отчёт](../../../validation/array_storage_examples_20261126.json).
+SHA-256, категории и наблюдения: [отчёт](../../../validation/array_storage_examples_20261127.json).
 """
-    outputs[SPEC / "validation/array_storage_examples_20261126.json"] = json.dumps({
-        "revision": "2026-11-26", "status": "SOURCE_MD_SYNC_PASS",
+    outputs[SPEC / "validation/array_storage_examples_20261127.json"] = json.dumps({
+        "revision": "2026-11-27", "status": "SOURCE_MD_SYNC_PASS",
         "scope": "Additive Array-storage cohort; no production execution",
         "examples": len(receipts), "places": len(places),
         "positive": len(cases["positive"]), "negative": len(cases["negative"]),

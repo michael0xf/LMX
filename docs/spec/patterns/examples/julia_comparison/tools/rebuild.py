@@ -13,7 +13,7 @@ from lmx_style_variants import get_variants, validate_variants
 from lmx_execution_contract import apply_execution_contract, acceptance_document
 from lmx_style_suite_reports import prepare as prepare_style, rows_for, client_markdown, count_table, write_overview, write_csv, block
 from canonical_operations import definitions, public_roots as catalog_roots, selected_operations
-EDITION = '2026-11-26'
+EDITION = '2026-11-27'
 COMPONENTS = [
  ('JI01','Упорядоченные обходы, предикаты и свёртки','JI01_ordered.jl',
   ['map','filter','foldl','scanl','zip','zipWith','bind','any','all','index','count','record'],

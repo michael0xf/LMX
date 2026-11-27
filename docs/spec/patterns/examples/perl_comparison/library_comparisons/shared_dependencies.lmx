@@ -136,7 +136,7 @@ FxSeqAdmit:
 
 FxSeqAllocate:
     private:
-        int: arrayType
+        @: arrayType
         int: count
     required: arrayType count
     return: @
@@ -220,12 +220,12 @@ FxSeqConcat:
         throws: copy(FxThrows\sequence)
         FxSeqInfo\get(parts)
         private: int: count length(parts)
-        private: int: arrayType []@
-        private: int: elementType 0
+        private: @: arrayType []@
+        private: @: elementType
         private: int: allDense 1
         private: int: i 0
         # Inspect all parts, including empty dense parts. Comparison uses
-        # canonical full element codes from the common type resolver.
+        # canonical full element TypeRef references from the common type resolver.
         while: i < count
             private: @: part FxSeqRead\read(parts; i)
             private: @: info FxSeqInfo\get(part)

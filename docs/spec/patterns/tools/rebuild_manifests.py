@@ -11,7 +11,7 @@ PACKAGE = PATTERNS / 'LMX_Fn_Receivers'
 
 def files(root, exclude):
     result = []
-    for path in sorted(root.rglob('*')):
+    for path in sorted(root.rglob('*'), key=lambda path: path.relative_to(root).as_posix()):
         if not path.is_file() or path.name in {'.DS_Store'} or path.suffix == '.pyc':
             continue
         if '__pycache__' in path.parts or '.git' in path.parts:
@@ -31,7 +31,7 @@ def write(path, value):
 
 
 def main():
-    provenance = json.loads((PATTERNS / 'validation/expansion_baseline_20261124.json').read_text())
+    provenance = json.loads((PATTERNS / 'validation/tensor_baseline_20261127.json').read_text())
     base = provenance['base_archive']
     historical = provenance.get('historical_provenance', {})
     catalog = json.loads((PACKAGE / 'catalog.json').read_text())
@@ -43,7 +43,7 @@ def main():
     assert not static['errors'], 'Fix source checks before publishing manifests'
     package_files = files(PACKAGE, {'MANIFEST.json'})
     write(PACKAGE / 'MANIFEST.json', {
-        'revision': 'examples-expansion-current-statistics-doc-examples-2026-11-24',
+        'revision': 'tensor-expression-integration-depth-2026-11-27',
         'base_archive': base['name'], 'base_archive_sha256': base['sha256'],
         'historical_provenance': historical,
         'public_receivers': len(catalog),
@@ -69,11 +69,11 @@ def main():
     (PATTERNS / 'MANIFEST.sha256').write_text(''.join(f"{row['sha256']}  {row['path']}\n" for row in pattern_files), encoding='utf-8', newline='\n')
     spec_files = files(SPEC, {'ARCHIVE_MANIFEST.json'})
     write(SPEC / 'ARCHIVE_MANIFEST.json', {
-        'edition': '2026-11-24', 'base_archive': base['name'], 'base_archive_sha256': base['sha256'],
+        'edition': '2026-11-27', 'base_archive': base['name'], 'base_archive_sha256': base['sha256'],
         'historical_provenance': historical,
         'scope': 'Complete post-merge spec directory, including integrated contracts, sources, comparisons and answers to Fable; not the member list of the changes-only archive.',
         'delivery_mode': 'changes_only',
-        'delta_manifest': 'CHANGES_2026-11-24.json at archive root',
+        'delta_manifest': 'docs/TENSOR_PATCH_MANIFEST_2026-11-27.json in the original delivery',
         'fable_answers': 'FABLE_CLARIFICATIONS.md',
         'self_excluded': True, 'excluded_metadata': ['.DS_Store', '__pycache__', '*.pyc', '.git'],
         'file_count_without_manifest': len(spec_files), 'files': spec_files,

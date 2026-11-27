@@ -1,88 +1,42 @@
-# Operator depth: one dot and an ordinary parenthesized expression
+# Operation depth: one external traversal
 
-Revision 2026-11-26. This is the common depth input of an operation, including
-custom operands. It selects a logical depth using the retained dimensions of
-a flat Array. It is not indentation or pointer indirection, and introduces no
-new kind of function or Structure.
+The common modifier `.(expression)op` supplies **depth**, not cell rank. A positive d traverses d outer logical axes. **Explicit zero means maximum depth.** The Array's rank remains its number of axes, and `math\linear\rank` remains a mathematical operation. [Complete normative contract](TENSOR_EXPRESSIONS.md#operator-depth).
 
 <a id="syntax"></a>
-## 1. Written forms
+## 1. Syntax and default
 
-| Expression form | Supplied depth |
+| Form | Meaning |
 | --- | --- |
-| `p1 + p2` | 0: the base operation consumes the outer values as wholes |
-| `p1 .+ p2` | 1: the standard value profile descends one logical dimension |
-| `p1 .(2)+ p2` | 2 |
-| `p1 .(10)+ p2` | 10 |
-| `p1 .(0)+ p2` | 0, explicitly; the same operation as the undotted form |
-| `p1 .(1)+ p2` | 1, explicitly; the same operation as the single-dot form |
-| `p1 .(layers + 1)myOperator p2` | The result of the ordinary depth expression |
+| `A + B` | Ordinary arithmetic default: maximum elementwise traversal |
+| `A .(0)+ B` | Explicit maximum depth |
+| `A .(1)op B` | Traverse one outer axis, pass the remaining cells to op's base handler |
+| `A .(d)op B` | Obtain one nonnegative integer from the ordinary expression d |
+| `.(d)method(A; B)` | The same prefix modifier before the method designator |
+| `A [*] B` | The whole/indexed product contract, without an external modifier |
 
-**The modifier has only one dot.** Custom depths are written in parentheses. A run of dots is not an alternative depth notation.
+There are no general `.op`, `..op` or `...op` abbreviations. `.:` is a dedicated slice-broadcast assignment, not depth-one `:=`; `.(d):` is not an assignment alias. Suffix `method.(d)(...)` is not introduced.
 
-Place the depth modifier before the ordinary designator of a built-in or
-user-defined operation. `.=`, `.**` and `.Lib\op`
-select `=`, `**` and `Lib\op` respectively at depth 1. The same designators
-can follow `.(expression)`. A whole exact identifier retains its spelling,
-including any dot inside its backquotes. `.:` is the dedicated depth-one
-spelling of assignment `:=`. `.(expression):` uses the explicit depth form
-of that same assignment.
-
-The material inside `.(…)` is parsed by the **same general parser** as other
-expressions. It may contain a name, a call or an expression such as `1 + 9`.
-No decimal-only scanner, source-text evaluator or second expression grammar
-is introduced. The resulting graph occurrence retains its original context.
-
-**A dot immediately followed by `(` always starts an operator/function
-modifier.** In the ordinary lexical context, `.(` is recognized before a
-decimal point or a dotted layout zone. The numeric scanner must leave this
-dot unconsumed. Thus `1.(3)+2.(2)+3` has the same boundaries as
-`1 .(3)+ 2 .(2)+ 3` and yields 6 under the existing scalar contract.
-
-After `.(` the common P0 parses an ordinary expression up to the matching
-`)`; no second depth-expression grammar is introduced. The grouper receives
-the resulting graph occurrence, not source text. Strings, comments and exact
-identifiers retain their shielding. Other numeric rules remain: `1 .+ 2`
-needs its ordinary token boundary, while `.(` is never a decimal point,
-even when adjacent to a preceding number.
+A dot immediately followed by `(` starts this modifier rather than a decimal fraction. Inner expressions use the common parser and retain source context. Strings, comments and quoted exact names retain shielding. Written boundaries are specified in the [bracket-subparser grammar](BRACKET_SUBPARSER.en.md). This documentation does not claim production parser/translator/runtime acceptance.
 
 <a id="abi"></a>
-## 2. Operand template and method entry
+## 2. Presence and common transport
 
-The first three inputs are **left, depth, right**, in that order:
+The service parameter has the declared type int. The traversal rules in this chapter belong to **standard Map profiles**. A custom handler may interpret depth differently; unless it selects that Map profile, nonnegative-depth, depth>K and frame checks are not imposed globally. In particular an admitted negative int can be passed to such a custom method. This does not authorize an arbitrary non-int service argument.
+
+Prepared actuals retain the order **left, depth, right**:
 
 ```lmx
-operand_template:
+ExpressionActuals:
     @: left
     int: depth
     []@: right
-    const: int: PASS_ARGS_AS_IS
-    const: int: PRIORITY
 ```
 
-All five named fields belong to the actual DATA description. `depth` is a
-normal numeric input, not another constant property like PRIORITY. The
-expression form supplies 0, 1 or the accepted result of the parenthesized
-expression. The input must be an admitted nonnegative integer; malformed
-structure, failures while evaluating the expression and ordinary input
-admission retain their normal diagnostics. An invalid ready depth is a translator diagnostic when statically known,
-otherwise an interpreter diagnostic when reached. It is not a catchable
-LMX exception or an extra entry in throws.
+This is a DATA transport fragment, not a complete operand template. Missing left and missing depth stay absent. No uninitialized number is read, no universal default zero is inserted, and no separate depthPresent flag or numeric absence sentinel is introduced. Presence belongs to the prepared occurrence; an outer dynamic field named depth does not manufacture a written modifier.
 
-This changes the operand transport layout: frame positions 0/1/2 contain
-left/depth/right. It does **not** insert depth into the Array of right
-arguments. The two existing placements remain: no left atom, or one left
-atom. A missing left remains missing. Prefix equivalence is still decided
-inside the operation method, not by moving the first right value into left.
+An explicitly written depth expression is obtained once when demanded in its source context. The method can independently use dynamic data to choose its own default. For ordinary arithmetic the default is maximum elementwise traversal. For a whole `[op]`, reducer or DATA/TYPE/RAW consumer, absence retains that receiver's default. **Absence and explicit zero therefore remain distinct:** `A [*] B` receives whole matrices; `A .(0)[*] B` selects scalar cells and needs an actual base-product contract admitting them, otherwise it diagnoses the application.
 
-PASS_ARGS_AS_IS still governs left/right consumption. For a RAW operation
-those occurrences remain RAW; when the operation is actually invoked,
-depth is a ready numeric input. Discovery reads the declared input type and
-the existing ready mode/priority; it does not evaluate a computed depth.
-
-A custom method receives the requested number before any optional
-operation-specific traversal. For example, this method reports the supplied
-depth and does not automatically map over its arguments:
+The common operand template retains PASS_ARGS_AS_IS and PRIORITY. Candidate discovery examines roles and ready priority without executing depth or callbacks. There are still two ordinary placements: absent left or one left atom. Neither grouping nor binding moves right[0] into left; the operand establishes supported prefix/infix equivalence itself.
 
 ```lmx
 DepthProbe:
@@ -91,6 +45,7 @@ DepthProbe:
     []@: right
     const: int: PASS_ARGS_AS_IS 1
     const: int: PRIORITY sys\priority("+")
+    required: depth
     return: int
     read:
         return: depth
@@ -99,174 +54,77 @@ DepthProbe:
 int: observed 10 .(1 + 1)myOperator 20
 ```
 
-The expected observed value is 2. This is a specification example;
-production parser/runtime execution is recorded separately.
+The service actual is 2. Original scalars have no missing Array axes to diagnose. This custom method reads the actual under its declared role; not every custom operand is forced into eager VALUE mapping. The LMX example is normative, production execution **NOT_RUN**.
 
 <a id="receiver"></a>
-## 3. Structural receiver form and exact names
-
-The structural form uses the **base name**, with the same named input
-`depth`. Dots and the parenthesized expression are not inserted into the name
-inside backticks. In a system value-receiver profile, for example:
+## 3. Receiver form and exact names
 
 ```lmx
-@: result `*`(a; b; depth := 2)
+@: values `*`(A; B; depth := 0)
+@: rowProducts `[*]`(A; B; depth := 1)
 ```
 
-That receiver profile consumes its ordinary value arguments plus the
-declared named depth input. This is not a positional call of the three-slot
-operand ABI. For a custom method exposing that ABI directly, name its
-left/depth/right inputs explicitly.
+The receiver uses the base name and the same named depth actual; the second example supplies corresponding rows for rank-two A and B. This is its declared logical-argument interface, not a positional call to the three-field operand transport. A custom method exposing that transport directly names left/depth/right.
 
-Backticks retain their usual exact-identifier semantics. A quoted name
-containing a dot remains that literal name if a user declares it; quoting
-does not decode it as a depth modifier. The standard operation does not
-publish a separate dot-prefixed callable alias. Its throws reference uses
-the base operation, for example `` `*`\throws ``.
-
-Depth is not a globally intercepted keyword in every function call. It
-belongs to the selected operation's declared input. The original function
-wrapped by `asOperand` keeps all its own logical arguments, including a
-user argument that happens to be named depth; the wrapper's control input
-has a different owner and is not inserted into those arguments.
+Backticks retain exact identifiers. Decoration does not become part of a standard callable name, nor does quoting decode a name. There are no historical dotted aliases. Errors are copied from actual base methods, for example ``copy(`*`\throws)``. A wrapper's service depth and an unrelated function's own argument have different owners; no blanket interception of every argument named depth is introduced.
 
 <a id="evaluation"></a>
-## 4. Evaluation and the common traversal
+## 4. One traversal, then the selected base handler
 
-The depth expression is obtained **once when that operation occurrence is
-demanded**, in its original source/caller context and under ordinary
-argument-order rules. Grouping, priority inspection and candidate discovery
-do not run it. A skipped logical or conditional branch does not run its
-computed depth either. The base operation's precedence and associativity
-do not depend on the resulting number.
+For an iterated Array of rank K, positive d requires d≤K. The first d axes form the frame and the last K−d axes form each cell. Explicit zero selects all K axes. Unlike the former cell-rank proposal, d>K is an error, not clipping.
 
-For the standard value profile, one shared traversal applies:
+| Shape | depth | Cell | Frame |
+| --- | ---: | --- | --- |
+| `(2,3,4)` | 0 (maximum) | One element | `(2,3,4)` |
+| `(2,3,4)` | 1 | `(3,4)` | `(2)` |
+| `(2,3,4)` | 2 | `(4)` | `(2,3)` |
+| `(2,3,4)` | 3 | One element | `(2,3,4)` |
+| `(2,3,4)` | 4 | Diagnostic | — |
 
-```text
-applyDepth(base, acceptedDepth, actuals, output):
-    if acceptedDepth == 0 or every original consumed actual is scalar:
-        return base(actuals) through the admitted result contract
-    level = prepareNextLogicalDimension(actuals)
-    diagnoseMissingRequiredDimensions(level, originalScalarInputs)
-    validateMatchingSelectedShapes(level)
-    for each position on this dimension:
-        values = sameStorageSlicesOrOriginalScalars(level, position)
-        applyDepth(base, acceptedDepth - 1, values, output.at(position))
-    publish the result with its full shape and result requirement
+After selecting a cell, the common mechanism calls the selected **base handler without re-entering the same automatic Map wrapper**. Otherwise depth would be erased by recursive remapping. Unsupported remaining Array inputs cause an ordinary admission diagnostic; they are not silently descended into. Explicit operations written inside a user's body retain their normal contracts.
+
+```lmx
+[2][2]int: A [1 2; 3 4]
+[2][2]int: B [5 6; 7 8]
+@: cells A * B
+# [5 12; 21 32]
+@: sameCells A .(0)* B
+# [5 12; 21 32]
+@: explicitCells A .(2)* B
+# [5 12; 21 32]
+@: rows A .(1)[*] B
+# [17 53]
+@: product A [*] B
+# [19 22; 43 50]
 ```
 
-Dimensions come from the [canonical complete Array type](ARRAY_STORAGE.en.md#array-profiles)
-and explicit or uniquely derivable constraints together with length. Initializer
-rows do not refine that type. At capacity=length no secondary descriptor exists;
-real reserve has an optional capacity entry without changing TypeRef. A temporary
-traversal plan never becomes a hidden persistent shape descriptor. Persistent
-output extents must be part of the operation's complete result requirement. Missing information needed for the selected depth is diagnosed,
-without guessing the rank or independent axes.
-For a flat rectangular Array, descending one dimension selects a logical
-slice of the same backing storage; it does not allocate a row Structure.
-Axis order is the declared order, outermost first. Once the requested
-number of dimensions has been consumed, the base operation receives the
-remaining whole values. Output shape follows that operation's actual
-result: a row product can return a scalar, while a row sum returns a row.
-One flat output backing is used when the admitted result is rectangular.
-No per-row graph or intermediate row objects are required. The concrete
-LMX executor may linearize the selected dimensions into one loop over a
-checked shape/address plan; this is the same traversal, not a second algorithm.
+Here `A .(1)* B` does not secretly perform row dots or another automatic scalar Map: the scalar base `*` needs an explicit admission for Array cells, otherwise it diagnoses them. `A .(3)* B` fails because the inputs have only two axes. For a rank-three batch, depth 1 passes matrix cells to a whole matrix method. Axis rules inside `.(d)[op ...]` refer to the remaining cells, not removed frame axes.
 
-No scalar leaf is probed to discover a type. Void remains void. Array
-inputs must provide the requested dimensions and compatible selected
-shapes. Original scalar inputs may be repeated; an exhausted Array cannot
-silently become a scalar broadcast while more dimensions are required.
-All-original-scalar inputs are fixed points. A singleton Array is still an
-Array. Invalid depth/shape is a translator/interpreter diagnostic. Empty
-inputs retain their complete shape and type without probing a first item.
+Frames of iterated Arrays match exactly. Their cell shapes can differ if the handler admits them. Original scalars contribute no axes and can be repeated. `$x` or `$(expression)` holds an actual whole for this external traversal, obtaining it once on demand without copying. For Z `(rows,cols)` and bias `(cols)`, `Z .(1)rowAdd $bias` passes a row and the whole bias. A declared rowAdd may explicitly use ordinary `+` in its body; the wrapper itself does not add a hidden inner Map. Explicit zero would instead pass each element and the whole bias, never hidden bias[j].
 
-For two **flat rank-2 Arrays** p1 and p2, with retained shape `(2,2)` and
-row-major backing `[1 2 3 4]` and `[10 20 30 40]`:
+An empty frame tuple means one call. A zero frame extent means no calls. Result requirements and empty assembly are declared rather than guessed by a trial invocation. Required dimensions come from the actual type and valid instance access context. Forgotten initializer rows are not recovered. Cells refer to the same flat backing with temporary parent context; escape requires retained context or materialization.
 
-| Operation | Base operation receives | Result |
-| --- | --- | --- |
-| `p1 * p2` | Two whole matrices | Shape `(2,2)`, backing `[70 100 150 220]` |
-| `p1 .* p2` | Each pair of logical rows | Shape `(2)`, values `[50 250]` |
-| `p1 .(2)* p2` | Each pair of scalar coordinates | Shape `(2,2)`, backing `[10 40 90 160]` |
-
-Thus scalar coordinatewise multiplication of rank N uses depth N. A single
-dot is exactly depth 1; it does not silently change its numeric meaning with
-rank. The former claim that every flat rank has only one usable depth level
-is replaced by this shape-aware rule. The same mechanism applies to all
-operations, without a multiplication-specific depth exception.
-
-An ordinary Structure remains `[]@`. A field may refer to another ordinary
-Structure; that introduces no separate “array of arrays” entity. The path
-`struct[i]\[j]` is the index spelling of `struct\struct2\field` when i and j
-select those fields; `struct[i]\[j]\[k]` spells `struct\struct2\field[k]`.
-Such paths use the common access mechanism. Flat Array dimensions come
-from metadata, not from guessing the shape of a referenced graph.
-
-Depth 0 means the base operation's existing whole-value contract; it does
-not promise that every outer container is valid for that contract.
-
-Custom, RAW, DATA, TYPE and PLACE consumers retain their own roles and
-semantics. They receive depth through the same transport but are not
-blindly rewritten into a VALUE map. A profile with no meaning for a
-nonzero depth reports an explicit translator/interpreter diagnostic instead of ignoring it.
-The value adapter shares the traversal and preserves the actual dependent
-result requirement; it must not promise scalar R for an Array result or
-replace every result with an untyped wrapper.
+Structure `[]@` participates with actual typed records. References do not invent tensor axes, and `struct[i]\[j]` keeps its path meaning. Unsupported operations are diagnosed on actual elements, not by excluding a container class.
 
 <a id="assignment"></a>
-## 5. Assignment family
+## 5. Special roles and writes
 
-The established assignment spellings remain:
+Ordinary `:=` is pointwise with exact Array shapes and admitted scalar fill. `.:` broadcasts RHS to a selected slice. An explicitly supported `.(d):=` selects real places through one external traversal and calls the base PLACE contract; it never turns a row region into a fictitious pointer slot.
 
-| Form | Canonical operation | Depth |
-| --- | --- | --- |
-| `target := source` | `:=` | 0 |
-| `target .: source` | `:=` | 1 |
-| `target .(n): source` | `:=` | accepted n |
-| `target .(0): source` | `:=` | 0, whole-place assignment |
+The destination is resolved once. All required pre-write RHS values and target admissions are established before stores, including overlapping permutations:
 
-This is the surface-form table for the existing assignment family. A bare
-colon is not turned into a new assignment receiver. The group planner,
-one-left rule and argument adaptation acquire no assignment-specific
-unwrapping pass. Structural calls use base `:=` and the named depth input;
-the standard throws reference is `` `:=`\throws ``.
+```lmx
+int: a 1
+int: b 2
+int: c 3
+(a b c) := (b c a)
+```
 
-At positive depth, the destination traversal retains real PLACE identities.
-For ordinary assignment, all required RHS values and target admissions are
-prepared before the first store across the whole operation, not merely
-before each child branch. This preserves overlapping permutations.
-Whole-place depth 0 follows ordinary := admission and identity rules.
-The explicit fused-output form retains its separately documented streaming
-contract; increasing depth does not silently turn ordinary assignment into
-streaming writes.
+Ready Array targets retain count, shape and identity. Ordinary declared reference places keep their distinct reference-assignment admission. Compound and attached updates reuse base arithmetic and the common writer. Prefix/postfix names remain `++var`, `var++`, `--var`, `var--`; decoration creates no new exact names. DATA/TYPE/RAW/NAME/PLACE and void consumers keep their declared roles.
 
-A logical row/plane PLACE in flat storage is an existing storage region,
-not an independent reference slot. At the selected base depth, assigning
-that PLACE writes an admitted block of the same remaining shape; it cannot
-rebind a fictitious row reference. A real variable/reference PLACE at depth
-0 keeps ordinary rebinding. For scalar fill of a rank-N Array, depth N
-selects scalar cells. All region/cell admissions and RHS snapshots precede
-the first write across the entire ordinary assignment.
+Initial fuse computes a fresh final result before outside assignment; it does not silently select streaming writes. Unsupported depth, unknown required axes, incompatible frames or unsupported methods are translator/interpreter diagnostics. Ordinary failures in depth expressions and actual methods retain their throws.
 
-Invalid depth, incompatible requested operand depths/shapes and an
-ineligible `fuse(expression)` are language-preparation diagnostics: the
-translator reports what it can determine, and the interpreter reports a
-reached dynamic violation. These are not new user exception types or
-wrapper failures. Real failures from evaluated user calls and selected
-scalar operations keep their existing contracts.
-
-## 6. Integration and examples
-
-See [short examples of all depth forms](examples/operator_depth/README.md).
-
-- [Array contracts and shared LMX bodies](ARRAY_EXPRESSIONS.en.md).
-- [Fusion, eligibility and shape propagation](FUSION.en.md).
-- [Structural discovery and operation forms](OPERATION_FORMS.md).
-- [Assignment examples and expected refusals](examples/assignment_forms/README.md).
-- [Expression depth transport reference](tools/operand_depth_reference.py).
-- [Callable publication and exact result requirements](patterns/LMX_Fn_Receivers/PUBLICATION_CONTRACT.md).
-
-The archive contains algorithms and independent contract models. Production
-P0, translator/runtime publication and the dependent-result provider are
-separate integration checks; no host model result is a production PASS.
+- [Array expressions](ARRAY_EXPRESSIONS.en.md).
+- [Minimal fusion](FUSION.en.md).
+- [Storage and context](ARRAY_STORAGE.en.md).
+- [Operation forms](OPERATION_FORMS.md).

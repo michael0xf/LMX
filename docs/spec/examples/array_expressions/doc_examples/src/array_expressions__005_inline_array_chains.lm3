@@ -7,11 +7,10 @@ InlineChain:
         int: d 4
         return: a + b + [10 20] + d
 
-WholeChildChain:
+InlineMatrixChain:
     return: @
     run:
-        throws: copy(`+`\throws)
-        @: arr0 [[1 2]]
-        @: arr1 [[10 20]]
-        @: arr2 [100 200]
-        return: arr0 .+ arr1 .+ [arr2]
+        throws: copy(`[+]`\throws)
+        [1][2]int: arr0 [1 2]
+        [1][2]int: arr1 [10 20]
+        return: arr0 [+] arr1 [+] ([1][2]int: [100 200])

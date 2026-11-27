@@ -4,7 +4,7 @@
 # All sequence algorithms are ordinary LMX in this package.
 # No helper executes a selected graph field or applies callable W/E to it.
 # arrayInfo returns ordinary metadata: arrayType, elementType, elementBits,
-# dense, maxLength. Type codes are int; maxLength bounds length AND byte size.
+# dense, maxLength. Types are canonical TypeRef references; maxLength bounds length AND byte size.
 
 FxSeqInfo:
     private: @: source
@@ -24,11 +24,13 @@ FxSeqRead:
         throws: FxKernelFailure FxTypeToken ReceiverIndex
         return: FxKernel\arrayRead(source := source; index := index)
 
-# The declaration head is an existing full int type code, resolved by the
+# The declaration head is an existing complete canonical TypeRef, resolved by the
 # common TYPE-role path. It is not a private sequence type constructor.
+# This empty-then-resize helper admits unconstrained linear Array types only.
+# Shaped tensor outputs use the prepared full-type allocation context instead.
 FxSeqAllocate:
     private:
-        int: arrayType
+        @: arrayType
         int: count
     required: arrayType count
     return: @

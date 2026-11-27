@@ -102,7 +102,7 @@ def main():
   if ident=='H07':extra+=lazy_review(defs)
   text=f'''# {title}: usage and implementation are separate
 
-Edition: 2026-11-26. Client: [{ident}](../haskell_comparision/source/lmx/{ident}.lm3), [scenario](../../LMX_examples_and_analogies.ru.md#{ident.lower()}).
+Edition: 2026-11-27. Client: [{ident}](../haskell_comparision/source/lmx/{ident}.lm3), [scenario](../../LMX_examples_and_analogies.ru.md#{ident.lower()}).
 
 ## Contract
 
@@ -178,6 +178,6 @@ The following retained adapter converts failures to FxCallFailure records and us
    row.update({'entry':'Cycles','public':'Cycles\\iterate','public_names':['Cycles\\iterate'],'roots':['Cycles'],'source_files':['examples/libraries/lmx/Cycles.lm3'],'lmx_entry':metric(local),'lmx':metric(local),'kernel_provider_excluded_and_disclosed':False,'primary_contract':'Ordinary named propagation; only source Stop is caught.','adapter_alternative':{'entry':entries[0],'public_names':public,'roots':roots,'source_files':paths,'lmx_entry':metric(body),'lmx':metric(allcode),'different_failure_api':True,'included_in_primary_metric':False}})
   (EX/'library_comparisons'/filename).write_text(text)
   rows.append(row)
- (EX/'validation/receiver_library_counts.json').write_text(json.dumps({'format':'receiver-library-comparisons-v2','status':'publication_consistency_not_execution','date':'2026-11-26','comparisons':rows},ensure_ascii=False,indent=2)+'\n')
+ (EX/'validation/receiver_library_counts.json').write_text(json.dumps({'format':'receiver-library-comparisons-v2','status':'publication_consistency_not_execution','date':'2026-11-27','comparisons':rows},ensure_ascii=False,indent=2)+'\n')
  print(json.dumps({'comparisons':len(rows),'all_foreign_implementation_only':True}))
 if __name__=='__main__':main()

@@ -89,7 +89,7 @@ separate whole TYPE admission from Expression evaluation. No constructor-specifi
 The built-in `::` implementation is not supplied, and execution is **NOT_RUN**.
 
 The [common Expression grouper](LMX_semantics.en.md#expression-structural-grouping)
-handles priorities and groups in the clean graph. In Expression, a graph reference atom to a Structure supplies one Array value when its target fails the operand template check. Translation rejects ambiguous interpretations before effects. Other reached Structures follow the name/actual-parent rule. The actual parent is preserved.
+handles priorities and groups in the clean graph. It is the one shared implementation used by every Expression consumer; independent binding algorithms or scale adapters are removed under the [shared-code requirement](EXPRESSION_ALGORITHM.md#single-parser-and-grouper). In Expression, a graph reference atom to a Structure supplies one Array value when its target fails the operand template check. Translation rejects ambiguous interpretations before effects. Other reached Structures follow the name/actual-parent rule. The actual parent is preserved.
 A separate application adapter packages one left actual and the current-level
 right sequence; complete TYPE/model and whole-value contracts keep their objects whole, while a graph received as CODE/Expression follows the same grouping through its references.
 `1 + ((2))` follows ordinary scalar grouping, while `int -> (int int)` retains
@@ -372,30 +372,38 @@ Their complete contracts, provenance and failure boundaries are recorded in
 No new provider hook, type specialization or execution model is introduced.
 
 
-### Array expressions, dotted operations, conditional and strided slices
+### Array, indexed and whole-operation profiles
 
-The [Array expression inventory](ARRAY_EXPRESSIONS.en.md) adds receiver/operand forms with one shared implementation per operation. [Matrix product and generic element traversal](patterns/LMX_Fn_Receivers/src/array_expression_ops.lmx) have concrete LMX loop bodies; RAW/PLACE preparation is connected through the existing expression and storage mechanisms described in [fuse](FUSION.en.md#implementation). These bodies are part of `LMX_Receivers.lmx`. Their production integration is **NOT_RUN**.
+[The integrated tensor contract](TENSOR_EXPRESSIONS.md) defines one shared
+implementation for each receiver/operand profile. The LMX bodies in
+[array_expression_ops.lmx](patterns/LMX_Fn_Receivers/src/array_expression_ops.lmx)
+use common Map, indexed reduction and snapshot/write mechanisms. Production
+preparation and publication remain **NOT_RUN**.
 
-| Public form | Receiving contract | Canonical implementation |
+| Form | Contract | Shared implementation |
 | --- | --- | --- |
-| `a * b + e` | Scalar or actual-Array profile; admitted dot/matrix product and same-shape addition | Shared generic contraction and element traversal |
-| Dotted arithmetic, bitwise, comparison and compound forms | One dot passes depth 1; `.(expression)` passes an explicit depth. The common traversal follows retained logical dimensions of flat storage and retains genuine scalar inputs | [Array contracts and base-name receiver forms](ARRAY_EXPRESSIONS.en.md#dotted) |
-| `target .: values` / `target .(depth): values` | PLACE target; all RHS values retained and all target admissions checked before the first store in the whole operation | Shared depth collection and snapshot/assignment loops in array_expression_ops.lmx |
-| `fuse(expression)` | RAW eligible expression; one output traversal, no intermediate Array for each operation | [FUSION](FUSION.en.md) |
-| `condition ? yes : no` / `` `?:`(condition; yes; no) `` | Condition once, only selected RAW branch demanded | [Conditional algorithm](TERNARY_AND_SLICES.en.md#conditional) |
-| `slice(source; spec)` / `source[start:stop:step]` | Signed/omitted bounds, nonzero step, shared source-profile selection traversal | [Slice algorithm and strict overload](TERNARY_AND_SLICES.en.md#slice-receiver) |
+| `a * b + e` | Ordinary pointwise arithmetic at maximum depth | FxArrayElementwise / FxArrayDepth |
+| `a [*] b` | Matrix/vector whole product | Auto-axis plan then FxArrayIndexed |
+| `a [op rules] b` | Declared indexed kernel and independent reducer | FxArrayIndexed |
+| `a .(N)op b` | N leading axes; 0 means maximum; no automatic second Map at the leaf | Common depth context and base handler |
+| `target := values` | Ordinary pointwise assignment; snapshot RHS and admission before stores | FxArrayAssignPrepared |
+| `target[:] .: values` | Slice broadcast assignment; right-aligned equal/1 RHS axes | Broadcast plan plus same snapshot/write body |
+| `fuse(expression)` | RAW Scalar/Map with fresh result; unsupported plans diagnose | FxFusePrepared |
+| `condition ? yes : no` | Selected RAW branch only | Existing conditional evaluator |
+| `source[start:stop:step]` | Signed slice normalization and selected places/value result | Existing slice profile |
 
-The existing strict `slice(source; begin; end)` overload is preserved. Symbolic forms and new RAW/PLACE profiles are listed in [the core extension projection](../core_catalog/core/array_expression_forms.json), separately from the previous 215-name snapshot; no claim that the running compiler already exports them is implied.
+The common depth transport accepts a signed integer and preserves absence. A custom method may interpret it as another setting and need no Map. Zero-as-maximum, nonnegative depth and the d<=Array-rank check belong to the selected standard Array traversal profile; they are not universal syntax or transport restrictions.
 
-The common operand header is **left, depth, right**, followed by the two
-constant mode/priority properties. Structural receiver calls use the base
-name and the named `depth` argument, for example `` `+`(a; b; depth := 1) ``;
-there are no separate standard callable aliases named `.+`. Ordinary
-receiver arguments are not the positional operand transport. See
-[operator depth](OPERATOR_DEPTH.en.md) for missing left, RAW/PLACE roles and
-custom operands. Invalid depth/required structure and ineligible fuse input
-are translator/interpreter diagnostics, without new user exceptions or
-additional `throws` declarations.
+The common operand header is **left, depth, right**. Omitted depth remains
+absent until profile selection. Explicit 0 means maximum; whole `[op]` with
+absent depth retains whole arguments. Structural forms use the base name and
+named depth; no `.op` aliases are created. RAW/PLACE/TYPE/DATA roles retain
+ordinary consuming contracts. There is no general exception for Structure []@.
+
+The [bracket subparser](BRACKET_SUBPARSER.en.md) delegates expression and brace
+contents to the main parser, which returns nextPosition. The subparser owns
+only its top-level separators and closing bracket. This is an integration
+specification, not a claim of production parser implementation.
 
 ## Integration and acceptance
 

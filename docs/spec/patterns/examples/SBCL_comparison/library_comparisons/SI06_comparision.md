@@ -104,7 +104,7 @@ FxMemo:
 
 - `FxMemoEntry` — [patterns/LMX_Fn_Receivers/src/generic_combinators.lmx](../../../LMX_Fn_Receivers/src/generic_combinators.lmx), SHA-256 `a02ea4be4da7690ed48b6aeebca2fa34f7d189fe1f09a6faf72168429884773f`.
 - `FxMemoState` — [patterns/LMX_Fn_Receivers/src/generic_combinators.lmx](../../../LMX_Fn_Receivers/src/generic_combinators.lmx), SHA-256 `b3c19624a4ad39492e9235a8a5ef0b0664d18ab16eac71b83a37417c0a48f10e`.
-- `FxMemoEngine` — [patterns/LMX_Fn_Receivers/src/generic_combinators.lmx](../../../LMX_Fn_Receivers/src/generic_combinators.lmx), SHA-256 `0a9237a564ac157eebd56b2d1ec93e1c323ba523668e14abfbc25800d06988db`.
+- `FxMemoEngine` — [patterns/LMX_Fn_Receivers/src/generic_combinators.lmx](../../../LMX_Fn_Receivers/src/generic_combinators.lmx), SHA-256 `fba941b0c71b2b4b5c050123b37b07dd899271fa16ce17af7c44bb52c43c5169`.
 - `FxMemo` — [patterns/LMX_Fn_Receivers/src/generic_combinators.lmx](../../../LMX_Fn_Receivers/src/generic_combinators.lmx), SHA-256 `dc6b312c30db379b2bcf5e45a723e7b66cd5aaf36bbfbf194af57abe4b442083`.
 
 ## Первичные источники Common Lisp

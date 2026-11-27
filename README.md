@@ -6,6 +6,9 @@
 
 [Грамматика](docs/spec/LMX_grammar.ru.md) · [Grammar](docs/spec/LMX_grammar.en.md)
 
+[Тензорные выражения](docs/spec/TENSOR_EXPRESSIONS.md) · [Нотация `prefix` / `infix`](docs/spec/LMX_grammar.ru.md#expression-notation) · [Порядок реализации](next_core_tasks_v3.md#grammar-complete-20261127)
+
+
 [Заметки о реализации](docs/spec/implementation-notes.ru.md) · [Implementation notes](docs/spec/implementation-notes.en.md)
 
 [Текущий план v3](next_core_tasks_v3.md) · [Карта ядра](docs/spec/CORE.md) · [Связь агентов](work_chat/README.md)

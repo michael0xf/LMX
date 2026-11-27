@@ -7,13 +7,25 @@ import unittest
 TOOLS = Path(__file__).resolve().parents[1] / "tools"
 sys.path.insert(0, str(TOOLS))
 from operand_depth_reference import (
-    DepthError, DepthExpression, admit_depth, prepare_operand_arguments,
+    ABSENT, DepthError, DepthExpression, admit_depth, prepare_operand_arguments,
     resolve_depth,
 )
 from ternary_slices_reference import RawOccurrence, conditional
 
 
 class DepthContracts(unittest.TestCase):
+    def test_custom_integer_is_not_given_standard_map_semantics_by_transport(self):
+        self.assertEqual(resolve_depth(-1, None), -1)
+        with self.assertRaises(DepthError):
+            admit_depth(-1)
+
+    def test_absent_depth_never_reads_same_named_dynamic_variable(self):
+        scope = {"depth": 7}
+        result = prepare_operand_arguments(None, ABSENT, [],
+            lambda *args: self.fail("absent modifier must not read caller depth"))
+        self.assertIs(result.depth, ABSENT)
+        self.assertEqual(scope["depth"], 7)
+
     def test_ready_zero_one_and_large_values_are_numbers(self):
         for value in (0, 1, 2, 10, 1000):
             self.assertEqual(resolve_depth(value, lambda *args: self.fail("literal")), value)
@@ -103,7 +115,7 @@ class DepthContracts(unittest.TestCase):
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(DepthContracts)
     result = unittest.TextTestRunner(verbosity=2).run(suite)
-    report = {"revision": "2026-11-26", "status": "PASS" if result.wasSuccessful() else "FAIL",
+    report = {"revision": "2026-11-27", "status": "PASS" if result.wasSuccessful() else "FAIL",
               "tests": result.testsRun, "failures": len(result.failures),
               "errors": len(result.errors), "production_p0": "NOT_RUN",
               "production_translator": "NOT_RUN", "lmx_runtime": "NOT_RUN",

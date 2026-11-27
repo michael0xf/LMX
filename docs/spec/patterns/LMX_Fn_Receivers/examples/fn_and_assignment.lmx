@@ -66,9 +66,9 @@ FxFnUninitExample:
     return: int
     run:
         throws: copy(FxThrows\capture)
-        int: integralTag sys\typeof(FxFnUninitSamples\integral[0])
-        int: realTag sys\typeof(FxFnUninitSamples\real[0])
-        int: referenceTag sys\typeof(FxFnUninitSamples\reference[0])
+        @: integralTag sys\typeof(FxFnUninitSamples\integral[0])
+        @: realTag sys\typeof(FxFnUninitSamples\real[0])
+        @: referenceTag sys\typeof(FxFnUninitSamples\reference[0])
         []@: tokens []
         sys\resize(tokens; 3)
         tokens[0] := FxFnUninitSamples\integral[0]
@@ -126,7 +126,7 @@ FxGroupRotateExample:
         int: a 1
         int: b 2
         int: c 3
-        (a b c) .: (b c a)
+        (a b c) := (b c a)
         sys\assert(a = 2)
         sys\assert(b = 3)
         sys\assert(c = 1)
@@ -149,7 +149,7 @@ FxGroupCopyExample:
         int: b 0
         int: c 0
         @: s FxAssignmentSource
-        (a b c) .: copy(s)
+        (a b c) := copy(s)
         sys\assert(a = 4)
         sys\assert(b = 5)
         sys\assert(c = 6)
@@ -172,10 +172,10 @@ FxFnAndAssignmentExamples:
 # Дополнительная приёмка на стороне ядра:
 # - инструментировать чтение uninit: ни make, ни normalizeType не читают payload;
 # - проверить qualified operand в interpreter/native и всех переходах между ними;
-# - обеспечить lifetime материализованных ready int-токенов;
+# - обеспечить lifetime канонических TypeRef;
 # - повторить операндный пример с прямым ядерным именем -> и проверить
 #   совместимость с FxFnExpectedMixed :: (...);
-# - неизвестный код типа отказывает с FxTypeToken, не создавая успешный descriptor;
+# - недопустимый TYPE/TypeRef отказывает с FxTypeToken, не создавая успешный descriptor;
 # - mismatch длины в групповом присваивании обнаруживается до первой записи;
 # - присваивание как операнд выражения сохраняет общий variadic right-контракт;
 # - группа передаёт только непосредственные поля, без рекурсивного снятия оболочек;

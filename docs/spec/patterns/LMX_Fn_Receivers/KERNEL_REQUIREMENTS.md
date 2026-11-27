@@ -6,13 +6,31 @@ The normative adapter requirements are [the current semantics](../../LMX_semanti
 
 ## 1. Common architecture
 
-Use one parser, one complete source graph, ordinary owner/DATA/CODE and existing Message arenas. A generated callable is an ordinary callable with genuine parent links. No second expanded executable graph, permanent namespace copy, hidden global closure environment, new lazy-array VM or alternative bytecode engine is permitted.
+Use one common parser with its `[]` subparser, one Expression grouping
+implementation, one complete source graph, ordinary owner/DATA/CODE and existing
+Message arenas. All source entries call that parser; all graph consumers use the
+same grouping code and its prepared plan. Remove the replaced parser/grouping
+algorithms and duplicate priority tables. Separate priority-scale adapters or
+compatibility fallbacks that retain those algorithms do not meet this requirement.
+A generated callable is an ordinary callable with genuine parent links. No
+second expanded executable graph, permanent namespace copy, hidden global
+closure environment, new lazy-array VM or alternative bytecode engine is permitted.
+
+The `[]` component follows the [full delegation contract](../../BRACKET_SUBPARSER.ru.md):
+adjacent `[op` and Python-style index/slice syntax enter the helper; every
+expression start and `{...}` region goes back to the same main parser, which
+returns the graph and continuation position. The helper never searches ahead
+for the delegated expression's end, `]` or `}`, nor scans its contents itself.
+It consumes its own square grammar at the returned boundaries. This is one
+parser with an internal helper, not two expression parsers.
 
 Signature inspection and `satisfies` execute no candidate, default, test or converter. Source expressions and declaration actuals keep their normal effect timing. Compilation remains explicit; a new ABI never borrows an incompatible native entry. Plain graph mutation and subsequent interpretation require neither compilation nor `endturn`. Installing a newly compiled machine implementation follows the existing explicit compilation and `endturn` rules; graph editing alone does not patch an old native caller.
 
-P0 retains the graph and diagnostic provenance. The Expression **grouper** handles priorities,
+P0 retains the graph and diagnostic provenance. The single Expression **grouper** handles priorities,
 groups and field streams in the supplied pure graph, regardless of notation or origin; its result is
-a structured operation/stream plan, not rewritten text to parse again.
+a structured operation/stream plan, not rewritten text to parse again. The
+source builder, interpreter and native emitter use that same implementation;
+none keeps a separate precedence table or regrouping algorithm.
 The distinct **application adapter** packages the left side as one actual and
 the current-level right stream as an Array of references. Left grouping is
 preserved by this packaging, not by making the grouper a left-argument wrapper.
@@ -27,11 +45,11 @@ without an assignment-specific parser branch or a universal pre-call binder.
 See [grouping and application](../../LMX_semantics.en.md#expression-structural-grouping)
 and the [accepted vector outcomes](../../LMX_semantics.en.md#operand-right-only-opening).
 
-For `(a b c) .: (a c b)`, the plan contains the two ordered streams and the
+For `(a b c) := (a c b)`, the plan contains the two ordered streams and the
 adapter supplies one whole left argument with three right values. For
-`(a b c) .: (f g h) (f g h) (f g h)`, the current right level has three whole
+`(a b c) := (f g h) (f g h) (f g h)`, the current right level has three whole
 Structures, never their nine fields. An explicit field stream may be written
-directly: `(a b c) .: copy(d)` and the grouped RHS spelling have the same
+directly: `(a b c) := copy(d)` and the grouped RHS spelling have the same
 group-assignment effect. A scalar whole-Structure receiver still retains its
 `(copy(d))` container.
 
@@ -213,7 +231,7 @@ explicit void retains the absence of a result. Full Structure, callable, Array,
 pointer and qualifier requirements remain intact. A plain initialized int is
 not a TYPE code and must not be reinterpreted as a descriptor address.
 
-Postfix `[]T`, `[N]T`, `@T` and dynamic rank/pointer forms produce TypeRef through
+Prefix `[]T`, `[N]T`, `@T` and dynamic rank/pointer forms produce TypeRef through
 the common canonicalizer. The complete normalized constructing description alone
 determines type identity: `[][]int` and `[](2)int` share a descriptor;
 initializer rows, actual length and reserve do not refine it. `[]: value` retains
@@ -368,81 +386,74 @@ The same existing dispatcher serves both forms of every operation. P0 already pr
 <a id="pd01"></a>
 ## PD01 — operandDepthContext(frame; arguments)
 
-The [common depth ABI](../../OPERATOR_DEPTH.en.md#abi) is left / depth / right.
-The source declaration is `FxKernelOperandDepthContextAPI :: (@: frame; @: arguments; return: @)`.
-The concrete provider is `FxKernel\operandDepthContext`.
+The common ABI is **left / optional depth / right**. The required provider is
+`FxKernel\operandDepthContext`; its declaration is
+`FxKernelOperandDepthContextAPI :: (@: frame; @: arguments; return: @)`.
+This is an integration requirement, not an implemented stub. Production provider:
+**NOT_IMPLEMENTED_IN_THIS_DOCS_ARCHIVE**; production execution: **NOT_RUN**.
 
-This provider is an **integration requirement**, not an implemented stub.
-Production implementation: **NOT_IMPLEMENTED_IN_THIS_DOCS_ARCHIVE**;
-production execution: **NOT_RUN**. The LMX wrapper and common traversal
-bodies are supplied separately and must not be replaced by a second opaque
-algorithm inside this provider.
+`policy\operandDepthSource` points to the real ordinary callable. Slots 0/1/2
+hold left/depth/right. The engine first tests slot 1 with demand disabled; absent
+depth does not read uninitialized storage or search a distant dynamic depth field.
+Absence preserves the original method contract. Explicit depth, including zero,
+enters this provider. An ordinary source input also called depth remains a
+separate logical argument owned by that callable.
 
-PD01 is reached only for a selected VALUE operand. `frame` retains its
-original owner/caller context; the source ordinary callable is identified
-by `policy\operandDepthSource`. Frame slots 0/1/2 hold left/depth/right;
-the separately supplied `arguments` are already collected logical arguments
-of the source, **without the wrapper's control depth**. A source formal
-also named depth retains its own owner and ordinary argument semantics.
+These Array traversal rules belong to the selected common Map profile, not to
+generic operand transport. The common middle formal remains int; transport
+admits that type and passes the optional named depth actual. A custom method
+may interpret it according to its own contract, including a negative integer.
+Unless it selects common Map, transport imposes no Array traversal, maximum
+meaning for zero, nonnegative-depth limit or depth-versus-rank admission.
 
-The result is a checked, operation-local context for the common
-`FxArrayDepth` traversal:
+The standard VALUE adapter `asOperand` explicitly selects this Map profile.
+The provider prepares one ordinary context consumed by `FxArrayDepth`; it never
+executes source callbacks to guess a type or implements another mapping loop.
+Explicit positive depth d selects d leading logical axes as the outer frame;
+the rest form the passed cell. Positive d above an Array rank is diagnosed.
+Explicit depth zero means maximum traversal of every iterated Array's logical
+axes, not a whole-array bypass. Frames match exactly. Original scalars and held
+actuals add no frame axes; an Array of length one stays an Array.
+
+The context selects the actual base entry, without the automatic Array wrapper
+for this invocation. After selecting a cell, no implicit continuation of Map is
+allowed; the base must admit that cell or the application is diagnosed. Explicit
+nested operations in the source body keep their own ordinary contracts.
 
 | Context component | Obligation |
 | --- | --- |
-| `base` | The selected source ordinary callable; invoked only by the common executor |
-| `hasResult` | 0 or 1; void traversals do not allocate Array<void> |
-| `level(context; depth; inputs)` | Select logical dimensions using available or uniquely derivable axis information from the current canonical Array type description plus length; insufficient required information is diagnosed. Compact arrays have no secondary descriptor. Return checked `{hasArray,count,inputs,read,layout,write}` and preserve original-scalar provenance. `count` counts base applications after the selected axes, not necessarily scalar storage cells |
-| `read(map; index)` in the frame | Obtain a selected scalar, ordinary Structure value or logical slice descriptor on the same existing storage. Do not allocate row Structures or a separate array-of-arrays representation |
-| `write(output; index; value)` in the frame | Admit and store the selected base result in its prepared scalar or block output region |
-| Full result requirement and `layout` | Preserve source R/void at depth 0 and scalar fixed points; determine the complete result shape/type without a probe call. A flat rectangular result uses one backing, without traversal-generated row containers |
-| `publish(context; layout; result)` | Use the canonical TypeRef of the complete declared/evaluated result requirement. Required persistent output axes must be expressed in that requirement; initializer/layout data cannot secretly specialize a generic result type. For capacity=length publish no secondary descriptor; real reserve uses an optional capacity entry without a new TypeRef. Preserve ordinary identity and parent rules; do not extend Lmx or user fields |
+| `base`, `hasResult` | Selected direct base entry, real owner/roles and value/void contract; no repeated implicit Array Map |
+| `frame(context; depth; inputs)` | Return checked `singleResult,count,inputs,read,layout,write,allocate` with the complete result requirement |
+| `inputs` | Iterated Arrays and original scalar/held values; preserve actual types and source occurrence identity |
+| `read(map; index)` | Obtain one scalar/cell through its true storage or parent context; no invented row hierarchy |
+| `layout`, `allocate(context; layout)` | Construct valid backing directly under the full canonical TypeRef; do not resize an invalid empty shaped Array or retag a generic one |
+| `write(output; index; value)` | Admit/store one result cell according to the declared dense or structural assembly |
 
-The provider checks actual shapes and full input/result requirements from
-the current ordinary records and shared type metadata. Shape and reserve
-representations follow [canonical Array descriptions](../../ARRAY_STORAGE.en.md#array-profiles).
-For a fixed shaped result, common construction allocates/initializes the valid
-backing directly under the complete evaluated requirement before publication.
-The old `FxSeqAllocate` empty-value-plus-resize helper only serves unconstrained
-linear types; it cannot publish an empty `[2][3]int` or retag a ready generic
-Array. Migrating that prototype is part of this boundary, without a second
-allocator or growth mechanism.
-An operation-local frame/layout is temporary and does not restore a mandatory
-per-Array shape descriptor. A temporary plan may carry dimensions during one
-expression; only the complete published result requirement persists them. Old
-host checks do not validate this TypeRef ABI or its production allocation transitions. It does not evaluate
-the source to infer a type, perform element arithmetic or execute another
-lifting algorithm. The LMX engine obtains one frame, adds `frame.root`,
-allocates only the admitted result layout through `FxArrayResultTree`, and
-runs the common `FxArrayExpressionFill` loop. `FxArrayDepthCell` reads the
-selected arguments and calls `FxArrayDepthBase` once per base application.
-The selected logical axes can be linearized into that loop; no second
-program graph or row-storage hierarchy is constructed. All effect order
-and actual callable failures retain the selected callable's ordinary contract.
+The common fill loop counts applications, not necessarily physical scalar cells.
+Frame () executes once; a zero frame axis executes no source callback. Dense
+result shape is frame + resultCellShape. Structural assembly can retain differing
+cell shapes and actual types. Source R can itself be Array/Structure; void never
+allocates Array<void>. The full dependent result and native ABI must be selected
+before execution without hidden compilation on demand or mutation of source DATA.
 
-At depth 0, `FxArrayDepth` directly delegates to the base method, retaining
-exact R/void. If all original actuals are scalar, the checked frame selects
-the same scalar fixed point. An Array whose required dimensions run out
-cannot silently become a scalar broadcast. For flat rank-2 inputs, depth 1
-selects rows and depth 2 selects scalar coordinates. Ordinary Structure
-paths, including `struct[i]\[j]`, continue to use general reference access;
-they do not declare another container entity. The header remains
-`parent/length/storage`, and the Array/Structure VALUE overload of
-`sys\descriptor` still returns those three field addresses for ordinary values.
-The canonical system-TYPE branch has priority for a TypeRef description and
-returns that same description: `sys\descriptor(typeof(obj))` is not an int-code
-lookup ([contract](../../ARRAY_STORAGE.en.md#type-descriptor)). It allocates no
-second descriptor for an Array.
+Structure/[]@ and text remain admitted Array values. Slots referring to typed
+records are read by that layout; actual reference values remain references.
+Index access such as `struct[i]\[j]` does not create extra outer axes or another
+arrays-of-arrays kind. For rank-2 Arrays ordinary `*` is elementwise by default. Explicit depths 0
+and 2 select scalar products; depth 1 selects rows and requires a base method
+that admits rows. No second automatic Map is inserted. `[*]` without a modifier
+is matmul, and `.(1)[*]` computes corresponding row dots.
 
-A wrapper whose depth may change the logical return type cannot keep an
-unconditional scalar R declaration for a lifted result. The existing
-adaptive call preparation must select and admit the full requirement
-before entry. Native dispatch must use the corresponding already prepared
-ABI; this change does not authorize hidden compilation on demand, mutation
-of the source callable description, or universal boxing of every result.
-A statically depth-0 call retains the original exact R/void route.
+TypeRef is a direct canonical descriptor reference. Shape constraints belong to
+the complete type; optional capacity describes reserve, not shape. Parent can
+lead to an ordinary access context with source/lifetime/offset/strides/maps and
+permissions. The primary header remains parent/length/storage. No second reserve
+descriptor is needed when capacity=length. The TYPE branch of sys\descriptor
+returns the canonical type description rather than interpreting an integer code.
 
-RAW, DATA, TYPE and PLACE consumers are not routed through this VALUE
-provider merely because they expose the same three input names. Their
-selected receiving contract either implements its own depth behavior or
-reports an unsupported depth as a translator/interpreter diagnostic. Invalid depth, inconsistent required Array levels/shapes and ineligible fusion do not introduce user exceptions or extra throws. Real callback failures retain their existing channels.
+RAW/DATA/TYPE/NAME/PLACE/callable roles are not blindly routed through this VALUE
+provider. Their selected contract admits a compatible explicit depth profile or
+diagnoses the unsupported application. No []@ exception or synthetic throws is
+introduced. Numerical/callback errors retain the reached methods' ordinary errors.
+General indexed, reduction, assignment and fuse contexts are detailed in
+[TENSOR_OPERATIONS_IMPLEMENTATION.md](TENSOR_OPERATIONS_IMPLEMENTATION.md).

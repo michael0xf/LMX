@@ -1,4 +1,4 @@
-# Дополнительный doc_examples: глубина операций
+# Дополнительный doc_examples: глубина обхода операций
 
 Пять полных исходников и десять мест текста: каждый отдельный `.lm3` также
 приведён целиком в README рядом с ним. Формат `src`, `index.tsv`, `places.tsv`
@@ -13,4 +13,4 @@ p0/build/run стоят `-`, класс — «не проверен»; стро�
 
 Повторная синхронизация: `python spec/tools/register_operator_depth_examples.py`
 из docs; проверка без записи — та же команда с `--check`.
-SHA-256 и ожидаемые наблюдения: [отчёт](../../../validation/operator_depth_examples_20261126.json).
+SHA-256 и ожидаемые наблюдения: [отчёт](../../../validation/operator_depth_examples_20261127.json).

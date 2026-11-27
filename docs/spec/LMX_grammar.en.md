@@ -29,7 +29,7 @@
 - [27. Original literal-boundary examples](#fixtures)
 - [28. Receiver-library syntax, 22 November 2026](#receiver-library-syntax)
 - [29. Prefix types and Pattern operands](#postfix-pattern-grammar)
-- [30. Conditional expressions, slices and dotted operands](#conditional-slice-grammar)
+- [30. Conditional expressions, slices, depth and square operations](#conditional-slice-grammar)
 - [31. Flat Array rank and square VALUE constructors](#array-rank-and-values)
 - [32. Dynamic type-prefix counts](#dynamic-type-postfix)
 - [33. Array axis sizes in TYPE prefixes](#sized-array-postfix)
@@ -58,7 +58,7 @@ The colon separates a head from its argument Structure. It does not by itself me
 
 Positional fields retain their order. A nested Frame stays an ordinary Frame and does not by itself name a formal; a named argument of a callable is written with the operator `:=` ([§21](#operators)), whose meaning the semantics defines after P0. Parameter names, table meaning, column count, named-argument validation, and execution are not inferred by P0 from visual alignment. There is no separate anonymous-function or label grammar; `outerLoop:` with a body is an ordinary Frame.
 
-The left side of `.:` may be an unnamed Structure of places: `(a b c) .: (c, a, b)` and `(a b) .: (copy(Pair))`. Write `(a b c) .: f()` to assign a call result positionally to a group of places. A nonempty bounded Structure followed by `.:` is the left side of the write; the right side is parsed by the common expression rules. That assignment case is separate from a group in a Frame head: the common head grammar admits a written bounded group, including a nonempty one, as the base of a head before `:`, with zero or more prefix constructors before it. Thus `(Model): p` is retained as a Frame with the complete grouped head; the head consumer decides whether that description is admissible. `(): value` retains its ordinary empty-head form ([§14](#bounded)). Group positional assignment, including both `(a b) .: copy(Pair)` and `(a b) .: (copy(Pair))`, follows [semantics](LMX_semantics.en.md#group-assign): values are obtained before the first write, and the receiver's field-stream contract does not change P0. Scalar or whole-value assignment uses `:=` at depth zero; `.:` is depth one of that same family and uses the same common grouping rules.
+The left side of `:=` may be an unnamed Structure of places: `(a b c) := (c, a, b)` and `(a b) := (copy(Pair))`. Write `(a b c) := f()` to assign a call result positionally to a group of places. A nonempty bounded Structure followed by `:=` is the left side of the write; the right side is parsed by the common expression rules. That assignment case is separate from a group in a Frame head: the common head grammar admits a written bounded group, including a nonempty one, as the base of a head before `:`, with zero or more prefix constructors before it. Thus `(Model): p` is retained as a Frame with the complete grouped head; the head consumer decides whether that description is admissible. `(): value` retains its ordinary empty-head form ([§14](#bounded)). Group positional assignment, including both `(a b) := copy(Pair)` and `(a b) := (copy(Pair))`, follows [semantics](LMX_semantics.en.md#group-assign): values are obtained before the first write, and the receiver's field-stream contract does not change P0. Ordinary `:=` assigns corresponding elements, including a group of places, and supports its declared scalar fill. `.:` is the separate slice-broadcast method; neither name is a rank decoration of the other.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 2148–2148.
 
@@ -428,7 +428,7 @@ Implementation status is separate from this normative grammar; consult the [impl
 
 `target[index]` in VALUE/PLACE role is a written nonempty index suffix. In a complete TYPE requirement, `[]T` adds an axis with an unspecified extent and `[extent]T` adds an axis with an explicit extent ([§33](#sized-array-postfix)). Both use the same P0 delimiter machinery. In an index role `a[()]` remains an index occurrence; an empty result does not turn it into a TYPE prefix. The role is not inferred from whether evaluation succeeds. Square `[data]` retains its existing initializer role in `[]: [data]`, `[]T: [data]`, and named counterparts. Standalone `[data]` in VALUE position also constructs one anonymous Array of unrestricted element types, as `[]@: [data]` does; it is not a round group. `[]` gives a present empty Array; `[arr2]` gives one whole arr2 element, without flattening or implicit broadcasting. `[]:` remains a symbolic declaration head. In DATA, ordinary anonymous fields accept square and round bounded forms with the same structural meaning; typed rank-initializer rows may be separated by `;`. Their receiving contracts determine this use ([§31](#array-rank-and-values)). All square content uses the same P0 and can contain nested source forms. NAME/TYPE/VALUE roles are established by the ordinary consuming contract before name lookup, initializer evaluation, or attachment in that role.
 
-A nonempty group followed by `.:` supplies the left side of an elementwise write ([§2](#structure)); P0 retains that group and the common Expression mechanism prepares it. `(): value` retains the separate empty-head form `()`.
+A nonempty group followed by `:=` supplies the left side of an elementwise write ([§2](#structure)); P0 retains that group and the common Expression mechanism prepares it. `(): value` retains the separate empty-head form `()`.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 3227–3228.
 
@@ -791,9 +791,9 @@ P0 does not reduce active entries to one flat table of winning values. A rendere
 
 ## 21. Operator tokens and expression boundaries
 
-Expression uses the ordinary source graph plus a semantic grouper for both priorities and structural groups. The rule depends on the tree, not a particular delimiter spelling: `1 + ((2))` is 3, while a material group `(1 2 3 4)` is not an implicit arithmetic expression. P0 preserves both groups. The later Expression application adapter separately packages one left actual and the current-level right stream, with numeric depth between them; it does not insert that package into the source graph. See [structural grouping](LMX_semantics.en.md#expression-structural-grouping).
+Expression uses the ordinary source graph plus a semantic grouper for both priorities and structural groups. The rule depends on the tree, not a particular delimiter spelling: `1 + ((2))` is 3, while a material group `(1 2 3 4)` is not an implicit arithmetic expression. P0 preserves both groups. The later Expression application adapter separately packages one left actual and the current-level right stream, with a present numeric depth or its absence between them; it does not insert that package into the source graph. See [structural grouping](LMX_semantics.en.md#expression-structural-grouping).
 
-The existing attached-unary class has a side, left or right, and exactly one atom. It applies generally, rather than being hardcoded to `++` and `--`. Ordinary infix/prefix operands, including `:=`, receive no parser exception by name or PLACE/NAME role. The common analysis retains each left occurrence and its value context; role consumption belongs to the resolved method. `(:= a 1)` is delivered as absent left, depth=0 and right [a,1], while `(a := 1)` is delivered as left a, depth=0 and right [1]. Only the assignment method makes their effects equivalent; the parser and binder never transpose these actuals. [Method consumption](LMX_semantics.en.md#operand-left-view).
+The existing attached-unary class has a side, left or right, and exactly one atom. It applies generally, rather than being hardcoded to `++` and `--`. Ordinary infix/prefix operands, including `:=`, receive no parser exception by name or PLACE/NAME role. The common analysis retains each left occurrence and its value context; role consumption belongs to the resolved method. `(:= a 1)` is delivered as absent left, depth absent and right [a,1], while `(a := 1)` is delivered as left a, depth absent and right [1]. Only the assignment method makes their effects equivalent; the parser and binder never transpose these actuals. [Method consumption](LMX_semantics.en.md#operand-left-view).
 
 Receiver spelling can use the same canonical symbolic name in backticks,
 for example `` `+`(a; b) ``. Colon is the existing structural delimiter and
@@ -853,11 +853,20 @@ In this profile, `=` is comparison, not assignment syntax or a named field. An u
 | logical and | `&&` | left to right |
 | logical or | `\|\|` | left to right |
 | conditional | `?:` | right to left |
-| assignment | `:=`, `.:` and compound assignments, including `**=` and `.**=` | right to left |
+| assignment | `:=`, `.:` and compound assignments, including `**=` | right to left |
 
-The logical `&&` and `||` obtain their right operand only when needed. A user operand is an ordinary method discovered through its DATA's explicit structural header: `left` is a reference, `depth` is the required numeric int input, `right` is an Array of references, and `PASS_ARGS_AS_IS` and `PRIORITY` are required constant integer fields. Mode must be `0` or `1`; priority must be ready before grouping. No `sys\operand` registration, separate implementation name, or implicit default property is used. The method's ordinary `return` describes its result; an operator application does not add a hidden dereference. Mode `0` supplies prepared values by reference; mode `1` supplies original occurrences and their live source context, evaluated only when the method calls `sys\eval`. Arrays and strings remain single operands. A lexical identifier can therefore have operator, ordinary-call, or reference use after P0 without a spelling-specific parser branch. `sys\name(identifier)` reads the identifier spelling without resolving or executing it; `sys\priority(name)` reads an accessible operand's ready priority by string content. The full contracts are in [semantics](LMX_semantics.en.md#operand-receiver), the [worked guide](LMX_semantics_guide.en.md#operand-templates).
+The logical `&&` and `||` obtain their right operand only when needed. A user operand is an ordinary method discovered through its DATA's explicit structural header: `left` is a reference, `depth` describes the optional numeric actual; absence is retained rather than replaced by 0, `right` is an Array of references, and `PASS_ARGS_AS_IS` and `PRIORITY` are required constant integer fields. Mode must be `0` or `1`; priority must be ready before grouping. No `sys\operand` registration, separate implementation name, or implicit default property is used. The method's ordinary `return` describes its result; an operator application does not add a hidden dereference. Mode `0` supplies prepared values by reference; mode `1` supplies original occurrences and their live source context, evaluated only when the method calls `sys\eval`. Arrays and strings remain single actuals, then the selected method applies its Array contract. Structure `[]@` is not excluded from elementwise operations; actual element types determine admission. A lexical identifier can therefore have operator, ordinary-call, or reference use after P0 without a spelling-specific parser branch. `sys\name(identifier)` reads the identifier spelling without resolving or executing it; `sys\priority(name)` reads an accessible operand's ready priority by string content. The full contracts are in [semantics](LMX_semantics.en.md#operand-receiver), the [worked guide](LMX_semantics_guide.en.md#operand-templates).
 
-Compound assignments `+=`, `-=`, `*=`, `/=`, `%=`, `<<=`, `>>=`, `&=`, `^=`, `|=`, `**=` and power `**` are single operator tokens; spacing does not alter them. Power groups right and binds above multiplication/addition but below call, index, and field access. On its left it binds above unary `+`, `-`, and `~`; on its right it admits a unary operand. Thus `-2 ** 2` is `-(2 ** 2)`, `2 ** -2` is `2 ** (-2)`, `2 ** 3 ** 2` is `2 ** (3 ** 2)`, and `2 * 3 ** 2` is `2 * (3 ** 2)`. `^` stays bitwise exclusive-or. Numeric admission and the result of negative powers follow LMX's numeric contract, not all of Python's semantics. [Compound assignment semantics](LMX_semantics.en.md#compound-assign) also govern effects; implementation acceptance verifies the common token and expression mechanisms.
+Compound assignments `+=`, `-=`, `*=`, `/=`, `%=`, `<<=`, `>>=`, `&=`, `^=`, `|=`, `**=` and power `**` are single operator tokens; spacing does not alter them. Standard power has `sys\priority("**") = 131`, calculated as `max(110, 130) + 1` on the existing scale. Its derived RHS minimum is also `131`, so equal-level power belongs to the right operand; a strict `p + 1` threshold would instead group left. This is the common binding policy, with no new public operand field or sign/bit encoding. [Numeric derivation and implementation boundary](EXPRESSION_ALGORITHM.md#power-priority). Power groups right and binds above multiplication/addition but below call, index, and field access. On its left it binds above unary `+`, `-`, and `~`; on its right it admits a unary operand. Thus `-2 ** 2` is `-(2 ** 2)`, `2 ** -2` is `2 ** (-2)`, `2 ** 3 ** 2` is `2 ** (3 ** 2)`, and `2 * 3 ** 2` is `2 * (3 ** 2)`; conversely, `2 ** 3 * 4` is `(2 ** 3) * 4`. `.(depth)**` and `[**]` retain level `131` and right grouping. `**=` retains assignment priority. `^` stays bitwise exclusive-or. Numeric admission and the result of negative powers follow LMX's numeric contract, not all of Python's semantics. [Compound assignment semantics](LMX_semantics.en.md#compound-assign) also govern effects; implementation acceptance verifies the common token and expression mechanisms.
+
+<a id="expression-notation"></a>
+### Expression notation
+
+The `prefix` and `infix` operators select a notation for the following Expression region. Parentheses first delimit nested regions. Inside its region a notation operator binds before every ordinary operation, including `**`. The selection lasts to the end of that region. With no separate parentheses the enclosing expression parser supplies the boundary. Leaving the region restores the outer mode.
+
+In `prefix` the operation precedes its arguments. Strict prefix parsing makes no priority comparisons. Groups and uniquely determined application boundaries supply nesting. In `infix` the ordinary LMX grouper applies its precedence, associativity and ordinary prefix applications. Both notations use the same graph, operand selection and `left/depth/right` contract. The mode neither supplies a left argument nor changes the method's formals. An ambiguous role or boundary is refused at translation or during interpreted preparation before effects.
+
+For example, `prefix (op a (sub b c))` passes two right occurrences to `op`, `a` and the result of the `sub` group, with `left` absent. In `prefix (op a (infix (b + c * d)))` multiplication binds before addition inside the `infix` region. Ordinary `a ** b ** c` keeps its right grouping. Test this rule by comparing trees before user operations execute.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 4259–4259.
 
@@ -931,17 +940,21 @@ L2:
 
 ## 24. The single P0 automaton
 
+**Shared implementation requirement, 2026-11-27.** The target has one main LMX parser containing the square subparser, which calls that same main parser for every expression and `{...}` region and resumes at its returned position. After parsing, every Expression consumer calls one shared implementation of semantic grouping. Duplicate parsers, independent binding algorithms and their tables are removed; independent scale adapters do not satisfy this requirement. Backend emission and actual preparation consume the common grouping result. [Architecture contract](EXPRESSION_ALGORITHM.md#single-parser-and-grouper).
+
 Source: §15.0; this is the normative recognition model, and the EBNF below is its projection.
 
 `P0 = (S, E, delta, O)`. State S contains source position/span base, lexical mode, normalized level, form stack, and output insertion cursor. Modes are `SOURCE`, `C_STRING`, `EXACT_IDENTIFIER`, `PYTHON_RAW_QUOTE`, `BLOCK_STRING`, `RAW_COMMENT`, and `LINE_COMMENT`. Stack forms are the level-0 root, vertical form K, short head N with body N + 1, parenthesized/index forms with base B, and Mix with local base 0.
 
-Events E are `LEVEL(K)`, `BLANK_LINE`, `ATOM(value)`, `HEAD(value)`, `COLON`, `CONDITIONAL_QUESTION`, `NEWLINE`, `COMMA_SEPARATOR`, `SEMICOLON_SEPARATOR`, opening/closing parenthesis, index, and Mix delimiters, a `TAIL_CUTTER` candidate, and `EOF`. Transitions follow the preceding sections. There is no separate P0 line, bracket, brace, or expression parser: all bounded forms enter recursive contexts of the same automaton.
+Events E are `LEVEL(K)`, `BLANK_LINE`, `ATOM(value)`, `HEAD(value)`, `COLON`, `CONDITIONAL_QUESTION`, `NEWLINE`, `COMMA_SEPARATOR`, `SEMICOLON_SEPARATOR`, opening/closing parenthesis, index, and Mix delimiters, a `TAIL_CUTTER` candidate, and `EOF`. Transitions follow the preceding sections. All bounded forms use the contexts and lexical rules of this automaton. Its square-form subparser handles compact `[op` operation forms and INDEX suffixes; it delegates complete expressions and nested regions back to P0. No independent line, brace, or expression parser is introduced.
 
-In a shielded lexical mode, brackets, separators, colons, dots, and closer words are content until the mode closes. The line-comment mode (`LINE_COMMENT`, `#`) ends at the end of the line or of the document, and for the document of a Mix mark that end is its closing `}` ([§9](#comments), [§19](#mix)). Matching-delimiter search must use those same modes; a separate character counter is insufficient. Braces are neither a comment nor a lexical mode: a mark is a bounded form, its content is parsed by the same automaton, and a closing bracket inside a mark with an error does not become the pair of an outer opening bracket (`f(a {)} b)` is an error). The content of an already delimited string payload passes the Mix scanner as a separate bounded context: it does not remove this shielding, does not alter the string's bounds, and an error in a mark does not fail the string ([§19](#mix)).
+In a shielded lexical mode, brackets, separators, colons, dots, and closer words are content until the mode closes. The line-comment mode (`LINE_COMMENT`, `#`) ends at the end of the line or of the document, and for the document of a Mix mark that end is its closing `}` ([§9](#comments), [§19](#mix)). Delimiter recognition belongs to this same parser and uses those same modes. The square subparser never pre-scans a delegated expression or Mix region for its end; it resumes at the position returned by the main parser. Braces are neither a comment nor a lexical mode: a mark is a bounded form, its content is parsed by the same automaton, and a closing bracket inside a mark with an error does not become the pair of an outer opening bracket (`f(a {)} b)` is an error). The content of an already delimited string payload passes the Mix scanner as a separate bounded context: it does not remove this shielding, does not alter the string's bounds, and an error in a mark does not fail the string ([§19](#mix)).
 
 `BLANK_LINE` is recognized from the original physical line and lexical mode before whitespace/comment removal. It enters the common completion mechanism at virtual level −1, completes the current block immediately, resolves pending Mix-only anchors, and resets continuation to the local document root. It adds no output field or instruction. If an internal paired form is unmatched, it reports an error at the boundary with the opener location; it does not synthesize a delimiter. The current Mix document's own wrapper is excluded from this internal-pair check. Source spans record the actual boundary rather than an inserted textual `---`. Repeated boundaries are idempotent. The same event is used in disabled-body syntax validation.
 
 EOF completes the root after all forms admitting EOF closure. No final blank line or trailer is required, and one final LF need not be treated as a blank line. Unclosed bounded forms or lexical modes remain errors, as does a closing bracket without an opening one ([§14](#bounded)). Output O retains Structures, Frames, atoms, Mix flags, and spans; P0 does not execute code, resolve functions, or assign types.
+
+The square-form component is a delegated part of this same automaton, not a second P0. Its complete-expression delegation, own-level separators and returned `nextPosition` are specified in [BRACKET_SUBPARSER](BRACKET_SUBPARSER.en.md). It does not scan nested `{...}` or search for their `}`; the common parser consumes those regions.
 
 <a id="ebnf"></a>
 
@@ -1052,14 +1065,21 @@ A bare identifier in `nullary_line_body` remains an atom. Availability, role, ar
     // segment. Comma is an ordinary field separator and never terminates the
     // current open short form.
 
-    head                ::= head_base { type_suffix }
+    head                ::= { type_prefix } head_base
                           | common_composed_head
 
     head_base           ::= bare_identifier | exact_identifier
                           | symbolic_head | bounded_structure
 
-    type_suffix         ::= written_empty_square_suffix | "@"
-    written_empty_square_suffix ::= "[" trivia_only "]"
+    type_prefix         ::= array_axis_prefix | dynamic_array_rank_prefix
+                          | pointer_prefix | dynamic_pointer_count_prefix
+    array_axis_prefix   ::= "[" [ expression ] "]"
+    dynamic_array_rank_prefix ::= "[]" "(" expression ")"
+    pointer_prefix      ::= "@"
+    dynamic_pointer_count_prefix ::= "@" "(" expression ")"
+    // Prefixes precede the complete base TYPE; no postfix T[] or T@ alias.
+    // Expressions and bounded bases use the common parser and receiving role.
+    // Dynamic-count versus grouped-base context is retained for the consumer.
 
     // common_composed_head is retained source under the same automaton.
     // Its validity is resolved by the normal receiver-head consumer, not
@@ -1142,10 +1162,29 @@ A bare identifier in `nullary_line_body` remains an atom. Availability, role, ar
                             local level-0 context and stored as a Mix-flagged
                             Structure node
 
-    index_access_suffix ::= "[" (argument_list | vertical_argument_list) "]"
-                            attached to a preceding target by an expression,
-                            update or receiver profile that admits index/access
-                            syntax
+    index_access_suffix ::= square_form(INDEX)
+                            attached to a preceding admitted target
+
+    square_form(context) ::= "[" common_or_delegated_square_body(context) "]"
+    // TYPE and VALUE/initializer keep the common bounded-form path.
+    // INDEX suffixes and compact [op operation occurrences delegate to
+    // BRACKET_SUBPARSER. The operation designator starts immediately after [.
+    // The main parser parses every nested expression, group, literal and Mix region.
+    // The square helper calls that same parser and never duplicates its scan.
+    // The helper owns only its current-level separators and final ].
+
+    index_body          ::= expression
+                          | [ expression ] ":" [ expression ]
+                            [ ":" [ expression ] ]
+    // A pending conditional consumes its own colon first. At the current
+    // INDEX level :: is two slice separators; nested :: remains an operand.
+    // := and .: are complete tokens, never split into these colons.
+
+    square_operation_body ::= operation_designator
+                              [ explicit_axis_rules ]
+                              [ output_permutation ] { ordinary_option }
+    // Axis-list absence differs from present empty (). Options/-> do not
+    // manufacture that list. All rule expressions/options use common P0.
 
     vertical_argument_list
                          ::= newline source_line { source_line }
@@ -1155,8 +1194,14 @@ A bare identifier in `nullary_line_body` remains an atom. Availability, role, ar
     structural_value
                          ::= compact_frame
                           | bounded_structure
+                          | square_form(admitted_context)
                           | mix_structure
                           | atom_or_value
+
+    expression          ::= [ notation_operator ] expression_region
+    notation_operator   ::= "prefix" | "infix"
+    // The common parser supplies the bounded expression_region and its nested groups.
+    // Each nested Expression may select a mode; the grouper applies the selected notation.
 ````
 
 <a id="normal-form"></a>
@@ -1281,7 +1326,7 @@ labels do not alter positional type compatibility. Dispatch on the resolved
 receiver's contract follows structural parsing and does not change written
 boundaries. The named declaration uses the ordinary expression operand `::`; it does not add a special signature delimiter or argument parser. The old named receiver is removed. The core type-token constructor `->` is another entry to the same signature kind.
 
-Expression is the ordinary Structure graph interpreted with a [structural grouper](LMX_semantics.en.md#expression-structural-grouping): it determines priorities, complete expression units and streams at the current tree level, independently of source spelling. A separate Expression application adapter packages left as one actual/reference bundle, supplies numeric depth next, and packages right as an Array of references. `arg0 operand arg1 arg2 arg3` is the general form; a binary contract uses one right item, with no automatic fold or movement of the first right item into an absent left. The receiving contract selects whole-value or current-level sequence consumption. `(a b c) .: (a c b)` therefore has one left bundle and three right values; three sibling RHS groups remain three Structure items. There is no extra conditional unwrapping pass after grouping. The grouper reads the clean graph. When translating Expression, ordinary `satisfies` against the operand template determines the role of a graph reference atom to a Structure. A result of `1` selects the operand and an established `0` preserves one whole Array of references (`[]@`). If both results are possible, translation rejects the expression before effects. Other reached Structures follow the name/actual-parent rule. Reference resolution preserves the actual parent. Whole VALUE/TYPE/DATA material is not automatically reclassified as CODE. `1 + ((2))` is 3; field collectors such as `(copy(Model))` remain containers for zero, one or many fields. `::` and modifiers keep DATA consumption and the common immediate-field reader; they gain no RHS evaluator. P0, ordinary callable W/E and the existing lifetime/effect rules remain intact. See [architecture and acceptance](EXPRESSION_GROUPING.md); execution is **NOT_RUN**.
+Expression is the ordinary Structure graph interpreted with a [structural grouper](LMX_semantics.en.md#expression-structural-grouping): it determines priorities, complete expression units and streams at the current tree level, independently of source spelling. A separate Expression application adapter packages left as one actual/reference bundle, preserves optional depth next, and packages right as an Array of references. `arg0 operand arg1 arg2 arg3` is the general form; a binary contract uses one right item, with no automatic fold or movement of the first right item into an absent left. The receiving contract selects whole-value or current-level sequence consumption. `(a b c) := (a c b)` therefore has one left bundle and three right values; three sibling RHS groups remain three Structure items. There is no extra conditional unwrapping pass after grouping. The grouper reads the clean graph. When translating Expression, ordinary `satisfies` against the operand template determines the role of a graph reference atom to a Structure. A result of `1` selects the operand and an established `0` preserves one whole Array of references (`[]@`). If both results are possible, translation rejects the expression before effects. Other reached Structures follow the name/actual-parent rule. Reference resolution preserves the actual parent. Whole VALUE/TYPE/DATA material is not automatically reclassified as CODE. `1 + ((2))` is 3; field collectors such as `(copy(Model))` remain containers for zero, one or many fields. `::` and modifiers keep DATA consumption and the common immediate-field reader; they gain no RHS evaluator. P0, ordinary callable W/E and the existing lifetime/effect rules remain intact. See [architecture and acceptance](EXPRESSION_GROUPING.md); execution is **NOT_RUN**.
 
 Generated LMX must preserve written anonymous groups, the current operand rule,
 blank-line root termination and explicit tail cutters. A reference sequence is
@@ -1300,153 +1345,91 @@ The [unified contract](CORE_SEQUENCES_REGEX.en.md#types) supplies NAME/TYPE/VALU
 
 <a id="conditional-slice-grammar"></a>
 
-## 30. Conditional expressions, slices and dotted operands
+## 30. Conditional expressions, slices, depth and square operations
 
-The [complete contract](TERNARY_AND_SLICES.en.md) defines values, lazy execution, omissions, normalization and references. This section defines source boundaries in the common P0. The new forms remain in the full graph; they introduce no executable working graph.
+These are source forms of the existing Expression/receiver mechanism. The [square subparser](BRACKET_SUBPARSER.en.md) specifies the additional delegated source component. The [tensor contracts](TENSOR_EXPRESSIONS.md) determine arithmetic, assignment, axis rules and execution after parsing. Production support remains **NOT_RUN**.
 
-### Paired conditional form
+### Paired conditional and slice boundaries
 
-`a ? b : c` is one operation whose canonical name is `?:`. At each structural level P0 tracks unmatched conditional separators: a colon closes the nearest pending question at that level. Nested groups, formed Frames, protected literals and exact identifiers keep their own colons. P0 neither evaluates the condition nor selects an arm. Ordinary Expression receives one left occurrence and two bounded right RAW occurrences with their source context; the conditional adds no form-specific fields to the common left/depth/right `OPERANDS_TEMPLATE`; its ordinary spelling receives depth=0.
+`a ? b : c` is one operation named `?:`. At each current structural level, a colon closes the nearest pending question before it can become a slice delimiter or a head/body colon. Nested groups, complete Frames, Mix regions, protected literals and exact identifiers keep their own contexts. P0 retains both RAW arms without evaluating either. Ordinary grouping provides one left condition and two right arm occurrences; no field is added to `left, depth, right` and ordinary conditional use leaves depth absent.
 
-`a ? b ? c : d : e` nests in the first arm; `a ? b : c ? d : e` nests in the second. Conditional precedence is below `||`, above assignments and `::`, with right association. Arms have their own expression boundaries, so assignment inside an arm keeps its ordinary contract. Receiver spelling `` `?:`(a; b; c) `` preserves laziness.
+The conditional precedence is below `||` and above assignments, with right association. Each chosen region retains its live context and ordinary demand rules. `` `?:`(a; b; c) `` uses the same lazy body, not eager argument evaluation. Examples and complete contracts: [conditional](TERNARY_AND_SLICES.en.md#conditional).
 
-Bound a short colon receiver inside an arm: `a ? (f: x) : (g: y)`; compact `a ? f(x) : g(y)` is also unambiguous. An unbounded colon after a pending question belongs to the conditional instead of opening a Frame. Missing arms and unmatched questions are preparation errors.
-
-### Slice suffixes
-
-At the current level of an index suffix, one or two colons not paired with a conditional divide start/stop/step. Thus `a[::2]` has two slice separators, not a signature operand. Outside that context and inside a nested group, `::` remains one signature token. In `a[flag ? 1 : 2:6]`, the first colon closes the question and the second divides slice fields. Compound tokens `.:` and `:=` are recognized before a single structural colon and are not separators.
-
-```ebnf
-slice_suffix = "[", [bound], ":", [bound], [":", [bound]], "]" ;
-bound = expression_region ;
-conditional = condition_region, "?", then_region, ":", else_region ;
-```
-
-This extends the existing bounded forms, not a separate expression parser. Region boundaries come from the common structural level, nested conditional separators and Expression rules. Preserve absent bounds explicitly; a written empty group is a present value, not an omission. `[]T`, scalar `a[i]`, initializer `[1 2]` and slice `a[:]` remain distinct applications of the common machinery. Negative bounds count from the end only under the slice contract; `a[-1]` is not last-element access.
-
-### Operation depth decoration
-
-The [common depth contract](OPERATOR_DEPTH.en.md#syntax) defines three forms:
-
-| Expression | Base operation | `depth` input |
-| --- | --- | --- |
-| `a op b` | `op` | 0 |
-| `a .op b` | `op` | 1 |
-| `a .(expression)op b` | `op` | One obtained nonnegative `int` |
-
-`.(0)op` explicitly selects zero, `.(1)op` equals `.op`, and `.(1 + 9)op`
-obtains depth 10. The parentheses after the dot contain an **ordinary expression parsed by the
-common P0**, including calls and nested groups. They are not a digits-only
-field, separate numeric scanner, Array index or rank/shape annotation.
-The compact `.(...)` decoration attaches to an operator or function designator; its
-original expression occurrence and context remain in the same graph.
-
-```ebnf
-decorated_operation = ".", operation_designator
-                    | ".", "(", expression_region, ")", operation_designator ;
-```
-
-The ordinary designator follows the base operation's existing structural class,
-including a custom operation obtained through a reference/path. The common
-prefix supplies depth to this unchanged designator. For example, `.=` and
-`.Lib\op` select `=` and `Lib\op` at depth 1. The dedicated depth-one
-assignment spelling is `.:`, with canonical family `:=`. The value is
-not limited to literal 10. `..op` and `...op` **are not depth shorthands**;
-depths greater than one use only `.(expression)`. This does not forbid dots
-inside exact names. An undeclared exact `` `..op` `` never becomes an alias
-of op with depth=2.
-
-Precedence, association and attached-operation class come from the base
-operation before depth execution. `.**` and `.(n)**` keep directional power
-binding. Preparation does not execute n, discover its future type by running
-its body, or change precedence using its value. Once an operation is demanded,
-the ordinary namespace obtains depth exactly once and supplies the method
-with a number. A skipped `?:`, `&&` or `||` branch has no depth-expression
-effects. Noninteger, negative or multiple values cause a translator
-diagnostic when statically established, or an interpreter diagnostic when
-reached. They are not LMX throws and add no throws-family member; no rounding
-or default replacement takes place. Static analysis of a
-ready constant does not authorize execution of RAW occurrences.
-
-The public `OPERANDS_TEMPLATE` has three inputs in the order **`left`, `depth`,
-`right`**: a reference, an `int`, and an Array of references. `PASS_ARGS_AS_IS`
-and `PRIORITY` remain constant properties. Left is still one occurrence or
-absent; depth is never taken from right, and right[0] is not promoted to left.
-Even in RAW mode, depth is numeric when the method is called; the argument
-roles of left/right remain intact. [ABI and demand](OPERATOR_DEPTH.en.md#abi).
-
-### Assignment and the exact receiver name
-
-| Surface form | Canonical family | depth |
-| --- | --- | --- |
-| `target := source` | `:=` | 0 |
-| `target .: source` | `:=` | 1 |
-| `target .(n): source` | `:=` | The value of n, including 0 |
-
-This is one row of the **assignment-family surface-form table**, not an
-exception to LeftView, grouping or PLACE admission. `.:` and `.(n):` do not
-open a Frame headed by `.`, and `.:=` is not introduced as a spelling or
-alias. `.=` still selects comparison `=` at depth=1.
-
-A receiver uses the base name and the selected profile's ordinary named depth
-input: `` `+`(a; b; depth := 2) `` or
-`` `:=`(target; source; depth := 1) ``. A direct custom-operand call spells
-its left/depth/right ABI inputs explicitly by name. An ordinary two-argument
-receiver does not reinterpret its second user actual as depth: the existing
-adapter declares that mapping; P0 never reorders arguments.
-
-Backticks retain **one exact name**. `` `.+` `` names the literal identifier
-.+ rather than reparsing it into + at depth=1; no built-in alias is created.
-Do not add depth decoration inside or outside a quoted receiver name. The
-name depth is not stripped from every ordinary function's arguments: it is
-an input of the selected operation profile, and another function's equally
-named formal keeps its own owner. [Receiver forms](OPERATOR_DEPTH.en.md#receiver).
-
-### Lexical boundaries
-
-The depth-one families retain `.+`, `.-`, `.*`, `./`, `.%`, `.**`, `.&`, `.|`,
-`.^`, `.~`, `.<<`, `.>>`, `.=` , `.!=`, `.<`, `.<=`, `.>`, `.>=`. Compound
-updates and attached `.++`/`.--` retain their classes. Attached canonical
-names remain `++var`, `var++`, `--var`, `var--`; depth is a separate input.
-Base symbolic names have no three/four-character limit; no `<<<`/`>>>`
-rotation operations are introduced.
-
-A dot immediately followed by `(` **always begins an operator or function
-modifier**, outside a shielded literal, comment, or exact identifier. This pair
-is recognized before a decimal point or layout dot. Ordinary structural-context
-validation remains: recognizing a modifier does not by itself make every root
-line an executable Expression. Other level dots retain §15–16 behavior.
-
-Lexical discrimination uses the one existing P0:
-
-1. A shielded lexical mode consumes its contents by its existing rules;
-   modifier-looking text inside it remains content.
-2. Before consuming a dot into a number in the ordinary source stream, inspect
-   the next character. If it is `(`, finish the number **before the dot** and
-   start a modifier region. Apply the same lookahead to a free/layout dot.
-3. Common P0 delimits content through its matching `)`, preserving the usual
-   nested-group, string, and comment shielding. It parses an ordinary Expression,
-   not a separate numeric scanner. The following operator or function designator
-   receives the existing depth description with its original context.
-4. Otherwise use the existing numeric and token rules. P0 never evaluates
-   depth; the grouper receives the clean graph, and the number is obtained only
-   when the operation is ordinarily demanded.
+Within an INDEX suffix, one or two current-level colons not owned by a conditional divide start/stop/step. `a[::2]` therefore has two slice separators; this contextual tokenization does not change `::` inside a nested ordinary group or outside INDEX. `:=` and `.:` remain complete tokens and never become slice separators.
 
 ```lmx
-1 .(3)+ 2 .(2)+ 3
-1.(3)+2.(2)+3
-1.(2)+3
+values[lo():hi():step()]
+values[::2]
+values[::-1]
+values[flag ? 1 : 2:6]
+values[(flag ? 1 : 2):6]
 ```
 
-These examples specify written boundaries, not successful scalar admission at
-every depth. `1.(2)+3` has number `1`, modifier `.(2)`, base `+`, and number `3`;
-the dot does not become part of `1.`. Decimal `1.5`, `.5`, and `1.` retain their
-forms. C99 admits `1.`, so `1.+2` still means `1.` followed by scalar `+`; write
-`1 .+ 2` for depth one, while `a.+b` remains compact operation syntax. `c.*`
-retains its profile. The previous square modifier spelling is not retained as
-an alias. Square indexes, slices, initializers, type `[]`, and `[](N)int` remain
-unchanged. `fuse(expression)` stays an ordinary RAW receiver; the lexer does
-not decide fusion eligibility. Production P0 for these boundaries: **NOT_RUN**.
+Every present field is a full ordinary expression. A missing field is absent, not zero, an empty group or a dynamic fallback request. Negative scalar indexes remain invalid; negative slice bounds have the explicit from-end contract. Interpreted L2 checks Array bounds; native L2's omitted check does not authorize invalid indexes. Backward address movement is expressed through a pointer. [Slice contract](TERNARY_AND_SLICES.en.md#slice-contract).
+
+### Traversal depth modifier
+
+The only attached modifier is `.(expression)op`, including `.(expression)[op …]` and prefix `.(expression)myFunc(A; B)`. Generic `.op`, `..op`, `...op`, and the old square modifier are not forms of this mechanism.
+
+| Source | Base operation | Actual depth |
+| --- | --- | --- |
+| `a + b` | `+` | Absent; ordinary arithmetic uses scalar cells by its own default |
+| `a .(0)+ b` | `+` | Present integer 0 |
+| `a .(d + 1)+ b` | `+` | Value of the complete expression `d + 1` |
+| `a .(2)[*] b` | `[*]` | Present 2, applied to this whole/default method |
+| `.(d)myFunc(A; B)` | `myFunc` | Present value d |
+
+The common parser consumes the complete `(...)` modifier region, including nested source, and returns its next position. The grouper sees its graph occurrence and ready base-operation priority, not source brackets. The normal executor obtains a present depth exactly once when the application is demanded. An unselected branch causes no depth-expression effects. The common transport admits the declared integer type, including negative integers. Its meaning is chosen by the resolved method/profile; the standard Array traversal separately rejects negative depth and unsupported cell/frame contracts as translator/interpreter diagnostics.
+
+**In the standard Array traversal, depth 0 means maximum traversal.** For an iterated Array of rank K, explicit depth=0 visits all K logical axes. Positive depth=d visits exactly the first d axes and supplies a cell of rank K−d; d>K is a diagnostic, not clipping. Rank remains the number of Array axes. Depth does not count pointer indirections, parent edges or separately allocated row objects.
+
+The base body receives each selected cell **without a second automatic Map**. Thus a scalar base + on a matrix receives row Arrays at depth=1 and rejects them unless an appropriate whole-cell body is declared; depth=2 or 0 supplies scalar elements. A custom method can accept an entire row and can explicitly call another Array operation in its body.
+
+Absence retains the selected method's default. Ordinary elementwise arithmetic uses maximum traversal, so its default and explicit 0 agree. Whole `[op]`, DATA/TYPE/RAW consumers and reductions retain their own defaults: `A [*] B` can receive whole Arrays, whereas explicit `A .(0)[*] B` first selects their elements and must pass the base method's admission. Frame matching, scalar actuals and held `$x` actuals follow [OPERATOR_DEPTH](OPERATOR_DEPTH.en.md). The modifier changes no source grouping or left-argument count.
+
+The public actual order is **left, depth, right**. There is at most one left actual or none. Depth is never taken from right, and right[0] is never promoted into missing left. A receiver uses its canonical name with an ordinary named depth argument, for example `` `+`(a; b; depth := 1) `` where the method admits it. A direct custom-operand call preserves its declared named actuals; a wrapped ordinary function's own argument named depth remains distinct from its outer operand's modifier.
+
+The modifier and its middle input do not force a custom method to use Array traversal. A custom method may treat the integer as a mode, count or other setting, including a documented meaning for -1. Only a selected standard Map profile applies the nonnegative-depth and d<=K rules. For example, `a .(-1)myOp b` preserves the integer -1 for a custom method that admits it; syntax or transport must not reject it merely as a negative traversal depth.
+
+### Assignment and exact names
+
+`:=` is ordinary elementwise assignment, with scalar fill where its existing contract permits; an Array RHS requires exact target shape. `.:` is a distinct slice assignment with right-aligned broadcasting to its fixed destination shape. Neither operation is encoded as “the other plus depth 1”. Ordinary comparison is `=`; no dotted `.=` family is needed.
+
+```lmx
+(a b c) := (b c a)
+values[::-1] := values
+values[:] := 0
+matrix[:][:] .: row
+```
+
+Exact identifiers in backticks preserve one name. `` `+` `` and bare `+` address the same canonical operation where that name is admitted; `` `[* 1:0]` `` is literally that name, not a parsed configuration. Depth decoration is not appended inside an exact name. Quoting does not choose VALUE/TYPE/RAW/PLACE or make a Structure callable. [Operation forms](OPERATION_FORMS.md).
+
+### Square whole and indexed operations
+
+In a syntactic position admitting a square operation, the compact opening `[op` with no space between `[` and the operation designator triggers the square subparser. An INDEX suffix such as `a[start:stop:step]` enters the same component with its INDEX context. TYPE prefixes, VALUE constructors and spaced ordinary square groups keep their existing common-parser path; `[ op]` is not automatically an alternative spelling of `[op]`. The common parser retains the surrounding role and parses the method designator and every embedded expression. Configuration is retained as ordinary Structures and method references; no runtime string parser or new operation registry is introduced.
+
+| Form | Axis list | Meaning |
+| --- | --- | --- |
+| `A [*] B` | Absent | Declared default matrix multiplication |
+| `A [* -> 1 0] B` | Absent | Same default multiplication, output permutation |
+| `A [* ()] B` | Present empty | Explicit indexed outer product |
+| `A [* 1:0] B` | Present | Indexed product with default summation |
+| `A [+ 1:0; reduce := min] B` | Present | Indexed addition with explicit reducer min |
+| `A [/] B` | Absent | Whole right solve |
+| `A [/ 0=0] B` | Present | Declared indexed division |
+| `[+ 1:] A` / `[* 1:] A` | Present | Unary sum / product |
+
+An option or `->` alone does not create axisRules. A unary `[* -> ...] A` uses its explicitly declared geometry contract. Source names and operand preparation do not select an algorithm by trial execution. Ordinary `*` remains elementwise for Arrays; matrix multiplication is `[*]`. Structure `[]@` participates in ordinary Array expressions with actual element types and is not an opaque-type exception. A returned Array remains one argument rather than becoming extra right actuals.
+
+### Lexical boundary of `.(` and delegated regions
+
+Outside protected lexical modes, the immediate pair `.(` always starts a modifier before the dot can be consumed by a number or layout. `1.(2)+3` means number 1, depth expression 2, base +, number 3. `1 .(3)+ 2 .(2)+ 3` has the same boundaries without spaces. These examples establish parsing, not admission of every selected cell contract.
+
+Decimals `1.5`, `.5`, `1.` and `1.+2` retain their numeric reading; the last contains `1.` followed by +, not a dotted operation. Strings, comments and exact names are protected. Type prefixes `[](N)int`/`@(N)int`, square values and index/slice suffixes keep their distinct contexts.
+
+The square helper owns only its current-level separators and closing `]`. On `{`, `(`, nested `[` or a literal it delegates the complete region to the common parser and resumes from the returned `nextPosition`; it does not search for nested closers, particularly `}`. Its successful result points immediately after its own `]`. Source grouping is finished before the pure-graph Expression grouper runs. The full interface, slice/axis boundary policies and pseudocode are in [BRACKET_SUBPARSER](BRACKET_SUBPARSER.en.md).
+
+`fuse(expression)` is an ordinary RAW receiver. The source parser does not decide eligibility. The required initial executor profile is Scalar/Map with a fresh result; reductions, contractions and merged stores require explicitly supported additional profiles.
 
 
 <a id="array-rank-and-values"></a>
@@ -1544,8 +1527,9 @@ path role:
 Selecting a flat consumer neither changes the source rank/type nor performs
 reshape. See the [access table](ARRAY_STORAGE.en.md#indexing) and
 [positive declarations](TYPE_DECLARATION_FORMS.md#array-rank).
-Operation depth follows retained logical axes: depth three on rank-three
-storage does not require three separately allocated C blocks.
+Operation depth uses retained logical axes: depth=0 selects maximum traversal,
+and positive depth=3 on a rank-three Array reaches scalar elements. It does not
+count separately allocated blocks or recursively followed references.
 Production P0/translator/runtime acceptance: **NOT_RUN**.
 
 

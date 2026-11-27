@@ -3,8 +3,9 @@
 
 Record identities, language pairs and measurement boundaries are discovered from
 current metadata. Historical receipts and earlier migration approvals are not
-acceptance criteria. The immutable uploaded spec is used only to prove that the
-original Haskell-suite LMX sources survived the directory move byte for byte.
+acceptance criteria. The immutable uploaded spec proves byte preservation of
+Haskell-suite LMX sources, except for explicitly reviewed exact-hash migrations.
+Both the historical and current Haskell directory layouts are accepted.
 """
 from __future__ import annotations
 
@@ -68,7 +69,7 @@ def listing_paths(item):
 
 
 class Validator:
-    def __init__(self, patterns, baseline):
+    def __init__(self, patterns, baseline, source_review=None):
         self.patterns = patterns.resolve()
         self.spec = self.patterns.parent
         self.examples = self.patterns / 'examples'
@@ -80,6 +81,8 @@ class Validator:
         self.cases = {}
         self.implementations = {}
         self.measured_files = set()
+        self.source_review_path = source_review.resolve() if source_review else None
+        self.source_review = self.read(self.source_review_path) if self.source_review_path else {}
 
     def check(self, ok, label, details=None):
         row = {'check': label, 'status': 'PASS' if ok else 'FAIL'}
@@ -333,7 +336,10 @@ class Validator:
     def haskell(self):
         directory = self.examples / 'haskell_comparision'
         index = self.read(directory / 'comparison_index.json')
-        baseline_index = self.read(self.baseline / 'patterns/examples/haskell/comparison_index.json')
+        baseline_index_path = self.baseline / 'patterns/examples/haskell_comparision/comparison_index.json'
+        if not baseline_index_path.is_file():
+            baseline_index_path = self.baseline / 'patterns/examples/haskell/comparison_index.json'
+        baseline_index = self.read(baseline_index_path)
         original = {item['id']: item for item in baseline_index.get('entries', [])}
         entries = index.get('entries', [])
         self.check({item['id'] for item in entries} == set(original), 'Haskell current/baseline contract identities')
@@ -365,16 +371,27 @@ class Validator:
                     after = self.examples / new_name
                     old_bytes = before.read_bytes() if before.is_file() else None
                     new_bytes = after.read_bytes() if after.is_file() else None
-                    ok = old_bytes is not None and new_bytes == old_bytes
-                    self.check(ok, label + '/' + style + ': immutable uploaded LMX bytes preserved',
+                    unchanged = old_bytes is not None and new_bytes == old_bytes
+                    review = self.source_review.get('files', {}).get(new_name, {})
+                    reviewed = (old_bytes is not None and new_bytes is not None
+                                and review.get('before_sha256') == sha(old_bytes)
+                                and review.get('after_sha256') == sha(new_bytes)
+                                and bool(review.get('reason')))
+                    ok = unchanged or reviewed
+                    self.check(ok, label + '/' + style + ': baseline bytes preserved or exact migration reviewed',
                                {'before': old_name, 'after': new_name})
                     seen_files.add(str(after.resolve()))
                     preserved[str(before.resolve())] = {'baseline': old_name, 'current': new_name,
-                        'sha256': sha(old_bytes) if old_bytes is not None else None, 'preserved': ok}
+                        'sha256': sha(old_bytes) if old_bytes is not None else None,
+                        'preserved': unchanged, 'reviewed_migration': reviewed and not unchanged,
+                        'accepted': ok}
         self.check(len(preserved) == len(seen_files), 'Haskell move preserves one physical file per original source')
         self.summary['haskell'] = {'contracts': len(entries), 'statuses': dict(statuses),
-            'preserved_lmx_physical_files': len(preserved), 'all_preserved': all(r['preserved'] for r in preserved.values()),
-            'baseline_index_sha256': sha(self.text(self.baseline / 'patterns/examples/haskell/comparison_index.json').encode()),
+            'preserved_lmx_physical_files': sum(r['preserved'] for r in preserved.values()),
+            'reviewed_lmx_physical_files': sum(r['reviewed_migration'] for r in preserved.values()),
+            'all_preserved': all(r['preserved'] for r in preserved.values()),
+            'all_preserved_or_reviewed': all(r['accepted'] for r in preserved.values()),
+            'baseline_index_sha256': sha(self.text(baseline_index_path).encode()),
             'sources': list(preserved.values())}
 
     def suites(self):
@@ -520,6 +537,7 @@ class Validator:
         module = import_file('current_packet_publication', self.patterns / 'tools/build_publication_data.py')
         module.ROOT = self.patterns; module.EXAMPLES = self.examples
         expected = module.build()
+        module.retain_document_editions(expected, current)
         self.check(not expected.get('errors'), 'Publication builder source checks', expected.get('errors'))
         self.check(current == expected, 'PUBLICATION_DATA exactly equals read-only reconstruction',
                    {'different_top_level_keys': [key for key in set(current) | set(expected) if current.get(key) != expected.get(key)]})
@@ -568,8 +586,9 @@ class Validator:
         return {'format': 'lmx-current-source-packet-validation-v2',
                 'checked_at_utc': datetime.now(timezone.utc).isoformat(),
                 'status': 'PASS' if not self.errors else 'FAIL',
-                'scope': 'Current sources, multipart boundaries, JSON, Markdown, CSV, publication data, core exports/assembly and immutable Haskell LMX preservation. No language execution.',
+                'scope': 'Current sources, multipart boundaries, JSON, Markdown, CSV, publication data, core exports/assembly and exact Haskell baseline preservation or reviewed source migration. No language execution.',
                 'source_root': str(self.spec), 'immutable_baseline': str(self.baseline),
+                'exact_source_review': str(self.source_review_path) if self.source_review_path else None,
                 'historical_receipts_used_for_acceptance': False,
                 'summary': self.summary, 'checks_count': len(self.checks),
                 'checks': self.checks, 'errors': self.errors, 'warnings': self.warnings,
@@ -582,9 +601,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--patterns', type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument('--baseline', type=Path, default=DEFAULT_BASELINE, help='Immutable uploaded spec directory')
+    parser.add_argument('--source-review', type=Path, help='Optional exact before/after hashes of reviewed Haskell source migrations')
     parser.add_argument('--output', type=Path, help='JSON receipt (default: patterns/validation/current_packet_expansion_20261124.json)')
     args = parser.parse_args()
-    report = Validator(args.patterns, args.baseline).run()
+    report = Validator(args.patterns, args.baseline, args.source_review).run()
     output = args.output or args.patterns / 'validation/current_packet_expansion_20261124.json'
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')

@@ -8,7 +8,7 @@ import unittest
 
 path = Path(__file__).resolve().parents[1] / "tools/expression_grouping_reference.py"
 sys.path.insert(0, str(path.parent))
-from operand_depth_reference import DepthExpression, DepthError
+from operand_depth_reference import DepthExpression, DepthError, ABSENT
 spec = importlib.util.spec_from_file_location("lmx_expression_reference", path)
 ref = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = ref
@@ -70,7 +70,7 @@ class NumericMethod:
         self.calls = []
 
     def invoke(self, left, depth, right, namespace, evaluate):
-        if depth != 0:
+        if depth is not ABSENT and depth != 0:
             raise NotImplementedError("this scalar test method has no lifting implementation")
         values = [] if left is ref.ABSENT else [evaluate(left.region)]
         values.extend(evaluate(item) for item in right)
@@ -90,7 +90,7 @@ class StoreMethod:
         self.received_shapes = []
 
     def invoke(self, left, depth, right, namespace, evaluate):
-        if depth != 0:
+        if depth is not ABSENT and depth != 0:
             raise ValueError("scalar store body requires depth zero")
         self.received_shapes.append((left is ref.ABSENT, len(right)))
         if left is ref.ABSENT:
@@ -129,20 +129,20 @@ class HostNoArgCall:
 
 
 class ElementwiseStoreMethod:
-    """Host .: consumer; source admission is separate from graph grouping.
+    """Host := array/group consumer; source admission is separate from graph grouping.
 
     Both a group of field places and an existing Array select real cells and
     use ref.elementwise_assignment. Python tuple/list stand for the same
     unrestricted LMX Array shape; they do not introduce a tuple language type.
-    This small model checks one level, not physical LMX typing or Array rank.
+    This small model checks one level, not physical LMX typing or Array priority.
     """
     def __init__(self, planner):
         self.planner = planner
         self.received_shapes = []
 
     def invoke(self, left, depth, right, namespace, evaluate):
-        if depth != 1:
-            raise NotImplementedError("this one-level consumer models depth one")
+        if depth is not ABSENT and depth != 0:
+            raise NotImplementedError("this test consumer models scalar-cell assignment")
         self.received_shapes.append((left is ref.ABSENT, len(right)))
         if left is ref.ABSENT:
             if len(right) < 2:
@@ -190,16 +190,22 @@ class ElementwiseStoreMethod:
 
 
 class AssignmentMethod:
-    """One canonical := family; surface .: supplies depth=1 before demand.
+    """The := method selects scalar/Array PLACE admission from the actual target.
 
-    The generic recursive lifting implementation is specified separately.
-    These host checks deliberately exercise only the existing zero/one bodies.
+    Depth presence never selects a different assignment operator. Broadcasting
+    slice .: is checked by the Array model, outside this grouping test double.
     """
     def __init__(self, scalar, elementwise):
         self.scalar, self.elementwise = scalar, elementwise
 
     def invoke(self, left, depth, right, namespace, evaluate):
-        body = self.scalar if depth == 0 else self.elementwise
+        target = right[0] if left is ref.ABSENT else left.occurrence
+        items = ref.expose_sequence((target,), self.elementwise.planner)
+        item = ref.prepared_value(items[0]) if len(items) == 1 else None
+        scalar = (isinstance(item, ref.Unit) and item.kind == "atom"
+                  and isinstance(item.node, str)
+                  and not isinstance(namespace.get(item.node), list))
+        body = self.scalar if scalar else self.elementwise
         return body.invoke(left, depth, right, namespace, evaluate)
 
 
@@ -255,13 +261,17 @@ class PlannerChecks(unittest.TestCase):
         self.owner = object()
         self.context = ref.Context(self.owner, object())
         self.ops = {
-            "+": ref.Binding("+", 10, prefix_rank=25),
-            "-": ref.Binding("-", 10, prefix_rank=25),
-            "*": ref.Binding("*", 20),
-            "**": ref.Binding("**", 30, right_associative=True),
+            # Numeric levels follow the source table; priority 131 for ** is
+            # a new documentation requirement, not a production execution claim.
+            "+": ref.Binding("+", 100, prefix_priority=130),
+            "-": ref.Binding("-", 100, prefix_priority=130),
+            "*": ref.Binding("*", 110),
+            "**": ref.Binding("**", 131, right_associative=True),
             ":=": ref.Binding(":=", 0, right_associative=True),
             "::": ref.Binding("::", 0),
-            "->": ref.Binding("->", 10),
+            "->": ref.Binding("->", 100),
+            # The following names are synthetic test operands with their own
+            # relative levels; they do not assign numeric priorities in LMX.
             "op": ref.Binding("op", 10),
             "high": ref.Binding("high", 20),
             "low": ref.Binding("low", 5),
@@ -274,7 +284,7 @@ class PlannerChecks(unittest.TestCase):
         self.planner = ref.Planner(self.view)
         self.store = StoreMethod()
         self.elementwise_store = ElementwiseStoreMethod(self.planner)
-        self.assign_each = ref.DecoratedOperation(":=", 1)
+        self.assign_each = ":="
         self.assignment_method = AssignmentMethod(self.store, self.elementwise_store)
         self.methods = {
             id(self.ops["+"]): NumericMethod(sum, arities=(1, 2)),
@@ -288,9 +298,9 @@ class PlannerChecks(unittest.TestCase):
     def plan(self, *items):
         return self.planner.plan(Group(items, self.owner), self.context)
 
-    def test_undecorated_application_supplies_zero_depth(self):
+    def test_undecorated_application_preserves_absent_depth(self):
         app = self.plan(1, "+", 2)[0]
-        self.assertEqual(app.depth, 0)
+        self.assertIs(app.depth, ref.ABSENT)
         self.assertEqual(evaluate_model(app, self.planner, self.methods, {}), 3)
 
     def test_depth_decoration_inherits_base_priority_without_evaluation(self):
@@ -345,13 +355,20 @@ class PlannerChecks(unittest.TestCase):
         self.assertEqual(shape(right), (1, 2))
 
     def test_bad_depth_never_enters_method(self):
-        for invalid in (-1, 1.5, True, (1, 2)):
+        for invalid in (1.5, True, (1, 2)):
             probe = ArgumentProbe()
             self.methods[id(self.ops["op"])] = probe
             app = self.plan(1, ref.DecoratedOperation("op", invalid), 2)[0]
             with self.assertRaises(DepthError):
                 evaluate_model(app, self.planner, self.methods, {})
             self.assertEqual(probe.received, [])
+
+    def test_custom_operand_receives_negative_integer_under_its_own_contract(self):
+        probe = ArgumentProbe()
+        self.methods[id(self.ops["op"])] = probe
+        app = self.plan(1, ref.DecoratedOperation("op", -1), 2)[0]
+        self.assertEqual(evaluate_model(app, self.planner, self.methods, {}), -1)
+        self.assertEqual(probe.received[0][1], -1)
 
     def test_shared_depth_source_is_not_cached_across_distinct_demands(self):
         calls = []
@@ -424,6 +441,24 @@ class PlannerChecks(unittest.TestCase):
     def test_power_right_associativity(self):
         self.assertEqual(shape(self.plan(2, "**", 3, "**", 2)),
                          (("**", 2, (("**", 3, (2,)),)),))
+
+    def test_power_numeric_priority_and_evaluation(self):
+        power, multiply, unary = (self.ops[name] for name in ("**", "*", "-"))
+        self.assertEqual(power.priority, max(multiply.priority, unary.prefix_priority) + 1)
+        self.assertEqual(power.priority, 131)
+        self.assertTrue(power.right_limit().accepts(power))
+        self.assertFalse(multiply.right_limit().accepts(multiply))
+        self.assertTrue(unary.prefix_limit().accepts(ref.Binding("sameMinimum", 130)))
+        for tokens, expected in (
+            ((2, "**", 3, "**", 2), 512),
+            ((2, "*", 3, "**", 2), 18),
+            ((2, "**", 3, "*", 4), 32),
+            (("-", 2, "**", 2), -4),
+            ((2, "**", "-", 2), 0.25),
+        ):
+            with self.subTest(tokens=tokens):
+                app = self.plan(*tokens)[0]
+                self.assertEqual(evaluate_model(app, self.planner, self.methods, {}), expected)
 
     def test_every_left_retains_atom_and_value_context(self):
         app = self.plan(1, "+", "v", ":=", 2, "+", 3)[0]
@@ -644,13 +679,12 @@ class PlannerChecks(unittest.TestCase):
         self.assertIs(namespace["target"], source)
         self.assertEqual(self.elementwise_store.received_shapes, [])
 
-    def test_scalar_assignment_refuses_material_group_target(self):
+    def test_assignment_admits_material_group_target(self):
         g = lambda *items: Group(items, self.owner)
         namespace = {"a": 1, "b": 2, "c": 3}
         app = self.plan(g("a", "b", "c"), ":=", g("b", "c", "a"))[0]
-        with self.assertRaisesRegex(ValueError, "simple named place"):
-            evaluate_model(app, self.planner, self.methods, namespace)
-        self.assertEqual(namespace, {"a": 1, "b": 2, "c": 3})
+        evaluate_model(app, self.planner, self.methods, namespace)
+        self.assertEqual(namespace, {"a": 2, "b": 3, "c": 1})
 
     def test_attached_left_class_has_one_argument(self):
         self.assertEqual(shape(self.plan("pre", 1, 2)), (("pre", None, (1,)), 2))

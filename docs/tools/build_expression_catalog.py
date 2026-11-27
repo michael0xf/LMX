@@ -1,135 +1,82 @@
-"""Project the documented Array/RAW/PLACE forms; never publish runtime names."""
+"""Documentation profile projection; not a runtime registry or implementation claim."""
 from pathlib import Path
 import hashlib
 import json
-
-ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "core_catalog/core"
-SOURCE = "spec/patterns/LMX_Fn_Receivers/src/array_expression_ops.lmx"
-ROWS = []
-
-def add(name, family, roles, body, contract, precedence="scalar-counterpart",
-        status="LMX_LOOP_BODY_WITH_PREPARATION_BOUNDARY", source=SOURCE):
-    surface = name
-    depth = 0
-    if name == ".:":
-        name, depth = ":=", 1
-    elif name.startswith("var."):
-        name, depth = name.replace("var.", "var", 1), 1
-    elif name.startswith("."):
-        name, depth = name[1:], 1
-    ROWS.append(dict(
-        name=name, family=family, roles=roles, precedence=precedence,
-        expression_form=surface, example_depth=depth,
-        depth_input="depth", operand_input_order=["left", "depth", "right"],
-        depth_syntax="undotted=0; single-dot=1; .(general expression)=explicit; assignment stem ':' maps to ':='",
-        receiver=f"`{name}`" if not name.isidentifier() else name,
-        implementation=body, source=source,
-        contract=contract, status=status,
-        production_binding="NOT_RUN", lmx_executed=False,
-    ))
-
-for name in "+ - * / % ** & | ^ ~ << >>".split():
-    body = "FxArrayProduct\\multiply / FxArrayElementwise\\apply" if name == "*" else "FxArrayElementwise\\apply"
-    if name == "**": body = "selected-algebraic-power-profile (no new default body)"
-    add(name, "ordinary-array-profile", ["VALUE"], body, "spec/ARRAY_EXPRESSIONS.en.md",
-        status="SELECTED_PROFILE_CONTRACT_ONLY" if name == "**" else "LMX_LOOP_BODY_WITH_PREPARATION_BOUNDARY",
-        source="spec/ARRAY_EXPRESSIONS.en.md" if name == "**" else SOURCE)
-for name in ".+ .- .* ./ .% .** .& .| .^ .~ .<< .>> .= .!= .< .<= .> .>=".split():
-    add(name, "component-value", ["VALUE"], "FxArrayDepth\\apply + selected base operation",
-        "spec/ARRAY_EXPRESSIONS.en.md#dotted")
-for name in ".+= .-= .*= ./= .%= .**= .&= .|= .^= .<<= .>>=".split():
-    add(name, "component-update", ["PLACE", "VALUE"],
-        "shared-update preparation -> FxArrayDepth\\apply -> FxArrayDepthAssignPrepared\\assign",
-        "spec/ARRAY_EXPRESSIONS.en.md#assignment", "assignment",
-        status="COMPOSED_LMX_BODIES_WITH_PREPARATION_BOUNDARY")
-for name in [".++var", "var.++", ".--var", "var.--"]:
-    add(name, "attached-component-update", ["PLACE"],
-        "old-value capture + FxArrayDepth\\apply(selected unit/update) + FxArrayDepthAssignPrepared\\assign + old/new result",
-        "spec/ARRAY_EXPRESSIONS.en.md#dotted", "selected-attached-position",
-        status="COMPOSED_LMX_BODIES_WITH_PREPARATION_BOUNDARY")
-add(".:", "component-assignment", ["PLACE", "VALUE"], "FxArrayDepthAssignPrepared\\assign -> shared FxArrayAssignPrepared\\assign",
-    "spec/ARRAY_EXPRESSIONS.en.md#assignment", "assignment")
-add("fuse", "one-loop-expression", ["RAW"], "FxFusePrepared\\run",
-    "spec/FUSION.en.md#implementation", "receiver",
-    status="LMX_LOOP_BODY_RAW_PREPARATION_REQUIRED")
-add("?:", "lazy-conditional", ["VALUE", "RAW", "RAW"], "shared-expression-conditional",
-    "spec/TERNARY_AND_SLICES.en.md#conditional", "below-logical-or-above-assignment-right",
-    status="HOST_REFERENCE_AND_DOCUMENTED_ALGORITHM",
-    source="spec/tools/ternary_slices_reference.py")
-add("slice", "signed-strided-slice-overload", ["VALUE", "VALUE"],
-    "shared-slice-normalize-and-selection", "spec/TERNARY_AND_SLICES.en.md#slice-receiver",
-    "postfix-for-suffix-form", status="HOST_REFERENCE_AND_DOCUMENTED_ALGORITHM",
-    source="spec/tools/ternary_slices_reference.py")
-
+ROOT=Path(__file__).resolve().parents[1]
+OUT=ROOT/'core_catalog/core'
+SOURCE='spec/patterns/LMX_Fn_Receivers/src/array_expression_ops.lmx'
+ROWS=[]
+def add(name,family,roles,body,surface=None,contract='spec/TENSOR_EXPRESSIONS.md'):
+    ROWS.append(dict(name=name,family=family,roles=roles,expression_form=surface or name,
+        depth_input='depth',operand_input_order=['left','depth','right'],
+        depth_syntax='.(general expression); absent is distinct from 0; no .op abbreviation',
+        depth_default='selected profile; plain Map defaults to scalar cells (0)',
+        receiver=f'`{name}`' if not name.isidentifier() else name,
+        implementation=body,source=SOURCE,contract=contract,
+        status='DOCUMENTED_PROFILE_AND_INTEGRATION_BODY',production_binding='NOT_RUN',lmx_executed=False))
+for n in '+ - * / % ** & | ^ ~ ! << >> = != < <= > >='.split():
+    add(n,'scalar-map',['VALUE'],r'FxArrayElementwise\apply / FxArrayDepth\apply')
+for n in '+= -= *= /= %= **= &= |= ^= <<= >>= ++var var++ --var var--'.split():
+    add(n,'pointwise-update',['PLACE','VALUE'],r'snapshot + base profile + FxArrayAssignPrepared\assign + selected old/new result')
+add(':=','pointwise-assignment',['PLACE','VALUE'],r'FxArrayAssignPrepared\assign')
+add('.:','slice-broadcast-assignment',['PLACE','VALUE'],r'broadcast RHS map -> FxArrayAssignPrepared\assign')
+for n in ['+','-','*','/','\\','**','=','!=']:
+    add(n,'whole-linear-algebra',['VALUE'],r'FxArrayProduct\multiply -> FxArrayIndexed\apply' if n=='*' else 'selected declared whole profile',surface='['+n+']')
+add('op','explicit-indexed-profile',['VALUE'],r'FxArrayIndexed\apply + FxArrayIndexedCell\at',surface='[op axisRules; options -> outputOrder]')
+for surface,family in [('[+ 1:]','unary-sum'),('[* 1:]','unary-product'),('[+ 0:1]','trace-sum'),('[* 0=1]','diagonal-view'),('[* -> 1,0]','permutation-view')]:
+    add(surface[1],family,['VALUE'],'ordinary selected index/geometry profile',surface=surface)
+add('fuse','minimum-scalar-map-fresh-result',['RAW'],r'FxFusePrepared\run',contract='spec/FUSION.en.md')
+add('?:','lazy-conditional',['VALUE','RAW','RAW'],'existing conditional demand',contract='spec/TERNARY_AND_SLICES.en.md#conditional')
+add('slice','signed-strided-slice',['VALUE','VALUE'],'shared slice normalization',contract='spec/TERNARY_AND_SLICES.en.md#slice-receiver')
 def build():
-    OUT.mkdir(parents=True, exist_ok=True)
-    data = dict(
-        edition="2026-11-26",
-        scope="Extension profiles of canonical operations; not a runtime export registry.",
-        source_sha256=hashlib.sha256((ROOT/SOURCE).read_bytes()).hexdigest(),
-        existing_catalog_names=215, existing_catalog_variants=227,
-        note="The existing catalog counts describe its retained snapshot. Dot depth is an input of the base name, never a callable alias.",
-        forms=ROWS,
-    )
-    (OUT/"array_expression_forms.json").write_text(
-        json.dumps(data, ensure_ascii=False, indent=2)+"\n")
-    lines = [
-        "# Array/RAW/PLACE operation profile inventory, 2026-11-26.",
-        "# DATA only. Runtime export binding and LMX execution: NOT_RUN.",
-        "# Bodies retain actual types, source parent and ordinary storage contracts.",
-        "",
-        "ArrayExpressionForms:",
-    ]
+    OUT.mkdir(parents=True,exist_ok=True)
+    data=dict(edition='2026-11-27',scope='Documentation profiles, not runtime registration.',source_sha256=hashlib.sha256((ROOT/SOURCE).read_bytes()).hexdigest(),canonical_spec='spec/TENSOR_EXPRESSIONS.md',forms=ROWS,note='Ordinary LMX configuration; absent depth and axisRules remain absent; exact names are opaque.')
+    (OUT/'array_expression_forms.json').write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
+    lines=['# Tensor/RAW/PLACE profile inventory, 2026-11-27.','# DATA only; production binding and LMX execution: NOT_RUN.','','ArrayExpressionForms:']
     for i,row in enumerate(ROWS,1):
-        lines.append(f"    entry{i:03}:")
-        for key in ["name","family","receiver","expression_form","depth_input","depth_syntax","implementation","source","contract","precedence","status","production_binding"]:
-            lines.append(f"        []char: {key} {json.dumps(row[key],ensure_ascii=False)}")
-        lines.append(f"        int: exampleDepth {row['example_depth']}")
-        lines.append("        int: executed 0")
-    (OUT/"array_expression_forms.lmx").write_text("\n".join(lines)+"\n")
-    head = """# Массивные операции, условие, срезы и fuse
+        lines.append(f'    entry{i:03}:')
+        for key in ['name','family','receiver','expression_form','depth_input','depth_syntax','depth_default','implementation','source','contract','status','production_binding']:
+            lines.append(f'        []char: {key} {json.dumps(row[key],ensure_ascii=False)}')
+        lines.append('        int: executed 0')
+    (OUT/'array_expression_forms.lmx').write_text('\n'.join(lines)+'\n')
+    text=r'''# Массивные, индексные и матричные профили
 
-Редакция 2026-11-26. [LMX-опись](array_expression_forms.lmx) и
-[JSON-проекция](array_expression_forms.json) перечисляют договоры дополнения.
-Это описания публикации, а не повторный runtime-диспетчер.
-Исходный каталог 215 имён / 227 вариантов сохранён как исходная опись.
-Новые профили не маскируются под уже проверенные экспорты компилятора.
+Редакция 2026-11-27. [LMX-опись](array_expression_forms.lmx) и
+[JSON-проекция](array_expression_forms.json) описывают канонические операции и
+профили; это не второй runtime-диспетчер.
 
-Для каждого имени обе формы используют один обработчик. RAW-выражение
-fuse/условия и PLACE назначения нельзя пропускать через eager VALUE-адаптер.
-Унарная/бинарная форма точечных знаков выбирается обычным договором арности.
-Обычный `*` использует целый матричный/векторный профиль. `.*` имеет
-глубину 1 по логическим измерениям; скалярные координаты rank-2 массива
-получаются через `.(2)*`. Промежуточные структуры строк не создаются.
-`.=` сравнивает, `.:` присваивает элементам. `:=` присваивает целому месту
-на глубине 0; `.(выражение):` задаёт глубину явно. Поэтому перестановка
-элементов записывается `(a b c) .: (b c a)`.
+Обычные арифметика, сравнения и обновления работают поэлементно. `*` и `[*]`
+различаются выбором Map и whole матричного профиля. Явные `[op rules]` выбирают
+индексный kernel с независимо объявленным reducer. Бинарный `*` может иметь
+default суммирования; для `+`, `&`, `^` reducer не угадывается. `[+ 1:]` — сумма,
+`[* 1:]` — произведение, `[+ 0:1]` — след. Пустые axisRules дают внешнее
+произведение и не совпадают с отсутствующим списком в `[*]`.
 
-[Общий depth](../../spec/OPERATOR_DEPTH.ru.md) — второй вход между left и right.
-Форма без точки передаёт 0, одна точка — 1, `.(выражение)` — явно вычисленную
-глубину. Внутри круглых скобок работает общий парсер. `.(` всегда начинает модификатор, не десятичную точку. Базовое имя
-ресивера остаётся без точек; используется именованный depth. Таблица
-ниже показывает профили и примеры поверхностной записи, не новые
-вызываемые имена. Неопределимая/недопустимая глубина, несовместимая
-структура и непригодный fuse — диагностика транслятора/интерпретатора,
-без новых пользовательских исключений.
+**left, depth, right** сохраняют отсутствие actual. `.(depth)` задаёт глубину обхода внешних осей; 0 означает максимум. `.op` не является
+сокращением. Структурные вызовы используют базовое имя с формалом depth.
+Конфигурация профиля — обычная LMX-структура; методы — обычные ссылки.
 
-[LMX-тела](../../spec/patterns/LMX_Fn_Receivers/src/array_expression_ops.lmx)
-содержат реальные общие циклы, включая внутреннюю свёртку матричного
-произведения. [Подключение](../../spec/FUSION.ru.md#implementation)
-сохраняет существующий граф и namespace; подготовка формы/RAW/PLACE и
-провайдеры скалярных операций остаются явно указанными точками интеграции.
-Production parser, translator и runtime: **NOT_RUN**.
+`:=` присваивает поэлементно со снимком RHS и проверками до записи.
+`target[:] .: values` присваивает срезу с выравниванием справа и транслированием
+осей размера 1. Оба используют одно тело snapshot/admission/write с разными
+подготовленными картами RHS.
 
-| Базовое имя | Пример формы | Семейство | Роли | Единое тело/алгоритм | Состояние исходника |
-| --- | --- | --- | --- | --- | --- |
-"""
+Минимальный `fuse` принимает Scalar/Map со свежим результатом. Неподдержанный
+план с редукцией, contraction или streaming store диагностируется. RAW/PLACE/
+TYPE/DATA не проходят через eager VALUE. Structure `[]@` не исключается из
+Arrays: применимость определяется типами ячеек и конкретным kernel.
+
+[Полная норма и каталог](../../spec/TENSOR_EXPRESSIONS.md),
+[depth](../../spec/OPERATOR_DEPTH.ru.md), [подпарсер](../../spec/BRACKET_SUBPARSER.ru.md),
+[общие LMX-тела](../../spec/patterns/LMX_Fn_Receivers/src/array_expression_ops.lmx).
+Production parser/translator/runtime: **NOT_RUN**.
+
+| Имя | Expression | Профиль | Роли | Общее тело/граница |
+| --- | --- | --- | --- | --- |
+'''
     for row in ROWS:
-        esc=lambda x:x.replace("|","\\|")
-        head += f"| `{esc(row['name'])}` | `{esc(row['expression_form'])}` | {row['family']} | {', '.join(row['roles'])} | `{esc(row['implementation'])}` | {row['status']} |\n"
-    (OUT/"ARRAY_EXPRESSIONS.md").write_text(head)
+        esc=lambda x:x.replace('|',r'\|')
+        text+=f"| `{esc(row['name'])}` | `{esc(row['expression_form'])}` | {row['family']} | {', '.join(row['roles'])} | `{esc(row['implementation'])}` |\n"
+    (OUT/'ARRAY_EXPRESSIONS.md').write_text(text)
     return len(ROWS)
-
-if __name__ == "__main__":
-    print(f"{build()} documented operation profiles; no runtime publication.")
+if __name__=='__main__':print(f'{build()} documented profiles; production NOT_RUN.')

@@ -64,18 +64,37 @@ def main():
         ('quoted exact names and unary places','Canonical name only; ++var/var++/--var/var-- preserve before/after result and one assignable place'),
         ('RAW/FORM/PLACE/TYPE/void/control forms','Translator routes original role, owner, lifetime, effects and result; no eager VALUE adapter for non-VALUE forms')]:add('GEN',scenario,expected)
     for scenario, expected in [
-        ('three service inputs and original user arity', 'The operand receives left/depth/right in that order; the wrapped ordinary source receives only logical arguments, including its own user field named depth when declared'),
-        ('op, .op and .(expression)op', 'One base operation, depths 0/1/evaluated n; .(0) equals op; repeated leading dots are not depth syntax; .( always starts an operator/function depth modifier and is never a decimal point; Array indices and [](N)T/@(N)T type forms retain their own syntax'),
-        ('effectful or unused depth expression', 'Ordinary P0/Expression semantics; evaluate once on the reached receiver demand, never while grouping or in a skipped RAW branch'),
-        ('negative or non-int depth', 'Translator/interpreter profile-admission diagnostic before any leaf operation or destination write; no new LMX exception, coercion or truncation'),
-        ('flat shape (2 2), depth 0/1/2 multiplication', {'inputs': {'A': {'shape': [2, 2], 'values': [1, 2, 3, 4]}, 'B': {'shape': [2, 2], 'values': [5, 6, 7, 8]}}, 'depth0': {'profile': 'matrix multiplication', 'shape': [2, 2], 'values': [19, 22, 43, 50]}, 'depth1': {'profile': 'corresponding row-vector dot products', 'shape': [2], 'values': [17, 53]}, 'depth2': {'profile': 'scalar componentwise products', 'shape': [2, 2], 'values': [5, 12, 21, 32]}, 'storage': 'One flat Array and logical dimension metadata; no allocated row Arrays or separate array-of-arrays kind'}),
-        ('logical axes and original scalar fixed point', 'Each step consumes the next outer axis from the ordinary shape descriptor. Only original scalar actuals broadcast; incompatible selected dimensions or exhausted Array rank diagnose before a leaf or write. All-original-scalar inputs reach a fixed point without synthetic dimensions'),
-        ('Structure []@ and explicit referenced indexing', 'struct[i] selects a reference; struct[i]\\[j] indexes its target under the ordinary reference and Array contracts. This does not introduce an array-of-arrays entity or an alternative definition of axis depth'),
-        ('exact value result at runtime-selected depth', 'PD01 derives the complete actual result requirement from depth and admitted shape; never promise scalar R for an Array result or erase all public returns to @'),
-        ('empty lifted Array and void source', 'Empty result type comes from the full contract without a probe call; void performs reached effects without Array<void> allocation'),
-        ('whole TYPE/RAW/PLACE/Maybe/Pattern profile', 'Preserve the receiver role and declared depth policy; an unsupported positive depth is a translator/interpreter diagnostic, never a synthetic throw or an eager generic graph traversal'),
-        ('prefix absence and empty right', 'Keep missing left distinct from a present value and from an empty right Array; do not move right[0] into left before the method'),
-        ('native result ABI and dependent preparation', 'Do not reuse a scalar native return ABI for a lifted Array or implicitly compile; require the real dependent result/provider integration before claiming native execution')]:add('DEPTH', scenario, expected)
+        ('three service inputs and original user arity', 'left/depth/right; optional depth belongs to this wrapper occurrence, not the ordinary source logical arguments'),
+        ('absent depth and an outer dynamic depth field', 'Absence keeps the ordinary method contract and does not read slot 1 or autofill from a same-named outer field'),
+        ('explicit depth zero', 'Supplied slot 1 is read once; zero selects maximum logical-axis traversal, never whole-argument invocation'),
+        ('op and .(expression)op', 'Only absent or explicit modifier; .op/repeated dots are removed; .( is never a decimal point'),
+        ('effectful or skipped depth expression', 'Demand once in its original context; no evaluation during grouping or a skipped RAW branch'),
+        ('non-int transport or negative standard Map depth', 'Non-int violates the shared int formal; negative is rejected by standard Map, not by generic transport; no truncation, synthetic exception or extra throws'),
+        ('custom depth meaning', 'Direct custom method receives the int actual, including a negative integer if its own contract permits; no automatic PD01/Map, zero reinterpretation or Array-rank check'),
+        ('flat shape (2 2), ordinary arithmetic and explicit depth', {'inputs': {'A': {'shape': [2, 2], 'values': [1, 2, 3, 4]}, 'B': {'shape': [2, 2], 'values': [5, 6, 7, 8]}}, 'plain_and_depth_0_or_2_times': {'shape': [2, 2], 'values': [5, 12, 21, 32]}, 'depth1_times': 'Pass row cells to base; scalar-only numeric * rejects them unless a compatible row base contract is declared; never implicitly remap', 'plain_matmul': {'shape': [2, 2], 'values': [19, 22, 43, 50]}, 'depth1_matmul': {'shape': [2], 'values': [17, 53]}, 'storage': 'Flat backing with logical axes; no row-storage hierarchy'}),
+        ('positive depth above Array rank', 'Reject before a base call or destination write; scalar/held actuals do not add axes'),
+        ('no second automatic Map', 'After outer traversal call the selected base directly; unsupported cells diagnose, while explicit nested operations retain their ordinary contracts'),
+        ('frame matching and held values', 'Iterated frames match exactly; original scalars and held actuals add none; a one-element Array is not a scalar'),
+        ('Structure []@ and actual references', 'Typed-record slots supply actual values; real references remain references; no []@ exclusion or blind pointer traversal'),
+        ('exact result at runtime-selected depth', 'PD01 derives full R and frame+resultCellShape without probing source code; heterogeneous outputs may use ordinary Structure assembly'),
+        ('empty frame and void source', 'No callback or sample call for empty frame, no Array<void>; frame () has one application'),
+        ('whole TYPE/RAW/PLACE/Maybe/Pattern profile', 'Absent modifier retains consuming roles; an explicit depth requires a compatible profile. Explicit zero does not denote whole'),
+        ('prefix absence and empty right', 'Missing left differs from a present value and present empty right; equivalence belongs to the selected method'),
+        ('native result ABI', 'Require dependent result admission and the matching ABI; no hidden compilation or universal boxing')]:add('DEPTH', scenario, expected)
+    for scenario, expected in [
+        ('missing versus empty axisRules', 'Missing chooses whole/automatic profile; present empty structure selects independent outer axes'),
+        ('binary product versus min-plus', 'Same indexed term loop, independent kernel/reducer: */+ versus +/min; no inference of min or max from +'),
+        ('unary sums, products and diagonal', '[+ axis:] and [+ i:j] sum; [* axis:] and [* i:j] multiply; geometry forms do not reduce'),
+        ('whole and indexed division', '[/] solves X B=A; explicit [/ rules] applies the declared pairwise division plan, not solve'),
+        ('empty reduction with S different from R', 'Identity/seed/factory starts still pass through finish S->R; first requires admission/mapToState Z->S'),
+        ('short circuit before next term', 'An explicitly allowed stop state is checked before the next term/kernel invocation; skipped callbacks and errors remain skipped'),
+        ('empty output frame versus empty reduced domain', 'Zero free axis gives no outputs/callbacks; an existing output with zero reduced terms needs its declared empty contract'),
+        ('ordinary profile copy and context', 'copy/merge combine real fields and method references, preserving ordinary parent/dynamic scope; no string registry or per-symbol loop')]:add('INDEX', scenario, expected)
+    for scenario, expected in [
+        ('elementwise := rotation', 'Capture all RHS values and complete admissions before writes; preserve real places and snapshot result'),
+        ('slice .: broadcasting', 'Right-align RHS axes to the fixed slice shape, allow explicit singleton-axis repetition and original scalar expansion; do not reevaluate RHS'),
+        ('minimal fuse result then assignment', 'Scalar/Map fresh result with no intermediate Array; external := or .: then keeps ordinary snapshot assignment'),
+        ('unsupported fuse reduction/contraction/store', 'Diagnostic unless a separate capability is implemented; no hidden materialization, implicit streaming store or partial-write behavior')]:add('TENSOR', scenario, expected)
     catalog=json.loads((ROOT/'catalog.json').read_text())
     for row in catalog:
         for variant in row['variants']:

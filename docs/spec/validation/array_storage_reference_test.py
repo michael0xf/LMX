@@ -5,7 +5,7 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from array_expression_reference import Array, RankDiagnostic, ShapeDiagnostic, array_value, lift, python_profile
+from array_expression_reference import Array, RankDiagnostic, ShapeDiagnostic, array_value, apply, python_profile
 from array_storage_reference import InitializerGroup as G, ValueOccurrence, scalar_offset, flat_selection, typed_initializer, ordinary_structure
 from ternary_slices_reference import SliceSpec
 
@@ -14,8 +14,8 @@ def rows(values, origin):
     return G(tuple(G(tuple(row), (origin, i)) for i, row in enumerate(values)), origin)
 
 
-def ints(region, rank=2, obtain=lambda value, context: value):
-    return typed_initializer(region, rank, "int", obtain, lambda value: type(value) is int)
+def ints(region, rank=2, obtain=lambda value, context: value, axes=None):
+    return typed_initializer(region, rank, "int", obtain, lambda value: type(value) is int, axes=axes)
 
 
 class StorageContracts(unittest.TestCase):
@@ -66,7 +66,8 @@ class StorageContracts(unittest.TestCase):
         data = ((1, 2), (3, 4), (5, 6))
         semi, square = rows(data, "semicolon regions"), rows(data, "nested square regions")
         a, b = ints(semi), ints(square)
-        self.assertEqual(a.shape, (3, 2))
+        self.assertIsNone(a.shape)
+        self.assertEqual(a.type_axes, (None, None))
         self.assertEqual((a.shape, a.values()), (b.shape, b.values()))
         self.assertEqual(semi.origin, "semicolon regions")
         self.assertEqual(square.origin, "nested square regions")
@@ -75,7 +76,8 @@ class StorageContracts(unittest.TestCase):
         data = ((1, 2, 3), (1, 2, 4), (1, 2, 3))
         first = ints(rows(data, "[a b c; a b d; a b c]"))
         second = ints(rows(data, "[[a b c] [a b d] [a b c]]"))
-        self.assertEqual(first.shape, (3, 3))
+        self.assertIsNone(first.shape)
+        self.assertEqual(first.type_axes, (None, None))
         self.assertEqual((first.shape, first.values()), (second.shape, second.values()))
 
     def test_both_unequal_row_forms_diagnose_before_leaf_effects(self):
@@ -109,17 +111,17 @@ class StorageContracts(unittest.TestCase):
                 calls.append(context)
                 return "call result"
             return node
-        result = typed_initializer(graph, 2, "@", obtain, lambda value: True)
+        result = typed_initializer(graph, 2, "@", obtain, lambda value: True, axes=(1, 2))
         self.assertEqual(result.shape, (1, 2))
         self.assertEqual(result.values(), ["call result", "literal;with:semicolon"])
         self.assertEqual(calls, ["f(a;b)"])
 
     def test_rank_three_initializer_and_axis_depth_share_flat_store(self):
         graph = G((rows(((1, 2), (3, 4)), "layer0"), rows(((5, 6), (7, 8)), "layer1")), "cube")
-        source = ints(graph, rank=3)
+        source = ints(graph, rank=3, axes=(2, 2, 2))
         self.assertEqual(source.shape, (2, 2, 2))
         self.assertEqual(source.storage, list(range(1, 9)))
-        shifted = lift("+", source, 10, depth=3, profile=python_profile("int"))
+        shifted = apply("+", source, 10, depth=3, profile=python_profile("int"))
         self.assertEqual(shifted.shape, source.shape)
         self.assertEqual(shifted.values(), list(range(11, 19)))
         self.assertEqual(source.values(), list(range(1, 9)))
@@ -166,16 +168,69 @@ class StorageContracts(unittest.TestCase):
         self.assertEqual(calls, [])
 
 
+    def test_generic_type_identity_does_not_include_initializer_length(self):
+        a = ints(G((1, 2)), rank=1)
+        b = ints(G((1, 2, 3)), rank=1)
+        self.assertIs(a.type_descriptor, b.type_descriptor)
+        self.assertEqual((a.shape, b.shape), ((2,), (3,)))
+        self.assertEqual(a.type_axes, (None,))
+
+    def test_rows_do_not_persist_unknown_dimensions(self):
+        a = ints(rows(((1, 2, 3), (4, 5, 6)), 'validated rows'))
+        self.assertIsNone(a.shape)
+        self.assertEqual(a.values(), [1, 2, 3, 4, 5, 6])
+        self.assertEqual(scalar_offset(a, (4,)), 4)
+        with self.assertRaises(ShapeDiagnostic): scalar_offset(a, (1, 1))
+        with self.assertRaises(ShapeDiagnostic): apply('+', a, 1, depth=1, profile=python_profile('int'))
+
+    def test_one_unknown_extent_is_derived_from_type_and_length(self):
+        a = ints(G((1, 2, 3, 4, 5, 6)), axes=(None, 3))
+        self.assertEqual(a.shape, (2, 3))
+        self.assertEqual(a.type_axes, (None, 3))
+        b = ints(rows(((1, 2, 3), (4, 5, 6)), 'rows'), axes=(None, 3))
+        self.assertIs(a.type_descriptor, b.type_descriptor)
+
+    def test_fixed_shape_and_unspecified_shape_have_different_types(self):
+        a = ints(G((1, 2, 3, 4, 5, 6)), axes=(2, 3))
+        b = ints(G((1, 2, 3, 4, 5, 6)))
+        self.assertIsNot(a.type_descriptor, b.type_descriptor)
+        self.assertEqual(a.shape, (2, 3))
+        self.assertIsNone(b.shape)
+
+    def test_reserve_entry_is_independent_of_canonical_type(self):
+        a = Array([1, 2], (2,), 'int', type_axes=(None,))
+        b = Array([1, 2], (2,), 'int', type_axes=(None,), capacity=8)
+        self.assertIs(a.type_descriptor, b.type_descriptor)
+        self.assertIsNone(a.capacity_entry)
+        self.assertEqual(b.capacity_entry, 8)
+
+    def test_zero_constraints_do_not_invent_unknown_extent(self):
+        a = ints(G(()), axes=(0, None))
+        self.assertIsNone(a.shape)
+        self.assertEqual(a.type_axes, (0, None))
+        b = ints(G(()), axes=(2, 0))
+        self.assertEqual(b.shape, (2, 0))
+        c = ints(G(()), axes=(None, 3))
+        self.assertEqual(c.shape, (0, 3))
+
+    def test_written_shape_contradiction_before_value_effects(self):
+        calls = []
+        with self.assertRaises(ShapeDiagnostic):
+            ints(rows(((1, 2), (3, 4), (5, 6)), 'wrong rows'),
+                 obtain=lambda v, c: calls.append(v) or v, axes=(2, 3))
+        self.assertEqual(calls, [])
+
+
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(StorageContracts)
     result = unittest.TextTestRunner(verbosity=2).run(suite)
     report = {
-        "revision": "2026-11-26", "status": "PASS" if result.wasSuccessful() else "FAIL",
+        "revision": "2026-11-27", "status": "PASS" if result.wasSuccessful() else "FAIL",
         "tests": result.testsRun, "failures": len(result.failures), "errors": len(result.errors),
         "scope": "New flat/nD access, rectangular initializer rows, ordinary DATA fields, inline identity; host only",
         "production_p0": "NOT_RUN", "production_translator": "NOT_RUN", "lmx_runtime": "NOT_RUN",
         "bounds": "Existing final scalar element check; no per-axis upper-bound restriction added",
-        "metadata": "Host shape models arena metadata, not new Lmx fields",
+        "metadata": "Canonical declared type is separate from validated access shape; unknown initializer extents are not retained",
         "initializer_parser": "NOT_RUN; row regions already supplied by common P0 in this model",
     }
     Path(__file__).with_name("array_storage_reference_report.json").write_text(json.dumps(report, indent=2) + "\n")

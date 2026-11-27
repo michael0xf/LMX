@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Any, Callable
 
 from array_expression_reference import (
-    Array, RankDiagnostic, ShapeDiagnostic, array_value, row_major_strides,
+    Array, RankDiagnostic, ShapeDiagnostic, array_value, row_major_strides, shape_from_type, array_type,
 )
 from ternary_slices_reference import SliceSpec, normalize_slice
 
@@ -24,13 +24,13 @@ def scalar_offset(array: Array, indices, *, checked=True) -> int:
     indices = tuple(indices)
     if any(type(index) is not int for index in indices):
         raise RankDiagnostic("scalar indexes require integer values")
-    if array.strides != row_major_strides(array.shape):
+    if array.shape is not None and array.strides != row_major_strides(array.shape):
         raise NotImplementedError("this reference entry models contiguous owning storage")
     if len(indices) == 1:
         linear = indices[0]
     elif len(indices) == array.rank:
         linear = 0
-        for index, extent in zip(indices, array.shape):
+        for index, extent in zip(indices, array.require_shape()):
             linear = linear * extent + index
     else:
         raise RankDiagnostic("use one flat index or the complete coordinate vector")
@@ -48,7 +48,7 @@ def flat_selection(array: Array, spec: SliceSpec) -> Array:
     plan = normalize_slice(array.size, spec)
     values = [array.storage[scalar_offset(array, (i,))] for i in plan.indices()]
     return Array(values, (plan.count,), array.element_type, dense=array.dense,
-                 admission=array.admission)
+                 admission=array.admission, type_axes=(None,))
 
 
 @dataclass(frozen=True)
@@ -91,38 +91,55 @@ def ordinary_structure(
 def typed_initializer(
     region: InitializerGroup, rank: int, element_type: Any,
     obtain: Callable[[Any, Any], Any], admit: Callable[[Any], bool],
+    *, axes: tuple | None = None,
 ) -> Array:
-    """Consume an already-delimited rectangular initializer into one store.
+    """Validate already delimited rows, then publish only the declared TYPE.
 
-    Row/layer groups are source regions, not newly allocated Array values.
-    Static shape preparation never obtains a leaf. Ordinary namespace obtaining
-    and actual T admission happen once per leaf in source order afterwards.
-    Explicit copy/merge streams require their existing stream integration; this
-    small model does not guess a stream from an ordinary Array VALUE.
+    Constructor row extents are validation evidence, never retained hidden
+    dimensions. Equal []int declarations share a canonical type irrespective
+    of length. Dynamic extents arrive already obtained through common P0.
     """
     if type(rank) is not int or rank < 1:
-        raise RankDiagnostic("initializer rank must be a positive integer")
+        raise RankDiagnostic('initializer rank must be a positive integer')
+    axes = (None,) * rank if axes is None else tuple(axes)
+    if len(axes) != rank:
+        raise RankDiagnostic('declared extent count differs from Array rank')
+    declared_type = array_type(element_type, axes)
     leaves = []
 
-    def topology(group, remaining):
+    def topology(group, remaining, top=False):
         if not isinstance(group, InitializerGroup):
-            raise ShapeDiagnostic("missing initializer region at the declared rank")
+            raise ShapeDiagnostic('initializer region required')
+        nested = [isinstance(item, InitializerGroup) for item in group.items]
+        if any(nested):
+            if not all(nested) or remaining < 2:
+                raise ShapeDiagnostic('inconsistent explicit row topology')
+            children = [topology(child, remaining-1) for child in group.items]
+            if any(shape != children[0] for shape in children[1:]):
+                raise ShapeDiagnostic('initializer rows must have equal shapes')
+            return (len(children),) + children[0]
+        leaves.extend(group.items)
+        if top:
+            return None  # A flat stream is valid at any declared rank.
         if remaining == 1:
-            leaves.extend(group.items)
             return (len(group.items),)
         if not group.items:
-            raise ShapeDiagnostic("empty outer region needs a complete remaining shape")
-        shapes = [topology(child, remaining - 1) for child in group.items]
-        if any(shape != shapes[0] for shape in shapes[1:]):
-            raise ShapeDiagnostic("initializer rows must have equal shapes")
-        return (len(group.items),) + shapes[0]
+            return (0,) + (None,) * (remaining-1)
+        raise ShapeDiagnostic('explicit row nesting differs from the declared rank')
 
-    shape = topology(region, rank)
+    observed = topology(region, rank, True)
+    if observed is not None and any(t is not None and n is not None and t != n
+                                    for t, n in zip(axes, observed)):
+        raise ShapeDiagnostic('explicit rows contradict a written extent')
+    retained_shape = shape_from_type(axes, len(leaves))
     values = []
     for leaf in leaves:
         value = (obtain(leaf.node, leaf.context) if isinstance(leaf, ValueOccurrence)
                  else obtain(leaf, None))
         if not admit(value):
-            raise ValueError("element rejected by its existing requirement")
+            raise ValueError('element rejected by its existing requirement')
         values.append(value)
-    return Array(values, shape, element_type, admission=admit)
+    result = Array(values, retained_shape, element_type, admission=admit,
+                   type_axes=axes, length=len(values))
+    assert result.type_descriptor is declared_type
+    return result

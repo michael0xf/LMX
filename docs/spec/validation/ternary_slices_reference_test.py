@@ -130,9 +130,17 @@ class Contracts(unittest.TestCase):
         self.assertIs(assign_selection(place, a), a)
         self.assertEqual(a, [3, 2, 1, 0])
         place = slice_place(a, SliceSpec(1, 3))
-        self.failure("FxShape", lambda: assign_selection(place, [9]))
+        self.failure("FxShape", lambda: assign_selection(place, [9, 10, 11]))
         self.assertEqual(a, [3, 2, 1, 0])
+        assign_selection(place, [9])
+        self.assertEqual(a, [3, 9, 9, 0])
         assign_selection(place, 8, scalar=True)
+        self.assertEqual(a, [3, 8, 8, 0])
+        self.failure("FxShape", lambda: assign_selection(place, []))
+        class UnreadSingleton:
+            def __len__(self): return 1
+            def __iter__(self): raise AssertionError("empty target read an RHS element")
+        assign_selection(slice_place(a, SliceSpec(1, 1)), UnreadSingleton())
         self.assertEqual(a, [3, 8, 8, 0])
         place = slice_place(a, SliceSpec())
         a.append(7)
@@ -182,8 +190,9 @@ if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(Contracts)
     result = unittest.TextTestRunner(verbosity=2).run(suite)
     report = {
+        "revision": "2026-11-27",
         "status": "PASS" if result.wasSuccessful() else "FAIL",
-        "scope": "independent Python contract model, not production LMX",
+        "scope": "independent Python contract model: conditional demand, slice normalization, one-axis .: broadcast/preflight; not production LMX",
         "test_methods": result.testsRun,
         "python_slice_oracle_vectors": 13 * 9 * 9 * 7,
         "production_parser": "NOT_RUN",

@@ -252,9 +252,14 @@ FxSubstitute:
             i += 1
         return: result
 
+# This standard asOperand adapter explicitly chooses the common Array Map
+# profile. A custom operand may interpret its own depth actual differently;
+# generic operand transport does not route it through this adapter.
 # A callable becomes one ordinary prepared-value operand. The SAME instance
 # admits (op a b) and (a op b). Its ABI is left, depth, right; the ordinary
 # source callable receives only collected logical arguments, never depth.
+# Presence of depth is checked before reading slot 1. Explicit zero maps scalar
+# cells; absence delegates to the ordinary source contract. No dynamic autofill.
 # The own policy adds operandDepthSource for dependent result preparation.
 # FxKernel\operandDepthContext is the explicit PD01 integration boundary;
 # it selects the full result requirement and common Array context, not a loop.
@@ -277,11 +282,12 @@ FxOperandValueEngine:
         private: @: slot FxKernel\frameSlot(frame; 0; demand := 0)
         if: slot\supplied != 0
             left := \FxFrameRead\read(frame; 0)
-        private: int: depth \FxFrameRead\read(frame; 1)
         private: @: right FxFrameRead\read(frame; 2)
         private: @: args RxLogicalArguments\collect(left := left; right := \right)
-        if: depth = 0
+        private: @: depthSlot FxKernel\frameSlot(frame; 1; demand := 0)
+        if: depthSlot\supplied = 0
             return: FxApply\apply(state; args)
+        private: int: depth \FxFrameRead\read(frame; 1)
         private: @: context FxKernel\operandDepthContext(frame; args)
         return: FxArrayDepth\apply(context; depth; args)
 
@@ -306,7 +312,7 @@ FxAsOperand:
         private: @: readyProperties sys\fromLmx(properties)
         private: @: data (
             private: copy(inputs)
-            required: depth right
+            required: right
             copy(output)
             copy(readyProperties)
         )

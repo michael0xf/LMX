@@ -1,6 +1,6 @@
 # Iteration until Stop: usage and implementation are separate
 
-Edition: 2026-11-26. Client: [H09](../haskell_comparision/source/lmx/H09.lm3), [scenario](../../LMX_examples_and_analogies.ru.md#h09).
+Edition: 2026-11-27. Client: [H09](../haskell_comparision/source/lmx/H09.lm3), [scenario](../../LMX_examples_and_analogies.ru.md#h09).
 
 ## Contract
 
@@ -105,7 +105,7 @@ whileJust next body = iterateUntilStop (convert <$> next) body
 | --- | ---: | ---: | ---: |
 | Primary complete Cycles helper | 73 | 9 | 159 |
 | Optional adapter entry | 313 | 14 | 491 |
-| Optional adapter and all reachable LMX roots | 13911 | 739 | 21393 |
+| Optional adapter and all reachable LMX roots | 13915 | 739 | 21396 |
 | Complete Haskell comparison module | 644 | 19 | 830 |
 
 Every declaration, complete Throws list and copy reference is included in the full source size. Shared definitions are counted once in the declared complete dependency boundary.

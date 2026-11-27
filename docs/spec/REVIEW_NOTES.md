@@ -1,8 +1,8 @@
 # Fable review notes — English documentation revision
 
-**Current extension:** [types, universal sequences, generic patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
+**Historical review receipts, with current links:** [types, universal sequences, generic patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
 
-Date: 2026-11-22.
+Date of the original review: 2026-11-22. The receipts and quoted parser-debt cases below retain their original dates. Current array/operator rules are [TENSOR_EXPRESSIONS](TENSOR_EXPRESSIONS.md) and [OPERATOR_DEPTH](OPERATOR_DEPTH.en.md); their edits do not inherit an old execution PASS. Group assignment is now `:=`; `.:` is slice-broadcast assignment, and historical `.op` spellings are not current aliases.
 
 ## 1. Review surface
 
@@ -338,7 +338,7 @@ The root type/sequence/Pattern specifications have been applied to the uploaded 
 - `LMX_Fn_Receivers__API.b07`: `(a b c) .: copy(d)`.
 - `LMX_examples_and_analogies.ru.b17`: `(a b) .: copy(Pair)`.
 
-Это явно записанный долг парсера для группового присваивания. Дополнительную оболочку вокруг `copy` ради обхода долга возвращать не нужно. Результаты P0 прочитаны из предоставленного индекса; новый запуск настоящего парсера здесь не производился.
+Это исторически записанный долг парсера для группового присваивания в указанной редакции. В текущем синтаксисе те же примеры записываются `(a b c) := copy(d)` и `(a b) := copy(Pair)`; старая запись в цитате не сохраняется как алиас. Дополнительную оболочку вокруг `copy` ради обхода долга возвращать не нужно. Результаты P0 прочитаны из предоставленного индекса; новый запуск настоящего парсера здесь не производился.
 
 ### Что подтверждено на исходной загрузке
 

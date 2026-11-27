@@ -1043,11 +1043,11 @@ sources. If W and E both fit, the result is the usual ambiguity error; import ha
 The ordinary named-signature expression `Name :: DATA` separately reads its one right template in the DATA role. This declaration contract does not turn the source arguments of import, copy or merge into DATA arguments merely because their output is accepted in a DATA context.
 
 ~~~lmx
-(a b) .: copy(Pair)
-(c b d a) .: (a b c d)
+(a b) := copy(Pair)
+(c b d a) := (a b c d)
 ~~~
 
-For [group positional assignment](LMX_semantics.en.md#group-assign), `(a b) .: copy(Pair)` and `(a b) .: (copy(Pair))` consume the same two emitted fields when the source and targets satisfy the contract. The collector is optional for this sequence consumer. The grouper preserves current-level items; application adaptation packages the left PLACE sequence as one actual. Three sibling RHS groups remain three Structure values, not a recursively flattened stream. Obtain and retain all RHS values and check their count before the first target write; RHS names do not reorder targets and previous RHS effects are not rolled back. A function-returned Structure remains one value. Scalar `ptr := (copy(Pair))` still receives one collected Structure.
+For [group positional assignment](LMX_semantics.en.md#group-assign), `(a b) := copy(Pair)` and `(a b) := (copy(Pair))` consume the same two emitted fields when the source and targets satisfy the contract. The collector is optional for this sequence consumer. The grouper preserves current-level items; application adaptation packages the left PLACE sequence as one actual. Three sibling RHS groups remain three Structure values, not a recursively flattened stream. Obtain and retain all RHS values and check their count before the first target write; RHS names do not reorder targets and previous RHS effects are not rolled back. A function-returned Structure remains one value. Scalar `ptr := (copy(Pair))` still receives one collected Structure.
 
 <a id="import-selection"></a>
 ### Import keeps original identities and parents
@@ -1210,15 +1210,25 @@ The grouper reads the clean graph. In Expression, a graph reference atom to a St
 
 `1 + ((2))` is 3 and `(1) + (2 * 3)` is 7: an Expression group contains one complete expression. Material `(1 2 3 4)` and nested `((1 2))` do not become implicit arithmetic. The same rule works on the tree of any source form, not only parentheses. A Structure received as a whole value stays one value; a graph received as CODE/Expression follows the same occurrence-role and name/actual-parent rules; `(copy(Model))` collects a field stream even when it emits zero or one field.
 
-The grouper builds priority dependencies and current-level sequences. A separate Expression application adapter packages left as one actual and right as an Array of references. Thus `(a b c) .: (a c b)` supplies one left PLACE bundle and three right values; `(a b c) .: (f g h) (f g h) (f g h)` supplies three right Structure values. The general form `arg0 operand arg1 arg2 arg3` includes ordinary binary expressions, without automatic folding or shifting a missing left argument. Receiving contracts preserve DATA, NAME, TYPE, PLACE and RAW. [Full rule](LMX_semantics.en.md#expression-structural-grouping).
+The grouper builds priority dependencies and current-level sequences. A separate Expression application adapter packages left as one actual and right as an Array of references. Thus `(a b c) := (a c b)` supplies one left PLACE bundle and three right values; `(a b c) := (f g h) (f g h) (f g h)` supplies three right Structure values. The general form `arg0 operand arg1 arg2 arg3` includes ordinary binary expressions, without automatic folding or shifting a missing left argument. Receiving contracts preserve DATA, NAME, TYPE, PLACE and RAW. [Full rule](LMX_semantics.en.md#expression-structural-grouping).
 
 <a id="expression-priority"></a>
 ## Priorities, value dependencies, and assignment effects
 
-The common expression mechanism uses C-like relative priorities, with right-associative assignment at the lowest
-level. Power has the existing Python-like asymmetric grouping: -2 ** 2 is -(2 ** 2), 2 ** -2 groups its unary right
-operand, and 2 ** 3 ** 2 is 2 ** (3 ** 2). Priority and value dependency are different questions: a receiver first
-obtains any needed result, even from an operation of lower priority, while that operation keeps its entire RHS.
+**Shared implementation requirement, 2026-11-27.** The target has one main LMX parser containing the square subparser, which calls that same main parser for every expression and `{...}` region and resumes at its returned position. After parsing, every Expression consumer calls one shared implementation of semantic grouping. Duplicate parsers, independent binding algorithms and their tables are removed; independent scale adapters do not satisfy this requirement. Backend emission and actual preparation consume the common grouping result. [Architecture contract](EXPRESSION_ALGORITHM.md#single-parser-and-grouper).
+
+The common expression mechanism uses C-like relative priorities, with right-associative assignment at the lowest level. Standard power has `sys\priority("**") = 131`, the least integer strictly above multiplication level `110` and the prefix-sign argument threshold `130`: `max(110, 130) + 1`. Its derived RHS minimum is `131`, which includes an equal-level power; increasing a level alone would not establish right associativity. The [full derivation](EXPRESSION_ALGORITHM.md#power-priority) uses the existing common binding policy, without adding a public field to the operand template.
+
+| Expression | Grouping | Result for admitted integers |
+| --- | --- | ---: |
+| `a ** b ** c` | `a ** (b ** c)` | Depends on values |
+| `2 ** 3 ** 2` | `2 ** (3 ** 2)` | `512` |
+| `2 * 3 ** 2` | `2 * (3 ** 2)` | `18` |
+| `2 ** 3 * 4` | `(2 ** 3) * 4` | `32` |
+| `-2 ** 2` | `-(2 ** 2)` | `-4` |
+| `2 ** -2` | `2 ** (-2)` | Selected numeric contract |
+
+The existing asymmetric unary relationship is preserved. Depth and Array selection do not alter grouping: `.(depth)**` and `[**]` use the same power policy, whereas `**=` retains the low assignment priority. These are normative outcomes, not evidence of production support. Priority and value dependency are different questions: a receiver first obtains any needed result, even from an operation of lower priority, while that operation keeps its entire RHS.
 
 ~~~text
 f(1 + v := 2 + 3)       → v = 5; one argument 6
@@ -1294,8 +1304,8 @@ hidden binding still uses the real candidate's names and DATA.
 <a id="operand-values"></a>
 ### Prepared-value mode: PASS_ARGS_AS_IS 0
 
-An operator application supplies a reference to its left value and an Array of references to its right values.
-Containers remain whole:
+An operator application preserves one left reference or its absence, the optional middle actual depth, and an Array of right references. The following table shows the two sides; no modifier is supplied in these examples, so depth remains absent.
+Containers remain one actual before the selected method applies its Array/role contract:
 
 | Expression | left | right |
 |---|---|---|
@@ -1565,4 +1575,6 @@ wholeMatch(utf8Text("AB-09"); (then (within("A"; "Z") times 2) "-" (asciiDigit t
 
 The Pattern is assembled by ordinary operands. The text is literal, the view explicitly chooses UTF-8 scalar positions, and wholeMatch tests the whole input. Builder evaluation is distinct from matching; no regex-string parser is implied.
 
-The [common depth input](OPERATOR_DEPTH.en.md) is the second input between left and right. The source forms supply 0, 1 or the once-obtained general expression in `.(…)`; only one dot is admitted. Structural receiver calls use the base name and named depth. Invalid depth/structure/fusion is diagnosed by translation or interpretation, without new user exceptions.
+The common depth transport accepts a signed integer and preserves absence. A custom method may interpret it as another setting and need no Map. Zero-as-maximum, nonnegative depth and the d<=Array-rank check belong to the selected standard Array traversal profile; they are not universal syntax or transport restrictions.
+
+[Traversal depth](OPERATOR_DEPTH.en.md) is the optional middle input left/depth/right. Plain Map and explicit depth=0 select maximum depth. Positive N traverses N outer logical axes and invokes the selected base handler without automatic remapping. rank remains the number of Array axes. Absent depth is retained for whole-profile selection. `:=` is pointwise assignment; `.:` broadcasts into a slice. [Full contract](TENSOR_EXPRESSIONS.md), [bracket subparser](BRACKET_SUBPARSER.en.md).

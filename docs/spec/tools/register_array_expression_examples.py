@@ -40,7 +40,7 @@ def expected_files():
         outputs[CATALOG / "src" / f"{ident}.lm3"] = code
         places += [[ident, "docs/" + path.relative_to(DOCS).as_posix(), "file", "-", 1],
                    [ident, "docs/" + readme.relative_to(DOCS).as_posix(), "block", block, line]]
-        index.append([ident, "fragment", 2, "-", "-", "-", "не проверен", "2026-11-26",
+        index.append([ident, "fragment", 2, "-", "-", "-", "не проверен", "2026-11-27",
                       "Expected diagnostic; NOT_RUN" if case["negative"] else "Normative example; NOT_RUN"])
         reports.append({**case, "source": path.relative_to(DOCS).as_posix(),
                         "sha256": hashlib.sha256(code.encode()).hexdigest(),
@@ -59,7 +59,7 @@ Production p0/build/run — `-`, класс `не проверен`, Graph — N
 Пути places относительно каталога, содержащего docs. Нормализация — LF и один
 завершающий LF; другие байты сохраняются. Повторная генерация из docs:
 `python spec/tools/register_array_expression_examples.py`; проверка — `--check`.
-[SHA-256 и ожидания](../../../validation/array_expression_examples_20261126.json).
+[SHA-256 и ожидания](../../../validation/array_expression_examples_20261127.json).
 """
     outputs[EXAMPLES / "negative/README.md"] = """# Отдельная диагностика inline singleton
 
@@ -68,8 +68,8 @@ Production p0/build/run — `-`, класс `не проверен`, Graph — N
 диагностика транслятора либо интерпретатора, без нового catchable exception.
 Полный текст и ожидание — в [общем README](../README.md). Production NOT_RUN.
 """
-    outputs[SPEC / "validation/array_expression_examples_20261126.json"] = json.dumps({
-        "revision": "2026-11-26", "status": "SOURCE_MD_SYNC_PASS",
+    outputs[SPEC / "validation/array_expression_examples_20261127.json"] = json.dumps({
+        "revision": "2026-11-27", "status": "SOURCE_MD_SYNC_PASS",
         "scope": "Additive Array-expression examples; no production execution",
         "examples": len(cases), "places": len(places), "cases": reports,
     }, ensure_ascii=False, indent=2) + "\n"

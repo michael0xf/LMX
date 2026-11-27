@@ -71,13 +71,9 @@ write_lmx(R/'src/public_operands.lmx', operands)
 write_lmx(R/'src/public_families.lmx', families)
 (R/'catalog.json').write_text(json.dumps(rows, ensure_ascii=False, indent=2)+'\n', encoding="utf-8", newline="\n")
 lines = ['# Canonical library operations and their two forms', '',
-    '> TYPE-контракты этой документации используют прямую TypeRef. Машинный каталог',
-    '> и связанные отдельные исходники ещё содержат прежние int-интерфейсы; перед',
-    '> пересборкой им требуется миграция по [инструкции дополнения](../../../ARRAY_TYPE_MIGRATION.md).',
-    '',
     f'{len(rows)} canonical names. Every input export is accounted for in [the migration inventory](CANONICAL_MIGRATION.json). Former names are not callable aliases.', '',
     'Both forms use the same algorithms and real owner DATA. Complete family/role binding, adaptive capture and exact result projection are defined in [PUBLICATION_CONTRACT.md](PUBLICATION_CONTRACT.md). Runtime execution is **NOT_RUN**.', '',
-    'Operand DATA order is `left`, `int: depth`, `right`, with ready `PASS_ARGS_AS_IS` and `PRIORITY`. `op`, `.op` and `.(expression)op` select one base operation. Ordinary VALUE adapters traverse logical outer axes of the flat Array shape through the shared engine and exact dependent result policy; rank-2 multiplication has matrix / row-dot / scalar profiles at depths 0 / 1 / 2. A Structure is an `[]@`, and indexed reference access introduces no separate array-of-arrays kind. Whole-role profiles admit depth 0 and diagnose unsupported depth before execution. No synthetic language exception is added. PD01 is a required kernel integration, not a passed runtime implementation.', '',
+    'Operand DATA order is `left`, optional `int: depth`, `right`, with ready `PASS_ARGS_AS_IS` and `PRIORITY`. Absent depth preserves the ordinary method contract. Explicit `.(expression)op` uses zero for maximum logical-axis traversal and positive d for d outer axes. Positive d above an Array rank is diagnosed. The selected base entry is called without re-entering automatic Array Map. Ordinary operations are elementwise; [*] is matmul and .(1)[*] gives row dot products. There is no .op shorthand or array-of-arrays primitive. Structure/[]@ and text participate through actual types. Whole/RAW/DATA/TYPE/PLACE profiles retain their consuming roles. PD01 is required production integration, not a passed runtime implementation. Settings are ordinary LMX structures. See [source tensor contracts](TENSOR_OPERATIONS_IMPLEMENTATION.md).', '',
     '| Name | Ordinary form | Implementations and operand form |', '| --- | --- | --- |']
 for row in rows:
     variants = '; '.join(f"**{v['family']}** [{markdown_code(v['api'])}]({v['source']}) → {markdown_code(v['operand']['target'])} ({v['operand']['route']})" for v in row['variants'])

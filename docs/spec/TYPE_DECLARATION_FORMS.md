@@ -201,10 +201,12 @@ address the same place without manufacturing row or layer objects. Flat access
 remains available when complete coordinates cannot be resolved.
 
 Every Array retains the same primary Lmx with parent/length/storage. Capacity
-is independent of TYPE: at capacity=length there is no secondary descriptor;
+is independent of TYPE: at capacity=length no extra reserve entry is needed;
 otherwise an optional capacity-only entry uses the existing arena association.
-`sys\capacity` reads the association or returns length. No per-Array shape
-record, hidden prefix, or additional Lmx field is introduced.
+`sys\capacity` reads the association or returns length. No hidden shape prefix
+or additional Lmx field is introduced. The existing system parent already holds
+the complete required instance descriptor/access context; its source, lifetime
+and mapping data are separate from both canonical TYPE and reserve.
 
 The type of a constructor result is determined only by its normalized complete
 left requirement. Its canonical immutable system Structure is directly addressed
@@ -349,12 +351,13 @@ before N is evaluated.
 
 Written Array rank/axis constraints belong to its canonical TypeRef description.
 Unspecified axes remain unspecified except for values derivable from TYPE and
-length. Capacity is independent of TYPE; at capacity=length there is no secondary
-descriptor. Pointer counts add no Lmx field or user-graph field. See
+length for ordinary owned storage. An explicit View has its separately validated
+access context in system parent. Capacity is independent of TYPE; at
+capacity=length no extra reserve entry is needed. Pointer counts add no Lmx field or user-graph field. See
 [grammar](LMX_grammar.en.md#dynamic-type-postfix) and
 [storage](ARRAY_STORAGE.en.md#dynamic-postfix).
-The existing 14 Array-storage host checks cover their previously stated scope;
-they are **not validation of these dynamic type forms**.
+Array-storage host checks model selected contracts and are **not production
+validation of these dynamic type forms**.
 
 
 <a id="sized-postfix"></a>
@@ -576,3 +579,16 @@ than persisting raw pointer values.
 Full descriptor contract: [English](ARRAY_STORAGE.en.md#type-descriptor) and
 [Russian](ARRAY_STORAGE.ru.md#type-descriptor). Old integer-code/type-profile
 receipts do not validate this new documentation; production acceptance is **NOT_RUN**.
+
+
+## 9. Operation depth and instance context
+
+Array rank in a type constructor is the positive number of logical axes; `.(d)op` supplies **depth of one external traversal**. Positive d visits d outer axes and leaves K−d axes in each cell. It must not exceed the rank K of an iterated Array. Explicit zero means maximum depth, reaching scalar elements. Absent depth remains absent and selects the receiver's default; whole `[op]` without a modifier receives whole objects. These choices do not change TypeRef. [Depth contract](OPERATOR_DEPTH.en.md).
+
+Once cells are selected, the wrapper invokes the base handler without another automatic Map that would erase depth. Unsupported remaining Array cells are diagnosed. Explicit ordinary operations in a user's body are unaffected. Scalars and explicitly held arguments contribute no synthetic axes.
+
+Ordinary Array operators are pointwise, including `*` and `:=`. `[*]` selects a matrix/tensor product; `.:` assigns a slice with RHS broadcasting. Structure `[]@` is admitted to the same Array mechanism with actual typed records; text remains an Array of its character type. Unsupported element operations are ordinary application diagnostics, not a container-class exclusion.
+
+The complete descriptor required for a particular Array is available through its **system parent**. Ordinary templates and copy/merge build a derived access context while retaining source/owner references, logical region, lifetime and rights. A same-named user field is not a hidden header accessor. Context does not refine an owner's canonical type from initializer rows. Persistent Views initially retain their source and reject invalidating backing/shape/length changes; temporary depth-selected cells cannot escape without retained context or materialization. [Storage and parent contract](ARRAY_STORAGE.en.md#parent-context).
+
+This distinction preserves all prefix type forms and the TypeRef ABI above. New `[op ...]` grammar is documented in [the bracket subparser](BRACKET_SUBPARSER.en.md); complete algebra, result, View and execution contracts are in [the tensor specification](TENSOR_EXPRESSIONS.md). These documents specify support to implement; production acceptance remains NOT_RUN.

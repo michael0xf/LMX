@@ -1,46 +1,22 @@
-# Присваивание: `:=`, `.:` и сравнение `.=`
+# Присваивание := и транслирование срезу .:
 
-Фикстуры предыдущей редакции: 17 положительных и 6 отрицательных.
-Для TypeRef ABI случаи 021, 022 и negative/023 требуют `[2][2]int` вместо `[][]int`:
-границы строк не сохраняют оси; готовый вход с заданным TYPE сохраняет его при допуске.
-Production P0, translator и LMX runtime — **NOT_RUN**; нового `Main` нет.
+17 положительных и 6 отрицательных примеров. Обычный :=
+присваивает поэлементно с полным снимком RHS и проверкой всех назначений до
+записи. Скалярное место @ принимает одно ссылочное значение по своему типу.
+Срезовое .: отдельно допускает транслирование RHS: оси выравниваются справа,
+каждая длина равна целевой либо 1. Обычный = сравнивает и ничего не записывает.
 
-`:=` меняет одно существующее место. Если это переменная-ссылка, меняется её
-цель, а прежние алиасы продолжают ссылаться на прежний объект. `.:` меняет
-элементы выбранного назначения и сохраняет идентичность его Array; в группе
-слева находятся реальные переменные или другие допустимые PLACE. `.=` только
-сравнивает соответствующие элементы и возвращает Array предикатов.
+Depth задаёт глубину обхода: 0 означает максимум, положительное N — N внешних
+осей. Пропуск depth сохраняется до выбора профиля. Модификатор — .(depth).
+Structure []@ не исключается из Arrays, а допуск проверяет фактические типы.
 
-Для обычного `.:` вся RHS и допуск всех целей готовы до первой записи. Один
-возвращённый Array читает сам поэлементный потребитель; несколько соседних
-структурных значений остаются несколькими элементами. Скалярное заполнение
-не делает Array из одного элемента скаляром. Явное `target .: fuse(expression)`
-выбирает отдельный потоковый договор: поздний обычный скалярный отказ сохраняет
-записанный префикс.
+Минимальный fuse создаёт свежий Scalar/Map результат; dest := fuse(expr)
+использует последующее обычное присваивание. Не обещаются streaming store,
+частичная запись при отказе внутри fuse или поддержка contraction в fuse.
 
-[Общая глубина](../../OPERATOR_DEPTH.ru.md) передаёт методу числовой `depth`:
-`op` имеет depth=0, `.op` — 1, `.(EXPR)op` получает явную глубину через обычное
-Expression один раз при востребовании. В ресиверной записи используется
-базовое имя и `depth := n`. Присваивание отображается как `:=`, `.:`,
-`.(EXPR):`; явное `.(0):` — обычная целая перепривязка настоящего binding PLACE.
-Глубина потребляет сохранённые логические оси плоского Array: у ранга 2 depth=1
-выбирает регионы строк, depth=2 — скалярные ячейки. Строка не получает отдельного
-pointer-slot или объекта графа. Недостающая ось не маскируется распространением
-скаляра, достигнутого внутри Array. Обычные Structure в полях сохраняют свою
-идентичность; отдельной сущности «массив массивов» нет.
-
-Примеры используют готовые числовые данные для понятных результатов;
-операции Array и fused-метод не ограничены `int`. Списки `throws` копируются
-из вызываемых базовых канонических методов; точечные имена в кавычках
-не декодируются в операцию с глубиной. RAW/PLACE-адаптеры новых форм ещё должны
-быть подключены в production согласно [границе реализации](../../FUSION.ru.md#implementation);
-эти файлы не объявляют поддельных заглушек вместо ядра.
-
-Нормы: [Array и присваивание](../../ARRAY_EXPRESSIONS.ru.md#assignment),
-[срезы](../../TERNARY_AND_SLICES.ru.md), [fuse](../../FUSION.ru.md),
-[групповое присваивание](../../LMX_semantics.ru.md#group-assign).
-[doc_examples](doc_examples/README.md) содержит дополнительные стабильные ID,
-два места каждого текста и SHA-256 в [отчёте](../../validation/assignment_forms_examples_20261126.json).
+Нормы: [TENSOR_EXPRESSIONS](../../TENSOR_EXPRESSIONS.md),
+[depth](../../OPERATOR_DEPTH.ru.md), [fuse](../../FUSION.ru.md).
+Production parser/translator/LMX runtime: **NOT_RUN**.
 
 ## Содержание
 
@@ -48,47 +24,35 @@ pointer-slot или объекта графа. Недостающая ось н�
 | --- | --- | --- |
 | [001_scalar_place.lm3](001_scalar_place.lm3) | Скалярное := меняет одно существующее место | Ожидаемый результат; NOT_RUN |
 | [002_reference_rebinding.lm3](002_reference_rebinding.lm3) | Присваивание := перепривязывает переменную-ссылку | Ожидаемый результат; NOT_RUN |
-| [003_element_assignment_identity.lm3](003_element_assignment_identity.lm3) | Поэлементное .: сохраняет массив назначения и его алиасы | Ожидаемый результат; NOT_RUN |
+| [003_element_assignment_identity.lm3](003_element_assignment_identity.lm3) | Поэлементное := сохраняет массив назначения и его алиасы | Ожидаемый результат; NOT_RUN |
 | [004_place_rotation.lm3](004_place_rotation.lm3) | Перестановка трёх настоящих переменных | Ожидаемый результат; NOT_RUN |
-| [005_scalar_fill.lm3](005_scalar_fill.lm3) | Один скаляр заполняет массив; := затем меняет один элемент | Ожидаемый результат; NOT_RUN |
-| [006_compound_updates.lm3](006_compound_updates.lm3) | Обычное += для скаляра и .+= для элементов | Ожидаемый результат; NOT_RUN |
+| [005_scalar_fill.lm3](005_scalar_fill.lm3) | Транслирование singleton RHS на срез | Ожидаемый результат; NOT_RUN |
+| [006_compound_updates.lm3](006_compound_updates.lm3) | Обычное += обновляет скаляр и элементы массива | Ожидаемый результат; NOT_RUN |
 | [007_overlap_shift.lm3](007_overlap_shift.lm3) | Сдвиг вправо с перекрывающимися участками | Ожидаемый результат; NOT_RUN |
 | [008_reverse_places.lm3](008_reverse_places.lm3) | Обратный порядок целевых мест и полный снимок источника | Ожидаемый результат; NOT_RUN |
-| [009_returned_array.lm3](009_returned_array.lm3) | Один возвращённый Array читает сам потребитель .: | Ожидаемый результат; NOT_RUN |
+| [009_returned_array.lm3](009_returned_array.lm3) | Элементы возвращённого Array получает потребитель := | Ожидаемый результат; NOT_RUN |
 | [010_sibling_groups.lm3](010_sibling_groups.lm3) | Три соседние группы остаются тремя структурными значениями | Ожидаемый результат; NOT_RUN |
 | [011_conditional_rhs.lm3](011_conditional_rhs.lm3) | Условная RHS выбирает массив либо скалярное заполнение | Ожидаемый результат; NOT_RUN |
-| [012_fused_assignment.lm3](012_fused_assignment.lm3) | Явное fused-присваивание в тот же массив | Ожидаемый результат; NOT_RUN |
-| [013_comparison_is_not_assignment.lm3](013_comparison_is_not_assignment.lm3) | .= сравнивает, .: меняет значения | Ожидаемый результат; NOT_RUN |
-| [017_nested_places.lm3](017_nested_places.lm3) | Глубина 2 меняет дочерние места; явная глубина 0 перепривязывает ссылку | Ожидаемый результат; NOT_RUN |
-| [018_dynamic_depth.lm3](018_dynamic_depth.lm3) | Обычное выражение глубины и исходный скалярный broadcast | Ожидаемый результат; NOT_RUN |
+| [012_fused_assignment.lm3](012_fused_assignment.lm3) | Свежий результат fuse и обычное присваивание в исходный массив | Ожидаемый результат; NOT_RUN |
+| [013_comparison_is_not_assignment.lm3](013_comparison_is_not_assignment.lm3) | = сравнивает, := меняет значения | Ожидаемый результат; NOT_RUN |
+| [017_nested_places.lm3](017_nested_places.lm3) | Запись двух ссылочных элементов и отдельная перепривязка скалярного @ | Ожидаемый результат; NOT_RUN |
+| [018_dynamic_depth.lm3](018_dynamic_depth.lm3) | Выражение глубины extra - 1 и скалярный множитель | Ожидаемый результат; NOT_RUN |
 | [021_flat_row_places.lm3](021_flat_row_places.lm3) | Строки flat матрицы как регионы PLACE, затем скалярное изменение | Ожидаемый результат; NOT_RUN |
-| [022_flat_fused_places.lm3](022_flat_fused_places.lm3) | Fused-запись по двум логическим осям плоской матрицы | Ожидаемый результат; NOT_RUN |
+| [022_flat_fused_places.lm3](022_flat_fused_places.lm3) | Свежий fuse-результат для плоской матрицы и запись через := | Ожидаемый результат; NOT_RUN |
 | [negative/014_shape_mismatch.lm3](negative/014_shape_mismatch.lm3) | Отказ: число элементов не совпадает; singleton Array не скаляр | Ожидаемый отказ; NOT_RUN |
 | [negative/015_admission_before_writes.lm3](negative/015_admission_before_writes.lm3) | Отказ допуска второго элемента до любых записей | Ожидаемый отказ; NOT_RUN |
 | [negative/016_fuse_contraction.lm3](negative/016_fuse_contraction.lm3) | Отказ: fuse не превращает свёртку в поэлементное умножение | Ожидаемый отказ; NOT_RUN |
-| [negative/019_depth_mismatch.lm3](negative/019_depth_mismatch.lm3) | Диагностика: один из исходных Array не имеет требуемого уровня | Ожидаемый отказ; NOT_RUN |
-| [negative/020_excess_depth.lm3](negative/020_excess_depth.lm3) | Диагностика: у одномерного scalar Array нет второй логической оси | Ожидаемый отказ; NOT_RUN |
-| [negative/023_scalar_to_row.lm3](negative/023_scalar_to_row.lm3) | Отказ допуска скаляра целому региону строки | Ожидаемый отказ; NOT_RUN |
+| [negative/019_frame_mismatch.lm3](negative/019_frame_mismatch.lm3) | При depth=1 внешние frames имеют разные размеры | Ожидаемый отказ; NOT_RUN |
+| [negative/020_excess_depth.lm3](negative/020_excess_depth.lm3) | Глубина обхода 2 превышает rank=1 входного Array | Ожидаемый отказ; NOT_RUN |
+| [negative/023_broadcast_mismatch.lm3](negative/023_broadcast_mismatch.lm3) | Несовместимый broadcast RHS среза | Ожидаемый отказ; NOT_RUN |
 
 ## Границы проверки
 
-Ниже сохранены прежние ожидания; изменения TypeRef для случаев с осями оговорены выше.
-Исполняемая [семантическая модель](../../tools/array_expression_reference.py)
-и её [проверки](../../tools/array_expression_reference_results.json) отдельно
-проверяют snapshots, alias, admission, shape и fusion. Синхронизация текстов
-проверяет лишь совпадение исходников, блоков Markdown и копий doc_examples.
-
-Отрицательные случаи вынесены в `negative/`; они не входят в успешный запуск
-положительных примеров. Неподходящие глубина/форма и непригодное выражение fuse
-диагностируются транслятором, если уже известны, иначе интерпретатором при
-достижении. Это не catchable LMX exceptions и не дополнительные строки throws.
-Обычный допуск целевого типа и ошибки самих числовых/обратных методов сохраняют
-свой существующий договор. Откат уже выполненных эффектов RHS не обещается.
-
-Поздний арифметический отказ в fused-записи проверен host-моделью с явно
-выбранным бросающим scalar provider. Этот раздел не придумывает для всех
-числовых типов единое имя или поведение деления на ноль. Production-проверки
-RAW/PLACE, времени жизни, объявления `throws` и точных ошибок остаются NOT_RUN.
+Ожидания приведены для новой нормативной семантики. Синхронизация исходников,
+Markdown и doc_examples не означает выполнение production parser/runtime.
+Неподходящие rank/frame/axisRules и неподдержанный fuse — диагностика
+транслятора при известных данных или интерпретатора при достижении.
+Ошибки выбранных скалярных методов сохраняют обычные throws.
 
 ## Полные положительные примеры
 
@@ -134,23 +98,23 @@ ReferenceRebinding:
         return: (original[0] source[0] other[0] selected[0])
 ```
 
-### Поэлементное .: сохраняет массив назначения и его алиасы
+### Поэлементное := сохраняет массив назначения и его алиасы
 
 [Полный исходник](003_element_assignment_identity.lm3); вызов `ElementAssignmentIdentity\run()`.
 
 Ожидание: `{"value": [7, 80, 7, 80, 8]}`.
 
-values получает элементы other, но остаётся тем же массивом. Запись через прежний alias видна через values, а отдельный other сохраняет свой элемент 8.
+Обычный := копирует значения элементов в существующий Array; прежний alias видит изменения, отдельный other сохраняет свои данные.
 
 ```lmx
 ElementAssignmentIdentity:
     return: @
     run:
-        throws: copy(`:=`\throws) copy(`:=`\throws) ReceiverIndex
+        throws: copy(`:=`\throws) ReceiverIndex
         []int: values [1 2 3]
         []int: other [7 8 9]
         @: alias values
-        values .: other
+        values := other
         alias[1] := 80
         return: (values[0] values[1] alias[0] alias[1] other[1])
 ```
@@ -171,46 +135,46 @@ PlaceRotation:
         int: a 1
         int: b 2
         int: c 3
-        (a b c) .: (b c a)
+        (a b c) := (b c a)
         return: (a b c)
 ```
 
-### Один скаляр заполняет массив; := затем меняет один элемент
+### Транслирование singleton RHS на срез
 
 [Полный исходник](005_scalar_fill.lm3); вызов `ScalarFill\run()`.
 
 Ожидание: `{"value": [7, 8, 7]}`.
 
-Скаляр 7 получается один раз как RHS и распространяется на выбранные места. Это не расширение массива из одного элемента: соответствующий отрицательный случай приведён отдельно.
+Срезовое .: транслирует Array длины 1 на длину назначения. Это разрешение принадлежит .:, а обычный := такого broadcasting Array не выполняет.
 
 ```lmx
 ScalarFill:
     return: @
     run:
-        throws: copy(`:=`\throws) copy(`:=`\throws) ReceiverIndex
+        throws: copy(`.:`\throws) copy(slice\throws) copy(`:=`\throws) ReceiverIndex
         []int: values [3 4 5]
-        values .: 7
+        values[:] .: [7]
         values[1] := 8
         return: values
 ```
 
-### Обычное += для скаляра и .+= для элементов
+### Обычное += обновляет скаляр и элементы массива
 
 [Полный исходник](006_compound_updates.lm3); вызов `CompoundUpdates\run()`.
 
 Ожидание: `{"value": [13, 15, 17]}`.
 
-offset становится 12. Затем один и тот же скаляр прибавляется к каждому элементу; .+= использует общие поэлементное сложение и присваивание, а место назначения разрешает один раз.
+Обычный += использует общие поэлементное сложение и присваивание, разрешая назначение один раз.
 
 ```lmx
 CompoundUpdates:
     return: @
     run:
-        throws: copy(`+=`\throws) copy(`+=`\throws)
+        throws: copy(`+=`\throws)
         int: offset 10
         offset += 2
         []int: values [1 3 5]
-        values .+= offset
+        values += offset
         return: values
 ```
 
@@ -220,13 +184,13 @@ CompoundUpdates:
 
 Ожидание: `{"value": [0, 0, 1, 2, 3]}`.
 
-Левый срез — реальные целевые ячейки. Правый срез в VALUE даёт свежую выборку; обычное .: дополнительно соблюдает полный снимок RHS до записей. Размер values остаётся 5.
+Левый срез задаёт места записи, правый — источник. Общий снимок всех RHS до stores сохраняет значения перекрывающихся областей.
 
 ```lmx
 OverlapShift:
     return: @
     run:
-        throws: copy(slice\throws) copy(`:=`\throws)
+        throws: copy(slice\throws) copy(`.:`\throws)
         []int: values [0 1 2 3 4]
         values[1:] .: values[:-1]
         return: values
@@ -238,25 +202,25 @@ OverlapShift:
 
 Ожидание: `{"value": [4, 3, 2, 1]}`.
 
-Здесь справа сам исходный массив, а слева выбранные места в обратном порядке. Результат требует удержания всех четырёх исходных значений; последовательная запись без снимка была бы неверна.
+Срез .: сохраняет снимок исходного массива перед записью по обратным адресам; shape назначения не меняется.
 
 ```lmx
 ReversePlaces:
     return: @
     run:
-        throws: copy(slice\throws) copy(`:=`\throws)
+        throws: copy(slice\throws) copy(`.:`\throws)
         []int: values [1 2 3 4]
         values[::-1] .: values
         return: values
 ```
 
-### Один возвращённый Array читает сам потребитель .:
+### Элементы возвращённого Array получает потребитель :=
 
 [Полный исходник](009_returned_array.lm3); вызов `ReturnedArray\run()`.
 
 Ожидание: `{"value": [20, 30, 10]}`.
 
-make возвращает одно значение Array. Группировщик не выпускает его элементы в поток; непосредственные элементы единственного RHS Array читает сам .:. Дополнительные copy и скобки не требуются.
+Функция возвращает одно Array-значение; непосредственные элементы читает договор :=, не группировщик.
 
 ```lmx
 ValuesProducer:
@@ -272,7 +236,7 @@ ReturnedArray:
         int: a 1
         int: b 2
         int: c 3
-        (a b c) .: ValuesProducer\make()
+        (a b c) := ValuesProducer\make()
         return: (a b c)
 ```
 
@@ -282,7 +246,7 @@ ReturnedArray:
 
 Ожидание: `{"value": [1, 2, 3, 4, 5, 6], "assigned_values": [[1, 2], [3, 4], [5, 6]]}`.
 
-Назначений три, RHS содержит три двухэлементные Structure. Они не превращаются в шесть аргументов .:. В конце шесть явных индексных чтений показывают содержимое трёх полученных значений.
+Три целевых поля типа @ принимают три Structure-значения; sibling группы не превращаются в шесть полей.
 
 ```lmx
 SiblingGroups:
@@ -292,7 +256,7 @@ SiblingGroups:
         @: first
         @: second
         @: third
-        (first second third) .: (1 2) (3 4) (5 6)
+        (first second third) := (1 2) (3 4) (5 6)
         return: (first[0] first[1] second[0] second[1] third[0] third[1])
 ```
 
@@ -314,19 +278,19 @@ ConditionalAssignment:
         throws: copy(`?:`\throws) copy(`:=`\throws)
         []int: values [1 2 3]
         []int: replacement [7 8 9]
-        values .: (chooseFill ? 5 : replacement)
+        values := (chooseFill ? 5 : replacement)
         return: values
 ```
 
-### Явное fused-присваивание в тот же массив
+### Свежий результат fuse и обычное присваивание в исходный массив
 
 [Полный исходник](012_fused_assignment.lm3); вызов `FusedAssignment\run(values; scale; bias)`.
 
 Входы: `[{"values": [1, 2, 3], "scale": 2, "bias": 1}]`.
 
-Ожидание: `{"value": [3, 5, 7], "target_identity": "preserved", "output_traversals": 1, "intermediate_result_arrays": 0}`.
+Ожидание: `{"value": [3, 5, 7], "target_identity": "preserved", "fuse_final_arrays": 1, "fuse_internal_intermediate_arrays": 0}`.
 
-values — одномерный Array допустимого полного числового T; scale/bias и операции совместимы с T. Совпадение координат разрешает запись на месте. Это явное исключение из полного снимка обычного `.:`: если скалярная операция или admission позже откажет, уже записанный префикс сохраняется. Числовые ошибки сохраняют обычный договор; непригодная форма fuse диагностируется отдельно и не является новым исключением.
+Минимальный fuse создаёт один свежий финальный Array без внутренних промежуточных Arrays. Обычный := затем получает снимок и проверяет назначение; streaming store и частично записанный префикс здесь не обещаются.
 
 ```lmx
 FusedAssignment:
@@ -336,11 +300,11 @@ FusedAssignment:
     return: @
     run:
         throws: copy(fuse\throws) copy(`*`\throws) copy(`+`\throws) copy(`:=`\throws)
-        values .: fuse(values .* scale .+ bias)
+        values := fuse(values * scale + bias)
         return: values
 ```
 
-### .= сравнивает, .: меняет значения
+### = сравнивает, := меняет значения
 
 [Полный исходник](013_comparison_is_not_assignment.lm3); вызов `ComparisonAndAssignment\run()`.
 
@@ -355,19 +319,19 @@ ComparisonAndAssignment:
         throws: copy(`=`\throws) copy(`:=`\throws)
         []int: left [1 2 3]
         []int: right [1 8 3]
-        @: before left .= right
-        left .: right
-        @: after left .= right
+        @: before left = right
+        left := right
+        @: after left = right
         return: (before; after)
 ```
 
-### Глубина 2 меняет дочерние места; явная глубина 0 перепривязывает ссылку
+### Запись двух ссылочных элементов и отдельная перепривязка скалярного @
 
 [Полный исходник](017_nested_places.lm3); вызов `NestedPlaces\run()`.
 
-Ожидание: `{"value": [[[3, 4], [1, 2]], [1, 2], [3, 4]]}`.
+Ожидание: `{"value": [[[3, 4], [1, 2]], [3, 4], [1, 2]]}`.
 
-Справа удерживаются все четыре исходных числа до любых записей. first/second сохраняют ссылки на прежние обычные Structure, чьи поля обменялись. Затем .(0): меняет только ссылку selected. Внешний []@ содержит две Structure как целые обычные значения; специальный вид массива массивов не вводится. Для плоских размерных данных применяются сохранённые логические оси, показанные отдельно.
+Обычный := меняет два поля внешней Structure. first/second сохраняют ссылки на прежние внутренние Structure; присваивание скалярному полю @ selected меняет только его ссылочное значение. Отдельного примитива массива массивов нет.
 
 ```lmx
 NestedPlaces:
@@ -377,30 +341,30 @@ NestedPlaces:
         []@: values [(1 2) (3 4)]
         @: first values[0]
         @: second values[1]
-        values .(2): (second first)
+        values := (second first)
         @: selected first
-        selected .(0): second
+        selected := second
         return: (values; selected; first)
 ```
 
-### Обычное выражение глубины и исходный скалярный broadcast
+### Выражение глубины extra - 1 и скалярный множитель
 
 [Полный исходник](018_dynamic_depth.lm3); вызов `DynamicDepth\run(extra)`.
 
 Входы: `[{"extra": 1}]`.
 
-Ожидание: `{"value": [[10, 20], [30, 40]], "obtained_depth": 2}`.
+Ожидание: `{"value": [[10, 20], [30, 40]], "obtained_depth": 0}`.
 
-При extra=1 обычное выражение 1+extra даёт depth=2 один раз. Исходный scalar 10 распространяется при выборе осей обычных Structure в полях. Ресиверная форма: `` `*`(rows; 10; depth := 1 + extra) ``; точечное имя в кавычках не создаётся. Ранг плоского Array задаётся его собственным описанием, а не угадывается по этим полям.
+extra=1 даёт depth=0 через общее выражение extra-1. depth=0 запускает максимальный Map и обрабатывает скалярные ячейки плоского Array формы 2×2 и сохраняет его форму.
 
 ```lmx
 DynamicDepth:
     int: extra
     return: @
     run:
-        throws: copy(`*`\throws) copy(`+`\throws)
-        []@: rows [(1 2) (3 4)]
-        return: rows .(1 + extra)* 10
+        throws: copy(`*`\throws) copy(`-`\throws)
+        [2][2]int: rows [1 2; 3 4]
+        return: rows .(extra - 1)* 10
 ```
 
 ### Строки flat матрицы как регионы PLACE, затем скалярное изменение
@@ -409,36 +373,37 @@ DynamicDepth:
 
 Ожидание: `{"shape": [2, 2], "flat_values": [13, 14, 11, 12], "returned_references_same_identity": true}`.
 
-Обе RHS строки выбираются до записи, после чего .: меняет целые реальные регионы строк. В storage не появляются ссылки на row objects. .(2)+= затем выбирает скалярные клетки. values и alias остаются тем же одним плоским Array. Каждая VALUE-выборка строки — обычный результат slice, а не постоянный writable view.
+Явный прямоугольный RHS меняет порядок строк, затем обычный += добавляет 10 к координатам. Shape 2×2 определена TYPE, values и alias сохраняют один объект.
 
 ```lmx
 FlatRowPlaces:
     return: @
     run:
         throws: copy(`:=`\throws) copy(`+=`\throws) copy(slice\throws) ReceiverIndex
-        [][]int: values [1 2; 3 4]
+        [2][2]int: values [1 2; 3 4]
         @: alias values
-        values .: [values[1][:] values[0][:]]
-        values .(2)+= 10
+        [2][2]int: swapped [values[2] values[3]; values[0] values[1]]
+        values := swapped
+        values += 10
         return: (values; alias)
 ```
 
-### Fused-запись по двум логическим осям плоской матрицы
+### Свежий fuse-результат для плоской матрицы и запись через :=
 
 [Полный исходник](022_flat_fused_places.lm3); вызов `FlatFusedPlaces\run()`.
 
-Ожидание: `{"shape": [2, 2], "flat_values": [3, 5, 7, 9], "returned_references_same_identity": true, "output_traversals": 1, "intermediate_result_arrays": 0}`.
+Ожидание: `{"shape": [2, 2], "flat_values": [3, 5, 7, 9], "returned_references_same_identity": true, "fuse_final_arrays": 1, "fuse_internal_intermediate_arrays": 0}`.
 
-Обе формы typed initializer эквивалентны: [[1 2] [3 4]] и [1 2; 3 4] создают одно плоское хранилище. depth=2 выбран у арифметики и назначения. Адреса строк получаются через описание без их выделения; явный fuse сохраняет потоковый договор поздних обычных ошибок.
+Обе записи прямоугольного initializer создают плоский Array. Scalar/Map fuse имеет свежий результат; обычный := сохраняет identity назначения и проверяет RHS до записей.
 
 ```lmx
 FlatFusedPlaces:
     return: @
     run:
         throws: copy(`:=`\throws) copy(fuse\throws) copy(`*`\throws) copy(`+`\throws)
-        [][]int: values [[1 2] [3 4]]
+        [2][2]int: values [[1 2] [3 4]]
         @: alias values
-        values .(2): fuse(values .(2)* 2 .(2)+ 1)
+        values := fuse(values * 2 + 1)
         return: (values; alias)
 ```
 
@@ -463,7 +428,7 @@ ShapeMismatch:
         throws: copy(`?:`\throws) copy(`:=`\throws)
         []int: one [9]
         []int: two [7 8]
-        values .: (useSingleton ? one : two)
+        values := (useSingleton ? one : two)
         return: values
 ```
 
@@ -483,7 +448,7 @@ AdmissionBeforeWrites:
     return: @
     run:
         throws: copy(`:=`\throws)
-        values .: (10 "bad" 30)
+        values := (10 "bad" 30)
         return: values
 ```
 
@@ -495,7 +460,7 @@ AdmissionBeforeWrites:
 
 Ожидание: `{"diagnostic": "ineligible contraction in fuse; translator/interpreter", "catchable_lmx_exception": false, "target_after_diagnostic": [1, 2]}`.
 
-Два линейных массива в обычном * выбирают скалярное произведение. Это непригодная к данному одному поэлементному проходу свёртка, а не запрос .*; отказ не запускает запасной eager-путь и не пишет в values.
+[*] выбирает скалярное произведение векторов. Минимальный Scalar/Map fuse не поддерживает contraction и диагностирует план без запасного eager-пути.
 
 ```lmx
 FuseContraction:
@@ -503,36 +468,36 @@ FuseContraction:
     []: factors
     return: @
     run:
-        throws: copy(fuse\throws) copy(`*`\throws) copy(`:=`\throws)
-        values .: fuse(values * factors)
+        throws: copy(fuse\throws) copy(`[*]`\throws) copy(`:=`\throws)
+        values := fuse(values [*] factors)
         return: values
 ```
 
-### Диагностика: один из исходных Array не имеет требуемого уровня
+### При depth=1 внешние frames имеют разные размеры
 
-[Полный исходник](negative/019_depth_mismatch.lm3); вызов `DepthMismatch\run()`.
+[Полный исходник](negative/019_frame_mismatch.lm3); вызов `FrameMismatch\run()`.
 
-Ожидание: `{"diagnostic": "incompatible required logical levels", "catchable_lmx_exception": false}`.
+Ожидание: `{"diagnostic": "incompatible frames (2) vs (3)", "catchable_lmx_exception": false}`.
 
-После первого потребления flat ранга 1 даёт скаляры, а ещё требуется ось. Это не исходный scalar-аргумент и не разрешённый broadcast. При .(1)* глубина уже исчерпана и базовый * мог бы выбрать масштабирование whole Structure/scalar; здесь запрошены два уровня.
+При depth=1 строки обоих Arrays имеют длину 2 и подходят базовому векторному [*], но frames равны (2) и (3). Несовместимые frames не транслируются неявно; ошибка возникает до вызова [*].
 
 ```lmx
-DepthMismatch:
+FrameMismatch:
     return: @
     run:
-        throws: copy(`*`\throws)
-        []@: nested [(1 2) (3 4)]
-        []int: flat [10 20]
-        return: nested .(2)* flat
+        throws: copy(`[*]`\throws)
+        [2][2]int: a [1 2; 3 4]
+        [3][2]int: b [10 20; 30 40; 50 60]
+        return: a .(1)[*] b
 ```
 
-### Диагностика: у одномерного scalar Array нет второй логической оси
+### Глубина обхода 2 превышает rank=1 входного Array
 
 [Полный исходник](negative/020_excess_depth.lm3); вызов `ExcessDepth\run()`.
 
-Ожидание: `{"diagnostic": "requested depth exceeds available logical axes", "catchable_lmx_exception": false}`.
+Ожидание: `{"diagnostic": "depth exceeds the actual Array rank", "catchable_lmx_exception": false}`.
 
-values объявлен []int и имеет ранг 1 со скалярными элементами. depth=2 запрашивает отсутствующую ось; исходный scalar 1 её не создаёт. У настоящего [][]int с сохранённым рангом 2 depth=2, напротив, допустим и выбирает клетки.
+У values одна логическая ось. Стандартный Map не обрезает положительный depth=2 до rank=1: применение диагностируется до базового сложения. Максимальный обход здесь задаётся depth=0 или depth=1. Пользовательский метод без Map сохраняет собственный договор числа.
 
 ```lmx
 ExcessDepth:
@@ -543,20 +508,20 @@ ExcessDepth:
         return: values .(2)+ 1
 ```
 
-### Отказ допуска скаляра целому региону строки
+### Несовместимый broadcast RHS среза
 
-[Полный исходник](negative/023_scalar_to_row.lm3); вызов `ScalarToRow\run()`.
+[Полный исходник](negative/023_broadcast_mismatch.lm3); вызов `BroadcastMismatch\run()`.
 
-Ожидание: `{"failure": "ordinary whole-region admission; scalar is not a compatible row block", "target_shape": [2, 2], "target_flat_after_failure": [1, 2, 3, 4]}`.
+Ожидание: `{"diagnostic": "slice broadcast shape mismatch", "catchable_lmx_exception": false, "target_shape": [2, 2], "target_flat_after_failure": [1, 2, 3, 4]}`.
 
-У values ранг 2, поэтому .: выбирает целые строки. В плоском хранилище нет отдельных reference-slots строк, которые можно перепривязать к 9; выбранный договор целого региона требует совместимый блок. Все admission выполняются до stores. Допустимое скалярное заполнение этой матрицы — values .(2): 9. Ошибка обычного admission не переименовывается в новый языковой exception.
+Срез имеет четыре места, RHS — три элемента. В .: размер RHS должен совпадать с размером оси либо быть 1; 3 в 4 не транслируется.
 
 ```lmx
-ScalarToRow:
+BroadcastMismatch:
     return: @
     run:
-        throws: copy(`:=`\throws)
-        [][]int: values [1 2; 3 4]
-        values .: 9
+        throws: copy(slice\throws) copy(`.:`\throws)
+        [2][2]int: values [1 2; 3 4]
+        values[:] .: [7 8 9]
         return: values
 ```

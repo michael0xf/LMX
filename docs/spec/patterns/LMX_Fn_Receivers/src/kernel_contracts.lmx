@@ -46,12 +46,12 @@ FxKernelOperandDepthContextAPI :: (@: frame; @: arguments; return: @)
 # signature -> {inputTypes,resultType,hasResult,names,throws,declarations}.
 # declarations are references to the selected candidate's real source forms;
 # no initializer/body is executed. Names/policy are not signature identity.
-# normalizeType reads an initialized int payload as type-id, uninit:T as its
-# type with no payload read, and returns an internal @ to a canonical int code
-# record. Existing type descriptions preserve full Structure/callable/Array
-# models; no new public boxed Type value is introduced.
-# []T and @T are postfix constructors producing ordinary int type codes.
-# []: variable is AnyArray, []@: variable is the actual Structure/[]@ requirement.
+# normalizeType returns the canonical TypeRef Structure directly. An ordinary
+# initialized integer is not a TYPE descriptor address. An uninitialized typed
+# record supplies its full type without reading its payload. Existing type
+# descriptions preserve complete Structure/callable/Array requirements.
+# []T, [N]T and @T are prefix constructors producing canonical TypeRef values.
+# []: variable is AnyArray; []@: variable has the Structure/[]@ requirement.
 # signatureData creates ordinary declarations, without universal required/private.
 # callable publishes ordinary owner -> DATA -> CODE with genuine parent links.
 # Its policy maps external positions to real source declarations, keeps bound
@@ -117,8 +117,9 @@ FxKernelArrayAdmitAPI :: (@: target; @: value; return: @)
 
 FxKernelArrayWriteAPI :: (@: target; int: index; @: value)
 
-# arrayInfo -> {arrayType,elementType,elementBits,dense,maxLength}, all int.
-# Canonical codes preserve full models and pointer levels; maxLength bounds the
+# arrayInfo -> arrayType/elementType as canonical TypeRef references, plus
+# elementBits/dense/maxLength as int metadata. Full types preserve models and
+# pointer levels; maxLength bounds the
 # actual index AND byte-size arithmetic, not currently available free memory.
 # arrayRead returns a direct stored []@ value or a stable dense-T record using
 # the actual stride. It never executes a saved graph form or preboxes all input.

@@ -35,7 +35,7 @@ def expected_files():
             [ident, "docs/" + readme_path.relative_to(DOCS).as_posix(), "block", block, line],
         ])
         index.append([ident, "fragment", 2, "-", "-", "-", "не проверен",
-                      "2026-11-26", "Normative source; P0/translator/LMX runtime NOT_RUN"])
+                      "2026-11-27", "Normative source; P0/translator/LMX runtime NOT_RUN"])
         receipts.append({
             **case, "id": ident, "source": source.relative_to(DOCS).as_posix(),
             "sha256": hashlib.sha256(code.encode()).hexdigest(),
@@ -47,7 +47,7 @@ def expected_files():
     outputs[CATALOG / "index.tsv"] = table(
         ["id", "kind", "places", "p0", "build", "run", "class", "step_or_fix", "note"], index)
     outputs[CATALOG / "places.tsv"] = table(["id", "doc", "kind", "block", "line"], places)
-    outputs[CATALOG / "README.md"] = """# Дополнительный doc_examples: глубина операций
+    outputs[CATALOG / "README.md"] = """# Дополнительный doc_examples: глубина обхода операций
 
 Пять полных исходников и десять мест текста: каждый отдельный `.lm3` также
 приведён целиком в README рядом с ним. Формат `src`, `index.tsv`, `places.tsv`
@@ -62,10 +62,10 @@ p0/build/run стоят `-`, класс — «не проверен»; стро�
 
 Повторная синхронизация: `python spec/tools/register_operator_depth_examples.py`
 из docs; проверка без записи — та же команда с `--check`.
-SHA-256 и ожидаемые наблюдения: [отчёт](../../../validation/operator_depth_examples_20261126.json).
+SHA-256 и ожидаемые наблюдения: [отчёт](../../../validation/operator_depth_examples_20261127.json).
 """
-    outputs[SPEC / "validation/operator_depth_examples_20261126.json"] = json.dumps({
-        "revision": "2026-11-26", "status": "SOURCE_MD_SYNC_PASS",
+    outputs[SPEC / "validation/operator_depth_examples_20261127.json"] = json.dumps({
+        "revision": "2026-11-27", "status": "SOURCE_MD_SYNC_PASS",
         "scope": "Additive depth cohort; no production execution",
         "examples": len(receipts), "places": len(places), "cases": receipts,
         "negative_cases": cases["negative"],

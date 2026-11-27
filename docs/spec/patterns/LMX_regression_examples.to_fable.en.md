@@ -901,14 +901,14 @@ not propose a global registry or new generic syntax.
 <a id="operands"></a>
 ## OP. Operands, expression evaluation, and argument boundaries
 
-These cases follow the current operand contract: the Expression grouper produces a structured operation/stream plan, and a separate application adapter supplies left, the depth integer and the right-reference Array in that order. These original positive scenarios demand depth 0; the extended depth cases are specified in [OPERATOR_DEPTH.en.md](../OPERATOR_DEPTH.en.md). In their source citations, P23 means the Interpreter section of source P3. Mandatory header fields are checked in the actual DATA; no registration receiver is used.
+These cases follow the current operand contract: the Expression grouper produces a structured operation/stream plan, and a separate application adapter supplies left, the optional depth actual and the right-reference Array in that order. These original positive scenarios leave the modifier absent and retain their ordinary contracts; explicit traversal-depth cases are specified in [OPERATOR_DEPTH.en.md](../OPERATOR_DEPTH.en.md). In their source citations, P23 means the Interpreter section of source P3. Mandatory header fields are checked in the actual DATA; no registration receiver is used.
 
 ### OP01 — An ordinary method acquires operand use from its actual DATA
 
 ```lmx
 numeric_ops:
     @int: left
-    int: depth 0
+    int: depth
     []@int: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("+")
@@ -942,7 +942,7 @@ Source: [operand discovery](../LMX_semantics.en.md#operand-receiver); [prepared 
 ```lmx
 several_ops:
     @int: left
-    int: depth 0
+    int: depth
     []@int: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("+")
@@ -957,7 +957,7 @@ several:
         return: (2 weighted 3 5 7)
 ```
 `several\demo()` returns **2357**. The actual operand invocation has three service input
-places: `left` addresses `2`, `depth` is 0, and `right` is an array of three references addressing
+places: `left` addresses `2`, `depth` is absent and must not be read, and `right` is an array of three references addressing
 `3`, `5`, `7`, in that order. It is not four positional method inputs, and `2` is
 not duplicated in `right`.
 
@@ -1003,10 +1003,10 @@ The following group-assignment snapshots distinguish the stream plan from the op
 
 | Written assignment | Grouper left segment | Grouper right stream | Application-adapter snapshot |
 | --- | --- | --- | --- |
-| `(a b c) .: (a c b)` | Places a, b, c | Values a, c, b at the selected level | One whole left place bundle; three right references |
-| `(a b c) .: (f g h) (f g h) (f g h)` | Places a, b, c | Three whole group items | One whole left place bundle; three right references, never nine |
-| `(a b) .: copy(Pair)`, with Pair fields 2 and 7 | Places a, b | The two fields emitted by copy | One whole left place bundle; references to 2 and 7 |
-| `(a b) .: (copy(Pair))`, with the same Pair | Places a, b | The same two copied fields | The same two-value assignment as the preceding row |
+| `(a b c) := (a c b)` | Places a, b, c | Values a, c, b at the selected level | One whole left place bundle; three right references |
+| `(a b c) := (f g h) (f g h) (f g h)` | Places a, b, c | Three whole group items | One whole left place bundle; three right references, never nine |
+| `(a b) := copy(Pair)`, with Pair fields 2 and 7 | Places a, b | The two fields emitted by copy | One whole left place bundle; references to 2 and 7 |
+| `(a b) := (copy(Pair))`, with the same Pair | Places a, b | The same two copied fields | The same two-value assignment as the preceding row |
 
 The last two rows are valid equivalent group-assignment cases. The current [R02 source](examples/haskell_comparision/source/lmx/R02.lm3) uses the shorter direct stream; its expected `StreamProbe\run()` result remains **27**. All right values are read before the first target write. These are normative expected snapshots, not a parser or runtime execution receipt. Removing parentheses from a scalar container assignment such as `ptr := (copy(Model))` is outside this equivalence.
 
@@ -1026,7 +1026,7 @@ meter:
 
 prepared_ops:
     @int: left
-    int: depth 0
+    int: depth
     []@int: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("+")
@@ -1036,7 +1036,7 @@ prepared_ops:
 
 raw_ops:
     @: left
-    int: depth 0
+    int: depth
     []@: right
     const: int: PASS_ARGS_AS_IS 1
     const: int: PRIORITY sys\priority("+")
@@ -1078,7 +1078,7 @@ meter:
 
 selection_ops:
     @: left
-    int: depth 0
+    int: depth
     []@: right
     const: int: PASS_ARGS_AS_IS 1
     const: int: PRIORITY sys\priority("+")
@@ -1115,7 +1115,7 @@ helpers:
 
 origin_ops:
     @: left
-    int: depth 0
+    int: depth
     []@: right
     const: int: PASS_ARGS_AS_IS 1
     const: int: PRIORITY sys\priority("+")
@@ -1149,7 +1149,7 @@ Source: [`sys\eval` and the source context](../LMX_semantics.en.md#expression-ev
 ```lmx
 reference_ops:
     @int: left
-    int: depth 0
+    int: depth
     []@int: right
     const: int: PASS_ARGS_AS_IS 0
     const: int: PRIORITY sys\priority("+")
@@ -2333,7 +2333,7 @@ Rooms:
 
 ### P23 — Interpreter: copied header, one expression, several activation contexts
 
-The [Interpreter comparison](23_interpreter_comparison.md) shows the supplied `sys\OPERANDS_TEMPLATE` DATA fragment separately. It supplies generic `left`, `int: depth`, `right` inputs in that order and the ready constant mode/priority properties, with **no result declaration**. The concrete parent below declares `return: int` once. For this independent fixture, provide that same DATA fragment; neither an extra result occurrence nor a general DATA last-declaration-wins rule is implied.
+The [Interpreter comparison](23_interpreter_comparison.md) shows the supplied `sys\OPERANDS_TEMPLATE` DATA fragment separately. It supplies generic `left`, optional `int: depth`, `right` inputs in that order and the ready constant mode/priority properties, with **no result declaration**. The concrete parent below declares `return: int` once. For this independent fixture, provide that same DATA fragment; neither an extra result occurrence nor a general DATA last-declaration-wins rule is implied.
 
 ```lmx
 Operands:

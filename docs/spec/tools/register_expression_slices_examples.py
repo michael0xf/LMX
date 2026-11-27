@@ -69,7 +69,7 @@ def expected_files():
         places.extend([[ident, file_doc, "file", "-", 1],
                        [ident, md_doc, "block", block, first_line]])
         index.append([ident, "fragment", 2, "-", "-", "-", "не проверен",
-                      "2026-11-26", "Normative source; P0/translator/LMX runtime NOT_RUN"])
+                      "2026-11-27", "Normative source; P0/translator/LMX runtime NOT_RUN"])
         cases.append({"id": ident, "source": source.relative_to(DOCS).as_posix(),
                       "sha256": hashlib.sha256(code.encode()).hexdigest(),
                       "markdown": readme_path.relative_to(DOCS).as_posix(),
@@ -100,10 +100,10 @@ PASS не являются результатом P0, трансляции ил�
 
 Повторная регистрация: `python spec/tools/register_expression_slices_examples.py`
 из docs; проверка без записи — та же команда с `--check`.
-Машиночитаемые ожидания и SHA-256: [отчёт](../../../validation/expression_slices_examples_20261126.json).
+Машиночитаемые ожидания и SHA-256: [отчёт](../../../validation/expression_slices_examples_20261127.json).
 """
-    outputs[SPEC / "validation/expression_slices_examples_20261126.json"] = json.dumps(
-        {"revision": "2026-11-26", "status": "SOURCE_MD_SYNC_PASS",
+    outputs[SPEC / "validation/expression_slices_examples_20261127.json"] = json.dumps(
+        {"revision": "2026-11-27", "status": "SOURCE_MD_SYNC_PASS",
          "scope": "Additive expression_slices cohort; no production execution",
          "examples": len(cases), "places": len(places),
          "normalization": "LF and exactly one final LF; all other bytes retained",

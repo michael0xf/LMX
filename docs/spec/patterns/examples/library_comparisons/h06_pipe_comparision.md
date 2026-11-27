@@ -1,6 +1,6 @@
 # Composition: usage and implementation are separate
 
-Edition: 2026-11-26. Client: [H06](../haskell_comparision/source/lmx/H06.lm3), [scenario](../../LMX_examples_and_analogies.ru.md#h06).
+Edition: 2026-11-27. Client: [H06](../haskell_comparision/source/lmx/H06.lm3), [scenario](../../LMX_examples_and_analogies.ru.md#h06).
 
 ## Contract
 
@@ -83,7 +83,7 @@ pipeIO2 first second input = first input >>= second
 | Source boundary | Nonwhitespace characters | Nonblank lines | UTF-8 bytes |
 | --- | ---: | ---: | ---: |
 | LMX entry definitions shown above | 507 | 17 | 686 |
-| All reachable LMX source roots, counted once | 14410 | 762 | 22043 |
+| All reachable LMX source roots, counted once | 14414 | 762 | 22046 |
 | Complete Haskell comparison module | 389 | 15 | 517 |
 
 Every declaration, complete Throws list and copy reference is included in the full source size. Shared definitions are counted once in the declared complete dependency boundary.

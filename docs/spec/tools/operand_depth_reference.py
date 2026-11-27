@@ -9,6 +9,9 @@ from dataclasses import dataclass
 from typing import Any, Callable
 
 
+ABSENT = object()
+
+
 class DepthError(ValueError):
     """Host diagnostic model: translator/interpreter error, not an LMX throw."""
 
@@ -20,10 +23,17 @@ class DepthExpression:
     origin: Any = None
 
 
+def admit_modifier_integer(value):
+    """The common formal is int; its semantic range belongs to the method."""
+    if type(value) is not int:
+        raise DepthError("the declared modifier input requires one int value")
+    return value
+
+
 def admit_depth(value):
-    """Validate one nonnegative int; invalid depth is an execution diagnostic."""
+    """Validate nonnegative int: 0 selects maximum depth; positive N selects N outer axes."""
     if type(value) is not int or value < 0:
-        raise DepthError("depth requires one nonnegative int value")
+        raise DepthError("depth requires one nonnegative int value (0 means maximum)")
     return value
 
 
@@ -34,15 +44,19 @@ def resolve_depth(source, obtain: Callable):
     The context and source occurrence are passed unchanged. Never cache this
     result across distinct demands/activations, even for shared graph nodes.
     """
+    if source is ABSENT:
+        return ABSENT
     value = (obtain(source.expression, source.context)
              if isinstance(source, DepthExpression) else source)
-    return admit_depth(value)
+    # A custom operand may interpret negative values under its own contract.
+    # Only a method selecting the standard Map calls admit_depth afterwards.
+    return admit_modifier_integer(value)
 
 
 @dataclass(frozen=True)
 class OperandArguments:
     left: Any
-    depth: int
+    depth: Any  # ABSENT is preserved; only the selected profile supplies a default
     right: Any
 
 

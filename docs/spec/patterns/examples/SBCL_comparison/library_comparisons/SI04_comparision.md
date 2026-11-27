@@ -132,7 +132,7 @@ FxSeqReplaceRange:
 
 ## Происхождение LMX
 
-- `FxSeqReplaceRange` — [patterns/LMX_Fn_Receivers/src/sequences_mutation.lmx](../../../LMX_Fn_Receivers/src/sequences_mutation.lmx), SHA-256 `e7c1587a6366b20dc32c9ab1331da3f58d6fe164c1338c304c287133474d23e6`.
+- `FxSeqReplaceRange` — [patterns/LMX_Fn_Receivers/src/sequences_mutation.lmx](../../../LMX_Fn_Receivers/src/sequences_mutation.lmx), SHA-256 `0b7eb6e58babbc4c86e77cf91a09c20a1a938abf67fc4575e87112ad9d4c888d`.
 
 ## Первичные источники Common Lisp
 

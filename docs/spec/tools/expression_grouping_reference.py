@@ -1,18 +1,21 @@
 """Executable reference of Expression *planning*, not a production LMX parser.
 
-Input is a graph view supplied by an integration adapter, never source text.
-There is no lexer, parenthesis token, source-origin test, or graph mutation.
-Ready receiver descriptions supply binding rules and argument contracts.
+Input is a prepared graph view supplied by the host harness, never source text.
+The production target has one main parser with a delegating square-bracket
+component and one shared grouping implementation called by every route.
+The three current production grouping mechanisms must be replaced by calls
+to that implementation; local precedence adapters do not meet this contract.
+The graph view supplies data access and ready receiver descriptions, not a
+second grouping algorithm. There is no lexer, parenthesis token, source-origin
+test, or graph mutation in this reference.
 The deliberately small classes below are transient views/plans, not new LMX
 storage records or additions to OPERANDS_TEMPLATE. See EXPRESSION_ALGORITHM.md.
 """
 
 from dataclasses import dataclass, replace
 from typing import Any, Callable
-from operand_depth_reference import admit_depth, prepare_operand_arguments
+from operand_depth_reference import ABSENT, admit_modifier_integer, prepare_operand_arguments
 
-
-ABSENT = object()
 
 
 @dataclass(frozen=True)
@@ -23,36 +26,42 @@ class Context:
 
 @dataclass(frozen=True)
 class Binding:
-    """Derived existing binding policy, not new public operand DATA fields.
+    """Derived common binding policy, not new public operand DATA fields.
 
-    Larger ranks bind more tightly. Equal ranks follow right_associative.
-    prefix_rank preserves the established directional unary/power policy.
+    Larger derived priorities bind more tightly. Equal priorities follow
+    right_associative; these are host views of the single shared binding policy.
+    For integral p, right_limit is a minimum of p for right association, or
+    p+1 for left association. The bool is not a new field in LMX operand DATA
+    and is not decoded from the sign or parity of PRIORITY.
+    An explicit prefix_priority is the inclusive argument minimum used by
+    the established directional unary/power policy.
     attached preserves the common attached-unary class, with side left/right.
     Receiving roles never select a different parsing branch.
     """
 
     name: str
-    rank: int
+    priority: int
     right_associative: bool = False
-    prefix_rank: int | None = None
+    prefix_priority: int | None = None
     attached: str | None = None
 
     def right_limit(self):
-        return Limit(self.rank, self.right_associative)
+        return Limit(self.priority, self.right_associative)
 
     def prefix_limit(self):
-        rank = self.rank if self.prefix_rank is None else self.prefix_rank
-        return Limit(rank, False)
+        if self.prefix_priority is not None:
+            return Limit(self.prefix_priority, True)
+        return Limit(self.priority, False)
 
 
 @dataclass(frozen=True)
 class Limit:
-    rank: int | None = None
+    priority: int | None = None
     include_equal: bool = True
 
     def accepts(self, binding):
-        return (self.rank is None or binding.rank > self.rank
-                or self.include_equal and binding.rank == self.rank)
+        return (self.priority is None or binding.priority > self.priority
+                or self.include_equal and binding.priority == self.priority)
 
 
 @dataclass(frozen=True)
@@ -72,11 +81,11 @@ class GraphRange:
 
 @dataclass(frozen=True)
 class DecoratedOperation:
-    """View of a parsed .op or .(expression)op occurrence, never source text.
+    """View of a parsed .(expression)op occurrence, never source text.
 
     `operation` retains the base name/reference. A whole exact identifier is
-    not inspected for dots. `depth` is ready 1 or a preserved DepthExpression;
-    an undecorated application supplies 0 through the same call contract.
+    not inspected for dots. `depth` is a ready int or a preserved DepthExpression;
+    an undecorated application keeps ABSENT until the selected profile consumes it.
     """
     operation: Any
     depth: Any
@@ -270,7 +279,7 @@ class Planner:
 
     def _depth(self, occurrence, context):
         node = self.view.resolve(occurrence, context)
-        return node.depth if isinstance(node, DecoratedOperation) else 0
+        return node.depth if isinstance(node, DecoratedOperation) else ABSENT
 
     def _unit(self, cursor, limit, context):
         start = cursor.index
@@ -467,7 +476,7 @@ def expose_sequence(units, planner):
 
 
 def prepare_actuals(left_sequence, depth, right_sequence, make_reference: Callable):
-    """Separate application adapter: no parsing or further group opening.
+    """Application transport helper: no parsing or further group opening.
 
     Sequence choice, DATA/TYPE/PLACE roles, RAW demand and stream production
     have already been settled by the receiving contract. left_sequence is
@@ -479,17 +488,17 @@ def prepare_actuals(left_sequence, depth, right_sequence, make_reference: Callab
         refs = tuple(make_reference(item) for item in left_sequence)
         left = refs[0] if len(refs) == 1 else LeftBundle(refs)
     right = tuple(make_reference(item) for item in right_sequence)
-    return Actuals(left, admit_depth(depth), right)
+    return Actuals(left, ABSENT if depth is ABSENT else admit_modifier_integer(depth), right)
 
 
 def elementwise_assignment(targets, right_items, read_once, validate_all, write):
-    """The common .: snapshot/validate/commit body, outside graph planning.
+    """The common := snapshot/validate/commit body, outside graph planning.
 
     The receiving method has already selected target cells and source fields.
     In particular it may consume the immediate fields of one returned Array;
     the grouper never performs that run-time Array admission or expansion.
     Several source Array values remain several items, not a flattened stream.
-    Scalar := has its own PLACE/VALUE contract and does not call this body.
+    Scalar := uses one PLACE; slice .: supplies its separately validated broadcast plan.
     """
     targets = tuple(targets)
     values = tuple(read_once(item) for item in right_items)

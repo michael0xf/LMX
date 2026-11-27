@@ -10,7 +10,7 @@
 
 [run_all.lmx](../examples/run_all.lmx) явно вызывает:
 
-1. [fn_and_assignment.lmx](../examples/fn_and_assignment.lmx): готовые type-code
+1. [fn_and_assignment.lmx](../examples/fn_and_assignment.lmx): готовые TypeRef
    токены, uninit без payload, void, групповые перестановки и явный copy-stream.
 2. [generic_callable_examples.lmx](../examples/generic_callable_examples.lmx):
    разнородные int/double/string входы, double/Structure/callable/void результаты,
@@ -142,8 +142,8 @@ Expression; `::` не выбирает CODE-ветвь и не выполняе�
   правых type-токена. Для готового вектора входов используют внутренний именованный
   вызов `` FxToTypes\`->`(inputs := types; result := R) ``; обычная публичная
   форма `` `->`(T0; T1; ...; R) `` получает TYPE-токены с результатом последним.
-- `(a b c) .: f()` не раскрывает возвращённую Structure.
-- `(a b) .: copy(Pair)` получает явный field stream; для группового получателя эффект совпадает с `(a b) .: (copy(Pair))`.
+- `(a b c) := f()` не раскрывает возвращённую Structure.
+- `(a b) := copy(Pair)` получает явный field stream; для группового получателя эффект совпадает с `(a b) := (copy(Pair))`.
 - `scalar := (copy(Pair))` сохраняет одну Structure, если этого требует scalar.
 - `curry`/`partial` сохраняют обычное selection: required без actual и собственного applicable default отклоняется; defaults не исполняются ради анализа.
 - `uncurry` не запускает ступени для анализа их следующей сигнатуры.

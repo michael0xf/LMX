@@ -206,11 +206,11 @@ FxZipWith:
 
 ## Происхождение LMX
 
-- `FxMap` — [patterns/LMX_Fn_Receivers/src/collections.lmx](../../../LMX_Fn_Receivers/src/collections.lmx), SHA-256 `49c1cb3d1577c37469adf35e404ca945dc8e331a87312695951bf35f4e935dbb`.
+- `FxMap` — [patterns/LMX_Fn_Receivers/src/collections.lmx](../../../LMX_Fn_Receivers/src/collections.lmx), SHA-256 `f9b46c16e2d92f9c83b2550ce692f63e1fa806fb45233f4f014a4d5c8fb8c8dc`.
 - `FxFilter` — [patterns/LMX_Fn_Receivers/src/collections.lmx](../../../LMX_Fn_Receivers/src/collections.lmx), SHA-256 `542bdf6db0e61ac6b33c361a2b658db22cf4993b70667052f54fb95e104712d0`.
-- `FxSeqCompress` — [patterns/LMX_Fn_Receivers/src/sequences.lmx](../../../LMX_Fn_Receivers/src/sequences.lmx), SHA-256 `1e4d207e73ac79896ce881e466673552e8715b51bbb3e5284ad6917648fe63d4`.
+- `FxSeqCompress` — [patterns/LMX_Fn_Receivers/src/sequences.lmx](../../../LMX_Fn_Receivers/src/sequences.lmx), SHA-256 `b1e89ebf354abec39ee409f4712037e6e3f88b9ca7a1fb80474a21c7bbbf2758`.
 - `FxFold` — [patterns/LMX_Fn_Receivers/src/collections.lmx](../../../LMX_Fn_Receivers/src/collections.lmx), SHA-256 `28284bf3f75237774f902a6c8db5b662686965754bae34616b124d34881990b2`.
-- `FxZipWith` — [patterns/LMX_Fn_Receivers/src/collections.lmx](../../../LMX_Fn_Receivers/src/collections.lmx), SHA-256 `6db9499add9b08adc4931b289e9a589c9b6fc4d30f9641d9358d074ca6fa8fbf`.
+- `FxZipWith` — [patterns/LMX_Fn_Receivers/src/collections.lmx](../../../LMX_Fn_Receivers/src/collections.lmx), SHA-256 `5e65b0d195a2f61b1e35e1bdd3ef40d3e4e13eb1238d61b7ba7fcbc0ce9fe15e`.
 
 ## Первичные источники Common Lisp
 

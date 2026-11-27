@@ -165,17 +165,29 @@ def slice_place(source: list, spec: SliceSpec):
 
 
 def assign_selection(place: SlicePlace, values, *, scalar=False):
-    """Reference for .: on selected cells; shape/values admitted before stores.
+    """One-axis .: broadcast on selected cells, admitted before all stores.
 
     Snapshot the required RHS values before stores to handle overlap. The
     production write bridge additionally enforces const, element admission,
-    physical stride and its ordinary failure/ownership contracts.
+    physical stride and its ordinary failure/ownership contracts. A supplied
+    iterable without length models obtaining the RHS value first; a ready
+    sized RHS exposes its shape without reading any elements.
     """
-    ready = ([values] * place.plan.count) if scalar else list(values)
+    count = place.plan.count
+    if scalar:
+        ready = [values] * count
+    else:
+        supplied = values if hasattr(values, "__len__") else list(values)
+        source_count = len(supplied)
+        if source_count not in (count, 1):
+            raise SliceFailure("FxShape", "RHS cannot broadcast to selected shape")
+        # A singleton Array is broadcast by .:, not reclassified as scalar.
+        # Empty targets admit source lengths 0 or 1 without reading elements.
+        ready = [] if not count else list(supplied)
+        if source_count == 1 and count:
+            ready *= count
     if len(place.source) != place.original_length:
         raise SliceFailure("FxShape", "destination shape changed while preparing RHS")
-    if len(ready) != place.plan.count:
-        raise SliceFailure("FxShape", "selected and supplied element counts differ")
     for index, value in zip(place.plan.indices(), ready):
         place.source[index] = value
     return place.source

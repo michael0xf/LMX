@@ -1,0 +1,27 @@
+meter:
+    int: calls 0
+    return: int
+    next:
+        node\calls += 1
+        return: node\calls
+
+selection_ops:
+    @: left
+    int: depth
+    []@: right
+    const: int: PASS_ARGS_AS_IS 1
+    const: int: PRIORITY sys\priority("+")
+    return: int
+    select_value:
+        if: sys\eval(left)
+            return: sys\eval(right[0])
+        return: sys\eval(right[1])
+
+selection:
+    return: int
+    first:
+        import: selection_ops
+        return: (1 select_value 19 meter\next())
+    second:
+        import: selection_ops
+        return: (0 select_value meter\next() 23)

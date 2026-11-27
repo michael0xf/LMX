@@ -1,0 +1,61 @@
+# Shared signature construction. Public -> uses inputs first and result last.
+# FxSignatureOperand is the private result/inputs engine; FxToTypes and
+# FxToTokens map both public forms into that one body. TYPE tokens remain
+# complete requirements, including uninitialised records and exact void.
+# Name :: DATA is the distinct named declaration role. See PUBLICATION_CONTRACT.md.
+
+FxSignatureOperand:
+    copy: FxPreparedOperands
+    const: int: PRIORITY sys\priority("+")
+    required: left right
+    return: @
+    make:
+        throws: copy(FxThrows\selection)
+        if: left = 0
+            throw: FxTypeToken()
+        private: @: resultType FxKernel\normalizeType(token := left)
+        private: @: inputTypes (copy(()))
+        sys\resize(inputTypes; length(right))
+        private: int: i 0
+        while: i < length(right)
+            inputTypes[i] := FxKernel\normalizeType(token := right[i])
+            i += 1
+        return: FxSignatures\make(inputs := inputTypes; result := resultType)
+
+
+
+FxToTypes:
+    private:
+        []@: inputs
+        @: result
+    required: inputs result
+    return: @
+    `->`:
+        throws: copy(FxThrows\selection)
+        return: FxSignatureOperand\make(
+            left := result;
+            right := inputs
+        )
+
+FxToTokens:
+    private: []@: tokens
+    required: tokens
+    return: @
+    `->`:
+        throws: FxArity copy(FxThrows\selection)
+        if: length(tokens) = 0
+            throw: FxArity()
+        private: int: last length(tokens) - 1
+        private: []@: inputs FxSeqSlice\slice(tokens; 0; last)
+        return: FxToTypes\`->`(inputs := inputs; result := tokens[last])
+
+FxToOperand:
+    copy: FxPreparedOperands
+    const: int: PRIORITY sys\priority("+")
+    required: left right
+    return: @
+    `->`:
+        throws: FxArity copy(FxThrows\selection)
+        return: FxToTokens\`->`(
+            tokens := RxLogicalArguments\collect(left := left; right := right)
+        )

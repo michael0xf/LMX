@@ -1,0 +1,35 @@
+# Physical field TYPE observations return canonical TypeRef references.
+# These are ordinary []@ values, not integer type codes or a new boxed Type.
+# The order/number of source fields is preserved; header fields are excluded.
+# Callable signature analysis still uses its full explicit contract, not sizes.
+# Production kernel/runtime validation remains NOT_RUN.
+
+RxTypesInto:
+    private:
+        @: source
+        []@: output
+    return: []@
+    types:
+        sys\resize(output; length(source))
+        private: int: i 0
+        while: i < length(source)
+            output[i] := sys\typeof(source[i])
+            i += 1
+        return: output
+
+# The public allocation form shares the same observation loop with the explicit
+# output-buffer profile. No descriptor body is copied or turned into an int.
+RxTypes:
+    private: @: source
+    return: []@
+    types:
+        private: []@: output []
+        return: RxTypesInto\types(source; output)
+
+# Internal physical-field fixture delegates to the same canonical algorithm.
+# It is not a separate public callable alias or a scalar-signature analyzer.
+RxPhysicalTypes:
+    private: @: source
+    return: []@
+    typesRecords:
+        return: RxTypes\types(source)

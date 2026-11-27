@@ -1,0 +1,27 @@
+DepthProbe:
+    @: left
+    int: depth
+    []@: right
+    const:
+        int: PASS_ARGS_AS_IS 0
+        int: PRIORITY sys\priority("+")
+    return: int
+    apply:
+        return: depth
+
+DepthSource:
+    int: calls 0
+    return: int
+    get:
+        DepthSource\calls += 1
+        return: 1 + 9
+
+Example:
+    return: @
+    run:
+        DepthSource\calls := 0
+        int: infix 5 .(DepthSource\get())DepthProbe\apply 6
+        int: prefix (.(1 + 9)DepthProbe\apply 5 6)
+        []@: arguments [6]
+        int: receiver DepthProbe\apply(left := 5; depth := 10; right := arguments)
+        return: (infix prefix receiver DepthSource\calls)

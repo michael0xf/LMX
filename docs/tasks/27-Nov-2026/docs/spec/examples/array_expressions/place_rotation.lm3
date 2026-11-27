@@ -1,0 +1,14 @@
+# The RHS values are captured before the first write to a real left place.
+# The returned Structure has values 2,3,1. The same algorithm accepts other
+# admitted value types; int only makes this small fixture easy to read.
+# Production parser/runtime: NOT_RUN.
+
+Rotation:
+    return: @
+    run:
+        throws: copy(`:=`\throws)
+        int: a 1
+        int: b 2
+        int: c 3
+        (a b c) := (b c a)
+        return: (a b c)

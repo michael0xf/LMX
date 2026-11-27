@@ -1,0 +1,2377 @@
+{
+  "edition": "2026-11-24; complete Haskell source coverage for all 24 cases",
+  "source_module": "haskell_comparision/Analogies.hs",
+  "source_module_sha256": "000fefaf6e094eb4901fbad0180e53f4dfd904dca339b86670f935bbfdcb958b",
+  "scope": "24 independently published Haskell modules, two byte-preserved LMX forms, explicit shared GraphCopy dependency and external fixtures. Analogies.hs remains a legacy guide runner.",
+  "coverage_unit": "One complete observable contract or an explicitly bounded graph-mechanism analogy. Source coverage is not runtime verification.",
+  "status_definitions": {
+    "complete_pair": "Both complete listings cover the bounded common contract; execution status remains separate.",
+    "related_analogy": "A real Haskell implementation is supplied, but a documented graph/representation/runtime mechanism is modeled explicitly. No size winner is inferred.",
+    "lmx_only": "No Haskell code; no current rows have this status."
+  },
+  "extraction_policy": "Each foreign_code is the exact complete independent source/haskell/<ID>.hs module. Custom GraphCopy dependency is explicit for both callers; validation/Main.hs is external harness.",
+  "measurement_policy": "No numerical recount was performed. Previous published measurements are retained in validation/published_metrics_before_expansion.json and existing global reports. New Haskell listing metrics are unset until an explicitly requested rebuild.",
+  "summary": {
+    "complete_pair": 9,
+    "related_analogy": 15
+  },
+  "runtime_execution": {
+    "haskell": "NOT_RUN",
+    "lmx": "NOT_RUN",
+    "reason": "No GHC or LMX runtime is available in the preparation environment. Static source consistency has its own receipt."
+  },
+  "full_module": {
+    "source": "haskell_comparision/Analogies.hs",
+    "sha256": "000fefaf6e094eb4901fbad0180e53f4dfd904dca339b86670f935bbfdcb958b",
+    "metrics": {
+      "bytes_utf8": 10521,
+      "characters": 10521,
+      "non_whitespace_characters": 8465,
+      "nonempty_lines": 247,
+      "physical_lines": 281
+    },
+    "dependencies": [
+      "base >=4.18 && <5",
+      "array",
+      "monad-loops ==0.4.3"
+    ],
+    "build_descriptor": "haskell_comparision/lmx-examples.cabal",
+    "scope": "Preserved legacy guide runner, including extra examples outside the 24 current comparison modules. Its historical metric is not the current group sum."
+  },
+  "entries": [
+    {
+      "id": "H01",
+      "title": "Replace and invoke a first-class callable",
+      "status": "complete_pair",
+      "foreign_code": "module H01 where\n\nimport Data.IORef (newIORef, readIORef, writeIORef)\n\nexample :: IO Int\nexample = do\n  chosen <- newIORef ((*2) :: Int -> Int)\n  firstOperation <- readIORef chosen\n  let first = firstOperation 7\n  writeIORef chosen (+1)\n  secondOperation <- readIORef chosen\n  pure (first * 100 + secondOperation 7)\n",
+      "source_symbols": [
+        "H01 (complete module)"
+      ],
+      "source_ranges": [],
+      "contract_notes": "Обе записи содержат настоящую изменяемую ячейку с функцией. В Haskell это IORef из base; первая функция удваивает, вторая прибавляет единицу. Конкретный ABI callable LMX в предмет сравнения не входит.",
+      "lmx_source": "haskell_comparision/source/lmx/H01.lm3",
+      "lmx_source_sha256": "5c9e0e0175c28a8002667ba607c18ef246b4de250362328ac0605a907a762061",
+      "pair_ratio_eligible": true,
+      "execution_status": "NOT_RUN",
+      "foreign_entry": "example",
+      "foreign_expected": 1408,
+      "output_normalization": null,
+      "imports": [
+        "import Data.IORef (newIORef, readIORef, writeIORef)"
+      ],
+      "dependencies": [
+        "base >=4.9 && <5"
+      ],
+      "foreign_listing_metrics": {
+        "bytes_utf8": 316,
+        "characters": 316,
+        "non_whitespace_characters": 256,
+        "nonempty_lines": 10,
+        "physical_lines": 12
+      },
+      "foreign_listing_sha256": "7e1874922576fdd675f8c89d3e34db03cb4fc680043f3a7ac38ccf5ffcb466c2",
+      "lmx_variants": {
+        "procedural": {
+          "code": "Arithmetic:\n    int: value\n    return: int\n    twice:\n        return: value * 2\n    plusOne:\n        return: value + 1\n\nApplyProbe:\n    return: int\n    run:\n        @: chosen Arithmetic\\twice\n        int: first chosen(7)\n        chosen := Arithmetic\\plusOne\n        return: first * 100 + chosen(7)\n",
+          "source_file": "haskell_comparision/source/lmx/H01.lm3",
+          "contract_id": "root/H01",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 191,
+            "characters_with_whitespace": 298,
+            "nonblank_lines": 14,
+            "utf8_bytes": 298,
+            "sha256": "5c9e0e0175c28a8002667ba607c18ef246b4de250362328ac0605a907a762061"
+          },
+          "source_sha256": "5c9e0e0175c28a8002667ba607c18ef246b4de250362328ac0605a907a762061",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        },
+        "functional": {
+          "code": "Arithmetic:\n    int: value\n    return: int\n    twice:\n        return: value * 2\n    plusOne:\n        return: value + 1\n\nApplyProbe:\n    return: int\n    run:\n        @: chosen Arithmetic\\twice\n        int: first chosen(7)\n        chosen := Arithmetic\\plusOne\n        return: first * 100 + chosen(7)\n",
+          "source_file": "haskell_comparision/source/lmx/H01.lm3",
+          "contract_id": "root/H01",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 191,
+            "characters_with_whitespace": 298,
+            "nonblank_lines": 14,
+            "utf8_bytes": 298,
+            "sha256": "5c9e0e0175c28a8002667ba607c18ef246b4de250362328ac0605a907a762061"
+          },
+          "source_sha256": "5c9e0e0175c28a8002667ba607c18ef246b4de250362328ac0605a907a762061",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        }
+      },
+      "lmx_comparison_variants": {
+        "procedural": "haskell_comparision/source/lmx/H01.lm3",
+        "functional": "haskell_comparision/source/lmx/H01.lm3"
+      },
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Сценарий наблюдает две записи и два чтения одной callable-ячейки. Эти эффекты обязательны в обоих стилях; прямой вызов выбранной функции уже является минимальной композицией.",
+      "lmx_runtime_execution": "NOT_RUN",
+      "lmx_style_comparison": "haskell_comparision/H01_comparision.md",
+      "lmx_operation_phase": "after_root_startup",
+      "common_contract": "Сохранить callable, вызвать его с 7, заменить в той же ячейке и снова вызвать с 7. Наблюдение: 1408.",
+      "foreign_source": "haskell_comparision/source/haskell/H01.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE",
+      "custom_dependencies": [],
+      "foreign_measurement_sources": [
+        "haskell_comparision/source/haskell/H01.hs"
+      ],
+      "foreign_measurement_code": "module H01 where\n\nimport Data.IORef (newIORef, readIORef, writeIORef)\n\nexample :: IO Int\nexample = do\n  chosen <- newIORef ((*2) :: Int -> Int)\n  firstOperation <- readIORef chosen\n  let first = firstOperation 7\n  writeIORef chosen (+1)\n  secondOperation <- readIORef chosen\n  pure (first * 100 + secondOperation 7)\n",
+      "foreign_full_metrics": {
+        "characters": 256,
+        "characters_with_whitespace": 316,
+        "nonblank_lines": 10,
+        "utf8_bytes": 316,
+        "sha256": "7e1874922576fdd675f8c89d3e34db03cb4fc680043f3a7ac38ccf5ffcb466c2"
+      }
+    },
+    {
+      "id": "H02",
+      "title": "Named signature positions versus candidate names",
+      "status": "related_analogy",
+      "foreign_code": "module H02 where\n\ndata Arguments = Arguments { a :: Int, b :: Int }\n\nencode :: Int -> Int -> Int\nencode bValue aValue = bValue * 10 + aValue\n\nbySignatureNames, byCandidateNames :: Arguments -> Int\nbySignatureNames args = encode (a args) (b args)\nbyCandidateNames args = encode (b args) (a args)\n\nexample :: Int\nexample = let args = Arguments { a = 2, b = 7 }\n          in bySignatureNames args * 100 + byCandidateNames args\n",
+      "source_symbols": [
+        "H02 (complete module)"
+      ],
+      "source_ranges": [],
+      "contract_notes": "Haskell-код действительно вычисляет 27 и 72: два адаптера берут поля Arguments в разном порядке. Именованное связывание и проверка допуска LMX здесь представлены явно написанными адаптерами; это не встроенный Haskell-механизм именованных фактических аргументов. Поэтому числового рейтинга этой строки нет.",
+      "lmx_source": "haskell_comparision/source/lmx/H02.lm3",
+      "lmx_source_sha256": "6e3810038be0f44f703144ed2effb616174b3e1223a4b4d28da5532f91460e22",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN",
+      "uploaded_lmx_source_sha256": "0fada75d76e77e680f44a2210628c5a6c6830901f1499ebc6609de5e719e2d1d",
+      "lmx_runtime_execution": "NOT_RUN",
+      "source_revision": "Canonical operation integration; source fingerprint only, no new parser/runtime receipt.",
+      "lmx_variants": {
+        "procedural": {
+          "code": "PairOperation :: (int: a; int: b; return: int)\n\nCandidate:\n    int: b\n    int: a\n    return: int\n    encode:\n        return: b * 10 + a\n\nSignatureProbe:\n    return: int\n    run:\n        @PairOperation: selected Candidate\\encode\n        int: first selected(a := 2; b := 7)\n        int: second Candidate\\encode(a := 2; b := 7)\n        return: first * 100 + second\n",
+          "source_file": "haskell_comparision/source/lmx/procedural/H02.lm3",
+          "contract_id": "root/H02",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 245,
+            "characters_with_whitespace": 362,
+            "nonblank_lines": 14,
+            "utf8_bytes": 362,
+            "sha256": "9809f081a0f5bde159b0a944d03cfa30275a5667d3ef8341323183ccee166702"
+          },
+          "source_sha256": "9809f081a0f5bde159b0a944d03cfa30275a5667d3ef8341323183ccee166702",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        },
+        "functional": {
+          "code": "PairOperation :: (int: a; int: b; return: int)\n\nCandidate:\n    int: b\n    int: a\n    return: int\n    encode:\n        return: b * 10 + a\n\nSignatureProbe:\n    return: int\n    run:\n        @PairOperation: selected Candidate\\encode\n        return: selected(a := 2; b := 7) * 100 + Candidate\\encode(a := 2; b := 7)\n",
+          "source_file": "haskell_comparision/source/lmx/H02.lm3",
+          "contract_id": "root/H02",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 215,
+            "characters_with_whitespace": 310,
+            "nonblank_lines": 12,
+            "utf8_bytes": 310,
+            "sha256": "6e3810038be0f44f703144ed2effb616174b3e1223a4b4d28da5532f91460e22"
+          },
+          "source_sha256": "6e3810038be0f44f703144ed2effb616174b3e1223a4b4d28da5532f91460e22",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        }
+      },
+      "lmx_comparison_variants": {
+        "procedural": "haskell_comparision/source/lmx/procedural/H02.lm3",
+        "functional": "haskell_comparision/source/lmx/H02.lm3"
+      },
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "style_note": "Процедурный вариант сохраняет результаты двух вызовов явно; функциональный объединяет их арифметическим выражением. Позиционное принятие сигнатуры и именованные аргументы проверяются одинаково.",
+      "lmx_style_comparison": "haskell_comparision/H02_comparision.md",
+      "lmx_operation_phase": "after_root_startup",
+      "common_contract": "Различить порядок позиций сигнатуры a,b и собственные имена кандидата b,a. Упаковка двух вызовов: 2772.",
+      "foreign_source": "haskell_comparision/source/haskell/H02.hs",
+      "foreign_entry": "example",
+      "foreign_expected": 2772,
+      "foreign_listing_sha256": "4ea9ead4b5afbcdc86961a4fab5966f3de3fdbaaeb416c33305654cfd9634f4c",
+      "foreign_listing_metrics": {
+        "bytes_utf8": 424,
+        "characters": 424,
+        "non_whitespace_characters": 332,
+        "nonempty_lines": 10,
+        "physical_lines": 14
+      },
+      "measurement_status": "CURRENT_FULL_SOURCE",
+      "imports": [],
+      "dependencies": [
+        "base >=4.9 && <5"
+      ],
+      "custom_dependencies": [],
+      "foreign_measurement_sources": [
+        "haskell_comparision/source/haskell/H02.hs"
+      ],
+      "foreign_measurement_code": "module H02 where\n\ndata Arguments = Arguments { a :: Int, b :: Int }\n\nencode :: Int -> Int -> Int\nencode bValue aValue = bValue * 10 + aValue\n\nbySignatureNames, byCandidateNames :: Arguments -> Int\nbySignatureNames args = encode (a args) (b args)\nbyCandidateNames args = encode (b args) (a args)\n\nexample :: Int\nexample = let args = Arguments { a = 2, b = 7 }\n          in bySignatureNames args * 100 + byCandidateNames args\n",
+      "foreign_full_metrics": {
+        "characters": 332,
+        "characters_with_whitespace": 424,
+        "nonblank_lines": 10,
+        "utf8_bytes": 424,
+        "sha256": "4ea9ead4b5afbcdc86961a4fab5966f3de3fdbaaeb416c33305654cfd9634f4c"
+      }
+    },
+    {
+      "id": "H03",
+      "title": "Independent bound prefixes and residual callable admission",
+      "status": "complete_pair",
+      "foreign_code": "module H03 where\n\nadd :: Int -> Int -> Int\nadd first second = first + second\n\nexample :: (Int, Int, Int)\nexample = let add5 = add 5\n              add100 = add 100\n          in (add5 1, add100 1, add5 1)\n",
+      "source_symbols": [
+        "H03 (complete module)"
+      ],
+      "source_ranges": [],
+      "contract_notes": "Haskell использует обычное частичное применение. Для сравнения результата тройка (a,b,c) упаковывается как a*1000000+b*1000+c, то есть 6101006. В LMX сохранённый actual не становится свободным остаточным параметром; Haskell не предоставляет одноимённого фактического аргумента для его переопределения. Отдельная диагностика допуска не объявлена одинаковой.",
+      "lmx_source": "haskell_comparision/source/lmx/H03.lm3",
+      "lmx_source_sha256": "29df456d160dbebb7f55cdc14c13dac04a0ff1918f2d84d9370fb7efb4afba33",
+      "pair_ratio_eligible": true,
+      "execution_status": "NOT_RUN",
+      "foreign_entry": "example",
+      "foreign_expected": [
+        6,
+        101,
+        6
+      ],
+      "output_normalization": {
+        "from": "Haskell triple (first,second,again)",
+        "to": "LMX packed int",
+        "expression": "first * 1000000 + second * 1000 + again",
+        "normalized_expected": 6101006,
+        "changes_effects": false
+      },
+      "imports": [],
+      "dependencies": [
+        "base >=4.9 && <5"
+      ],
+      "foreign_listing_metrics": {
+        "bytes_utf8": 203,
+        "characters": 203,
+        "non_whitespace_characters": 137,
+        "nonempty_lines": 7,
+        "physical_lines": 9
+      },
+      "foreign_listing_sha256": "aa35945a80c0442c4a8234e553a6258e21ac9da9a259fd76efee4656065797a4",
+      "lmx_variants": {
+        "procedural": {
+          "code": "CapturePrototype:\n    int: saved 0\n    @: binary 0\n    inputs:\n        int: second\n        return: int\n        apply:\n            return: node\\binary(node\\saved; second)\n\nCurry:\n    @: binary\n    int: first\n    return: @\n    capture:\n        @: instance (copy(CapturePrototype))\n        @: owner parent(instance\\inputs)\n        owner\\saved := first\n        owner\\binary := binary\n        return: instance\\inputs\\apply\n\nAddition:\n    int: first\n    int: second\n    return: int\n    add:\n        return: first + second\n\nClosureProbe:\n    return: int\n    run:\n        @: add5 Curry\\capture(Addition\\add; 5)\n        @: add100 Curry\\capture(Addition\\add; 100)\n        int: saved 1000\n        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n",
+          "source_file": "haskell_comparision/source/lmx/procedural/H03.lm3",
+          "contract_id": "root/H03",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 495,
+            "characters_with_whitespace": 741,
+            "nonblank_lines": 31,
+            "utf8_bytes": 741,
+            "sha256": "6505baaf9fa1353319900de9484fd8dff8d5e85d4800c6596537df59f905a8d1"
+          },
+          "source_sha256": "6505baaf9fa1353319900de9484fd8dff8d5e85d4800c6596537df59f905a8d1",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        },
+        "functional": {
+          "code": "Addition:\n    int: first\n    int: second\n    return: int\n    add:\n        return: first + second\n\nClosureProbe:\n    return: int\n    run:\n        throws: copy(partial\\throws)\n        @: add5 partial(Addition\\add; (5))\n        @: add100 partial(Addition\\add; (100))\n        int: saved 1000\n        return: add5(1) * 1000000 + add100(1) * 1000 + add5(1)\n",
+          "source_file": "haskell_comparision/source/lmx/H03.lm3",
+          "contract_id": "root/H03",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 239,
+            "characters_with_whitespace": 351,
+            "nonblank_lines": 14,
+            "utf8_bytes": 351,
+            "sha256": "29df456d160dbebb7f55cdc14c13dac04a0ff1918f2d84d9370fb7efb4afba33"
+          },
+          "source_sha256": "29df456d160dbebb7f55cdc14c13dac04a0ff1918f2d84d9370fb7efb4afba33",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        }
+      },
+      "lmx_comparison_variants": {
+        "procedural": "haskell_comparision/source/lmx/procedural/H03.lm3",
+        "functional": "haskell_comparision/source/lmx/H03.lm3"
+      },
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "style_note": "Процедурный вариант целиком показывает отдельные копии окружения и прямой вызов. Функциональный использует общий partial; сохранённый вход не становится доступным именованным аргументом остаточной функции.",
+      "lmx_runtime_execution": "NOT_RUN",
+      "lmx_style_comparison": "haskell_comparision/H03_comparision.md",
+      "lmx_operation_phase": "after_root_startup",
+      "common_contract": "Независимые частичные применения 5 и 100; последовательность результатов 6,101,6.",
+      "foreign_source": "haskell_comparision/source/haskell/H03.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE",
+      "custom_dependencies": [],
+      "foreign_measurement_sources": [
+        "haskell_comparision/source/haskell/H03.hs"
+      ],
+      "foreign_measurement_code": "module H03 where\n\nadd :: Int -> Int -> Int\nadd first second = first + second\n\nexample :: (Int, Int, Int)\nexample = let add5 = add 5\n              add100 = add 100\n          in (add5 1, add100 1, add5 1)\n",
+      "foreign_full_metrics": {
+        "characters": 137,
+        "characters_with_whitespace": 203,
+        "nonblank_lines": 7,
+        "utf8_bytes": 203,
+        "sha256": "aa35945a80c0442c4a8234e553a6258e21ac9da9a259fd76efee4656065797a4"
+      }
+    },
+    {
+      "id": "H04",
+      "title": "Overrideable copied default",
+      "status": "complete_pair",
+      "foreign_code": "module H04 where\n\naddWithDefault :: Int -> Maybe Int -> Int\naddWithDefault x supplied = x + maybe 5 id supplied\n\nexample :: [Int]\nexample = map (addWithDefault 1) [Nothing, Just 25, Just 0, Nothing]\n",
+      "source_symbols": [
+        "H04 (complete module)"
+      ],
+      "source_ranges": [],
+      "contract_notes": "Maybe отличает отсутствие переопределения от значения 0. Четыре вызова включены в обе реализации. Список упаковывается как a*1000000+b*10000+c*100+d, результат 6260106. В отличие от прежнего обрывка после объявления функции, показанный Haskell-модуль самодостаточен.",
+      "lmx_source": "haskell_comparision/source/lmx/H04.lm3",
+      "lmx_source_sha256": "8df2b2495dbe10e31c0230e9f3b0b5a66dfb4d70a636be3d735e0e64a46c1234",
+      "pair_ratio_eligible": true,
+      "execution_status": "NOT_RUN",
+      "foreign_entry": "example",
+      "foreign_expected": [
+        6,
+        26,
+        1,
+        6
+      ],
+      "output_normalization": {
+        "from": "Haskell list [a,b,c,d]",
+        "to": "LMX packed int",
+        "expression": "a * 1000000 + b * 10000 + c * 100 + d",
+        "normalized_expected": 6260106,
+        "changes_effects": false
+      },
+      "imports": [],
+      "dependencies": [
+        "base >=4.9 && <5"
+      ],
+      "foreign_listing_metrics": {
+        "bytes_utf8": 199,
+        "characters": 199,
+        "non_whitespace_characters": 162,
+        "nonempty_lines": 5,
+        "physical_lines": 7
+      },
+      "foreign_listing_sha256": "d8f5833a04aede8126694a83a9c9ac71b46baf031080fdb3605d828da804c447",
+      "fixture_expression_source": {
+        "first_line": 242,
+        "last_line": 242,
+        "text": "    (map (addWithDefault 1) [Nothing, Just 25, Just 0, Nothing])"
+      },
+      "listing_kind": "exact declaration plus expression fragment; run in the existing full module",
+      "lmx_variants": {
+        "procedural": {
+          "code": "Addition:\n    int: x\n    int: y\n    return: int\n    add:\n        return: x + y\n\nDefaultProbe:\n    return: int\n    run:\n        int: y 100\n        @: fiveContext (merge(Addition; (int: y 5)))\n        @: add5 fiveContext\\add\n        int: first add5(1)\n        int: second add5(1; y := 25)\n        int: third add5(1; y := 0)\n        int: fourth add5(1)\n        return: first * 1000000 + second * 10000 + third * 100 + fourth\n",
+          "source_file": "haskell_comparision/source/lmx/procedural/H04.lm3",
+          "contract_id": "root/H04",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 265,
+            "characters_with_whitespace": 422,
+            "nonblank_lines": 17,
+            "utf8_bytes": 422,
+            "sha256": "f95caed4e498307ca0786adc291705127094c7a6cf9a52950360d0cb29d5661c"
+          },
+          "source_sha256": "f95caed4e498307ca0786adc291705127094c7a6cf9a52950360d0cb29d5661c",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        },
+        "functional": {
+          "code": "Addition:\n    int: x\n    int: y\n    return: int\n    add:\n        return: x + y\n\nDefaultProbe:\n    return: int\n    run:\n        int: y 100\n        @: fiveContext (merge(Addition; (int: y 5)))\n        @: add5 fiveContext\\add\n        return: add5(1) * 1000000 + add5(1; y := 25) * 10000 + add5(1; y := 0) * 100 + add5(1)\n",
+          "source_file": "haskell_comparision/source/lmx/H04.lm3",
+          "contract_id": "root/H04",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 205,
+            "characters_with_whitespace": 318,
+            "nonblank_lines": 13,
+            "utf8_bytes": 318,
+            "sha256": "8df2b2495dbe10e31c0230e9f3b0b5a66dfb4d70a636be3d735e0e64a46c1234"
+          },
+          "source_sha256": "8df2b2495dbe10e31c0230e9f3b0b5a66dfb4d70a636be3d735e0e64a46c1234",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        }
+      },
+      "lmx_comparison_variants": {
+        "procedural": "haskell_comparision/source/lmx/procedural/H04.lm3",
+        "functional": "haskell_comparision/source/lmx/H04.lm3"
+      },
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "style_note": "Процедурный вариант сохраняет четыре наблюдения по шагам; функциональный непосредственно компонует их. Оба проверяют отсутствующий аргумент, явные25/0 и повторное значение по умолчанию.",
+      "lmx_runtime_execution": "NOT_RUN",
+      "lmx_style_comparison": "haskell_comparision/H04_comparision.md",
+      "lmx_operation_phase": "after_root_startup",
+      "common_contract": "Отсутствующий default, явные 25 и 0, затем снова отсутствующий default: 6,26,1,6.",
+      "foreign_source": "haskell_comparision/source/haskell/H04.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE",
+      "custom_dependencies": [],
+      "foreign_measurement_sources": [
+        "haskell_comparision/source/haskell/H04.hs"
+      ],
+      "foreign_measurement_code": "module H04 where\n\naddWithDefault :: Int -> Maybe Int -> Int\naddWithDefault x supplied = x + maybe 5 id supplied\n\nexample :: [Int]\nexample = map (addWithDefault 1) [Nothing, Just 25, Just 0, Nothing]\n",
+      "foreign_full_metrics": {
+        "characters": 162,
+        "characters_with_whitespace": 199,
+        "nonblank_lines": 5,
+        "utf8_bytes": 199,
+        "sha256": "d8f5833a04aede8126694a83a9c9ac71b46baf031080fdb3605d828da804c447"
+      }
+    },
+    {
+      "id": "H05",
+      "title": "Dynamic and lexical binding after a graph copy",
+      "status": "related_analogy",
+      "foreign_code": "module H05 where\n\nimport Data.IORef (IORef, newIORef, readIORef, writeIORef)\n\naddIn :: IORef Int -> Int -> IO Int\naddIn environment x = (+x) <$> readIORef environment\n\nexample :: IO (Int, Int, Int)\nexample = do\n  source <- newIORef 5\n  copied <- readIORef source >>= newIORef\n  writeIORef source 8\n  caller <- newIORef 25\n  dynamic <- addIn caller 1\n  lexical <- addIn copied 1\n  sourceAfter <- readIORef source\n  pure (dynamic, lexical, sourceAfter)\n",
+      "source_symbols": [
+        "H05 (complete module)"
+      ],
+      "source_ranges": [],
+      "contract_notes": "Haskell создаёт две разные ячейки, действительно меняет источник и передаёт окружение явно. Третий результат проверяет источник после изменения: 8. Это модель выбора окружения, а не копирование исполняемого графа или native dynamic lookup LMX; parent и граф методов Haskell-код не воспроизводит.",
+      "lmx_source": "haskell_comparision/source/lmx/H05.lm3",
+      "lmx_source_sha256": "1efa0aab92f30b89bcf2ae9740f60b482101d12c1e9767c13d10298100c2d34d",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN",
+      "lmx_variants": {
+        "procedural": {
+          "code": "Source:\n    int: y 5\n    methods:\n        int: x\n        return: int\n        dynamic:\n            return: x + y\n        lexical:\n            return: x + node\\y\n\nBindingProbe:\n    return: int\n    run:\n        @: copied (copy(Source))\n        Source\\y := 8\n        int: y 25\n        int: a copied\\methods\\dynamic(1)\n        int: b copied\\methods\\lexical(1)\n        return: a * 100 + b\n",
+          "source_file": "haskell_comparision/source/lmx/procedural/H05.lm3",
+          "contract_id": "root/H05",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 218,
+            "characters_with_whitespace": 383,
+            "nonblank_lines": 18,
+            "utf8_bytes": 383,
+            "sha256": "b745ff9743cb9c72924a2c3f1bbe749a66388083b9df8d6ead457fa1e3577dde"
+          },
+          "source_sha256": "b745ff9743cb9c72924a2c3f1bbe749a66388083b9df8d6ead457fa1e3577dde",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        },
+        "functional": {
+          "code": "Source:\n    int: y 5\n    methods:\n        int: x\n        return: int\n        dynamic:\n            return: x + y\n        lexical:\n            return: x + node\\y\n\nBindingProbe:\n    return: int\n    run:\n        @: copied (copy(Source))\n        Source\\y := 8\n        int: y 25\n        return: copied\\methods\\dynamic(1) * 100 + copied\\methods\\lexical(1)\n",
+          "source_file": "haskell_comparision/source/lmx/H05.lm3",
+          "contract_id": "root/H05",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 206,
+            "characters_with_whitespace": 349,
+            "nonblank_lines": 16,
+            "utf8_bytes": 349,
+            "sha256": "1efa0aab92f30b89bcf2ae9740f60b482101d12c1e9767c13d10298100c2d34d"
+          },
+          "source_sha256": "1efa0aab92f30b89bcf2ae9740f60b482101d12c1e9767c13d10298100c2d34d",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        }
+      },
+      "lmx_comparison_variants": {
+        "procedural": "haskell_comparision/source/lmx/procedural/H05.lm3",
+        "functional": "haskell_comparision/source/lmx/H05.lm3"
+      },
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "style_note": "Копирование графа и последующая запись в источник обязательны. Процедурный вариант сохраняет два чтения; функциональный объединяет их выражением, сохраняя динамический и лексический пути.",
+      "lmx_runtime_execution": "NOT_RUN",
+      "lmx_style_comparison": "haskell_comparision/H05_comparision.md",
+      "lmx_operation_phase": "after_root_startup",
+      "common_contract": "Скопировать исходное значение 5, изменить источник на 8, затем прочитать динамическое окружение 25 и лексическую копию 5 с аргументом 1: 26 и 6.",
+      "foreign_source": "haskell_comparision/source/haskell/H05.hs",
+      "foreign_entry": "example",
+      "foreign_expected": [
+        26,
+        6,
+        8
+      ],
+      "foreign_listing_sha256": "efa2740820fbeb935035a890ec140926fa074523856bd7ba536e9a4a5c821071",
+      "foreign_listing_metrics": {
+        "bytes_utf8": 451,
+        "characters": 451,
+        "non_whitespace_characters": 362,
+        "nonempty_lines": 14,
+        "physical_lines": 17
+      },
+      "measurement_status": "CURRENT_FULL_SOURCE",
+      "imports": [
+        "import Data.IORef (IORef, newIORef, readIORef, writeIORef)"
+      ],
+      "dependencies": [
+        "base >=4.9 && <5"
+      ],
+      "custom_dependencies": [],
+      "foreign_measurement_sources": [
+        "haskell_comparision/source/haskell/H05.hs"
+      ],
+      "foreign_measurement_code": "module H05 where\n\nimport Data.IORef (IORef, newIORef, readIORef, writeIORef)\n\naddIn :: IORef Int -> Int -> IO Int\naddIn environment x = (+x) <$> readIORef environment\n\nexample :: IO (Int, Int, Int)\nexample = do\n  source <- newIORef 5\n  copied <- readIORef source >>= newIORef\n  writeIORef source 8\n  caller <- newIORef 25\n  dynamic <- addIn caller 1\n  lexical <- addIn copied 1\n  sourceAfter <- readIORef source\n  pure (dynamic, lexical, sourceAfter)\n",
+      "foreign_full_metrics": {
+        "characters": 362,
+        "characters_with_whitespace": 451,
+        "nonblank_lines": 14,
+        "utf8_bytes": 451,
+        "sha256": "efa2740820fbeb935035a890ec140926fa074523856bd7ba536e9a4a5c821071"
+      }
+    },
+    {
+      "id": "H06",
+      "title": "Order of two composed computations",
+      "status": "complete_pair",
+      "foreign_code": "module H06 where\n\nexample :: (Int, Int)\nexample = (((+1) . (*2)) 4, ((*2) . (+1)) 4)\n",
+      "source_symbols": [
+        "H06 (complete module)"
+      ],
+      "source_ranges": [],
+      "contract_notes": "Оператор композиции Haskell задаёт те же две арифметические цепочки. Пара (a,b) нормализуется в LMX-упаковку a*100+b=910. Отдельный эффектный сценарий со счётчиками из старого Analogies.hs не подставляется вместо этого чистого договора.",
+      "lmx_source": "haskell_comparision/source/lmx/H06.lm3",
+      "lmx_source_sha256": "087e663312eef267106bea154c2762a5facf5e88e7e45b98eb1bbe460a16fe2d",
+      "pair_ratio_eligible": true,
+      "execution_status": "NOT_RUN",
+      "foreign_entry": "example",
+      "foreign_expected": [
+        9,
+        10
+      ],
+      "output_normalization": {
+        "from": "Haskell pair (a,b)",
+        "to": "LMX packed int",
+        "expression": "a * 100 + b",
+        "normalized_expected": 910,
+        "changes_effects": false
+      },
+      "imports": [],
+      "dependencies": [
+        "base >=4.9 && <5"
+      ],
+      "foreign_listing_metrics": {
+        "bytes_utf8": 85,
+        "characters": 85,
+        "non_whitespace_characters": 67,
+        "nonempty_lines": 3,
+        "physical_lines": 4
+      },
+      "foreign_listing_sha256": "24187ef17c41a921992df8942a69366ab01560b913589b47c346788216d047d5",
+      "uploaded_lmx_source_sha256": "058b479732dbe1a717eb97eb2542d2cd5a27f81eb4b745896749f516ffef9945",
+      "lmx_runtime_execution": "NOT_RUN",
+      "source_revision": "Canonical operation integration; source fingerprint only, no new parser/runtime receipt.",
+      "lmx_variants": {
+        "procedural": {
+          "code": "Functions:\n    int: x\n    return: int\n    twice:\n        return: x * 2\n    next:\n        return: x + 1\n\nCompositionProbe:\n    return: int\n    run:\n        int: first Functions\\twice(4)\n        first := Functions\\next(first)\n        int: second Functions\\next(4)\n        second := Functions\\twice(second)\n        return: first * 100 + second\n",
+          "source_file": "haskell_comparision/source/lmx/procedural/H06.lm3",
+          "contract_id": "root/H06",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 223,
+            "characters_with_whitespace": 341,
+            "nonblank_lines": 15,
+            "utf8_bytes": 341,
+            "sha256": "f6742f1da51a267be70b3ec7a51b150f6eed38242e9c75e1f5c301aa725501c2"
+          },
+          "source_sha256": "f6742f1da51a267be70b3ec7a51b150f6eed38242e9c75e1f5c301aa725501c2",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        },
+        "functional": {
+          "code": "Functions:\n    int: x\n    return: int\n    twice:\n        return: x * 2\n    next:\n        return: x + 1\n\nCompositionProbe:\n    return: int\n    run:\n        return: Functions\\next(Functions\\twice(4)) * 100 + Functions\\twice(Functions\\next(4))\n",
+          "source_file": "haskell_comparision/source/lmx/H06.lm3",
+          "contract_id": "root/H06",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 167,
+            "characters_with_whitespace": 241,
+            "nonblank_lines": 11,
+            "utf8_bytes": 241,
+            "sha256": "087e663312eef267106bea154c2762a5facf5e88e7e45b98eb1bbe460a16fe2d"
+          },
+          "source_sha256": "087e663312eef267106bea154c2762a5facf5e88e7e45b98eb1bbe460a16fe2d",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        }
+      },
+      "lmx_comparison_variants": {
+        "procedural": "haskell_comparision/source/lmx/procedural/H06.lm3",
+        "functional": "haskell_comparision/source/lmx/H06.lm3"
+      },
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "style_note": "Процедурный вариант явно хранит промежуточные стадии; функциональный использует краткие вложенные вызовы. Обе последовательности наблюдаются: next(twice(4))=9 и twice(next(4))=10.",
+      "lmx_style_comparison": "haskell_comparision/H06_comparision.md",
+      "lmx_operation_phase": "after_root_startup",
+      "common_contract": "next(twice(4))=9; twice(next(4))=10. Оба порядка обязательны.",
+      "foreign_source": "haskell_comparision/source/haskell/H06.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE",
+      "custom_dependencies": [],
+      "foreign_measurement_sources": [
+        "haskell_comparision/source/haskell/H06.hs"
+      ],
+      "foreign_measurement_code": "module H06 where\n\nexample :: (Int, Int)\nexample = (((+1) . (*2)) 4, ((*2) . (+1)) 4)\n",
+      "foreign_full_metrics": {
+        "characters": 67,
+        "characters_with_whitespace": 85,
+        "nonblank_lines": 3,
+        "utf8_bytes": 85,
+        "sha256": "24187ef17c41a921992df8942a69366ab01560b913589b47c346788216d047d5"
+      }
+    },
+    {
+      "id": "H07",
+      "title": "Prepared value versus raw source occurrence",
+      "status": "related_analogy",
+      "foreign_code": "module H07 where\n\nimport Control.Monad (replicateM)\nimport Data.IORef (newIORef, modifyIORef', readIORef)\n\nexample :: IO ((Int, Int, Int), (Int, Int, Int))\nexample = do\n  preparedCount <- newIORef 0\n  let preparedNext = modifyIORef' preparedCount (+1) >> readIORef preparedCount\n  first <- (\\value -> value + value) <$> preparedNext\n  second <- (\\value -> value + value) <$> preparedNext\n  preparedCalls <- readIORef preparedCount\n  rawCount <- newIORef 0\n  let rawNext = modifyIORef' rawCount (+1) >> readIORef rawCount\n  third <- sum <$> replicateM 2 rawNext\n  fourth <- sum <$> replicateM 2 rawNext\n  rawCalls <- readIORef rawCount\n  pure ((first, second, preparedCalls), (third, fourth, rawCalls))\n",
+      "source_symbols": [
+        "H07 (complete module)"
+      ],
+      "source_ranges": [],
+      "contract_notes": "Реальная Haskell-реализация отдельно разделяет полученное значение и повторяет IO-действие. Она не принимает произвольное исходное вхождение программы и не исполняет сохранённый граф через sys\\eval. Ленивость Haskell сама по себе не объявляется заменой PASS_ARGS_AS_IS.",
+      "lmx_source": "haskell_comparision/source/lmx/H07.lm3",
+      "lmx_source_sha256": "37c80f57054abb22f7bdea1153c9b0f319d3db236466e4994df220c7a09bd225",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN",
+      "lmx_variants": {
+        "procedural": {
+          "code": "PreparedOps:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: int\n    twice:\n        return: \\left + \\left\n\nRawOps:\n    merge: sys\\OPERANDS_TEMPLATE (const: int: PASS_ARGS_AS_IS 1)\n    return: int\n    twice:\n        return: sys\\eval(left) + sys\\eval(left)\n\nMeter:\n    int: calls 0\n    return: int\n    next:\n        node\\calls += 1\n        return: node\\calls\n\nEvaluation:\n    return: int\n    prepared:\n        return: (Meter\\next() PreparedOps\\twice 0)\n    raw:\n        return: (Meter\\next() RawOps\\twice 0)\n",
+          "source_file": "haskell_comparision/source/lmx/H07.lm3",
+          "contract_id": "root/H07",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 354,
+            "characters_with_whitespace": 502,
+            "nonblank_lines": 22,
+            "utf8_bytes": 502,
+            "sha256": "37c80f57054abb22f7bdea1153c9b0f319d3db236466e4994df220c7a09bd225"
+          },
+          "source_sha256": "37c80f57054abb22f7bdea1153c9b0f319d3db236466e4994df220c7a09bd225",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        },
+        "functional": {
+          "code": "PreparedOps:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: int\n    twice:\n        return: \\left + \\left\n\nRawOps:\n    merge: sys\\OPERANDS_TEMPLATE (const: int: PASS_ARGS_AS_IS 1)\n    return: int\n    twice:\n        return: sys\\eval(left) + sys\\eval(left)\n\nMeter:\n    int: calls 0\n    return: int\n    next:\n        node\\calls += 1\n        return: node\\calls\n\nEvaluation:\n    return: int\n    prepared:\n        return: (Meter\\next() PreparedOps\\twice 0)\n    raw:\n        return: (Meter\\next() RawOps\\twice 0)\n",
+          "source_file": "haskell_comparision/source/lmx/H07.lm3",
+          "contract_id": "root/H07",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 354,
+            "characters_with_whitespace": 502,
+            "nonblank_lines": 22,
+            "utf8_bytes": 502,
+            "sha256": "37c80f57054abb22f7bdea1153c9b0f319d3db236466e4994df220c7a09bd225"
+          },
+          "source_sha256": "37c80f57054abb22f7bdea1153c9b0f319d3db236466e4994df220c7a09bd225",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        }
+      },
+      "lmx_comparison_variants": {
+        "procedural": "haskell_comparision/source/lmx/H07.lm3",
+        "functional": "haskell_comparision/source/lmx/H07.lm3"
+      },
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Это проверка prepared/raw ролей и повторного вычисления исходного occurrence. Замена сохраняемого узла на lambda или заранее вычисленное значение изменила бы договор, поэтому минимальная запись общая.",
+      "lmx_runtime_execution": "NOT_RUN",
+      "lmx_style_comparison": "haskell_comparision/H07_comparision.md",
+      "lmx_operation_phase": "after_root_startup",
+      "common_contract": "Два prepared-вызова дают 2 и 4 при двух вычислениях источника; два raw-вызова дают 3 и 7 при четырёх вычислениях.",
+      "foreign_source": "haskell_comparision/source/haskell/H07.hs",
+      "foreign_entry": "example",
+      "foreign_expected": [
+        [
+          2,
+          4,
+          2
+        ],
+        [
+          3,
+          7,
+          4
+        ]
+      ],
+      "foreign_listing_sha256": "6fb23930abc8194707c3c9041f4531f92fef0c27583986117289bb0a46dbc8b3",
+      "foreign_listing_metrics": {
+        "bytes_utf8": 702,
+        "characters": 702,
+        "non_whitespace_characters": 582,
+        "nonempty_lines": 16,
+        "physical_lines": 18
+      },
+      "measurement_status": "CURRENT_FULL_SOURCE",
+      "imports": [
+        "import Control.Monad (replicateM)",
+        "import Data.IORef (newIORef, modifyIORef', readIORef)"
+      ],
+      "dependencies": [
+        "base >=4.9 && <5"
+      ],
+      "custom_dependencies": [],
+      "foreign_measurement_sources": [
+        "haskell_comparision/source/haskell/H07.hs"
+      ],
+      "foreign_measurement_code": "module H07 where\n\nimport Control.Monad (replicateM)\nimport Data.IORef (newIORef, modifyIORef', readIORef)\n\nexample :: IO ((Int, Int, Int), (Int, Int, Int))\nexample = do\n  preparedCount <- newIORef 0\n  let preparedNext = modifyIORef' preparedCount (+1) >> readIORef preparedCount\n  first <- (\\value -> value + value) <$> preparedNext\n  second <- (\\value -> value + value) <$> preparedNext\n  preparedCalls <- readIORef preparedCount\n  rawCount <- newIORef 0\n  let rawNext = modifyIORef' rawCount (+1) >> readIORef rawCount\n  third <- sum <$> replicateM 2 rawNext\n  fourth <- sum <$> replicateM 2 rawNext\n  rawCalls <- readIORef rawCount\n  pure ((first, second, preparedCalls), (third, fourth, rawCalls))\n",
+      "foreign_full_metrics": {
+        "characters": 582,
+        "characters_with_whitespace": 702,
+        "nonblank_lines": 16,
+        "utf8_bytes": 702,
+        "sha256": "6fb23930abc8194707c3c9041f4531f92fef0c27583986117289bb0a46dbc8b3"
+      }
+    },
+    {
+      "id": "H08",
+      "title": "Owned formal copy versus caller place",
+      "status": "related_analogy",
+      "foreign_code": "module H08 where\n\nimport Data.IORef (IORef, newIORef, readIORef, modifyIORef')\n\nfreeStep, ownStep :: IORef Int -> IO ()\nfreeStep place = modifyIORef' place (+3)\nownStep caller = readIORef caller >>= newIORef >>= freeStep\n\nstateProbe :: (IORef Int -> IO ()) -> IO Int\nstateProbe action = do\n  caller <- newIORef 0\n  action caller\n  readIORef caller\n",
+      "source_symbols": [
+        "H08 (complete module)"
+      ],
+      "source_ranges": [],
+      "contract_notes": "freeStep содержит единственную реализацию изменения. ownStep создаёт отдельную ячейку и вызывает тот же шаг; stateProbe принимает произвольную операцию. Разница владения проверяется настоящими IORef, но передача ссылки в Haskell явная и не воспроизводит автоматическое динамическое связывание LMX.",
+      "lmx_source": "haskell_comparision/source/lmx/H08.lm3",
+      "lmx_source_sha256": "1621071225ae4b31e554d0190b5f70ab55878decc47ea9dc88043afbda551895",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN",
+      "lmx_variants": {
+        "procedural": {
+          "code": "Free:\n    step:\n        y += 3\n\nOwn:\n    int: y\n    step:\n        Free\\step()\n\nStateProbe:\n    @: action\n    return: int\n    run:\n        int: y 0\n        action()\n        return: y\n",
+          "source_file": "haskell_comparision/source/lmx/H08.lm3",
+          "contract_id": "root/H08",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 94,
+            "characters_with_whitespace": 182,
+            "nonblank_lines": 14,
+            "utf8_bytes": 182,
+            "sha256": "1621071225ae4b31e554d0190b5f70ab55878decc47ea9dc88043afbda551895"
+          },
+          "source_sha256": "1621071225ae4b31e554d0190b5f70ab55878decc47ea9dc88043afbda551895",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        },
+        "functional": {
+          "code": "Free:\n    step:\n        y += 3\n\nOwn:\n    int: y\n    step:\n        Free\\step()\n\nStateProbe:\n    @: action\n    return: int\n    run:\n        int: y 0\n        action()\n        return: y\n",
+          "source_file": "haskell_comparision/source/lmx/H08.lm3",
+          "contract_id": "root/H08",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 94,
+            "characters_with_whitespace": 182,
+            "nonblank_lines": 14,
+            "utf8_bytes": 182,
+            "sha256": "1621071225ae4b31e554d0190b5f70ab55878decc47ea9dc88043afbda551895"
+          },
+          "source_sha256": "1621071225ae4b31e554d0190b5f70ab55878decc47ea9dc88043afbda551895",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        }
+      },
+      "lmx_comparison_variants": {
+        "procedural": "haskell_comparision/source/lmx/H08.lm3",
+        "functional": "haskell_comparision/source/lmx/H08.lm3"
+      },
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Проверяемый эффект — изменение собственной ячейки формального параметра либо живого места вызывающего. Одно тело операции и runner необходимы в обоих стилях; дополнительная обвязка не меняет стиль наблюдаемой операции.",
+      "lmx_runtime_execution": "NOT_RUN",
+      "lmx_style_comparison": "haskell_comparision/H08_comparision.md",
+      "lmx_operation_phase": "after_root_startup",
+      "common_contract": "Один шаг +3; через собственную копию формального поля вызывающая ячейка остаётся 0, через общее место становится 3.",
+      "foreign_source": "haskell_comparision/source/haskell/H08.hs",
+      "foreign_entry": "stateProbe ownStep; stateProbe freeStep",
+      "foreign_expected": [
+        0,
+        3
+      ],
+      "foreign_listing_sha256": "a2bd9158799751db24beb8c2a8ea968f7ecfc74cb597c326fb8f557ab41b2e8e",
+      "foreign_listing_metrics": {
+        "bytes_utf8": 348,
+        "characters": 348,
+        "non_whitespace_characters": 285,
+        "nonempty_lines": 10,
+        "physical_lines": 13
+      },
+      "measurement_status": "CURRENT_FULL_SOURCE",
+      "imports": [
+        "import Data.IORef (IORef, newIORef, readIORef, modifyIORef')"
+      ],
+      "dependencies": [
+        "base >=4.9 && <5"
+      ],
+      "custom_dependencies": [],
+      "foreign_measurement_sources": [
+        "haskell_comparision/source/haskell/H08.hs"
+      ],
+      "foreign_measurement_code": "module H08 where\n\nimport Data.IORef (IORef, newIORef, readIORef, modifyIORef')\n\nfreeStep, ownStep :: IORef Int -> IO ()\nfreeStep place = modifyIORef' place (+3)\nownStep caller = readIORef caller >>= newIORef >>= freeStep\n\nstateProbe :: (IORef Int -> IO ()) -> IO Int\nstateProbe action = do\n  caller <- newIORef 0\n  action caller\n  readIORef caller\n",
+      "foreign_full_metrics": {
+        "characters": 285,
+        "characters_with_whitespace": 348,
+        "nonblank_lines": 10,
+        "utf8_bytes": 348,
+        "sha256": "a2bd9158799751db24beb8c2a8ea968f7ecfc74cb597c326fb8f557ab41b2e8e"
+      }
+    },
+    {
+      "id": "H09",
+      "title": "Finite iterator with a live declaration and body",
+      "status": "related_analogy",
+      "foreign_code": "module H09 where\n\nimport Control.Exception (Exception, catch, throwIO)\nimport Data.IORef (newIORef, readIORef, writeIORef, modifyIORef')\n\ndata Stop = Stop deriving Show\ninstance Exception Stop\n\niterateUntil :: IO a -> (a -> IO ()) -> IO ()\niterateUntil next body = do\n  item <- (Just <$> next) `catch` (\\Stop -> pure Nothing)\n  case item of\n    Nothing -> pure ()\n    Just value -> body value >> iterateUntil next body\n\nexample :: IO Int\nexample = do\n  position <- newIORef 0\n  total <- newIORef 0\n  let next = do\n        value <- readIORef position\n        if value >= 3 then throwIO Stop else do\n          writeIORef position (value + 1)\n          pure (value + 1)\n  iterateUntil next (\\item -> modifyIORef' total (+ (item * 2)))\n  readIORef total\n",
+      "source_symbols": [
+        "H09 (complete module)"
+      ],
+      "source_ranges": [],
+      "contract_notes": "Общий iterateUntil ловит Stop только при получении следующего элемента; Stop из тела и другие исключения проходят наружу. Объявление item и живое присоединённое тело LMX представлены callback-функцией. Счётчики находятся во внешней фикстуре, а не искусственно утяжеляют сравниваемый алгоритм. Графовый механизм declaration-as-DATA остаётся различием.",
+      "lmx_source": "haskell_comparision/source/lmx/H09.lm3",
+      "lmx_source_sha256": "29a9c1336f27efd0d80ee9a5db1f166ed9b7cee5d1d336097da056c1ec01c486",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN",
+      "observed_fixture_coverage": "complete for 12/4/3; source-count boundary is not comparable",
+      "lmx_variants": {
+        "procedural": {
+          "code": "Cycles:\n    @: iteration\n    @: body\n    iterate:\n        while: 1\n            iteration()\n            catch: Stop ()\n                break\n            body()\n\nNumbers:\n    int: position 0\n    return: int\n    next:\n        throws: Stop\n        if: node\\position >= 3\n            throw: Stop()\n        node\\position += 1\n        return: node\\position\n    demo:\n        node\\position := 0\n        int: total 0\n        Cycles\\iterate: int: item Numbers\\next()\n            item *= 2\n            total += item\n        return: total\n",
+          "source_file": "haskell_comparision/source/lmx/H09.lm3",
+          "contract_id": "root/H09",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 285,
+            "characters_with_whitespace": 527,
+            "nonblank_lines": 25,
+            "utf8_bytes": 527,
+            "sha256": "29a9c1336f27efd0d80ee9a5db1f166ed9b7cee5d1d336097da056c1ec01c486"
+          },
+          "source_sha256": "29a9c1336f27efd0d80ee9a5db1f166ed9b7cee5d1d336097da056c1ec01c486",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        },
+        "functional": {
+          "code": "Cycles:\n    @: iteration\n    @: body\n    iterate:\n        while: 1\n            iteration()\n            catch: Stop ()\n                break\n            body()\n\nNumbers:\n    int: position 0\n    return: int\n    next:\n        throws: Stop\n        if: node\\position >= 3\n            throw: Stop()\n        node\\position += 1\n        return: node\\position\n    demo:\n        node\\position := 0\n        int: total 0\n        Cycles\\iterate: int: item Numbers\\next()\n            item *= 2\n            total += item\n        return: total\n",
+          "source_file": "haskell_comparision/source/lmx/H09.lm3",
+          "contract_id": "root/H09",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 285,
+            "characters_with_whitespace": 527,
+            "nonblank_lines": 25,
+            "utf8_bytes": 527,
+            "sha256": "29a9c1336f27efd0d80ee9a5db1f166ed9b7cee5d1d336097da056c1ec01c486"
+          },
+          "source_sha256": "29a9c1336f27efd0d80ee9a5db1f166ed9b7cee5d1d336097da056c1ec01c486",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        }
+      },
+      "lmx_comparison_variants": {
+        "procedural": "haskell_comparision/source/lmx/H09.lm3",
+        "functional": "haskell_comparision/source/lmx/H09.lm3"
+      },
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Принятая декларация и тело работают в живом контексте. Stop источника поглощается, Stop тела распространяется под исходным именем. Существующий общий адаптер имеет иной failure-envelope API, поэтому корректная минимальная форма здесь общая.",
+      "lmx_runtime_execution": "NOT_RUN",
+      "lmx_style_comparison": "haskell_comparision/H09_comparision.md",
+      "lmx_operation_phase": "after_root_startup",
+      "common_contract": "Конечный источник 1,2,3, удвоение в теле, сумма 12, четыре обращения к источнику и три исполнения тела.",
+      "foreign_source": "haskell_comparision/source/haskell/H09.hs",
+      "foreign_entry": "example; validation.iteratorFixture",
+      "foreign_expected": {
+        "total": 12,
+        "next_calls": 4,
+        "body_calls": 3
+      },
+      "foreign_listing_sha256": "e62f260a4e6c59a5f68f7bcb2a06d9bf980e1f09429204a104d6f76617b89cb2",
+      "foreign_listing_metrics": {
+        "bytes_utf8": 750,
+        "characters": 750,
+        "non_whitespace_characters": 569,
+        "nonempty_lines": 22,
+        "physical_lines": 26
+      },
+      "measurement_status": "CURRENT_FULL_SOURCE",
+      "imports": [
+        "import Control.Exception (Exception, catch, throwIO)",
+        "import Data.IORef (newIORef, readIORef, writeIORef, modifyIORef')"
+      ],
+      "dependencies": [
+        "base >=4.9 && <5"
+      ],
+      "custom_dependencies": [],
+      "foreign_measurement_sources": [
+        "haskell_comparision/source/haskell/H09.hs"
+      ],
+      "foreign_measurement_code": "module H09 where\n\nimport Control.Exception (Exception, catch, throwIO)\nimport Data.IORef (newIORef, readIORef, writeIORef, modifyIORef')\n\ndata Stop = Stop deriving Show\ninstance Exception Stop\n\niterateUntil :: IO a -> (a -> IO ()) -> IO ()\niterateUntil next body = do\n  item <- (Just <$> next) `catch` (\\Stop -> pure Nothing)\n  case item of\n    Nothing -> pure ()\n    Just value -> body value >> iterateUntil next body\n\nexample :: IO Int\nexample = do\n  position <- newIORef 0\n  total <- newIORef 0\n  let next = do\n        value <- readIORef position\n        if value >= 3 then throwIO Stop else do\n          writeIORef position (value + 1)\n          pure (value + 1)\n  iterateUntil next (\\item -> modifyIORef' total (+ (item * 2)))\n  readIORef total\n",
+      "foreign_full_metrics": {
+        "characters": 569,
+        "characters_with_whitespace": 750,
+        "nonblank_lines": 22,
+        "utf8_bytes": 750,
+        "sha256": "e62f260a4e6c59a5f68f7bcb2a06d9bf980e1f09429204a104d6f76617b89cb2"
+      }
+    },
+    {
+      "id": "R01",
+      "title": "Merge an existing record and add a field",
+      "status": "related_analogy",
+      "foreign_code": "module R01 where\n\nimport qualified Data.Map.Strict as Map\n\nmodel, patch, extended :: Map.Map String Int\nmodel = Map.fromList [(\"width\",2),(\"height\",3)]\npatch = Map.fromList [(\"height\",5),(\"depth\",7)]\nextended = Map.union patch model\n\nexample :: Int\nexample = extended Map.! \"width\" * 100\n        + extended Map.! \"height\" * 10 + extended Map.! \"depth\"\n",
+      "source_symbols": [
+        "R01 (complete module)"
+      ],
+      "source_ranges": [],
+      "contract_notes": "Использован Map, а не запись с заранее объявленным depth. Map.union patch model сохраняет значение patch при совпадении ключа, добавляет новый ключ и не меняет исходные карты. Карта однородных значений не реализует типизированный исполняемый граф, DATA и parent структуры LMX; этот предел отмечен явно.",
+      "lmx_source": "haskell_comparision/source/lmx/R01.lm3",
+      "lmx_source_sha256": "7c9c547785d0630e2a6e524650ad4be5a2ab3b0bb99cdcca99f53e0dba75dd4f",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN",
+      "lmx_variants": {
+        "procedural": {
+          "code": "RecordModel:\n    int: width 2\n    int: height 3\n\nRecordPatch:\n    int: height 5\n    int: depth 7\n\nMergeProbe:\n    return: int\n    run:\n        @: result (merge(RecordModel; RecordPatch))\n        return: result\\width * 100 + result\\height * 10 + result\\depth\n",
+          "source_file": "haskell_comparision/source/lmx/procedural/R01.lm3",
+          "contract_id": "root/R01",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 184,
+            "characters_with_whitespace": 258,
+            "nonblank_lines": 11,
+            "utf8_bytes": 258,
+            "sha256": "44ab8ad94a93860b38f084465e82020ab6ee52f28d043d576acb698ea93867bc"
+          },
+          "source_sha256": "44ab8ad94a93860b38f084465e82020ab6ee52f28d043d576acb698ea93867bc",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        },
+        "functional": {
+          "code": "RecordModel:\n    int: width 2\n    int: height 3\n\nRecordPatch:\n    int: height 5\n    int: depth 7\n\nMergeProbe:\n    return: int\n    run:\n        @: result derive(RecordModel; RecordPatch)\n        return: result\\width * 100 + result\\height * 10 + result\\depth\n",
+          "source_file": "haskell_comparision/source/lmx/R01.lm3",
+          "contract_id": "root/R01",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 183,
+            "characters_with_whitespace": 257,
+            "nonblank_lines": 11,
+            "utf8_bytes": 257,
+            "sha256": "7c9c547785d0630e2a6e524650ad4be5a2ab3b0bb99cdcca99f53e0dba75dd4f"
+          },
+          "source_sha256": "7c9c547785d0630e2a6e524650ad4be5a2ab3b0bb99cdcca99f53e0dba75dd4f",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        }
+      },
+      "lmx_comparison_variants": {
+        "procedural": "haskell_comparision/source/lmx/procedural/R01.lm3",
+        "functional": "haskell_comparision/source/lmx/R01.lm3"
+      },
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "style_note": "Процедурный вариант использует прямой merge полей, функциональный — канонический derive. Оба добавляют отсутствовавшее поле depth и сохраняют исходные структуры.",
+      "lmx_runtime_execution": "NOT_RUN",
+      "lmx_style_comparison": "haskell_comparision/R01_comparision.md",
+      "lmx_operation_phase": "after_root_startup",
+      "common_contract": "Объединить width=2,height=3 с height=5,depth=7: получить 257; depth действительно отсутствует в исходной модели.",
+      "foreign_source": "haskell_comparision/source/haskell/R01.hs",
+      "foreign_entry": "example",
+      "foreign_expected": 257,
+      "foreign_listing_sha256": "0eb6653e88f16b830f9e5fd0d4c573f4e6cf3dbaaa61954e80a9efeb3e303e85",
+      "foreign_listing_metrics": {
+        "bytes_utf8": 352,
+        "characters": 352,
+        "non_whitespace_characters": 293,
+        "nonempty_lines": 9,
+        "physical_lines": 12
+      },
+      "measurement_status": "CURRENT_FULL_SOURCE",
+      "imports": [
+        "import qualified Data.Map.Strict as Map"
+      ],
+      "dependencies": [
+        "base >=4.9 && <5",
+        "containers >=0.5 && <0.9"
+      ],
+      "custom_dependencies": [],
+      "foreign_measurement_sources": [
+        "haskell_comparision/source/haskell/R01.hs"
+      ],
+      "foreign_measurement_code": "module R01 where\n\nimport qualified Data.Map.Strict as Map\n\nmodel, patch, extended :: Map.Map String Int\nmodel = Map.fromList [(\"width\",2),(\"height\",3)]\npatch = Map.fromList [(\"height\",5),(\"depth\",7)]\nextended = Map.union patch model\n\nexample :: Int\nexample = extended Map.! \"width\" * 100\n        + extended Map.! \"height\" * 10 + extended Map.! \"depth\"\n",
+      "foreign_full_metrics": {
+        "characters": 293,
+        "characters_with_whitespace": 352,
+        "nonblank_lines": 9,
+        "utf8_bytes": 352,
+        "sha256": "0eb6653e88f16b830f9e5fd0d4c573f4e6cf3dbaaa61954e80a9efeb3e303e85"
+      }
+    },
+    {
+      "id": "R02",
+      "title": "Copy a field stream into group assignment",
+      "status": "related_analogy",
+      "foreign_code": "module R02 where\n\ndata Pair = Pair { first :: Int, second :: Int }\n\nfieldStream :: Pair -> [Int]\nfieldStream pair = [first pair, second pair]\n\nexample :: Maybe Int\nexample = case fieldStream (Pair 2 7) of\n  [a,b] -> Just (a * 10 + b)\n  _ -> Nothing\n",
+      "source_symbols": [
+        "R02 (complete module)"
+      ],
+      "source_ranges": [],
+      "contract_notes": "fieldStream действительно извлекает поля, а pattern match распределяет их по двум переменным. В Haskell это специально определённое представление потока и проверка длины, не общий copy структур LMX и не группировщик Expression. Just 27 нормализуется в успешный результат 27; Nothing обозначает неподходящую длину.",
+      "lmx_source": "haskell_comparision/source/lmx/R02.lm3",
+      "lmx_source_sha256": "e2fc29d306076753d8fd7d9f777ddb59356ca0ea7ef640ab4007220e07ac0089",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN",
+      "lmx_variants": {
+        "procedural": {
+          "code": "Pair:\n    int: first 2\n    int: second 7\n\nStreamProbe:\n    return: int\n    run:\n        int: a 0\n        int: b 0\n        (a b) := copy(Pair)\n        return: a * 10 + b\n",
+          "source_file": "haskell_comparision/source/lmx/R02.lm3",
+          "contract_id": "root/R02",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 93,
+            "characters_with_whitespace": 169,
+            "nonblank_lines": 10,
+            "utf8_bytes": 169,
+            "sha256": "e2fc29d306076753d8fd7d9f777ddb59356ca0ea7ef640ab4007220e07ac0089"
+          },
+          "source_sha256": "e2fc29d306076753d8fd7d9f777ddb59356ca0ea7ef640ab4007220e07ac0089",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        },
+        "functional": {
+          "code": "Pair:\n    int: first 2\n    int: second 7\n\nStreamProbe:\n    return: int\n    run:\n        int: a 0\n        int: b 0\n        (a b) := copy(Pair)\n        return: a * 10 + b\n",
+          "source_file": "haskell_comparision/source/lmx/R02.lm3",
+          "contract_id": "root/R02",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 93,
+            "characters_with_whitespace": 169,
+            "nonblank_lines": 10,
+            "utf8_bytes": 169,
+            "sha256": "e2fc29d306076753d8fd7d9f777ddb59356ca0ea7ef640ab4007220e07ac0089"
+          },
+          "source_sha256": "e2fc29d306076753d8fd7d9f777ddb59356ca0ea7ef640ab4007220e07ac0089",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        }
+      },
+      "lmx_comparison_variants": {
+        "procedural": "haskell_comparision/source/lmx/R02.lm3",
+        "functional": "haskell_comparision/source/lmx/R02.lm3"
+      },
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Групповое присваивание принимает поток полей `copy(Pair)` напрямую; внешняя группа вокруг `copy` для этого списка мест не нужна. В обоих стилях сохранены позиционные записи a=2 и b=7, чтение всех правых значений до первой записи и результат 27. Минимальная форма общая.",
+      "lmx_runtime_execution": "NOT_RUN",
+      "lmx_style_comparison": "haskell_comparision/R02_comparision.md",
+      "lmx_operation_phase": "after_root_startup",
+      "common_contract": "Получить из двух полей Pair упорядоченный поток 2,7 и разложить его на a,b; результат 27.",
+      "foreign_source": "haskell_comparision/source/haskell/R02.hs",
+      "foreign_entry": "example",
+      "foreign_expected": {
+        "Just": 27
+      },
+      "foreign_listing_sha256": "468a55faef67ebc2a2b221cdfbb6af0a060aaf8c4c9a5c0154a526c0b3c50f04",
+      "foreign_listing_metrics": {
+        "bytes_utf8": 249,
+        "characters": 249,
+        "non_whitespace_characters": 192,
+        "nonempty_lines": 8,
+        "physical_lines": 11
+      },
+      "measurement_status": "CURRENT_FULL_SOURCE",
+      "imports": [],
+      "dependencies": [
+        "base >=4.9 && <5"
+      ],
+      "custom_dependencies": [],
+      "foreign_measurement_sources": [
+        "haskell_comparision/source/haskell/R02.hs"
+      ],
+      "foreign_measurement_code": "module R02 where\n\ndata Pair = Pair { first :: Int, second :: Int }\n\nfieldStream :: Pair -> [Int]\nfieldStream pair = [first pair, second pair]\n\nexample :: Maybe Int\nexample = case fieldStream (Pair 2 7) of\n  [a,b] -> Just (a * 10 + b)\n  _ -> Nothing\n",
+      "foreign_full_metrics": {
+        "characters": 192,
+        "characters_with_whitespace": 249,
+        "nonblank_lines": 8,
+        "utf8_bytes": 249,
+        "sha256": "468a55faef67ebc2a2b221cdfbb6af0a060aaf8c4c9a5c0154a526c0b3c50f04"
+      }
+    },
+    {
+      "id": "R03",
+      "title": "Imported parent identity versus copied parent identity",
+      "status": "related_analogy",
+      "foreign_code": "module R03 where\n\nimport Data.IORef (IORef, newIORef, readIORef, writeIORef)\n\ndata Provider = Provider { owner :: IORef Int, readValue :: IO Int }\n\nmakeProvider :: Int -> IO Provider\nmakeProvider value = do\n  cell <- newIORef value\n  pure (Provider cell (readIORef cell))\n\ncopyProvider :: Provider -> IO Provider\ncopyProvider provider = readValue provider >>= makeProvider\n\nexample :: IO (Int, Int, Int)\nexample = do\n  provider <- makeProvider 7\n  let imported = readValue provider\n  original <- imported\n  copied <- copyProvider provider\n  writeIORef (owner copied) 12\n  result <- readValue copied\n  originalAfter <- readValue provider\n  pure (original * 100 + result, originalAfter, result)\n",
+      "source_symbols": [
+        "R03 (complete module)"
+      ],
+      "source_ranges": [],
+      "contract_notes": "Provider хранит реальную ячейку владельца и closure для чтения. Импорт моделируется сохранением этого closure, copyProvider создаёт новую ячейку и новый closure; исходная ячейка остаётся 7. Это явно написанная модель owner/copy, а не реализация общего import, parent или группирующего контейнера LMX.",
+      "lmx_source": "haskell_comparision/source/lmx/R03.lm3",
+      "lmx_source_sha256": "8a0f6994503baba726d5244625f31cfd5edc48111741b22d6af0ba37aa2d99fa",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN",
+      "lmx_variants": {
+        "procedural": {
+          "code": "Provider:\n    int: value 7\n    return: int\n    read:\n        return: value\n\nImportProbe:\n    return: int\n    run:\n        import: Provider\n        int: value 99\n        int: original read()\n        @: copied (copy(Provider))\n        @: copiedOwner parent(copied\\read)\n        copiedOwner\\value := 12\n        return: original * 100 + copied\\read()\n",
+          "source_file": "haskell_comparision/source/lmx/R03.lm3",
+          "contract_id": "root/R03",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 226,
+            "characters_with_whitespace": 347,
+            "nonblank_lines": 15,
+            "utf8_bytes": 347,
+            "sha256": "8a0f6994503baba726d5244625f31cfd5edc48111741b22d6af0ba37aa2d99fa"
+          },
+          "source_sha256": "8a0f6994503baba726d5244625f31cfd5edc48111741b22d6af0ba37aa2d99fa",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        },
+        "functional": {
+          "code": "Provider:\n    int: value 7\n    return: int\n    read:\n        return: value\n\nImportProbe:\n    return: int\n    run:\n        import: Provider\n        int: value 99\n        int: original read()\n        @: copied (copy(Provider))\n        @: copiedOwner parent(copied\\read)\n        copiedOwner\\value := 12\n        return: original * 100 + copied\\read()\n",
+          "source_file": "haskell_comparision/source/lmx/R03.lm3",
+          "contract_id": "root/R03",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 226,
+            "characters_with_whitespace": 347,
+            "nonblank_lines": 15,
+            "utf8_bytes": 347,
+            "sha256": "8a0f6994503baba726d5244625f31cfd5edc48111741b22d6af0ba37aa2d99fa"
+          },
+          "source_sha256": "8a0f6994503baba726d5244625f31cfd5edc48111741b22d6af0ba37aa2d99fa",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        }
+      },
+      "lmx_comparison_variants": {
+        "procedural": "haskell_comparision/source/lmx/R03.lm3",
+        "functional": "haskell_comparision/source/lmx/R03.lm3"
+      },
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Обязательны import исходного владельца, copy графа и запись в владельца копии. Эти наблюдаемые операции одинаковы; искусственная функциональная обвязка не вводится.",
+      "lmx_runtime_execution": "NOT_RUN",
+      "lmx_style_comparison": "haskell_comparision/R03_comparision.md",
+      "lmx_operation_phase": "after_root_startup",
+      "common_contract": "Импортированный read сохраняет владельца со значением 7; копия получает собственного владельца, запись в него даёт 12, результат 712.",
+      "foreign_source": "haskell_comparision/source/haskell/R03.hs",
+      "foreign_entry": "example",
+      "foreign_expected": [
+        712,
+        7,
+        12
+      ],
+      "foreign_listing_sha256": "0454c46c2fb6a3586b90f3650aa9a600825d81ef35cbf6a048749f29a82f38f7",
+      "foreign_listing_metrics": {
+        "bytes_utf8": 693,
+        "characters": 693,
+        "non_whitespace_characters": 568,
+        "nonempty_lines": 19,
+        "physical_lines": 24
+      },
+      "measurement_status": "CURRENT_FULL_SOURCE",
+      "imports": [
+        "import Data.IORef (IORef, newIORef, readIORef, writeIORef)"
+      ],
+      "dependencies": [
+        "base >=4.9 && <5"
+      ],
+      "custom_dependencies": [],
+      "foreign_measurement_sources": [
+        "haskell_comparision/source/haskell/R03.hs"
+      ],
+      "foreign_measurement_code": "module R03 where\n\nimport Data.IORef (IORef, newIORef, readIORef, writeIORef)\n\ndata Provider = Provider { owner :: IORef Int, readValue :: IO Int }\n\nmakeProvider :: Int -> IO Provider\nmakeProvider value = do\n  cell <- newIORef value\n  pure (Provider cell (readIORef cell))\n\ncopyProvider :: Provider -> IO Provider\ncopyProvider provider = readValue provider >>= makeProvider\n\nexample :: IO (Int, Int, Int)\nexample = do\n  provider <- makeProvider 7\n  let imported = readValue provider\n  original <- imported\n  copied <- copyProvider provider\n  writeIORef (owner copied) 12\n  result <- readValue copied\n  originalAfter <- readValue provider\n  pure (original * 100 + result, originalAfter, result)\n",
+      "foreign_full_metrics": {
+        "characters": 568,
+        "characters_with_whitespace": 693,
+        "nonblank_lines": 19,
+        "utf8_bytes": 693,
+        "sha256": "0454c46c2fb6a3586b90f3650aa9a600825d81ef35cbf6a048749f29a82f38f7"
+      }
+    },
+    {
+      "id": "R04",
+      "title": "Computed initializer, local write and repeated activation",
+      "status": "related_analogy",
+      "foreign_code": "module R04 where\n\nimport Data.IORef (newIORef, readIORef, writeIORef, modifyIORef')\n\nchangeLocal :: IO Int -> IO Int\nchangeLocal initializer = do\n  local <- initializer >>= newIORef\n  seen <- readIORef local\n  writeIORef local 99\n  pure seen\n\nexample :: IO ((Int, Int), (Int, Int))\nexample = do\n  calls <- newIORef 0\n  let next = modifyIORef' calls (+1) >> ((40+) <$> readIORef calls)\n  first <- changeLocal next\n  second <- changeLocal next\n  twice <- readIORef calls\n  writeIORef calls 0\n  i <- next >>= newIORef\n  modifyIORef' i (+3)\n  explicit <- readIORef i\n  once <- readIORef calls\n  pure ((first * 100 + second, twice), (explicit, once))\n",
+      "source_symbols": [
+        "R04 (complete module)"
+      ],
+      "source_ranges": [],
+      "contract_notes": "initializer здесь настоящий IO action; каждая активация вызывает его заново и меняет только отдельный local IORef. Счётчик источника общий. Haskell-модель не хранит само вычисляемое объявление в исходном графе программы, поэтому сравнение остаётся семантической аналогией.",
+      "lmx_source": "haskell_comparision/source/lmx/R04.lm3",
+      "lmx_source_sha256": "5f9c0d63ff8e857abe5103b9e1b2f2ff573413b21746d50b6ced2f8b40b7bbed",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN",
+      "lmx_variants": {
+        "procedural": {
+          "code": "ReadSource:\n    int: calls 0\n    return: int\n    next:\n        node\\calls += 1\n        return: 40 + node\\calls\n\nComputedInput:\n    int: value ReadSource\\next()\n    return: int\n    changeLocal:\n        int: seen value\n        value := 99\n        return: seen\n\nLocalProbe:\n    return: int\n    run:\n        ReadSource\\calls := 0\n        int: first ComputedInput\\changeLocal()\n        int: second ComputedInput\\changeLocal()\n        return: first * 100 + second\n    explicitInitialization:\n        ReadSource\\calls := 0\n        int: i\n        i := ReadSource\\next()\n        i += 3\n        return: i\n",
+          "source_file": "haskell_comparision/source/lmx/R04.lm3",
+          "contract_id": "root/R04",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 383,
+            "characters_with_whitespace": 595,
+            "nonblank_lines": 26,
+            "utf8_bytes": 595,
+            "sha256": "5f9c0d63ff8e857abe5103b9e1b2f2ff573413b21746d50b6ced2f8b40b7bbed"
+          },
+          "source_sha256": "5f9c0d63ff8e857abe5103b9e1b2f2ff573413b21746d50b6ced2f8b40b7bbed",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        },
+        "functional": {
+          "code": "ReadSource:\n    int: calls 0\n    return: int\n    next:\n        node\\calls += 1\n        return: 40 + node\\calls\n\nComputedInput:\n    int: value ReadSource\\next()\n    return: int\n    changeLocal:\n        int: seen value\n        value := 99\n        return: seen\n\nLocalProbe:\n    return: int\n    run:\n        ReadSource\\calls := 0\n        int: first ComputedInput\\changeLocal()\n        int: second ComputedInput\\changeLocal()\n        return: first * 100 + second\n    explicitInitialization:\n        ReadSource\\calls := 0\n        int: i\n        i := ReadSource\\next()\n        i += 3\n        return: i\n",
+          "source_file": "haskell_comparision/source/lmx/R04.lm3",
+          "contract_id": "root/R04",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 383,
+            "characters_with_whitespace": 595,
+            "nonblank_lines": 26,
+            "utf8_bytes": 595,
+            "sha256": "5f9c0d63ff8e857abe5103b9e1b2f2ff573413b21746d50b6ced2f8b40b7bbed"
+          },
+          "source_sha256": "5f9c0d63ff8e857abe5103b9e1b2f2ff573413b21746d50b6ced2f8b40b7bbed",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        }
+      },
+      "lmx_comparison_variants": {
+        "procedural": "haskell_comparision/source/lmx/R04.lm3",
+        "functional": "haskell_comparision/source/lmx/R04.lm3"
+      },
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Инициализатор с побочным эффектом и различие локальной/графовой записи являются предметом проверки. Их порядок, число вызовов и два отдельных entry сохраняются одинаково.",
+      "lmx_runtime_execution": "NOT_RUN",
+      "lmx_style_comparison": "haskell_comparision/R04_comparision.md",
+      "lmx_operation_phase": "after_root_startup",
+      "common_contract": "Повторные активации вычисляемого initializer дают 41 и 42, несмотря на локальную запись 99: 4142 и два вызова. Отдельная явная инициализация даёт 44 и один вызов.",
+      "foreign_source": "haskell_comparision/source/haskell/R04.hs",
+      "foreign_entry": "example",
+      "foreign_expected": [
+        [
+          4142,
+          2
+        ],
+        [
+          44,
+          1
+        ]
+      ],
+      "foreign_listing_sha256": "e9365cdb28f2ba715f2131eb6f26b59d05c6173d3da0179689fcf924f0cd5f28",
+      "foreign_listing_metrics": {
+        "bytes_utf8": 646,
+        "characters": 646,
+        "non_whitespace_characters": 514,
+        "nonempty_lines": 21,
+        "physical_lines": 24
+      },
+      "measurement_status": "CURRENT_FULL_SOURCE",
+      "imports": [
+        "import Data.IORef (newIORef, readIORef, writeIORef, modifyIORef')"
+      ],
+      "dependencies": [
+        "base >=4.9 && <5"
+      ],
+      "custom_dependencies": [],
+      "foreign_measurement_sources": [
+        "haskell_comparision/source/haskell/R04.hs"
+      ],
+      "foreign_measurement_code": "module R04 where\n\nimport Data.IORef (newIORef, readIORef, writeIORef, modifyIORef')\n\nchangeLocal :: IO Int -> IO Int\nchangeLocal initializer = do\n  local <- initializer >>= newIORef\n  seen <- readIORef local\n  writeIORef local 99\n  pure seen\n\nexample :: IO ((Int, Int), (Int, Int))\nexample = do\n  calls <- newIORef 0\n  let next = modifyIORef' calls (+1) >> ((40+) <$> readIORef calls)\n  first <- changeLocal next\n  second <- changeLocal next\n  twice <- readIORef calls\n  writeIORef calls 0\n  i <- next >>= newIORef\n  modifyIORef' i (+3)\n  explicit <- readIORef i\n  once <- readIORef calls\n  pure ((first * 100 + second, twice), (explicit, once))\n",
+      "foreign_full_metrics": {
+        "characters": 514,
+        "characters_with_whitespace": 646,
+        "nonblank_lines": 21,
+        "utf8_bytes": 646,
+        "sha256": "e9365cdb28f2ba715f2131eb6f26b59d05c6173d3da0179689fcf924f0cd5f28"
+      }
+    },
+    {
+      "id": "R06a",
+      "title": "Graph copy preserving shared targets",
+      "status": "related_analogy",
+      "foreign_code": "module R06a where\n\nimport Data.IORef (newIORef, readIORef, modifyIORef')\nimport GraphCopy (Node(..), copyGraph)\n\nexample :: IO (Int, Bool, Bool)\nexample = do\n  shared <- newIORef (Node 7 [])\n  pair <- newIORef (Node 0 [shared,shared])\n  copied <- copyGraph pair\n  Node _ [left,right] <- readIORef copied\n  modifyIORef' left (\\(Node _ links) -> Node 21 links)\n  Node rightValue _ <- readIORef right\n  Node originalValue _ <- readIORef shared\n  pure (rightValue * 100 + originalValue, left == right, left /= shared)\n",
+      "source_symbols": [
+        "R06a (complete module)"
+      ],
+      "source_ranges": [],
+      "contract_notes": "Используется общий алгоритм GraphCopy с таблицей посещённых IORef, а не заранее изготовленная правильная пара. Фикстура проверяет равенство copied left/right и отличие от оригинала. Модель копирует узлы и рёбра явно заданного графа; правила DATA, parent и исполняемых узлов LMX в неё не включены.",
+      "lmx_source": "haskell_comparision/source/lmx/R06a.lm3",
+      "lmx_source_sha256": "89651e6ebb49598ba2835aa155dc1ada59ad18b3bfea79ad3f47d844e66f2ecf",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN",
+      "lmx_variants": {
+        "procedural": {
+          "code": "SharedValue:\n    int: value 7\n\nSharedPair:\n    @: left SharedValue\n    @: right SharedValue\n\nSharingProbe:\n    return: int\n    run:\n        @: copied (copy(SharedPair))\n        copied\\left\\value := 21\n        return: copied\\right\\value * 100 + SharedValue\\value\n",
+          "source_file": "haskell_comparision/source/lmx/R06a.lm3",
+          "contract_id": "root/R06a",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 189,
+            "characters_with_whitespace": 262,
+            "nonblank_lines": 11,
+            "utf8_bytes": 262,
+            "sha256": "89651e6ebb49598ba2835aa155dc1ada59ad18b3bfea79ad3f47d844e66f2ecf"
+          },
+          "source_sha256": "89651e6ebb49598ba2835aa155dc1ada59ad18b3bfea79ad3f47d844e66f2ecf",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        },
+        "functional": {
+          "code": "SharedValue:\n    int: value 7\n\nSharedPair:\n    @: left SharedValue\n    @: right SharedValue\n\nSharingProbe:\n    return: int\n    run:\n        @: copied (copy(SharedPair))\n        copied\\left\\value := 21\n        return: copied\\right\\value * 100 + SharedValue\\value\n",
+          "source_file": "haskell_comparision/source/lmx/R06a.lm3",
+          "contract_id": "root/R06a",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 189,
+            "characters_with_whitespace": 262,
+            "nonblank_lines": 11,
+            "utf8_bytes": 262,
+            "sha256": "89651e6ebb49598ba2835aa155dc1ada59ad18b3bfea79ad3f47d844e66f2ecf"
+          },
+          "source_sha256": "89651e6ebb49598ba2835aa155dc1ada59ad18b3bfea79ad3f47d844e66f2ecf",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        }
+      },
+      "lmx_comparison_variants": {
+        "procedural": "haskell_comparision/source/lmx/R06a.lm3",
+        "functional": "haskell_comparision/source/lmx/R06a.lm3"
+      },
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Оба стиля должны выполнить настоящий graph copy и проверить сохранённую общую цель после записи. Числовая имитация или сборка новой записи не эквивалентна этому договору.",
+      "lmx_runtime_execution": "NOT_RUN",
+      "lmx_style_comparison": "haskell_comparision/R06a_comparision.md",
+      "lmx_operation_phase": "after_root_startup",
+      "common_contract": "При копировании два ребра на общий узел должны остаться двумя ребрами на один новый узел. Изменение копии на 21 видно через второе ребро; оригинал остаётся 7: 2107.",
+      "foreign_source": "haskell_comparision/source/haskell/R06a.hs",
+      "foreign_entry": "example",
+      "foreign_expected": [
+        2107,
+        true,
+        true
+      ],
+      "foreign_listing_sha256": "a6b6c6a9c24f64156b4e46f188aa6490fe1c72e8c18da55fe081503663524414",
+      "foreign_listing_metrics": {
+        "bytes_utf8": 514,
+        "characters": 514,
+        "non_whitespace_characters": 420,
+        "nonempty_lines": 13,
+        "physical_lines": 15
+      },
+      "measurement_status": "CURRENT_FULL_SOURCE",
+      "imports": [
+        "import Data.IORef (newIORef, readIORef, modifyIORef')",
+        "import GraphCopy (Node(..), copyGraph)"
+      ],
+      "dependencies": [
+        "base >=4.9 && <5"
+      ],
+      "custom_dependencies": [
+        "haskell_comparision/source/haskell/GraphCopy.hs"
+      ],
+      "foreign_measurement_sources": [
+        "haskell_comparision/source/haskell/R06a.hs",
+        "haskell_comparision/source/haskell/GraphCopy.hs"
+      ],
+      "foreign_measurement_code": "module R06a where\n\nimport Data.IORef (newIORef, readIORef, modifyIORef')\nimport GraphCopy (Node(..), copyGraph)\n\nexample :: IO (Int, Bool, Bool)\nexample = do\n  shared <- newIORef (Node 7 [])\n  pair <- newIORef (Node 0 [shared,shared])\n  copied <- copyGraph pair\n  Node _ [left,right] <- readIORef copied\n  modifyIORef' left (\\(Node _ links) -> Node 21 links)\n  Node rightValue _ <- readIORef right\n  Node originalValue _ <- readIORef shared\n  pure (rightValue * 100 + originalValue, left == right, left /= shared)\n\nmodule GraphCopy (Node(..), copyGraph) where\n\nimport Data.IORef (IORef, newIORef, readIORef, writeIORef, modifyIORef')\n\ndata Node a = Node a [IORef (Node a)]\n\ncopyGraph :: IORef (Node a) -> IO (IORef (Node a))\ncopyGraph root = do\n  memo <- newIORef []\n  let visit source = do\n        seen <- readIORef memo\n        case lookup source seen of\n          Just target -> pure target\n          Nothing -> do\n            Node value children <- readIORef source\n            target <- newIORef (Node value [])\n            modifyIORef' memo ((source,target):)\n            copiedChildren <- mapM visit children\n            writeIORef target (Node value copiedChildren)\n            pure target\n  visit root\n",
+      "foreign_full_metrics": {
+        "characters": 909,
+        "characters_with_whitespace": 1211,
+        "nonblank_lines": 31,
+        "utf8_bytes": 1211,
+        "sha256": "d9d88f5bf4b0249fce0c44b58a45a512d9804298f5098cf20d9a5aaacbbb8d70"
+      }
+    },
+    {
+      "id": "R06b",
+      "title": "Graph copy preserving a cycle",
+      "status": "related_analogy",
+      "foreign_code": "module R06b where\n\nimport Data.IORef (newIORef, readIORef, writeIORef, modifyIORef')\nimport GraphCopy (Node(..), copyGraph)\n\nexample :: IO (Int, Bool, Bool, Int)\nexample = do\n  ring <- newIORef (Node 3 [])\n  writeIORef ring (Node 3 [ring])\n  copied <- copyGraph ring\n  Node snapshotValue [self] <- readIORef copied\n  modifyIORef' self (\\(Node _ links) -> Node 8 links)\n  Node value _ <- readIORef copied\n  Node original _ <- readIORef ring\n  pure (value * 10 + original, self == copied, copied /= ring, snapshotValue)\n",
+      "source_symbols": [
+        "R06b (complete module)"
+      ],
+      "source_ranges": [],
+      "contract_notes": "Тот же GraphCopy заносит новый узел в memo до обхода его рёбер, поэтому цикл завершается и сохраняется. Проверяются self==copy, copy/=original и прежнее значение отдельного снимка 3. Снимок не объявляется реализацией LMX-группирующей структуры с собственными ячейками; этот графовый аспект остаётся за пределом модели.",
+      "lmx_source": "haskell_comparision/source/lmx/R06b.lm3",
+      "lmx_source_sha256": "6fe929ca2086d62a65e57972c0dba8fc385d696cd2b965049ceb5c56d86fc2a4",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN",
+      "lmx_variants": {
+        "procedural": {
+          "code": "Ring:\n    int: value 3\n    @: self\n\nCycleProbe:\n    return: int\n    run:\n        Ring\\self := Ring\n        @: copied (copy(Ring))\n        copied\\self\\value := 8\n        return: copied\\self\\value * 10 + Ring\\value\n",
+          "source_file": "haskell_comparision/source/lmx/R06b.lm3",
+          "contract_id": "root/R06b",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 139,
+            "characters_with_whitespace": 213,
+            "nonblank_lines": 10,
+            "utf8_bytes": 213,
+            "sha256": "6fe929ca2086d62a65e57972c0dba8fc385d696cd2b965049ceb5c56d86fc2a4"
+          },
+          "source_sha256": "6fe929ca2086d62a65e57972c0dba8fc385d696cd2b965049ceb5c56d86fc2a4",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        },
+        "functional": {
+          "code": "Ring:\n    int: value 3\n    @: self\n\nCycleProbe:\n    return: int\n    run:\n        Ring\\self := Ring\n        @: copied (copy(Ring))\n        copied\\self\\value := 8\n        return: copied\\self\\value * 10 + Ring\\value\n",
+          "source_file": "haskell_comparision/source/lmx/R06b.lm3",
+          "contract_id": "root/R06b",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 139,
+            "characters_with_whitespace": 213,
+            "nonblank_lines": 10,
+            "utf8_bytes": 213,
+            "sha256": "6fe929ca2086d62a65e57972c0dba8fc385d696cd2b965049ceb5c56d86fc2a4"
+          },
+          "source_sha256": "6fe929ca2086d62a65e57972c0dba8fc385d696cd2b965049ceb5c56d86fc2a4",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        }
+      },
+      "lmx_comparison_variants": {
+        "procedural": "haskell_comparision/source/lmx/R06b.lm3",
+        "functional": "haskell_comparision/source/lmx/R06b.lm3"
+      },
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Оба стиля обязаны сохранить и проверить цикл графа. copy, запись через self и чтение исходника — минимальные необходимые операции.",
+      "lmx_runtime_execution": "NOT_RUN",
+      "lmx_style_comparison": "haskell_comparision/R06b_comparision.md",
+      "lmx_operation_phase": "after_root_startup",
+      "common_contract": "Копия self-cycle должна замыкаться на себя, а не на исходный Ring. После записи 8 исходный Ring остаётся 3: 83.",
+      "foreign_source": "haskell_comparision/source/haskell/R06b.hs",
+      "foreign_entry": "example",
+      "foreign_expected": [
+        83,
+        true,
+        true,
+        3
+      ],
+      "foreign_listing_sha256": "b5b190261d619b62370fbb531126cfe9f4b0a9cd17fde517aa07122bf94c0d65",
+      "foreign_listing_metrics": {
+        "bytes_utf8": 518,
+        "characters": 518,
+        "non_whitespace_characters": 422,
+        "nonempty_lines": 13,
+        "physical_lines": 15
+      },
+      "measurement_status": "CURRENT_FULL_SOURCE",
+      "imports": [
+        "import Data.IORef (newIORef, readIORef, writeIORef, modifyIORef')",
+        "import GraphCopy (Node(..), copyGraph)"
+      ],
+      "dependencies": [
+        "base >=4.9 && <5"
+      ],
+      "custom_dependencies": [
+        "haskell_comparision/source/haskell/GraphCopy.hs"
+      ],
+      "foreign_measurement_sources": [
+        "haskell_comparision/source/haskell/R06b.hs",
+        "haskell_comparision/source/haskell/GraphCopy.hs"
+      ],
+      "foreign_measurement_code": "module R06b where\n\nimport Data.IORef (newIORef, readIORef, writeIORef, modifyIORef')\nimport GraphCopy (Node(..), copyGraph)\n\nexample :: IO (Int, Bool, Bool, Int)\nexample = do\n  ring <- newIORef (Node 3 [])\n  writeIORef ring (Node 3 [ring])\n  copied <- copyGraph ring\n  Node snapshotValue [self] <- readIORef copied\n  modifyIORef' self (\\(Node _ links) -> Node 8 links)\n  Node value _ <- readIORef copied\n  Node original _ <- readIORef ring\n  pure (value * 10 + original, self == copied, copied /= ring, snapshotValue)\n\nmodule GraphCopy (Node(..), copyGraph) where\n\nimport Data.IORef (IORef, newIORef, readIORef, writeIORef, modifyIORef')\n\ndata Node a = Node a [IORef (Node a)]\n\ncopyGraph :: IORef (Node a) -> IO (IORef (Node a))\ncopyGraph root = do\n  memo <- newIORef []\n  let visit source = do\n        seen <- readIORef memo\n        case lookup source seen of\n          Just target -> pure target\n          Nothing -> do\n            Node value children <- readIORef source\n            target <- newIORef (Node value [])\n            modifyIORef' memo ((source,target):)\n            copiedChildren <- mapM visit children\n            writeIORef target (Node value copiedChildren)\n            pure target\n  visit root\n",
+      "foreign_full_metrics": {
+        "characters": 911,
+        "characters_with_whitespace": 1215,
+        "nonblank_lines": 31,
+        "utf8_bytes": 1215,
+        "sha256": "ceba4a607075b2cdfbbf5183620e5bc374e641f43c096993c375547a52e69935"
+      }
+    },
+    {
+      "id": "R07",
+      "title": "User operand and preserved computation",
+      "status": "related_analogy",
+      "foreign_code": "module R07 where\n\ndata Expr = Number Int | Variable | Add Expr Expr\n\neval :: Int -> Expr -> Int\neval _ (Number n) = n\neval x Variable = x\neval x (Add a b) = eval x a + eval x b\n\ntree :: Expr\ntree = Add (Add Variable (Number 3)) Variable\n\nexample :: Int\nexample = eval 2 tree + eval 5 tree\n",
+      "source_symbols": [
+        "R07 (complete module)"
+      ],
+      "source_ranges": [],
+      "contract_notes": "Haskell строит один явный AST и исполняет его общим eval с разными значениями переменной. Это не пользовательский операнд, встроенный в обычный парсер Haskell, и не гомоиконный граф LMX. Арифметика и повторное использование формы воспроизводятся, синтаксическая инфраструктура различается.",
+      "lmx_source": "haskell_comparision/source/lmx/R07.lm3",
+      "lmx_source_sha256": "c217ade3cd30247ba7e03c5435d98caf05aa146218c86715089ebd074506f9cb",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN",
+      "lmx_variants": {
+        "procedural": {
+          "code": "Operands:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: int\n    add:\n        return: \\left + \\right[0]\n    Example:\n        int: n\n        return: int\n        calculate:\n            return: (n add 3) add n\n        demo:\n            return: calculate(2) + calculate(5)\n",
+          "source_file": "haskell_comparision/source/lmx/R07.lm3",
+          "contract_id": "root/R07",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 159,
+            "characters_with_whitespace": 266,
+            "nonblank_lines": 12,
+            "utf8_bytes": 266,
+            "sha256": "c217ade3cd30247ba7e03c5435d98caf05aa146218c86715089ebd074506f9cb"
+          },
+          "source_sha256": "c217ade3cd30247ba7e03c5435d98caf05aa146218c86715089ebd074506f9cb",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        },
+        "functional": {
+          "code": "Operands:\n    copy: sys\\OPERANDS_TEMPLATE\n    return: int\n    add:\n        return: \\left + \\right[0]\n    Example:\n        int: n\n        return: int\n        calculate:\n            return: (n add 3) add n\n        demo:\n            return: calculate(2) + calculate(5)\n",
+          "source_file": "haskell_comparision/source/lmx/R07.lm3",
+          "contract_id": "root/R07",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 159,
+            "characters_with_whitespace": 266,
+            "nonblank_lines": 12,
+            "utf8_bytes": 266,
+            "sha256": "c217ade3cd30247ba7e03c5435d98caf05aa146218c86715089ebd074506f9cb"
+          },
+          "source_sha256": "c217ade3cd30247ba7e03c5435d98caf05aa146218c86715089ebd074506f9cb",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        }
+      },
+      "lmx_comparison_variants": {
+        "procedural": "haskell_comparision/source/lmx/R07.lm3",
+        "functional": "haskell_comparision/source/lmx/R07.lm3"
+      },
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Это упражнение самого пользовательского операнда в обычном Expression, а не только вычисления числа20. Общий шаблон и форма вызова обязательны в обоих стилях.",
+      "lmx_runtime_execution": "NOT_RUN",
+      "lmx_style_comparison": "haskell_comparision/R07_comparision.md",
+      "lmx_operation_phase": "after_root_startup",
+      "common_contract": "Одна сохранённая вычислительная форма (n+3)+n выполняется для 2 и 5; сумма 20.",
+      "foreign_source": "haskell_comparision/source/haskell/R07.hs",
+      "foreign_entry": "example",
+      "foreign_expected": 20,
+      "foreign_listing_sha256": "da9a60bce4f372b7d11b316f3d51c497f89aa7f572c4421f43ba61c435db319d",
+      "foreign_listing_metrics": {
+        "bytes_utf8": 289,
+        "characters": 289,
+        "non_whitespace_characters": 217,
+        "nonempty_lines": 10,
+        "physical_lines": 14
+      },
+      "measurement_status": "CURRENT_FULL_SOURCE",
+      "imports": [],
+      "dependencies": [
+        "base >=4.9 && <5"
+      ],
+      "custom_dependencies": [],
+      "foreign_measurement_sources": [
+        "haskell_comparision/source/haskell/R07.hs"
+      ],
+      "foreign_measurement_code": "module R07 where\n\ndata Expr = Number Int | Variable | Add Expr Expr\n\neval :: Int -> Expr -> Int\neval _ (Number n) = n\neval x Variable = x\neval x (Add a b) = eval x a + eval x b\n\ntree :: Expr\ntree = Add (Add Variable (Number 3)) Variable\n\nexample :: Int\nexample = eval 2 tree + eval 5 tree\n",
+      "foreign_full_metrics": {
+        "characters": 217,
+        "characters_with_whitespace": 289,
+        "nonblank_lines": 10,
+        "utf8_bytes": 289,
+        "sha256": "da9a60bce4f372b7d11b316f3d51c497f89aa7f572c4421f43ba61c435db319d"
+      }
+    },
+    {
+      "id": "R09",
+      "title": "Uninitialized payload and local versus graph write",
+      "status": "related_analogy",
+      "foreign_code": "module R09 where\n\nimport Data.IORef (IORef, newIORef, readIORef, writeIORef)\n\ndata Payload a = Uninitialized | Ready a deriving (Eq, Show)\n\nlocalWrite, graphWrite :: IORef (Payload Int) -> IO Int\nlocalWrite source = do\n  local <- readIORef source >>= newIORef\n  writeIORef local (Ready 5)\n  Ready value <- readIORef local\n  pure value\ngraphWrite source = do\n  writeIORef source (Ready 5)\n  Ready value <- readIORef source\n  pure value\n\nreadyNumber :: Payload Int\nreadyNumber = Ready 0\n\nreadyReference :: Payload (Maybe Int)\nreadyReference = Ready Nothing\n",
+      "source_symbols": [
+        "R09 (complete module)"
+      ],
+      "source_ranges": [],
+      "contract_notes": "Payload моделирует тег состояния: Uninitialized отличается от Ready 0 и Ready Nothing. Копия IORef используется для локальной записи, исходный IORef — для graphWrite. Конструктор Uninitialized не означает физический нулевой payload LMX; ни размер памяти, ни адресная идентичность представлены этим сравнением не полностью.",
+      "lmx_source": "haskell_comparision/source/lmx/R09.lm3",
+      "lmx_source_sha256": "97e5e04d20f6d69074278ad57cb6f2a022825ff3fd553a211b22c7b671d70c73",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN",
+      "lmx_variants": {
+        "procedural": {
+          "code": "UninitializedGraph:\n    int: number\n    @: reference\n    return: int\n    localWrite:\n        number := 5\n        return: number\n    graphWrite:\n        UninitializedGraph\\number := 5\n        return: UninitializedGraph\\number\n\nReadyValues:\n    int: number 0\n    @: reference 0\n",
+          "source_file": "haskell_comparision/source/lmx/R09.lm3",
+          "contract_id": "root/R09",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 189,
+            "characters_with_whitespace": 276,
+            "nonblank_lines": 13,
+            "utf8_bytes": 276,
+            "sha256": "97e5e04d20f6d69074278ad57cb6f2a022825ff3fd553a211b22c7b671d70c73"
+          },
+          "source_sha256": "97e5e04d20f6d69074278ad57cb6f2a022825ff3fd553a211b22c7b671d70c73",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        },
+        "functional": {
+          "code": "UninitializedGraph:\n    int: number\n    @: reference\n    return: int\n    localWrite:\n        number := 5\n        return: number\n    graphWrite:\n        UninitializedGraph\\number := 5\n        return: UninitializedGraph\\number\n\nReadyValues:\n    int: number 0\n    @: reference 0\n",
+          "source_file": "haskell_comparision/source/lmx/R09.lm3",
+          "contract_id": "root/R09",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 189,
+            "characters_with_whitespace": 276,
+            "nonblank_lines": 13,
+            "utf8_bytes": 276,
+            "sha256": "97e5e04d20f6d69074278ad57cb6f2a022825ff3fd553a211b22c7b671d70c73"
+          },
+          "source_sha256": "97e5e04d20f6d69074278ad57cb6f2a022825ff3fd553a211b22c7b671d70c73",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        }
+      },
+      "lmx_comparison_variants": {
+        "procedural": "haskell_comparision/source/lmx/R09.lm3",
+        "functional": "haskell_comparision/source/lmx/R09.lm3"
+      },
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Неинициализированные поля и отдельные пути локальной/графовой записи нельзя заменить значениями-константами. Минимальная форма одинакова.",
+      "lmx_runtime_execution": "NOT_RUN",
+      "lmx_style_comparison": "haskell_comparision/R09_comparision.md",
+      "lmx_operation_phase": "after_root_startup",
+      "common_contract": "Различить отсутствие инициализации и готовый ноль; локальная запись даёт 5 без изменения источника, графовая запись заменяет исходное состояние на Ready 5.",
+      "foreign_source": "haskell_comparision/source/haskell/R09.hs",
+      "foreign_entry": "localWrite; graphWrite",
+      "foreign_expected": {
+        "local": 5,
+        "source_after_local": "Uninitialized",
+        "graph": 5,
+        "source_after_graph": "Ready 5"
+      },
+      "foreign_listing_sha256": "5747789bdc0734447646131e843c56d2e811073c22d7caf7a611ead5d634c074",
+      "foreign_listing_metrics": {
+        "bytes_utf8": 555,
+        "characters": 555,
+        "non_whitespace_characters": 454,
+        "nonempty_lines": 17,
+        "physical_lines": 22
+      },
+      "measurement_status": "CURRENT_FULL_SOURCE",
+      "imports": [
+        "import Data.IORef (IORef, newIORef, readIORef, writeIORef)"
+      ],
+      "dependencies": [
+        "base >=4.9 && <5"
+      ],
+      "custom_dependencies": [],
+      "foreign_measurement_sources": [
+        "haskell_comparision/source/haskell/R09.hs"
+      ],
+      "foreign_measurement_code": "module R09 where\n\nimport Data.IORef (IORef, newIORef, readIORef, writeIORef)\n\ndata Payload a = Uninitialized | Ready a deriving (Eq, Show)\n\nlocalWrite, graphWrite :: IORef (Payload Int) -> IO Int\nlocalWrite source = do\n  local <- readIORef source >>= newIORef\n  writeIORef local (Ready 5)\n  Ready value <- readIORef local\n  pure value\ngraphWrite source = do\n  writeIORef source (Ready 5)\n  Ready value <- readIORef source\n  pure value\n\nreadyNumber :: Payload Int\nreadyNumber = Ready 0\n\nreadyReference :: Payload (Maybe Int)\nreadyReference = Ready Nothing\n",
+      "foreign_full_metrics": {
+        "characters": 454,
+        "characters_with_whitespace": 555,
+        "nonblank_lines": 17,
+        "utf8_bytes": 555,
+        "sha256": "5747789bdc0734447646131e843c56d2e811073c22d7caf7a611ead5d634c074"
+      }
+    },
+    {
+      "id": "A01",
+      "title": "Shared structural slots and replacement field identity",
+      "status": "related_analogy",
+      "foreign_code": "module A01 where\n\nimport Data.IORef (newIORef, readIORef, modifyIORef')\n\ndata Field = Field { name :: String, value :: Int } deriving (Eq, Show)\n\nreplaceAt :: Int -> a -> [a] -> [a]\nreplaceAt index replacement xs = take index xs ++ [replacement] ++ drop (index+1) xs\n\nexample :: IO (Int, [String])\nexample = do\n  slots <- newIORef [Field \"x\" 1, Field \"y\" 2]\n  let same = slots\n      replacement = [Field \"z\" 9]\n  modifyIORef' same (replaceAt 1 (head replacement))\n  fields <- readIORef slots\n  let Just z = lookup \"z\" [(name field,value field) | field <- fields]\n  pure (length fields * 100 + z, map name fields)\n",
+      "source_symbols": [
+        "A01 (complete module)"
+      ],
+      "source_ranges": [],
+      "contract_notes": "Общий IORef списка Field передаёт изменение через обе ссылки. Заменяется целый Field, включая имя, а не только число. Это явная модель дескриптора с именами; она не приписывает обычным Haskell-record полям возможность менять их имена и не моделирует все правила идентичности примитивов LMX.",
+      "lmx_source": "haskell_comparision/source/lmx/A01.lm3",
+      "lmx_source_sha256": "fe7e44ff9bf3a9188a9da359003f633d5b6c9167128420f73f5223be1a044b86",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN",
+      "lmx_variants": {
+        "procedural": {
+          "code": "Slots:\n    int: x 1\n    int: y 2\n\nReplacement:\n    int: z 9\n\nSlotProbe:\n    return: int\n    run:\n        @: same Slots\n        same[1] := Replacement[0]\n        return: length(Slots) * 100 + Slots\\z\n",
+          "source_file": "haskell_comparision/source/lmx/A01.lm3",
+          "contract_id": "root/A01",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 126,
+            "characters_with_whitespace": 199,
+            "nonblank_lines": 11,
+            "utf8_bytes": 199,
+            "sha256": "fe7e44ff9bf3a9188a9da359003f633d5b6c9167128420f73f5223be1a044b86"
+          },
+          "source_sha256": "fe7e44ff9bf3a9188a9da359003f633d5b6c9167128420f73f5223be1a044b86",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        },
+        "functional": {
+          "code": "Slots:\n    int: x 1\n    int: y 2\n\nReplacement:\n    int: z 9\n\nSlotProbe:\n    return: int\n    run:\n        @: same Slots\n        same[1] := Replacement[0]\n        return: length(Slots) * 100 + Slots\\z\n",
+          "source_file": "haskell_comparision/source/lmx/A01.lm3",
+          "contract_id": "root/A01",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 126,
+            "characters_with_whitespace": 199,
+            "nonblank_lines": 11,
+            "utf8_bytes": 199,
+            "sha256": "fe7e44ff9bf3a9188a9da359003f633d5b6c9167128420f73f5223be1a044b86"
+          },
+          "source_sha256": "fe7e44ff9bf3a9188a9da359003f633d5b6c9167128420f73f5223be1a044b86",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        }
+      },
+      "lmx_comparison_variants": {
+        "procedural": "haskell_comparision/source/lmx/A01.lm3",
+        "functional": "haskell_comparision/source/lmx/A01.lm3"
+      },
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Проверяется замена структурной позиции с изменением видимого имени поля и сохранением общего descriptor. Нужна настоящая запись в слот; обе формы минимально совпадают.",
+      "lmx_runtime_execution": "NOT_RUN",
+      "lmx_style_comparison": "haskell_comparision/A01_comparision.md",
+      "lmx_operation_phase": "after_root_startup",
+      "common_contract": "Две ссылки выбирают одну структуру слотов; замена второго поля y на z сохраняет длину 2 и делает z=9 видимым через исходную ссылку: 209.",
+      "foreign_source": "haskell_comparision/source/haskell/A01.hs",
+      "foreign_entry": "example",
+      "foreign_expected": [
+        209,
+        [
+          "x",
+          "z"
+        ]
+      ],
+      "foreign_listing_sha256": "25aefd134be0a8636fa14cf049070a1a07b66c8bb220be344d838b213da2334f",
+      "foreign_listing_metrics": {
+        "bytes_utf8": 613,
+        "characters": 613,
+        "non_whitespace_characters": 486,
+        "nonempty_lines": 14,
+        "physical_lines": 18
+      },
+      "measurement_status": "CURRENT_FULL_SOURCE",
+      "imports": [
+        "import Data.IORef (newIORef, readIORef, modifyIORef')"
+      ],
+      "dependencies": [
+        "base >=4.9 && <5"
+      ],
+      "custom_dependencies": [],
+      "foreign_measurement_sources": [
+        "haskell_comparision/source/haskell/A01.hs"
+      ],
+      "foreign_measurement_code": "module A01 where\n\nimport Data.IORef (newIORef, readIORef, modifyIORef')\n\ndata Field = Field { name :: String, value :: Int } deriving (Eq, Show)\n\nreplaceAt :: Int -> a -> [a] -> [a]\nreplaceAt index replacement xs = take index xs ++ [replacement] ++ drop (index+1) xs\n\nexample :: IO (Int, [String])\nexample = do\n  slots <- newIORef [Field \"x\" 1, Field \"y\" 2]\n  let same = slots\n      replacement = [Field \"z\" 9]\n  modifyIORef' same (replaceAt 1 (head replacement))\n  fields <- readIORef slots\n  let Just z = lookup \"z\" [(name field,value field) | field <- fields]\n  pure (length fields * 100 + z, map name fields)\n",
+      "foreign_full_metrics": {
+        "characters": 486,
+        "characters_with_whitespace": 613,
+        "nonblank_lines": 14,
+        "utf8_bytes": 613,
+        "sha256": "25aefd134be0a8636fa14cf049070a1a07b66c8bb220be344d838b213da2334f"
+      }
+    },
+    {
+      "id": "V02",
+      "title": "Whole ASCII ticket-code predicate",
+      "status": "complete_pair",
+      "foreign_code": "module V02 where\n\nimport Data.Ix (inRange)\n\naccepts :: String -> Bool\naccepts [a,b,'-',c,d] =\n  all (inRange ('A','Z')) [a,b]\n    && all (inRange ('0','9')) [c,d]\naccepts _ = False\n",
+      "source_symbols": [
+        "V02 (complete module)"
+      ],
+      "source_ranges": [],
+      "contract_notes": "Пятиэлементный pattern match задаёт точную длину; inRange проверяет ASCII-границы. Нет поиска подстроки, locale-зависимых классов или предварительной очистки входа. Bool нормализуется как False→0, True→1. Исходный процедурный LMX с проверенным разделителем --- сохранён без изменения.",
+      "lmx_source": "haskell_comparision/source/lmx/V02.lm3",
+      "lmx_source_sha256": "c04f46b3e81e1852a927ab5178843517ff23bb29231ce44e088eed349f820dbd",
+      "pair_ratio_eligible": true,
+      "execution_status": "NOT_RUN",
+      "foreign_entry": "accepts",
+      "foreign_expected": [
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "output_normalization": {
+        "from": "Haskell Bool",
+        "to": "LMX int truth",
+        "expression": "False -> 0; True -> 1",
+        "changes_effects": false
+      },
+      "imports": [
+        "import Data.Ix (inRange)"
+      ],
+      "dependencies": [
+        "base >=4.9 && <5"
+      ],
+      "foreign_listing_metrics": {
+        "bytes_utf8": 181,
+        "characters": 181,
+        "non_whitespace_characters": 146,
+        "nonempty_lines": 7,
+        "physical_lines": 9
+      },
+      "foreign_listing_sha256": "8451352597c287b2c644b2c7c5e4679b6976d1a9b819cc66fb92ff0156da5aea",
+      "uploaded_lmx_source_sha256": "3c1179924ff6c1e51573e2574318f9cbabf5bc3b03a115e1e9d14892025bf0e9",
+      "lmx_runtime_execution": "NOT_RUN",
+      "source_revision": "Canonical operation integration; source fingerprint only, no new parser/runtime receipt.",
+      "lmx_variants": {
+        "procedural": {
+          "code": "TicketCode:\n    []char: candidate\n    return: int\n    accepts:\n        if: length(candidate) != 5\n            return: 0\n        int: i 0\n        while: i < 5\n            if: i != 2\n                char: first '0'\n                char: last '9'\n                if: i < 2\n                    first := 'A'\n                    last := 'Z'\n                if: candidate[i] < first || candidate[i] > last\n                    return: 0\n                ---\n            i += 1\n        return: candidate[2] = '-'\n",
+          "source_file": "haskell_comparision/source/lmx/procedural/V02.lm3",
+          "contract_id": "root/V02",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 226,
+            "characters_with_whitespace": 503,
+            "nonblank_lines": 19,
+            "utf8_bytes": 503,
+            "sha256": "7b2ede7752f8dfe0e5636e0e543ab32f5242d47d9aa056815733bd07eefd07ce"
+          },
+          "source_sha256": "7b2ede7752f8dfe0e5636e0e543ab32f5242d47d9aa056815733bd07eefd07ce",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": false
+        },
+        "functional": {
+          "code": "TicketCode:\n    []char: candidate\n    return: int\n    accepts:\n        throws: copy(matches\\throws)\n        return: matches(byteText(candidate); (within(\"A\"; \"Z\") times 2) then \"-\" then (asciiDigit times 2))\n",
+          "source_file": "haskell_comparision/source/lmx/V02.lm3",
+          "contract_id": "root/V02",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 160,
+            "characters_with_whitespace": 208,
+            "nonblank_lines": 6,
+            "utf8_bytes": 208,
+            "sha256": "c04f46b3e81e1852a927ab5178843517ff23bb29231ce44e088eed349f820dbd"
+          },
+          "source_sha256": "c04f46b3e81e1852a927ab5178843517ff23bb29231ce44e088eed349f820dbd",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        }
+      },
+      "lmx_comparison_variants": {
+        "procedural": "haskell_comparision/source/lmx/procedural/V02.lm3",
+        "functional": "haskell_comparision/source/lmx/V02.lm3"
+      },
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "style_note": "Процедурный вариант перебирает позиции и проверяет ASCII-границы явно. Функциональный строит общий Pattern и применяет matches к полному byteText. Договор — ровно две ASCII-буквы, дефис и две ASCII-цифры.",
+      "lmx_style_comparison": "haskell_comparision/V02_comparision.md",
+      "lmx_operation_phase": "after_root_startup",
+      "common_contract": "Принять всю строку ровно из двух ASCII A–Z, дефиса и двух ASCII 0–9. Проверяются одиннадцать входов, включая NUL и не-ASCII символы.",
+      "foreign_source": "haskell_comparision/source/haskell/V02.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE",
+      "custom_dependencies": [],
+      "foreign_measurement_sources": [
+        "haskell_comparision/source/haskell/V02.hs"
+      ],
+      "foreign_measurement_code": "module V02 where\n\nimport Data.Ix (inRange)\n\naccepts :: String -> Bool\naccepts [a,b,'-',c,d] =\n  all (inRange ('A','Z')) [a,b]\n    && all (inRange ('0','9')) [c,d]\naccepts _ = False\n",
+      "foreign_full_metrics": {
+        "characters": 146,
+        "characters_with_whitespace": 181,
+        "nonblank_lines": 7,
+        "utf8_bytes": 181,
+        "sha256": "8451352597c287b2c644b2c7c5e4679b6976d1a9b819cc66fb92ff0156da5aea"
+      }
+    },
+    {
+      "id": "V03",
+      "title": "Inject a read dependency and check interaction counts",
+      "status": "complete_pair",
+      "foreign_code": "module V03 where\n\nimport Data.IORef (newIORef, readIORef, modifyIORef')\n\ntype Candidate = Int -> IO Int -> IO Int\n\nsample, biased, readsTwice :: Candidate\nsample gain readSample = (*gain) <$> readSample\nbiased gain readSample = (+1) <$> sample gain readSample\nreadsTwice gain readSample = readSample >> sample gain readSample\n\ncheck :: Candidate -> IO (Bool, Int)\ncheck candidate = do\n  calls <- newIORef 0\n  let fixedRead = modifyIORef' calls (+1) >> pure 7\n  result <- candidate 4 fixedRead\n  count <- readIORef calls\n  pure (result == 28 && count == 1, count)\n",
+      "source_symbols": [
+        "V03 (complete module)"
+      ],
+      "source_ranges": [],
+      "contract_notes": "В отличие от прежнего закрытого SampleVariant, checker получает функцию Candidate. Общая sample используется вариантами biased и readsTwice, повторный read действительно выполняется. Haskell передаёт gain и read явно; LMX связывает их через текущий контекст. Наблюдаемый договор checker и три отрицательных/положительных случая совпадают.",
+      "lmx_source": "haskell_comparision/source/lmx/V03.lm3",
+      "lmx_source_sha256": "b4c730a3673836c65edd4bc0801136145c55e1dfc0f9620b2e4ecba3ede626f7",
+      "pair_ratio_eligible": true,
+      "execution_status": "NOT_RUN",
+      "lmx_variants": {
+        "procedural": {
+          "code": "Measurement:\n    int: gain\n    @: read\n    return: int\n    sample:\n        return: read() * gain\n    biased:\n        return: sample() + 1\n    readsTwice:\n        int: discarded read()\n        return: sample()\n\nSamplingCheck:\n    @: candidate\n    int: calls 0\n    return: int\n    fixedRead:\n        node\\calls += 1\n        return: 7\n    check:\n        node\\calls := 0\n        @: read fixedRead\n        int: result candidate(gain := 4)\n        if: result != 28\n            return: 0\n        return: node\\calls = 1\n",
+          "source_file": "haskell_comparision/source/lmx/procedural/V03.lm3",
+          "contract_id": "root/V03",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 308,
+            "characters_with_whitespace": 512,
+            "nonblank_lines": 25,
+            "utf8_bytes": 512,
+            "sha256": "2516827ee9c9814de3719020a767a480226e2d6ac40f6d6d47a7ca63ffb52a32"
+          },
+          "source_sha256": "2516827ee9c9814de3719020a767a480226e2d6ac40f6d6d47a7ca63ffb52a32",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        },
+        "functional": {
+          "code": "Measurement:\n    int: gain\n    @: read\n    return: int\n    sample:\n        return: read() * gain\n    biased:\n        return: sample() + 1\n    readsTwice:\n        int: discarded read()\n        return: sample()\n\nSamplingCheck:\n    @: candidate\n    int: calls 0\n    return: int\n    fixedRead:\n        node\\calls += 1\n        return: 7\n    check:\n        node\\calls := 0\n        @: read fixedRead\n        int: result candidate(gain := 4)\n        return: result = 28 && node\\calls = 1\n",
+          "source_file": "haskell_comparision/source/lmx/V03.lm3",
+          "contract_id": "root/V03",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 298,
+            "characters_with_whitespace": 480,
+            "nonblank_lines": 23,
+            "utf8_bytes": 480,
+            "sha256": "b4c730a3673836c65edd4bc0801136145c55e1dfc0f9620b2e4ecba3ede626f7"
+          },
+          "source_sha256": "b4c730a3673836c65edd4bc0801136145c55e1dfc0f9620b2e4ecba3ede626f7",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        }
+      },
+      "lmx_comparison_variants": {
+        "procedural": "haskell_comparision/source/lmx/procedural/V03.lm3",
+        "functional": "haskell_comparision/source/lmx/V03.lm3"
+      },
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "distinct",
+      "style_note": "Процедурный вариант ветвится по результату; функциональный соединяет проверки выражением. Сам candidate вызывается ровно один раз, счётчик чтений сохраняется.",
+      "lmx_runtime_execution": "NOT_RUN",
+      "lmx_style_comparison": "haskell_comparision/V03_comparision.md",
+      "lmx_operation_phase": "after_root_startup",
+      "common_contract": "Checker принимает произвольный кандидат, внедряет read, проверяет результат 28 и ровно одно чтение. Good: True/1, biased: False/1, readsTwice: False/2.",
+      "foreign_source": "haskell_comparision/source/haskell/V03.hs",
+      "foreign_entry": "check sample; check biased; check readsTwice",
+      "foreign_expected": [
+        [
+          true,
+          1
+        ],
+        [
+          false,
+          1
+        ],
+        [
+          false,
+          2
+        ]
+      ],
+      "foreign_listing_sha256": "e8e480a131cf14d9503735aa24fb790ec4f2af21054ee0253ccd8ce410714f4a",
+      "foreign_listing_metrics": {
+        "bytes_utf8": 563,
+        "characters": 563,
+        "non_whitespace_characters": 459,
+        "nonempty_lines": 14,
+        "physical_lines": 18
+      },
+      "measurement_status": "CURRENT_FULL_SOURCE",
+      "imports": [
+        "import Data.IORef (newIORef, readIORef, modifyIORef')"
+      ],
+      "dependencies": [
+        "base >=4.9 && <5"
+      ],
+      "custom_dependencies": [],
+      "foreign_measurement_sources": [
+        "haskell_comparision/source/haskell/V03.hs"
+      ],
+      "foreign_measurement_code": "module V03 where\n\nimport Data.IORef (newIORef, readIORef, modifyIORef')\n\ntype Candidate = Int -> IO Int -> IO Int\n\nsample, biased, readsTwice :: Candidate\nsample gain readSample = (*gain) <$> readSample\nbiased gain readSample = (+1) <$> sample gain readSample\nreadsTwice gain readSample = readSample >> sample gain readSample\n\ncheck :: Candidate -> IO (Bool, Int)\ncheck candidate = do\n  calls <- newIORef 0\n  let fixedRead = modifyIORef' calls (+1) >> pure 7\n  result <- candidate 4 fixedRead\n  count <- readIORef calls\n  pure (result == 28 && count == 1, count)\n",
+      "foreign_full_metrics": {
+        "characters": 459,
+        "characters_with_whitespace": 563,
+        "nonblank_lines": 14,
+        "utf8_bytes": 563,
+        "sha256": "e8e480a131cf14d9503735aa24fb790ec4f2af21054ee0253ccd8ce410714f4a"
+      }
+    },
+    {
+      "id": "V04",
+      "title": "Distinguish a named failure from a numeric result",
+      "status": "complete_pair",
+      "foreign_code": "module V04 where\n\nimport Control.Exception (Exception, catch, throwIO)\n\ndata NoSample = NoSample deriving Show\ninstance Exception NoSample\n\nunavailable, zero :: IO Int\nunavailable = throwIO NoSample\nzero = pure 0\n\ncheck :: IO Int -> IO Int\ncheck candidate = (candidate >> pure 0) `catch` (\\NoSample -> pure 1)\n",
+      "source_symbols": [
+        "V04 (complete module)"
+      ],
+      "source_ranges": [],
+      "contract_notes": "NoSample — отдельный тип Exception. catch обрабатывает только этот тип; zero успешно возвращает 0 и checker возвращает 0. Другая ошибка не поглощается. В сравнении показаны объявления исключения, throwIO и весь обработчик, без ручного сравнения строк имени ошибки.",
+      "lmx_source": "haskell_comparision/source/lmx/V04.lm3",
+      "lmx_source_sha256": "9dba0380b48df28fad71d803579da6dc8d24392ded88768096b93bd148589728",
+      "pair_ratio_eligible": true,
+      "execution_status": "NOT_RUN",
+      "lmx_variants": {
+        "procedural": {
+          "code": "UnavailableSensor:\n    return: int\n    read:\n        throws: NoSample\n        throw: NoSample()\n    zero:\n        return: 0\n\nFailureCheck:\n    @: candidate\n    return: int\n    check:\n        candidate()\n        return: 0\n        catch: NoSample ()\n            return: 1\n",
+          "source_file": "haskell_comparision/source/lmx/V04.lm3",
+          "contract_id": "root/V04",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 160,
+            "characters_with_whitespace": 270,
+            "nonblank_lines": 15,
+            "utf8_bytes": 270,
+            "sha256": "9dba0380b48df28fad71d803579da6dc8d24392ded88768096b93bd148589728"
+          },
+          "source_sha256": "9dba0380b48df28fad71d803579da6dc8d24392ded88768096b93bd148589728",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        },
+        "functional": {
+          "code": "UnavailableSensor:\n    return: int\n    read:\n        throws: NoSample\n        throw: NoSample()\n    zero:\n        return: 0\n\nFailureCheck:\n    @: candidate\n    return: int\n    check:\n        candidate()\n        return: 0\n        catch: NoSample ()\n            return: 1\n",
+          "source_file": "haskell_comparision/source/lmx/V04.lm3",
+          "contract_id": "root/V04",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 160,
+            "characters_with_whitespace": 270,
+            "nonblank_lines": 15,
+            "utf8_bytes": 270,
+            "sha256": "9dba0380b48df28fad71d803579da6dc8d24392ded88768096b93bd148589728"
+          },
+          "source_sha256": "9dba0380b48df28fad71d803579da6dc8d24392ded88768096b93bd148589728",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        }
+      },
+      "lmx_comparison_variants": {
+        "procedural": "haskell_comparision/source/lmx/V04.lm3",
+        "functional": "haskell_comparision/source/lmx/V04.lm3"
+      },
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Именованный catch отличает NoSample от нормального нулевого результата. Его минимальная прямая форма общая; универсальное recover изменило бы границу типов/ошибок.",
+      "lmx_runtime_execution": "NOT_RUN",
+      "lmx_style_comparison": "haskell_comparision/V04_comparision.md",
+      "lmx_operation_phase": "after_root_startup",
+      "common_contract": "Распознать именно именованную ошибку NoSample; обычный числовой ноль ошибкой не считается.",
+      "foreign_source": "haskell_comparision/source/haskell/V04.hs",
+      "foreign_entry": "check unavailable; check zero",
+      "foreign_expected": [
+        1,
+        0
+      ],
+      "foreign_listing_sha256": "a2237d6d6a1b45271cca556d3d495ec78d5400280c68ea30d1e327d9f1a3bd73",
+      "foreign_listing_metrics": {
+        "bytes_utf8": 310,
+        "characters": 310,
+        "non_whitespace_characters": 257,
+        "nonempty_lines": 9,
+        "physical_lines": 13
+      },
+      "measurement_status": "CURRENT_FULL_SOURCE",
+      "imports": [
+        "import Control.Exception (Exception, catch, throwIO)"
+      ],
+      "dependencies": [
+        "base >=4.9 && <5"
+      ],
+      "custom_dependencies": [],
+      "foreign_measurement_sources": [
+        "haskell_comparision/source/haskell/V04.hs"
+      ],
+      "foreign_measurement_code": "module V04 where\n\nimport Control.Exception (Exception, catch, throwIO)\n\ndata NoSample = NoSample deriving Show\ninstance Exception NoSample\n\nunavailable, zero :: IO Int\nunavailable = throwIO NoSample\nzero = pure 0\n\ncheck :: IO Int -> IO Int\ncheck candidate = (candidate >> pure 0) `catch` (\\NoSample -> pure 1)\n",
+      "foreign_full_metrics": {
+        "characters": 257,
+        "characters_with_whitespace": 310,
+        "nonblank_lines": 9,
+        "utf8_bytes": 310,
+        "sha256": "a2237d6d6a1b45271cca556d3d495ec78d5400280c68ea30d1e327d9f1a3bd73"
+      }
+    },
+    {
+      "id": "V05",
+      "title": "Command/read integration check and fault modes",
+      "status": "complete_pair",
+      "foreign_code": "module V05 where\n\nimport Prelude hiding (reads)\nimport Data.IORef (IORef, newIORef, readIORef, modifyIORef')\n\ndata State = State\n  { commanded :: Int, sensed :: Int, writes :: Int, reads :: Int, trace :: Int }\n  deriving (Eq, Show)\ndata Device = Device { set :: Int -> IO Int, observe :: IO Int }\n\nmakeDevice :: Int -> IO (Device, IORef State)\nmakeDevice fault = do\n  state <- newIORef (State 0 0 0 0 0)\n  let mark event = modifyIORef' state (\\s -> s { trace = trace s * 10 + event })\n      setCommand command = do\n        modifyIORef' state (\\s -> s { commanded = command, writes = writes s + 1,\n          sensed = case fault of { 0 -> command; 1 -> 0; 2 -> 1; _ -> sensed s } })\n        mark command\n        pure 1\n      readSensor = do\n        modifyIORef' state (\\s -> s { reads = reads s + 1 })\n        mark 2\n        sensed <$> readIORef state\n  pure (Device setCommand readSensor, state)\n\ncycleDevice :: Device -> Int -> IO Bool\ncycleDevice candidate command = do\n  ack <- set candidate command\n  seen <- observe candidate\n  pure (ack == 1 && seen == command)\n\ncheck :: Device -> IO Bool\ncheck candidate = do\n  on <- cycleDevice candidate 1\n  off <- cycleDevice candidate 0\n  pure (on && off)\n",
+      "source_symbols": [
+        "V05 (complete module)"
+      ],
+      "source_ranges": [],
+      "contract_notes": "Device хранит две произвольные операции. Общая cycleDevice выполняет set и observe; check сначала исполняет оба IO-цикла, затем применяет && к полученным Bool. Поэтому ошибка первого сравнения не отменяет выключение. State позволяет проверить commanded=0 и sensed=0/0/1. Сравнивается этот локальный контракт устройства; внутренние parent-адреса LMX не объявлены Haskell-адресами.",
+      "lmx_source": "haskell_comparision/source/lmx/V05.lm3",
+      "lmx_source_sha256": "37a72ebca803e0c1c741019e9c8edc0ed40042b25dd300a599e4fb748115062a",
+      "pair_ratio_eligible": true,
+      "execution_status": "NOT_RUN",
+      "lmx_variants": {
+        "procedural": {
+          "code": "Indicator:\n    int: command\n    int: fault 0\n    int: commanded 0\n    int: sensed 0\n    int: writes 0\n    int: reads 0\n    int: trace 0\n    return: int\n    mark:\n        node\\trace := node\\trace * 10 + command\n        return: 1\n    set:\n        node\\commanded := command\n        node\\writes += 1\n        mark()\n        if: node\\fault = 0\n            node\\sensed := command\n        if: node\\fault = 1\n            node\\sensed := 0\n        if: node\\fault = 2\n            node\\sensed := 1\n        return: 1\n    observe:\n        node\\reads += 1\n        mark(2)\n        return: node\\sensed\n\nCommissioning:\n    @: candidate\n    int: command\n    return: int\n    cycle:\n        int: ack candidate\\set(command := command)\n        int: seen candidate\\observe()\n        return: ack = 1 && seen = command\n    check:\n        int: on cycle(command := 1)\n        int: off cycle(command := 0)\n        return: on && off\n",
+          "source_file": "haskell_comparision/source/lmx/V05.lm3",
+          "contract_id": "root/V05",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 547,
+            "characters_with_whitespace": 902,
+            "nonblank_lines": 39,
+            "utf8_bytes": 902,
+            "sha256": "37a72ebca803e0c1c741019e9c8edc0ed40042b25dd300a599e4fb748115062a"
+          },
+          "source_sha256": "37a72ebca803e0c1c741019e9c8edc0ed40042b25dd300a599e4fb748115062a",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        },
+        "functional": {
+          "code": "Indicator:\n    int: command\n    int: fault 0\n    int: commanded 0\n    int: sensed 0\n    int: writes 0\n    int: reads 0\n    int: trace 0\n    return: int\n    mark:\n        node\\trace := node\\trace * 10 + command\n        return: 1\n    set:\n        node\\commanded := command\n        node\\writes += 1\n        mark()\n        if: node\\fault = 0\n            node\\sensed := command\n        if: node\\fault = 1\n            node\\sensed := 0\n        if: node\\fault = 2\n            node\\sensed := 1\n        return: 1\n    observe:\n        node\\reads += 1\n        mark(2)\n        return: node\\sensed\n\nCommissioning:\n    @: candidate\n    int: command\n    return: int\n    cycle:\n        int: ack candidate\\set(command := command)\n        int: seen candidate\\observe()\n        return: ack = 1 && seen = command\n    check:\n        int: on cycle(command := 1)\n        int: off cycle(command := 0)\n        return: on && off\n",
+          "source_file": "haskell_comparision/source/lmx/V05.lm3",
+          "contract_id": "root/V05",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 547,
+            "characters_with_whitespace": 902,
+            "nonblank_lines": 39,
+            "utf8_bytes": 902,
+            "sha256": "37a72ebca803e0c1c741019e9c8edc0ed40042b25dd300a599e4fb748115062a"
+          },
+          "source_sha256": "37a72ebca803e0c1c741019e9c8edc0ed40042b25dd300a599e4fb748115062a",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        }
+      },
+      "lmx_comparison_variants": {
+        "procedural": "haskell_comparision/source/lmx/V05.lm3",
+        "functional": "haskell_comparision/source/lmx/V05.lm3"
+      },
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Оба цикла set/observe должны выполняться безусловно, в том числе после неуспешного первого. Замена на короткое замыкание пропустила бы off. Общие mark/cycle и обязательные эффекты сохраняются.",
+      "lmx_runtime_execution": "NOT_RUN",
+      "lmx_style_comparison": "haskell_comparision/V05_comparision.md",
+      "lmx_operation_phase": "after_root_startup",
+      "common_contract": "Два обязательных цикла set(1),observe,set(0),observe; при fault=0/1/2 ответы True/False/False. Всегда две записи, два чтения, trace=1202.",
+      "foreign_source": "haskell_comparision/source/haskell/V05.hs",
+      "foreign_entry": "check =<< fst <$> makeDevice fault",
+      "foreign_expected": {
+        "results": [
+          true,
+          false,
+          false
+        ],
+        "writes": 2,
+        "reads": 2,
+        "trace": 1202,
+        "commanded": 0,
+        "sensed": [
+          0,
+          0,
+          1
+        ]
+      },
+      "foreign_listing_sha256": "48b8949186ca57d98fdc0618d4a9947186da675f50fb660800f093384224282f",
+      "foreign_listing_metrics": {
+        "bytes_utf8": 1200,
+        "characters": 1200,
+        "non_whitespace_characters": 885,
+        "nonempty_lines": 31,
+        "physical_lines": 36
+      },
+      "measurement_status": "CURRENT_FULL_SOURCE",
+      "imports": [
+        "import Prelude hiding (reads)",
+        "import Data.IORef (IORef, newIORef, readIORef, modifyIORef')"
+      ],
+      "dependencies": [
+        "base >=4.9 && <5"
+      ],
+      "custom_dependencies": [],
+      "foreign_measurement_sources": [
+        "haskell_comparision/source/haskell/V05.hs"
+      ],
+      "foreign_measurement_code": "module V05 where\n\nimport Prelude hiding (reads)\nimport Data.IORef (IORef, newIORef, readIORef, modifyIORef')\n\ndata State = State\n  { commanded :: Int, sensed :: Int, writes :: Int, reads :: Int, trace :: Int }\n  deriving (Eq, Show)\ndata Device = Device { set :: Int -> IO Int, observe :: IO Int }\n\nmakeDevice :: Int -> IO (Device, IORef State)\nmakeDevice fault = do\n  state <- newIORef (State 0 0 0 0 0)\n  let mark event = modifyIORef' state (\\s -> s { trace = trace s * 10 + event })\n      setCommand command = do\n        modifyIORef' state (\\s -> s { commanded = command, writes = writes s + 1,\n          sensed = case fault of { 0 -> command; 1 -> 0; 2 -> 1; _ -> sensed s } })\n        mark command\n        pure 1\n      readSensor = do\n        modifyIORef' state (\\s -> s { reads = reads s + 1 })\n        mark 2\n        sensed <$> readIORef state\n  pure (Device setCommand readSensor, state)\n\ncycleDevice :: Device -> Int -> IO Bool\ncycleDevice candidate command = do\n  ack <- set candidate command\n  seen <- observe candidate\n  pure (ack == 1 && seen == command)\n\ncheck :: Device -> IO Bool\ncheck candidate = do\n  on <- cycleDevice candidate 1\n  off <- cycleDevice candidate 0\n  pure (on && off)\n",
+      "foreign_full_metrics": {
+        "characters": 885,
+        "characters_with_whitespace": 1200,
+        "nonblank_lines": 31,
+        "utf8_bytes": 1200,
+        "sha256": "48b8949186ca57d98fdc0618d4a9947186da675f50fb660800f093384224282f"
+      }
+    },
+    {
+      "id": "M01",
+      "title": "Serial state updates at one Message owner",
+      "status": "complete_pair",
+      "foreign_code": "module M01 where\n\nimport Control.Concurrent (MVar, putMVar)\nimport Control.Concurrent.Chan (Chan, readChan)\n\ndata CounterRequest = AddBy Int (MVar Int) | ReadValue (MVar Int) | Stop (MVar ())\n\ncounterLoop :: Chan CounterRequest -> Int -> IO ()\ncounterLoop inbox value = do\n  request <- readChan inbox\n  case request of\n    AddBy delta reply -> do\n      let next = value + delta\n      next `seq` putMVar reply next\n      counterLoop inbox next\n    ReadValue reply -> putMVar reply value >> counterLoop inbox value\n    Stop ack -> putMVar ack ()\n",
+      "source_symbols": [
+        "M01 (complete module)"
+      ],
+      "source_ranges": [],
+      "contract_notes": "Chan и MVar — реальные средства base. В сравниваемом модуле целиком показан service loop, включая завершение; запуск потоков и проверка ответов находятся в одинаково исключённом из размера внешнем harness. Проверяются оба допустимых набора промежуточных ответов. HTTP и распределённая доставка не входят в эту локальную пару.",
+      "lmx_source": "haskell_comparision/source/lmx/M01.lm3",
+      "lmx_source_sha256": "f83d23836f4fd74f0842162e723736fa68fd1f851a7bdfbd484e042f47b5eae2",
+      "pair_ratio_eligible": true,
+      "execution_status": "NOT_RUN",
+      "foreign_entry": "validation.counterFixture",
+      "foreign_expected": 13,
+      "output_normalization": null,
+      "imports": [
+        "import Control.Concurrent (MVar, putMVar)",
+        "import Control.Concurrent.Chan (Chan, readChan)"
+      ],
+      "dependencies": [
+        "base >=4.9 && <5"
+      ],
+      "foreign_listing_metrics": {
+        "bytes_utf8": 544,
+        "characters": 544,
+        "non_whitespace_characters": 425,
+        "nonempty_lines": 14,
+        "physical_lines": 17
+      },
+      "foreign_listing_sha256": "115e23bdb255a1ce07d13c07cdcbd7a23175bce91c852c9f571425ab21f7ddcd",
+      "verification_symbols": [
+        "counterExample"
+      ],
+      "counting_boundary": "CounterRequest and counterLoop service only; counterExample sender/launch/assertion harness is excluded.",
+      "lmx_variants": {
+        "procedural": {
+          "code": "Counter:\n    int: value 0\n    int: delta\n    return: int\n    add:\n        node\\value += delta\n        return: read()\n    read:\n        return: node\\value\n",
+          "source_file": "haskell_comparision/source/lmx/M01.lm3",
+          "contract_id": "root/M01",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 93,
+            "characters_with_whitespace": 154,
+            "nonblank_lines": 9,
+            "utf8_bytes": 154,
+            "sha256": "f83d23836f4fd74f0842162e723736fa68fd1f851a7bdfbd484e042f47b5eae2"
+          },
+          "source_sha256": "f83d23836f4fd74f0842162e723736fa68fd1f851a7bdfbd484e042f47b5eae2",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        },
+        "functional": {
+          "code": "Counter:\n    int: value 0\n    int: delta\n    return: int\n    add:\n        node\\value += delta\n        return: read()\n    read:\n        return: node\\value\n",
+          "source_file": "haskell_comparision/source/lmx/M01.lm3",
+          "contract_id": "root/M01",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 93,
+            "characters_with_whitespace": 154,
+            "nonblank_lines": 9,
+            "utf8_bytes": 154,
+            "sha256": "f83d23836f4fd74f0842162e723736fa68fd1f851a7bdfbd484e042f47b5eae2"
+          },
+          "source_sha256": "f83d23836f4fd74f0842162e723736fa68fd1f851a7bdfbd484e042f47b5eae2",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        }
+      },
+      "lmx_comparison_variants": {
+        "procedural": "haskell_comparision/source/lmx/M01.lm3",
+        "functional": "haskell_comparision/source/lmx/M01.lm3"
+      },
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Сериализованное изменение состояния одного Message-owner — сам договор. Одна запись и вызов общего read являются минимальной формой в обоих стилях.",
+      "lmx_runtime_execution": "NOT_RUN",
+      "lmx_style_comparison": "haskell_comparision/M01_comparision.md",
+      "lmx_operation_phase": "after_root_startup",
+      "common_contract": "Один владелец последовательно принимает два запроса +4 и +9 от разных отправителей. После обоих ответов чтение даёт 13 при любом порядке поступления.",
+      "foreign_source": "haskell_comparision/source/haskell/M01.hs",
+      "measurement_status": "CURRENT_FULL_SOURCE",
+      "custom_dependencies": [],
+      "foreign_measurement_sources": [
+        "haskell_comparision/source/haskell/M01.hs"
+      ],
+      "foreign_measurement_code": "module M01 where\n\nimport Control.Concurrent (MVar, putMVar)\nimport Control.Concurrent.Chan (Chan, readChan)\n\ndata CounterRequest = AddBy Int (MVar Int) | ReadValue (MVar Int) | Stop (MVar ())\n\ncounterLoop :: Chan CounterRequest -> Int -> IO ()\ncounterLoop inbox value = do\n  request <- readChan inbox\n  case request of\n    AddBy delta reply -> do\n      let next = value + delta\n      next `seq` putMVar reply next\n      counterLoop inbox next\n    ReadValue reply -> putMVar reply value >> counterLoop inbox value\n    Stop ack -> putMVar ack ()\n",
+      "foreign_full_metrics": {
+        "characters": 425,
+        "characters_with_whitespace": 544,
+        "nonblank_lines": 14,
+        "utf8_bytes": 544,
+        "sha256": "115e23bdb255a1ce07d13c07cdcbd7a23175bce91c852c9f571425ab21f7ddcd"
+      }
+    },
+    {
+      "id": "M05",
+      "title": "Void Message procedure without a fabricated reply",
+      "status": "related_analogy",
+      "foreign_code": "module M05 where\n\nimport Control.Concurrent.Chan (Chan, readChan)\nimport Data.IORef (IORef, writeIORef)\n\nset :: IORef Int -> Int -> IO ()\nset = writeIORef\n\nlampLoop :: Chan (Maybe Int) -> IORef Int -> IO ()\nlampLoop inbox state = do\n  request <- readChan inbox\n  case request of\n    Just command -> set state command >> lampLoop inbox state\n    Nothing -> pure ()\n",
+      "source_symbols": [
+        "M05 (complete module)"
+      ],
+      "source_ranges": [],
+      "contract_notes": "lampLoop читает команды без поля для reply и вызывает IO () setter. Nothing завершает внешний тестовый worker. Harness ожидает завершение потока отдельно; эта синхронизация не является ответом на set. Фикстура действительно наблюдает state=1. Отсутствие прикладного reply выражено типом и телом worker; HTTP/Message-доставку LMX и её счётчики этот локальный Haskell-код не исполняет.",
+      "lmx_source": "haskell_comparision/source/lmx/M05.lm3",
+      "lmx_source_sha256": "718e22e1385ae361666370a044ac07f89728f867a8bcabbb8464a42b3607e1eb",
+      "pair_ratio_eligible": false,
+      "execution_status": "NOT_RUN",
+      "lmx_variants": {
+        "procedural": {
+          "code": "Lamp:\n    int: state 0\n    int: command\n    set:\n        node\\state := command\n",
+          "source_file": "haskell_comparision/source/lmx/M05.lm3",
+          "contract_id": "root/M05",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 49,
+            "characters_with_whitespace": 79,
+            "nonblank_lines": 5,
+            "utf8_bytes": 79,
+            "sha256": "718e22e1385ae361666370a044ac07f89728f867a8bcabbb8464a42b3607e1eb"
+          },
+          "source_sha256": "718e22e1385ae361666370a044ac07f89728f867a8bcabbb8464a42b3607e1eb",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        },
+        "functional": {
+          "code": "Lamp:\n    int: state 0\n    int: command\n    set:\n        node\\state := command\n",
+          "source_file": "haskell_comparision/source/lmx/M05.lm3",
+          "contract_id": "root/M05",
+          "runtime_execution": "NOT_RUN",
+          "metrics": {
+            "characters": 49,
+            "characters_with_whitespace": 79,
+            "nonblank_lines": 5,
+            "utf8_bytes": 79,
+            "sha256": "718e22e1385ae361666370a044ac07f89728f867a8bcabbb8464a42b3607e1eb"
+          },
+          "source_sha256": "718e22e1385ae361666370a044ac07f89728f867a8bcabbb8464a42b3607e1eb",
+          "measurement_status": "CURRENT_FULL_SOURCE",
+          "published_metrics_match_source_hash": true
+        }
+      },
+      "lmx_comparison_variants": {
+        "procedural": "haskell_comparision/source/lmx/M05.lm3",
+        "functional": "haskell_comparision/source/lmx/M05.lm3"
+      },
+      "lmx_legacy_role": "compatibility_mirror_not_separate_comparison",
+      "style_relation": "same_minimal_form",
+      "style_note": "Единственная операция — void-процедура Message с записью состояния и без выдуманного reply. Обе формы совпадают; возвращаемое значение не добавляется.",
+      "lmx_runtime_execution": "NOT_RUN",
+      "lmx_style_comparison": "haskell_comparision/M05_comparision.md",
+      "lmx_operation_phase": "after_root_startup",
+      "common_contract": "Процедура set сохраняет состояние 1 и не имеет контракта прикладного ответа. Отсутствие результата не должно порождать фиктивный ACK.",
+      "foreign_source": "haskell_comparision/source/haskell/M05.hs",
+      "foreign_entry": "validation.lampFixture",
+      "foreign_expected": 1,
+      "foreign_listing_sha256": "c5fcc43cc7967f60be720bbc6858a1dbcd9a423c847952a3a3b75e4a71cd05c1",
+      "foreign_listing_metrics": {
+        "bytes_utf8": 364,
+        "characters": 364,
+        "non_whitespace_characters": 289,
+        "nonempty_lines": 11,
+        "physical_lines": 14
+      },
+      "measurement_status": "CURRENT_FULL_SOURCE",
+      "imports": [
+        "import Control.Concurrent.Chan (Chan, readChan)",
+        "import Data.IORef (IORef, writeIORef)"
+      ],
+      "dependencies": [
+        "base >=4.9 && <5"
+      ],
+      "custom_dependencies": [],
+      "foreign_measurement_sources": [
+        "haskell_comparision/source/haskell/M05.hs"
+      ],
+      "foreign_measurement_code": "module M05 where\n\nimport Control.Concurrent.Chan (Chan, readChan)\nimport Data.IORef (IORef, writeIORef)\n\nset :: IORef Int -> Int -> IO ()\nset = writeIORef\n\nlampLoop :: Chan (Maybe Int) -> IORef Int -> IO ()\nlampLoop inbox state = do\n  request <- readChan inbox\n  case request of\n    Just command -> set state command >> lampLoop inbox state\n    Nothing -> pure ()\n",
+      "foreign_full_metrics": {
+        "characters": 289,
+        "characters_with_whitespace": 364,
+        "nonblank_lines": 11,
+        "utf8_bytes": 364,
+        "sha256": "c5fcc43cc7967f60be720bbc6858a1dbcd9a423c847952a3a3b75e4a71cd05c1"
+      }
+    }
+  ],
+  "lmx_comparison_policy": "Both complete LMX style sources are preserved byte-for-byte and their paths are migrated. Current code mirrors match the sources; retained numeric measurements are explicitly historical.",
+  "lmx_execution_contract": {
+    "startup_target": "root",
+    "startup_level": "L3 Thread",
+    "root_has_data": false,
+    "root_accepts_user_arguments": false,
+    "local_declarations_and_calls": "The ordinary common language mechanism applies at the root and at later calls.",
+    "case_operation_phase": "after_root_startup",
+    "named_operation_is_startup": false,
+    "case_actuals": "invoke/inputs/args describe ordinary later case operations, not startup arguments for the root.",
+    "argument_fixture": "A parent stub may have its own arguments and send a message to the root; this does not give DATA or user arguments to the root.",
+    "source_dependencies": "Required source definitions and load_before dependencies belong to the fixture. They do not introduce a DATA-load startup or a named alternative entry."
+  },
+  "lmx_runner_contract": "Always start the root as an L3 Thread without DATA or user arguments. Local declarations and calls use the ordinary common language mechanism. An invoke path or named case operation is performed by the root or an ordinary handler after startup; Main and Example\\run are not alternative program entries. A parent stub with its own arguments may send a message to the root. load_before lists required fixture definitions; import exposes existing names, not a new file loader. These records specify acceptance observations and do not claim an executed LMX runner."
+}

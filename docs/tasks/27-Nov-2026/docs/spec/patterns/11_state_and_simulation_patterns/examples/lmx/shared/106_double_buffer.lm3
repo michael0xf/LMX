@@ -1,0 +1,45 @@
+Buffers:
+    @: current
+    @: next
+
+BufferMake:
+    []int: cells
+    int: steps
+    return: @
+    make:
+        throws: InvalidSteps InvalidCell copy(sys\resize\throws)
+        if: steps < 0
+            throw: InvalidSteps()
+        int: i 0
+        while: i < length(cells)
+            if: cells[i] != 0 && cells[i] != 1
+                throw: InvalidCell()
+            i += 1
+        []int: current [copy(cells)]
+        []int: next []
+        sys\resize(next; length(cells))
+        @: state (copy(Buffers))
+        state\current := current
+        state\next := next
+        return: state
+
+Ring:
+    @Buffers: state
+    int: index
+    return: int
+    value:
+        @: source state\current
+        int: left index - 1
+        int: right index + 1
+        if: left < 0
+            left := length(source) - 1
+        if: right = length(source)
+            right := 0
+        return: (source[left] + source[right]) % 2
+
+Publish:
+    @Buffers: state
+    return: @
+    swap:
+        (state\current state\next) := state\next state\current
+        return: state

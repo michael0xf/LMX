@@ -1,0 +1,21 @@
+# scale and bias are ordinary dynamically bound scalar values. Their actual
+# numeric types and contexts are preserved, not fixed here to machine int.
+# fuse creates a fresh result; ordinary := then snapshots/admit/writes values.
+# With values=[1 2 3], scale=2, bias=1 the result is [3 5 7].
+# Production parser/runtime: NOT_RUN.
+
+FusedUpdate:
+    []: values
+    return: @
+    run:
+        throws: copy(fuse\throws) copy(`:=`\throws) copy(`*`\throws) copy(`+`\throws)
+        values := fuse(values * scale + bias)
+        return: values
+
+ConditionalFusion:
+    []: values
+    int: enabled
+    return: @
+    run:
+        throws: copy(fuse\throws) copy(`*`\throws) copy(`+`\throws)
+        return: fuse(enabled ? values * scale : values + bias)

@@ -1,0 +1,176 @@
+{
+  "revision": "2026-11-27",
+  "scope": "Normative source examples, not parser receipts",
+  "positive": [
+    {
+      "id": "001_nested_values",
+      "expected": {
+        "value": [
+          [
+            11,
+            12
+          ],
+          [
+            13,
+            14
+          ]
+        ],
+        "shape_preserved": true
+      },
+      "note_ru": "Плоский Array формы 2×2; depth=0 выбирает скалярные ячейки, сохраняет форму и допускает исходный скаляр 10.",
+      "source": "001_nested_values.lm3",
+      "entry_point": "Example\\run",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "002_assignment_levels",
+      "expected": {
+        "value": [
+          9,
+          3,
+          1
+        ]
+      },
+      "note_ru": "Обычный := сохраняет RHS перестановки до записи; последующее присваивание скалярному a меняет одно место.",
+      "source": "002_assignment_levels.lm3",
+      "entry_point": "Example\\run",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "003_custom_dynamic_depth",
+      "expected": {
+        "value": [
+          10,
+          10,
+          10,
+          1
+        ]
+      },
+      "note_ru": "Один операнд получает left/depth/right; явное выражение depth вычисляется один раз, prefix сохраняет отсутствие left.",
+      "source": "003_custom_dynamic_depth.lm3",
+      "entry_point": "Example\\run",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "004_receiver_depth",
+      "expected": {
+        "value": [
+          [
+            11,
+            12
+          ],
+          [
+            13,
+            14
+          ]
+        ]
+      },
+      "note_ru": "Ресивер + получает именованный depth=0; точное имя не содержит декораций.",
+      "source": "004_receiver_depth.lm3",
+      "entry_point": "Example\\run",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "005_lazy_depth",
+      "expected": {
+        "value": [
+          0,
+          1,
+          42,
+          0
+        ]
+      },
+      "note_ru": "Невостребованные ветви не получают выражение depth и не вызывают эффектов.",
+      "source": "005_lazy_depth.lm3",
+      "entry_point": "Example\\run",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    }
+  ],
+  "negative": [
+    {
+      "id": "negative_depth",
+      "source": "return: 1 .(-1)+ 2",
+      "outcome": "TRANSLATOR_DIAGNOSTIC",
+      "reason": "Known negative depth rejected by the standard Map profile of +; custom methods retain their own contract; not an LMX throw",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "noninteger_depth",
+      "source": "return: 1 .(1.5)+ 2",
+      "outcome": "TRANSLATOR_DIAGNOSTIC",
+      "reason": "Known non-int depth; no implicit conversion",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "multiple_depth_values",
+      "source": "return: 1 .((1 2))+ 3",
+      "outcome": "TRANSLATOR_OR_INTERPRETER_DIAGNOSTIC",
+      "reason": "A group of two values is not one int; no selecting first element",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "empty_depth",
+      "source": "return: 1 .()+ 2",
+      "outcome": "TRANSLATOR_DIAGNOSTIC",
+      "reason": "Missing expression is not default depth",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "dynamic_negative_depth",
+      "source": "return: first .(nextDepth())+ second",
+      "given": "nextDepth returns -1 when the operation is demanded",
+      "outcome": "INTERPRETER_DIAGNOSTIC",
+      "reason": "Obtain once; the standard Map profile of + diagnoses negative depth before its base body; no new throws member",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "repeated_dots",
+      "source": "return: 1 ..+ 2",
+      "outcome": "NOT_A_BUILTIN_DEPTH_FORM",
+      "reason": "There is no depth=2 shorthand; use .(2)+",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "exact_dotted_name",
+      "source": "return: `.+`(1; 2)",
+      "given": "No ordinary declaration of literal name .+",
+      "outcome": "ORDINARY_NAME_LOOKUP_DIAGNOSTIC",
+      "reason": "Exact name stays opaque and is not a builtin alias",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    },
+    {
+      "id": "exact_explicit_depth_name",
+      "source": "return: `.(2)+`(rows; 10)",
+      "given": "No ordinary declaration of literal name .(2)+",
+      "outcome": "ORDINARY_NAME_LOOKUP_DIAGNOSTIC",
+      "reason": "No depth expression is extracted from the identifier",
+      "production_p0": "NOT_RUN",
+      "production_translator": "NOT_RUN",
+      "lmx_runtime": "NOT_RUN"
+    }
+  ]
+}

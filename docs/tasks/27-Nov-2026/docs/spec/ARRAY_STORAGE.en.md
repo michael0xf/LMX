@@ -1,0 +1,713 @@
+# Array dimensions, storage, and square values
+
+Revision 27 November 2026. `[][][]int: arr` describes one flat Array of int
+with three logical axes. Every Array has the same primary Lmx descriptor.
+Its canonical TypeRef is determined only by the normalized complete left
+requirement. Capacity is independent of that type. When capacity equals length,
+no additional capacity entry is needed. An instance access/lifetime context,
+when required, is available through the existing system parent. The Lmx header and user Structure fields are
+unchanged; the existing type prefix is now a direct pointer-width TypeRef.
+
+<a id="rank"></a>
+## 1. Repeated prefixes and an initialized value
+
+```lmx
+[]int: line
+[][]int: plane
+[][][]int: arr
+```
+
+Each consecutive `[]` or `[extent-expression]` prefix describes one axis
+of one Array, in outer-to-inner order. Thus N empty `[]` prefixes describe
+N axes whose sizes are not constrained by the written type. Dense int storage is
+one contiguous C block, with the last coordinate varying fastest. Rows and
+layers are not separately allocated graph objects. A declaration without an
+initializer retains ordinary typed absence; it allocates neither an empty
+Array nor guessed dimensions or zero-filled elements.
+
+The earlier description of `[][]int` as a separate array-of-arrays kind is
+superseded. `[]@[]int` remains an ordinary composition of reference and Array
+requirements, without a new container kind. Structure is the ordinary `[]@`.
+Its elements may refer to other ordinary Structures through normal graph
+links, without dedicated storage, a recursive-container type, or dispatch.
+
+<a id="dynamic-postfix"></a>
+### 1.1. Dynamic rank and pointer-depth spelling
+
+**DOC_SPEC_ADDITION — specification only.** `[](N)int` equals N repeated
+`[]` prefixes before int; `@(N)int` equals N repeated `@` prefixes. For example:
+
+```lmx
+[](1)int: [1 2 3 4]
+@(2)int: ptr_to_ptr
+```
+
+The first line has rank 1 and length 4; N sets neither length nor capacity.
+The second declares an uninitialized depth-two pointer place without allocating
+a chain of objects. `[](3)int: arr` without an initializer also remains uninit.
+
+N is an ordinary expression yielding a positive finite integer. The TYPE consumer
+obtains it once when consuming the complete requirement. Zero or negative counts
+neither erase a type nor introduce rank zero. Common P0 retains the N region
+without evaluation; repeated prefixes and the complete left model retain their
+ordinary requirement meaning.
+
+This shorthand changes no storage contract: written rank/axis constraints
+belong to the canonical type description, capacity has its independent optional
+entry, and pointers gain no new Lmx fields. Composition order
+and the distinction from compact declarations are specified in the
+[complete contract](TYPE_DECLARATION_FORMS.md#dynamic-postfix).
+No implementation or new tests are added; production P0/translator/runtime:
+**NOT_RUN**. The previous 14 host checks in this chapter do not test these forms.
+
+In `[](sizes)T`, the expression may yield a nonempty one-dimensional Array of
+exact axis sizes, ordered from outermost to innermost. Given
+`[]int: sizes [2 2 3 3]`, the place `[](sizes)T: customTypeArray` has the same
+type as `[2][2][3][3]T: customTypeArray`. The TYPE consumer obtains `sizes`
+once and stores its values in the canonical type description.
+[Axis-size Array contract](TYPE_DECLARATION_FORMS.md#extent-vector-prefix).
+
+<a id="sized-postfix"></a>
+### 1.2. Sizes in square type prefixes
+
+**DOC_SPEC_ADDITION_ONLY.** A nonempty prefix in a TYPE
+requirement fixes that axis's extent. An empty prefix leaves its size
+unspecified; it does not remove the axis. These four separate declarations
+produce the same length 6 and ordered values `[1,2,3,4,5,6]`, but their
+different left requirements do not all describe the same type:
+
+```lmx
+[][3]int: var [1 2 3    4 5 6]
+```
+
+```lmx
+[][]int: var [1 2 3;    4 5 6]
+```
+
+```lmx
+[][]int: var [[1 2 3]  [4 5 6]]
+```
+
+```lmx
+[][3]int: var [1 2 3
+              4 5 6]
+```
+
+The named form may omit `var` in every case. In the first and fourth forms,
+the known last-axis size 3 partitions the six initializer elements into two
+rows. The line break merely separates elements inside the already delimited
+initializer: indentation does not supply an axis size or a row boundary. An
+empty physical line outside a delimited region retains the ordinary block-reset
+rule; this addition changes neither that rule nor the initializer's boundary.
+The first and fourth declarations have type [][3]int, from which shape `[2,3]`
+is derivable using length. The second and third have type [][]int; their rows
+are validated during construction but their two sizes remain unspecified
+afterward. Equal payload is not equal complete type or persistent shape.
+
+Both axis sizes may be explicit, and the element requirement may be a complete
+structural model rather than a primitive type:
+
+```lmx
+[2][5]int: [[1 2 3 4 5] [1 2 3 4 5]]
+[2][5]Struct: [[a b c d e] [e d c b a]]
+```
+
+These are rank-two Arrays of shape `[2,5]`, with ten elements. In the second
+line, each of a through e must satisfy the ordinary complete Struct requirement;
+the notation does not copy their fields or introduce a new container kind.
+
+```lmx
+[2]Struct: [a b]
+[2]Struct: var [a b]
+[]Struct: var [a b]
+```
+
+`[2]Struct` denotes the abstract requirement “Array of Struct elements, length
+2”. The first complete declaration uses that requirement to initialize an
+anonymous Array; the second names it var. No name is invented for the first
+form. The third constructs the same two-element value with an unconstrained
+axis in its declared requirement. A size is an admission constraint, not a
+reserve request or a second element type. `[2][5]int: var` without an
+initializer still declares typed absence and does not allocate ten elements.
+
+The contents of every nonempty size region are parsed by the full common P0
+and evaluated through its ordinary expression contract. A size is not restricted
+to a numeral, identifier, or special constant-expression sublanguage:
+
+```lmx
+int: N 3
+[][N]int: [1 2 3    4 5 6]
+[][N + 0]int: [1 2 3    4 5 6]
+```
+
+Calls and nested VALUE indexing are parsed completely as well:
+
+```lmx
+[]int: row [1 2 3]
+[]int: sizes [2 3]
+int: axis 1
+[][length(row)]int: [1 2 3 4 5 6]
+[][sizes[axis]]int: [1 2 3 4 5 6]
+```
+
+Only the outer `[E]` contributes a type axis. E is an ordinary expression;
+inside it, `sizes[axis]` indexes the existing VALUE sizes. The TYPE role is
+not blindly propagated into every nested square region.
+
+The TYPE consumer obtains each written size expression once, in written prefix order
+and in its original context, before admitting that declaration's initializer.
+Calls, nested groups, paths, and operators retain their ordinary parsing and
+effect contracts; an inner separator belongs to its own delimited region.
+The expression must yield a finite nonnegative integer admitted by the existing
+integer/size contract. A negative, noninteger, unavailable, or unsupported size
+is diagnosed without truncation or wraparound. An axis size may be zero;
+the positive count R in `[](R)T` or `@(R)T` has a different role.
+
+The obtained sizes belong to the complete ordinary type requirement. Reuse of
+that requirement does not reevaluate its source expressions or read later
+changes to N. Its implementation preserves those constraints through existing
+type normalization, comparison, admission, copying, and serialization; it does
+not add a new TYPE-record field or a second type registry. The canonical
+description is addressed directly by TypeRef. Runtime dimensions are obtained
+only from that written normalized requirement and length where sufficient;
+initializer boundaries are not retained as instance metadata.
+The compatible forms `[](1)[3]int` and `[][3]int` both describe two axes, the
+first unconstrained and the second of size 3. Pointer composition retains its
+order: `@[2]int` is a reference to a length-two int Array, whereas `[2]@int`
+is a length-two Array of int references.
+
+`[2]T` refines `[]T`; an unsized declaration alone does not prove length 2.
+Admission checks the actual current extent whenever that fact is value-dependent.
+A stable type-pair cache must not treat one successful check on one unsized
+Array as a permanent proof for all values of that type. This refinement does
+not give one-dimensional and multidimensional Arrays different primary
+descriptors or element-storage mechanisms. Type identity and compatibility
+are described [below](#array-profiles).
+
+The receiving role and complete syntax distinguish a type extent from an index:
+
+```lmx
+[2]Struct: [a b]
+Struct[2]:= [a b]
+```
+
+The first has the declaration's `:` and a sized TYPE head. The second contains
+the single assignment operand `:=`, exactly as `Struct[2] := [a b]` does. It
+selects index 2 of an existing VALUE named Struct and assigns the ready Array
+`[a b]` under ordinary place/admission rules. It neither declares a type nor
+declares an Array of length 2. Ordinary index bounds and target compatibility
+still apply. Capitalization does not decide the role, and the contents of the
+initializer are not trial-executed to choose a parse.
+
+An indexed receiver/callable VALUE before `:` retains its ordinary call contract.
+The colon alone does not turn every `x[n]` head into TYPE; the common head
+resolution and receiving-role rules still apply.
+
+See [shape inference](#shape-inference) for flat streams, explicit row groups,
+zero extents, and diagnostics. This addition does not claim a production P0,
+translator, or LMX runtime implementation: **NOT_RUN**.
+
+<a id="side-metadata"></a>
+## 2. Primary descriptor and optional capacity storage
+
+Every initialized Array has its own primary `Lmx` with `parent`, `length`, and `storage` and no hidden shape prefix.
+At `capacity == length` no additional capacity header is required. The system
+parent may still carry the instance context required by a selected access profile. The TypeRefs of `[]int`
+arrays of different lengths point to the same system Structure describing the type `[]int`.
+
+| Actual storage condition | Representation |
+| --- | --- |
+| `capacity == length` | No extra reserve record is needed; capacity is obtained from length. A required View/access context remains available through parent, independently of capacity. |
+| `capacity > length` | A compact optional entry stores capacity through the existing arena association. It contains no mandatory rank/extents data. |
+| `capacity < length` | Invalid state. |
+
+`sys\capacity(arr)` checks that association or returns length if the entry is
+absent. It allocates nothing and neither creates nor changes a type. Reserve
+amounts and the presence of a capacity entry never enter type identity.
+
+Length and capacity count elements. The element size and stride follow the
+ordinary full element/storage contract. For an ordinary owned dense Array, dimensions come from its complete type
+description and, where sufficient, current length. An explicitly constructed
+View/access context may carry its own valid output shape and coordinate map.
+Written initializer row boundaries are not retained as hidden state.
+Direct low-level writes to length must preserve capacity and the written type
+constraints; `sys\resize` performs the coordinated ordinary operation.
+
+`sys\descriptor` supplied an ordinary Array/Structure retains the three live
+primary-field addresses. Its [TypeRef overload](#type-descriptor) has a distinct
+contract. Names such as `arr\rank` or `arr\capacity` gain no special field role.
+
+<a id="parent-context"></a>
+### Instance context through the system parent
+
+The system parent contains the complete instance descriptor and ordinary context needed for the selected Array access. A reference to the Array makes that context available to its receiving executor. Source/owner references, logical region, geometry, lifetime and rights are not new mandatory fields of every canonical TypeRef or of the Lmx header.
+
+Ordinary Structure templates and copy/merge build the correct derived parent. They retain the required source context and add the transformation data. This is a resolved construction mechanism, not an open problem requiring another graph, parser or metadata language. TypeRef still describes the type; capacity, length, rank, extents and instance access information remain different things. A user field called parent is not redefined as a hidden header accessor; existing system-descriptor access is used.
+
+```lmx
+ArrayViewFields:
+    @: source
+    @: owner
+    @: sourceRegion
+    @: shape
+    @: strides
+    int: offset 0
+    int: writable 0
+    []char: addressUnit "element"
+    []char: lifetime "retained"
+    []char: reallocation "reject"
+    @: read
+```
+
+This is ordinary DATA. The [complete context builder](TENSOR_EXPRESSIONS.md#view-context) uses merge and actual references; the Array constructor places its result in system parent. Field presence does not implement reading, owner retention or rights checking. The executor must actually consume these fields and call the admitted methods. Missing support is diagnosed rather than advertised as implemented.
+
+The initial persistent View holds its source and necessary owner context, is read-only unless writable access is explicitly admitted, and cannot amplify source rights. While held, the region's shape, length and backing must not change; invalidating resize, move or release is rejected. Existing element contents may change by permitted operations: a View is not a snapshot. No unagreed concurrent mutation occurs during a traversal. A temporary depth-cell context lasts only through its receiving call; escape requires a retained context or explicit materialization.
+
+Affine offset and signed strides use element units. A derived map is checked first against the immediate source's logical region and then composed into owner coordinates. Allocation bounds alone cannot grant access outside a borrowed subregion. Index/shape arithmetic is checked for validity and overflow independently of scalar wrapping policies. Empty results address no element. Non-affine access, such as gather or padding, can use ordinary methods; an affine-only executor rejects unsupported maps.
+
+Repeated reads are allowed. Repeated physical write addresses require an explicitly selected deterministic scatter/reduce rule, otherwise they are rejected. Ordinary assignment retains RHS values before stores. Merely selecting fuse does not weaken this snapshot contract. The full normative rules are [tensor geometry and context](TENSOR_EXPRESSIONS.md#geometry-and-parent).
+
+<a id="array-profiles"></a>
+### 2.1. One canonical TypeRef per normalized left requirement
+
+The type of a newly constructed Array is determined **only by its normalized
+complete left requirement**. TypeRef is an ordinary address/reference to the
+canonical immutable system Structure describing that type. It is not an int
+counter, table index, encoded bit tag, or integer API token. The same mechanism
+represents all types, including primitive int, Array, pointer, and signature
+requirements. Equal resolved requirements share one canonical description.
+
+| Declarations or type expressions | Type identity |
+| --- | --- |
+| `[]int: var [1 2]` and `[]int: vr2 [1 2 3]` | Same TypeRef. The initializer lengths do not specialize the type. |
+| `[][]int` and `[](2)int` | Same TypeRef: two axes without specified sizes. |
+| `[][3]int` and `[](1)[3]int` | Same TypeRef: two axes, with the last constrained to 3. |
+| `[2][3]int` and `[3][2]int` | Different types: the ordered written constraints differ. |
+| `[5]int` and `[]int` | Different complete requirements. |
+| `[N]int` after N resolves to 5 and `[5]int` | Same normalized requirement and canonical TypeRef. Evaluation does not force a fresh type. |
+
+Names, capacity, initializer lengths, row boundaries, and unused backing storage
+are not interning-key parameters. The type constructor evaluates a dynamic
+written size once under the ordinary contract and interns the resolved left
+requirement. There is no initializer-derived actual type, reserved-capacity type
+transition, or second type registry. The former compact/reserved *type-profile*
+scheme is superseded; those words can describe capacity storage conditions only.
+
+An Array created by `[][]int` retains two unspecified axes even when its
+initializer used rectangular rows of lengths 3 and 3. Those boundaries validate
+and flatten that construction; they do not turn its type into `[2][3]int`,
+persist per-value extents, or authorize rereading the original initializer to
+recover shape later. To retain the explicit shape, write the corresponding type:
+
+```lmx
+[2][3]int: var23 [[1 2 3] [4 5 6]]
+[3][2]int: var32 [[1 2] [3 4] [5 6]]
+```
+
+Available shape is obtained from TYPE plus length. One unconstrained axis can
+be derived by exact division by the positive product of all other known extents;
+for rank one this is simply length. Multiple unspecified axes remain unspecified.
+A zero known product does not determine another unknown axis. Thus `[2][0][3]int`
+retains its full zero-length shape through its type, whereas `[][0]int` does not
+invent its first size. Flat operations need no missing shape. An operation that
+actually needs unavailable dimensions receives the ordinary translator/interpreter
+diagnostic, not a new throw family or guessed factorization.
+
+### 2.2. Compatibility, references, and `typeof`
+
+Compatibility remains directed ordinary admission between complete descriptions.
+Canonical pointer identity proves the same type, but is not the full compatibility
+test. Exact size constraints refine the corresponding unsized requirements;
+otherwise admissible shapes must meet every explicitly required dimension.
+Value-dependent conditions use the current length and actual complete type,
+not a permanent successful check on an earlier value.
+
+A generic flat sequence consumer accepts the applicable one-dimensional and
+multidimensional Arrays without changing their type or layout. Explicit rank or
+size requirements still apply to consumers that declare them. An existing ready
+Array admitted through a compatible declaration or alias is neither copied nor
+retagged: its type remains the constructor's complete requirement. No alias or
+initializer-driven specialization is introduced.
+
+`typeof` and `sys\typeof` return TypeRef. A saved result is therefore declared
+as a reference, not int:
+
+```lmx
+[]int: arr [1 2 3]
+@: savedType typeof(arr)
+sys\reserve(arr; 8)
+@: afterReserve typeof(arr)
+```
+
+For this same arr, savedType and afterReserve refer to the same canonical []int
+description. Reserve changes no TYPE. An admitted resize likewise retains that
+TypeRef and obeys any fixed constraints of the type. Replacing a variable's
+value with a different typed object is a different ordinary operation. Queries
+about an address or a reference place retain their own contracts; typeof does
+not recursively dereference arbitrary pointers.
+
+The direct TypeRef prefix, its pointer-width load, alignment, and zero-payload
+uninit representation follow the [typed-record ABI](L2_spec_en.md#value-record).
+For a genuine initialized record payload at byte address p, one pointer load
+from `p - sizeof(TypeRef)` obtains the description address. This is neither the
+old fixed `p - 4` nor universally `p - sizeof(size_t)`. Bare expressions and
+dense Array elements do not automatically provide such tagged-record addresses.
+
+<a id="type-descriptor"></a>
+### 2.3. The system Structure itself: `sys\descriptor(typeof(obj))`
+
+TypeRef already addresses the canonical system description. The existing
+receiver's TypeRef overload returns **that same canonical immutable Structure**;
+it does not look up an integer code, allocate a wrapper, or copy metadata for
+each call or Array. This rule applies to primitive and dynamically derived types.
+
+| Argument supplied to `sys\descriptor` | Result |
+| --- | --- |
+| A canonical system TypeRef, including `typeof(obj)` | That same system type-description Structure. |
+| An ordinary Array or Structure value | The existing Structure of three live primary-field addresses: parent, length, storage. |
+| No argument | The previous current-DATA selection and instance-field-address contract. |
+
+A type description is itself a Structure, so the more specific canonical
+system-TYPE contract takes precedence for that object. Canonical status is
+established by the common type system, not by matching a user field layout,
+name, or integer value. Arbitrary ints are not retained as type-code aliases
+and are never interpreted as descriptor addresses. Invalid or unavailable TYPE
+references receive the ordinary type refusal and lifetime rules.
+
+```lmx
+[]int: arr [1 2 3]
+@: savedType typeof(arr)
+@: instanceFields sys\descriptor(arr)
+@: typeInfo sys\descriptor(savedType)
+@: sameTypeInfo sys\descriptor(typeof(arr))
+```
+
+Here savedType, typeInfo, and sameTypeInfo refer to the same type Structure;
+instanceFields has the ordinary three live addresses. `sys\descriptor(typeof(7))`
+returns the canonical primitive int description by the same rule. Description
+objects have a finite bootstrapped metatype; ordinary graph cycles can support
+`typeof(typeof(obj))` without infinitely constructing more descriptions.
+
+The returned Structure exposes the normalized complete type description:
+applicable element/storage constraints, the written rank and axis constraints,
+the policy for obtaining any dimension derivable from length, and direct
+compatibility/refinement relations. Unknown axes stay unspecified. Initializer
+rows never appear as extra exact dimensions.
+Actual instance length and reserve are not copied into a shared type description.
+`sys\capacity(obj)` reads the instance's optional capacity entry or returns
+its length when the entry is absent. No new public field names or large mandatory
+metadata schema are required.
+
+The canonical description is system-owned and read-only. Reserve and admitted
+resize do not replace it. A saved TypeRef continues to identify that same type
+under ordinary ownership/lifetime rules. The query creates no secondary Array
+descriptor even for compact multidimensional values. A TYPE description's own
+ordinary graph representation is not a disguised per-Array shape allocation.
+Production P0/translator/runtime acceptance of this documentation change is
+**NOT_RUN**; earlier integer-code/profile receipts do not validate the new ABI.
+
+<a id="indexing"></a>
+## 3. Linear access, coordinates, and ordinary paths
+
+| Form | Meaning |
+| --- | --- |
+| `arr[k]` | One flat element index, also when rank is greater than one |
+| `arr[i][j][k]` for rank=3 | Complete coordinates into that same flat storage |
+| `arr[start:stop:step]` | A one-dimensional selection of the linear sequence |
+| `plane[i][:]` | An explicit row selection through an axis chain |
+| `plane[1:3][::-1]` | Selection along two retained axes, reversing the latter |
+| `struct\struct2\field` | Ordinary named Structure-field path |
+| `struct[i]\[j]\[k]` | The same path mechanism, selecting ordinary elements by index |
+
+When i selects the field struct2 and j selects field, the exact correspondences are:
+
+| Named/mixed form | Indexed form |
+| --- | --- |
+| `struct\struct2\field` | `struct[i]\[j]` |
+| `struct\struct2\field[k]` | `struct[i]\[j]\[k]` |
+
+The second row has one further selection k; it is not equivalent to a path
+with only the first two selections.
+
+Adjacent suffixes without a path separator refer to axes of one Array.
+Backslash continues the ordinary path through the selected field value; it
+does not invoke an array-of-arrays operation. Names and indexes can use the
+same ordinary path rules.
+
+For extents `[d0,d1,d2]`, coordinates map to `(i*d1+j)*d2+k`. Thus for
+`[2,2,2]`, `arr[5]` and `arr[1][0][1]` address the same place. A single suffix
+does not manufacture a row Array. A partial coordinate-only chain creates
+no hidden view: use one flat index or the complete coordinate vector.
+In a chain containing slices, a scalar removes its axis, a slice retains
+its selected extent, and unmentioned remaining axes stay whole.
+The needed dimensions must be available from the actual TYPE and length.
+Rank alone does not supply unknown strides; former initializer rows are not
+runtime evidence. Flat arr[k] remains available without those dimensions.
+
+Source and index occurrences are obtained once in their existing order.
+Retaining extents does not add per-coordinate upper-bound checks: existing
+linearization and final-element validation remain authoritative. Negative
+scalar Array indexing never means from-end access. Interpreted L2/L3 and
+L3 retain their checks; native L2 retains its absence of automatic checks.
+Use ordinary pointers for relative address offsets.
+
+A full scalar chain first computes one row-major index and validates only
+that final element: at extents `[2,3]`, `[0][3]` and `[1][0]` both give k=3.
+Slice bounds have their separate selected-axis normalization contract; it
+must not be applied to scalar-only chains as new per-coordinate checks.
+
+<a id="constructors"></a>
+## 4. Standalone `[items]` is one VALUE
+
+In VALUE position, standalone squares construct an ordinary anonymous Array
+of unrestricted element types, as `[]@: [items]` does. This extends the
+existing declaration initializer through the same P0 machinery.
+
+```lmx
+[]int: arr2 [10 20]
+@: whole [arr2]
+@: empty []
+@: pair [1 2]
+```
+
+Whole has one element holding the original arr2 value with its identity.
+The constructor neither copies arr2's elements nor broadcasts the singleton.
+Empty brackets yield one present empty Array. No first element is probed
+to infer the complete result type.
+
+Element expressions are obtained once in their normal order. Explicit
+copy/merge streams follow the existing initializer contract. A ready VALUE
+is not executed again as code. The constructed Array stays one value at
+zero, one, or many elements; ordinary singleton expression-group transparency
+does not flatten it. P0 retains the structural constructor form and original
+context; the grouper consumes graph contracts without scanning brackets.
+
+`[]T`, `[extent]T` in TYPE, `arr[i]` in VALUE/PLACE, `arr[:]`, `[items]`,
+and `.(expression)op` remain distinct
+by structural position and receiving role. No size tail on a declaration is
+introduced. The rank-three examples may receive a ready Array with complete
+extents `[2,2,2]`.
+
+### 4.1. Rows of a typed multidimensional initializer
+
+The declared rank and any explicit axis sizes determine how the receiver consumes already delimited
+initializer regions. A `;` at the current initializer level finishes a row;
+explicit row groups give the same boundaries. These forms are equivalent:
+
+```lmx
+[][]int: [a b c; a b d; a b c]
+[][]int: [[a b c] [a b d] [a b c]]
+```
+
+With `a=1`, `b=2`, `c=3`, `d=4`, both validate an initializer of shape `[3,3]`
+and produce flat storage `[1,2,3,1,2,4,1,2,3]`. Their retained type is [][]int,
+with unspecified extents; the row sizes do not enter it. The numeric pair
+similarly validates rows of shape `[3,2]`:
+
+```lmx
+[][]int: [1 2; 3 4; 5 6]
+[][]int: [[1 2] [3 4] [5 6]]
+```
+
+Row lengths must agree. The following forms have row lengths 3, 4, 5 and
+receive a shape diagnostic from translation or the reached interpreter:
+
+```lmx
+[][]int: [a b c; a b c d; a b c d e]
+[][]int: [[a b c] [a b c d] [a b c d e]]
+```
+
+The author's further negative example also fails: its row lengths are 3, 3, 4.
+
+```lmx
+[][]int: [[a b c] [a b d] [a b c d]]
+```
+
+These are not new catchable LMX exceptions. No ragged storage, row-boundary
+table, or intermediate row Array objects are created. Above rank two, the
+same contract consumes already delimited regions of the following axes.
+
+Preparation uses common P0 and the ordinary initializer contract:
+
+1. Preserve source nodes and contexts. The initializer gets row boundaries
+   from the [common P0 semicolon rule](LMX_grammar.en.md#separators). Commas
+   separate fields within a row. Separators in nested calls and bounded regions
+   belong to those regions. Characters inside a literal remain its content.
+2. Reconcile explicit type extents, rectangular initializer regions, and the
+   element count by [the common shape procedure](#shape-inference). Check
+   rectangularity of the available regions for the declared rank.
+   A known mismatch is diagnosed before obtaining elements; dynamic streams
+   retain their ordinary sequential admission contract.
+3. Obtain each element once in source order and admit it under T. An ordinary
+   Array VALUE does not implicitly become a stream. Explicit copy/merge streams
+   retain the existing initialization contract.
+4. Fill one flat storage with the left requirement's canonical TypeRef. Do not
+   retain initializer-derived dimensions in the type or an instance-side record. Do not rewrite
+   source text or the live graph into a different graph of row objects.
+
+If empty axes remain unspecified, length=0 does not justify guessing their
+sizes or rejecting otherwise valid empty storage. An explicit left type such
+as [2][0][3]int preserves its complete zero-length shape.
+
+### 4.2. Ordinary anonymous Structure fields in DATA
+
+Rectangularity is a typed rank-constructor requirement, not a requirement on
+every collection of Structures. These DATA forms are equivalent and valid:
+
+```lmx
+Struct: [a b c] [a b d] [a b c d]
+Struct: (a b c) (a b d) (a b c d)
+```
+
+Each declares three ordinary anonymous Structure fields with lengths 3, 3, 4.
+Structure is `[]@`; its fields may hold ordinary references without a special
+array-of-arrays kind. This receiving DATA role retains three structural values
+and imposes no shared rectangular shape on their individual fields.
+
+The grouper does not choose this behavior by the original bracket characters.
+In VALUE position, the ordinary constructor for `[arr2]` has been consumed and
+returns one ready Array with one whole arr2 field. In DATA, the receiver accepts
+the anonymous-field graph. No square-versus-round flags control unwrapping.
+
+<a id="shape-inference"></a>
+### 4.3. Initializer validation and the dimensions available afterward
+
+One typed-initializer procedure consumes common P0 regions, not their source
+spellings. It validates available row/layer boundaries but retains only the
+type supplied by the left requirement. A ready Array initializer follows
+ordinary reference identity/admission; checking it does not copy or reshape it.
+
+1. Normalize the complete left requirement. Each `[]` contributes an unspecified
+   extent; each `[E]` contributes its once-evaluated checked nonnegative size;
+   `[](R)` contributes R unspecified axes. Pointer composition keeps its ordinary
+   boundaries. Intern that complete requirement as a canonical TypeRef.
+2. For a constructor with explicit rows/layers, verify the declared rank,
+   rectangularity, and all written size constraints against those regions.
+   Do not discard contradictory explicit boundaries merely because their total
+   count could fit another shape. Their discovered dimensions are temporary
+   construction facts, not new TYPE parameters or retained Array metadata.
+3. Obtain each admitted element once in source order. Explicit copy/merge streams
+   keep their contracts. A ready Array element does not implicitly become a
+   stream. Check statically known contradictions before obtaining elements;
+   dynamically obtained information is checked without rerunning producers.
+4. Check the final count against the written constraints. With no unspecified
+   axes, it must equal the known product. With one or more unspecified axes
+   and a positive known product, the count must be exactly divisible by that
+   product. A single residual size is then derivable when needed; with several
+   unknowns, no factorization is chosen. If any written extent is zero, the
+   count must be zero; other unknown extents remain unknown. Lack of a unique
+   full shape does not itself prevent storing an otherwise admitted flat value.
+5. Check integer products/offsets without wraparound and publish one flat Array
+   with the left requirement's TypeRef and ordinary capacity storage. Do not
+   append shape records, refine the type from rows, or later reread the original
+   initializer as runtime shape. Existing effects/failure contracts remain;
+   there is no new rollback guarantee.
+
+| Separate source example | Required result |
+| --- | --- |
+| `[][3]int: [1 2 3 4 5 6]` | Type [][3]int; `[2,3]` is derivable from that TYPE and length 6. |
+| `[2][]int: [1 2 3 4 5 6]` | Type [2][]int; `[2,3]` is derivable when required. |
+| `[2][3]int: [1 2 3 4 5 6]` | Type and complete shape [2][3]int; length must be 6. |
+| `[][]int: [[1 2 3] [4 5 6]]` | Rectangular rows validate and flatten; TYPE remains [][]int with unspecified extents. |
+| `[][]int: [1 2 3 4 5 6]` | Valid flat storage under [][]int; two extents remain unspecified. |
+| `[][3]int: [1 2 3 4 5]` | Invalid count: five is not divisible by the written width 3. |
+| `[2][3]int: [[1 2] [3 4] [5 6]]` | Invalid explicit rows: their `[3,2]` form contradicts written `[2,3]`. |
+| `[][3]int: []` | Type [][3]int, length 0; shape `[0,3]` is derivable. |
+| `[2][0]int: []` | Type [2][0]int retains the complete zero-length shape. |
+| `[0][]int: []` | Valid empty value; the second extent remains unspecified. |
+| `[][0]int: []` | Valid empty value; the first extent remains unspecified. |
+| `[][0]int: [[] []]` | Explicit empty rows validate; their count 2 does not enter TYPE or persist as an implicit first extent. |
+
+For ordinary owned storage, a shape-requiring operation uses the actual complete
+TYPE and length. An explicit View/access context has its separately validated shape.
+For an [][]int value, even a former rectangular initializer does not prove
+which pair of extents it had. Missing necessary information is diagnosed at
+that consuming operation, while flat reads/writes/traversals remain available.
+The same applies to compatible admission of a ready value: accepting it cannot
+manufacture missing size evidence or silently retag it as a shaped type.
+
+Explicit constraints continue to govern mutation. `[2][3]int` cannot retain its
+type while an operation publishes length 7 or claims shape `[3,2]`. Reserve may
+grow without changing any type or dimension. Known contradictions are translator
+diagnostics; genuinely dynamic contradictions are interpreter diagnostics.
+This addition supplies no new catchable shape-error family. Production parsing,
+translation, and LMX execution remain **NOT_RUN**.
+
+<a id="mutation"></a>
+## 5. Flat operations and mutation remain ordinary
+
+Rank does not prohibit flat traversal, selection, or element writes. Flat
+consumers use the actual element/storage contract, length, and storage without
+requiring unknown axis sizes. A multidimensional consumer uses dimensions available from TYPE/length or an
+explicit valid access context, with a diagnostic if needed information is absent. Changing index spelling does not change the type or retain extra shape.
+
+A newly constructed result receives the complete type selected by its declared
+constructor/result contract. A new flat selection may use a one-axis requirement
+without changing its source. Shape-preserving contracts must preserve the
+applicable written constraints; they cannot promise hidden initializer-derived
+extents. Ordinary `:=` preserves pointwise target identity for Array places; an ordinary
+reference place keeps its separately established reference/admission contract.
+The dedicated `.:` broadcasts RHS to an already selected slice without resizing it.
+
+`sys\reserve` changes capacity while preserving length and TypeRef. An auxiliary
+capacity entry exists only when the actual reserve exceeds length. Resize
+respects the same complete type: a fixed `[2][3]int` cannot acquire length 7;
+`[][3]int` admits lengths compatible with its known width; `[][]int` does not
+invent axis sizes merely to change its flat length. At length equal to capacity
+the entry is removed. Shrink retaining backing generally leaves a capacity entry.
+Neither transition changes the type address. Direct low-level length writes
+have the same consistency obligation. This storage rule does not itself implement the separately specified reshape
+method; that method obeys the selected type and access-context contract.
+
+<a id="reconstruction"></a>
+## 6. Copying, restoration, and native code
+
+References to one Array share its primary descriptor and canonical TypeRef.
+Copying preserves values, complete type requirements, and ordinary reference
+relationships through the existing source-to-copy mapping. It does not create
+shape that the source type lacks. A copy or restoration may choose capacity equal
+to length without allocating an extra capacity entry; required access/owner context is
+retained or rebuilt by ordinary copy/merge. Reserve is not type identity.
+
+Type-description addresses remain stable while needed. Same-context attach
+preserves references and identities under the ordinary ownership/lifetime
+contract. Cross-context restoration interns the complete descriptions and
+relocates TypeRefs; raw addresses are not portable serialized identifiers.
+Known constraints such as [2][0][3]int remain intact, while unspecified dimensions
+remain unspecified. No former row boundaries are recovered from source code.
+
+An otherwise permitted storage move does not change Array identity. A retained
+View under the initial context policy rejects an invalidating move, length/shape
+change or release until the retention ends; rebinding is a separate implemented policy. An existing capacity association
+is transferred or released with its owner, and reused descriptor memory must not
+inherit it. Shared immutable type Structures obey the common type-context
+lifetime rather than the lifetime of one Array. Copying does not multiply them
+once per value when canonical descriptions can be shared.
+
+Native code and caches may rely on the immutable complete type, but dimensions
+derived from length and other value-dependent checks must use the current value
+or a valid proof after mutations. No automatic compilation/invalidation mechanism
+is added. Native modules and record readers must use the TypeRef-width ABI,
+not old four-byte integer-tag layouts or old numeric-type receipts.
+
+<a id="depth"></a>
+## 7. Operation depth uses available logical dimensions
+
+[Operation depth](OPERATOR_DEPTH.en.md#evaluation) counts one external traversal over the same flat storage. Positive d selects the first d logical axes as frame and leaves K−d axes in each cell; d>K is diagnosed. Explicit zero means maximum depth: all K axes. Absent depth remains absent and preserves the selected method's default, rather than being a universal whole-object zero.
+
+Ordinary `A * B` multiplies elements. `A [*] B` uses matrix/tensor multiplication. For rank-two inputs, `A .(2)* B` explicitly reaches elements and `A .(1)[*] B` passes row pairs to vector multiplication. After selecting cells, the mechanism invokes the base handler without repeating automatic Map. A scalar base method that does not admit remaining Array cells diagnoses them. Explicit body operations remain ordinary calls.
+
+An `[][]int` with unknown dimensions does not recover initializer rows when depth is requested. Required missing dimensions are diagnosed; a flat consumer can still proceed. An explicit View's valid context can describe its own coordinates without changing the owner's TypeRef or recovering forgotten initializer data. Temporary cells share backing and do not allocate graph rows; their escape follows the context lifetime rule.
+
+Structure `[]@` remains in the Array mechanism with real typed records. A reference element does not add a flat axis or create a separate array-of-arrays category. Frame agreement and actual operator admission are checked independently.
+
+
+<a id="examples"></a>
+## 8. Examples and verification scope
+
+The sized declarations above preserve the canonical TypeRef rule. The [Array examples](examples/array_storage/README.md), [host storage model](tools/array_storage_reference.py) and [reference checks](validation/array_storage_reference_test.py) distinguish constructor validation, declared type constraints and available runtime access shape. They model selected contracts, not production P0, the complete TypeRef ABI or runtime retention. Old receipts are not proof for changed semantics; current host results and NOT_RUN production status must be reported separately.
+
+- [Type declaration forms](TYPE_DECLARATION_FORMS.md).
+- [Array expressions](ARRAY_EXPRESSIONS.en.md).
+- [Full tensor specification](TENSOR_EXPRESSIONS.md).
+- [Bracket-subparser grammar](BRACKET_SUBPARSER.en.md).

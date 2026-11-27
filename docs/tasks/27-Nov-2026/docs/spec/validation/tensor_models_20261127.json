@@ -1,0 +1,191 @@
+{
+  "revision": "2026-11-27",
+  "status": "PASS",
+  "scope": "Prepared host semantic contracts and documentation examples. This is not a production conformance claim.",
+  "test_suites": [
+    {
+      "name": "tensor_contracts",
+      "status": "PASS",
+      "test_methods": 43,
+      "command": "python3 docs/spec/tools/test_array_expression_reference.py"
+    },
+    {
+      "name": "depth_transport",
+      "status": "PASS",
+      "test_methods": 12,
+      "command": "python3 docs/spec/validation/operand_depth_reference_test.py"
+    },
+    {
+      "name": "array_storage",
+      "status": "PASS",
+      "test_methods": 21,
+      "command": "python3 docs/spec/validation/array_storage_reference_test.py"
+    },
+    {
+      "name": "ternary_slices",
+      "status": "PASS",
+      "test_methods": 13,
+      "command": "python3 docs/spec/validation/ternary_slices_reference_test.py"
+    },
+    {
+      "name": "grouping",
+      "status": "PASS",
+      "test_methods": 69,
+      "command": "python3 docs/spec/validation/expression_grouping_reference_test.py"
+    },
+    {
+      "name": "operation_forms",
+      "status": "PASS",
+      "test_methods": 26,
+      "command": "python3 docs/spec/reference/operation_forms/test_translator_reference.py"
+    },
+    {
+      "name": "closers",
+      "status": "PASS",
+      "test_methods": 25,
+      "command": "python3 docs/tools/test_normalize_lmx_closers.py"
+    }
+  ],
+  "test_methods_total": 209,
+  "slice_oracle_vectors": 7371,
+  "registries": [
+    {
+      "name": "array_expression",
+      "examples": 6,
+      "places": 12,
+      "status": "PASS",
+      "command": "python3 docs/spec/tools/register_array_expression_examples.py --check"
+    },
+    {
+      "name": "array_storage",
+      "examples": 10,
+      "places": 20,
+      "status": "PASS",
+      "command": "python3 docs/spec/tools/register_array_storage_examples.py --check"
+    },
+    {
+      "name": "assignment",
+      "examples": 23,
+      "places": 46,
+      "status": "PASS",
+      "command": "python3 docs/spec/tools/register_assignment_examples.py --check"
+    },
+    {
+      "name": "expression_slices",
+      "examples": 10,
+      "places": 20,
+      "status": "PASS",
+      "command": "python3 docs/spec/tools/register_expression_slices_examples.py --check"
+    },
+    {
+      "name": "operator_depth",
+      "examples": 5,
+      "places": 10,
+      "status": "PASS",
+      "command": "python3 docs/spec/tools/register_operator_depth_examples.py --check"
+    }
+  ],
+  "registered_examples": 54,
+  "registered_places": 108,
+  "repairs": [
+    "Synchronize depth filenames, README source blocks, exact source mirrors, TSV positions and SHA-256 receipts.",
+    "Use .(1)[*] in frame-mismatch fixture so the base method admits row vectors.",
+    "Retain the original valid depth>rank fixture (020_excess_depth); negative int remains independently covered by operator_depth cases.",
+    "Correct one-axis .: host model: singleton RHS broadcasts, zero target reads no ready RHS elements; incompatible lengths fail before stores.",
+    "Recognize only validated in-tree task provenance in JSON; compare the recorded task baseline hash against the supplied archive.",
+    "Derive ** priority 131 from the current source thresholds, preserve the existing right binding policy, and test chained powers, multiplication on both sides and signed operands."
+  ],
+  "production_parser": "NOT_RUN",
+  "production_translator": "NOT_RUN",
+  "lmx_runtime": "NOT_RUN",
+  "retention_runtime": "NOT_RUN",
+  "C_import": "NOT_RUN",
+  "power_priority": {
+    "value": 131,
+    "derivation": "max(multiplicative priority 110, unary-sign argument minimum 130) + 1",
+    "binding_pair": [
+      131,
+      131
+    ],
+    "association": "right; derived RHS minimum admits equal priority",
+    "encoding": "No sign/parity decoding and no new public operand DATA field",
+    "source_evidence": {
+      "archive": "selfbuild.tar.gz",
+      "archive_sha256": "36e4dc2b2d2f94a13c4d32157781c93193823b80676882c8b72b7c69ca3c00a7",
+      "member": "selfbuild/src/l2src/lmx_graph.lm2",
+      "member_sha256": "2e5a3ae9a5b04010dae4ee55b66e203044d701434c20a2611f2479f68b0382d5",
+      "priority_table_lines": [
+        3907,
+        3920
+      ],
+      "climber_lines": [
+        4135,
+        4139
+      ],
+      "source_power_implementation": "ABSENT; the 131 requirement is documentation, not a claim that this source supports **",
+      "builder_scale": {
+        "member": "selfbuild/src/l2src/l2_graph_build.lm2",
+        "table_lines": [
+          154,
+          171
+        ],
+        "right_minimum_line": 362,
+        "multiplicative": 6,
+        "additive": 5,
+        "prefix_argument_minimum": 7,
+        "index": 8,
+        "integration_note": "Replace this builder grouping mechanism with a call to the one common grouping implementation. The current 1–8 scale is audit evidence; no separate binding algorithm or local precedence table is retained in the target architecture."
+      },
+      "ordinary_frontend_scale": {
+        "member": "selfbuild/src/l2src/l2_frontend_helpers.lm2",
+        "table_lines": [
+          3222,
+          3244
+        ],
+        "split_lines": [
+          3022,
+          3037
+        ],
+        "multiplicative": 10,
+        "additive": 9,
+        "initial_best_priority": 99,
+        "equal_priority_rule": "p <= bestp chooses the rightmost minimum, producing left-associated binary grouping",
+        "consumer": "selfbuild/src/l2src/l2_frontend_lower.lm2:9616–9727",
+        "integration_note": "Replace rw_prec/rw_split grouping with a call to the same common implementation used by the other routes. The current 1–10 scale and bestp=99 are audit evidence, not a separate mechanism to preserve through a binding adapter."
+      }
+    },
+    "host_cases": [
+      {
+        "expression": "2 ** 3 ** 2",
+        "expected": 512
+      },
+      {
+        "expression": "2 * 3 ** 2",
+        "expected": 18
+      },
+      {
+        "expression": "2 ** 3 * 4",
+        "expected": 32
+      },
+      {
+        "expression": "-2 ** 2",
+        "expected": -4
+      },
+      {
+        "expression": "2 ** -2",
+        "expected": 0.25
+      }
+    ],
+    "status": "HOST_REFERENCE_PASS",
+    "production_execution": "NOT_RUN",
+    "model_scope": "Normative host fixture of the single shared grouping algorithm; it does not execute or reproduce the current production parser."
+  },
+  "required_architecture": {
+    "parser": "One main parser with a delegating square-bracket subparser as part of that same parser; expressions and brace regions are delegated and resume at the returned cursor.",
+    "grouping": "One common grouping implementation called by every source, graph, interpreter and native route.",
+    "migration": "Replace all three current grouping mechanisms with calls to the shared implementation; their different scales remain source evidence only.",
+    "excluded_target": "Separate grouping algorithms retained through precedence adapters or synchronized local tables.",
+    "implementation_status": "Documentation target only; production source unchanged and NOT_RUN."
+  },
+  "architecture_update_validation": "Comments and evidence notes only; host priority131 and tested behavior are unchanged. No additional test run."
+}

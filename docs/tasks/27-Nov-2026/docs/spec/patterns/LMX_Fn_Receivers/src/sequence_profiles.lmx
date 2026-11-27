@@ -1,0 +1,124 @@
+# A finite half-open range over an explicit value/ordering profile.
+# The built-in exact-int representation retains FxSeqRange's bigint preflight;
+# other representations use the same ordinary sequence storage and callbacks.
+FxRangeProfile:
+    @: arrayType
+    int: direction
+    @: advance
+    @: order
+    @: validate
+
+FxProfileRange:
+    private:
+        @: start
+        @: stop
+        @: step
+        @FxRangeProfile: profile
+    required: start stop step profile
+    return: @
+    range:
+        throws: copy(FxThrows\traversal) FxPredicate SequenceElement SequenceStep
+        if: profile\direction != 1 && profile\direction != -1
+            throw: SequenceStep()
+        FxApply\apply(profile\validate; (start; stop; step))
+        private: @: out FxSeqAllocate\make(profile\arrayType; 0)
+        private: @: current start
+        while: FxValueOrder\compare(current; stop; profile\order) * profile\direction < 0
+            FxSeqPush\append(out; current)
+            private: @: following FxApply\apply(profile\advance; FxTwo\make(current; step))
+            if: FxValueOrder\compare(following; current; profile\order) != profile\direction
+                throw: SequenceStep()
+            current := following
+        return: out
+
+# The profile is explicit when no built-in exact representation is selected.
+# Rounded arithmetic must prove actual progress at every reached step. The
+# output's own maxLength and element admission remain FxSeqPush's checks.
+
+FxCodecApply:
+    private:
+        @: value
+        @: operation
+        @: arguments ()
+    required: value operation
+    return: @
+    apply:
+        throws: copy(FxThrows\traversal)
+        return: FxApply\apply(operation; FxSeqConcat\concat((FxOne\make(value); arguments)))
+
+FxProfileFormat:
+    private:
+        @: value
+        @: profile
+        @: arguments ()
+    required: value profile
+    return: @
+    format:
+        throws: copy(FxThrows\traversal)
+        return: FxCodecApply\apply(value; profile; arguments)
+
+FxProfileParse:
+    private:
+        @: source
+        @: profile
+        @: arguments ()
+    required: source profile
+    return: @
+    parse:
+        throws: copy(FxThrows\traversal)
+        return: FxCodecApply\apply(source; profile; arguments)
+
+# These exact public text representations supply defaults only for text. They
+# delegate to the single generic algorithm and preserve the actual []char R.
+FxTextTrim:
+    private:
+        []char: text
+        []char: chars " \t\r\n\v\f"
+        @: predicate 0
+        @: same 0
+    required: text
+    return: []char
+    trim:
+        throws: copy(FxThrows\predicate) FxShape SequenceSize
+        return: \FxSequenceTrim\trim(text; chars; 0; predicate; same)
+    trimStart:
+        throws: copy(FxThrows\predicate) FxShape SequenceSize
+        return: \FxSequenceTrim\trim(text; chars; 1; predicate; same)
+    trimEnd:
+        throws: copy(FxThrows\predicate) FxShape SequenceSize
+        return: \FxSequenceTrim\trim(text; chars; 2; predicate; same)
+
+FxTextPad:
+    private:
+        []char: text
+        int: width
+        []char: fill " "
+    required: text width
+    return: []char
+    padLeft:
+        throws: copy(FxThrows\sequence)
+        return: \FxSequencePad\pad(text; width; fill; 0)
+    padRight:
+        throws: copy(FxThrows\sequence)
+        return: \FxSequencePad\pad(text; width; fill; 1)
+
+FxTextJoin:
+    private:
+        @: parts
+        []char: separator ""
+    required: parts
+    return: []char
+    join:
+        throws: copy(FxThrows\mutation)
+        return: \FxStdJoin\join(parts; separator)
+
+FxTextCycle:
+    private:
+        []char: items
+        int: count
+        int: rejectNegative 0
+    required: items count
+    return: []char
+    cycle:
+        throws: copy(FxThrows\sequence)
+        return: \FxStdCycle\cycle(items; count; rejectNegative)

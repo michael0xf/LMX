@@ -2885,6 +2885,8 @@ fn: lm_graph_flag_name (int: flagset; int: index) const: char@
             return: "SQUARE"
         if: index = 7
             return: "POSTFIX"
+        if: index = 8
+            return: "SLICE_SEPARATOR"
         ---
     if: flagset = 1
         if: index = 0
@@ -2984,6 +2986,8 @@ sub: lm_graph_nodes_prefix (c.FILE@: out; c.LmP0Node@: item)
         c.fputs("Square ", out)
     if: (item\flags & c.LM_P0_NODE_POSTFIX) != 0U
         c.fputs("Postfix ", out)
+    if: (item\flags & c.LM_P0_NODE_SLICE_SEPARATOR) != 0U
+        c.fputs("SliceSeparator ", out)
     ---
 return
 

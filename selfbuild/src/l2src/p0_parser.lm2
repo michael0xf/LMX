@@ -2147,6 +2147,156 @@ fn: lm_p0_compact_piece (c.LmP0Document@: document; const: (char@: text); size_t
     return: 1
 end: lm_p0_compact_piece
 
+# 1 when the multi-line index between open_index and close_index has a deeper logical source event at its own level (LMX_grammar
+# section 15): after the line that opens the index, a content line whose layout (indentation and leading dots, lm_p0_scan_layout_prefix)
+# is deeper than the first content line's (lm_p0_layout_prefix_is_deeper). Logical lines come from lm_p0_find_layout_line_end_from, the
+# physical rule of a bracket group: a line break inside a nested group or a protected text is not a line of this level.
+fn: lm_p0_index_has_deeper_event (const: (char@: text); size_t: open_index; size_t: close_index) int
+    size_t: line_end
+    size_t: line_start
+    size_t: width
+    size_t: content_offset
+    size_t: content_indent
+    size_t: content_dots
+    size_t: base_indent
+    size_t: base_dots
+    int: have_base
+    have_base := 0
+    base_indent := 0U
+    base_dots := 0U
+    line_end := lm_p0_find_layout_line_end_from(text, close_index, (open_index + 1U), 0, 0U, 0U)
+    width := c.lm_p0_line_break_width_at(text, close_index, line_end)
+    if: width = 0U
+        return: 0
+    ---
+    line_start := (line_end + width)
+    while: line_start < close_index
+        lm_p0_scan_layout_prefix(text, close_index, line_start, @ content_offset, @ content_indent, @ content_dots)
+        if: (content_offset < close_index) && (c.lm_p0_is_line_break(text[content_offset]) = 0) && (text[content_offset] != '#')
+            if: have_base = 0
+                base_indent := content_indent
+                base_dots := content_dots
+                have_base := 1
+            else:
+                if: lm_p0_layout_prefix_is_deeper(content_indent, content_dots, base_indent, base_dots) != 0
+                    return: 1
+                ---
+            ---
+        ---
+        line_end := lm_p0_find_layout_line_end_from(text, close_index, line_start, 0, 0U, 0U)
+        width := c.lm_p0_line_break_width_at(text, close_index, line_end)
+        if: width = 0U
+            return: 0
+        ---
+        line_start := (line_end + width)
+    ---
+    return: 0
+end: lm_p0_index_has_deeper_event
+
+# The index `[...]` after a head (LMX_grammar section 30, slices) is its own bounded level, parsed with LM_P0_FIELD_PARSE_INDEX_SUFFIX:
+# a colon there is never a frame colon. A colon with no open question is a slice separator (LM_P0_NODE_SLICE_SEPARATOR, dumped as
+# SliceSeparator); `::` is two of them; a third one is refused. An index with no separator and no question is spliced flat into the
+# enclosing level, as an ordinary index always was. Otherwise its level stands as one Structure node between the atoms `[` and `]`,
+# so its colons never close a question of the enclosing level. The values are the same nodes, not copies.
+fn: lm_p0_index_content (c.LmP0Document@: document; c.LmP0Structure@: structure; const: (char@: text); size_t: byte_count; size_t: line; size_t: column; size_t: offset; size_t: open_index; size_t: close_index) int
+    c.LmP0Structure@: index_structure
+    c.LmP0Field@: field
+    c.LmP0Node@: value
+    c.LmP0Node@: index_node
+    size_t: inner_index
+    size_t: separators
+    int: pending
+    int: marked
+    unsigned: index_flags
+    int: document_index
+    int: multiline
+    index_structure := 0
+    inner_index := 0U
+    multiline := 0
+    if: lm_p0_count_line_breaks(text, (open_index + 1U), close_index) != 0U
+        multiline := 1
+    ---
+    document_index := 0
+    index_flags := c.LM_P0_FIELD_PARSE_INDEX_SUFFIX
+    if: multiline != 0
+        document_index := lm_p0_index_has_deeper_event(text, open_index, close_index)
+    ---
+    if: document_index != 0
+        index_flags := 0U
+    ---
+    if: multiline != 0
+        if: (lm_p0_parse_group(document, text, byte_count, line, column, open_index, close_index, index_flags, @ index_structure) = 0)
+            return: 0
+        ---
+    else:
+        index_structure := lm_p0_new_structure(document, line, column)
+        if: (index_structure = 0)
+            return: 0
+        ---
+        if: (lm_p0_parse_fields_until(document, index_structure, ((text + open_index) + 1U), ((close_index - open_index) - 1U), line, ((column + open_index) + 1U), ((offset + open_index) + 1U), c.LM_P0_FIELD_PARSE_INDEX_SUFFIX, 0U, 0U, @ inner_index) = 0)
+            return: 0
+        ---
+    ---
+    marked := 0
+    separators := 0
+    pending := 0
+    field := index_structure\first_field
+    if: document_index != 0
+        field := 0
+    ---
+    while: field != 0
+        value := field\value
+        if: lm_p0_active_node(value) != 0
+            if: lm_p0_node_is_mark(value, '?') != 0
+                pending := pending + 1
+                marked := 1
+            ---
+            if: lm_p0_node_is_mark(value, ':') != 0
+                if: (value\flags & c.LM_P0_NODE_SLICE_SEPARATOR) != 0U
+                    separators := separators + 1U
+                    marked := 1
+                else:
+                    if: pending > 0
+                        pending := pending - 1
+                    else:
+                        value\flags := (value\flags | c.LM_P0_NODE_SLICE_SEPARATOR)
+                        separators := separators + 1U
+                        marked := 1
+                    ---
+                ---
+            ---
+            if: separators > 2U
+                lm_p0_set_diagnostic(document, 6, value\span\line, value\span\column, "a third slice separator in an index")
+                return: 0
+            ---
+        ---
+        field := field\next
+    ---
+    if: marked = 0 && index_structure\trailer = 0
+        # The flat splice relinks the index's own field list (no new field records, no re-parse): the count and the spans stay.
+        if: index_structure\first_field != 0
+            if: structure\last_field = 0
+                structure\first_field := index_structure\first_field
+            else:
+                structure\last_field\next := index_structure\first_field
+            ---
+            structure\last_field := index_structure\last_field
+            structure\field_count := structure\field_count + index_structure\field_count
+        ---
+        return: 1
+    ---
+    index_node := lm_p0_new_node(document, c.LM_P0_NODE_STRUCTURE)
+    if: index_node = 0
+        return: 0
+    ---
+    index_node\as\structure := index_structure
+    index_node\span\line := line
+    lm_p0_position_in_slice(text, byte_count, open_index, line, column, (cast: (size_t@) (@ index_node\span\line)), (cast: (size_t@) (@ index_node\span\column)))
+    index_node\span\offset := (offset + open_index)
+    index_node\span\length := ((close_index - open_index) + 1U)
+    return: lm_p0_append_field(document, structure, index_node)
+end: lm_p0_index_content
+
 fn: lm_p0_append_compact_atom_pieces (c.LmP0Document@: document; c.LmP0Structure@: structure; const: (char@: text); size_t: byte_count; size_t: line; size_t: column; size_t: offset; size_t: start; size_t: end_index) int
     size_t: i
     int: allow_signed_number
@@ -2164,24 +2314,11 @@ fn: lm_p0_append_compact_atom_pieces (c.LmP0Document@: document; c.LmP0Structure
                 return: 0
             if: (lm_p0_find_matching_bracket(document, text, end_index, i, line, column, @ close_index) = 0)
                 return: 0
-            # An index that spans lines is a document of its own (lm_p0_parse_group); its fields stand between the
-            # atoms `[` and `]`, as the fields of an index written on one line do.
-            if: (lm_p0_count_line_breaks(text, (i + 1U), close_index) != 0U)
-                c.LmP0Structure@: group_structure
-                c.LmP0Field@: group_field
-                if: (lm_p0_parse_group(document, text, byte_count, line, column, i, close_index, 0U, @ group_structure) = 0)
-                    return: 0
-                group_field := group_structure\first_field
-                while: (group_field != 0)
-                    if: (lm_p0_append_field(document, structure, (cast: (c.LmP0Node@) group_field\value)) = 0)
-                        return: 0
-                    group_field := group_field\next
-                ---
-            else:
-                inner_index := 0U
-                if: (lm_p0_parse_fields_until(document, structure, ((text + i) + 1U), ((close_index - i) - 1U), line, ((column + i) + 1U), ((offset + i) + 1U), 0U, 0U, 0U, @ inner_index) = 0)
-                    return: 0
-                ---
+            # The index is its own bounded level (lm_p0_index_content): its fields splice flat into this level when it has
+            # no slice separator and no question; otherwise they stand in one Structure node between the atoms `[` and `]`.
+            if: (lm_p0_index_content(document, structure, text, byte_count, line, column, offset, i, close_index) = 0)
+                return: 0
+            ---
             if: (lm_p0_append_atom_slice(document, structure, text, byte_count, line, column, offset, close_index, (close_index + 1U)) = 0)
                 return: 0
             i := (close_index + 1U)
@@ -2675,7 +2812,7 @@ fn: lm_p0_pending_conditionals (c.LmP0Structure@: structure) int
             if: lm_p0_node_is_mark(value, '?') != 0
                 pending := pending + 1
             ---
-            if: lm_p0_node_is_mark(value, ':') != 0 && pending > 0
+            if: lm_p0_node_is_mark(value, ':') != 0 && pending > 0 && ((value\flags & c.LM_P0_NODE_SLICE_SEPARATOR) = 0U)
                 pending := pending - 1
             ---
         ---
@@ -3039,7 +3176,17 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
     int: headless_group_after_separator
     int: indent_stack_owned
     int: restart_parse_context
+    int: question_seen
     parse_stack := lm_p0_field_parse_loop_stack_new(document, line, column)
+    # One scan per call (child contexts are subsets of this text, so a child can only lose a question, never gain one):
+    # conservative: this text has a `?` byte, or the level already holds fields (an earlier logical line may hold a question).
+    question_seen := 0
+    if: lm_p0_source_has_question(text, byte_count) != 0
+        question_seen := 1
+    ---
+    if: (structure != 0) && (structure\first_field != 0)
+        question_seen := 1
+    ---
     if: (parse_stack = 0)
         return: 0
     i := index[0]
@@ -3143,7 +3290,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                 if: ((structure\last_field != 0) && (structure\last_field\value != 0))
                     structure\last_field\value\flags := (structure\last_field\value\flags | c.LM_P0_NODE_SEPARATOR_AFTER)
                 # A semicolon closes the short form, and no conditional question may cross it (LMX_grammar section 30).
-                if: (separator = ';') && (lm_p0_pending_conditionals(structure) > 0)
+                if: (separator = ';') && (question_seen != 0 && lm_p0_pending_conditionals(structure) > 0)
                     size_t: semicolon_line
                     size_t: semicolon_column
                     lm_p0_position_in_slice(text, byte_count, separator_index, line, column, @ semicolon_line, @ semicolon_column)
@@ -3252,7 +3399,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                 size_t: suffix_end
                 size_t: suffix_count
                 suffix_end := lm_p0_scan_suffix_run(text, byte_count, close_index + 1U, @ suffix_count)
-                if: ((suffix_end < byte_count) && (text[suffix_end] = ':') && (((suffix_end + 1U) >= byte_count) || ((text[(suffix_end + 1U)] != ':') && (text[(suffix_end + 1U)] != '=')))) && (lm_p0_pending_conditionals(structure) = 0)
+                if: ((suffix_end < byte_count) && (text[suffix_end] = ':') && (((suffix_end + 1U) >= byte_count) || ((text[(suffix_end + 1U)] != ':') && (text[(suffix_end + 1U)] != '=')))) && ((flags & c.LM_P0_FIELD_PARSE_INDEX_SUFFIX) = 0U) && (question_seen = 0 || lm_p0_pending_conditionals(structure) = 0)
                     size_t: body_index
                     unsigned: body_flags
                     int: has_inline_body
@@ -3434,7 +3581,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                         restart_parse_context := 1
                         break
                     ---
-                    if: ((((i < byte_count) && (text[i] = ':')) && (head_end > start)) && (((i + 1U) >= byte_count) || (text[(i + 1U)] != ':'))) && (lm_p0_pending_conditionals(structure) = 0)
+                    if: ((((i < byte_count) && (text[i] = ':')) && (head_end > start)) && (((i + 1U) >= byte_count) || (text[(i + 1U)] != ':'))) && ((flags & c.LM_P0_FIELD_PARSE_INDEX_SUFFIX) = 0U) && (question_seen = 0 || lm_p0_pending_conditionals(structure) = 0)
                         size_t: body_index
                         unsigned: body_flags
                         int: has_inline_body
@@ -3551,6 +3698,36 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                             restart_parse_context := 1
                             break
                         else:
+                            # In an index a colon at a field start is a slice separator (LMX_grammar section 30): one atom per colon, each with
+                            # its own span, flagged SliceSeparator, so a run `::` or `:::` never closes a question. A single colon with an
+                            # open question is the conditional colon, as in any level. `:=` keeps its own reading.
+                            if: ((head_end = start) && (start < byte_count) && (text[start] = ':') && ((flags & c.LM_P0_FIELD_PARSE_INDEX_SUFFIX) != 0U) && (((start + 1U) >= byte_count) || (text[(start + 1U)] != '=')))
+                                size_t: colon_end
+                                size_t: colon_index
+                                colon_end := (start + 1U)
+                                while: (colon_end < byte_count) && (text[colon_end] = ':')
+                                    colon_end := colon_end + 1U
+                                ---
+                                if: (colon_end = (start + 1U)) && (question_seen != 0 && lm_p0_pending_conditionals(structure) > 0)
+                                    if: (lm_p0_append_atom_slice(document, structure, text, byte_count, line, column, offset, start, (start + 1U)) = 0)
+                                        return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                                    ---
+                                    i := (start + 1U)
+                                    expect_field := 0
+                                    continue
+                                ---
+                                colon_index := start
+                                while: colon_index < colon_end
+                                    if: (lm_p0_append_atom_slice(document, structure, text, byte_count, line, column, offset, colon_index, (colon_index + 1U)) = 0)
+                                        return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                                    ---
+                                    structure\last_field\value\flags := (structure\last_field\value\flags | c.LM_P0_NODE_SLICE_SEPARATOR)
+                                    colon_index := colon_index + 1U
+                                ---
+                                i := colon_end
+                                expect_field := 0
+                                continue
+                            ---
                             # The token `::` (Р143): a field that starts with two colons, not three, is the atom `::`.
                             if: ((head_end = start) && ((start + 1U) < byte_count) && (text[start] = ':') && (text[(start + 1U)] = ':') && (((start + 2U) >= byte_count) || (text[(start + 2U)] != ':')))
                                 head_end := (start + 2U)
@@ -3566,7 +3743,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                             ---
                             # A structural colon at a field start is the conditional colon while a `?` is open at this level (LMX_grammar
                             # section 30): one atom, and the arms follow as fields. `::` and `:=` keep their own readings.
-                            if: ((head_end = start) && (start < byte_count) && (text[start] = ':') && (((start + 1U) >= byte_count) || ((text[(start + 1U)] != ':') && (text[(start + 1U)] != '='))) && (lm_p0_pending_conditionals(structure) > 0))
+                            if: ((head_end = start) && (start < byte_count) && (text[start] = ':') && (((start + 1U) >= byte_count) || ((text[(start + 1U)] != ':') && (text[(start + 1U)] != '='))) && (question_seen != 0 && lm_p0_pending_conditionals(structure) > 0))
                                 if: (lm_p0_append_atom_slice(document, structure, text, byte_count, line, column, offset, start, (start + 1U)) = 0)
                                     return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                                 ---
@@ -3591,7 +3768,9 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                                     return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                                 lm_p0_set_diagnostic(document, 6, diagnostic_line, diagnostic_column, "unexpected character in field list")
                                 return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
-                            if: (quoted_head && (lm_p0_require_quoted_token_boundary(document, text, byte_count, head_end, line, column) = 0))
+                            # Inside an index a structural colon directly after a protected exact name or string is the slice separator (LMX_grammar
+                            # section 30); the boundary is not required there. Outside an index nothing changes.
+                            if: (quoted_head && ((((flags & c.LM_P0_FIELD_PARSE_INDEX_SUFFIX) != 0U) && (head_end < byte_count) && (text[head_end] = ':')) = 0) && (lm_p0_require_quoted_token_boundary(document, text, byte_count, head_end, line, column) = 0))
                                 return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                             if: (quoted_head = 0)
                                 i := head_end
@@ -5646,6 +5825,11 @@ fn: lm_p0_check_conditionals_structure (c.LmP0Document@: document; c.LmP0Structu
             if: lm_p0_check_conditionals_node(document, value) = 0
                 return: 0
             ---
+            # A slice separator cannot supply the else arm of a conditional colon (LMX_grammar section 30): `a ? b : : c` lacks it.
+            if: prior_node != 0 && lm_p0_node_is_mark(prior_node, ':') != 0 && ((prior_node\flags & c.LM_P0_NODE_SLICE_SEPARATOR) = 0U) && lm_p0_node_is_mark(value, ':') != 0 && ((value\flags & c.LM_P0_NODE_SLICE_SEPARATOR) != 0U)
+                lm_p0_set_diagnostic(document, 6, value\span\line, value\span\column, "empty conditional else-arm")
+                return: 0
+            ---
             if: lm_p0_node_is_mark(value, '?') != 0
                 if: prior_node = 0 || lm_p0_node_is_mark(prior_node, '?') != 0 || lm_p0_node_is_mark(prior_node, ':') != 0 || (prior_node\flags & c.LM_P0_NODE_SEPARATOR_AFTER) != 0U
                     lm_p0_set_diagnostic(document, 6, value\span\line, value\span\column, "conditional question without a condition")
@@ -5654,7 +5838,7 @@ fn: lm_p0_check_conditionals_structure (c.LmP0Document@: document; c.LmP0Structu
                 pending := pending + 1
                 last_question := value
             ---
-            if: lm_p0_node_is_mark(value, ':') != 0
+            if: lm_p0_node_is_mark(value, ':') != 0 && ((value\flags & c.LM_P0_NODE_SLICE_SEPARATOR) = 0U)
                 if: prior_node = 0 || lm_p0_node_is_mark(prior_node, '?') != 0
                     lm_p0_set_diagnostic(document, 6, value\span\line, value\span\column, "empty conditional then-arm")
                     return: 0
@@ -5675,7 +5859,7 @@ fn: lm_p0_check_conditionals_structure (c.LmP0Document@: document; c.LmP0Structu
         ---
         field := field\next
     ---
-    if: prior_node != 0 && lm_p0_node_is_mark(prior_node, ':') != 0
+    if: prior_node != 0 && lm_p0_node_is_mark(prior_node, ':') != 0 && ((prior_node\flags & c.LM_P0_NODE_SLICE_SEPARATOR) = 0U)
         lm_p0_set_diagnostic(document, 6, prior_node\span\line, prior_node\span\column, "conditional colon without an else arm")
         return: 0
     ---
@@ -6267,6 +6451,11 @@ fn: lm_p0_lower_types_node (c.LmP0Document@: document; c.LmP0Node@: p0_node) int
             body := group\trailer\body
             return: lm_p0_lower_types_structure(document, body)
         return: 1
+    # The legacy path has no slice separator: a SliceSeparator atom is refused at its coordinate (LMX_grammar section 30).
+    if: p0_node\kind = c.LM_P0_NODE_ATOM && (p0_node\flags & c.LM_P0_NODE_SLICE_SEPARATOR) != 0U
+        lm_p0_set_diagnostic(document, 6, p0_node\span\line, p0_node\span\column, "slice separator requires its expression projection")
+        return: 0
+    ---
     # The legacy path has no conditional operator: a `?` atom is refused at its coordinate, as a depth form is (LMX_grammar section 30).
     if: p0_node\kind = c.LM_P0_NODE_ATOM && p0_node\as\atom\length = 1U && p0_node\as\atom\data[0] = '?'
         lm_p0_set_diagnostic(document, 6, p0_node\span\line, p0_node\span\column, "conditional operator requires its expression projection")

@@ -933,6 +933,9 @@ fn: lm_graph_build_node (c.LmxGraph@: g; c.Lmx@: parent; c.LmP0Node@: nd; int: d
     if: g = 0 || nd = 0 || out = 0
         return: 2
     out[0] := 0
+    if: (nd\flags & c.LM_P0_NODE_SLICE_SEPARATOR) != 0U
+        c.fprintf(c.stderr, "graph: %zu:%zu: slice requires its expression projection\n", (cast: (size_t) nd\span\line), (cast: (size_t) nd\span\column))
+        return: 2
     if: nd\kind = c.LM_P0_NODE_ATOM
         text := lm_graph_p0_atom(nd)
         if: lm_graph_p0_length(text) = 1U && text\data[0] = '?'

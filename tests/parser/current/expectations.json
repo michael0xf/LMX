@@ -2780,5 +2780,70 @@
     "authority": "v3 29.8.1: malformed conditional arm or separator is refused at its structural level",
     "exit": 1,
     "diagnostic": "6@1:15"
+  },
+  {
+    "path": "tests/parser/current/slice_fields.lmx",
+    "authority": "Grammar §30: preserve the suffix level, the written bounds and the separate slice separators",
+    "exit": 0,
+    "flags": true,
+    "stdout_exact": "structure fields=13 ##\n  frame head=\"omitted\" body=structure fields=4 ## {COLON INLINE}\n    atom \"values\" ##\n    atom \"[\" ##\n    structure fields=3 ##\n      SliceSeparator atom \":\" ## [SLICE_SEPARATOR]\n      SliceSeparator atom \":\" ## [SLICE_SEPARATOR]\n      atom \"2\" ##\n    atom \"]\" ##\n  frame head=\"negative\" body=structure fields=4 ## {COLON INLINE}\n    atom \"values\" ##\n    atom \"[\" ##\n    structure fields=5 ##\n      atom \"5\" ##\n      SliceSeparator atom \":\" ## [SLICE_SEPARATOR]\n      atom \"1\" ##\n      SliceSeparator atom \":\" ## [SLICE_SEPARATOR]\n      atom \"-1\" ##\n    atom \"]\" ##\n  frame head=\"emptyGroups\" body=structure fields=4 ## {COLON INLINE}\n    atom \"values\" ##\n    atom \"[\" ##\n    structure fields=3 ##\n      structure fields=0 ##\n      SliceSeparator atom \":\" ## [SLICE_SEPARATOR]\n      structure fields=0 ##\n    atom \"]\" ##\n  frame head=\"bound\" body=structure fields=4 ## {COLON INLINE}\n    atom \"values\" ##\n    atom \"[\" ##\n    structure fields=7 ##\n      atom \"flag\" ##\n      atom \"?\" ##\n      atom \"1\" ##\n      atom \":\" ##\n      atom \"2\" ##\n      SliceSeparator atom \":\" ## [SLICE_SEPARATOR]\n      atom \"6\" ##\n    atom \"]\" ##\n  frame head=\"grouped\" body=structure fields=4 ## {COLON INLINE}\n    atom \"values\" ##\n    atom \"[\" ##\n    structure fields=3 ##\n      structure fields=5 ##\n        atom \"flag\" ##\n        atom \"?\" ##\n        atom \"1\" ##\n        atom \":\" ##\n        atom \"2\" ##\n      SliceSeparator atom \":\" ## [SLICE_SEPARATOR]\n      atom \"6\" ##\n    atom \"]\" ##\n  frame head=\"stop\" body=structure fields=4 ## {COLON INLINE}\n    atom \"values\" ##\n    atom \"[\" ##\n    structure fields=7 ##\n      atom \"1\" ##\n      SliceSeparator atom \":\" ## [SLICE_SEPARATOR]\n      atom \"flag\" ##\n      atom \"?\" ##\n      atom \"5\" ##\n      atom \":\" ##\n      atom \"6\" ##\n    atom \"]\" ##\n  frame head=\"nested\" body=structure fields=4 ## {COLON INLINE}\n    atom \"values\" ##\n    atom \"[\" ##\n    structure fields=6 ##\n      atom \"a\" ##\n      atom \"[\" ##\n      structure fields=3 ##\n        SliceSeparator atom \":\" ## [SLICE_SEPARATOR]\n        SliceSeparator atom \":\" ## [SLICE_SEPARATOR]\n        atom \"2\" ##\n      atom \"]\" ##\n      SliceSeparator atom \":\" ## [SLICE_SEPARATOR]\n      atom \"6\" ##\n    atom \"]\" ##\n  frame head=\"signature\" body=structure fields=4 ## {COLON INLINE}\n    atom \"values\" ##\n    atom \"[\" ##\n    structure fields=2 ##\n      structure fields=3 ##\n        atom \"a\" ##\n        atom \"::\" ##\n        atom \"T\" ##\n      SliceSeparator atom \":\" ## [SLICE_SEPARATOR]\n    atom \"]\" ##\n  frame head=\"outer\" body=structure fields=11 ## {COLON INLINE}\n    atom \"flag\" ##\n    atom \"?\" ##\n    atom \"values\" ##\n    atom \"[\" ##\n    structure fields=3 ##\n      atom \"1\" ##\n      SliceSeparator atom \":\" ## [SLICE_SEPARATOR]\n      atom \"3\" ##\n    atom \"]\" ##\n    atom \":\" ##\n    atom \"values\" ##\n    atom \"[\" ##\n    structure fields=3 ##\n      atom \"2\" ##\n      SliceSeparator atom \":\" ## [SLICE_SEPARATOR]\n      atom \"6\" ##\n    atom \"]\" ##\n  frame head=\"calls\" body=structure fields=4 ## {COLON INLINE}\n    atom \"values\" ##\n    atom \"[\" ##\n    structure fields=5 ##\n      frame head=\"f\" body=structure fields=1 ## {COMPACT}\n        atom \"x\" ##\n      SliceSeparator atom \":\" ## [SLICE_SEPARATOR]\n      frame head=\"g\" body=structure fields=1 ## {COMPACT}\n        atom \"y\" ##\n      SliceSeparator atom \":\" ## [SLICE_SEPARATOR]\n      frame head=\"step\" body=structure fields=1 ## {COMPACT}\n        atom \"z\" ##\n    atom \"]\" ##\n  frame head=\"protected\" body=structure fields=4 ## {COLON INLINE}\n    atom \"values\" ##\n    atom \"[\" ##\n    structure fields=3 ##\n      atom \"`a::b`\" ##\n      SliceSeparator atom \":\" ## [SLICE_SEPARATOR]\n      atom \"\"c:d\"\" ##\n    atom \"]\" ##\n  frame head=\"index\" body=structure fields=4 ## {COLON INLINE}\n    atom \"values\" ##\n    atom \"[\" ##\n    atom \"-1\" ##\n    atom \"]\" ##\n  frame head=\"zeroStep\" body=structure fields=4 ## {COLON INLINE}\n    atom \"values\" ##\n    atom \"[\" ##\n    structure fields=3 ##\n      SliceSeparator atom \":\" ## [SLICE_SEPARATOR]\n      SliceSeparator atom \":\" ## [SLICE_SEPARATOR]\n      atom \"0\" ##\n    atom \"]\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/slice_omissions_spans.lmx",
+    "authority": "Grammar §30: preserve the suffix level, the written bounds and the separate slice separators",
+    "exit": 0,
+    "nodes": true,
+    "stdout_exact": "structure fields=1 ## @0+15 0:0\n  frame head=\"r\" body=structure fields=4 ## @0+14 1:1 {COLON INLINE}\n    atom \"values\" ## @3+6 1:4\n    atom \"[\" ## @9+1 1:10\n    structure fields=3 ## @9+5 1:10\n      SliceSeparator atom \":\" ## @10+1 1:11 [SLICE_SEPARATOR]\n      SliceSeparator atom \":\" ## @11+1 1:12 [SLICE_SEPARATOR]\n      atom \"2\" ## @12+1 1:13\n    atom \"]\" ## @13+1 1:14\n"
+  },
+  {
+    "path": "tests/parser/current/slice_too_many_separators.lmx",
+    "authority": "Grammar §30: refusal at the malformed suffix or conditional boundary",
+    "exit": 1,
+    "diagnostic": "6@1:16"
+  },
+  {
+    "path": "tests/parser/current/slice_cannot_close_outer_conditional.lmx",
+    "authority": "Grammar §30: refusal at the malformed suffix or conditional boundary",
+    "exit": 1,
+    "diagnostic": "6@1:9"
+  },
+  {
+    "path": "tests/parser/current/slice_cannot_close_inner_conditional.lmx",
+    "authority": "Grammar §30: refusal at the malformed suffix or conditional boundary",
+    "exit": 1,
+    "diagnostic": "6@1:22"
+  },
+  {
+    "path": "tests/parser/current/slice_cannot_supply_conditional_else.lmx",
+    "authority": "Grammar §30: refusal at the malformed suffix or conditional boundary",
+    "exit": 1,
+    "diagnostic": "6@1:22"
+  },
+  {
+    "path": "tests/parser/current/slice_double_separator_cannot_close_conditional.lmx",
+    "authority": "Grammar §30: refusal at the malformed suffix or conditional boundary",
+    "exit": 1,
+    "diagnostic": "6@1:16"
+  },
+  {
+    "path": "tests/parser/current/slice_multiline.lmx",
+    "authority": "Grammar §§15, 30: structural source levels and bounded conditional and slice separators",
+    "exit": 0,
+    "flags": true,
+    "stdout_exact": "structure fields=3 ##\n  frame head=\"omitted\" body=structure fields=4 ## {COLON INLINE}\n    atom \"values\" ##\n    atom \"[\" ##\n    structure fields=2 ##\n      atom \"1\" ## [DOCUMENT]\n      SliceSeparator atom \":\" ## [DOCUMENT SLICE_SEPARATOR]\n    atom \"]\" ##\n  frame head=\"split\" body=structure fields=4 ## {COLON INLINE}\n    atom \"values\" ##\n    atom \"[\" ##\n    structure fields=3 ##\n      atom \"1\" ## [DOCUMENT]\n      SliceSeparator atom \":\" ## [DOCUMENT SLICE_SEPARATOR]\n      atom \"2\" ## [DOCUMENT]\n    atom \"]\" ##\n  frame head=\"conditional\" body=structure fields=4 ## {COLON INLINE}\n    atom \"values\" ##\n    atom \"[\" ##\n    structure fields=7 ##\n      atom \"flag\" ## [DOCUMENT]\n      atom \"?\" ## [DOCUMENT]\n      atom \"1\" ## [DOCUMENT]\n      atom \":\" ## [DOCUMENT]\n      atom \"2\" ## [DOCUMENT]\n      SliceSeparator atom \":\" ## [DOCUMENT SLICE_SEPARATOR]\n      atom \"6\" ## [DOCUMENT]\n    atom \"]\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/slice_dotted_document.lmx",
+    "authority": "Grammar §§15, 30: structural source levels and bounded conditional and slice separators",
+    "exit": 0,
+    "flags": true,
+    "stdout_exact": "structure fields=1 ##\n  frame head=\"D\" body=structure fields=5 ## {COLON INLINE}\n    atom \"x\" ##\n    atom \"[\" ##\n    frame head=\"Point\" body=structure fields=1 ## [DOCUMENT] {COLON}\n      frame head=\"int\" body=structure fields=2 ## {COLON INLINE}\n        atom \"x\" ##\n        atom \"4\" ##\n      Tail cutter trailer spelling=\"end\" fields=1 ## {CUTTER COLON}\n        atom \"Point\" ##\n    frame head=\"int\" body=structure fields=2 ## [DOCUMENT] {COLON INLINE}\n      atom \"y\" ##\n      atom \"2\" ##\n    atom \"]\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/conditional_multiline_group.lmx",
+    "authority": "Grammar §§15, 30: structural source levels and bounded conditional and slice separators",
+    "exit": 0,
+    "flags": true,
+    "stdout_exact": "structure fields=1 ##\n  frame head=\"r\" body=structure fields=1 ## {COLON INLINE}\n    structure fields=5 ##\n      atom \"flag\" ## [DOCUMENT]\n      atom \"?\" ## [DOCUMENT]\n      atom \"1\" ## [DOCUMENT]\n      atom \":\" ## [DOCUMENT]\n      atom \"2\" ## [DOCUMENT]\n"
   }
 ]

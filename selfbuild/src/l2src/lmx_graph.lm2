@@ -1968,7 +1968,7 @@ fn: lmx_graph_type_form (c.LmxGraph@: g; @: raw) int
     ---
     char@: head lmx_graph_name_of(g, raw)
     size_t: fields lmx_graph_count((cast: (c.Lmx@) raw))
-    if: fields >= 2U && head = lmx_graph_intern("$array-type", 11U)
+    if: fields >= 2U && (head = lmx_graph_intern("$type", 5U) || head = lmx_graph_intern("$array-type", 11U))
         return: 2
     ---
     if: (fields = 2U || fields = 3U) && head = lmx_graph_intern("$array-place", 12U)
@@ -2836,7 +2836,8 @@ fn: lmx_graph_dump_type_head (c.LmxArena@: arena; c.Lmx@: type_ref; c.FILE@: f) 
     size_t@: axes 0
     size_t: rank 0U
     size_t: depth 0U
-    if: c.lmx_types_reference_parts(arena, (cast: (@) type_ref), @ axes, @ rank, @ depth) = 0
+    int: base c.LMX_TYPE_NONE
+    if: c.lmx_types_reference_details(arena, (cast: (@) type_ref), @ axes, @ rank, @ depth, @ base) = 0
         return: 1
     ---
     size_t: i 0U
@@ -2848,14 +2849,14 @@ fn: lmx_graph_dump_type_head (c.LmxArena@: arena; c.Lmx@: type_ref; c.FILE@: f) 
         ---
         i := i + 1U
     ---
-    if: depth = 0U
+    if: depth = 1U
+        c.fputc('@', f)
+    ---
+    if: depth > 1U
+        c.fprintf(f, "@(%zu)", depth)
+    ---
+    if: base = c.LMX_TYPE_INT
         c.fputs("int", f)
-    else:
-        if: depth = 1U
-            c.fputc('@', f)
-        else:
-            c.fprintf(f, "@(%zu)", depth)
-        ---
     ---
     return: 0
 end: lmx_graph_dump_type_head

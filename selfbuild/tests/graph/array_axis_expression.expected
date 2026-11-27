@@ -16,10 +16,10 @@ Provider:
 end: Provider
 @: getSizes (Provider \ Make)
 :=: (Trace \ before) (Trace \ calls)
-$array-place: customTypeArray ($array-type 0 (1 (getSizes)))
+$array-place: customTypeArray ($type 2 (1 (getSizes)))
 :=: (Trace \ same) ((typeof customTypeArray) = sys\descriptor([2][2][3][3]int))
-:=: (Trace \ countSame) (($array-type 0 (1 (1 + 1))) = sys\descriptor([][]int))
+:=: (Trace \ countSame) (($type 2 (1 (1 + 1))) = sys\descriptor([][]int))
 ([]int: initSizes [2 2])
-$array-place: matrix ($array-type 0 (1 (initSizes))) ((1 2) (3 4))
+$array-place: matrix ($type 2 (1 (initSizes))) ((1 2) (3 4))
 :=: (Trace \ matrixSame) ((typeof matrix) = sys\descriptor([2][2]int))
 :=: (Trace \ last) (matrix [] 3)

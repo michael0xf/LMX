@@ -109,8 +109,8 @@ fn: lm_graph_emit_node (c.LmxGraph@: g; c.FILE@: f; @: value; c.LmxCopyMap@: map
             if: status != 0 || target = 0U
                 return: 1
             ---
-            if: c.lmx_range_type_of(g\arena, value) = c.LMX_TYPE_UNINIT_ARRAY
-                c.fprintf(f, "        l2_gv%zu: lmx_types_uninit_array(arena, (cast: (@: Lmx) l2_gv%zu))\n", id, target)
+            if: c.lmx_range_type_of(g\arena, value) = c.LMX_TYPE_UNINIT_COMPOSED
+                c.fprintf(f, "        l2_gv%zu: lmx_types_uninit_composed(arena, (cast: (@: Lmx) l2_gv%zu))\n", id, target)
             else:
                 c.LmxArray@: array (cast: (c.LmxArray@) value)
                 c.VoidArray@: payload @ array\array
@@ -229,7 +229,8 @@ fn: lm_graph_emit_type_reference (c.LmxGraph@: g; c.FILE@: f; @: value; size_t: 
     size_t@: axes 0
     size_t: rank 0U
     size_t: depth 0U
-    if: c.lmx_types_reference_parts(g\arena, value, @ axes, @ rank, @ depth) = 0
+    int: base c.LMX_TYPE_NONE
+    if: c.lmx_types_reference_details(g\arena, value, @ axes, @ rank, @ depth, @ base) = 0
         return: 0
     ---
     if: axes = 0
@@ -240,7 +241,7 @@ fn: lm_graph_emit_type_reference (c.LmxGraph@: g; c.FILE@: f; @: value; size_t: 
         c.fprintf(f, "        l2_gv%zu: (cast: (@: void) lmx_types_reference(arena, %d))\n", id, word)
     else:
         if: rank = 0U
-            c.fprintf(f, "        l2_gv%zu: (cast: (@: void) lmx_types_composed_reference(arena, %zuU, 0, 0U))\n", id, depth)
+            c.fprintf(f, "        l2_gv%zu: (cast: (@: void) lmx_types_composed_base(arena, %d, %zuU, 0, 0U))\n", id, base, depth)
         else:
             c.fprintf(f, "        []: size_t l2_axes%zu %zu\n", id, rank)
             size_t: i 0U
@@ -252,7 +253,7 @@ fn: lm_graph_emit_type_reference (c.LmxGraph@: g; c.FILE@: f; @: value; size_t: 
                 ---
                 i := i + 1U
             ---
-            c.fprintf(f, "        l2_gv%zu: (cast: (@: void) lmx_types_composed_reference(arena, %zuU, l2_axes%zu, %zuU))\n", id, depth, id, rank)
+            c.fprintf(f, "        l2_gv%zu: (cast: (@: void) lmx_types_composed_base(arena, %d, %zuU, l2_axes%zu, %zuU))\n", id, base, depth, id, rank)
         ---
     ---
     c.fprintf(f, "        if: l2_gv%zu = 0\n            return: 1\n", id)

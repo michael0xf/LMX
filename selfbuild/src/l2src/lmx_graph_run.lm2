@@ -6068,17 +6068,31 @@ fn: lmx_graph_normalize_array_type (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: recip
     size_t@: axes 0
     size_t: rank 0U
     size_t: i 1U
-    int: depth 0
+    size_t: depth 0U
+    int: base c.LMX_TYPE_NONE
     int: status 0
-    if: c.lmx_graph_value_int(g, c.lmx_graph_get_in(g, recipe, 0U), @ depth) != 0 || depth < 0
+    int: first 0
+    if: c.lmx_graph_value_int(g, c.lmx_graph_get_in(g, recipe, 0U), @ first) != 0
         return: 4
     ---
+    if: c.lmx_graph_name_of(g, recipe) = c.lmx_graph_intern("$array-type", 11U)
+        # The original Array recipe stored a fixed depth followed by axes.
+        if: first < 0
+            return: 4
+        ---
+        depth := (cast: (size_t) first)
+        if: depth = 0U
+            base := c.LMX_TYPE_INT
+        ---
+    else:
+        base := first
+    ---
     while: i < c.lmx_graph_count(recipe) && status = 0
-        status := lmx_graph_append_type_axes(g, scope, c.lmx_graph_get_in(g, recipe, i), run, @ axes, @ rank)
+        status := lmx_graph_use_type_entry(g, scope, c.lmx_graph_get_in(g, recipe, i), run, @ axes, @ rank, @ depth)
         i := i + 1U
     ---
     if: status = 0
-        out[0] := c.lmx_types_composed_reference(g\arena, (cast: (size_t) depth), axes, rank)
+        out[0] := c.lmx_types_composed_base(g\arena, base, depth, axes, rank)
         if: out[0] = 0
             status := 1
         ---
@@ -6087,13 +6101,12 @@ fn: lmx_graph_normalize_array_type (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: recip
     return: status
 end: lmx_graph_normalize_array_type
 
-# A literal field is a fixed extent or the open-axis marker (-1). In a
-# bounded expression field, the mode says whether an int gives an extent or
-# a count. The ordinary evaluator obtains exactly one Value for that field.
-fn: lmx_graph_append_type_axes (c.LmxGraph@: g; c.Lmx@: scope; @: field; int: run; size_t@@: axes; size_t@: rank) int
+# A literal field is an open axis. An expression entry gives an extent (0),
+# axes (1), or pointer depth (2). It is read by the ordinary evaluator once.
+fn: lmx_graph_use_type_entry (c.LmxGraph@: g; c.Lmx@: scope; @: field; int: run; size_t@@: axes; size_t@: rank; size_t@: depth) int
     int: extent 0 - 1
     int: number 0
-    int: sequence 0
+    int: mode 0
     size_t: count 1U
     size_t: arank 0U
     size_t: i 0U
@@ -6104,7 +6117,7 @@ fn: lmx_graph_append_type_axes (c.LmxGraph@: g; c.Lmx@: scope; @: field; int: ru
         extent := c.lmx_int_value_known(field)
     else:
         c.Lmx@: entry (cast: (c.Lmx@) field)
-        if: c.lmx_graph_kind(g, field) != 4 || c.lmx_graph_count(entry) != 2U || c.lmx_graph_value_int(g, c.lmx_graph_get_in(g, entry, 0U), @ sequence) != 0
+        if: c.lmx_graph_kind(g, field) != 4 || c.lmx_graph_count(entry) != 2U || c.lmx_graph_value_int(g, c.lmx_graph_get_in(g, entry, 0U), @ mode) != 0 || mode < 0 || mode > 2
             return: 4
         ---
         operand := c.lmx_graph_get_in(g, entry, 1U)
@@ -6119,18 +6132,26 @@ fn: lmx_graph_append_type_axes (c.LmxGraph@: g; c.Lmx@: scope; @: field; int: ru
                 return: status
             ---
         ---
-        if: c.lmx_graph_value_int(g, value, @ number) = 0
-            if: number < sequence
+        int: integer c.lmx_graph_value_int(g, value, @ number)
+        if: mode = 2
+            if: integer != 0 || number <= 0 || (cast: (size_t) number) > (cast: (size_t) -1) - depth[0]
                 return: 4
             ---
-            if: sequence = 0
+            depth[0] := depth[0] + (cast: (size_t) number)
+            return: 0
+        ---
+        if: integer = 0
+            if: number < mode
+                return: 4
+            ---
+            if: mode = 0
                 extent := number
             else:
                 count := (cast: (size_t) number)
             ---
         else:
             value := c.lmx_graph_target(g, value)
-            if: sequence = 0 || c.lmx_range_type_of(g\arena, value) != c.LMX_TYPE_ARRAY_OF_INT
+            if: mode = 0 || c.lmx_range_type_of(g\arena, value) != c.LMX_TYPE_ARRAY_OF_INT
                 return: 4
             ---
             c.Lmx@: type_ref c.lmx_types_record_reference(g\arena, value)
@@ -6166,7 +6187,7 @@ fn: lmx_graph_append_type_axes (c.LmxGraph@: g; c.Lmx@: scope; @: field; int: ru
     ---
     rank[0] := rank[0] + count
     return: 0
-end: lmx_graph_append_type_axes
+end: lmx_graph_use_type_entry
 
 fn: lmx_graph_flat_array_extent (const: (size_t@: axes); size_t: rank; size_t: item_count) int
     if: axes = 0
@@ -6289,7 +6310,7 @@ fn: lmx_graph_array_place (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: declaration; @@
         ---
         return: status
     ---
-    out[0] := c.lmx_types_uninit_array(g\arena, reference)
+    out[0] := c.lmx_types_uninit_composed(g\arena, reference)
     return: (cast: (int) (out[0] = 0))
 end: lmx_graph_array_place
 
@@ -6351,7 +6372,7 @@ fn: lmx_graph_eval_value (c.LmxGraph@: g; c.Lmx@: scope; @: raw; @@: out) int
             out[0] := raw
             return: 0
         ---
-        if: c.lmx_range_type_of(g\arena, raw) = c.LMX_TYPE_UNINIT_ARRAY
+        if: c.lmx_range_type_of(g\arena, raw) = c.LMX_TYPE_UNINIT_COMPOSED
             return: 5
         ---
         if: lmx_graph_scalar_pool(g, raw) = 0
@@ -6481,7 +6502,7 @@ fn: lmx_graph_eval_value (c.LmxGraph@: g; c.Lmx@: scope; @: raw; @@: out) int
             ---
         ---
     ---
-    if: c.lmx_range_type_of(g\arena, value) = c.LMX_TYPE_UNINIT_ARRAY
+    if: c.lmx_range_type_of(g\arena, value) = c.LMX_TYPE_UNINIT_COMPOSED
         return: 5
     ---
     if: snapshot != 0 && lmx_graph_scalar_pool(g, value) != 0

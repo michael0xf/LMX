@@ -922,29 +922,12 @@ fn: lm_graph_build_typed_place (c.LmxGraph@: g; c.LmP0Frame@: fr; char@: head; @
     return: 0
 end: lm_graph_build_typed_place
 
-# Consume a bounded integer from the ordinary P0 tree. Unsupported expressions
-# stay for the general TYPE consumer; they are never run by the graph builder.
-fn: lm_graph_type_integer (c.LmP0Node@: region; int@: value) int
-    if: region = 0 || region\kind != c.LM_P0_NODE_STRUCTURE
-        return: 0
-    ---
-    c.LmP0Structure@: body lm_graph_p0_structure(region)
-    if: body = 0 || lm_graph_count_active(body) != 1U
-        return: 0
-    ---
-    c.LmP0Node@: field lm_graph_p0_value(lm_graph_next_active(lm_graph_p0_first(body)))
-    if: field\kind != c.LM_P0_NODE_ATOM
-        return: 0
-    ---
-    return: lm_graph_int_literal(lm_graph_p0_atom(field), value)
-end: lm_graph_type_integer
-
 fn: lm_graph_type_adjacent (c.LmP0Node@: left; c.LmP0Node@: right) int
     return: right != 0 && right\span\offset = left\span\offset + left\span\length
 end: lm_graph_type_adjacent
 
-# Use the normal bounded Expression builder for every written axis operand.
-fn: lm_graph_type_entry (c.LmxGraph@: g; c.Lmx@: scope; c.LmP0Node@: region; int: sequence; @@: out) int
+# Use the ordinary bounded Expression builder for every written prefix operand.
+fn: lm_graph_type_entry (c.LmxGraph@: g; c.Lmx@: scope; c.LmP0Node@: region; int: mode; @@: out) int
     c.LmP0Structure@: body lm_graph_p0_structure(region)
     c.LmP0Field@: cursor lm_graph_next_active(lm_graph_p0_first(body))
     @: operand void 0
@@ -956,16 +939,19 @@ fn: lm_graph_type_entry (c.LmxGraph@: g; c.Lmx@: scope; c.LmP0Node@: region; int
     if: status != 0 || cursor != 0
         return: 2
     ---
+    return: lm_graph_type_operation(g, mode, operand, out)
+end: lm_graph_type_entry
+
+fn: lm_graph_type_operation (c.LmxGraph@: g; int: mode; @: operand; @@: out) int
     c.Lmx@: entry c.lmx_graph_lmx(g, 0, 2U)
-    if: entry = 0 || lm_graph_build_put(g, entry, 0U, c.lmx_graph_int(g, sequence)) != 0 || lm_graph_build_put(g, entry, 1U, operand) != 0
+    if: operand = 0 || entry = 0 || lm_graph_build_put(g, entry, 0U, c.lmx_graph_int(g, mode)) != 0 || lm_graph_build_put(g, entry, 1U, operand) != 0
         return: 1
     ---
     out[0] := (cast: (@) entry)
     return: 0
-end: lm_graph_type_entry
+end: lm_graph_type_operation
 
-# Keep a TYPE with live operands as an ordinary graph record. Only a fully
-# literal requirement can be interned now, before the code starts.
+# Only a fully literal TYPE is interned before the code starts.
 fn: lm_graph_build_type_reference (c.LmxGraph@: g; c.Lmx@: scope; c.LmP0Structure@: source; int@: rejected) c.Lmx@
     rejected[0] := 0
     if: source = 0
@@ -983,9 +969,8 @@ fn: lm_graph_build_type_reference (c.LmxGraph@: g; c.Lmx@: scope; c.LmP0Structur
     c.LmP0Node@: nd lm_graph_p0_value(field)
     c.LmP0Node@: following 0
     c.LmP0Node@: operand 0
-    size_t: width 0U
     size_t: n 0U
-    int: depth 0
+    int: base c.LMX_TYPE_NONE
     int: status 0
     c.Lmx@: reference 0
     while: nd != 0 && (nd\flags & c.LM_P0_NODE_SQUARE) != 0U && status = 0
@@ -1023,28 +1008,65 @@ fn: lm_graph_build_type_reference (c.LmxGraph@: g; c.Lmx@: scope; c.LmP0Structur
         n := n + 1U
         nd := following
     ---
-    if: nd != 0 && nd\kind = c.LM_P0_NODE_ATOM && status = 0
-        c.LmP0Text@: base lm_graph_p0_atom(nd)
-        const: (char@: bytes lm_graph_p0_data(base))
-        width := lm_graph_p0_length(base)
+    size_t: array_ops n
+    while: nd != 0 && nd\kind = c.LM_P0_NODE_ATOM && status = 0
+        c.LmP0Text@: token lm_graph_p0_atom(nd)
+        const: (char@: bytes lm_graph_p0_data(token))
+        size_t: width lm_graph_p0_length(token)
+        int: depth 0
         while: (cast: (size_t) depth) < width && bytes[depth] = '@'
             depth := depth + 1
         ---
         field := lm_graph_next_active(lm_graph_p0_next(field))
-        int: admitted (cast: (int) (depth != 0 && (cast: (size_t) depth) = width))
-        if: admitted != 0 && field != 0
-            int: count 0
+        if: width = 3U && c.memcmp((cast: (const: @) bytes), "int", 3U) = 0 && field = 0
+            base := c.LMX_TYPE_INT
+            nd := 0
+            break
+        ---
+        if: depth = 0 || (cast: (size_t) depth) != width
+            break
+        ---
+        following := 0
+        if: field != 0
             following := lm_graph_p0_value(field)
-            if: lm_graph_type_adjacent(nd, following) != 0 && lm_graph_type_integer(following, @ count) != 0 && count > 0 && depth - 1 <= c.INT_MAX - count
-                depth := depth - 1 + count
-                field := lm_graph_next_active(lm_graph_p0_next(field))
+            if: lm_graph_type_adjacent(nd, following) = 0
+                break
             ---
         ---
-        if: field = 0 && (admitted != 0 || (width = 3U && c.memcmp((cast: (const: @) bytes), "int", 3U) = 0))
-            if: n = 0U
-                reference := c.lmx_types_composed_reference(g\arena, (cast: (size_t) depth), 0, 0U)
+        if: following != 0 && following\kind = c.LM_P0_NODE_STRUCTURE && (following\flags & c.LM_P0_NODE_SQUARE) = 0U
+            operand := following
+            field := lm_graph_next_active(lm_graph_p0_next(field))
+            following := 0
+            if: field != 0
+                following := lm_graph_p0_value(field)
+                if: lm_graph_type_adjacent(operand, following) = 0
+                    break
+                ---
             else:
-                status := lm_graph_make_type(g, scope, depth, ops, n, @ reference)
+                if: array_ops = 0U
+                    break
+                ---
+            ---
+            if: depth > 1
+                status := lm_graph_type_operation(g, 2, c.lmx_graph_int(g, depth - 1), @ ops[n])
+                n := n + 1U
+            ---
+            if: status = 0
+                status := lm_graph_type_entry(g, scope, operand, 2, @ ops[n])
+                n := n + 1U
+            ---
+        else:
+            status := lm_graph_type_operation(g, 2, c.lmx_graph_int(g, depth), @ ops[n])
+            n := n + 1U
+        ---
+        nd := following
+    ---
+    if: nd = 0 && status = 0
+        if: n = 0U && base = c.LMX_TYPE_INT
+            reference := c.lmx_types_reference(g\arena, base)
+        else:
+            if: n > array_ops || base = c.LMX_TYPE_INT
+                status := lm_graph_make_type(g, scope, base, ops, n, @ reference)
             ---
         ---
     ---
@@ -1053,10 +1075,10 @@ fn: lm_graph_build_type_reference (c.LmxGraph@: g; c.Lmx@: scope; c.LmP0Structur
     return: reference
 end: lm_graph_build_type_reference
 
-fn: lm_graph_make_type (c.LmxGraph@: g; c.Lmx@: scope; int: depth; @@: ops; size_t: n; c.Lmx@@: out) int
+fn: lm_graph_make_type (c.LmxGraph@: g; c.Lmx@: scope; int: base; @@: ops; size_t: n; c.Lmx@@: out) int
     c.Lmx@: recipe c.lmx_graph_lmx(g, 0, n + 1U)
     size_t: i 0U
-    if: recipe = 0 || c.lmx_graph_name_address(g, recipe, c.lmx_graph_intern("$array-type", 11U)) != 0 || lm_graph_build_put(g, recipe, 0U, c.lmx_graph_int(g, depth)) != 0
+    if: recipe = 0 || c.lmx_graph_name_address(g, recipe, c.lmx_graph_intern("$type", 5U)) != 0 || lm_graph_build_put(g, recipe, 0U, c.lmx_graph_int(g, base)) != 0
         return: 1
     ---
     while: i < n
@@ -1076,11 +1098,11 @@ fn: lm_graph_make_type (c.LmxGraph@: g; c.Lmx@: scope; int: depth; @@: ops; size
     return: status
 end: lm_graph_make_type
 
-fn: lm_graph_build_array_place (c.LmxGraph@: g; c.Lmx@: parent; c.Lmx@: scope; c.LmP0Frame@: frame; @@: out) int
+fn: lm_graph_build_typed_composition (c.LmxGraph@: g; c.Lmx@: parent; c.Lmx@: scope; c.LmP0Frame@: frame; @@: out) int
     c.LmP0Text@: head lm_graph_p0_head(frame)
     const: (char@: bytes lm_graph_p0_data(head))
     size_t: width lm_graph_p0_length(head)
-    if: width < 3U || bytes[0] != '[' || (frame\flags & c.LM_P0_FRAME_COLON) = 0U || frame\trailer != 0
+    if: width < 3U || (bytes[0] != '[' && bytes[0] != '@') || (frame\flags & c.LM_P0_FRAME_COLON) = 0U || frame\trailer != 0
         return: 0
     ---
     c.LmP0Document@: parsed 0
@@ -1107,6 +1129,9 @@ fn: lm_graph_build_array_place (c.LmxGraph@: g; c.Lmx@: parent; c.Lmx@: scope; c
                 item := lm_graph_p0_value(field)
             ---
         ---
+    ---
+    if: bytes[0] = '@' && item != 0
+        return: 0
     ---
     if: field != 0 && lm_graph_next_active(lm_graph_p0_next(field)) != 0
         return: 2
@@ -1137,7 +1162,7 @@ fn: lm_graph_build_array_place (c.LmxGraph@: g; c.Lmx@: parent; c.Lmx@: scope; c
         return: 0
     ---
     if: initializer = 0
-        out[0] := c.lmx_types_uninit_array(g\arena, reference)
+        out[0] := c.lmx_types_uninit_composed(g\arena, reference)
     else:
         rejected := c.lmx_graph_array_literal(g, parent, reference, initializer, out)
         if: rejected < 0
@@ -1151,7 +1176,7 @@ fn: lm_graph_build_array_place (c.LmxGraph@: g; c.Lmx@: parent; c.Lmx@: scope; c
         return: 1
     ---
     return: 0
-end: lm_graph_build_array_place
+end: lm_graph_build_typed_composition
 
 fn: lm_graph_build_node (c.LmxGraph@: g; c.Lmx@: parent; c.Lmx@: scope; c.LmP0Node@: nd; int: described; @@: out) int
     c.LmxGraphState@: state (cast: (c.LmxGraphState@) c.lmx_graph_state())
@@ -1205,7 +1230,7 @@ fn: lm_graph_build_node (c.LmxGraph@: g; c.Lmx@: parent; c.Lmx@: scope; c.LmP0No
             return: lm_graph_build_assignment(g, parent, scope, frame, out)
         text := lm_graph_p0_head(frame)
         if: described = 0
-            status := lm_graph_build_array_place(g, parent, scope, frame, out)
+            status := lm_graph_build_typed_composition(g, parent, scope, frame, out)
             if: status != 0 || out[0] != 0
                 return: status
             ---

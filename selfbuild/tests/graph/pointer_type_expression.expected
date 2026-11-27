@@ -1,0 +1,23 @@
+Trace:
+    int: calls 1
+    int: before 0
+    int: same 1
+    int: fixed 1
+    int: untyped 0
+    int: arraySame 1
+end: Trace
+Provider:
+    return: int
+    Make:
+        :=: (Trace \ calls) ((Trace \ calls) + 1)
+        return: 2
+    end: Make
+end: Provider
+@: getDepth (Provider \ Make)
+:=: (Trace \ before) (Trace \ calls)
+$array-place: pointer ($type 2 (2 (getDepth)))
+(@(2)int: repeated)
+:=: (Trace \ same) ((typeof pointer) = sys\descriptor(@(2)int))
+:=: (Trace \ fixed) ((typeof repeated) = ($type 2 (2 (1 + 1))))
+:=: (Trace \ untyped) (sys\descriptor(@(2)int) = sys\descriptor(@(2)))
+:=: (Trace \ arraySame) (($type 2 (0 3) (2 (1 + 1))) = sys\descriptor([3]@(2)int))

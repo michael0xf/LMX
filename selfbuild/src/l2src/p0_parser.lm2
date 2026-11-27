@@ -2297,33 +2297,111 @@ fn: lm_p0_index_content (c.LmP0Document@: document; c.LmP0Structure@: structure;
     return: lm_p0_append_field(document, structure, index_node)
 end: lm_p0_index_content
 
+# A bounded region of a prefix type uses the ordinary group parser. It keeps the written count, size or grouped base.
+fn: lm_p0_append_prefix_group (c.LmP0Document@: document; c.LmP0Structure@: structure; const: (char@: text); size_t: byte_count; size_t: line; size_t: column; size_t: offset; size_t: open_index; size_t: close_index) int
+    c.LmP0Structure@: group_structure
+    c.LmP0Node@: group_node
+    group_structure := 0
+    if: (lm_p0_parse_group(document, text, byte_count, line, column, open_index, close_index, c.LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS, @ group_structure) = 0)
+        return: 0
+    ---
+    group_node := lm_p0_new_node(document, c.LM_P0_NODE_STRUCTURE)
+    if: group_node = 0
+        return: 0
+    ---
+    group_node\as\structure := group_structure
+    group_node\span\line := line
+    lm_p0_position_in_slice(text, byte_count, open_index, line, column, (cast: (size_t@) (@ group_node\span\line)), (cast: (size_t@) (@ group_node\span\column)))
+    group_node\span\offset := (offset + open_index)
+    group_node\span\length := ((close_index - open_index) + 1U)
+    return: lm_p0_append_field(document, structure, group_node)
+end: lm_p0_append_prefix_group
+
+# The byte after a prefix square or a counted group starts a base or a further prefix: a word, `@`, `[`, `(` or a backquoted name.
+fn: lm_p0_type_base_follows (const: (char@: text); size_t: end_index; size_t: pos) int
+    if: pos >= end_index
+        return: 0
+    ---
+    if: text[pos] = '@' || text[pos] = '[' || text[pos] = '(' || text[pos] = 96
+        return: 1
+    ---
+    return: lm_p0_is_word_start_byte(text[pos])
+end: lm_p0_type_base_follows
+
 fn: lm_p0_append_compact_atom_pieces (c.LmP0Document@: document; c.LmP0Structure@: structure; const: (char@: text); size_t: byte_count; size_t: line; size_t: column; size_t: offset; size_t: start; size_t: end_index) int
     size_t: i
     int: allow_signed_number
+    int: prefix_chain
+    int: after_count
+    size_t: prefix_end
     i := start
     allow_signed_number := 1
+    prefix_chain := 1
+    after_count := 0
+    prefix_end := start
     while: (i < end_index)
         size_t: piece_end
         if: c.lm_p0_is_field_space(text[i])
             i := i + 1U
             continue
+        # A counted group glued to the end of a prefix chain: `@(N)T`, `@@(N)T`, `[](N)T` (LMX_grammar 32). A group right after
+        # a counted group is its base (`@(N)(Model)`). Without a following base `@(name)` keeps its reading.
+        if: (text[i] = '(') && (prefix_chain != 0) && (i = prefix_end) && (i > start)
+            size_t: counted_after
+            size_t: group_close
+            counted_after := 0U
+            group_close := 0U
+            if: lm_p0_counter_after(document, text, end_index, i, line, column, @ counted_after, @ group_close) = 0
+                return: 0
+            if: (after_count != 0) || (counted_after != 0U)
+                # The attached `@` before an admitted group is a prefix, not a postfix (Р156).
+                if: (text[i - 1U] = '@') && (structure\last_field != 0) && (structure\last_field\value != 0)
+                    structure\last_field\value\flags := structure\last_field\value\flags - (structure\last_field\value\flags & c.LM_P0_NODE_POSTFIX)
+                ---
+                if: lm_p0_append_prefix_group(document, structure, text, byte_count, line, column, offset, i, group_close) = 0
+                    return: 0
+                i := (group_close + 1U)
+                prefix_end := i
+                after_count := 1
+                allow_signed_number := 0
+                continue
+            ---
+        ---
         if: (text[i] = '[')
             size_t: close_index
+            size_t: square_after
             size_t: inner_index
-            if: (lm_p0_append_atom_slice(document, structure, text, byte_count, line, column, offset, i, (i + 1U)) = 0)
-                return: 0
+            # The close comes from the bracket finder, so trivia inside an empty square (`[ ]`, comments) is covered.
             if: (lm_p0_find_matching_bracket(document, text, end_index, i, line, column, @ close_index) = 0)
                 return: 0
-            # The index is its own bounded level (lm_p0_index_content): its fields splice flat into this level when it has
-            # no slice separator and no question; otherwise they stand in one Structure node between the atoms `[` and `]`.
+            square_after := (close_index + 1U)
+            # A square glued to a prefix chain with a base after it is a bounded Square Structure (LMX_grammar 29, 33):
+            # `@(P)[pick(n)]int`, `@(R)[](N)int`. Any other square is an ordinary index or constructor and keeps its atoms.
+            if: (prefix_chain != 0) && (i = prefix_end) && (i > start) && (lm_p0_type_base_follows(text, end_index, square_after) != 0)
+                if: (text[i - 1U] = '@') && (structure\last_field != 0) && (structure\last_field\value != 0)
+                    structure\last_field\value\flags := structure\last_field\value\flags - (structure\last_field\value\flags & c.LM_P0_NODE_POSTFIX)
+                ---
+                if: (lm_p0_append_prefix_group(document, structure, text, byte_count, line, column, offset, i, close_index) = 0)
+                    return: 0
+                structure\last_field\value\flags := structure\last_field\value\flags | c.LM_P0_NODE_SQUARE
+                prefix_end := square_after
+                after_count := 0
+                i := square_after
+                allow_signed_number := 0
+                continue
+            ---
+            if: (lm_p0_append_atom_slice(document, structure, text, byte_count, line, column, offset, i, (i + 1U)) = 0)
+                return: 0
             if: (lm_p0_index_content(document, structure, text, byte_count, line, column, offset, i, close_index) = 0)
                 return: 0
-            ---
             if: (lm_p0_append_atom_slice(document, structure, text, byte_count, line, column, offset, close_index, (close_index + 1U)) = 0)
                 return: 0
+            prefix_chain := 0
+            after_count := 0
             i := (close_index + 1U)
             allow_signed_number := 0
             continue
+        ---
         if: lm_p0_compact_piece(document, text, end_index, i, allow_signed_number, line, column, @ piece_end) = 0
             return: 0
         if: (piece_end <= i)
@@ -2331,9 +2409,27 @@ fn: lm_p0_append_compact_atom_pieces (c.LmP0Document@: document; c.LmP0Structure
         ---
         if: (lm_p0_append_atom_slice(document, structure, text, byte_count, line, column, offset, i, piece_end) = 0)
             return: 0
-        # A series of `@` glued on the left to the end of a completed operand is a postfix (Р156); anywhere else it is a prefix. What stands on the right does not matter.
-        if: (text[i] = '@') && (i > 0U) && (lm_p0_byte_ends_operand(text[i - 1U]) != 0) && (structure\last_field != 0) && (structure\last_field\value != 0)
+        # A series of `@` glued on the left to the end of a completed operand is a postfix (Р156), unless a counted prefix follows it.
+        if: (text[i] = '@') && (i > 0U) && (lm_p0_byte_ends_operand(text[i - 1U]) != 0) && (after_count = 0) && (structure\last_field != 0) && (structure\last_field\value != 0)
             structure\last_field\value\flags := structure\last_field\value\flags | c.LM_P0_NODE_POSTFIX
+        # The prefix chain: a run of `@` alone, glued to the previous prefix, keeps it open; any other piece ends it.
+        if: (text[i] = '@')
+            size_t: at_index
+            at_index := i
+            while: (at_index < piece_end) && (text[at_index] = '@')
+                at_index := at_index + 1U
+            ---
+            if: (at_index = piece_end) && (prefix_chain != 0) && (i = prefix_end)
+                prefix_end := piece_end
+                after_count := 0
+            else:
+                prefix_chain := 0
+                after_count := 0
+            ---
+        else:
+            prefix_chain := 0
+            after_count := 0
+        ---
         i := piece_end
         allow_signed_number := 0
     ---
@@ -2929,12 +3025,13 @@ end: lm_p0_depth_designator
 # prefix chain (prefix_open = 0 after the name). The closing parenthesis is searched ONCE by the common delimiter scope
 # (marks, strings, comments); nothing is evaluated. Returns 0 when that search fails (the head is refused; there is no
 # compact fallback). after[0] is the offset after the counter, or 0 when the counter does not continue the head.
-fn: lm_p0_counter_after (c.LmP0Document@: document; const: (char@: text); size_t: byte_count; size_t: open_index; size_t: line; size_t: column; size_t@: after) int
+fn: lm_p0_counter_after (c.LmP0Document@: document; const: (char@: text); size_t: byte_count; size_t: open_index; size_t: line; size_t: column; size_t@: after; size_t@: close_out) int
     size_t: close_index 0U
     size_t: next 0U
     after[0] := 0U
     if: lm_p0_find_matching_paren(document, text, byte_count, open_index, line, column, @ close_index) = 0
         return: 0
+    close_out[0] := close_index
     next := close_index + 1U
     if: next >= byte_count
         return: 1
@@ -2949,6 +3046,17 @@ fn: lm_p0_counter_after (c.LmP0Document@: document; const: (char@: text); size_t
     if: text[next] = ':' && ((next + 1U) >= byte_count || (text[(next + 1U)] != ':' && text[(next + 1U)] != '='))
         after[0] := next
         return: 1
+    ---
+    # A parenthesised base right after a counted group belongs to the head when a colon follows it (`@(N)(Model): q`, LMX_grammar 29).
+    if: text[next] = '('
+        size_t: base_close
+        base_close := 0U
+        if: lm_p0_find_matching_paren(document, text, byte_count, next, line, column, @ base_close) = 0
+            return: 0
+        if: (base_close + 1U) < byte_count && text[base_close + 1U] = ':' && ((base_close + 2U) >= byte_count || (text[(base_close + 2U)] != ':' && text[(base_close + 2U)] != '='))
+            after[0] := next
+            return: 1
+        ---
     ---
     return: 1
 end: lm_p0_counter_after
@@ -2968,6 +3076,8 @@ fn: lm_p0_scan_head (c.LmP0Document@: document; const: (char@: text); size_t: by
     size_t: square_after 0U
     size_t: counter_after 0U
     size_t: closed_end 0U
+    size_t: counted_end 0U
+    size_t: counter_close 0U
     int: prefix_open 0
     quoted_head[0] := 0
     if: i >= byte_count
@@ -3000,13 +3110,14 @@ fn: lm_p0_scan_head (c.LmP0Document@: document; const: (char@: text); size_t: by
     prefix_open := (cast: (int) (text[i] = '@' || text[i] = '['))
     while: i < byte_count && c.lm_p0_is_field_space(text[i]) = 0 && c.lm_p0_is_field_separator(text[i]) = 0 && lm_p0_dot_operator_at(text, byte_count, i) = 0 && lm_p0_depth_stop_at(text, byte_count, start, i) = 0 && text[i] != ')' && text[i] != '?' && text[i] != '#' && text[i] != '{' && text[i] != '}' && text[i] != ':'
         if: text[i] = '('
-            if: prefix_open = 0 || (i != square_end && i != pointer_end)
+            if: prefix_open = 0 || (i != square_end && i != pointer_end && i != counted_end)
                 break
-            if: lm_p0_counter_after(document, text, byte_count, i, line, column, @ counter_after) = 0
+            if: lm_p0_counter_after(document, text, byte_count, i, line, column, @ counter_after, @ counter_close) = 0
                 return: 0
             if: counter_after = 0U
                 break
             i := counter_after
+            counted_end := i
             occurrence_label := (cast: (int) (text[i] = 96))
             continue
         if: text[i] = '['
@@ -6295,6 +6406,62 @@ fn: lm_p0_lower_types_bare (c.LmP0Document@: document; c.LmP0Node@: p0_node) int
     slot\value := made
     return: 1
 
+# The first bounded argument of `cast` is TYPE. In that group an attached `@T` is the same type as `@: T`.
+# Other groups still contain the prefix address operation and its value operand.
+fn: lm_p0_lower_cast_pointer (c.LmP0Document@: document; c.LmP0Structure@: body) int
+    c.LmP0Structure@: type_group
+    c.LmP0Field@: field
+    c.LmP0Field@: base_field
+    c.LmP0Node@: group_node
+    c.LmP0Node@: prefix
+    c.LmP0Node@: base
+    c.LmP0Node@: made
+    c.LmP0Text@: spelling
+    size_t: i 0U
+    size_t: span_length 0U
+    unsigned: separator 0U
+    field := body\first_field
+    field := lm_p0_lower_types_first_live(field)
+    if: field = 0
+        return: 1
+    group_node := field\value
+    if: group_node\kind != c.LM_P0_NODE_STRUCTURE || (group_node\flags & c.LM_P0_NODE_SQUARE) != 0U
+        return: 1
+    type_group := group_node\as\structure
+    if: type_group = 0 || type_group\field_count != 2U || type_group\trailer != 0
+        return: 1
+    field := type_group\first_field
+    base_field := field\next
+    if: lm_p0_lower_types_field_live(field) = 0 || lm_p0_lower_types_field_live(base_field) = 0
+        return: 1
+    prefix := field\value
+    base := base_field\value
+    if: prefix\kind != c.LM_P0_NODE_ATOM || base\kind != c.LM_P0_NODE_ATOM || (prefix\flags & (c.LM_P0_NODE_POSTFIX | c.LM_P0_NODE_SEPARATOR_AFTER)) != 0U
+        return: 1
+    if: prefix\span\offset + prefix\span\length != base\span\offset || lm_p0_lower_types_part(base) != 1
+        return: 1
+    spelling := prefix\as\atom
+    if: spelling\length = 0U
+        return: 1
+    while: i < spelling\length
+        if: spelling\data[i] != '@'
+            return: 1
+        i := i + 1U
+    ---
+    span_length := (base\span\offset - prefix\span\offset) + base\span\length
+    made := lm_p0_lower_types_reference(document, (cast: (char@) spelling\data), spelling\length, base, prefix, span_length)
+    if: made = 0
+        return: 0
+    separator := base\flags & c.LM_P0_NODE_SEPARATOR_AFTER
+    made\flags := made\flags | separator
+    base\flags := base\flags - separator
+    field\value := made
+    field\next := 0
+    type_group\last_field := field
+    type_group\field_count := 1U
+    return: 1
+end: lm_p0_lower_cast_pointer
+
 # A static pointer declaration `@..T: name tail` and its historical spelling `T@..:` use the same internal Frame `@..: name T tail`.
 # The base is an atom for a word or exact name, or the fields P0 reads for a path or group. This pass consumes only declaration heads.
 fn: lm_p0_lower_types_frame (c.LmP0Document@: document; c.LmP0Node@: p0_node) int
@@ -6513,6 +6680,11 @@ fn: lm_p0_lower_types_node (c.LmP0Document@: document; c.LmP0Node@: p0_node) int
         ---
     if: lm_p0_lower_types_bare(document, p0_node) = 0
         return: 0
+    if: lm_p0_node_head_is(p0_node, "cast") != 0
+        body := frame\body
+        if: body != 0 && lm_p0_lower_cast_pointer(document, body) = 0
+            return: 0
+        ---
     return: lm_p0_lower_types_frame(document, p0_node)
 
 # The pass over a parsed document: 0 done, 1 refused or failed with a diagnostic of the document. The tree is open to allocation for the length of the pass and frozen again after it.

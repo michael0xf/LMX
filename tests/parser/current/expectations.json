@@ -2874,5 +2874,55 @@
     "lower_types": true,
     "flags": true,
     "stdout_exact": "structure fields=3 ##\n  frame head=\"@\" body=structure fields=4 ## {COLON INLINE}\n    atom \"p\" ##\n    atom \"int\" ##\n    atom \"@\" ##\n    atom \"value\" ##\n  frame head=\"@@\" body=structure fields=4 ## {COLON INLINE}\n    atom \"pp\" ##\n    atom \"int\" ##\n    atom \"@\" ##\n    atom \"p\" ##\n  frame head=\"return\" body=structure fields=2 ## {COLON INLINE}\n    atom \"@\" ##\n    atom \"value\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/prefix_type_literal_count_heads.lmx",
+    "authority": "Grammar §29 and v3 §29.9: numerical counts stay in the declaration head and pointer TYPE in cast has its explicit type role",
+    "exit": 0,
+    "flags": true,
+    "stdout_exact": "structure fields=2 ##\n  frame head=\"@(2)int\" body=structure fields=0 ## {COLON}\n  frame head=\"[](2)int\" body=structure fields=0 ## {COLON}\n"
+  },
+  {
+    "path": "tests/parser/current/prefix_type_literal_count_named.lmx",
+    "authority": "Grammar §29 and v3 §29.9: numerical counts stay in the declaration head and pointer TYPE in cast has its explicit type role",
+    "exit": 0,
+    "flags": true,
+    "stdout_exact": "structure fields=2 ##\n  frame head=\"@(2)int\" body=structure fields=1 ## {COLON INLINE}\n    atom \"ptr\" ##\n  frame head=\"[](2)int\" body=structure fields=1 ## {COLON INLINE}\n    atom \"matrix\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/prefix_type_pointer_cast.lmx",
+    "authority": "Grammar §29 and v3 §29.9: numerical counts stay in the declaration head and pointer TYPE in cast has its explicit type role",
+    "exit": 0,
+    "flags": true,
+    "lower_types": true,
+    "stdout_exact": "structure fields=3 ##\n  frame head=\"int\" body=structure fields=2 ## {COLON INLINE}\n    atom \"value\" ##\n    atom \"7\" ##\n  frame head=\"@\" body=structure fields=3 ## {COLON INLINE}\n    atom \"p\" ##\n    atom \"int\" ##\n    structure fields=1 ##\n      frame head=\"cast\" body=structure fields=3 ## {COLON INLINE}\n        structure fields=1 ##\n          frame head=\"@\" body=structure fields=1 ## {COLON INLINE}\n            atom \"int\" ##\n        atom \"@\" ##\n        atom \"value\" ##\n  frame head=\"return\" body=structure fields=2 ## {COLON INLINE}\n    atom \"@\" ##\n    atom \"value\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/prefix_type_counted_group_base.lmx",
+    "authority": "Grammar §§29, 32: a counted prefix retains its bounded expression and the following written type base",
+    "exit": 0,
+    "flags": true,
+    "stdout_exact": "structure fields=3 ##\n  frame head=\"@(N)int\" body=structure fields=1 ## {COLON INLINE}\n    atom \"p\" ##\n  frame head=\"@(N)(Model)\" body=structure fields=1 ## {COLON INLINE}\n    atom \"q\" ##\n  frame head=\"[](N)(Model)\" body=structure fields=1 ## {COLON INLINE}\n    atom \"a\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/prefix_type_count_operand_scope.lmx",
+    "authority": "Grammar §§29, 32: a counted prefix retains its bounded expression and the following written type base",
+    "exit": 0,
+    "flags": true,
+    "stdout_exact": "structure fields=3 ##\n  frame head=\"return\" body=structure fields=3 ## {COLON INLINE}\n    atom \"@\" ##\n    structure fields=1 ##\n      frame head=\"probe\" body=structure fields=4 ## [DOCUMENT] {COMPACT}\n        atom \"values\" ##\n        atom \"[\" ##\n        atom \"0\" ##\n        atom \"]\" ##\n    atom \"int\" ##\n  frame head=\"return\" body=structure fields=1 ## {COLON INLINE}\n    frame head=\"@\" body=structure fields=1 ## {COMPACT}\n      atom \"name\" ##\n  frame head=\"return\" body=structure fields=5 ## {COLON INLINE}\n    atom \"@\" ##\n    atom \"S\" ##\n    atom \"[\" ##\n    atom \"0\" ##\n    atom \"]\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/prefix_type_literal_count_operands.lmx",
+    "authority": "Grammar §§29, 32: a counted prefix retains its bounded expression and the following written type base",
+    "exit": 0,
+    "flags": true,
+    "stdout_exact": "structure fields=2 ##\n  frame head=\"return\" body=structure fields=3 ## {COLON INLINE}\n    atom \"@\" ##\n    structure fields=1 ##\n      atom \"2\" ## [DOCUMENT]\n    atom \"int\" ##\n  frame head=\"return\" body=structure fields=3 ## {COLON INLINE}\n    Square structure fields=0 ## [SQUARE]\n    structure fields=1 ##\n      atom \"2\" ##\n    atom \"int\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/prefix_type_mixed_counts.lmx",
+    "authority": "Grammar §§29, 32, 33: an attached chain retains the order of bounded sizes and counts, and the pointer marker stays a prefix",
+    "exit": 0,
+    "flags": true,
+    "stdout_exact": "structure fields=3 ##\n  frame head=\"return\" body=structure fields=4 ## {COLON INLINE}\n    atom \"@\" ##\n    structure fields=4 ##\n      atom \"remaining\" ## [DOCUMENT]\n      atom \"[\" ## [DOCUMENT]\n      atom \"0\" ## [DOCUMENT]\n      atom \"]\" ## [DOCUMENT]\n    Square structure fields=1 ## [SQUARE]\n      frame head=\"pick\" body=structure fields=1 ## [DOCUMENT] {COMPACT}\n        atom \"n\" ##\n    atom \"int\" ##\n  frame head=\"return\" body=structure fields=4 ## {COLON INLINE}\n    Square structure fields=0 ## [SQUARE]\n    atom \"@\" ##\n    structure fields=1 ##\n      frame head=\"depth\" body=structure fields=0 ## [DOCUMENT] {COMPACT}\n    atom \"int\" ##\n  frame head=\"return\" body=structure fields=5 ## {COLON INLINE}\n    atom \"@\" ##\n    structure fields=1 ##\n      atom \"R\" ## [DOCUMENT]\n    Square structure fields=0 ## [SQUARE]\n    structure fields=1 ##\n      atom \"N\" ## [DOCUMENT]\n    atom \"int\" ##\n"
   }
 ]

@@ -21,8 +21,10 @@ def expected_files():
     block = readme.count("```lmx\n")
     readme += "\n\n" + BEGIN + "\n\n## Полные листинги\n"
     outputs, places, receipts = {}, [], []
-    index = [["#graph", "-", "-", "label=NOT_RUN", "-", "-", "-", "-",
-              "No production parser/compiler/runtime was executed for this cohort"]]
+    verification = cases.get("verification")
+    production = "PARTIAL" if verification else "NOT_RUN"
+    index = [["#graph", "-", "-", "label=" + production, "-", "-", "-", "-",
+              verification["graph_sha256"] if verification else "No production execution"]]
     for category in ("positive", "negative"):
         for case in cases[category]:
             source = EXAMPLES / case["source"]
@@ -38,9 +40,14 @@ def expected_files():
                 [ident, "docs/" + source.relative_to(DOCS).as_posix(), "file", "-", 1],
                 [ident, "docs/" + readme_path.relative_to(DOCS).as_posix(), "block", block, line],
             ])
-            note = ("Expected shape diagnostic; production NOT_RUN" if category == "negative"
-                    else "Normative source; P0/translator/LMX runtime NOT_RUN")
-            index.append([ident, "fragment", 2, "-", "-", "-", "не проверен", "2026-11-27", note])
+            p0 = "0" if case.get("production_p0") == "PASS" else "-"
+            if case.get("production_translator") == "EXPECTED_SHAPE_DIAGNOSTIC":
+                build, run, result, note = "answered 2", "-", "ожидаемый отказ", "Shape diagnostic"
+            elif case.get("lmx_runtime") == "INTERPRETER_PASS":
+                build, run, result, note = "0", "0", "проверен", "Graph interpreter"
+            else:
+                build, run, result, note = "-", "-", "не проверен", "Production NOT_RUN"
+            index.append([ident, "fragment", 2, p0, build, run, result, "2026-11-27", note])
             receipts.append({
                 **case, "id": ident, "category": category,
                 "source": source.relative_to(DOCS).as_posix(),
@@ -62,10 +69,10 @@ def expected_files():
 начинаются `array_storage__`. Пути в places.tsv относительны директории,
 содержащей docs. При слиянии группы прежние ID и receipts не заменяются.
 
-Это регистрация исходников и Markdown, **не запуск P0 или LMX**. Колонки
-p0/build/run имеют `-`, класс — «не проверен». Отрицательные файлы требуют
-shape diagnostic по нормативному контракту, но её фактический production
-результат не заявлен. Строка #graph сообщает NOT_RUN.
+Регистратор сверяет исходники и Markdown. Колонки p0/build/run показывают
+отдельно записанные результаты Graph. Прочерк означает отсутствие прогона.
+У отрицательных примеров `answered 2` означает проверенную диагностику
+формы при построении графа.
 
 Повторная синхронизация: `python spec/tools/register_array_storage_examples.py`
 из docs; проверка без записи — та же команда с `--check`.
@@ -73,10 +80,10 @@ SHA-256, категории и наблюдения: [отчёт](../../../valid
 """
     outputs[SPEC / "validation/array_storage_examples_20261127.json"] = json.dumps({
         "revision": "2026-11-27", "status": "SOURCE_MD_SYNC_PASS",
-        "scope": "Additive Array-storage cohort; no production execution",
+        "scope": "Array-storage source registration with recorded per-case evidence",
         "examples": len(receipts), "places": len(places),
         "positive": len(cases["positive"]), "negative": len(cases["negative"]),
-        "cases": receipts, "production_execution": "NOT_RUN",
+        "cases": receipts, "production_execution": production,
         "normalization": "LF and exactly one final LF; all other source bytes retained",
     }, ensure_ascii=False, indent=2) + "\n"
     return outputs, len(receipts), len(places)
@@ -96,7 +103,7 @@ def main():
                 path.write_text(content)
     print(json.dumps({"status": "FAIL" if args.check and mismatches else "PASS",
                       "examples": count, "locations": locations, "changed": mismatches,
-                      "production_execution": "NOT_RUN"}, ensure_ascii=False))
+                      "production_execution": "see case records"}, ensure_ascii=False))
     return int(args.check and bool(mismatches))
 
 

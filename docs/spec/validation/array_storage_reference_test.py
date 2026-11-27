@@ -220,6 +220,59 @@ class StorageContracts(unittest.TestCase):
                  obtain=lambda v, c: calls.append(v) or v, axes=(2, 3))
         self.assertEqual(calls, [])
 
+    def test_same_anonymous_structures_at_rank_one_and_two(self):
+        graph = rows(((1, 2, 3), (4, 5), (6,), (7, 8)), "semicolon")
+        calls = []
+        def obtain(value, context):
+            calls.append(value)
+            return value
+        with self.assertRaises(ShapeDiagnostic):
+            ints(graph, obtain=obtain)
+        self.assertEqual(calls, [])
+        result = ints(graph, rank=1, obtain=obtain)
+        self.assertEqual(result.values(), list(range(1, 9)))
+        self.assertEqual(calls, list(range(1, 9)))
+        self.assertEqual(result.type_axes, (None,))
+
+    def test_explicit_structure_width_is_checked_before_total_count(self):
+        for graph, width in ((rows(((1, 2, 3),) * 4, "semicolon"), 5),
+                             (rows(((1, 2, 3, 4),) * 2, "semicolon"), 2)):
+            with self.subTest(width=width), self.assertRaises(ShapeDiagnostic):
+                ints(graph, axes=(None, width))
+
+    def test_flat_multiline_data_has_no_structure_boundaries(self):
+        graph = G((1, 2, 3) * 4, "ordinary physical line breaks")
+        result = ints(graph, axes=(None, 3))
+        self.assertEqual(result.shape, (4, 3))
+        self.assertEqual(result.values(), [1, 2, 3] * 4)
+        with self.assertRaises(ShapeDiagnostic):
+            ints(graph, axes=(None, 5))
+
+    def test_rank_three_complete_and_partial_structure_nesting(self):
+        axes = (None, 2, 2)
+        block = rows(((1, 2), (3, 4)), "nested")
+        flat = G((1, 2, 3, 4))
+        for graph in (G((block,) * 4), G((flat,) * 4), G((flat, block) * 2)):
+            result = ints(graph, rank=3, axes=axes)
+            self.assertEqual(result.shape, (4, 2, 2))
+            self.assertEqual(result.values(), [1, 2, 3, 4] * 4)
+
+    def test_partial_subarrays_reject_incompatible_local_counts(self):
+        for graph in (rows(((1, 2), (3, 4, 5, 6, 7, 8)), "flat child counts"),
+                      G((rows(((1, 2), (3, 4)), "nested"), G((5, 6)))),
+                      G((1, G((2, 3, 4))))):
+            with self.subTest(graph=graph), self.assertRaises(ShapeDiagnostic):
+                ints(graph, rank=3, axes=(None, 2, 2))
+        two_by_two = rows(((1, 2), (3, 4)), "first")
+        four_by_one = rows(((5,), (6,), (7,), (8,)), "second")
+        with self.assertRaises(ShapeDiagnostic):
+            ints(G((two_by_two, four_by_one)), rank=3)
+
+    def test_explicit_groups_cannot_exceed_multidimensional_rank(self):
+        nested = G((G((G((1, 2)),)), G((G((3, 4)),))))
+        with self.assertRaises(ShapeDiagnostic):
+            ints(nested, axes=(None, 2))
+
 
 if __name__ == "__main__":
     suite = unittest.defaultTestLoader.loadTestsFromTestCase(StorageContracts)
@@ -227,11 +280,11 @@ if __name__ == "__main__":
     report = {
         "revision": "2026-11-27", "status": "PASS" if result.wasSuccessful() else "FAIL",
         "tests": result.testsRun, "failures": len(result.failures), "errors": len(result.errors),
-        "scope": "New flat/nD access, rectangular initializer rows, ordinary DATA fields, inline identity; host only",
+        "scope": "Flat/nD access, anonymous Structures in rank-one and rectangular initializers, ordinary DATA fields, inline identity; host only",
         "production_p0": "NOT_RUN", "production_translator": "NOT_RUN", "lmx_runtime": "NOT_RUN",
         "bounds": "Existing final scalar element check; no per-axis upper-bound restriction added",
         "metadata": "Canonical declared type is separate from validated access shape; unknown initializer extents are not retained",
-        "initializer_parser": "NOT_RUN; row regions already supplied by common P0 in this model",
+        "initializer_parser": "NOT_RUN; initializer Structures are already delimited in this model",
     }
     Path(__file__).with_name("array_storage_reference_report.json").write_text(json.dumps(report, indent=2) + "\n")
     raise SystemExit(not result.wasSuccessful())

@@ -488,11 +488,13 @@ by structural position and receiving role. No size tail on a declaration is
 introduced. The rank-three examples may receive a ready Array with complete
 extents `[2,2,2]`.
 
-### 4.1. Rows of a typed multidimensional initializer
+### 4.1. Anonymous Structures in typed initializers
 
-The declared rank and any explicit axis sizes determine how the receiver consumes already delimited
-initializer regions. A `;` at the current initializer level finishes a row;
-explicit row groups give the same boundaries. These forms are equivalent:
+The declared rank and explicit axis sizes determine how the receiver consumes
+Structures already built by common P0. A `;` finishes an anonymous Structure
+at the current level. A nested group produces the same kind of structural
+boundary. An ordinary line break between elements inside the square group
+leaves them at the same level. These forms are equivalent:
 
 ```lmx
 [][]int: [a b c; a b d; a b c]
@@ -529,9 +531,9 @@ same contract consumes already delimited regions of the following axes.
 
 Preparation uses common P0 and the ordinary initializer contract:
 
-1. Preserve source nodes and contexts. The initializer gets row boundaries
+1. Preserve source nodes and contexts. The initializer gets Structure boundaries
    from the [common P0 semicolon rule](LMX_grammar.en.md#separators). Commas
-   separate fields within a row. Separators in nested calls and bounded regions
+   separate fields within a Structure. Separators in nested calls and bounded regions
    belong to those regions. Characters inside a literal remain its content.
 2. Reconcile explicit type extents, rectangular initializer regions, and the
    element count by [the common shape procedure](#shape-inference). Check
@@ -572,20 +574,23 @@ the anonymous-field graph. No square-versus-round flags control unwrapping.
 <a id="shape-inference"></a>
 ### 4.3. Initializer validation and the dimensions available afterward
 
-One typed-initializer procedure consumes common P0 regions, not their source
-spellings. It validates available row/layer boundaries but retains only the
-type supplied by the left requirement. A ready Array initializer follows
+One typed-initializer procedure consumes Structures built by common P0.
+The boundaries determine validation and element order. The result retains
+only the type supplied by the left requirement. A ready Array initializer follows
 ordinary reference identity/admission; checking it does not copy or reshape it.
 
 1. Normalize the complete left requirement. Each `[]` contributes an unspecified
    extent; each `[E]` contributes its once-evaluated checked nonnegative size;
    `[](R)` contributes R unspecified axes. Pointer composition keeps its ordinary
    boundaries. Intern that complete requirement as a canonical TypeRef.
-2. For a constructor with explicit rows/layers, verify the declared rank,
-   rectangularity, and all written size constraints against those regions.
-   Do not discard contradictory explicit boundaries merely because their total
-   count could fit another shape. Their discovered dimensions are temporary
-   construction facts, not new TYPE parameters or retained Array metadata.
+2. At rank one, open the initializer's anonymous Structures into one stream
+   in source order. At a higher rank, a list of child Structures supplies one
+   axis. Siblings must describe compatible shapes. Apply the remaining axis
+   constraints within each child. At any depth, validate a flat remainder by
+   the product of its remaining known extents: exact equality if all are
+   known, exact divisibility if some are unspecified. Siblings may use
+   different nesting depths when their dimensions and element counts agree.
+   Check explicit structural boundaries even when the total count fits.
 3. Obtain each admitted element once in source order. Explicit copy/merge streams
    keep their contracts. A ready Array element does not implicitly become a
    stream. Check statically known contradictions before obtaining elements;

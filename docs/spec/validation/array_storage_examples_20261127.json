@@ -1,11 +1,11 @@
 {
   "revision": "2026-11-27",
   "status": "SOURCE_MD_SYNC_PASS",
-  "scope": "Additive Array-storage cohort; no production execution",
-  "examples": 10,
-  "places": 20,
-  "positive": 7,
-  "negative": 3,
+  "scope": "Array-storage source registration with recorded per-case evidence",
+  "examples": 20,
+  "places": 40,
+  "positive": 12,
+  "negative": 8,
   "cases": [
     {
       "id": "array_storage__001_flat_and_coordinates",
@@ -57,7 +57,7 @@
       "sha256": "28d9eb094a1bd2c8ee4ce4fff0a042473103570855eca04ef7c62e071c74a43c",
       "markdown": "spec/examples/array_storage/README.md",
       "block": 6,
-      "line": 123,
+      "line": 138,
       "source_markdown_sync": "PASS"
     },
     {
@@ -111,7 +111,7 @@
       "sha256": "429b02ade0e3730f98bd5970b0526ffbd3e3263b548541f18fe6ebd2050a8cbd",
       "markdown": "spec/examples/array_storage/README.md",
       "block": 7,
-      "line": 137,
+      "line": 152,
       "source_markdown_sync": "PASS"
     },
     {
@@ -135,7 +135,7 @@
       "sha256": "326356e2f9fb79dec45f1c83fbafc92bb6abe8c728d2422ada541e7e223319a4",
       "markdown": "spec/examples/array_storage/README.md",
       "block": 8,
-      "line": 150,
+      "line": 165,
       "source_markdown_sync": "PASS"
     },
     {
@@ -159,7 +159,7 @@
       "sha256": "95facd22d1b2de8819ee931c234d49fc1f9d86810ccaf7eedf905465e6f2fde8",
       "markdown": "spec/examples/array_storage/README.md",
       "block": 9,
-      "line": 165,
+      "line": 180,
       "source_markdown_sync": "PASS"
     },
     {
@@ -213,7 +213,7 @@
       "sha256": "b979f691c42efb437c98d031e95a13ac3a851828b860818e9104ca0d62f57605",
       "markdown": "spec/examples/array_storage/README.md",
       "block": 10,
-      "line": 189,
+      "line": 204,
       "source_markdown_sync": "PASS"
     },
     {
@@ -289,7 +289,7 @@
       "sha256": "b499d8242360ea3c417845c4f78e2e8876c370be140ebb049742a67382e5f5e0",
       "markdown": "spec/examples/array_storage/README.md",
       "block": 11,
-      "line": 203,
+      "line": 218,
       "source_markdown_sync": "PASS"
     },
     {
@@ -321,7 +321,191 @@
       "sha256": "32de740e086d1769b1b1ded1ae7d648b0887c5ac2aa4fd46d1f0d84a40e7a2e4",
       "markdown": "spec/examples/array_storage/README.md",
       "block": 12,
-      "line": 222,
+      "line": 237,
+      "source_markdown_sync": "PASS"
+    },
+    {
+      "id": "array_storage__012_flatten_rank1",
+      "inputs": {},
+      "expected": {
+        "type": "[]int",
+        "shape": [
+          8
+        ],
+        "length": 8,
+        "flat_storage": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      },
+      "note_ru": "Для rank=1 те же безымянные Structure раскрываются в поток из восьми элементов.",
+      "source": "spec/examples/array_storage/012_flatten_rank1.lm3",
+      "entry_point": "root",
+      "production_p0": "PASS",
+      "production_translator": "PASS",
+      "lmx_runtime": "INTERPRETER_PASS",
+      "category": "positive",
+      "sha256": "fdbb54a9783fbd35a7bd7f605de0b04d58bca36bb24e0a3c10a38ef7b792704f",
+      "markdown": "spec/examples/array_storage/README.md",
+      "block": 13,
+      "line": 256,
+      "source_markdown_sync": "PASS"
+    },
+    {
+      "id": "array_storage__014_flat_lines_width3",
+      "inputs": {},
+      "expected": {
+        "type": "[][3]int",
+        "shape": [
+          4,
+          3
+        ],
+        "length": 12,
+        "flat_storage": [
+          1,
+          2,
+          3,
+          1,
+          2,
+          3,
+          1,
+          2,
+          3,
+          1,
+          2,
+          3
+        ]
+      },
+      "note_ru": "Переносы оставляют двенадцать элементов в одном потоке. TYPE и length определяют форму [4,3].",
+      "source": "spec/examples/array_storage/014_flat_lines_width3.lm3",
+      "entry_point": "root",
+      "production_p0": "PASS",
+      "production_translator": "PASS",
+      "lmx_runtime": "INTERPRETER_PASS",
+      "category": "positive",
+      "sha256": "3a087445f10c8c407c30f55b18484f6089964f0474ec9d20898cf1989337430e",
+      "markdown": "spec/examples/array_storage/README.md",
+      "block": 14,
+      "line": 264,
+      "source_markdown_sync": "PASS"
+    },
+    {
+      "id": "array_storage__016_nested_rank3",
+      "inputs": {},
+      "expected": {
+        "type": "[][2][2]int",
+        "shape": [
+          4,
+          2,
+          2
+        ],
+        "length": 16,
+        "flat_storage": [
+          1,
+          2,
+          3,
+          4,
+          1,
+          2,
+          3,
+          4,
+          1,
+          2,
+          3,
+          4,
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "note_ru": "Четыре безымянные Structure содержат по две Structure из двух элементов. Форма [4,2,2].",
+      "source": "spec/examples/array_storage/016_nested_rank3.lm3",
+      "entry_point": "root",
+      "production_p0": "PASS",
+      "production_translator": "PASS",
+      "lmx_runtime": "INTERPRETER_PASS",
+      "category": "positive",
+      "sha256": "3183601282b8611fa1e27bede18b1285e8b6b5f4bc59f10f62f8d935e7a96876",
+      "markdown": "spec/examples/array_storage/README.md",
+      "block": 15,
+      "line": 275,
+      "source_markdown_sync": "PASS"
+    },
+    {
+      "id": "array_storage__017_partial_rank3",
+      "inputs": {},
+      "expected": {
+        "type": "[][2][2]int",
+        "shape": [
+          2,
+          2,
+          2
+        ],
+        "length": 8,
+        "flat_storage": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      },
+      "note_ru": "Каждая из двух Structure содержит по четыре плоских элемента. Они удовлетворяют оставшимся размерам [2,2].",
+      "source": "spec/examples/array_storage/017_partial_rank3.lm3",
+      "entry_point": "root",
+      "production_p0": "PASS",
+      "production_translator": "PASS",
+      "lmx_runtime": "INTERPRETER_PASS",
+      "category": "positive",
+      "sha256": "0c0db87e445778967caf00b8fcf3859d056f5d39f664fa92609d150848bd5324",
+      "markdown": "spec/examples/array_storage/README.md",
+      "block": 16,
+      "line": 286,
+      "source_markdown_sync": "PASS"
+    },
+    {
+      "id": "array_storage__020_mixed_nesting_depth",
+      "inputs": {},
+      "expected": {
+        "type": "[][2][2]int",
+        "shape": [
+          2,
+          2,
+          2
+        ],
+        "length": 8,
+        "flat_storage": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      },
+      "note_ru": "Две Structure описывают по 2×2 элемента: с полной вложенностью и плоской внутренней областью.",
+      "source": "spec/examples/array_storage/020_mixed_nesting_depth.lm3",
+      "entry_point": "root",
+      "production_p0": "PASS",
+      "production_translator": "PASS",
+      "lmx_runtime": "INTERPRETER_PASS",
+      "category": "positive",
+      "sha256": "c27941befd89cb10eb94a889a5462b7bb8d55caae4885918706cc8ed1f716dbd",
+      "markdown": "spec/examples/array_storage/README.md",
+      "block": 17,
+      "line": 294,
       "source_markdown_sync": "PASS"
     },
     {
@@ -340,8 +524,8 @@
       "category": "negative",
       "sha256": "13969218155ed5eaaad847732e5a76b2b379c94c6cc7296e31f149c2c4425aeb",
       "markdown": "spec/examples/array_storage/README.md",
-      "block": 13,
-      "line": 241,
+      "block": 18,
+      "line": 302,
       "source_markdown_sync": "PASS"
     },
     {
@@ -360,8 +544,8 @@
       "category": "negative",
       "sha256": "d0e07146c7ea7c50dcac6fb4530406ce48287003e3c7cb751f9f1ccc1b075156",
       "markdown": "spec/examples/array_storage/README.md",
-      "block": 14,
-      "line": 257,
+      "block": 19,
+      "line": 318,
       "source_markdown_sync": "PASS"
     },
     {
@@ -380,11 +564,106 @@
       "category": "negative",
       "sha256": "ab021e75d4c778ba6a15c497392c1b85ba6d6b20432f37b45152cae3ab049225",
       "markdown": "spec/examples/array_storage/README.md",
-      "block": 15,
-      "line": 273,
+      "block": 20,
+      "line": 334,
+      "source_markdown_sync": "PASS"
+    },
+    {
+      "id": "array_storage__011_ragged_rank2",
+      "inputs": {},
+      "expected": {
+        "diagnostic": "shape"
+      },
+      "note_ru": "Безымянные Structure имеют длины 3, 2, 1 и 2. Для rank=2 их размеры несовместимы.",
+      "source": "spec/examples/array_storage/negative/011_ragged_rank2.lm3",
+      "entry_point": "root",
+      "production_p0": "PASS",
+      "production_translator": "EXPECTED_SHAPE_DIAGNOSTIC",
+      "lmx_runtime": "NOT_RUN",
+      "category": "negative",
+      "sha256": "fc111c9515230602044916df0dbb6c29efbec51233620585616e4c7f855e8be2",
+      "markdown": "spec/examples/array_storage/README.md",
+      "block": 21,
+      "line": 349,
+      "source_markdown_sync": "PASS"
+    },
+    {
+      "id": "array_storage__013_explicit_wrong_width",
+      "inputs": {},
+      "expected": {
+        "diagnostic": "shape"
+      },
+      "note_ru": "Каждая безымянная Structure содержит три элемента. Объявленный размер оси равен пяти.",
+      "source": "spec/examples/array_storage/negative/013_explicit_wrong_width.lm3",
+      "entry_point": "root",
+      "production_p0": "PASS",
+      "production_translator": "EXPECTED_SHAPE_DIAGNOSTIC",
+      "lmx_runtime": "NOT_RUN",
+      "category": "negative",
+      "sha256": "08765aee582d5343e02b5f2eb2502df8232d346389ba6a1388e29791b15d71ce",
+      "markdown": "spec/examples/array_storage/README.md",
+      "block": 22,
+      "line": 357,
+      "source_markdown_sync": "PASS"
+    },
+    {
+      "id": "array_storage__015_flat_lines_width5",
+      "inputs": {},
+      "expected": {
+        "diagnostic": "shape"
+      },
+      "note_ru": "Длина плоского потока 12 не делится на записанный размер 5.",
+      "source": "spec/examples/array_storage/negative/015_flat_lines_width5.lm3",
+      "entry_point": "root",
+      "production_p0": "PASS",
+      "production_translator": "EXPECTED_SHAPE_DIAGNOSTIC",
+      "lmx_runtime": "NOT_RUN",
+      "category": "negative",
+      "sha256": "bdb0db9b3421f3c4d4ccba56e35686156ccd4b3e768f42a02cfc6abfa0648502",
+      "markdown": "spec/examples/array_storage/README.md",
+      "block": 23,
+      "line": 365,
+      "source_markdown_sync": "PASS"
+    },
+    {
+      "id": "array_storage__018_partial_wrong_layer",
+      "inputs": {},
+      "expected": {
+        "diagnostic": "shape"
+      },
+      "note_ru": "Общее число элементов равно восьми. Длины двух Structure 2 и 6 противоречат размеру 2×2 каждой позиции первой оси.",
+      "source": "spec/examples/array_storage/negative/018_partial_wrong_layer.lm3",
+      "entry_point": "root",
+      "production_p0": "PASS",
+      "production_translator": "EXPECTED_SHAPE_DIAGNOSTIC",
+      "lmx_runtime": "NOT_RUN",
+      "category": "negative",
+      "sha256": "283008df254e560bfc9dced5919221a534de44dc4fe4eed0113ceff0b38ef6ab",
+      "markdown": "spec/examples/array_storage/README.md",
+      "block": 24,
+      "line": 376,
+      "source_markdown_sync": "PASS"
+    },
+    {
+      "id": "array_storage__019_explicit_groups_override_total",
+      "inputs": {},
+      "expected": {
+        "diagnostic": "shape"
+      },
+      "note_ru": "Две Structure по четыре элемента противоречат явному размеру 2, хотя общая длина 8 делится на 2.",
+      "source": "spec/examples/array_storage/negative/019_explicit_groups_override_total.lm3",
+      "entry_point": "root",
+      "production_p0": "PASS",
+      "production_translator": "EXPECTED_SHAPE_DIAGNOSTIC",
+      "lmx_runtime": "NOT_RUN",
+      "category": "negative",
+      "sha256": "cba5145f635b21e1312caac1c377aacaede24b3a44cb696f811b8a88d6219843",
+      "markdown": "spec/examples/array_storage/README.md",
+      "block": 25,
+      "line": 384,
       "source_markdown_sync": "PASS"
     }
   ],
-  "production_execution": "NOT_RUN",
+  "production_execution": "PARTIAL",
   "normalization": "LF and exactly one final LF; all other source bytes retained"
 }

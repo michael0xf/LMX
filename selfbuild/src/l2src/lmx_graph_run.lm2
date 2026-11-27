@@ -6228,54 +6228,90 @@ fn: lmx_graph_array_literal (c.LmxGraph@: g; c.Lmx@: parent; c.Lmx@: reference; 
     if: c.lmx_graph_kind(g, initializer) != 4
         return: 2
     ---
-    c.Lmx@: rows (cast: (c.Lmx@) initializer)
-    size_t@: shape (cast: (size_t@) c.malloc(rank * c.sizeof(c.size_t)))
+    if: rank > ((cast: (size_t) -1) / c.sizeof(c.size_t)) / 2U
+        return: 2
+    ---
+    c.Lmx@: region (cast: (c.Lmx@) initializer)
+    size_t: shape_bytes rank * c.sizeof(c.size_t)
+    size_t@: shape (cast: (size_t@) c.malloc(2U * shape_bytes))
     if: shape = 0
         return: 1
     ---
-    c.memset((cast: (@) shape), 255, rank * c.sizeof(c.size_t))
-    size_t: literal_rank rank
-    size_t@: literal_axes axes
-    if: rank > 1U && (c.lmx_graph_count(rows) = 0U || c.lmx_graph_kind(g, c.lmx_graph_get_in(g, rows, 0U)) != 4)
-        literal_rank := 1U
-        literal_axes := 0
+    size_t@: counts shape + rank
+    c.memset((cast: (@) counts), 255, shape_bytes)
+    if: axes = 0
+        c.memset((cast: (@) shape), 255, shape_bytes)
+    else:
+        c.memcpy((cast: (@) shape), (cast: (const: @) axes), shape_bytes)
     ---
     size_t: count 0U
-    int: admitted lmx_graph_literal_ints(g, rows, literal_axes, shape, 0U, literal_rank, 0, @ count)
-    if: admitted != 1 || (literal_rank != rank && lmx_graph_flat_array_extent(axes, rank, count) = 0)
+    int: admitted lmx_graph_literal_ints(g, region, shape, counts, 0U, rank, 0, @ count)
+    if: admitted != 1
         c.free((cast: (@) shape))
         if: admitted < 0
             return: -1
         ---
         return: 2
     ---
+    if: lmx_graph_flat_array_extent(shape, rank, count) = 0
+        c.free((cast: (@) shape))
+        return: 2
+    ---
+    # A later sibling may supply dimensions left open by a flat region.
+    size_t: axis 1U
+    while: axis < rank && counts[axis] != (cast: (size_t) -1)
+        if: lmx_graph_flat_array_extent(shape + axis, rank - axis, counts[axis]) = 0
+            c.free((cast: (@) shape))
+            return: 2
+        ---
+        axis := axis + 1U
+    ---
     c.LmxArray@: array c.lmx_array_new_int_with_reference(g\arena, parent, reference, count)
     if: array != 0
         c.VoidArray@: data @ array\array
         int@: values (cast: (int@) data\data)
         count := 0U
-        lmx_graph_literal_ints(g, rows, literal_axes, shape, 0U, literal_rank, values, @ count)
+        lmx_graph_literal_ints(g, region, shape, counts, 0U, rank, values, @ count)
         out[0] := (cast: (@) array)
     ---
     c.free((cast: (@) shape))
     return: (cast: (int) (array = 0))
 end: lmx_graph_array_literal
 
-fn: lmx_graph_literal_ints (c.LmxGraph@: g; c.Lmx@: rows; const: (size_t@: axes); size_t@: shape; size_t: level; size_t: rank; int@: values; size_t@: cursor) int
-    if: c.lmx_graph_kind(g, rows) != 4 || c.lmx_graph_name_of(g, rows) != 0
+fn: lmx_graph_literal_ints (c.LmxGraph@: g; c.Lmx@: region; size_t@: shape; size_t@: counts; size_t: level; size_t: rank; int@: values; size_t@: cursor) int
+    if: c.lmx_graph_kind(g, region) != 4 || c.lmx_graph_name_of(g, region) != 0
         return: 0
     ---
-    size_t: count c.lmx_graph_count(rows)
+    size_t: count c.lmx_graph_count(region)
     size_t: unknown (cast: (size_t) -1)
-    if: (axes != 0 && axes[level] != unknown && axes[level] != count) || (shape[level] != unknown && shape[level] != count)
-        return: 0
+    size_t: start cursor[0]
+    int: grouped 0
+    if: rank > 1U && count != 0U
+        @: first void c.lmx_graph_get_in(g, region, 0U)
+        if: c.lmx_graph_kind(g, first) = 4 && c.lmx_graph_name_of(g, first) = 0
+            if: level + 1U = rank || (shape[level] != unknown && shape[level] != count)
+                return: 0
+            ---
+            shape[level] := count
+            grouped := 1
+        ---
     ---
-    shape[level] := count
     size_t: i 0U
     while: i < count
-        @: item void c.lmx_graph_get_in(g, rows, i)
-        if: level + 1U = rank
-            if: c.lmx_graph_kind(g, item) != 1 || c.lmx_graph_name_of(g, item) != 0
+        @: item void c.lmx_graph_get_in(g, region, i)
+        int: kind c.lmx_graph_kind(g, item)
+        char@: item_name c.lmx_graph_name_of(g, item)
+        if: grouped != 0 || (rank = 1U && kind = 4 && item_name = 0)
+            size_t: child_level level + (cast: (size_t) grouped)
+            int: admitted lmx_graph_literal_ints(g, (cast: (c.Lmx@) item), shape, counts, child_level, rank, values, cursor)
+            if: admitted != 1
+                return: admitted
+            ---
+        else:
+            if: kind = 4 && item_name = 0
+                return: 0
+            ---
+            if: kind != 1 || item_name != 0
                 return: -1
             ---
             if: cursor[0] = unknown
@@ -6285,13 +6321,15 @@ fn: lmx_graph_literal_ints (c.LmxGraph@: g; c.Lmx@: rows; const: (size_t@: axes)
                 values[cursor[0]] := c.lmx_int_value_known(item)
             ---
             cursor[0] := cursor[0] + 1U
-        else:
-            int: admitted lmx_graph_literal_ints(g, (cast: (c.Lmx@) item), axes, shape, level + 1U, rank, values, cursor)
-            if: admitted != 1
-                return: admitted
-            ---
         ---
         i := i + 1U
+    ---
+    if: rank > 1U
+        size_t: elements cursor[0] - start
+        if: counts[level] != unknown && counts[level] != elements
+            return: 0
+        ---
+        counts[level] := elements
     ---
     return: 1
 end: lmx_graph_literal_ints

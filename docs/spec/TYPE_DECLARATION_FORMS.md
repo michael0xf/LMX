@@ -220,7 +220,7 @@ copying its elements, flattening the singleton, or broadcasting it. A ready
 reference in an ordinary Structure follows the same graph and path rules as
 any other field. Composition such as `[]@[]int` introduces no array-of-arrays kind.
 
-### Rectangular initializer rows and ordinary DATA fields
+### Anonymous initializer Structures and ordinary DATA fields
 
 The following forms validate the same rectangular initializer and construct
 identical flat payload under the same [][]int requirement. They do not retain
@@ -499,9 +499,11 @@ determines its type. The [complete identity and compatibility rules](ARRAY_STORA
 include equal []int types for lengths two and three, and different [2][3]int
 and [3][2]int types despite equal total lengths.
 
-The initializer validates explicit rows and written constraints. Row groups
-must be rectangular, but their discovered extents do not enter the retained
-type. A single unspecified size can be derived from TYPE and length by exact
+A rank-one initializer opens its anonymous Structures into one flat element
+stream. At higher ranks, sibling Structures must describe a compatible shape.
+For a flat portion at any depth, the element count must satisfy the product of
+the remaining written extents. The initializer's discovered extents do not
+enter the retained type. A single unspecified size can be derived from TYPE and length by exact
 division by a positive known product. Several unknown sizes, or an unknown
 multiplied by zero, remain unspecified. Flat `[][]int: [1 2 3 4 5 6]`,
 `[0][]int: []`, and `[][0]int: []` are therefore valid storage declarations;

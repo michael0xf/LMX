@@ -93,7 +93,7 @@ def typed_initializer(
     obtain: Callable[[Any, Any], Any], admit: Callable[[Any], bool],
     *, axes: tuple | None = None,
 ) -> Array:
-    """Validate already delimited rows, then publish only the declared TYPE.
+    """Validate anonymous initializer Structures, then publish only declared TYPE.
 
     Constructor row extents are validation evidence, never retained hidden
     dimensions. Equal []int declarations share a canonical type irrespective
@@ -106,31 +106,44 @@ def typed_initializer(
         raise RankDiagnostic('declared extent count differs from Array rank')
     declared_type = array_type(element_type, axes)
     leaves = []
+    extents = list(axes)
+    counts = [None] * rank
 
-    def topology(group, remaining, top=False):
-        if not isinstance(group, InitializerGroup):
-            raise ShapeDiagnostic('initializer region required')
-        nested = [isinstance(item, InitializerGroup) for item in group.items]
-        if any(nested):
-            if not all(nested) or remaining < 2:
-                raise ShapeDiagnostic('inconsistent explicit row topology')
-            children = [topology(child, remaining-1) for child in group.items]
-            if any(shape != children[0] for shape in children[1:]):
-                raise ShapeDiagnostic('initializer rows must have equal shapes')
-            return (len(children),) + children[0]
-        leaves.extend(group.items)
-        if top:
-            return None  # A flat stream is valid at any declared rank.
-        if remaining == 1:
-            return (len(group.items),)
-        if not group.items:
-            return (0,) + (None,) * (remaining-1)
-        raise ShapeDiagnostic('explicit row nesting differs from the declared rank')
+    def flatten(group):
+        for item in group.items:
+            if isinstance(item, InitializerGroup):
+                flatten(item)
+            else:
+                leaves.append(item)
 
-    observed = topology(region, rank, True)
-    if observed is not None and any(t is not None and n is not None and t != n
-                                    for t, n in zip(axes, observed)):
-        raise ShapeDiagnostic('explicit rows contradict a written extent')
+    def collect(group, axis):
+        start = len(leaves)
+        child_count = sum(isinstance(item, InitializerGroup) for item in group.items)
+        if child_count:
+            if child_count != len(group.items) or axis + 1 == rank:
+                raise ShapeDiagnostic('inconsistent explicit Structure nesting')
+            extent = extents[axis]
+            if extent is not None and extent != child_count:
+                raise ShapeDiagnostic('explicit Structures contradict an axis extent')
+            extents[axis] = child_count
+            for child in group.items:
+                collect(child, axis + 1)
+        else:
+            leaves.extend(group.items)
+        count = len(leaves) - start
+        if counts[axis] is not None and counts[axis] != count:
+            raise ShapeDiagnostic('sibling Structures must describe the same shape')
+        counts[axis] = count
+
+    if not isinstance(region, InitializerGroup):
+        raise ShapeDiagnostic('initializer Structure required')
+    if rank == 1:
+        flatten(region)
+    else:
+        collect(region, 0)
+        for axis, count in enumerate(counts):
+            if count is not None:
+                shape_from_type(extents[axis:], count)
     retained_shape = shape_from_type(axes, len(leaves))
     values = []
     for leaf in leaves:

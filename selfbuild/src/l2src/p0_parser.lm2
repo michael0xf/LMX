@@ -1645,7 +1645,7 @@ fn: lm_p0_segment_standalone (c.LmP0Node@: value) int
     return: (value\kind = c.LM_P0_NODE_FRAME) && ((value\as\frame\flags & c.LM_P0_FRAME_SEPARATOR_CLOSED) != 0U)
 end: lm_p0_segment_standalone
 
-# Finish the anonymous segments of a written round or square group. A short
+# Finish the anonymous segments of a written group or a vertical body. A short
 # form already handled its own semicolon. Compact argument lists also keep
 # their own field contract. Relink the parsed fields without reading text again.
 fn: lm_p0_group_segments (c.LmP0Document@: document; c.LmP0Structure@: structure) int
@@ -5803,6 +5803,7 @@ end: lm_p0_postprocess_stack_delete
 fn: lm_p0_postprocess_run (c.LmP0Document@: document; c.LmOwnPtrStack@: stack) int
     c.LmP0PostprocessFrame@: frame
     c.LmP0Node@: p0_node
+    c.LmP0Frame@: parsed_frame
     c.LmP0Structure@: structure
     int: status
     status := 1
@@ -5849,8 +5850,17 @@ fn: lm_p0_postprocess_run (c.LmP0Document@: document; c.LmOwnPtrStack@: stack) i
         if: (frame\phase = c.LM_P0_POSTPROCESS_FRAME_WRAP)
             p0_node := frame\node
             c.lm_own_delete(c.lm_own_ptr_stack_pop(stack), 0)
-            if: (((p0_node != 0) && ((p0_node\as\frame\flags & c.LM_P0_FRAME_INLINE_BODY) != 0U)) && (lm_p0_wrap_fields_from_line(document, (cast: (c.LmP0Structure@) p0_node\as\frame\body), (cast: (size_t) p0_node\span\line), ((cast: (size_t) p0_node\span\offset) + (cast: (size_t) p0_node\span\length))) = 0))
-                status := 0
+            if: p0_node = 0
+                continue
+            ---
+            parsed_frame := p0_node\as\frame
+            structure := parsed_frame\body
+            if: (parsed_frame\flags & c.LM_P0_FRAME_INLINE_BODY) != 0U
+                status := lm_p0_wrap_fields_from_line(document, structure, p0_node\span\line, p0_node\span\offset + p0_node\span\length)
+            else:
+                if: (parsed_frame\flags & c.LM_P0_FRAME_COLON) != 0U && (parsed_frame\flags & c.LM_P0_FRAME_COMPACT) = 0U
+                    status := lm_p0_group_segments(document, structure)
+                ---
             ---
             continue
         status := 0
@@ -5878,6 +5888,7 @@ fn: lm_p0_wrap_fields_from_line (c.LmP0Document@: document; c.LmP0Structure@: st
     c.LmP0Field@: previous
     c.LmP0Field@: group_first
     c.LmP0Node@: group_node
+    c.LmP0Structure@: group_body
     c.LmP0Field@: move
     previous := 0
     field := structure\first_field
@@ -5893,6 +5904,7 @@ fn: lm_p0_wrap_fields_from_line (c.LmP0Document@: document; c.LmP0Structure@: st
     group_node := lm_p0_new_node(document, c.LM_P0_NODE_STRUCTURE)
     if: (group_node = 0)
         return: 0
+    group_body := group_node\as\structure
     group_node\span[0] := group_first\value\span[0]
     move := group_first
     while: (move != 0)
@@ -5901,10 +5913,13 @@ fn: lm_p0_wrap_fields_from_line (c.LmP0Document@: document; c.LmP0Structure@: st
         next_move := move\next
         value := move\value
         move\value := 0
-        if: (lm_p0_append_field(document, (cast: (c.LmP0Structure@) group_node\as\structure), value) = 0)
+        if: (lm_p0_append_field(document, group_body, value) = 0)
             lm_p0_free_node(group_node)
             return: 0
         move := next_move
+    ---
+    if: lm_p0_group_segments(document, group_body) = 0
+        return: 0
     ---
     group_first\value := group_node
     group_first\next := 0

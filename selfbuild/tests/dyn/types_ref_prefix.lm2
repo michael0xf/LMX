@@ -4,6 +4,7 @@ predef: "l2src/lmx_array_owned.h.lm1"
 predef: "l2src/lmx_types.h.lm1"
 predef: "l2src/lmx_gc.h.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_graph_copy_owned.h.lm1"
 include: "<string.h>"
 
@@ -31,10 +32,32 @@ fn: type_ref_prefix_check () int
     if: c.lmx_range_type_of(@ arena, type_ref) != 0 - c.LMX_TYPE_STRUCT || c.lmx_range_stride(@ arena, a) != c.sizeof(c.Lmx) || c.lmx_range_cell_pool(@ arena, prefix) != 0
         return: 103
     ---
-    c.VoidArray@: contents @ type_ref\array
-    @@: fields void (cast: (@@) contents\data)
-    if: contents\size != 3U || c.lmx_graph_value_in(@ arena, type_ref, 1U) != int_ref || c.lmx_int_value_known(fields[2]) != 1
+    # Both descriptions are ordinary graph nodes. The raw prefix is storage.
+    if: c.lmx_graph_node_in(@ arena, type_ref) != type_ref || c.lmx_graph_node_in(@ arena, int_ref) != int_ref || c.lmx_graph_node_in(@ arena, prefix) != 0
         return: 104
+    ---
+    c.LmxGraph@: graph c.lmx_graph_open(@ arena)
+    if: graph = 0 || c.lmx_graph_count(type_ref) != 3U || c.lmx_graph_count(int_ref) != 1U
+        return: 113
+    ---
+    @: spelling void c.lmx_graph_get_in(graph, type_ref, 0U)
+    @: element void c.lmx_graph_get_in(graph, type_ref, 1U)
+    @: rank_value void c.lmx_graph_get_in(graph, type_ref, 2U)
+    int: rank 0
+    if: c.lmx_range_type_of(@ arena, spelling) != 0 - c.LMX_TYPE_ARRAY_OF_CHAR || element != int_ref || c.lmx_graph_get_in(graph, int_ref, 0U) = 0
+        return: 114
+    ---
+    if: c.lmx_graph_value_int(graph, rank_value, @ rank) != 0 || rank != 1
+        return: 115
+    ---
+    if: c.lmx_graph_write_slot(graph, type_ref, 1U, 0) = 0 || c.lmx_graph_get_in(graph, type_ref, 1U) != int_ref
+        return: 116
+    ---
+    if: c.lmx_graph_assign_int(graph, type_ref, 2U, 2) = 0 || c.lmx_graph_value_int(graph, rank_value, @ rank) != 0 || rank != 1
+        return: 118
+    ---
+    if: c.lmx_graph_close(graph) != 0
+        return: 117
     ---
     c.VoidArray@: dense @ b\array
     int@: data (cast: (int@) dense\data)

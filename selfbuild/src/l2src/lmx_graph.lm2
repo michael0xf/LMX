@@ -2151,12 +2151,18 @@ fn: lmx_graph_value_int (c.LmxGraph@: g; @: value; int@: out) int
     if: kind = 3
         value := c.lmx_arena_pointer_void_read(value)
         kind := lmx_graph_kind(g, value)
-    # An addressable result can retain its full scalar context in an ordinary
-    # ABI cell. Read it numerically only when the frontend proved this exact
-    # C access contract to be INT; physical kind/profile stay unchanged.
     if: kind = 0
         pool := c.lmx_range_cell_pool(g\arena, value)
-        if: pool = 0 || pool\kind != c.LMX_KIND_PRIMITIVE || c.lmx_type_base(pool\type) != c.LMX_TYPE_FOREIGN || pool\scalar_abi = 0 || pool\stride != pool\scalar_abi\size || lmx_graph_scalar_type((cast: (const: c.LmxScalarABI@) pool\scalar_abi)) != c.LMX_TYPE_INT
+        if: pool = 0 || pool\kind != c.LMX_KIND_PRIMITIVE
+            return: 1
+        ---
+        # Read immutable int cells without admitting them as writable places.
+        if: pool\type = 0 - c.LMX_TYPE_INT && pool\stride = c.sizeof(c.int)
+            out[0] := c.lmx_int_value_known(value)
+            return: 0
+        ---
+        # An exact foreign scalar can be read when its saved context proves INT.
+        if: c.lmx_type_base(pool\type) != c.LMX_TYPE_FOREIGN || pool\scalar_abi = 0 || pool\stride != pool\scalar_abi\size || lmx_graph_scalar_type((cast: (const: c.LmxScalarABI@) pool\scalar_abi)) != c.LMX_TYPE_INT
             return: 1
         context := c.lmx_value_cell_context(g\arena, value)
         if: context = 0 || context\present = 0 || context\kind != c.LMX_WALK_VALUE_FOREIGN || context\ref != value || context\type != pool\type || context\scalar_abi != pool\scalar_abi || context\physical_profile != pool\profile

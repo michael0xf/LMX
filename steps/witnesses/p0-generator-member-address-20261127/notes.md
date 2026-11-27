@@ -53,7 +53,7 @@ Sol в той же переписке (имя указателя в данных
 | Компонентная цепочка от принятого набора | manifest, verify, build-self, rt01, feh01, rt02, graph02 — все exit 0; прежняя остановка rt02 снята | `build2/coder-grammar-20261127/gen-05/chain/` |
 | Два поколения runtime | rt02 `driver.o` и `driver-observe.o` побайтно равны rt01 (старая эмиссия точкой, новая — адресом) | там же, `chain.out` |
 | C `lmx_graph_scalar_cell` | было `context.source_type = …`, `value . ref`; стало `LmxWalkValue * l2_t8 = (& (context)); l2_t8->source_type = …`, `(& (value)) -> ref`; объект тот же | `stage-gen-05/coder-gen05-rt0{1,2}/scalar_cell.c.txt` |
-| Полный список | SUITE 237 rows, 48 failures; те же 48 строк, что в принятом состоянии K2 S3 (236/48): только новых 0, только прежних 0, смена класса 0 | `gen-05/accept/full-suite.log`, `full/failures.tsv` |
+| Полный список | SUITE 237 rows, 48 failures; те же 48 строк, что в принятом состоянии K2 S3 (236/48): только новых 0, только прежних 0, смена класса 0 | `gen-05/accept/full.log`, `full/failures.tsv` |
 | Самопроверки ядра | SUITE 17 rows, 0 failures | `gen-05/accept/selftests.log` |
 | Набор графа, 665 строк, против расписок K2 S3 (26 ноября, 11:00) | equal 601 (зелёные в обоих 501, красные в обоих 100), changed 64; против прогона до третьего исправления — equal 665, changed 0 | `gen-05/accept/graph/graph-compare.tsv` |
 | Контроль 64 отличных строк на принятом наборе (tool05, `sol-k4-feh01`, runtime12, Graph `pointer02`), строка за строкой под таймаутом 90 с | 63 строки дают вердикт, все 63 равны вердиктам кандидата (красные в обоих 62, зелёные в обоих 1); `control_flow` не вернулась за 90 с на обоих наборах | `gen-05/control/graph-compare-accepted-vs-candidate.tsv` |

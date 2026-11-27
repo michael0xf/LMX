@@ -1580,7 +1580,7 @@ forms and the ordinary TYPE/prefix consumer handle it without a second parser
 or expansion of the graph into N textual prefixes. Forms `@(name)` and
 `[](name)` without a following type retain their compact declaration reading when a NAME is expected.
 In TYPE, `@(Model)` and `[](Model)` use the round group as the base description.
-When a complete base type follows, as in `@(N)T`, the attached group gives the count.
+When a complete base type follows, as in `@(N)T`, the attached group gives the count. An Array prefix chain can also end in a counted address prefix with an implicit base. Thus `[](2)@(3)` and `[][]@@@` describe one TYPE. `[]@`, `[5]@` and `[](2)@(3)` stand alone in TYPE position; adding `: NAME` declares a place of the same type.
 The receiving role and the written type boundary decide this before evaluation.
 
 Composition reads from the outermost constructor to the base: `[](R)@(P)int` has R Array axes with a

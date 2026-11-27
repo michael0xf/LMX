@@ -316,7 +316,15 @@ retain these boundaries; a separate parser or textual expansion into N source
 prefix nodes is not introduced. In a completed declaration Frame, `@(name)` and
 `[](name)` use the ordinary NAME contract. In TYPE, `@(Model)` and `[](Model)`
 apply the prefix to the grouped base. In `@(N)T` and `[](N)T` a base T follows
-the attached count. These boundaries are determined before N is evaluated.
+the attached count. In an Array prefix chain the last counted address prefix
+can instead end the TYPE with an implicit address base. `[](2)@(3)` is the
+same requirement as `[][]@@@`: two unspecified axes with depth-three
+address elements. `[]@` and `[5]@` have depth-one address elements and one
+axis, unspecified and fixed at five respectively. These are complete TYPEs
+on their own. With `: NAME` the same TYPEs declare places, for example
+`[]@: voidarray`, `[5]@: voidarray` and `[](2)@(3): arr`. An omitted
+initializer leaves the place uninitialized. These boundaries are determined
+before N is evaluated.
 
 Written Array rank/axis constraints belong to its canonical TypeRef description.
 Unspecified axes remain unspecified except for values derivable from TYPE and

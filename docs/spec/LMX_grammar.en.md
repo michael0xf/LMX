@@ -318,9 +318,9 @@ The forms of a structural call use the same Frame and ordinary argument parsing:
 
 Sources: §§4.1, 4.2.1–4.2.1.1, 15.
 
-A comma separates fields and does not terminate an open short tail. A semicolon at the current scan depth immediately terminates the current short form, then separates the next item/segment at that depth. A separator inside deeper brackets belongs to those brackets. With no open short tail, comma is an ordinary separator and semicolon an item separator; a single trailing separator is allowed, including at file root.
+A comma separates fields within the current segment and keeps an open short tail. A semicolon ends the current segment at its scan depth. An open short form completes first under its existing rule, and its neighboring segment starts at the form’s level. An already open headless segment ends at its own level. A single trailing separator is allowed, including at file root.
 
-A neighboring headless segment after `;` may be represented as a separate anonymous Structure. P0 does not append it to the completed tail or decide whether it repeats a declaration. The consuming profile decides that.
+Common P0 preserves the semicolon boundary separately from the field separator shared with commas. In a written anonymous `(...)` or `[...]` group, neighboring segments separated by semicolons become child anonymous Structures. For example, `( a bc d ; efgh sdf ; ddg g)` gives one Structure with three child Structures of lengths 3, 2, and 2. A compact call `f(...)` retains its argument-list contract. After a short form closes, the next headless segment can form a neighboring anonymous Structure. A rank initializer reads the same boundaries as ends of its current rows. A separator inside a nested bounded region belongs to that region.
 
 Repeated separators `a,,c`, `a;;c`, `a,;c`, `a;,c` denote a positional skip where the context admits empty positions; a leading separator may skip the first position. P0 preserves the skip without shifting the other arguments. A consumer admits it only for an argument with an allowed default, otherwise reporting an error. `()` is a present empty Structure, not a skip.
 
@@ -1523,8 +1523,7 @@ one flat storage, and the VALUE constructor `[arr2]` returns one whole Array.
 The grouper sees the clean graph and receiving roles; original bracket choices
 provide no flags or unwrapping branches.
 
-Nested calls, strings and bounded regions shield their semicolons from the
-outer level. Outside initializers semicolons retain short-form termination.
+Common P0 preserves semicolon boundaries under [§11](#separators). A comma separates fields within the current row. Nested calls, strings and bounded regions shield their semicolons from the outer level.
 The common parser preserves the written graph. The TYPE consumer checks
 rectangular row regions and explicit bounds, then obtains elements once in
 source order. Rows flatten into storage; their boundaries are not retained as

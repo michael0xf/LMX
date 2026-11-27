@@ -489,9 +489,10 @@ same contract consumes already delimited regions of the following axes.
 
 Preparation uses common P0 and the ordinary initializer contract:
 
-1. Preserve source nodes and contexts; delimiters identify complete regions.
-   A `;` inside a call, literal, or nested region does not split an outer row.
-   Outside an initializer it retains its ordinary short-form termination role.
+1. Preserve source nodes and contexts. The initializer gets row boundaries
+   from the [common P0 semicolon rule](LMX_grammar.en.md#separators). Commas
+   separate fields within a row. Separators in nested calls and bounded regions
+   belong to those regions. Characters inside a literal remain its content.
 2. Reconcile explicit type extents, rectangular initializer regions, and the
    element count by [the common shape procedure](#shape-inference). Check
    rectangularity of the available regions for the declared rank.

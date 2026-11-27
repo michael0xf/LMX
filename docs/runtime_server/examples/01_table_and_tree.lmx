@@ -1,0 +1,47 @@
+# Concrete data following the working table example in
+# docs/spec/patterns/03_domain_and_persistence/examples/lmx/026_table_module.lm3.
+# The first column is the row key. Arrays contain references to named rows.
+# No table syntax, automatic registry, padding or implicit missing cell exists.
+
+LmxServerExampleOrderA:
+    []char: id "A-100"
+    int: quantity 2
+    int: price 150
+
+LmxServerExampleOrderB:
+    []char: id "B-200"
+    int: quantity 3
+    int: price 80
+
+LmxServerExampleOrders:
+    @: columns ("id"; "quantity"; "price")
+    []@: rows (LmxServerExampleOrderA; LmxServerExampleOrderB)
+
+LmxServerExampleTotal:
+    []@: rows
+    required: rows
+    return: int
+    total:
+        private: int: result 0
+        private: int: i 0
+        while: i < length(rows)
+            private: @: row rows[i]
+            result += row\quantity * row\price
+            i += 1
+        return: result
+
+# Ordinary hierarchy and deliberate sharing: both paths select the same table.
+LmxServerExampleWorkspace:
+    []char: name "orders-review"
+    @: orders LmxServerExampleOrders
+    review:
+        []char: question "Check the order total and show the data used."
+        @: evidence LmxServerExampleOrders
+    policy:
+        int: maxModelRounds 4
+        @: projection ("name"; "type"; "value")
+
+LmxServerExampleTableRead:
+    return: int
+    run:
+        return: LmxServerExampleTotal\total(rows := LmxServerExampleOrders\rows)

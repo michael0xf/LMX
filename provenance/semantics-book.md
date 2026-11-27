@@ -615,7 +615,7 @@ Expanded [Message-context examples](LMX_semantics_guide.en.md#message-conversion
 
 Проверяющему выражению передаётся фактический кандидат обычным аргументом. Пригодность структуры для его собственных обращений проверяется до исполнения; `@` не добавляется ради передачи Structure, уже передаваемой ссылкой. Проверка возвращает обычный `int`: 1 — успех, 0 — неуспех. Ожидаемый отказ проверяется обычным `catch`, а произвольный `throw` не считается успехом.
 
-Исполнение проверки завершает уже начатый допуск, не начинает тот же допуск заново. Цикл незавершённых проверок не является успехом. Написанная связь и тело проверки находятся в том же графе для `sys\toLmx`, копирования и исполнения, пока не изменены явной записью; отдельного каталога тестов, вспомогательного графа, дополнительной runtime-таблицы связывания имён и скрытого отключения типизации нет. Тесты вызывают методы через обычную диспетчеризацию native/обходчика и не принуждают всё исполнение к обходу.
+Исполнение проверки завершает уже начатый допуск, не начинает тот же допуск заново. Цикл незавершённых проверок не является успехом. Написанная связь и тело проверки находятся в том же графе для `sys\toLmx`, копирования и исполнения, пока не изменены явной записью; отдельного каталога, определяющего допуск или выбор теста, вспомогательного графа, дополнительной runtime-таблицы связывания имён и скрытого отключения типизации нет. Тесты вызывают методы через обычную диспетчеризацию native/обходчика и не принуждают всё исполнение к обходу.
 
 [EN]
 Candidate admission uses one mechanism: interface checking by directional `satisfies`, then the explicitly specified analytical checks (`test`) of the receiving expression where that admission contract requires them. Physical type references identify representation but do not replace admission. Ordinary used-interface checking examines a concrete Consumer's actual demands; an explicit structural template requires its whole stated tree, and a named fn description selects the [positional signature rule](#fn-signature). These are branches of the same mechanism, not alternative type systems.
@@ -660,7 +660,7 @@ A `test` form follows the general [rules for execution through receivers](#data-
 
 The actual candidate is supplied to the checker as an ordinary argument. Structural suitability for the checker's own accesses is checked before execution; no `@` is added merely to transport a Structure, which already travels by reference. A checker returns an ordinary `int`: 1 for success, 0 for failure. An expected failure uses ordinary `catch`; an arbitrary `throw` is not success.
 
-Running a check completes admission already in progress rather than starting that same admission over again. A cycle of unfinished checks is not success. The written association and checking body reside in the same graph for `sys\toLmx`, copying and execution until changed by an explicit write; there is no separate test catalogue, auxiliary graph, additional runtime variable-binding table or hidden typing-disabled mode. Test calls use ordinary native/walker dispatch and do not force every call to be walked.
+Running a check completes admission already in progress rather than starting that same admission over again. A cycle of unfinished checks is not success. The written association and checking body reside in the same graph for `sys\toLmx`, copying and execution until changed by an explicit write; there is no separate catalogue that controls admission or test selection, auxiliary graph, additional runtime variable-binding table or hidden typing-disabled mode. Test calls use ordinary native/walker dispatch and do not force every call to be walked.
 
 @@ admission-recipes | Как получить требуемую гарантию: четырнадцать практических случаев | Obtaining a required guarantee: fourteen practical cases | 2.5.4; 2.5.3; author 2026-09-20
 [RU]
@@ -6124,7 +6124,7 @@ Use:
 <a id="source-codec"></a>
 ### Вывод текущего графа: sys\toLmx
 
-`sys\toLmx` выводит LMX-текст текущего графа с каноническими именами и сохранёнными комментариями. Все записи ресиверов и записанные границы группировки сохраняются; расширение потока namespace не заменяет исходные записи import/copy/merge. Терминальные примитивные объявления восстанавливаются из типа, значения и имени. Форматирование вставляет пустые строки только на задуманных границах полного корня документа, чтобы повторный разбор сохранял структуру. Явно перезаписанная конструкция выводится в своём текущем виде; ни история, ни native не восстанавливают более ранний исходный текст. Локальное выполнение не публикует свой frame и не заменяет инициализатор в исходных данных. Эта сериализация отличается от `sys\translate`, который возвращает текст L1 для последующей компиляции и ошибок понижения.
+`sys\toLmx` выводит текущий граф любой Structure и любого L3Thread как текст LMX с каноническими именами и сохранёнными комментариями. Все записи ресиверов и записанные границы группировки сохраняются; расширение потока namespace не заменяет исходные записи import/copy/merge. Терминальные примитивные объявления восстанавливаются из типа, значения и имени. Форматирование вставляет пустые строки только на задуманных границах полного корня документа, чтобы повторный разбор сохранял структуру. Явно перезаписанная конструкция выводится в своём текущем виде; ни история, ни native не восстанавливают более ранний исходный текст. Локальное выполнение не публикует свой frame и не заменяет инициализатор в исходных данных. Эта сериализация отличается от `sys\translate`, который возвращает текст L1 для последующей компиляции и ошибок понижения.
 
 Аргумент `sys\toLmx(S)` задаёт сохраняемую структуру. Для L3 Thread сохраняются также все таблицы его арены, включая таблицы call и native-дескрипторы. Таблицами владеет арена: они не являются полями R0, и R0 — не единственный подходящий Thread. К произвольной S внешние таблицы арены скрыто не добавляются. Сохраняются порядок и пустые позиции, общие ссылки, циклы, имена и типизированные значения: это восстанавливаемый текущий граф, не только печать похожего исходника. Скрытых данных в чистом графе нет: все данные лежат в `void *`-хранилище его Structure и отображаются `toLmx` элементарно, а `length` и `parent` выводятся из сформированного им текста (решение автора 2026-11-17). Таблицу имён `fromLmx` восстанавливает из текста; она и остальные таблицы ядра — данные самого ядра, которое собирает само себя и написано на L2 и L3, то есть такие же Structure чистого графа, а не скрытые данные рядом с ним. Весь программный материал, включая эти таблицы, лежит в чистом графе LMX. Отдельный бинарник содержит скомпилированные методы, включая R0 и интерпретатор; R0 обращается к своему графу через локальный указатель. Переносимый C генерируется для реализаций этих методов по пути L3/L2 → L1 → C и не поставляет скрытого зеркала статических данных графа. Транслятор написан на L2 и L3, и вставки L1 в итоге тоже убираются.
 
@@ -6195,7 +6195,7 @@ Repeated names follow the receiving context's ordinary redeclaration rules. Impo
 <a id="source-codec"></a>
 ### Current-graph serialization: sys\toLmx
 
-`sys\toLmx` emits LMX text of the current graph with canonical names and retained comments. All receiver records and written grouping boundaries are preserved; namespace stream expansion does not replace source import/copy/merge records. Terminal primitive declarations are reconstructed from type, value and name. Formatting inserts blank lines only at intended full document-root boundaries so reparsing retains structure. An explicitly overwritten construct is emitted in its current form; neither history nor native reconstructs earlier source. Local execution does not publish its frame or replace the initializer in source data. This serialization differs from `sys\translate`, which returns L1 text for subsequent compilation and lowering errors.
+`sys\toLmx` emits the current graph of any Structure or L3Thread as LMX text with canonical names and retained comments. All receiver records and written grouping boundaries are preserved; namespace stream expansion does not replace source import/copy/merge records. Terminal primitive declarations are reconstructed from type, value and name. Formatting inserts blank lines only at intended full document-root boundaries so reparsing retains structure. An explicitly overwritten construct is emitted in its current form; neither history nor native reconstructs earlier source. Local execution does not publish its frame or replace the initializer in source data. This serialization differs from `sys\translate`, which returns L1 text for subsequent compilation and lowering errors.
 
 The argument of `sys\toLmx(S)` selects the saved Structure. For an L3 Thread it also saves all tables of that Thread's arena, including call tables and native descriptors. The arena owns these tables; they are not fields of R0, and R0 is not the only eligible Thread. External arena tables are not silently attached to an arbitrary S. Preserve order and empty positions, shared references, cycles, names, and typed values: this is a reconstructable current graph, not merely source-like output. The clean graph holds no hidden data: all data lie in the `void *` storage of its Structures and are mapped by `toLmx` in an elementary way, while `length` and `parent` are derived from the text it forms (the author's decision of 2026-11-17). The table of names is restored by `fromLmx` from the text; it and the other tables of the kernel are data of the kernel itself, which builds itself and is written in L2 and L3 -- that is, the same Structures of the clean graph, not hidden data beside it. All program material, these tables included, lies in the clean LMX graph. The separate binary contains the compiled methods, including R0 and the interpreter; R0 accesses its graph through a local pointer. Portable C is generated for those method implementations along L3/L2 -> L1 -> C and does not supply a hidden static-data mirror of the graph. The translator is written in L2 and L3, and the L1 inserts are removed in the end too.
 
@@ -6885,10 +6885,24 @@ Provider tests must include cross-implementation vectors and negative cases: inv
 
 Streaming, secret streams, HSM/TPM, KEM/PQC, remote key services and protected-envelope formats are outside the profile defined here.
 
-@@ edit-api | Mutating debug API для AI-чата | Mutating debug API for an AI chat | author's application-interface supplement; reconciled 2026-11-21
+@@ edit-api | API агентов, отладка и MCP на LMX | Agent API, debugging and MCP in LMX | author's application-interface supplement; reconciled 2026-11-21
 [RU]
 Эта глава задаёт требуемое поведение прикладного интерфейса просмотра, вставки, копирования и пошагового исполнения работающего приложения LMX. Это не утверждение о готовой реализации и не новый уровень LMX; общие языковые контракты задают эта спецификация, [спецификация L2](L2_spec_ru.md) и [грамматика](LMX_grammar.ru.md).
 
+
+<a id="edit-api-runtime-server"></a>
+### Runtime как сервер LMX для агентов
+
+Приложение LMX может обслуживать свой runtime через операции на L3. Законченное текстовое Message, включая исходный файл, проходит через `sys\fromLmx` до трансляции. Местный клиент может передать готовый граф обычным вызовом или письмом. Вход MCP по договору своей версии преобразует JSON-RPC в те же операции. Все три пути используют разрешённую область, общий допуск и исполнение у владельца. Получения графа достаточно для просмотра и каталогизации. Исполнение команды, тест и компиляция запрашиваются явно. `sys\toLmx` выдаёт текущую Structure либо L3Thread по полному договору кодека. [Рабочее ТЗ](../runtime_server/README.md#runtime-service) · [Кодек](#source-codec).
+
+Агент может читать и размещать граф, менять допущенный обработчик и делать шаг указанного исполнения. Следующий вызов выбирает новый обработчик, а уже выбранный CODE и его кадр сохраняются. Обмен с моделью использует обычные Message и фактические расписки. Усечённый документ не исполняется. При утрате ответа неопределённый эффект не повторяется автоматически. [Операции и жизненный цикл](../runtime_server/API.md#runtime-operations) · [MCP](../runtime_server/MCP.md#runtime-mcp).
+
+<a id="edit-api-catalogue"></a>
+### Каталог L3Thread до компиляции
+
+До входа в транслятор владелец может дать агенту снимок чистого графа выбранного L3Thread, в том числе созданного во время исполнения. Обход сохраняет порядок и кратность полей, пустые места, общие ссылки, циклы и действительные parent. Доступны определения, типы и написанные связи. Вычисляемые инициализаторы, тела и тесты при обходе не выполняются. Последующие решения конкретной компиляции, тестовые результаты и native-артефакты имеют отдельные основания. Динамический адресат может остаться неизвестным. [Факты и охват](../runtime_server/CATALOGUE.md#catalogue-facts).
+
+Ключ узла действует внутри разрешённой области и одного снимка. Живая операция заново получает действительную ссылку или PLACE с обычным допуском. Кандидат каталога успешной компиляции публикуется на полосе владельца в её границе до невозвращающего `endturn`. Смена публикации атомарна в SQLite. Отказ БД сохраняет старую публикацию и отдельную расписку. Текущее состояние графа читается независимо от последней публикации. [Основа и публикация](../runtime_server/CATALOGUE.md#catalogue-publication).
 
 <a id="edit-api-status"></a>
 ### Статус
@@ -7060,6 +7074,20 @@ end: interpreter
 [EN]
 This chapter defines the required behavior of an application interface for inspecting, extending, copying and stepping a live LMX application. It is not a claim of completed implementation and not a new LMX level; the general language contracts are those of this specification, the [L2 specification](L2_spec_en.md) and the [grammar](LMX_grammar.en.md).
 
+
+<a id="edit-api-runtime-server"></a>
+### The runtime as an LMX server for agents
+
+An LMX application can serve its own runtime through operations written in L3. A complete textual Message, including a source file, goes through `sys\fromLmx` before translation. A local client may pass a ready graph by ordinary call or Message. The MCP binding maps versioned JSON-RPC to the same operations. All three paths use the permitted scope, ordinary admission and owner-side execution. Constructing the graph suffices for inspection and cataloguing. Executing a command, running a test and compiling are explicit requests. `sys\toLmx` emits the current Structure or L3Thread under the full codec contract. [Service design](../runtime_server/README.md#runtime-service) · [Codec](#source-codec).
+
+The agent can inspect and place graph values, replace an admitted handler and step a specified execution. The next selection obtains the new handler. Already selected CODE and active frames retain their targets. The model exchange uses ordinary Messages and observed receipts. Truncated documents are rejected before execution. Losing a reply does not trigger automatic replay of an uncertain effect. [Operations and lifecycle](../runtime_server/API.md#runtime-operations) · [MCP](../runtime_server/MCP.md#runtime-mcp).
+
+<a id="edit-api-catalogue"></a>
+### Cataloguing an L3Thread before compilation
+
+Before entering the translator, the owner can give an agent a snapshot of the selected L3Thread's clean graph, including one built at runtime. Traversal preserves field order and multiplicity, empty slots, shared edges, cycles and actual parents. Definitions, types and written relations can be inspected. Traversal does not execute computed initializers, bodies or tests. Later resolution decisions from a particular compilation, test outcomes and native artifacts carry their own evidence. A dynamic target can remain unknown. [Facts and coverage](../runtime_server/CATALOGUE.md#catalogue-facts).
+
+A node key is scoped to one authorized owner view and snapshot. A live operation resolves an actual reference or PLACE under ordinary admission. For a successful compilation the owner publishes its prepared catalogue at the boundary before the nonreturning `endturn`. SQLite switches publications atomically. A database failure leaves the previous publication visible and has a separate receipt. Current graph state can be inspected independently of the last publication. [Basis and publication](../runtime_server/CATALOGUE.md#catalogue-publication).
 
 <a id="edit-api-status"></a>
 ### Status

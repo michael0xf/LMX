@@ -1,0 +1,66 @@
+{
+  "fixture": {
+    "profile": "2026-07-28",
+    "kind": "protocol-reference",
+    "runtimeStatus": "NOT_RUN",
+    "requires": [
+      "tools provider",
+      "cooperative cancellation at an execution boundary"
+    ],
+    "note": "Expected wire shape; this does not advertise or prove implemented capabilities."
+  },
+  "transport": "stdio",
+  "exchange": [
+    {
+      "direction": "client-to-server",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": "calc-1",
+        "method": "tools/call",
+        "params": {
+          "_meta": {
+            "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+            "io.modelcontextprotocol/clientCapabilities": {},
+            "io.modelcontextprotocol/clientInfo": {
+              "name": "lmx-fixture-client",
+              "version": "0.1.0"
+            },
+            "progressToken": "progress-1"
+          },
+          "name": "lmx",
+          "arguments": {
+            "document": "1 + 2"
+          }
+        }
+      }
+    },
+    {
+      "direction": "server-to-client",
+      "body": {
+        "jsonrpc": "2.0",
+        "method": "notifications/progress",
+        "params": {
+          "progressToken": "progress-1",
+          "progress": 1,
+          "total": 2,
+          "message": "Reference execution phase"
+        }
+      }
+    },
+    {
+      "direction": "client-to-server",
+      "body": {
+        "jsonrpc": "2.0",
+        "method": "notifications/cancelled",
+        "params": {
+          "requestId": "calc-1",
+          "reason": "fixture cancellation"
+        }
+      }
+    }
+  ],
+  "expectedAfterCancel": {
+    "furtherMessagesForRequest": false,
+    "rollbackImplied": false
+  }
+}

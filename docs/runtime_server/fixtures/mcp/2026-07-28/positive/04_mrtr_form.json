@@ -1,0 +1,124 @@
+{
+  "fixture": {
+    "profile": "2026-07-28",
+    "kind": "protocol-reference",
+    "runtimeStatus": "NOT_RUN",
+    "requires": [
+      "reference prompt lmx.ask registered; prompts capability enabled",
+      "client elicitation.form enabled"
+    ],
+    "note": "Expected wire shape; this does not advertise or prove implemented capabilities."
+  },
+  "transport": "stdio",
+  "exchange": [
+    {
+      "direction": "client-to-server",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": "prompt-1",
+        "method": "prompts/get",
+        "params": {
+          "_meta": {
+            "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+            "io.modelcontextprotocol/clientCapabilities": {
+              "elicitation": {
+                "form": {}
+              }
+            },
+            "io.modelcontextprotocol/clientInfo": {
+              "name": "lmx-fixture-client",
+              "version": "0.1.0"
+            }
+          },
+          "name": "lmx.ask"
+        }
+      }
+    },
+    {
+      "direction": "server-to-client",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": "prompt-1",
+        "result": {
+          "resultType": "input_required",
+          "inputRequests": {
+            "goal": {
+              "method": "elicitation/create",
+              "params": {
+                "mode": "form",
+                "message": "Какую задачу должен выполнить LMX runtime?",
+                "requestedSchema": {
+                  "type": "object",
+                  "properties": {
+                    "goal": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "goal"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "direction": "client-to-server",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": "prompt-2",
+        "method": "prompts/get",
+        "params": {
+          "_meta": {
+            "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+            "io.modelcontextprotocol/clientCapabilities": {
+              "elicitation": {
+                "form": {}
+              }
+            },
+            "io.modelcontextprotocol/clientInfo": {
+              "name": "lmx-fixture-client",
+              "version": "0.1.0"
+            }
+          },
+          "name": "lmx.ask",
+          "inputResponses": {
+            "goal": {
+              "action": "accept",
+              "content": {
+                "goal": "Вычисли 1 + 2"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "direction": "server-to-client",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": "prompt-2",
+        "result": {
+          "resultType": "complete",
+          "messages": [
+            {
+              "role": "user",
+              "content": {
+                "type": "text",
+                "text": "Вычисли 1 + 2"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "constraints": [
+    "Input requests have no independent JSON-RPC id/jsonrpc.",
+    "Retry uses a new outer id.",
+    "No requestState is needed by this pure reference prompt provider.",
+    "Stateful providers must protect and validate any requestState they issue."
+  ]
+}

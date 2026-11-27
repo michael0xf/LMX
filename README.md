@@ -9,6 +9,8 @@
 [Тензорные выражения](docs/spec/TENSOR_EXPRESSIONS.md) · [Нотация `prefix` / `infix`](docs/spec/LMX_grammar.ru.md#expression-notation) · [Порядок реализации](next_core_tasks_v3.md#grammar-complete-20261127)
 
 
+[API для агентов и сервер MCP на LMX](docs/runtime_server/README.md#runtime-service) · [Agent API in the language specification](docs/spec/LMX_semantics.en.md#edit-api-runtime-server)
+
 [Заметки о реализации](docs/spec/implementation-notes.ru.md) · [Implementation notes](docs/spec/implementation-notes.en.md)
 
 [Текущий план v3](next_core_tasks_v3.md) · [Карта ядра](docs/spec/CORE.md) · [Связь агентов](work_chat/README.md)

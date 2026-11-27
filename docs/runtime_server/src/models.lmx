@@ -1,0 +1,79 @@
+# Ordinary LMX models. These are DATA, not new runtime categories.
+# An uninitialized payload is not @0, a void result, or successful execution.
+# Providers must fill the fields promised by their declared result contracts.
+
+LmxServerStage:
+    int: ready
+    @: payload
+
+# In the command path, ready=1 carries a prepared, not yet entered invocation.
+# Catalogue uses the same Stage shape for a prepared batch, consumed only by
+# its publication port, never by runtime.execute.
+# ready=0 carries the actual non-success Receipt from preparation.
+# No other ready value is admitted by the common apply body.
+# ok=1 below means an actual normal result; it is not a generic delivery ACK.
+# No-result, suspension, failure and turn-ended outcomes retain their distinct
+# actual payloads under the provider contract and are never replaced by @0.
+LmxServerReceipt:
+    int: ok
+    @: payload
+
+LmxServerModelAnswer:
+    int: complete
+    []char: text
+    @: details
+
+LmxServerDecision:
+    int: finished
+    @: observation
+
+LmxServerEvent:
+    []char: kind
+    @: payload
+
+LmxServerSourceDiagnostic:
+    int: sourceKind
+    @: source
+
+# kind="question": payload is the original question record.
+# kind="observation": payload is the actual runtime Receipt.
+# previous is an explicit finite history link, not a queue or scheduler.
+LmxServerExchange:
+    []char: kind
+    @: payload
+    @: previous
+
+LmxServerReceiptMake:
+    int: ok
+    @: payload
+    required: ok payload
+    return: @LmxServerReceipt
+    make:
+        private: @: result (copy(LmxServerReceipt))
+        result\ok := ok
+        result\payload := payload
+        return: result
+
+LmxServerDecide:
+    int: finished
+    @: observation
+    required: finished observation
+    return: @LmxServerDecision
+    make:
+        private: @: result (copy(LmxServerDecision))
+        result\finished := finished
+        result\observation := observation
+        return: result
+
+LmxServerExchangeMake:
+    []char: kind
+    @: payload
+    @: previous
+    required: kind payload previous
+    return: @LmxServerExchange
+    make:
+        private: @: result (copy(LmxServerExchange))
+        result\kind := kind
+        result\payload := payload
+        result\previous := previous
+        return: result

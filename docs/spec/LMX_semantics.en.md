@@ -56,7 +56,7 @@ LMX is also a grammar capable of representing both data in a complex, uniquely s
 - [33. Authentication, authority and evidence](#authentication)
 - [34. Cryptographic values and providers](#crypto-values)
 - [35. Cryptographic operation contracts](#crypto-operations)
-- [36. Mutating debug API for an AI chat](#edit-api)
+- [36. Agent API, debugging and MCP in LMX](#edit-api)
 - [37. General functional receivers and containers](#functional-receivers)
 - [38. Unified type, sequence and Pattern profiles](#unified-core)
 
@@ -421,7 +421,7 @@ A `test` form follows the general [rules for execution through receivers](#data-
 
 The actual candidate is supplied to the checker as an ordinary argument. Structural suitability for the checker's own accesses is checked before execution; no `@` is added merely to transport a Structure, which already travels by reference. A checker returns an ordinary `int`: 1 for success, 0 for failure. An expected failure uses ordinary `catch`; an arbitrary `throw` is not success.
 
-Running a check completes admission already in progress rather than starting that same admission over again. A cycle of unfinished checks is not success. The written association and checking body reside in the same graph for `sys\toLmx`, copying and execution until changed by an explicit write; there is no separate test catalogue, auxiliary graph, additional runtime variable-binding table or hidden typing-disabled mode. Test calls use ordinary native/walker dispatch and do not force every call to be walked.
+Running a check completes admission already in progress rather than starting that same admission over again. A cycle of unfinished checks is not success. The written association and checking body reside in the same graph for `sys\toLmx`, copying and execution until changed by an explicit write; there is no separate catalogue that controls admission or test selection, auxiliary graph, additional runtime variable-binding table or hidden typing-disabled mode. Test calls use ordinary native/walker dispatch and do not force every call to be walked.
 
 <a id="admission-recipes"></a>
 ## 8. Obtaining a required guarantee: fourteen practical cases
@@ -3302,7 +3302,7 @@ Repeated names follow the receiving context's ordinary redeclaration rules. Impo
 <a id="source-codec"></a>
 ### Current-graph serialization: sys\toLmx
 
-`sys\toLmx` emits LMX text of the current graph with canonical names and retained comments. All receiver records and written grouping boundaries are preserved; namespace stream expansion does not replace source import/copy/merge records. Terminal primitive declarations are reconstructed from type, value and name. Formatting inserts blank lines only at intended full document-root boundaries so reparsing retains structure. An explicitly overwritten construct is emitted in its current form; neither history nor native reconstructs earlier source. Local execution does not publish its frame or replace the initializer in source data. This serialization differs from `sys\translate`, which returns L1 text for subsequent compilation and lowering errors.
+`sys\toLmx` emits the current graph of any Structure or L3Thread as LMX text with canonical names and retained comments. All receiver records and written grouping boundaries are preserved; namespace stream expansion does not replace source import/copy/merge records. Terminal primitive declarations are reconstructed from type, value and name. Formatting inserts blank lines only at intended full document-root boundaries so reparsing retains structure. An explicitly overwritten construct is emitted in its current form; neither history nor native reconstructs earlier source. Local execution does not publish its frame or replace the initializer in source data. This serialization differs from `sys\translate`, which returns L1 text for subsequent compilation and lowering errors.
 
 The argument of `sys\toLmx(S)` selects the saved Structure. For an L3 Thread it also saves all tables of that Thread's arena, including call tables and native descriptors. The arena owns these tables; they are not fields of R0, and R0 is not the only eligible Thread. External arena tables are not silently attached to an arbitrary S. Preserve order and empty positions, shared references, cycles, names, and typed values: this is a reconstructable current graph, not merely source-like output. The clean graph holds no hidden data: all data lie in the `void *` storage of its Structures and are mapped by `toLmx` in an elementary way, while `length` and `parent` are derived from the text it forms (the author's decision of 2026-11-17). The table of names is restored by `fromLmx` from the text; it and the other tables of the kernel are data of the kernel itself, which builds itself and is written in L2 and L3 -- that is, the same Structures of the clean graph, not hidden data beside it. All program material, these tables included, lies in the clean LMX graph. The separate binary contains the compiled methods, including R0 and the interpreter; R0 accesses its graph through a local pointer. Portable C is generated for those method implementations along L3/L2 -> L1 -> C and does not supply a hidden static-data mirror of the graph. The translator is written in L2 and L3, and the L1 inserts are removed in the end too.
 
@@ -3698,10 +3698,24 @@ Provider tests must include cross-implementation vectors and negative cases: inv
 Streaming, secret streams, HSM/TPM, KEM/PQC, remote key services and protected-envelope formats are outside the profile defined here.
 
 <a id="edit-api"></a>
-## 36. Mutating debug API for an AI chat
+## 36. Agent API, debugging and MCP in LMX
 
 This chapter defines the required behavior of an application interface for inspecting, extending, copying and stepping a live LMX application. It is not a claim of completed implementation and not a new LMX level; the general language contracts are those of this specification, the [L2 specification](L2_spec_en.md) and the [grammar](LMX_grammar.en.md).
 
+
+<a id="edit-api-runtime-server"></a>
+### The runtime as an LMX server for agents
+
+An LMX application can serve its own runtime through operations written in L3. A complete textual Message, including a source file, goes through `sys\fromLmx` before translation. A local client may pass a ready graph by ordinary call or Message. The MCP binding maps versioned JSON-RPC to the same operations. All three paths use the permitted scope, ordinary admission and owner-side execution. Constructing the graph suffices for inspection and cataloguing. Executing a command, running a test and compiling are explicit requests. `sys\toLmx` emits the current Structure or L3Thread under the full codec contract. [Service design](../runtime_server/README.md#runtime-service) · [Codec](#source-codec).
+
+The agent can inspect and place graph values, replace an admitted handler and step a specified execution. The next selection obtains the new handler. Already selected CODE and active frames retain their targets. The model exchange uses ordinary Messages and observed receipts. Truncated documents are rejected before execution. Losing a reply does not trigger automatic replay of an uncertain effect. [Operations and lifecycle](../runtime_server/API.md#runtime-operations) · [MCP](../runtime_server/MCP.md#runtime-mcp).
+
+<a id="edit-api-catalogue"></a>
+### Cataloguing an L3Thread before compilation
+
+Before entering the translator, the owner can give an agent a snapshot of the selected L3Thread's clean graph, including one built at runtime. Traversal preserves field order and multiplicity, empty slots, shared edges, cycles and actual parents. Definitions, types and written relations can be inspected. Traversal does not execute computed initializers, bodies or tests. Later resolution decisions from a particular compilation, test outcomes and native artifacts carry their own evidence. A dynamic target can remain unknown. [Facts and coverage](../runtime_server/CATALOGUE.md#catalogue-facts).
+
+A node key is scoped to one authorized owner view and snapshot. A live operation resolves an actual reference or PLACE under ordinary admission. For a successful compilation the owner publishes its prepared catalogue at the boundary before the nonreturning `endturn`. SQLite switches publications atomically. A database failure leaves the previous publication visible and has a separate receipt. Current graph state can be inspected independently of the last publication. [Basis and publication](../runtime_server/CATALOGUE.md#catalogue-publication).
 
 <a id="edit-api-status"></a>
 ### Status

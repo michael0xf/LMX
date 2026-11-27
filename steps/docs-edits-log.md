@@ -343,6 +343,7 @@ Haskell (`patterns/examples/haskell_comparision/A01, H01–H09, M01, M05, R01–
 | 35 | 2026-11-26 | коммит этой строки | `docs/spec/LMX_semantics.en.md`, `.ru.md`, `docs/spec/EXPRESSION_ALGORITHM.md`, `docs/spec/EXPRESSION_GROUPING.md`, `docs/spec/LMX_grammar.en.md`, `.ru.md`, `provenance/grammar.json`, `provenance/semantics-book.md`, `LMX_blog/2026-11-26-expression-reference-atoms.md` | уточнение автора: роль атома-ссылки в Expression задаёт обычный `satisfies` по шаблону операнда при трансляции; запись 35 |
 | 36 | 2026-11-26 | коммит этой строки | `docs/core_catalog/**`, `docs/c99_archive/**`, `third_party/lmx_c99_compact/**`, `.gitattributes` | каталог и коллекция C99 расширены до 180 компонентов; запись 36 |
 | 37 | 2026-11-26 | коммит этой строки | `docs/core_catalog/tools/extract_inventory.py` | исправлено извлечение описи C API под Windows; запись 37 |
+| 38 | 2026-11-27 | коммит этой строки | `provenance/semantics-book.md`, книги RU/EN, `docs/runtime_server/`, план v3 | После ядра предусмотрен сервер на LMX. Общий API обслуживает чистый граф и предкомпиляционный каталог L3Thread. |
 
 Запись 28: рабочая коллекция взята из пакета 3. Из 2861 изменённых путей 2854 новых и 7 заменённых; 2526 хранятся
 байтами автора, остальные 335 текстов (2 779 499 → 2 733 078 байт, 46 421 перевод CRLF; `vendor/softfloat` 307,

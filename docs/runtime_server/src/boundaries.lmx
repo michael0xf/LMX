@@ -1,0 +1,43 @@
+# Thin ordinary call adapters. Their receiver graphs must belong to the same
+# command owner as service. External dispatch posts the selected adapter CODE
+# through the existing transport; it does not call a foreign mutable arena.
+# Complete framing and MCP profile handling are injected providers, not bodies
+# hidden behind these declarations. See the protocol compatibility document.
+
+LmxServerNativeCommand:
+    @LmxServerService: service
+    []char: document
+    required: service document
+    return: []char
+    exchange:
+        throws: copy(LmxServerPortThrows)
+        private: @LmxServerReceipt: receipt service\submitText(source := document)
+        private: @LmxServerRuntimePort: runtime service\runtime
+        return: runtime\present(receipt := receipt)
+
+LmxServerMcpCommand:
+    @LmxServerService: service
+    @LmxServerMcpPort: protocol
+    @: request
+    required: service protocol request
+    return: @
+    exchange:
+        throws: copy(LmxServerPortThrows)
+        private: []char: document protocol\decodeCommand(request := request)
+        private: @LmxServerReceipt: receipt service\submitText(source := document)
+        return: protocol\encodeReceipt(request := request; receipt := receipt)
+
+# A single complete native exchange. A transport integration may arrange this
+# with post and use its own actual I/O implementation. readDocument returns only
+# a complete framed document; EOF/truncation is a declared failure, never a prefix.
+# This adapter introduces neither a listener loop nor an OS thread per request.
+LmxServerNativeFrame:
+    @LmxServerService: service
+    @LmxServerTransportPort: transport
+    @: connection
+    required: service transport connection
+    exchange:
+        throws: copy(LmxServerPortThrows)
+        private: []char: document transport\readDocument(connection := connection)
+        private: []char: response LmxServerNativeCommand\exchange(service := service; document := document)
+        transport\writeDocument(connection := connection; document := response)

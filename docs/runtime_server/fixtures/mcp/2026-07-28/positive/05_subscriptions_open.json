@@ -1,0 +1,72 @@
+{
+  "fixture": {
+    "profile": "2026-07-28",
+    "kind": "protocol-reference",
+    "runtimeStatus": "NOT_RUN",
+    "requires": [
+      "tools.listChanged enabled"
+    ],
+    "note": "Expected wire shape; this does not advertise or prove implemented capabilities."
+  },
+  "transport": "http",
+  "request": {
+    "method": "POST",
+    "path": "/mcp",
+    "headers": {
+      "Content-Type": "application/json",
+      "Accept": "application/json, text/event-stream",
+      "MCP-Protocol-Version": "2026-07-28",
+      "Mcp-Method": "subscriptions/listen"
+    },
+    "body": {
+      "jsonrpc": "2.0",
+      "id": "listen-1",
+      "method": "subscriptions/listen",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+          "io.modelcontextprotocol/clientCapabilities": {},
+          "io.modelcontextprotocol/clientInfo": {
+            "name": "lmx-fixture-client",
+            "version": "0.1.0"
+          }
+        },
+        "notifications": {
+          "toolsListChanged": true
+        }
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "text/event-stream",
+      "X-Accel-Buffering": "no"
+    },
+    "eventsFile": "05_subscriptions_open.sse"
+  },
+  "events": [
+    {
+      "jsonrpc": "2.0",
+      "method": "notifications/subscriptions/acknowledged",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/subscriptionId": "listen-1"
+        },
+        "notifications": {
+          "toolsListChanged": true
+        }
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "notifications/tools/list_changed",
+      "params": {
+        "_meta": {
+          "io.modelcontextprotocol/subscriptionId": "listen-1"
+        }
+      }
+    }
+  ],
+  "termination": "Not included: this fixture tests only opening/acknowledgement/filtering; see source issue on server teardown."
+}

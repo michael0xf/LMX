@@ -7,7 +7,9 @@
 [Действующие роли](../../to_sol.md).
 
 
-Для редакции 27 ноября сервис возвращает правила `expression.notation` (`prefix`/`infix`), `expression.power`, `tensor.brackets`, `tensor.depth`, `tensor.assignment` и `tensor.inventory`. Порядок работы можно запросить по `plan.grammar`, `plan.kernel` и `plan.after_kernel`; общие операции интерпретатора — по `kernel.interpreter_jit`. У больших разделов передайте указанный ответом `sectionTooLarge` размер в `max_chars`. Эти запросы читают текущие файлы и возвращают хеш раздела. Проверяйте фактическую фазу и версию связки отдельно через статус сервиса.
+Для редакции 27 ноября сервис возвращает правила `expression.notation` (`prefix`/`infix`), `expression.power`, `tensor.brackets`, `tensor.depth`, `tensor.assignment` и `tensor.inventory`. Порядок работы можно запросить по `plan.grammar`, `plan.kernel`, `plan.runtime_api` и `plan.after_kernel`; общие операции интерпретатора — по `kernel.interpreter_jit`. У больших разделов передайте указанный ответом `sectionTooLarge` размер в `max_chars`. Эти запросы читают текущие файлы и возвращают хеш раздела. Проверяйте фактическую фазу и версию связки отдельно через статус сервиса.
+
+Проект следующего сервера описывают `runtime.agent_api`, `runtime.catalogue` и `runtime.mcp`. Это правила для реализации. Доступные сейчас инструменты и состояние связки по-прежнему показывает `service_status`. [API на LMX и переход клиентов](../../docs/runtime_server/MCP.md#development-parity).
 
 ## Поиск нормы
 

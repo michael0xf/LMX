@@ -1,0 +1,234 @@
+# Capture the owner-selected clean L3Thread graph before compilation.
+# The caller may inspect this input even when it never requests a compilation.
+# fromLmx builds that clean graph; kernel toLmx emits any Structure/L3Thread.
+# No source reparse, extra serializer, resolver, graph watcher or object-ID map.
+# Provider slots below are required integration contracts, not implementations.
+# Bind real finite failure descriptions before use; named signatures alone do
+# not prove throws. Recoverable provider failures are LmxServerPortFailure.
+
+# Database keys identify one publication in one caller-supplied scope.
+# They are neither runtime addresses nor authority to mutate a live object.
+LmxCatalogueItemRef:
+    []char: publication
+    []char: item
+
+# A typed envelope for a prepared row. fields is ordinary LMX DATA matching
+# schema/catalogue.sql, with explicit absence and evidence where applicable.
+# recordKey belongs to this projection; kind is a schema record_kind value.
+LmxCatalogueFact:
+    []char: recordKey
+    []char: kind
+    @: fields
+
+# basis identifies the actual compiler input/observation, not a disk rebuild.
+# state is an owned provider cursor. Closing it releases only its own holds.
+LmxCatalogueCursor:
+    @: basis
+    @: state
+
+# hasValue=0 means exhaustion; value is then not read.
+# hasValue=1 means one initialized Fact. Other values are provider failures.
+# A returned Next/Fact retained by a result or failure obeys ordinary lifetime
+# after closeFacts/discard; it must not point into an expired cursor stack slot.
+LmxCatalogueNext:
+    int: hasValue
+    @LmxCatalogueFact: value
+
+LmxCatalogueProblem:
+    []char: reason
+    int: limit
+    @: detail
+
+LmxCatalogueProblemMake:
+    []char: reason
+    int: limit
+    @: detail
+    required: reason limit detail
+    return: @LmxCatalogueProblem
+    make:
+        private: @: problem (copy(LmxCatalogueProblem))
+        problem\reason := reason
+        problem\limit := limit
+        problem\detail := detail
+        return: problem
+
+# openFacts consumes the owner-selected input graph and its observation basis before translation.
+# It does not compile, run initializers/tests, or analyse a second source graph.
+# Resolution facts may later be attached by the compiler for this exact input.
+LmxCatalogueOpenFactsAPI :: (@: scope; @: observation; return: @LmxCatalogueCursor; throws: copy(LmxServerPortThrows))
+LmxCatalogueNextFactAPI :: (@LmxCatalogueCursor: cursor; return: @LmxCatalogueNext; throws: copy(LmxServerPortThrows))
+LmxCatalogueCloseFactsAPI :: (@LmxCatalogueCursor: cursor)
+
+# A batch is staged and invisible as the active projection. append accepts one
+# prepared row; the provider owns staging in memory or its separate store.
+# The boundary's active-table replacement uses real SQLite bindings; preparation
+# does not hold an active-database write transaction across tests or endturn.
+# finishPrepared validates coverage and yields Stage; it neither publishes the
+# projection nor installs native code.
+# A ready Stage takes ownership of its prepared batch. Its retained metadata
+# and diagnostics must survive closeFacts/discard of the other work resources.
+# closeFacts/discard have no declared recoverable exits in this port contract.
+LmxCatalogueBeginAPI :: (@: scope; @: basis; return: @; throws: copy(LmxServerPortThrows))
+LmxCatalogueAppendAPI :: (@: batch; @LmxCatalogueFact: fact; throws: copy(LmxServerPortThrows))
+LmxCatalogueFinishPreparedAPI :: (@: batch; return: @LmxServerStage; throws: copy(LmxServerPortThrows))
+LmxCatalogueDiscardAPI :: (@: batch)
+
+# Registers a pending publication at the owner's real successful boundary.
+# The immediate Receipt is pending, not published (ok=0 plus explicit pending
+# payload). status reports the actual boundary outcome. No code after endturn
+# is used. SQLite commit does not roll back graph/native/external effects.
+LmxCatalogueStagePublicationAPI :: (@: scope; @LmxServerStage: stage; return: @LmxServerReceipt; throws: copy(LmxServerPortThrows))
+LmxCatalogueStatusAPI :: (@: scope; return: @LmxServerReceipt; throws: copy(LmxServerPortThrows))
+
+# query is text to search, not SQL. A typed null cursor starts the first page.
+# Every page carries publication/coverage/evidence and explicit continuation.
+# Old item/cursor publication keys must be rejected after projection replacement
+# when that publication is no longer available. History is optional.
+# A provider checks item.publication or the cursor's expected publication and
+# reads the requested keys in ONE SQLite read transaction. A mismatch reports
+# LmxServerPortFailure with reason catalogue-stale; an absent key in the matched
+# projection reports catalogue-key-not-found. Replies identify the actual
+# publication, compilation/observation basis and all relevant coverage facets.
+# Query limits must be positive and within the configured admitted bounds.
+# callers returns incoming call relations. dependencies returns outgoing
+# relations; reverse impact/reachability is a separate query, not a synonym.
+LmxCatalogueSearchAPI :: (@: scope; []char: query; int: limit; @: cursor; return: @LmxServerReceipt; throws: copy(LmxServerPortThrows))
+LmxCatalogueDescribeAPI :: (@: scope; @LmxCatalogueItemRef: item; return: @LmxServerReceipt; throws: copy(LmxServerPortThrows))
+LmxCatalogueCallersAPI :: (@: scope; @LmxCatalogueItemRef: item; int: limit; @: cursor; return: @LmxServerReceipt; throws: copy(LmxServerPortThrows))
+LmxCatalogueDependenciesAPI :: (@: scope; @LmxCatalogueItemRef: item; int: limit; @: cursor; return: @LmxServerReceipt; throws: copy(LmxServerPortThrows))
+
+LmxCataloguePort:
+    @LmxCatalogueOpenFactsAPI: openFacts
+    @LmxCatalogueNextFactAPI: nextFact
+    @LmxCatalogueCloseFactsAPI: closeFacts
+    @LmxCatalogueBeginAPI: begin
+    @LmxCatalogueAppendAPI: append
+    @LmxCatalogueFinishPreparedAPI: finishPrepared
+    @LmxCatalogueDiscardAPI: discard
+    @LmxCatalogueStagePublicationAPI: stagePublication
+    @LmxCatalogueStatusAPI: status
+    @LmxCatalogueSearchAPI: search
+    @LmxCatalogueDescribeAPI: describe
+    @LmxCatalogueCallersAPI: callers
+    @LmxCatalogueDependenciesAPI: dependencies
+
+# The actual collector policy is LMX: read one fact, validate the stream marker,
+# enforce an explicit finite budget, append, finish or release the staged batch.
+# It neither declares unresolved facts proven nor suppresses partial coverage.
+LmxCatalogueDrain:
+    @LmxCataloguePort: port
+    @: scope
+    @LmxCatalogueCursor: cursor
+    int: maxFacts
+    required: port scope cursor maxFacts
+    return: @LmxServerStage
+    collect:
+        throws: copy(LmxServerPortThrows)
+        private: @: batch port\begin(scope := scope; basis := cursor\basis)
+        private: int: transferred 0
+        finally:
+            if: transferred = 0
+                port\discard(batch := batch)
+        ---
+        private: int: count 0
+        while: 1
+            private: @LmxCatalogueNext: next port\nextFact(cursor := cursor)
+            if: next\hasValue = 0
+                private: @LmxServerStage: prepared port\finishPrepared(batch := batch)
+                if: prepared\ready = 1
+                    transferred := 1
+                    return: prepared
+                if: prepared\ready = 0
+                    return: prepared
+                throw: LmxServerPortFailure(prepared)
+            if: next\hasValue != 1
+                throw: LmxServerPortFailure(next)
+            if: count >= maxFacts
+                throw: LmxServerPortFailure(LmxCatalogueProblemMake\make(reason := "fact-budget"; limit := maxFacts; detail := next))
+            port\append(batch := batch; fact := next\value)
+            count += 1
+
+LmxCataloguePrepare:
+    @LmxCataloguePort: port
+    @: scope
+    @: observation
+    int: maxFacts
+    required: port scope observation maxFacts
+    return: @LmxServerStage
+    prepare:
+        throws: copy(LmxServerPortThrows)
+        if: maxFacts < 0
+            throw: LmxServerPortFailure(LmxCatalogueProblemMake\make(reason := "invalid-fact-budget"; limit := maxFacts; detail := observation))
+        private: @LmxCatalogueCursor: cursor port\openFacts(scope := scope; observation := observation)
+        finally:
+            port\closeFacts(cursor := cursor)
+        return: LmxCatalogueDrain\collect(port := port; scope := scope; cursor := cursor; maxFacts := maxFacts)
+
+LmxCatalogueQueuePublication:
+    @LmxCataloguePort: port
+    @: scope
+    @LmxServerStage: stage
+    required: port scope stage
+    return: @LmxServerReceipt
+    queue:
+        throws: copy(LmxServerPortThrows)
+        if: stage\ready = 0
+            return: stage\payload
+        if: stage\ready = 1
+            return: port\stagePublication(scope := scope; stage := stage)
+        throw: LmxServerPortFailure(stage)
+
+LmxCatalogueSearch:
+    @LmxCataloguePort: port
+    @: scope
+    []char: query
+    int: limit
+    @: cursor 0
+    required: port scope query limit
+    return: @LmxServerReceipt
+    search:
+        throws: copy(LmxServerPortThrows)
+        return: port\search(scope := scope; query := query; limit := limit; cursor := cursor)
+
+LmxCatalogueDescribe:
+    @LmxCataloguePort: port
+    @: scope
+    @LmxCatalogueItemRef: item
+    required: port scope item
+    return: @LmxServerReceipt
+    describe:
+        throws: copy(LmxServerPortThrows)
+        return: port\describe(scope := scope; item := item)
+
+LmxCatalogueCallers:
+    @LmxCataloguePort: port
+    @: scope
+    @LmxCatalogueItemRef: item
+    int: limit
+    @: cursor 0
+    required: port scope item limit
+    return: @LmxServerReceipt
+    callers:
+        throws: copy(LmxServerPortThrows)
+        return: port\callers(scope := scope; item := item; limit := limit; cursor := cursor)
+
+LmxCatalogueDependencies:
+    @LmxCataloguePort: port
+    @: scope
+    @LmxCatalogueItemRef: item
+    int: limit
+    @: cursor 0
+    required: port scope item limit
+    return: @LmxServerReceipt
+    dependencies:
+        throws: copy(LmxServerPortThrows)
+        return: port\dependencies(scope := scope; item := item; limit := limit; cursor := cursor)
+
+LmxCatalogueStatus:
+    @LmxCataloguePort: port
+    @: scope
+    required: port scope
+    return: @LmxServerReceipt
+    status:
+        throws: copy(LmxServerPortThrows)
+        return: port\status(scope := scope)

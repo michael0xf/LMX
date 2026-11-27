@@ -1,0 +1,66 @@
+{
+  "fixture": {
+    "profile": "2025-11-25",
+    "kind": "protocol-reference",
+    "runtimeStatus": "NOT_RUN",
+    "requires": [
+      "legacy lifecycle adapter",
+      "tools provider"
+    ],
+    "note": "Expected wire shape; this does not advertise or prove implemented capabilities."
+  },
+  "transport": "http",
+  "precondition": "Initialize negotiated 2025-11-25 and server tools capability. No optional MCP session was created by this reference profile.",
+  "request": {
+    "method": "POST",
+    "path": "/mcp",
+    "headers": {
+      "Content-Type": "application/json",
+      "Accept": "application/json, text/event-stream",
+      "MCP-Protocol-Version": "2025-11-25"
+    },
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 7,
+      "method": "tools/call",
+      "params": {
+        "name": "lmx",
+        "arguments": {
+          "document": "1 + 2"
+        }
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 7,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "int: result 3"
+          },
+          {
+            "type": "text",
+            "text": "{\"format\":\"application/lmx\",\"document\":\"int: result 3\"}"
+          }
+        ],
+        "structuredContent": {
+          "format": "application/lmx",
+          "document": "int: result 3"
+        },
+        "isError": false
+      }
+    }
+  },
+  "expectation": {
+    "kind": "mathematical-reference",
+    "value": 3,
+    "runtimeStatus": "NOT_RUN"
+  }
+}

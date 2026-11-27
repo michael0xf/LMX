@@ -1,0 +1,51 @@
+# Both forms use the same stable entry and the existing post/answer mechanism.
+# readyGraph is an already constructed command graph/invocation in an admitted
+# live arena, not a string, serialized copy, numeric object ID or evaluated call.
+
+LmxServerExampleLocalText:
+    @LmxServerService: service
+    @: sink
+    []char: source
+    required: service sink source
+    start:
+        post:
+            ask:
+                service\submitText(source := source)
+            answer:
+                sink\Receiver\accept
+            catch: LmxServerPortFailure (@: cause)
+                sink\Failure\accept(cause := cause)
+
+LmxServerExampleLocalGraph:
+    @LmxServerService: service
+    @: sink
+    @: readyGraph
+    required: service sink readyGraph
+    start:
+        post:
+            ask:
+                service\submitGraph(graph := readyGraph)
+            answer:
+                sink\Receiver\accept
+            catch: LmxServerPortFailure (@: cause)
+                sink\Failure\accept(cause := cause)
+
+# Invoke this receiver with the actual Receipt; it retains the whole outcome.
+# It does not flatten an error, no-result, suspension or turn boundary to @0.
+LmxServerExampleReceiptSink:
+    State:
+        @LmxServerReceipt: last
+        @: failure
+    Receiver:
+        @LmxServerReceipt: receipt
+        required: receipt
+        accept:
+            private: @: owner parent(node)
+            owner\State\last := receipt
+    ---
+    Failure:
+        @: cause
+        required: cause
+        accept:
+            private: @: owner parent(node)
+            owner\State\failure := cause

@@ -1529,6 +1529,11 @@ fn: tool_main (char@@: args; int: n) int
             c.fputs("parser-suite REPO GRAPH-EXE EXPECTATIONS-JSON NEW-OUT\n", c.stderr)
             return: 2
         return: parser_suite(args[2], args[3], args[4], args[5])
+    if: n >= 2 && c.strcmp(args[1], "parser-bounds") = 0
+        if: n != 6
+            c.fputs("parser-bounds REPO GRAPH-EXE EXPECTATIONS-JSON NEW-OUT\n", c.stderr)
+            return: 2
+        return: parser_bounds(args[2], args[3], args[4], args[5])
     if: n >= 12 && c.strcmp(args[1], "os-walk-witness") = 0
         r := os_walk_witness(args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], c.atoi(args[10]), args[11])
         if: r != 0

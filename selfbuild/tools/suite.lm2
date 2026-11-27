@@ -1887,3 +1887,168 @@ fn: parser_suite (char@: repo; char@: graph; char@: expectations; char@: out) in
     c.free(json)
     c.free(report_path)
 return: failed
+
+# The number that follows a word in the summary line of `graph_trans p0 FILE bounds` (BOUNDS rows R nested X empty Y
+# multiline Z mix M failed F). 1 when the word is there, 0 when it is not.
+fn: parser_bounds_number (char@: text; char@: word; int@: value) int
+    char@: at 0
+    value[0] := 0
+    if: text = 0
+        return: 0
+    at := c.strstr(text, word)
+    if: at = 0
+        return: 0
+    value[0] := c.atoi(at + c.strlen(word))
+    return: 1
+
+# Every FAIL line of the answer of `p0 FILE bounds` goes to the report with the name of its case and the exit of the
+# process.
+sub: parser_bounds_report (c.FILE@: report; char@: name; char@: actual; int: exit_code)
+    char@: line 0
+    char@: stop 0
+    if: actual = 0
+        return
+    line := actual
+    while: line != 0
+        stop := line
+        while: stop != 0 && stop[0] != 0 && stop[0] != 10
+            stop := stop + 1
+        if: stop != 0 && txt_starts(line, "FAIL ") != 0
+            c.fprintf(report, "%s\t0\t%d\t%.*s\n", name, exit_code, (cast: (int) (stop - line)), line)
+        if: stop = 0 || stop[0] = 0
+            return
+        line := stop + 1
+    return
+
+# One case of the parser corpus under `graph_trans p0 FILE bounds`: the observation of its bounded forms checked
+# against the bytes of the case and its tree. The totals of the summary line are added to the out parameters.
+# 1 when the case stands, 0 when it does not, -1 when P0 refuses the case (it is not a case of this receipt:
+# parser-suite holds its diagnostic).
+fn: parser_bounds_case (char@: repo; char@: graph; char@: json; size_t: count; size_t: row; char@: out; int: index; c.FILE@: report; int@: rows; int@: nested; int@: empty; int@: multiline; int@: mix) int
+    char@: name 0
+    char@: source 0
+    char@: number txt_int(index)
+    char@: dir txt_path(out, number)
+    char@: stdout_path txt_path(dir, "stdout")
+    char@: stderr_path txt_path(dir, "stderr")
+    char@: actual 0
+    char@@: words c.calloc(3U, sizeof(char@))
+    int@: detail c.calloc(1U, sizeof(c.int))
+    size_t: first 0U
+    size_t: after 0U
+    size_t: actual_count 0U
+    int: expected_exit -1
+    int: value 0
+    int: result 0
+    if: dj_property(json, count, row, "exit", @ first, @ after) = 1 && after = first + 1U
+        if: json[first] = (cast: (char) 48) || json[first] = (cast: (char) 49)
+            expected_exit := (cast: (int) (json[first] - 48))
+        ---
+    if: expected_exit = 1
+        # P0 refuses this case: its diagnostic is the receipt of parser-suite, not of this one
+        result := -1
+    if: result = 0
+        pi_path_string(json, count, row, "path", @ name)
+    if: name = 0
+        name := txt_dup("(invalid expectation)")
+    if: result = 0 && expected_exit = 0 && number != 0 && dir != 0 && stdout_path != 0 && stderr_path != 0 && words != 0 && detail != 0
+        result := 1
+        source := suite_path(repo, name)
+        if: source = 0 || file_exists(source) = 0 || dir_make(dir) != 0
+            result := 0
+        ---
+    if: result = 1
+        words[0] := "p0"
+        words[1] := source
+        words[2] := "bounds"
+        result := 1
+        if: run_self(graph, words, 3, dir, stdout_path, stderr_path, 15000U, detail) != 0 || detail[0] != 0
+            result := 0
+        actual := parser_output(stdout_path, @ actual_count)
+        if: actual = 0
+            result := 0
+        if: result = 1
+            if: parser_bounds_number(actual, " rows ", @ value) != 0
+                rows[0] := rows[0] + value
+            if: parser_bounds_number(actual, " nested ", @ value) != 0
+                nested[0] := nested[0] + value
+            if: parser_bounds_number(actual, " empty ", @ value) != 0
+                empty[0] := empty[0] + value
+            if: parser_bounds_number(actual, " multiline ", @ value) != 0
+                multiline[0] := multiline[0] + value
+            if: parser_bounds_number(actual, " mix ", @ value) != 0
+                mix[0] := mix[0] + value
+        ---
+        parser_bounds_report(report, name, actual, detail[0])
+        c.fprintf(report, "%s\t%d\t%d\t\t%d\n", name, expected_exit, detail[0], result)
+    if: result = 0
+        c.fprintf(report, "%s\t%d\t\t\t0\n", name, expected_exit)
+    c.free(name)
+    c.free(source)
+    c.free(number)
+    c.free(dir)
+    c.free(stdout_path)
+    c.free(stderr_path)
+    c.free(actual)
+    c.free(words)
+    c.free(detail)
+    if: result = 1
+        return: 1
+    if: result = 0
+        return: 0
+    return: -1
+
+# parser-bounds REPO GRAPH-EXE EXPECTATIONS-JSON NEW-OUT: `p0 FILE bounds` of graph_trans over every case of the parser
+# corpus that P0 accepts (the cases it refuses keep the diagnostic receipt of parser-suite). A FAIL line of a case, or
+# a case that does not answer 0, fails the suite. The totals of the summary lines are printed with it.
+fn: parser_bounds (char@: repo; char@: graph; char@: expectations; char@: out) int
+    size_t: count 0U
+    size_t: pos 0U
+    size_t: after 0U
+    size_t: next 0U
+    char@: json file_read(expectations, @ count)
+    char@: report_path txt_path(out, "report.tsv")
+    c.FILE@: report 0
+    int: cases 0
+    int: failed 0
+    int: rows 0
+    int: nested 0
+    int: empty 0
+    int: multiline 0
+    int: mix 0
+    int: answer 0
+    if: json = 0 || report_path = 0 || file_exists(graph) = 0
+        return: 1
+    if: file_exists(report_path) != 0 || dj_document(json, count, @ pos, @ after) != 3
+        c.free(json)
+        c.free(report_path)
+        return: 1
+    if: dir_make(out) = 0
+        report := os_file_open(report_path, "wb")
+    if: report = 0
+        c.free(json)
+        c.free(report_path)
+        return: 1
+    c.fprintf(report, "# source\texpected-process-exit\tprocess-exit\tFAIL line\tpassed\n")
+    pos := dj_ws(json, count, pos + 1U)
+    while: pos < count && json[pos] != (cast: (char) 93)
+        if: dj_span(json, count, pos, @ next) != 2
+            failed := failed + 1
+            break
+        answer := parser_bounds_case(repo, graph, json, count, pos, out, cases, report, @ rows, @ nested, @ empty, @ multiline, @ mix)
+        if: answer >= 0
+            cases := cases + 1
+        if: answer = 0
+            failed := failed + 1
+        if: dj_array_next(json, count, next, @ pos) != 0
+            failed := failed + 1
+            break
+    ---
+    if: cases = 0
+        failed := failed + 1
+    if: c.fclose(report) != 0
+        failed := failed + 1
+    c.printf("PARSER-BOUNDS cases %d rows %d nested %d empty %d multiline %d mix %d failed %d\n", cases, rows, nested, empty, multiline, mix, failed)
+    c.free(json)
+    c.free(report_path)
+return: failed

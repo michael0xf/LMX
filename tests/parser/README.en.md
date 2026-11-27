@@ -22,6 +22,12 @@ From a new private working directory, with absolute paths:
 TOOL 0 entry 0 -- parser-suite REPO GRAPH_EXE REPO/tests/parser/current/expectations.json NEW_OUT
 ```
 
+The boundary receipt is taken by the same tool's `parser-bounds` command. For each case P0 accepts, the graph tool's `p0 FILE bounds` turns on the optional observation of bounded forms and checks it against the bytes of the source and the tree: the opening delimiter stands where the row says, the expected closing delimiter of its kind stands where the row says, the owner of the form resumed right after it, only layout stands between that position and the next place the tree begins a node, and the forms lie one inside another instead of crossing. Cases P0 refuses are not run: their receipt is the diagnostic code, line and column of `parser-suite`. Summary line: `PARSER-BOUNDS cases N rows R nested X empty Y multiline Z mix M failed F`. The command `p0 FILE boundaries` prints the rows of the observation themselves.
+
+```text
+TOOL 0 entry 0 -- parser-bounds REPO GRAPH_EXE REPO/tests/parser/current/expectations.json NEW_OUT
+```
+
 Parser and tool sources are in `selfbuild/src` and `selfbuild/tools`. `tools/run_parser.py`, the old `printTree`, root `l1src` and `dev/` remain historical material, not a supported fallback. Documentation is checked by the language-owned `docs check` command in [READ.ME](../../READ.ME#docs-cycle). The old profiles and dated run results described below are history.
 
 `historical` checks the 131 cases in the old manifest: exit code and exact tree bytes, or error code/line/column. `previous-l1` checks the same corpus with pinned previous L1 admission changes. These profiles are historical regression, not a statement of the new norm. `current` checks new author clarifications; it must expose old implementation mismatches rather than conceal them. Rejection, crashing, and timeout are not interchangeable successful negative tests.

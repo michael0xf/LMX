@@ -1375,8 +1375,10 @@ end: lm_p0_skip_leading_brace_marks
 # Original: parser.lm1:1269 lm_p0_line_is_standalone_mix_run
 fn: lm_p0_line_is_standalone_mix_run (c.LmP0Document@: document; const: (char@: text); size_t: byte_count; size_t: line; size_t: column; int@: out_is_mix) int
     size_t: i
+    size_t: mark_start
     int: saw_mix
     i := 0U
+    mark_start := 0U
     saw_mix := 0
     out_is_mix[0] := 0
     while: (i < byte_count)
@@ -1389,8 +1391,10 @@ fn: lm_p0_line_is_standalone_mix_run (c.LmP0Document@: document; const: (char@: 
             break
         if: (text[i] != '{')
             return: 1
+        mark_start := i
         if: (lm_p0_skip_brace_mark(document, text, byte_count, @ i, line, column) = 0)
             return: 0
+        lm_p0_probe_mark(document, (text + mark_start), (text + i), 0)
         saw_mix := 1
     ---
     out_is_mix[0] := saw_mix
@@ -1400,10 +1404,12 @@ end: lm_p0_line_is_standalone_mix_run
 # Original: parser.lm1:1291 lm_p0_scan_leading_mix_prefix
 fn: lm_p0_scan_leading_mix_prefix (c.LmP0Document@: document; const: (char@: text); size_t: byte_count; size_t: line; size_t: column; size_t@: out_prefix_start; size_t@: out_prefix_end; size_t@: out_anchor) int
     size_t: i
+    size_t: mark_start
     size_t: prefix_start
     size_t: prefix_end
     int: saw_mix
     i := 0U
+    mark_start := 0U
     while: ((i < byte_count) && c.lm_p0_is_horizontal_space(text[i]))
         i := i + 1U
     ---
@@ -1418,8 +1424,10 @@ fn: lm_p0_scan_leading_mix_prefix (c.LmP0Document@: document; const: (char@: tex
         ---
         if: ((i >= byte_count) || (text[i] != '{'))
             break
+        mark_start := i
         if: (lm_p0_skip_brace_mark(document, text, byte_count, @ i, line, column) = 0)
             return: 0
+        lm_p0_probe_mark(document, (text + mark_start), (text + i), 0)
         prefix_end := i
         saw_mix := 1
     ---
@@ -1431,6 +1439,7 @@ fn: lm_p0_scan_leading_mix_prefix (c.LmP0Document@: document; const: (char@: tex
     out_prefix_start[0] := prefix_start
     out_prefix_end[0] := prefix_end
     out_anchor[0] := i
+    lm_p0_probe_anchor(document, (text + i))
     return: 1
 end: lm_p0_scan_leading_mix_prefix
 
@@ -1896,6 +1905,9 @@ fn: lm_p0_parse_nested (c.LmP0Document@: document; const: (char@: text); size_t:
         nested\group_item_flags := group_item_flags
         nested\group_indent := group_indent
         nested\group_dots := group_dots
+        # The observation goes into the nested document; its rows are written in the bytes of the root document.
+        nested\probe := document\probe
+        nested\probe_base := (document\probe_base + base_offset)
         status := lm_p0_nested_chain(document, nested, base_offset, base_line, base_column, quiet, out_structure)
     lm_p0_document_destroy_owners(nested)
     c.lm_own_delete(nested, 0)
@@ -1964,6 +1976,7 @@ fn: lm_p0_record_mix_mark (c.LmP0Document@: document; c.LmP0Structure@: structur
         lm_p0_free_node(p0_node)
         return: 0
     # The content of the mark is a nested document; an empty mark keeps the node's own empty Structure.
+    lm_p0_probe_mark(document, (text + start), (text + limit_index), 0)
     if: limit_index > start + 2U
         if: lm_p0_parse_nested(document, (text + start + 1U), (limit_index - start - 2U), span_line, (span_column + 1U), 0, 0U, 0U, 0U, 0, @ payload) = 0
             return: 0
@@ -1998,6 +2011,8 @@ fn: lm_p0_record_string_mark (c.LmP0Document@: document; c.LmP0Node@: atom_node;
     c.LmP0Structure@: payload
     size_t: absolute_offset
     payload := 0
+    # A mark inside a string atom (route 5: inside a token): its content is a nested document, read by the same parser.
+    lm_p0_probe_mark(document, (text + start), (text + limit_index), 5)
     if: (limit_index > (start + 2U))
         if: (lm_p0_parse_nested(document, ((text + start) + 1U), ((limit_index - start) - 2U), span_line, (span_column + 1U), 0, 0U, 0U, 0U, 1, @ payload) = 0)
             return: 1
@@ -2449,9 +2464,11 @@ fn: lm_p0_append_compact_atom_pieces (c.LmP0Document@: document; c.LmP0Structure
                 if: (text[i - 1U] = '@') && (structure\last_field != 0) && (structure\last_field\value != 0)
                     structure\last_field\value\flags := structure\last_field\value\flags - (structure\last_field\value\flags & c.LM_P0_NODE_POSTFIX)
                 ---
+                lm_p0_probe_form(document, 1, 3, (text + i), (text + group_close), (text + group_close))
                 if: lm_p0_append_prefix_group(document, structure, text, byte_count, line, column, offset, i, group_close) = 0
                     return: 0
                 i := (group_close + 1U)
+                lm_p0_probe_return(document, (text + group_close), (text + i))
                 prefix_end := i
                 after_count := 1
                 allow_signed_number := 0
@@ -2472,17 +2489,20 @@ fn: lm_p0_append_compact_atom_pieces (c.LmP0Document@: document; c.LmP0Structure
                 if: (text[i - 1U] = '@') && (structure\last_field != 0) && (structure\last_field\value != 0)
                     structure\last_field\value\flags := structure\last_field\value\flags - (structure\last_field\value\flags & c.LM_P0_NODE_POSTFIX)
                 ---
+                lm_p0_probe_form(document, 2, 3, (text + i), (text + close_index), (text + close_index))
                 if: (lm_p0_append_prefix_group(document, structure, text, byte_count, line, column, offset, i, close_index) = 0)
                     return: 0
                 structure\last_field\value\flags := structure\last_field\value\flags | c.LM_P0_NODE_SQUARE
                 prefix_end := square_after
                 after_count := 0
                 i := square_after
+                lm_p0_probe_return(document, (text + close_index), (text + i))
                 allow_signed_number := 0
                 continue
             ---
             if: (lm_p0_append_atom_slice(document, structure, text, byte_count, line, column, offset, i, (i + 1U)) = 0)
                 return: 0
+            lm_p0_probe_form(document, 2, 3, (text + i), (text + close_index), (text + close_index))
             if: (lm_p0_index_content(document, structure, text, byte_count, line, column, offset, i, close_index) = 0)
                 return: 0
             if: (lm_p0_append_atom_slice(document, structure, text, byte_count, line, column, offset, close_index, (close_index + 1U)) = 0)
@@ -2490,6 +2510,7 @@ fn: lm_p0_append_compact_atom_pieces (c.LmP0Document@: document; c.LmP0Structure
             prefix_chain := 0
             after_count := 0
             i := (close_index + 1U)
+            lm_p0_probe_return(document, (text + close_index), (text + i))
             allow_signed_number := 0
             continue
         ---
@@ -3564,6 +3585,9 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                 ---
                 if: (lm_p0_depth_designator(document, text, byte_count, depth_designator_index, line, column, @ depth_designator_end, @ depth_canonical) = 0)
                     return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                if: depth_explicit != 0
+                    lm_p0_probe_form(document, 1, 4, ((text + i) + 1U), (text + depth_close_index), (text + (depth_designator_end - 1U)))
+                ---
                 p0_node := lm_p0_new_node(document, c.LM_P0_NODE_FRAME)
                 if: (p0_node = 0)
                     return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
@@ -3584,6 +3608,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                         return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                     p0_node\as\frame\body := depth_group
                     depth_grouped := 1
+                    lm_p0_probe_return(document, (text + (depth_designator_end - 1U)), (text + depth_designator_end))
                 ---
                 if: (depth_explicit != 0) && (depth_grouped = 0)
                     child_indent_stack := lm_p0_indent_stack_new_empty()
@@ -3667,6 +3692,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                     p0_node := lm_p0_new_node(document, c.LM_P0_NODE_STRUCTURE)
                     if: (p0_node = 0)
                         return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                    lm_p0_probe_group(document, 1, text, i, close_index)
                     # A group that spans lines is a document of its own (lm_p0_parse_group).
                     if: (lm_p0_count_line_breaks(text, (i + 1U), close_index) != 0U)
                         c.LmP0Structure@: group_structure
@@ -3680,6 +3706,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                         p0_node\span\offset := (offset + start)
                         p0_node\span\length := ((close_index - start) + 1U)
                         i := (close_index + 1U)
+                        lm_p0_probe_return(document, (text + close_index), (text + i))
                         if: (lm_p0_parse_append_node_and_update(document, structure, p0_node, flags, allow_empty_fields, @ expect_field, @ headless_group_after_separator) = 0)
                             return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                         continue
@@ -3717,6 +3744,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                         return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                     # The explicit group of elements: a Structure written in square brackets at a field start (Р156). The brackets of an index or of a suffix are atoms and carry no flag.
                     p0_node\flags := p0_node\flags | c.LM_P0_NODE_SQUARE
+                    lm_p0_probe_group(document, 2, text, i, close_index)
                     # A group that spans lines is a document of its own (lm_p0_parse_group).
                     if: (lm_p0_count_line_breaks(text, (i + 1U), close_index) != 0U)
                         c.LmP0Structure@: group_structure
@@ -3730,6 +3758,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                         p0_node\span\offset := (offset + start)
                         p0_node\span\length := ((close_index - start) + 1U)
                         i := (close_index + 1U)
+                        lm_p0_probe_return(document, (text + close_index), (text + i))
                         if: (lm_p0_parse_append_node_and_update(document, structure, p0_node, flags, allow_empty_fields, @ expect_field, @ headless_group_after_separator) = 0)
                             return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                         continue
@@ -3893,6 +3922,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                             p0_node\as\frame\flags := c.LM_P0_FRAME_COMPACT
                             if: (lm_p0_find_matching_paren(document, text, byte_count, i, line, column, @ close_index) = 0)
                                 return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                            lm_p0_probe_group(document, 1, text, i, close_index)
                             # Arguments that span lines are a document of their own (lm_p0_parse_group).
                             if: (lm_p0_count_line_breaks(text, (i + 1U), close_index) != 0U)
                                 c.LmP0Structure@: group_structure
@@ -3906,6 +3936,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                                 if: (lm_p0_document_register_lazy_text(document, (cast: (const: char@) p0_node\as\frame\head\data), (cast: (size_t) p0_node\as\frame\head\length), (cast: (const: char@@) (@ p0_node\as\frame\head\data)), (cast: (size_t) p0_node\span\line), (cast: (size_t) p0_node\span\column)) = 0)
                                     return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                                 i := (close_index + 1U)
+                                lm_p0_probe_return(document, (text + close_index), (text + i))
                                 if: (lm_p0_parse_append_node_and_update(document, structure, p0_node, flags, allow_empty_fields, @ expect_field, @ headless_group_after_separator) = 0)
                                     return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                                 continue
@@ -4122,6 +4153,8 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
             restart_parse_context := 1
             continue
         if: (frame\continuation = c.LM_P0_FIELD_PARSE_LOOP_BOUNDED_STRUCTURE)
+            # The owner of the group resumes right after its closing delimiter (lm_p0_probe_group).
+            lm_p0_probe_return(document, (text + close_index), (text + (close_index + 1U)))
             c.LmP0Structure@: group_structure p0_node\as\structure
             if: lm_p0_group_segments(document, group_structure) = 0
                 c.lm_own_delete(frame, 0)
@@ -4139,6 +4172,9 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
             restart_parse_context := 1
             continue
         if: (frame\continuation = c.LM_P0_FIELD_PARSE_LOOP_COMPACT_FRAME_BODY)
+            # The owner of the body resumes after the token it kept for the observation: the closing delimiter of a
+            # call, or the last byte of the designator of a depth form (lm_p0_probe_group, lm_p0_probe_form).
+            lm_p0_probe_return(document, (text + close_index), (text + (close_index + 1U)))
             p0_node\span\line := line
             lm_p0_position_in_slice(text, byte_count, start, line, column, (cast: (size_t@) (@ p0_node\span\line)), (cast: (size_t@) (@ p0_node\span\column)))
             p0_node\span\offset := (offset + start)
@@ -6155,7 +6191,161 @@ fn: lm_p0_check_conditionals_node (c.LmP0Document@: document; c.LmP0Node@: p0_no
     return: 1
 end: lm_p0_check_conditionals_node
 
+# ---- The observation of the bounded forms of a parse ---------------------------------------------------------------------
+# Optional, and off in an ordinary document: document\probe is 0 there, and nothing of this part allocates or writes.
+# The consumer that wants the ledger (graph_trans, `p0 FILE boundaries` and `bounds`) creates the probe and parses with
+# lm_p0_parse_file_observed. A site that really enters a bounded form writes one row (lm_p0_probe_form): where the form
+# was entered, the closing delimiter its owner met and how it got it -- today from a pre-scan of the source -- and,
+# when the owner resumes (lm_p0_probe_return), the position it continues from. A look-ahead that only looks for a
+# delimiter writes nothing. A nested document shares the probe of its document and adds the offset of its own source,
+# so a row is written in the bytes of the root document once. The observation changes nothing of what is parsed: a
+# probe that cannot grow its rows sets failed and keeps silence.
+
+# The offset of a pointer into the source of this document, in the bytes of the root document.
+fn: lm_p0_probe_root_offset (c.LmP0Document@: document; const: (char@: pointer)) size_t
+    size_t: offset 0U
+    if: lm_p0_pointer_source_offset(document, pointer, @ offset) = 0
+        return: (cast: (size_t) -1)
+    return: (document\probe_base + offset)
+end: lm_p0_probe_root_offset
+
+# One row: a form entered at open_at whose owner met the closing delimiter at close_at and finds the row again by
+# token_at when it resumes. The index of the row, or (size_t) -1 when nothing is observed.
+fn: lm_p0_probe_row (c.LmP0Document@: document; int: kind; int: route; size_t: open_at; size_t: close_at; size_t: token_at) size_t
+    c.LmP0BoundaryProbe@: probe
+    c.LmP0BoundaryRow@: grown
+    c.LmP0BoundaryRow: row
+    size_t: new_capacity 0U
+    probe := document\probe
+    if: probe = 0 || probe\failed != 0
+        return: (cast: (size_t) -1)
+    if: probe\count = probe\capacity
+        if: probe\capacity = 0U
+            new_capacity := 16U
+        else:
+            new_capacity := (probe\capacity * 2U)
+        ---
+        grown := (cast: (c.LmP0BoundaryRow@) c.lm_own_resize(probe\rows, (new_capacity * c.sizeof(probe\rows[0]))))
+        if: grown = 0
+            probe\failed := 1
+            return: (cast: (size_t) -1)
+        probe\rows := grown
+        probe\capacity := new_capacity
+    ---
+    row\kind := kind
+    row\route := route
+    row\how := 1
+    row\open_at := open_at
+    row\close_at := close_at
+    row\next_at := (cast: (size_t) -1)
+    row\token_at := token_at
+    row\anchor_at := (cast: (size_t) -1)
+    probe\rows[probe\count] := row
+    probe\count := (probe\count + 1U)
+    return: (probe\count - 1U)
+end: lm_p0_probe_row
+
+# The owner of a form resumes at next_at; its row is the last one still open with that token.
+sub: lm_p0_probe_resume (c.LmP0Document@: document; size_t: token_at; size_t: next_at)
+    c.LmP0BoundaryProbe@: probe
+    c.LmP0BoundaryRow: row
+    size_t: i 0U
+    probe := document\probe
+    if: probe = 0 || probe\failed != 0
+        return
+    i := probe\count
+    while: i > 0U
+        i := (i - 1U)
+        row := probe\rows[i]
+        if: (row\next_at = (cast: (size_t) -1)) && (row\token_at = token_at)
+            row\next_at := next_at
+            probe\rows[i] := row
+            return
+        ---
+    ---
+end: lm_p0_probe_resume
+
+# A bounded form is entered at open_pointer, its opening delimiter; its owner met the closing delimiter at
+# close_pointer and keeps token_pointer to find the row when it resumes.
+fn: lm_p0_probe_form (c.LmP0Document@: document; int: kind; int: route; const: (char@: open_pointer); const: (char@: close_pointer); const: (char@: token_pointer)) size_t
+    return: lm_p0_probe_row(document, kind, route, lm_p0_probe_root_offset(document, open_pointer), lm_p0_probe_root_offset(document, close_pointer), lm_p0_probe_root_offset(document, token_pointer))
+end: lm_p0_probe_form
+
+# A group of the loop of fields entered at text[open_index] and closed at text[close_index]: its body is read in a
+# context of the loop (route 1) or, with a line break among its bytes, as a nested document (route 2).
+fn: lm_p0_probe_group (c.LmP0Document@: document; int: kind; const: (char@: text); size_t: open_index; size_t: close_index) size_t
+    if: document\probe = 0
+        return: (cast: (size_t) -1)
+    if: lm_p0_count_line_breaks(text, (open_index + 1U), close_index) != 0U
+        return: lm_p0_probe_form(document, kind, 2, (text + open_index), (text + close_index), (text + close_index))
+    return: lm_p0_probe_form(document, kind, 1, (text + open_index), (text + close_index), (text + close_index))
+end: lm_p0_probe_group
+
+# The owner of a form continues from next_pointer; lm_p0_probe_form says which row is its own.
+sub: lm_p0_probe_return (c.LmP0Document@: document; const: (char@: token_pointer); const: (char@: next_pointer))
+    lm_p0_probe_resume(document, lm_p0_probe_root_offset(document, token_pointer), lm_p0_probe_root_offset(document, next_pointer))
+end: lm_p0_probe_return
+
+# A Mix mark passed whole (the looks of the stream) or read as a nested document (the marks the parser records): it
+# opens at open_pointer, closes with the brace before after_pointer, and the caller goes on at after_pointer at once.
+# route is 0 for a mark of a line and 5 for a mark inside a string atom.
+sub: lm_p0_probe_mark (c.LmP0Document@: document; const: (char@: open_pointer); const: (char@: after_pointer); int: route)
+    c.LmP0BoundaryProbe@: probe
+    c.LmP0BoundaryRow: row
+    size_t: i 0U
+    size_t: open_at 0U
+    size_t: after_at 0U
+    probe := document\probe
+    if: probe = 0 || probe\failed != 0
+        return
+    open_at := lm_p0_probe_root_offset(document, open_pointer)
+    after_at := lm_p0_probe_root_offset(document, after_pointer)
+    if: open_at = (cast: (size_t) -1) || after_at = (cast: (size_t) -1)
+        return
+    # A mark read again by a later look at the same line (the test for a standalone run, then the leading prefix, then
+    # the record of the mark) keeps its one row.
+    i := probe\count
+    while: i > 0U
+        i := (i - 1U)
+        row := probe\rows[i]
+        if: row\kind = 3 && row\open_at = open_at
+            return
+        ---
+    ---
+    lm_p0_probe_row(document, 3, route, open_at, (after_at - 1U), (after_at - 1U))
+    lm_p0_probe_resume(document, (after_at - 1U), after_at)
+end: lm_p0_probe_mark
+
+# The item a leading Mix mark belongs to really continues at anchor_pointer (lm_p0_scan_leading_mix_prefix): the
+# last Mix mark without an anchor is the last mark of that prefix.
+sub: lm_p0_probe_anchor (c.LmP0Document@: document; const: (char@: anchor_pointer))
+    c.LmP0BoundaryProbe@: probe
+    c.LmP0BoundaryRow: row
+    size_t: i 0U
+    probe := document\probe
+    if: probe = 0 || probe\failed != 0
+        return
+    i := probe\count
+    while: i > 0U
+        i := (i - 1U)
+        row := probe\rows[i]
+        if: row\kind = 3
+            if: row\anchor_at != (cast: (size_t) -1)
+                return
+            row\anchor_at := lm_p0_probe_root_offset(document, anchor_pointer)
+            probe\rows[i] := row
+            return
+        ---
+    ---
+end: lm_p0_probe_anchor
+
 fn: lm_p0_parse_bytes (const: (char@: source); size_t: source_length; c.LmP0Document@@: out_document) int
+    return: lm_p0_parse_bytes_observed(source, source_length, 0, out_document)
+end: lm_p0_parse_bytes
+
+# lm_p0_parse_bytes with the observation of the bounded forms: the probe of the consumer (0: off) is attached to the
+# document before its first byte is read. The document does not own the probe.
+fn: lm_p0_parse_bytes_observed (const: (char@: source); size_t: source_length; c.LmP0BoundaryProbe@: probe; c.LmP0Document@@: out_document) int
     c.LmP0Document@: document
     if: (out_document = 0)
         return: 1
@@ -6172,6 +6362,7 @@ fn: lm_p0_parse_bytes (const: (char@: source); size_t: source_length; c.LmP0Docu
     ---
     document\source_length := source_length
     document\source := c.lm_own_arena_copy_bytes(document\source_owner, source, document\source_length)
+    document\probe := probe
     if: (document\source = 0)
         lm_p0_document_destroy_owners(document)
         c.lm_own_delete(document, 0)
@@ -6193,7 +6384,7 @@ fn: lm_p0_parse_bytes (const: (char@: source); size_t: source_length; c.LmP0Docu
     if: (document\diagnostic\code = 0)
         return: 0
     return: (cast: (int) document\diagnostic\code)
-end: lm_p0_parse_bytes
+end: lm_p0_parse_bytes_observed
 
 # Original: parser.lm1:4408 lm_p0_parse_string
 fn: lm_p0_parse_string (const: (char@: source); c.LmP0Document@@: out_document) int
@@ -6205,6 +6396,12 @@ end: lm_p0_parse_string
 
 # Original: parser.lm1:4416 lm_p0_parse_file
 fn: lm_p0_parse_file (const: (char@: path); c.LmP0Document@@: out_document) int
+    return: lm_p0_parse_file_observed(path, 0, out_document)
+end: lm_p0_parse_file
+
+# lm_p0_parse_file with the observation of the bounded forms on (lm_p0_parse_bytes_observed): the probe belongs to
+# the caller, which reads its rows after the parse and frees them.
+fn: lm_p0_parse_file_observed (const: (char@: path); c.LmP0BoundaryProbe@: probe; c.LmP0Document@@: out_document) int
     c.FILE@: file
     c.LmP0FileScratch: file_scratch
     char@: buffer
@@ -6236,10 +6433,10 @@ fn: lm_p0_parse_file (const: (char@: path); c.LmP0Document@@: out_document) int
         c.lm_own_delete(buffer, 0)
         return: 1
     buffer[read_size] := '\0'
-    status := lm_p0_parse_bytes(buffer, read_size, out_document)
+    status := lm_p0_parse_bytes_observed(buffer, read_size, probe, out_document)
     c.lm_own_delete(buffer, 0)
     return: status
-end: lm_p0_parse_file
+end: lm_p0_parse_file_observed
 
 # Original: parser.lm1:4454 lm_p0_path_has_extension
 fn: lm_p0_path_has_extension (const: (char@: path); const: (char@: extension)) int

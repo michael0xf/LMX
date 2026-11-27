@@ -2965,24 +2965,27 @@ end: lm_graph_emit_file
 # `p0 FILE`: the P0 tree of FILE as the parser dumps it (the builder's input, for the record of a slice).  A file that
 # does not parse prints the parser's diagnostic -- its number, line and column, as the P0 tests record them
 # (tests/parser: `P0 parse error N at L:C`) -- and answers 2.
+# The diagnostic of a document P0 refused, as the P0 tests record it (`P0 parse error N at L:C: message`; a document
+# without one: `cannot read or parse`); the document is destroyed. 2.
+fn: lm_graph_p0_report_diagnostic (const: (char@: path); c.LmP0Document@: doc) int
+    c.LmP0Diagnostic@: diag 0
+    if: doc != 0
+        diag := (cast: (c.LmP0Diagnostic@) c.lm_p0_document_diagnostic(doc))
+    if: diag != 0
+        c.fprintf(c.stderr, "P0 parse error %d at %zu:%zu: %s\n", (cast: (int) (diag\code)), (cast: (size_t) (diag\line)), (cast: (size_t) (diag\column)), (cast: (char@) (diag\message)))
+    else:
+        c.fprintf(c.stderr, "graph: %s: cannot read or parse\n", path)
+    if: doc != 0
+        c.lm_p0_document_destroy(doc)
+    return: 2
+
 fn: lm_graph_p0_open (const: (char@: path); c.LmP0Document@@: out_document) int
     c.LmP0Document@: doc 0
-    c.LmP0Diagnostic@: diag 0
     out_document[0] := 0
     if: c.lm_p0_parse_file(path, @ doc) != 0
-        if: doc != 0
-            diag := (cast: (c.LmP0Diagnostic@) c.lm_p0_document_diagnostic(doc))
-        ---
-        if: diag != 0
-            c.fprintf(c.stderr, "P0 parse error %d at %zu:%zu: %s\n", (cast: (int) (diag\code)), (cast: (size_t) (diag\line)), (cast: (size_t) (diag\column)), (cast: (char@) (diag\message)))
-        else:
-            c.fprintf(c.stderr, "graph: %s: cannot read or parse\n", path)
-        ---
-        if: doc != 0
-            c.lm_p0_document_destroy(doc)
-        return: 2
+        return: lm_graph_p0_report_diagnostic(path, doc)
     out_document[0] := doc
-return: 0
+    return: 0
 
 # ---- `p0 FILE [lower-types] [flags|nodes]`: the tree with what the ordinary print hides ------------------------------------
 # The ordinary print shows a node's kind, its text and its field count, and a few of its flags as words before the kind.
@@ -3179,12 +3182,33 @@ sub: lm_graph_nodes_node (c.FILE@: out; c.LmP0Node@: item; size_t: indent; int: 
     lm_graph_nodes_tail(out, item, 0U, 0, mode)
 return
 
-# `p0 FILE [lower-types] [flags|nodes]`: the tree of a file, read by P0 (and, with lower-types, lowered by the pass of
-# the typed notation). Without flags and nodes the print is the parser's own, byte for byte.
+# `p0 FILE [lower-types] [flags|nodes|boundaries|bounds]`: the tree of a file, read by P0 (and, with lower-types, lowered
+# by the pass of the typed notation). Without flags and nodes the print is the parser's own, byte for byte.
 fn: lm_graph_p0_file (const: (char@: path); int: lowered; int: mode) int
     c.LmP0Document@: doc 0
     char@: dump 0
     c.LmP0Diagnostic@: diag 0
+    c.LmP0BoundaryProbe@: probe 0
+    int: status 0
+    # `boundaries` and `bounds` read the file with the observation of its bounded forms on (lm_p0_probe_* in
+    # p0_parser.lm2); the probe belongs to this command, not to the document.
+    if: mode >= 3
+        probe := (cast: (c.LmP0BoundaryProbe@) c.lm_own_new_zero(c.sizeof(c.LmP0BoundaryProbe)))
+        if: probe = 0
+            c.fputs("graph_trans: out of memory for the observation of the bounded forms\n", c.stderr)
+            return: 2
+        if: c.lm_p0_parse_file_observed(path, probe, @ doc) != 0
+            status := lm_graph_p0_report_diagnostic(path, doc)
+            c.lm_own_delete(probe, 0)
+            return: status
+        if: mode = 3
+            lm_graph_p0_boundaries(c.stdout, doc)
+        else:
+            status := lm_graph_p0_bounds(c.stdout, doc)
+        c.lm_own_delete(probe\rows, 0)
+        c.lm_own_delete(probe, 0)
+        c.lm_p0_document_destroy(doc)
+        return: status
     if: lm_graph_p0_open(path, @ doc) != 0
         return: 2
     if: lowered != 0 && c.lm_p0_lower_types(doc) != 0
@@ -3205,8 +3229,376 @@ fn: lm_graph_p0_file (const: (char@: path); int: lowered; int: mode) int
     c.lm_p0_document_destroy(doc)
 return: 0
 
-# The words after the file of the p0 command: lower-types, flags and nodes, each at most once and in any order; anything
-# else is a usage error (2).
+# ---- `p0 FILE boundaries|bounds`: the observation of the bounded forms of a parse ------------------------------------------------------
+# The rows come from the parser (lm_p0_probe_* in p0_parser.lm2): one for each round or square form the loop of fields,
+# a nested document or an atom really entered, and one for each Mix mark, with the offsets in the bytes of the source.
+# `boundaries` prints them. `bounds` checks them against the bytes of the source and against the tree, which is the
+# receipt of the criterion that a nested area returns to its owner the position after its own delimiter.
+
+fn: lm_graph_bounds_kind_name (int: kind) const: char@
+    if: kind = 1
+        return: "ROUND"
+    if: kind = 2
+        return: "SQUARE"
+    return: "MIX"
+
+fn: lm_graph_bounds_route_name (int: route) const: char@
+    if: route = 1
+        return: "LOOP"
+    if: route = 2
+        return: "DOCUMENT"
+    if: route = 3
+        return: "ATOM"
+    if: route = 4
+        return: "DESIGNATOR"
+    if: route = 5
+        return: "STRING"
+    return: "NONE"
+
+# One line per row: the kind of the form, how its body was read, how its owner got its closing delimiter, and the
+# offsets in the bytes of the source: the opening delimiter, the closing one, the position the owner continued from,
+# the token the owner kept, and for a leading Mix mark the item it continues in ((size_t) -1: none).
+sub: lm_graph_p0_boundaries (c.FILE@: out; c.LmP0Document@: doc)
+    c.LmP0BoundaryProbe@: probe 0
+    c.LmP0BoundaryRow: row
+    size_t: i 0U
+    probe := doc\probe
+    if: probe = 0
+        c.fputs("BOUNDARIES none\n", out)
+        return
+    while: i < probe\count
+        row := probe\rows[i]
+        c.fprintf(out, "%s %s %s %zu %zu %zu %zu %zu\n", lm_graph_bounds_kind_name(row\kind), lm_graph_bounds_route_name(row\route), "PRE_SCAN", (cast: (size_t) row\open_at), (cast: (size_t) row\close_at), (cast: (size_t) row\next_at), (cast: (size_t) row\token_at), (cast: (size_t) row\anchor_at))
+        i := i + 1U
+    ---
+    c.fprintf(out, "BOUNDARIES rows %zu\n", (cast: (size_t) probe\count))
+return
+
+# One line that is the spelling of a trailer: `end`, `return`, `until`, or `end:` with the name of its target. A trailer
+# is no node: its spelling is a copy in the document, so the tree keeps no offset for it, and its target is no node
+# either. The line is the bytes from start to stop, without its line break.
+fn: lm_graph_bounds_trailer_line (const: (char@: source); size_t: start; size_t: stop) int
+    size_t: last 0U
+    size_t: i 0U
+    last := stop
+    while: last > start && (source[(last - 1U)] = 32 || source[(last - 1U)] = 9 || source[(last - 1U)] = 13)
+        last := (last - 1U)
+    ---
+    if: last = start
+        return: 0
+    if: last = (start + 6U) && c.strncmp((source + start), "return", 6U) = 0
+        return: 1
+    if: last = (start + 5U) && c.strncmp((source + start), "until", 5U) = 0
+        return: 1
+    if: last = (start + 3U) && c.strncmp((source + start), "end", 3U) = 0
+        return: 1
+    # `end:` and the name of the target: word bytes to the end of the line
+    if: last < (start + 5U) || c.strncmp((source + start), "end:", 4U) != 0
+        return: 0
+    i := (start + 4U)
+    while: i < last && (source[i] = 32 || source[i] = 9)
+        i := (i + 1U)
+    if: i = last
+        return: 1
+    while: i < last
+        if: lm_graph_bounds_word_byte(source[i]) = 0
+            return: 0
+        i := (i + 1U)
+    ---
+    return: 1
+
+# A byte of a name: a letter, a digit, the underscore, the backslash of a path, the dot of a path, a backquote.
+fn: lm_graph_bounds_word_byte (char: value) int
+    if: value >= 'a' && value <= 'z'
+        return: 1
+    if: value >= 'A' && value <= 'Z'
+        return: 1
+    if: value >= '0' && value <= '9'
+        return: 1
+    return: (cast: (int) (value = 95 || value = 92 || value = 46 || value = 96))
+end: lm_graph_bounds_word_byte
+
+# The bytes from start to stop are what may stand between the position an owner continued from and the next thing the
+# tree begins there: spaces, tabs, line breaks, comment lines, a field separator, the dot of a dotted level, a fence
+# line of dashes, equals signs or stars, the line of a trailer -- and a bracket or a brace that is the delimiter of
+# an observed form.
+fn: lm_graph_bounds_trivia (const: (char@: source); size_t: byte_count; size_t: start; size_t: stop; c.LmP0BoundaryProbe@: probe) int
+    c.LmP0BoundaryRow: row
+    size_t: i 0U
+    size_t: j 0U
+    int: found 0
+    i := start
+    while: i < stop
+        if: source[i] = 32 || source[i] = 9 || source[i] = 13 || source[i] = 10 || source[i] = 44 || source[i] = 59
+            i := i + 1U
+            continue
+        if: source[i] = 35
+            while: i < stop && c.lm_p0_is_line_break(source[i]) = 0
+                i := i + 1U
+            continue
+        if: source[i] = 46
+            # the dot of a dotted level stands before a space or the end of its line
+            if: (i + 1U) >= stop || source[(i + 1U)] = 32 || source[(i + 1U)] = 9 || c.lm_p0_is_line_break(source[(i + 1U)]) != 0
+                i := i + 1U
+                continue
+            return: 0
+        if: source[i] = 45 || source[i] = 61 || source[i] = 42
+            # a fence line: the same sign, then spaces, then the end of the line
+            j := i
+            while: j < stop && source[j] = source[i]
+                j := j + 1U
+            while: j < stop && (source[j] = 32 || source[j] = 9 || source[j] = 13)
+                j := j + 1U
+            if: j >= stop || c.lm_p0_is_line_break(source[j]) != 0
+                i := j
+                continue
+            return: 0
+        if: source[i] = 40 || source[i] = 41 || source[i] = 91 || source[i] = 93 || source[i] = 123 || source[i] = 125
+            found := 0
+            j := 0U
+            while: j < probe\count
+                row := probe\rows[j]
+                if: row\open_at = i || row\close_at = i
+                    found := 1
+                j := j + 1U
+            if: found = 0
+                return: 0
+            i := i + 1U
+            continue
+        if: source[i] = 'e' || source[i] = 'r' || source[i] = 'u'
+            # the line of a trailer: the gap ends inside it at the latest (its target is the next thing of the tree)
+            j := i
+            while: j < byte_count && c.lm_p0_is_line_break(source[j]) = 0
+                j := j + 1U
+            if: stop <= j && lm_graph_bounds_trailer_line(source, i, j) != 0
+                i := stop
+                continue
+            return: 0
+        ---
+        return: 0
+    ---
+    return: 1
+
+# Does a line break stand in the bytes from start to stop?
+fn: lm_graph_bounds_has_break (const: (char@: source); size_t: start; size_t: stop) int
+    size_t: i 0U
+    i := start
+    while: i < stop
+        if: c.lm_p0_is_line_break(source[i]) != 0
+            return: 1
+        i := i + 1U
+    ---
+    return: 0
+
+# Are the bytes from start to stop spaces and tabs only?
+fn: lm_graph_bounds_only_spaces (const: (char@: source); size_t: start; size_t: stop) int
+    size_t: i 0U
+    i := start
+    while: i < stop
+        if: source[i] != 32 && source[i] != 9
+            return: 0
+        i := i + 1U
+    ---
+    return: 1
+
+# The smaller of two offsets of the source; (size_t) -1 (none) loses against any offset, and against another none.
+fn: lm_graph_bounds_least (size_t: a; size_t: b) size_t
+    if: a = (cast: (size_t) -1)
+        return: b
+    if: b = (cast: (size_t) -1)
+        return: a
+    if: b < a
+        return: b
+    return: a
+
+# The smallest offset, not before limit, at which the tree under this node begins something: the node itself, a node
+# under it, or the spelling of a trailer. (size_t) -1 when there is none. It is found by walking the tree (the receipt
+# is a command of the tool, not a path of a build), so nothing is kept beside the tree.
+fn: lm_graph_bounds_first_node (c.LmP0Node@: item; c.LmP0Document@: doc; size_t: limit) size_t
+    c.LmP0Frame@: frame 0
+    size_t: best 0U
+    size_t: found 0U
+    best := (cast: (size_t) -1)
+    if: item = 0
+        return: best
+    found := best
+    if: item\kind = c.LM_P0_NODE_FRAME
+        frame := (cast: (c.LmP0Frame@) item\as\frame)
+        # A position inside the head of a Frame lies inside one token (an index, a counted group or a prefix square
+        # of the head): the owner of the form goes on right there, and nothing of the tree begins before the body.
+        if: (cast: (size_t) item\span\offset) < limit && limit < ((cast: (size_t) item\span\offset) + (cast: (size_t) frame\head\length))
+            return: limit
+        ---
+    if: (cast: (size_t) item\span\offset) >= limit
+        best := (cast: (size_t) item\span\offset)
+    if: item\kind = c.LM_P0_NODE_STRUCTURE
+        found := lm_graph_bounds_first_structure((cast: (c.LmP0Structure@) item\as\structure), doc, limit)
+    if: item\kind = c.LM_P0_NODE_FRAME
+        frame := (cast: (c.LmP0Frame@) item\as\frame)
+        found := lm_graph_bounds_first_structure((cast: (c.LmP0Structure@) frame\body), doc, limit)
+        found := lm_graph_bounds_least(found, lm_graph_bounds_first_trailer((cast: (c.LmP0Trailer@) frame\trailer), doc, limit))
+    if: item\kind = c.LM_P0_NODE_ATOM
+        found := lm_graph_bounds_first_structure((cast: (c.LmP0Structure@) item\marks), doc, limit)
+    return: lm_graph_bounds_least(best, found)
+
+fn: lm_graph_bounds_first_structure (c.LmP0Structure@: structure; c.LmP0Document@: doc; size_t: limit) size_t
+    c.LmP0Field@: field 0
+    size_t: best 0U
+    size_t: found 0U
+    best := (cast: (size_t) -1)
+    if: structure = 0
+        return: best
+    field := (cast: (c.LmP0Field@) structure\first_field)
+    while: field != 0
+        found := lm_graph_bounds_first_node((cast: (c.LmP0Node@) field\value), doc, limit)
+        best := lm_graph_bounds_least(best, found)
+        field := (cast: (c.LmP0Field@) field\next)
+    found := lm_graph_bounds_first_trailer((cast: (c.LmP0Trailer@) structure\trailer), doc, limit)
+    return: lm_graph_bounds_least(best, found)
+
+# The same for a trailer: the offset of its spelling, when the spelling lies in the source of the document, and what
+# its body begins.
+fn: lm_graph_bounds_first_trailer (c.LmP0Trailer@: trailer; c.LmP0Document@: doc; size_t: limit) size_t
+    c.LmP0Text@: spelling 0
+    size_t: at 0U
+    size_t: best 0U
+    best := (cast: (size_t) -1)
+    if: trailer = 0
+        return: best
+    spelling := (cast: (c.LmP0Text@) trailer\spelling)
+    if: spelling != 0 && spelling\data != 0 && spelling\length != 0U
+        if: c.lm_p0_pointer_source_offset(doc, (cast: (char@) spelling\data), @ at) != 0
+            if: at >= limit && at < doc\source_length
+                best := at
+            ---
+        ---
+    ---
+    return: lm_graph_bounds_least(best, lm_graph_bounds_first_structure((cast: (c.LmP0Structure@) trailer\body), doc, limit))
+
+# `p0 FILE bounds`: the observation of a parse checked against the bytes of its source and against its tree. For every
+# row: the source has the opening delimiter of its kind at open_at and its closing one at close_at; its owner resumed
+# right after that delimiter (after the designator, for a depth form; at the anchor of its item, for a leading Mix
+# mark); between the position the owner continued from and the next thing the tree begins there is nothing but
+# layout; and the forms lie one inside another. The forms met are counted: nested, empty and written on several lines.
+# 0 when every row stands; 2 when one does not, each one printed as a FAIL line.
+fn: lm_graph_p0_bounds (c.FILE@: out; c.LmP0Document@: doc) int
+    const: (char@: source)
+    size_t: byte_count 0U
+    c.LmP0BoundaryProbe@: probe 0
+    c.LmP0BoundaryRow: row
+    c.LmP0BoundaryRow: other
+    size_t: i 0U
+    size_t: j 0U
+    size_t: first 0U
+    size_t: found 0U
+    size_t: fails 0U
+    size_t: nested 0U
+    size_t: empty 0U
+    size_t: multiline 0U
+    size_t: mix 0U
+    int: inside 0
+    char: opener
+    char: closer
+    source := doc\source
+    byte_count := doc\source_length
+    probe := doc\probe
+    if: probe = 0
+        c.fputs("BOUNDS no observation\n", out)
+        return: 2
+    if: probe\failed != 0
+        c.fputs("BOUNDS the observation ran out of memory\n", out)
+        return: 2
+    while: i < probe\count
+        row := probe\rows[i]
+        opener := '{'
+        closer := '}'
+        if: row\kind = 1
+            opener := '('
+            closer := ')'
+        if: row\kind = 2
+            opener := '['
+            closer := ']'
+        if: row\kind = 3
+            mix := (mix + 1U)
+        if: row\open_at >= byte_count || source[row\open_at] != opener
+            c.fprintf(out, "FAIL row %zu: the source has no opening delimiter of its kind at %zu\n", i, (cast: (size_t) row\open_at))
+            fails := (fails + 1U)
+        if: row\close_at >= byte_count || row\close_at <= row\open_at || source[row\close_at] != closer
+            c.fprintf(out, "FAIL row %zu: the source has no closing delimiter of its kind at %zu\n", i, (cast: (size_t) row\close_at))
+            fails := (fails + 1U)
+        if: row\next_at = (cast: (size_t) -1)
+            c.fprintf(out, "FAIL row %zu: the owner never resumed\n", i)
+            fails := (fails + 1U)
+        else:
+            if: row\next_at <= row\close_at || row\next_at > byte_count
+                c.fprintf(out, "FAIL row %zu: the owner resumed at %zu\n", i, (cast: (size_t) row\next_at))
+                fails := (fails + 1U)
+            if: row\route != 4 && row\next_at != (row\close_at + 1U)
+                c.fprintf(out, "FAIL row %zu: the owner resumed at %zu, not after its delimiter at %zu\n", i, (cast: (size_t) row\next_at), (cast: (size_t) row\close_at))
+                fails := (fails + 1U)
+            if: row\route = 4
+                # the designator of a depth form: bytes that are no spaces and no brackets
+                j := (row\close_at + 1U)
+                while: j < row\next_at
+                    if: source[j] = 32 || source[j] = 9 || source[j] = 13 || source[j] = 10 || source[j] = 40 || source[j] = 41 || source[j] = 91 || source[j] = 93
+                        c.fprintf(out, "FAIL row %zu: a space or a bracket at %zu inside the designator the owner read\n", i, j)
+                        fails := (fails + 1U)
+                    j := (j + 1U)
+                if: row\next_at = (row\close_at + 1U)
+                    c.fprintf(out, "FAIL row %zu: the designator of the depth form is empty\n", i)
+                    fails := (fails + 1U)
+                ---
+            if: row\anchor_at != (cast: (size_t) -1)
+                if: row\anchor_at < row\next_at || row\anchor_at > byte_count || lm_graph_bounds_only_spaces(source, row\next_at, row\anchor_at) = 0
+                    c.fprintf(out, "FAIL row %zu: the item of the Mix mark does not continue at %zu\n", i, (cast: (size_t) row\anchor_at))
+                    fails := (fails + 1U)
+        ---
+        if: row\kind != 3
+            if: lm_graph_bounds_has_break(source, (row\open_at + 1U), row\close_at) != 0
+                multiline := (multiline + 1U)
+            if: lm_graph_bounds_trivia(source, byte_count, (row\open_at + 1U), row\close_at, probe) != 0
+                empty := (empty + 1U)
+            inside := 0
+            j := 0U
+            while: j < probe\count
+                other := probe\rows[j]
+                if: other\open_at < row\open_at && row\close_at < other\close_at
+                    inside := 1
+                if: j > i && ((other\open_at < row\open_at && row\open_at < other\close_at && other\close_at < row\close_at) || (row\open_at < other\open_at && other\open_at < row\close_at && row\close_at < other\close_at))
+                    c.fprintf(out, "FAIL row %zu: the form at %zu and the form at %zu cross each other\n", i, (cast: (size_t) row\open_at), (cast: (size_t) other\open_at))
+                    fails := (fails + 1U)
+                j := (j + 1U)
+            if: inside != 0
+                nested := (nested + 1U)
+        ---
+        if: row\route != 5
+            # The owner of a form that lies inside a depth form `.(E)op` goes on only after the designator of that
+            # form: the designator stands between the two. The first thing of the tree is looked for from the farthest
+            # such position.
+            first := row\next_at
+            j := 0U
+            while: j < probe\count
+                other := probe\rows[j]
+                if: other\route = 4 && other\open_at < row\open_at && row\close_at < other\close_at && other\next_at > first
+                    first := other\next_at
+                j := (j + 1U)
+            ---
+            found := lm_graph_bounds_first_node((cast: (c.LmP0Node@) c.lm_p0_document_root(doc)), doc, first)
+            if: found = (cast: (size_t) -1)
+                found := byte_count
+            if: lm_graph_bounds_trivia(source, byte_count, first, found, probe) = 0
+                c.fprintf(out, "FAIL row %zu: between %zu and the next thing of the tree at %zu there is more than layout\n", i, first, found)
+                fails := (fails + 1U)
+        ---
+        i := (i + 1U)
+    ---
+    c.fprintf(out, "BOUNDS rows %zu nested %zu empty %zu multiline %zu mix %zu failed %zu\n", (cast: (size_t) probe\count), nested, empty, multiline, mix, fails)
+    if: fails = 0U
+        return: 0
+    return: 2
+
+# The words after the file of the p0 command: lower-types, flags, nodes, boundaries and bounds, each at most once and in any
+# order; anything else is a usage error (2).
 fn: lm_graph_p0_command (char@@: args; int: n) int
     int: lowered 0
     int: mode 0
@@ -3218,8 +3610,12 @@ fn: lm_graph_p0_command (char@@: args; int: n) int
             mode := 1
         if: c.strcmp(args[i], "nodes") = 0
             mode := 2
-        if: c.strcmp(args[i], "lower-types") != 0 && c.strcmp(args[i], "flags") != 0 && c.strcmp(args[i], "nodes") != 0
-            c.fputs("graph_trans: p0 takes FILE [lower-types] [flags|nodes]\n", c.stderr)
+        if: c.strcmp(args[i], "boundaries") = 0
+            mode := 3
+        if: c.strcmp(args[i], "bounds") = 0
+            mode := 4
+        if: c.strcmp(args[i], "lower-types") != 0 && c.strcmp(args[i], "flags") != 0 && c.strcmp(args[i], "nodes") != 0 && c.strcmp(args[i], "boundaries") != 0 && c.strcmp(args[i], "bounds") != 0
+            c.fputs("graph_trans: p0 takes FILE [lower-types] [flags|nodes|boundaries|bounds]\n", c.stderr)
             return: 2
         i := i + 1
     ---
@@ -3519,7 +3915,7 @@ fn: lm_graph_main (char@@: args; int: n) int
         if: runs < 1
             return: 2
         return: lm_graph_emit_file(args[2], args[3], forced, check_root, runs, entry)
-    c.fputs("graph_trans: usage: check FILE | run SOURCES [COUNT] [ENTRY] | emit|emit-check SOURCES OUT.lm1 native|forced [COUNT] [ENTRY] | p0 FILE [lower-types] [flags|nodes] | retype --dry|--write ROOT LIST [REPORT] | groups ROOT LIST NEW_OUT | intern\n", c.stderr)
+    c.fputs("graph_trans: usage: check FILE | run SOURCES [COUNT] [ENTRY] | emit|emit-check SOURCES OUT.lm1 native|forced [COUNT] [ENTRY] | p0 FILE [lower-types] [flags|nodes|boundaries|bounds] | retype --dry|--write ROOT LIST [REPORT] | groups ROOT LIST NEW_OUT | intern\n", c.stderr)
     return: 2
 end: lm_graph_main
 

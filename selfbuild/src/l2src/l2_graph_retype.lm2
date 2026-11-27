@@ -1,6 +1,6 @@
-# The translation of the records of the old notation of a reference into the typed notation (step 23.7 of the plan, the
-# translation of the sources of L2): `@: name T value` becomes `T@: name value`, `@: name void` becomes `@: name`, and in the
-# places of a type (the type of a cast, of sizeof, of const, the result of a function) `@: T` becomes `T@` and `@: void`
+# The translation of the records of the historical notation of a reference into the current prefix notation (step 23.7 of the plan, the
+# translation of the sources of L2): `@: name T value` becomes `@T: name value`, `@: name void` becomes `@: name`, and in the
+# places of a type (the type of a cast, of sizeof, of const, the result of a function) `@: T` becomes `@T` and `@: void`
 # becomes `@`. The rules are those of the ledger (R152, item 3) and the table of the census of the sources
 # (step-23-7/census_forms.py); the typed notation is read by the pass of step 23.6 (lm_p0_lower_types), which lowers it to
 # the tree P0 builds for the old notation, so the translation keeps every tree.
@@ -282,7 +282,7 @@ sub: lm_rt_report (c.FILE@: report; char@@: p; c.LmP0Node@: item; int: place; in
 return
 
 # The classification of a record by its fields, as the census does: the form (see lm_rt_form_name) and, in kind, how the
-# rules edit it: 0 not at all, 1 the type of an operand (T@), 2 void as an operand (@), 3 a name and a type (T@: name),
+# rules edit it: 0 not at all, 1 the type of an operand (@T), 2 void as an operand (@), 3 a name and a type (@T: name),
 # 4 a name and void (the name). The fields: n of them, the first three c0, c1, c2.
 fn: lm_rt_form (int: operand; size_t: n; c.LmP0Node@: c0; c.LmP0Node@: c1; c.LmP0Node@: c2) int
     int: form 7
@@ -399,13 +399,13 @@ sub: lm_rt_record (c.FILE@: report; size_t@: st; char@@: p; c.LmP0Node@: item; c
         return
     out_start := st[0]
     if: kind = 1
-        lm_rt_put(st, p, src + ts, te - ts)
         lm_rt_put_at(st, p, k)
+        lm_rt_put(st, p, src + ts, te - ts)
     if: kind = 2
         lm_rt_put_at(st, p, k)
     if: kind = 3
-        lm_rt_put(st, p, src + ts, te - ts)
         lm_rt_put_at(st, p, k)
+        lm_rt_put(st, p, src + ts, te - ts)
         lm_rt_put(st, p, ": ", 2U)
         lm_rt_put(st, p, src + ns, ne - ns)
     if: kind = 4

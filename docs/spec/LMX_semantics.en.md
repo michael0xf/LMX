@@ -2819,7 +2819,7 @@ normalized requirement does not rerun these expressions. `[N]int` with the
 same obtained N reuses the same canonical TypeRef. No separate parser,
 restricted constant calculator, trial execution or source rewriting is added.
 
-`[N]T` contributes one axis of size N; `[](N)T` contributes N unspecified
+`[N]T` contributes one axis of size N; `[](N)T` with an integer N contributes N unspecified
 axes; `@(N)T` contributes N pointer levels. Rank and pointer-depth counts remain
 positive, while an extent may be zero. Canonical normalization stores the full
 left requirement in a shared immutable system TYPE Structure. Equal requirements
@@ -2833,6 +2833,12 @@ retag a value or discard its full original requirement. Size-changing operations
 respect written bounds, and a cached type pair cannot prove a mutable value's
 current size. See [canonical types](ARRAY_STORAGE.en.md#array-profiles) and
 [representation](ARRAY_STORAGE.en.md#side-metadata).
+
+`[](sizes)T` obtains a nonempty one-dimensional Array of integer extents once.
+Its elements give exact sizes from the outermost axis to the innermost, including
+zero. Given `[]int: sizes [2 2 3 3]`, `[](sizes)T` and `[2][2][3][3]T` give the
+same TypeRef. The canonical description stores the extent values.
+[Axis-size Array contract](TYPE_DECLARATION_FORMS.md#extent-vector-prefix).
 
 In a VALUE/PLACE role `Struct[2]` selects physical index 2. Consequently
 `Struct[2]:= [a b]` is the same indexed assignment as `Struct[2] := [a b]`:

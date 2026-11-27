@@ -5155,7 +5155,7 @@ typed absence. Заданные размеры не выделяют элеме�
 Отдельного parser, ограниченного калькулятора констант, пробного исполнения
 или переписывания исходника нет.
 
-`[N]T` добавляет одну ось размера N; `[](N)T` — N незаданных осей;
+`[N]T` добавляет одну ось размера N; `[](N)T` с целым N — N незаданных осей;
 `@(N)T` — N уровней указателя. Числа осей и уровней указателя остаются
 положительными, а размер оси может быть нулём. Каноническая нормализация хранит
 полное требование слева в общей неизменяемой системной Structure TYPE.
@@ -5170,6 +5170,12 @@ capacity, и TYPE он не меняет. Общий допуск не меня�
 границы; кэш пары типов не доказывает текущий размер изменяемого значения.
 См. [канонические типы](ARRAY_STORAGE.ru.md#array-profiles) и
 [представление](ARRAY_STORAGE.ru.md#side-metadata).
+
+`[](sizes)T` получает непустой одномерный Array целых размеров один раз.
+Его элементы задают точные размеры осей от внешней к внутренней, включая 0.
+Если `[]int: sizes [2 2 3 3]`, то `[](sizes)T` и `[2][2][3][3]T` дают одну
+TypeRef. Каноническое описание сохраняет сами размеры.
+[Договор массива размеров](TYPE_DECLARATION_FORMS.md#extent-vector-prefix).
 
 В роли VALUE/PLACE `Struct[2]` выбирает физический индекс 2. Поэтому
 `Struct[2]:= [a b]` — то же индексное присваивание, что `Struct[2] := [a b]`:
@@ -5412,7 +5418,7 @@ normalized requirement does not rerun these expressions. `[N]int` with the
 same obtained N reuses the same canonical TypeRef. No separate parser,
 restricted constant calculator, trial execution or source rewriting is added.
 
-`[N]T` contributes one axis of size N; `[](N)T` contributes N unspecified
+`[N]T` contributes one axis of size N; `[](N)T` with an integer N contributes N unspecified
 axes; `@(N)T` contributes N pointer levels. Rank and pointer-depth counts remain
 positive, while an extent may be zero. Canonical normalization stores the full
 left requirement in a shared immutable system TYPE Structure. Equal requirements
@@ -5426,6 +5432,12 @@ retag a value or discard its full original requirement. Size-changing operations
 respect written bounds, and a cached type pair cannot prove a mutable value's
 current size. See [canonical types](ARRAY_STORAGE.en.md#array-profiles) and
 [representation](ARRAY_STORAGE.en.md#side-metadata).
+
+`[](sizes)T` obtains a nonempty one-dimensional Array of integer extents once.
+Its elements give exact sizes from the outermost axis to the innermost, including
+zero. Given `[]int: sizes [2 2 3 3]`, `[](sizes)T` and `[2][2][3][3]T` give the
+same TypeRef. The canonical description stores the extent values.
+[Axis-size Array contract](TYPE_DECLARATION_FORMS.md#extent-vector-prefix).
 
 In a VALUE/PLACE role `Struct[2]` selects physical index 2. Consequently
 `Struct[2]:= [a b]` is the same indexed assignment as `Struct[2] := [a b]`:

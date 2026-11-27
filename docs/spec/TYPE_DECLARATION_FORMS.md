@@ -296,6 +296,27 @@ by available resources. Zero, negative, or noninteger counts are not admitted;
 this addition defines no rank-zero or type-erasure meaning and no new exception
 family. The usual type-requirement diagnostic and resource contracts apply.
 
+<a id="extent-vector-prefix"></a>
+### Array of axis sizes
+
+In `[](sizes)T`, the attached expression may yield a nonempty
+one-dimensional Array of finite nonnegative integers. Each element gives one
+exact axis size in outer-to-inner order. For example, given an element type `T`:
+
+```lmx
+[]int: sizes [2 2 3 3]
+[](sizes)T: customTypeArray
+```
+
+The declaration has the complete type `[2][2][3][3]T`. The two spellings
+produce the same canonical TypeRef, including when consumed as standalone
+TYPEs. The TYPE consumer obtains the Array once and snapshots its sizes before
+admitting any initializer elements. Each zero is an exact extent. An empty
+vector, a negative or noninteger extent, or an unsupported size is diagnosed
+under the ordinary TYPE contract. The resulting description retains the sizes
+by value and stays valid if the input Array later changes. An integer operand
+still gives a count of unspecified axes. The rule applies to Array prefixes.
+
 The outer constructors are written first. Successive count and size
 expressions are consumed once in written order:
 

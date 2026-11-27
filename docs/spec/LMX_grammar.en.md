@@ -1558,6 +1558,8 @@ requirement as N consecutive `[]` prefixes before T; `@(N)T` applies N `@`
 prefixes. Repeated forms remain available: `[](3)int` equals `[][][]int`,
 and `@(3)int` equals `@@@int`.
 
+In `[](sizes)T`, the same region may yield a nonempty one-dimensional Array of integer extents. Each element gives one exact axis size, from outermost to innermost. After `[]int: sizes [2 2 3 3]`, `[](sizes)T: customTypeArray` is equivalent to `[2][2][3][3]T: customTypeArray`. The consumer obtains the Array once and normalizes its extents to the shared TypeRef. [Axis-size Array contract](TYPE_DECLARATION_FORMS.md#extent-vector-prefix).
+
 ```lmx
 [](1)int: [1 2 3 4]
 @(2)int: ptr_to_ptr

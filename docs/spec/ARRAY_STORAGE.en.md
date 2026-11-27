@@ -59,6 +59,13 @@ and the distinction from compact declarations are specified in the
 No implementation or new tests are added; production P0/translator/runtime:
 **NOT_RUN**. The previous 14 host checks in this chapter do not test these forms.
 
+In `[](sizes)T`, the expression may yield a nonempty one-dimensional Array of
+exact axis sizes, ordered from outermost to innermost. Given
+`[]int: sizes [2 2 3 3]`, the place `[](sizes)T: customTypeArray` has the same
+type as `[2][2][3][3]T: customTypeArray`. The TYPE consumer obtains `sizes`
+once and stores its values in the canonical type description.
+[Axis-size Array contract](TYPE_DECLARATION_FORMS.md#extent-vector-prefix).
+
 <a id="sized-postfix"></a>
 ### 1.2. Sizes in square type prefixes
 

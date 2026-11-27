@@ -1,5 +1,7 @@
 # Assignment is not declaration
 
+> **Historical notes · 27 November 2026.** The numeric `uninit:T` code is historical. The record now stores a TypeRef with no value payload. [Current references](README.md#standalone-status)
+
 **Status:** applied documentation requirement, reconciled with the accepted rules through 2026-11-21.
 The directory name Old_TZ does not make its surviving contracts optional. This revision states the current rule;
 it does not claim that a runtime or native/walker test has passed.

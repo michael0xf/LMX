@@ -1,5 +1,7 @@
 # Composition follow-up: current decision index
 
+> **Historical notes · 27 November 2026.** The paragraph describing a named `fn: name data` requirement and the old load/flush vocabulary are historical. Current contracts use `Name :: DATA`, `satisfies`, the actual `parent(C)` and one graph. [Current references](README.md#standalone-status)
+
 **Status:** applied documentation requirements, reconciled through 2026-11-21.
 The prior follow-up questions are not reopened; this document states their surviving consequences under the
 [current composition rules](../spec/LMX_semantics.en.md#composition) and

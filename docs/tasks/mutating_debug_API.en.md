@@ -1,5 +1,7 @@
 # Mutating debug API for an AI chat
 
+> **Historical notes · 27 November 2026.** The `fn: name data` spelling and earlier physical type-code examples are historical. The application operations use the current TypeRef and ordinary call-admission contracts. [Current references](README.md#standalone-status)
+
 Applied application-interface requirements, reconciled through 2026-11-21. These define required behavior, not a claim of completed implementation and not a new LMX level. General language contracts belong to [L3](../spec/LMX_semantics.en.md), [L2](../spec/L2_spec_en.md), and the [grammar](../spec/LMX_grammar.en.md).
 
 <a id="status"></a>

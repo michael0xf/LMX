@@ -1,5 +1,7 @@
 # Migrate `send` and `receive` to common mail
 
+> **Historical notes · 27 November 2026.** The `sendMessage`/`receiveMessage`, named `fn` and `implements` spellings in this revision are historical. `send`, `receive` and `post` use the common Message layer and ordinary admission. [Current references](README.md#standalone-status)
+
 Applied migration requirements, reconciled through 2026-11-21. Companion documents are the [`post` contract and T01–T26 matrix](threadMessageAPI.en.md) and [main L3 semantics](../spec/LMX_semantics.en.md#thread-message-api). This specifies required implementation behavior and evidence; it does not claim that migration has already happened.
 
 Historical provenance: the author's 2026-11-10 renaming changed `sendMessage`/`receiveMessage` to `send`/`receive`. “Old” below refers to these existing operations compared with `post`, not to obsolete public names.

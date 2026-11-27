@@ -1,5 +1,7 @@
 # Working state without load/cache/dirty publication
 
+> **Historical notes · 27 November 2026.** The withdrawn load/cache/dirty, flush and local-publication models are historical, as is the use of `implements` in §4. The single-graph and actual-place requirements remain in force. [Current references](README.md#standalone-status)
+
 **Status:** applied documentation requirement, updated in English through 2026-11-21.
 The former load-dirty mechanism and its publication rules are withdrawn. This file retains its name for existing
 references and states the current [call-frame contract](../spec/LMX_semantics.en.md#call-frame-20261115);

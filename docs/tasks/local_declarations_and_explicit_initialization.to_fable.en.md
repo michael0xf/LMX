@@ -1,5 +1,7 @@
 # Local declarations and explicit initialization
 
+> **Historical notes · 27 November 2026.** The numeric `uninit` code in the local-leaf examples is historical. The TypeRef remains in the record with zero value payload. Local initialization and writes into a selected graph place retain their distinct contracts. [Current references](README.md#standalone-status)
+
 **Status:** applied documentation requirement, reconciled through 2026-11-21.
 The current [construction](../spec/LMX_semantics.en.md#construction),
 [declaration arguments](LMX_Fable_TZ_Declaration_Arguments_and_Import_v2_2026-11-20.md),

@@ -1,5 +1,7 @@
 # Ordinary LMX calls over Message transport: `post` and reply waits
 
+> **Historical notes · 27 November 2026.** The `implements`, `fn:` and `sub` spellings in the examples and acceptance matrix are historical. Calls over Message use the same selection and admission rules as ordinary calls. [Current references](README.md#standalone-status)
+
 Applied transport requirements, reconciled through 2026-11-21. The governing contract is [L3 §28](../spec/LMX_semantics.en.md#thread-message-api); migration of the old entry points has a [separate instruction](threadMessageAPI_migration.en.md). This document retains the detailed acceptance matrix. Its directory name does not create an alternative or optional Thread API, and no test success is asserted.
 
 ## 0. Required: replace the previous external-API design

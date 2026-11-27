@@ -1,5 +1,7 @@
 # Author clarification: complete program graph, methods binary, zero-payload uninit, and graph assignment
 
+> **Historical notes · 27 November 2026.** The numeric type code in §2 and the corresponding test in §5 are historical. The record stores a canonical TypeRef. Zero value payload and replacement of the selected graph fragment remain in force. [Current references](README.md#standalone-status)
+
 Date: 2026-11-21. Status: accepted author clarification, incorporated into this documentation review.
 
 This note records the author's direct answers during the review. It resolves the former physical-layout question P01. It has priority over older prose that reserves a future `T` value cell inside `uninit:T`, describes a nested `T` record, or treats execution as replacing written source forms with their computed results.

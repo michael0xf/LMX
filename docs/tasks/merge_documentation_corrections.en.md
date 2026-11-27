@@ -1,5 +1,7 @@
 # Composition and graph-copying requirements
 
+> **Historical notes · 27 November 2026.** References to `fn` signature comparison describe the earlier spelling. The named signature is now `Name :: DATA`. Whole and expanded argument forms are selected before effects. [Current references](README.md#standalone-status)
+
 **Status:** applied documentation requirement, reconciled with the 2026-11-21
 [field-stream requirements](LMX_Fable_TZ_Import_Copy_Merge_Field_Streams_2026-11-21.md).
 The [composition contract](../spec/LMX_semantics.en.md#composition) and

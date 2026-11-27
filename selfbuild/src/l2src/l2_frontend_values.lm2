@@ -593,6 +593,7 @@ fn: lm_compiler_emit_scalar_capture (int: ft; const: (char@: arena); const: (cha
     c.L2Tx@: source c.lm_compiler_tx_local(@ source_tx, (cast: (char@) source_storage\buffer), 64U)
     c.L2Tx@: status c.lm_compiler_tx_local(@ status_tx, (cast: (char@) status_storage\buffer), 64U)
     int: id next[0]
+    int: mptr 0
     next[0] := next[0] + 1
     if: arena = 0 || storage = 0 || ind = 0 || dest = 0 || fail = 0 || abi = 0 || source = 0 || status = 0 || lm_compiler_emit_scalar_contract(ft, ind, abi, source, status, declared_source) != 0
         return: 1
@@ -602,9 +603,14 @@ fn: lm_compiler_emit_scalar_capture (int: ft; const: (char@: arena); const: (cha
         return: 1
     # Raw C transport has no producer SOURCE. Its expected formal must not
     # invent a language alias; a supplied full context remains authoritative.
-    if: declared_source != 0 && c.fprintf(out[0], "%sif: l2_scontext%d.source_type = 0\n%s    l2_scontext%d.source_type: %s\n%s---\n", ind, id, ind, id, source\data, ind) < 0
-        return: 1
-    if: c.fprintf(out[0], "%s@: Lmx l2_sprofile%d lmx_range_profile(%s, %s)\n%sif: l2_scontext%d.physical_profile != 0\n%s    l2_sprofile%d: l2_scontext%d.physical_profile\n%s---\n", ind, id, arena, storage, ind, id, ind, id, id, ind) < 0
+    if: declared_source != 0
+        mptr := lm_compiler_member_pointer("LmxWalkValue", "l2_scontext%d", id, ind)
+        if: mptr < 0
+            return: 1
+        if: c.fprintf(out[0], "%sif: l2_t%d\\source_type = 0\n%s    l2_t%d\\source_type: %s\n%s---\n", ind, mptr, ind, mptr, source\data, ind) < 0
+            return: 1
+    ---
+    if: c.fprintf(out[0], "%s@: Lmx l2_sprofile%d lmx_range_profile(%s, %s)\n%sif: (@ (l2_scontext%d))\\physical_profile != 0\n%s    l2_sprofile%d: (@ (l2_scontext%d))\\physical_profile\n%s---\n", ind, id, arena, storage, ind, id, ind, id, id, ind) < 0
         return: 1
     if: c.fprintf(out[0], "%s@: LmxPool l2_spool%d lmx_range_cell_pool(%s, %s)\n%sint: l2_stype%d c.LMX_TYPE_FOREIGN\n%sint: l2_sdirect%d 0\n%sif: l2_spool%d != 0\n%s    if: l2_spool%d\\kind != c.LMX_KIND_PRIMITIVE || lmx_type_base(l2_spool%d\\type) != c.LMX_TYPE_FOREIGN || l2_spool%d\\scalar_abi != %s\n%s        %s: c.LMX_WALK_INVALID\n%s    ---\n%s    l2_stype%d: l2_spool%d\\type\n%s    l2_sprofile%d: l2_spool%d\\profile\n", ind, id, arena, storage, ind, id, ind, id, ind, id, ind, id, id, id, abi\data, ind, status\data, ind, ind, id, id, ind, id, id) < 0
         return: 1
@@ -2783,7 +2789,7 @@ fn: lm_compiler_emit_send (int: k; int: proto; char@: prefix; int@: count_arr; i
     while: j < nf
         if: kind_arr[off_arr[k] + j] = 1 && c.fprintf(out_cell[0], "    cell: lmx_int_new_owned(a)\n    if: cell = 0 || refs[%d] = 0 || lmx_int_store_known(cell, lmx_int_value_known(refs[%d])) != 0 || lmx_arena_ref_store(a, p, %dU, cell) != 0\n        l2_send_fail()\n", j, j, j) < 0
             return: (cast: (int) (1))
-        if: kind_arr[off_arr[k] + j] = 2 && c.fprintf(out_cell[0], "    if: refs[%d] = 0\n        l2_send_fail()\n    source_text: (cast: (@: LmxArray) lmx_pointer_value_known(refs[%d]))\n    if: source_text = 0 || lmx_domain_kind(lmx_call_arena, (cast: (@: void) source_text)) != c.LMX_KIND_ARRAY || lmx_type_base(lmx_domain_type(lmx_call_arena, (cast: (@: void) source_text))) != c.LMX_TYPE_ARRAY_OF_CHAR || (source_text\\array.size != 0U && source_text\\array.data = 0)\n        l2_send_fail()\n    text: lmx_array_new_child_profiled(p, c.LMX_TYPE_ARRAY_OF_CHAR, (source_text\\array.size), a, 0)\n    if: text = 0 || lmx_arena_ref_store(a, p, %dU, (cast: (@: void) text)) != 0\n        l2_send_fail()\n    if: source_text\\array.size != 0U\n        memcpy((text\\array.data), (source_text\\array.data), (source_text\\array.size))\n    ---\n", j, j, j) < 0
+        if: kind_arr[off_arr[k] + j] = 2 && c.fprintf(out_cell[0], "    if: refs[%d] = 0\n        l2_send_fail()\n    source_text: (cast: (@: LmxArray) lmx_pointer_value_known(refs[%d]))\n    if: source_text = 0 || lmx_domain_kind(lmx_call_arena, (cast: (@: void) source_text)) != c.LMX_KIND_ARRAY || lmx_type_base(lmx_domain_type(lmx_call_arena, (cast: (@: void) source_text))) != c.LMX_TYPE_ARRAY_OF_CHAR || ((@ (source_text\\array))\\size != 0U && (@ (source_text\\array))\\data = 0)\n        l2_send_fail()\n    text: lmx_array_new_child_profiled(p, c.LMX_TYPE_ARRAY_OF_CHAR, ((@ (source_text\\array))\\size), a, 0)\n    if: text = 0 || lmx_arena_ref_store(a, p, %dU, (cast: (@: void) text)) != 0\n        l2_send_fail()\n    if: (@ (source_text\\array))\\size != 0U\n        memcpy(((@ (text\\array))\\data), ((@ (source_text\\array))\\data), ((@ (source_text\\array))\\size))\n    ---\n", j, j, j) < 0
             return: (cast: (int) (1))
         j := j + 1
     ---

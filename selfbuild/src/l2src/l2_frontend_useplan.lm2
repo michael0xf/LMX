@@ -1398,7 +1398,7 @@ fn: lm_compiler_model_inst_full (int: mi; int: ni; const: (char@: ind); c.L2Tx@:
         return: 1
     if: c.fprintf(out_cell[0], "%s@: void l2_model_value%d (cast: (@: void) (%s))\n%sLmxWalkValue: l2_cv%d\n%sint: l2_model_status%d lmx_walk_value_cell(l2_program_arena, l2_model_value%d, @ l2_cv%d)\n", ind, t, dest\data, ind, t, ind, t, t, t) < 0
         return: 1
-    if: c.fprintf(out_cell[0], "%sif: l2_model_status%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_model_status%d)\n%s    return: 0\n%s---\n%s@: Lmx %s (cast: (@: Lmx) l2_cv%d.ref)\n", ind, t, ind, t, ind, ind, ind, name, t) < 0
+    if: c.fprintf(out_cell[0], "%sif: l2_model_status%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_model_status%d)\n%s    return: 0\n%s---\n%s@: Lmx %s (cast: (@: Lmx) (@ (l2_cv%d))\\ref)\n", ind, t, ind, t, ind, ind, ind, name, t) < 0
         return: 1
     if: c.lm_compiler_emit_roots_values(mi, ind, "l2_call_arena", "l2_cv", t, 1, 0, 0) != 0
         return: 1
@@ -1434,6 +1434,7 @@ fn: lm_compiler_emit_deliver (int: mi; const: (c.LmP0Text@: tname); const: (char
     int: idx 0
     int: p
     int: control
+    int: mptr 0
     if: c.lm_compiler_catch_find(mi, tname, cname, @ blk, @ idx) = 0
         return: (cast: (int) (0))
     p := lm_compiler_pad_of(blk)
@@ -1446,8 +1447,13 @@ fn: lm_compiler_emit_deliver (int: mi; const: (c.LmP0Text@: tname); const: (char
         return: (cast: (int) (-1))
     if: c.fprintf(out_cell[0], "%sl2_pl%d: %s\n%sl2_at%d: %d\n", ind, p, payload, ind, p, idx) < 0
         return: (cast: (int) (-1))
-    if: c.lm_compiler_roots_enabled(mi) != 0 && c.fprintf(out_cell[0], "%sl2_pad_span%d.held: (cast: (@: void) l2_pl%d)\n", ind, p, p) < 0
-        return: -1
+    if: c.lm_compiler_roots_enabled(mi) != 0
+        mptr := lm_compiler_member_pointer("LmxExecutionRoots", "l2_pad_span%d", p, ind)
+        if: mptr < 0
+            return: -1
+        if: c.fprintf(out_cell[0], "%sl2_t%d\\held: (cast: (@: void) l2_pl%d)\n", ind, mptr, p) < 0
+            return: -1
+    ---
     # Unwind one real C scope at a time. Restoring an outer target now and
     # then an inner checkpoint on the next hop would resurrect dead spans.
     if: c.lm_compiler_emit_bindings_exit(mi, ind, 1, p) != 0

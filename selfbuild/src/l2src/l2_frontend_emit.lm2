@@ -18324,7 +18324,7 @@ fn: lm_compiler_emit_unit (const: (char@: out_path)) int
     if: library_mode_cell[0] = 0 && lm_compiler_parts_have_char() != 0 && c.fputs("        l2_program_chars: process_chars\n", out_cell[0]) < 0
         c.fclose(out_cell[0])
         return: (cast: (int) (1))
-    if: library_mode_cell[0] = 0 && c.fprintf(out_cell[0], "        l2_entry_unit: graph\n        if: l2_program_arena = 0 || l2_entry_unit = 0 || l2_entry_unit\\array.size != %uU\n            return: 1\n", kids) < 0
+    if: library_mode_cell[0] = 0 && c.fprintf(out_cell[0], "        l2_entry_unit: graph\n        if: l2_program_arena = 0 || l2_entry_unit = 0 || (@ (l2_entry_unit\\array))\\size != %uU\n            return: 1\n", kids) < 0
         c.fclose(out_cell[0])
         return: (cast: (int) (1))
     if: library_mode_cell[0] != 0 && c.fprintf(out_cell[0], "        l2_entry_unit: lmx_node_new_owned(l2_program_arena)\n        if: l2_entry_unit = 0\n            return: 1\n        if: %uU != 0U && lmx_arena_refs_open_owned(l2_program_arena, l2_entry_unit, %uU) != 0\n            return: 1\n", kids, kids) < 0

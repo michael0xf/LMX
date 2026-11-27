@@ -460,3 +460,59 @@ fn: lm_compiler_vec_grow (@: old; int: used; int: cap; size_t: esz) @
         lm_compiler_xfree(old)
     return: (cast: (@) (made))
 end: lm_compiler_vec_grow
+
+# The declaration line of a typed pointer to a record: `declaration (@ (record))`. declaration is the complete
+# pointer declaration of one name, `@: TYPE name` (lm_compiler_member_pointer_named, or lm_compiler_emit_raw_path
+# through the type's index). The author, 2026-11-27: the dotted member is no form of the grammar, and L1 is no
+# separate grammar; a member of a record held by value is reached through the record's address.
+fn: lm_compiler_emit_member_pointer (c.L2Tx@: declaration; const: (char@: record); const: (char@: ind)) int
+    c.FILE@@: out_cell (cast: (c.FILE@@) (@ c.l2_out))
+    if: declaration = 0 || record = 0 || ind = 0 || c.fprintf(out_cell[0], "%s%s (@ (%s))\n", ind, declaration\data, record) < 0
+        return: 1
+    return: 0
+end: lm_compiler_emit_member_pointer
+
+# One typed pointer to an already-admitted record under a name of its own: the declaration line
+# `@: TYPE pointer_name (@ (record))`. A head of an assignment to a member of a record held by value is then
+# `p\member`: `(@ (record))\member` is a value, and a head has no tree for it. type_word is the record's type as the
+# L1 declares it (`LmxWalkValue`). 0, or 1.
+fn: lm_compiler_member_pointer_named (const: (char@: type_word); const: (char@: record); const: (char@: pointer_name); const: (char@: ind)) int
+    c.L2FrontendScratchChar256: declaration_own_storage
+    char@: declaration_own (cast: (char@) declaration_own_storage\buffer)
+    c.L2Tx: declaration_tx
+    c.L2Tx@: declaration c.lm_compiler_tx_local(@ declaration_tx, declaration_own, 256U)
+    if: type_word = 0 || record = 0 || pointer_name = 0 || ind = 0 || declaration = 0
+        return: 1
+    if: c.lm_compiler_tx_join(declaration, "@: ", type_word, " ", pointer_name, 0) != 0
+        return: 1
+    return: lm_compiler_emit_member_pointer(declaration, record, ind)
+end: lm_compiler_member_pointer_named
+
+# The same pointer as the next temporary of a body, `l2_t<number>`: for a statement of a unit's body. record is the
+# record's name, or its printf form when number >= 0 (`l2_owp%d`). The number of the pointer, or -1. The data of a
+# unit is declared before its body starts the temporary counter: there a pointer takes a name of its own
+# (lm_compiler_member_pointer_named), never a number of that counter.
+fn: lm_compiler_member_pointer (const: (char@: type_word); const: (char@: record); int: number; const: (char@: ind)) int
+    int@: tn_cell (cast: (int@) (@ c.l2_tn))
+    c.L2FrontendScratchChar48: name_storage
+    char@: name (cast: (char@) name_storage\buffer)
+    c.L2FrontendScratchChar96: record_storage
+    char@: record_text (cast: (char@) record_storage\buffer)
+    if: record = 0 || ind = 0
+        return: -1
+    if: c.snprintf(name, 48U, "l2_t%d", tn_cell[0]) < 0
+        return: -1
+    if: number >= 0
+        if: c.snprintf(record_text, 96U, record, number) < 0 || lm_compiler_member_pointer_named(type_word, record_text, name, ind) != 0
+            return: -1
+            ---
+        ---
+    else:
+        if: lm_compiler_member_pointer_named(type_word, record, name, ind) != 0
+            return: -1
+            ---
+        ---
+    ---
+    tn_cell[0] := tn_cell[0] + 1
+    return: (tn_cell[0] - 1)
+end: lm_compiler_member_pointer

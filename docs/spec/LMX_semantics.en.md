@@ -244,13 +244,13 @@ promoted to this branch.
 Here obj is an ordinary Array/Structure. `savedType` already refers to its type
 description; `typeInfo` retains that identity. The description exposes primitive
 or element storage, rank and the axis constraints written in the normalized
-TYPE, compatibility relationships, and the common capacity-access policy.
+TYPE and compatibility relationships.
 Unspecified axes stay unspecified. Neither inspecting a type nor observing
 initializer rows manufactures per-object shape metadata.
 
-`sys\capacity(obj)` remains the query for that Array's actual capacity. The
-shared TYPE describes how to consult the optional capacity entry or use length;
-at capacity=length an instance of any rank has one primary `Lmx` of its own and no reserve entry.
+`sys\capacity(obj)` reads the optional capacity entry for that Array or returns
+its length when the entry is absent. At capacity=length an instance of any rank
+has one primary `Lmx` of its own and no reserve entry.
 Every `[]int` has a TypeRef pointing to the same actual system Structure for `[]int`, including arrays of different lengths.
 
 A saved TypeRef and its canonical description remain immutable. Reserve or an

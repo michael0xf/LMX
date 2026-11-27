@@ -359,9 +359,10 @@ precedence for canonical TYPE objects, not for a user Structure selected by name
 or a similar field layout. There is no integer-code lookup, cast of an arbitrary
 int to metadata, copy or per-object descriptor allocation. The common description
 contains the complete normalized LEFT, declared dimensions, actual storage rules
-and compatibility, plus the common capacity access policy. It contains no instance
-reserve or initializer-inferred extents. Actual capacity is `sys\capacity(obj)`;
-missing dimensions stay unknown unless TYPE plus current length determines them.
+and compatibility. It contains no instance reserve or initializer-inferred extents.
+`sys\capacity(obj)` reads the instance's optional capacity entry or returns its
+length when the entry is absent. Missing dimensions stay unknown unless TYPE plus
+current length determines them.
 Saved TypeRefs remain valid and immutable; reserve/resize does not change them.
 The ordinary object overload and no-argument DATA default remain intact.
 [Normative TYPE contract](ARRAY_STORAGE.en.md#type-descriptor),

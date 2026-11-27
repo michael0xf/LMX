@@ -52,9 +52,10 @@ system-TYPE overload `sys\descriptor(sys\typeof(obj))` returns that **same**
 immutable Structure, with no integer lookup, copied description or per-Array
 allocation. Only the canonical TYPE contract selects this branch; ordinary user
 Structures keep the three-field-address overload. The metadata exposes the full
-LEFT, declared dimensions, storage/compatibility and common capacity access policy.
-Actual capacity still uses `sys\capacity(obj)`. No initializer-specific shape or
-reserve amount enters the shared type. Saved TypeRefs stay valid while needed.
+LEFT, declared dimensions, storage and compatibility. `sys\capacity(obj)` reads
+the instance's optional capacity entry or returns its length when the entry is absent.
+No initializer-specific shape or reserve amount enters the shared type. Saved TypeRefs
+stay valid while needed.
 [TYPE specification](ARRAY_STORAGE.en.md#type-descriptor), production **NOT_RUN**.
 
 Lowering parent/length/sys\storage reads header fields; sys\native obtains the native descriptor from call tables and

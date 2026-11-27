@@ -222,13 +222,13 @@ print: "Hello World"
 Здесь obj — обычный Array/Structure. `savedType` уже ссылается на описание его
 типа; `typeInfo` сохраняет эту идентичность. Описание раскрывает хранение
 примитива либо элемента, rank и ограничения осей нормализованного TYPE,
-отношения совместимости и общий договор получения capacity. Незаданные оси
-остаются незаданными. Просмотр типа и наблюдение рядов инициализатора не
+отношения совместимости. Незаданные оси остаются незаданными.
+Просмотр типа и наблюдение рядов инициализатора не
 создают сведений формы отдельного экземпляра.
 
-`sys\capacity(obj)` остаётся запросом фактической вместимости данного Array.
-Общий TYPE описывает проверку необязательной записи capacity либо использование
-length. При capacity=length экземпляр любого ранга имеет один собственный основной `Lmx` без записи о резерве.
+`sys\capacity(obj)` читает необязательную запись вместимости данного Array
+или возвращает length, если записи нет. При capacity=length экземпляр любого
+ранга имеет один собственный основной `Lmx` без записи о резерве.
 TypeRef всех `[]int` указывает на одну реально существующую служебную Structure типа `[]int`, в том числе при разных длинах.
 
 Сохранённая TypeRef и её каноническое описание неизменяемы. Reserve или
@@ -358,13 +358,13 @@ promoted to this branch.
 Here obj is an ordinary Array/Structure. `savedType` already refers to its type
 description; `typeInfo` retains that identity. The description exposes primitive
 or element storage, rank and the axis constraints written in the normalized
-TYPE, compatibility relationships, and the common capacity-access policy.
+TYPE and compatibility relationships.
 Unspecified axes stay unspecified. Neither inspecting a type nor observing
 initializer rows manufactures per-object shape metadata.
 
-`sys\capacity(obj)` remains the query for that Array's actual capacity. The
-shared TYPE describes how to consult the optional capacity entry or use length;
-at capacity=length an instance of any rank has one primary `Lmx` of its own and no reserve entry.
+`sys\capacity(obj)` reads the optional capacity entry for that Array or returns
+its length when the entry is absent. At capacity=length an instance of any rank
+has one primary `Lmx` of its own and no reserve entry.
 Every `[]int` has a TypeRef pointing to the same actual system Structure for `[]int`, including arrays of different lengths.
 
 A saved TypeRef and its canonical description remain immutable. Reserve or an

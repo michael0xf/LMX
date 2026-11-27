@@ -350,13 +350,13 @@ objects have a finite bootstrapped metatype; ordinary graph cycles can support
 
 The returned Structure exposes the normalized complete type description:
 applicable element/storage constraints, the written rank and axis constraints,
-the policy for obtaining any dimension derivable from length, the common
-capacity-access policy, and direct compatibility/refinement relations. Unknown
-axes stay unspecified; initializer rows never appear as extra exact dimensions.
+the policy for obtaining any dimension derivable from length, and direct
+compatibility/refinement relations. Unknown axes stay unspecified. Initializer
+rows never appear as extra exact dimensions.
 Actual instance length and reserve are not copied into a shared type description.
-Capacity comes from `sys\capacity(obj)`; its type description explains the common
-association-or-length policy, not whether this particular Array currently has
-reserve. No new public field names or large mandatory metadata schema are required.
+`sys\capacity(obj)` reads the instance's optional capacity entry or returns
+its length when the entry is absent. No new public field names or large mandatory
+metadata schema are required.
 
 The canonical description is system-owned and read-only. Reserve and admitted
 resize do not replace it. A saved TypeRef continues to identify that same type

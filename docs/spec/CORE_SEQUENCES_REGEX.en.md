@@ -208,8 +208,8 @@ TYPE descriptions, not for ordinary Structures guessed by name or fields. The
 ordinary object overload still returns its three live primary-field addresses;
 the no-argument form keeps current DATA. There is no integer lookup, copied type
 object or secondary allocation. Descriptions expose full LEFT, storage rules,
-explicit dimensions and compatibility. `sys\capacity(obj)` remains the actual
-instance query; the description states its common optional-entry-or-length policy.
+explicit dimensions and compatibility. `sys\capacity(obj)` reads the instance's
+optional capacity entry or returns its length when the entry is absent.
 Type descriptions have a finite bootstrapped meta-description, with ordinary graph
 cycles where needed. [TYPE descriptor](ARRAY_STORAGE.en.md#type-descriptor):
 **DOC_SPEC_ADDITION_ONLY**, production acceptance **NOT_RUN**.

@@ -232,6 +232,9 @@ fn: lmx_graph_deferred_kind (c.LmxGraph@: g; @: value) int
     declaration := (cast: (c.Lmx@) value)
     if: state = 0 || c.lmx_graph_kind(g, value) != 4 || c.lmx_graph_fn_result(g, value) != 0
         return: 0
+    if: c.lmx_graph_type_form(g, value) = 3
+        return: 10
+    ---
     head := c.lmx_graph_name_of(g, value)
     n := c.lmx_graph_count(declaration)
     if: head = state\w_int && n >= 2U
@@ -442,12 +445,16 @@ fn: lmx_graph_work_load (c.LmxGraph@: g; c.LmxGraphWork@@: place) int
                 value := c.lmx_graph_int(g, number)
             ---
         else:
-            status := lmx_graph_read_received_value(g, (cast: (c.Lmx@) active\code), c.lmx_graph_get_in(g, declaration, c.lmx_graph_count(declaration) - 1U), (cast: (int) (kind = 6)) * 2, @ value)
-            if: status = 0
-                if: kind = 6
-                    value := c.lmx_graph_lmx_ref_of(g, value)
-                else:
-                    value := c.lmx_graph_int_ref_of(g, value)
+            if: kind = 10
+                status := lmx_graph_array_place(g, (cast: (c.Lmx@) active\code), declaration, @ value)
+            else:
+                status := lmx_graph_read_received_value(g, (cast: (c.Lmx@) active\code), c.lmx_graph_get_in(g, declaration, c.lmx_graph_count(declaration) - 1U), (cast: (int) (kind = 6)) * 2, @ value)
+                if: status = 0
+                    if: kind = 6
+                        value := c.lmx_graph_lmx_ref_of(g, value)
+                    else:
+                        value := c.lmx_graph_int_ref_of(g, value)
+                    ---
                 ---
             ---
         ---
@@ -3041,10 +3048,13 @@ fn: lmx_graph_group_expression (c.LmxGraph@: g; c.Lmx@: scope; @: raw) int
             return: (cast: (int) (c.lmx_graph_name_of(g, child) = 0))
         if: kind != 4
             return: 0
-        if: c.lmx_graph_name_of(g, child) != 0
+        word := c.lmx_graph_name_of(g, child)
+        if: word != 0
             # A language application still belongs to its existing receiver,
             # including a receiver this subset must explicitly refuse.
-            return: (cast: (int) (c.lmx_graph_language_receiver(c.lmx_graph_name_of(g, child)) != 0 || lmx_graph_applies(g, scope, child) != 0))
+            # A structural callable is as much an expression under parentheses
+            # as a method. The query only classifies its head.
+            return: (cast: (int) (c.lmx_graph_language_receiver(word) != 0 || c.lmx_graph_kind(g, c.lmx_graph_target(g, lmx_graph_resolve(g, scope, word))) = 4))
         return: lmx_graph_group_expression(g, scope, child)
     word := c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, value, 0U))
     if: count = 2U
@@ -5076,6 +5086,9 @@ fn: lmx_graph_block_declaration (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: holder; s
     int: required_kind 0
     int: supplied 0
     int: status 0
+    if: c.lmx_graph_type_form(g, raw) = 3
+        return: lmx_graph_reach_array_place(g, code, holder, index)
+    ---
     if: name = 0
         return: 0
     if: kind = 1 || kind = 3
@@ -5196,7 +5209,13 @@ fn: lmx_graph_block_body (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: body; size_t: fr
             continue
         raw := c.lmx_graph_binding_leaf(g, raw)
         kind := c.lmx_graph_kind(g, raw)
-        if: kind = 1 || kind = 3 || kind = 5 || kind = 6 || kind = 8 || kind = 9 || (kind = 0 && c.lmx_types_record_reference(g\arena, raw) != 0)
+        int: type_form c.lmx_graph_type_form(g, raw)
+        if: type_form = 2
+            status := lmx_graph_eval_value(g, code, raw, @ discarded)
+            i := i + 1U
+            continue
+        ---
+        if: type_form = 3 || kind = 1 || kind = 3 || kind = 5 || kind = 6 || kind = 8 || kind = 9 || (kind = 0 && c.lmx_types_record_reference(g\arena, raw) != 0)
             status := lmx_graph_block_declaration(g, code, body, i, 0, mode)
             i := i + 1U
             continue
@@ -5965,6 +5984,11 @@ fn: lmx_graph_result_cell (c.LmxGraph@: g; c.LmxWalkValue@: value; @@: out) int
     c.LmxWalkValue: boxed
     if: g = 0 || value = 0 || out = 0 || value\present = 0
         return: 4
+    if: value\kind = c.LMX_WALK_VALUE_REFERENCE && value\type = c.LMX_TYPE_DESC && c.lmx_range_classify(g\arena, value\ref) = c.LMX_KIND_ARRAY
+        # A returned Array already has an addressable header with its TypeRef.
+        out[0] := value\ref
+        return: 0
+    ---
     # A scalar return was already saved before cleanup. Its ordinary result
     # cell is also its address; do not copy it again merely to supply an address.
     if: value\kind = c.LMX_WALK_VALUE_FOREIGN && value\scalar_abi != 0
@@ -6024,7 +6048,7 @@ fn: lmx_graph_eval_record (c.LmxGraph@: g; c.Lmx@: scope; @: raw; c.LmxWalkValue
         # result as before (lmx_graph_eval_explicit_call).
         if: word = state\w_call
             return: lmx_graph_eval_explicit_call_value(g, scope, (cast: (c.Lmx@) raw), 1, out)
-        if: word = 0 || lmx_graph_language_word(state, word) = 0
+        if: c.lmx_graph_type_form(g, raw) != 2 && (word = 0 || lmx_graph_language_word(state, word) = 0)
             if: c.lmx_graph_application_parts(g, raw, 0, 0, 0) != 0
                 return: lmx_graph_eval_application_value(g, scope, (cast: (c.Lmx@) raw), 1, out)
             ---
@@ -6039,6 +6063,262 @@ fn: lmx_graph_eval_record (c.LmxGraph@: g; c.Lmx@: scope; @: raw; c.LmxWalkValue
         return: 4
     return: 0
 end: lmx_graph_eval_record
+
+fn: lmx_graph_normalize_array_type (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: recipe; int: run; c.Lmx@@: out) int
+    size_t@: axes 0
+    size_t: rank 0U
+    size_t: i 1U
+    int: depth 0
+    int: status 0
+    if: c.lmx_graph_value_int(g, c.lmx_graph_get_in(g, recipe, 0U), @ depth) != 0 || depth < 0
+        return: 4
+    ---
+    while: i < c.lmx_graph_count(recipe) && status = 0
+        status := lmx_graph_append_type_axes(g, scope, c.lmx_graph_get_in(g, recipe, i), run, @ axes, @ rank)
+        i := i + 1U
+    ---
+    if: status = 0
+        out[0] := c.lmx_types_composed_reference(g\arena, (cast: (size_t) depth), axes, rank)
+        if: out[0] = 0
+            status := 1
+        ---
+    ---
+    c.free((cast: (@) axes))
+    return: status
+end: lmx_graph_normalize_array_type
+
+# A literal field is a fixed extent or the open-axis marker (-1). In a
+# bounded expression field, the mode says whether an int gives an extent or
+# a count. The ordinary evaluator obtains exactly one Value for that field.
+fn: lmx_graph_append_type_axes (c.LmxGraph@: g; c.Lmx@: scope; @: field; int: run; size_t@@: axes; size_t@: rank) int
+    int: extent 0 - 1
+    int: number 0
+    int: sequence 0
+    size_t: count 1U
+    size_t: arank 0U
+    size_t: i 0U
+    int@: sizes 0
+    @: operand void 0
+    @: value void 0
+    if: c.lmx_graph_kind(g, field) = 1
+        extent := c.lmx_int_value_known(field)
+    else:
+        c.Lmx@: entry (cast: (c.Lmx@) field)
+        if: c.lmx_graph_kind(g, field) != 4 || c.lmx_graph_count(entry) != 2U || c.lmx_graph_value_int(g, c.lmx_graph_get_in(g, entry, 0U), @ sequence) != 0
+            return: 4
+        ---
+        operand := c.lmx_graph_get_in(g, entry, 1U)
+        if: run = 0
+            if: c.lmx_graph_kind(g, operand) != 1
+                return: 5
+            ---
+            value := operand
+        else:
+            int: status lmx_graph_eval_value(g, scope, operand, @ value)
+            if: status != 0
+                return: status
+            ---
+        ---
+        if: c.lmx_graph_value_int(g, value, @ number) = 0
+            if: number < sequence
+                return: 4
+            ---
+            if: sequence = 0
+                extent := number
+            else:
+                count := (cast: (size_t) number)
+            ---
+        else:
+            value := c.lmx_graph_target(g, value)
+            if: sequence = 0 || c.lmx_range_type_of(g\arena, value) != c.LMX_TYPE_ARRAY_OF_INT
+                return: 4
+            ---
+            c.Lmx@: type_ref c.lmx_types_record_reference(g\arena, value)
+            if: c.lmx_types_reference_parts(g\arena, type_ref, 0, @ arank, 0) = 0 || arank != 1U
+                return: 4
+            ---
+            c.LmxArray@: array (cast: (c.LmxArray@) value)
+            c.VoidArray@: data @ array\array
+            count := data\size
+            sizes := (cast: (int@) data\data)
+            if: count = 0U || sizes = 0
+                return: 4
+            ---
+        ---
+    ---
+    if: count > ((cast: (size_t) -1) / c.sizeof(c.size_t)) - rank[0]
+        return: 4
+    ---
+    size_t@: grown (cast: (size_t@) c.realloc((cast: (@) axes[0]), (rank[0] + count) * c.sizeof(c.size_t)))
+    if: grown = 0
+        return: 1
+    ---
+    axes[0] := grown
+    while: i < count
+        if: sizes != 0
+            extent := sizes[i]
+            if: extent < 0
+                return: 4
+            ---
+        ---
+        grown[rank[0] + i] := (cast: (size_t) extent)
+        i := i + 1U
+    ---
+    rank[0] := rank[0] + count
+    return: 0
+end: lmx_graph_append_type_axes
+
+fn: lmx_graph_flat_array_extent (const: (size_t@: axes); size_t: rank; size_t: item_count) int
+    if: axes = 0
+        return: 1
+    ---
+    int: missing 0
+    size_t: product 1U
+    size_t: i 0U
+    while: i < rank
+        if: axes[i] = (cast: (size_t) -1)
+            missing := 1
+        else:
+            if: axes[i] = 0U
+                return: item_count = 0U
+            ---
+            if: product > ((cast: (size_t) -1) / axes[i])
+                return: 0
+            ---
+            product := product * axes[i]
+        ---
+        i := i + 1U
+    ---
+    if: missing != 0
+        return: item_count % product = 0U
+    ---
+    return: item_count = product
+end: lmx_graph_flat_array_extent
+
+# Dense literal construction shares the same layout validation for a
+# literal TypeRef and for a TypeRef produced when the declaration is reached.
+fn: lmx_graph_array_literal (c.LmxGraph@: g; c.Lmx@: parent; c.Lmx@: reference; @: initializer; @@: out) int
+    size_t: rank 0U
+    size_t: depth 0U
+    size_t@: axes 0
+    if: c.lmx_types_reference_parts(g\arena, reference, @ axes, @ rank, @ depth) = 0 || depth != 0U || rank = 0U
+        return: 2
+    ---
+    if: c.lmx_graph_kind(g, initializer) != 4
+        return: 2
+    ---
+    c.Lmx@: rows (cast: (c.Lmx@) initializer)
+    size_t@: shape (cast: (size_t@) c.malloc(rank * c.sizeof(c.size_t)))
+    if: shape = 0
+        return: 1
+    ---
+    c.memset((cast: (@) shape), 255, rank * c.sizeof(c.size_t))
+    size_t: literal_rank rank
+    size_t@: literal_axes axes
+    if: rank > 1U && (c.lmx_graph_count(rows) = 0U || c.lmx_graph_kind(g, c.lmx_graph_get_in(g, rows, 0U)) != 4)
+        literal_rank := 1U
+        literal_axes := 0
+    ---
+    size_t: count 0U
+    int: admitted lmx_graph_literal_ints(g, rows, literal_axes, shape, 0U, literal_rank, 0, @ count)
+    if: admitted != 1 || (literal_rank != rank && lmx_graph_flat_array_extent(axes, rank, count) = 0)
+        c.free((cast: (@) shape))
+        if: admitted < 0
+            return: -1
+        ---
+        return: 2
+    ---
+    c.LmxArray@: array c.lmx_array_new_int_with_reference(g\arena, parent, reference, count)
+    if: array != 0
+        c.VoidArray@: data @ array\array
+        int@: values (cast: (int@) data\data)
+        count := 0U
+        lmx_graph_literal_ints(g, rows, literal_axes, shape, 0U, literal_rank, values, @ count)
+        out[0] := (cast: (@) array)
+    ---
+    c.free((cast: (@) shape))
+    return: (cast: (int) (array = 0))
+end: lmx_graph_array_literal
+
+fn: lmx_graph_literal_ints (c.LmxGraph@: g; c.Lmx@: rows; const: (size_t@: axes); size_t@: shape; size_t: level; size_t: rank; int@: values; size_t@: cursor) int
+    if: c.lmx_graph_kind(g, rows) != 4 || c.lmx_graph_name_of(g, rows) != 0
+        return: 0
+    ---
+    size_t: count c.lmx_graph_count(rows)
+    size_t: unknown (cast: (size_t) -1)
+    if: (axes != 0 && axes[level] != unknown && axes[level] != count) || (shape[level] != unknown && shape[level] != count)
+        return: 0
+    ---
+    shape[level] := count
+    size_t: i 0U
+    while: i < count
+        @: item void c.lmx_graph_get_in(g, rows, i)
+        if: level + 1U = rank
+            if: c.lmx_graph_kind(g, item) != 1 || c.lmx_graph_name_of(g, item) != 0
+                return: -1
+            ---
+            if: cursor[0] = unknown
+                return: 0
+            ---
+            if: values != 0
+                values[cursor[0]] := c.lmx_int_value_known(item)
+            ---
+            cursor[0] := cursor[0] + 1U
+        else:
+            int: admitted lmx_graph_literal_ints(g, (cast: (c.Lmx@) item), axes, shape, level + 1U, rank, values, cursor)
+            if: admitted != 1
+                return: admitted
+            ---
+        ---
+        i := i + 1U
+    ---
+    return: 1
+end: lmx_graph_literal_ints
+
+fn: lmx_graph_array_place (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: declaration; @@: out) int
+    c.Lmx@: reference 0
+    c.Lmx@: recipe (cast: (c.Lmx@) c.lmx_graph_get_in(g, declaration, 1U))
+    int: status lmx_graph_normalize_array_type(g, code, recipe, 1, @ reference)
+    if: status != 0
+        return: status
+    ---
+    if: c.lmx_graph_count(declaration) = 3U
+        status := lmx_graph_array_literal(g, (cast: (c.Lmx@) declaration\parent), reference, c.lmx_graph_get_in(g, declaration, 2U), out)
+        if: status < 0 || status = 2
+            return: 4
+        ---
+        return: status
+    ---
+    out[0] := c.lmx_types_uninit_array(g\arena, reference)
+    return: (cast: (int) (out[0] = 0))
+end: lmx_graph_array_place
+
+fn: lmx_graph_reach_array_place (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: owner; size_t: slot) int
+    c.Lmx@: declaration (cast: (c.Lmx@) c.lmx_graph_binding_leaf(g, c.lmx_graph_get_in(g, owner, slot)))
+    c.LmxActivation@: active (cast: (c.LmxActivation@) g\arena\activation)
+    c.LmxGraphFrame@: frame 0
+    c.LmxGraphWork@: row 0
+    @: storage void 0
+    int: kind 0
+    size_t: token 0U
+    int: status lmx_graph_place_site(g, code, owner, slot, @ token, @ kind)
+    if: status != 0
+        return: status
+    ---
+    status := lmx_graph_array_place(g, code, declaration, @ storage)
+    if: status != 0
+        return: status
+    ---
+    frame := (cast: (c.LmxGraphFrame@) active\frame)
+    row := lmx_graph_work_target(frame\rows + (token - active\width))
+    if: row = 0
+        return: 3
+    ---
+    row\cell := storage
+    row\loaded := row\loaded | 1
+    c.lmx_walk_value_clear((cast: (c.LmxWalkValue@) (@ row\value)))
+    return: 0
+end: lmx_graph_reach_array_place
 
 fn: lmx_graph_array_typeof (c.LmxGraph@: g; c.Lmx@: scope; c.Lmx@: expression) c.Lmx@
     if: c.lmx_graph_count(expression) != 1U
@@ -6089,6 +6369,12 @@ fn: lmx_graph_eval_value (c.LmxGraph@: g; c.Lmx@: scope; @: raw; @@: out) int
             if: c.lmx_graph_name_of(g, raw) = state\w_merge
                 return: lmx_graph_eval_merge(g, scope, (cast: (c.Lmx@) raw), out)
             word := c.lmx_graph_name_of(g, raw)
+            if: c.lmx_graph_type_form(g, raw) = 2
+                c.Lmx@: type_ref 0
+                status := lmx_graph_normalize_array_type(g, scope, (cast: (c.Lmx@) raw), 1, @ type_ref)
+                out[0] := (cast: (@) type_ref)
+                return: status
+            ---
             if: word = state\w_typeof
                 c.Lmx@: type_ref lmx_graph_array_typeof(g, scope, (cast: (c.Lmx@) raw))
                 if: type_ref != 0
@@ -6342,7 +6628,20 @@ fn: lmx_graph_eval_number (c.LmxGraph@: g; c.Lmx@: scope; @: raw; int@: out) int
     if: count = 3U && word = state\w_eq
         @: first void c.lmx_graph_get_in(g, expression, 0U)
         @: second void c.lmx_graph_get_in(g, expression, 2U)
-        if: c.lmx_types_reference_parts(g\arena, first, 0, 0, 0) != 0 && c.lmx_types_reference_parts(g\arena, second, 0, 0, 0) != 0
+        int: left_form c.lmx_graph_type_form(g, first)
+        int: right_form c.lmx_graph_type_form(g, second)
+        if: left_form != 0 && left_form != 3 && right_form != 0 && right_form != 3 && (left_form != 4 || right_form != 4)
+            status := lmx_graph_eval_value(g, scope, first, @ first)
+            if: status != 0
+                return: status
+            ---
+            status := lmx_graph_eval_value(g, scope, second, @ second)
+            if: status != 0
+                return: status
+            ---
+            if: c.lmx_graph_type_form(g, first) != 1 || c.lmx_graph_type_form(g, second) != 1
+                return: 4
+            ---
             out[0] := (cast: (int) (first = second))
             return: 0
         ---

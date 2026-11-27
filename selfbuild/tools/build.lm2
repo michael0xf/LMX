@@ -2371,8 +2371,8 @@ fn: bld_kernel_l2 (c.FILE@: rec; char@: repo; char@: stage; char@: base; char@: 
     char@@: walk_value_names c.calloc(200U, sizeof(char@))
     char@@: checks_names c.calloc(6U, sizeof(char@))
     char@@: language_names c.calloc(3U, sizeof(char@))
-    char@@: graph_names c.calloc(114U, sizeof(char@))
-    char@@: graph_run_names c.calloc(95U, sizeof(char@))
+    char@@: graph_names c.calloc(115U, sizeof(char@))
+    char@@: graph_run_names c.calloc(98U, sizeof(char@))
     char@: src txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
         return: 1
@@ -2508,6 +2508,7 @@ fn: bld_kernel_l2 (c.FILE@: rec; char@: repo; char@: stage; char@: base; char@: 
     graph_names[111] := "lmx_native_install"
     graph_names[112] := "lmx_graph_number_in"
     graph_names[113] := "lmx_graph_scalar_typed_text"
+    graph_names[114] := "lmx_graph_type_form"
     # The module of checks and the types of L3 (plan #one-graph-plan, P1), below lmx_graph: the graph's operations and the
     # interpreter call it.
     checks_names[0] := "lmx_l3_type"
@@ -2611,6 +2612,9 @@ fn: bld_kernel_l2 (c.FILE@: rec; char@: repo; char@: stage; char@: base; char@: 
     graph_run_names[92] := "lmx_graph_method_run_value"
     graph_run_names[93] := "lmx_graph_call_diagnosis"
     graph_run_names[94] := "lmx_graph_structural_diagnosis"
+    graph_run_names[95] := "lmx_graph_normalize_array_type"
+    graph_run_names[96] := "lmx_graph_reach_array_place"
+    graph_run_names[97] := "lmx_graph_array_literal"
     clock_names[0] := "lmx_clock_now"
     clock_names[1] := "lmx_clock_ticks"
     clock_names[2] := "lmx_clock_since"
@@ -3462,9 +3466,9 @@ fn: bld_kernel_l2 (c.FILE@: rec; char@: repo; char@: stage; char@: base; char@: 
     language_names[2] := "lmx_language_call_word"
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_language_words", language_names, 3, 1) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph", graph_names, 114, 1) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph", graph_names, 115, 1) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_run", graph_run_names, 95, 1) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_run", graph_run_names, 98, 1) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_ids", ids_names, 6, 0) != 0
         return: 1

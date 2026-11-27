@@ -538,6 +538,16 @@ fn: lm_graph_emit_operand (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: scope; c.Lmx@: ho
     int: value 0
     int: number 0
     int: status 0
+    int: type_form c.lmx_graph_type_form(g, raw)
+    if: type_form = 2 || type_form = 4
+        value := temps[0]
+        temps[0] := value + 1
+        c.fprintf(f, "        @: void l2_v%d 0\n        if: lmx_graph_eval_value(l2_g, lmx_call_code, lmx_graph_get_in(l2_g, ", value)
+        status := lm_graph_emit_address(g, f, scope, holder)
+        c.fprintf(f, ", %zuU), @ l2_v%d) != 0\n            %s\n", index, value, leave_failure)
+        temp[0] := value
+        return: status
+    ---
     # User applications carry a full result. Numeric built-ins keep their
     # existing emitter; only a numerical consumer asks for an int projection.
     if: kind = 4 && c.lmx_graph_name_of(g, raw) != 0
@@ -776,17 +786,20 @@ fn: lm_graph_emit_number (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: scope; c.Lmx@: hol
         if: count = 3U && word = state\w_eq
             @: first void c.lmx_graph_get_in(g, expression, 0U)
             @: second void c.lmx_graph_get_in(g, expression, 2U)
-            if: c.lmx_types_reference_parts(g\arena, first, 0, 0, 0) != 0 && c.lmx_types_reference_parts(g\arena, second, 0, 0, 0) != 0
-                status := lm_graph_emit_received_operand(g, f, scope, expression, 0U, 2, -1, temps, decl_names, decl_slots, decl_n, @ left)
+            int: left_form c.lmx_graph_type_form(g, first)
+            int: right_form c.lmx_graph_type_form(g, second)
+            if: left_form != 0 && left_form != 3 && right_form != 0 && right_form != 3 && (left_form != 4 || right_form != 4)
+                status := lm_graph_emit_operand(g, f, scope, expression, 0U, temps, decl_names, decl_slots, decl_n, @ left)
                 if: status != 0
                     return: status
                 ---
-                status := lm_graph_emit_received_operand(g, f, scope, expression, 2U, 2, -1, temps, decl_names, decl_slots, decl_n, @ right)
+                status := lm_graph_emit_operand(g, f, scope, expression, 2U, temps, decl_names, decl_slots, decl_n, @ right)
                 if: status != 0
                     return: status
                 ---
                 value := temps[0]
                 temps[0] := value + 1
+                c.fprintf(f, "        if: lmx_graph_type_form(l2_g, l2_v%d) != 1 || lmx_graph_type_form(l2_g, l2_v%d) != 1\n            %s\n", left, right, leave_failure)
                 c.fprintf(f, "        int: l2_t%d (cast: (int) (l2_v%d = l2_v%d))\n", value, left, right)
                 temp[0] := value
                 return: 0
@@ -1890,6 +1903,12 @@ fn: lm_graph_emit_declaration (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: code; c.Lmx@:
     int: result 0
     int: status 0
     lm_graph_emit_leave_text(leave_failure, temps[1], 1)
+    if: c.lmx_graph_type_form(g, raw) = 3
+        c.fputs("        if: lmx_graph_reach_array_place(l2_g, lmx_call_code, ", f)
+        status := lm_graph_emit_address(g, f, code, holder)
+        c.fprintf(f, ", %zuU) != 0\n            %s\n", index, leave_failure)
+        return: status
+    ---
     if: kind = 0 && c.lmx_types_record_reference(g\arena, raw) != 0
         if: mode = 0 && c.lmx_graph_slot_name(g, holder, index) != 0
             number := temps[0]
@@ -2027,11 +2046,17 @@ fn: lm_graph_emit_block (c.LmxGraph@: g; c.FILE@: f; c.Lmx@: code; c.Lmx@: body;
             continue
         raw := c.lmx_graph_binding_leaf(g, c.lmx_graph_get_in(g, body, i))
         kind := c.lmx_graph_kind(g, raw)
+        int: type_form c.lmx_graph_type_form(g, raw)
+        if: type_form = 2
+            status := lm_graph_emit_operand(g, f, code, body, i, temps, 0, 0, 0U, @ result)
+            i := i + 1U
+            continue
+        ---
         # A declaration of an int place in a body runs at its written position (§3.2), at every reach, as in the
         # interpreter (plan M11 5a, B5, B10): a literal declaration writes into the activation's place what stands in its
         # slot when the line runs -- read from the graph then, not the value the translation saw --, a place without a
         # value is checked; in an inline body of the root the root's place is written.
-        if: kind = 1 || kind = 3 || kind = 5 || kind = 6 || kind = 8 || kind = 9 || (kind = 0 && c.lmx_types_record_reference(g\arena, raw) != 0)
+        if: type_form = 3 || kind = 1 || kind = 3 || kind = 5 || kind = 6 || kind = 8 || kind = 9 || (kind = 0 && c.lmx_types_record_reference(g\arena, raw) != 0)
             status := lm_graph_emit_declaration(g, f, code, body, i, 0, 0U, mode, temps)
             if: status != 0
                 return: status

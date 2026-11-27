@@ -1,0 +1,14 @@
+([]int: sizes [2 2 3 3])
+Trace:
+    int: calls 1
+    int: same 1
+end: Trace
+Provider:
+    return: @
+    Make:
+        :=: (Trace \ calls) ((Trace \ calls) + 1)
+        return: sizes
+    end: Make
+end: Provider
+@: getSizes (Provider \ Make)
+:=: (Trace \ same) (($array-type 0 (1 ((getSizes)))) = sys\descriptor([2][2][3][3]int))

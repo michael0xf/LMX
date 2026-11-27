@@ -1,0 +1,25 @@
+([]int: sizes [2 2 3 3])
+Trace:
+    int: calls 1
+    int: before 0
+    int: same 1
+    int: countSame 1
+    int: matrixSame 1
+    int: last 4
+end: Trace
+Provider:
+    return: @
+    Make:
+        :=: (Trace \ calls) ((Trace \ calls) + 1)
+        return: sizes
+    end: Make
+end: Provider
+@: getSizes (Provider \ Make)
+:=: (Trace \ before) (Trace \ calls)
+$array-place: customTypeArray ($array-type 0 (1 (getSizes)))
+:=: (Trace \ same) ((typeof customTypeArray) = sys\descriptor([2][2][3][3]int))
+:=: (Trace \ countSame) (($array-type 0 (1 (1 + 1))) = sys\descriptor([][]int))
+([]int: initSizes [2 2])
+$array-place: matrix ($array-type 0 (1 (initSizes))) ((1 2) (3 4))
+:=: (Trace \ matrixSame) ((typeof matrix) = sys\descriptor([2][2]int))
+:=: (Trace \ last) (matrix [] 3)

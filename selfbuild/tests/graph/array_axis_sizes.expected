@@ -1,15 +1,15 @@
 ([]int: sizes [2 2 3 3])
-([2][2][3][3]int: customTypeArray)
+$array-place: customTypeArray ($array-type 0 (1 sizes))
 ([2][2][3][3]int: explicit)
-sys\descriptor([2][2][3][3]int)
+$array-type: 0 (1 sizes)
 sys\descriptor([2][2][3][3]int)
 ([]int: withZero [3 0 2])
-([7][3][0][2]@: empty)
+$array-place: empty ($array-type 1 (0 7) (1 withZero))
 Observed:
     int: equal 1
     int: equalZero 1
     int: reorderedEqual 0
 end: Observed
-:=: (Observed \ equal) (sys\descriptor([2][2][3][3]int) = sys\descriptor([2][2][3][3]int))
-:=: (Observed \ equalZero) (sys\descriptor([7][3][0][2]@) = sys\descriptor([7][3][0][2]@))
-:=: (Observed \ reorderedEqual) (sys\descriptor([2][2][3][3]int) = sys\descriptor([2][3][2][3]int))
+:=: (Observed \ equal) (($array-type 0 (1 sizes)) = sys\descriptor([2][2][3][3]int))
+:=: (Observed \ equalZero) (($array-type 1 (0 7) (1 withZero)) = sys\descriptor([7][3][0][2]@))
+:=: (Observed \ reorderedEqual) (($array-type 0 (1 sizes)) = sys\descriptor([2][3][2][3]int))

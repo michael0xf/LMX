@@ -1960,6 +1960,29 @@ fn: lmx_graph_binding_leaf (c.LmxGraph@: g; @: raw) @
     return: leaf
 end: lmx_graph_binding_leaf
 
+# The builder lowers an Array TYPE with live operands to a graph recipe. The
+# separate declaring record supplies its NAME without evaluating that recipe.
+fn: lmx_graph_type_form (c.LmxGraph@: g; @: raw) int
+    if: raw = 0 || lmx_graph_kind(g, raw) != 4
+        return: 0
+    ---
+    char@: head lmx_graph_name_of(g, raw)
+    size_t: fields lmx_graph_count((cast: (c.Lmx@) raw))
+    if: fields >= 2U && head = lmx_graph_intern("$array-type", 11U)
+        return: 2
+    ---
+    if: (fields = 2U || fields = 3U) && head = lmx_graph_intern("$array-place", 12U)
+        return: 3
+    ---
+    if: fields = 1U && head = lmx_graph_intern("typeof", 6U)
+        return: 4
+    ---
+    if: c.lmx_types_reference_parts(g\arena, raw, 0, 0, 0) != 0
+        return: 1
+    ---
+    return: 0
+end: lmx_graph_type_form
+
 # Borrowed receiving parts: the caller retains raw, including every qualifier/Array receiver.
 # Only that chain is read, never model/default contents or mutable payloads. A two-field reference
 # remains ambiguous here; its operand is still available through leaf. C-door syntax alone is no type proof.
@@ -1995,6 +2018,13 @@ fn: lmx_graph_declaration_parts (c.LmxGraph@: g; @: raw; @@: leaf; @@: model; @@
                 current := c.lmx_arena_pointer_void_read(current)
             return: lmx_graph_name_of(g, current)
         head := lmx_graph_name_of(g, current)
+        if: head = lmx_graph_intern("$array-place", 12U) && lmx_graph_type_form(g, current) = 3
+            leaf[0] := current
+            model[0] := lmx_graph_get_in(g, (cast: (c.Lmx@) current), 1U)
+            candidate[0] := lmx_graph_get_in(g, (cast: (c.Lmx@) current), 2U)
+            default_presence[0] := (cast: (int) (candidate[0] != 0))
+            return: lmx_graph_word_text(g, lmx_graph_get_in(g, (cast: (c.Lmx@) current), 0U))
+        ---
         family := lmx_graph_declaration_receiver(head)
         if: family = 3
             if: lmx_graph_receiving_view(g, current, @ child, @ binding_private) != 0

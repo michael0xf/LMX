@@ -9,4 +9,8 @@
 > проверьне просто массив а именнообщую форму:
 > ( a bc d ; efgh sdf ; ddg g) -- это теперь три безымянных структуры внутри одной структуры
 
+> (log: print: a b c; D E f;) идентичен должен быть (log: print: a b c; D E f)
+
+> (print: a b c; D E f;) НЕ идентичен (print: a b c; D E f)
+
 [Грамматика](../docs/spec/LMX_grammar.ru.md#separators).

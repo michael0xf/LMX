@@ -1178,7 +1178,7 @@ fn: decl_lmx (c.FILE@: f) int
         return: 1
     if: c.fputs("struct: LmxChunk\n    LmxCharDynamicArray: cells\n    # Pointer-cell context companions are trailing storage of THIS chunk's\n    # record allocation. Exact cell ordinal selects its state, not a second\n    # address/Model registry. Caller-owned unaccompanied chunks leave this 0.\n    @: LmxWalkValue value_contexts\n    @: LmxChunk next\n    # The collection pass that last WALKED this chunk (lmx_gc): a chunk whose stamp is the\n    # arena's current generation was reached from a root, so it stays.  A stamp and not a\n    # flag: a new pass needs nothing cleared, and \"did this pass reach it\" is one comparison.\n    # Zero means no pass has walked it.  The granularity is the chunk, because that is the\n    # granularity at which the arena's storage is freed -- a chunk is one block.\n    unsigned: mark\nend: LmxChunk\n\n", f) < 0
         return: 1
-    if: c.fputs("define: LMX_POOL_ROLE_PLAIN 0\ndefine: LMX_POOL_ROLE_FN 1\nstruct: LmxPool\n    @: LmxChunk head\n    @: LmxChunk tail\n    size_t: stride\n    size_t: chunk_capacity\n    int: kind\n    int: type\n    # A receiver-produced Structure uses the same Lmx representation in a\n    # distinct arena pool. This is physical classification, not an opcode or\n    # a name stored in the graph. Ordinary data Structures remain role 0.\n    unsigned: role\n    LmxPointerCellRead: pointer_read\n    LmxPointerCellWrite: pointer_write\n    const: @: LmxScalarABI scalar_abi\n    # Optional PHYSICAL receiver-expression/profile identity.  This is the address of an\n    # ordinary graph Structure in its owner's arena, not a wrapper or numeric qualifier.\n    # kind/type continue to say exactly how cells are represented; two arrays may therefore\n    # have identical representation and different profiles.  Qualification is found only\n    # by address -> range -> array -> this physical graph reference.\n    @: Lmx profile\n    # Lifecycle/GC policy only.  A sealed array cannot grow or hand out more cells, and GC\n    # neither marks nor sweeps its chunks.  This bit NEVER means any language qualifier:\n    # sharing/copy decisions compare the explicit physical profile reference instead.\n", f) < 0
+    if: c.fputs("define: LMX_POOL_ROLE_PLAIN 0\ndefine: LMX_POOL_ROLE_FN 1\ndefine: LMX_POOL_ROLE_TYPED_RECORD 2\nstruct: LmxPool\n    @: LmxChunk head\n    @: LmxChunk tail\n    size_t: stride\n    @: Lmx type_ref\n    size_t: chunk_capacity\n    int: kind\n    int: type\n    # A receiver-produced Structure uses the same Lmx representation in a\n    # distinct arena pool. This is physical classification, not an opcode or\n    # a name stored in the graph. Ordinary data Structures remain role 0.\n    unsigned: role\n    LmxPointerCellRead: pointer_read\n    LmxPointerCellWrite: pointer_write\n    const: @: LmxScalarABI scalar_abi\n    # Optional PHYSICAL receiver-expression/profile identity.  This is the address of an\n    # ordinary graph Structure in its owner's arena, not a wrapper or numeric qualifier.\n    # kind/type continue to say exactly how cells are represented; two arrays may therefore\n    # have identical representation and different profiles.  Qualification is found only\n    # by address -> range -> array -> this physical graph reference.\n    @: Lmx profile\n    # Lifecycle/GC policy only.  A sealed array cannot grow or hand out more cells, and GC\n    # neither marks nor sweeps its chunks.  This bit NEVER means any language qualifier:\n    # sharing/copy decisions compare the explicit physical profile reference instead.\n", f) < 0
         return: 1
     if: c.fputs("    unsigned: sealed\n    # The arena's list of its N arrays, linked through the descriptors themselves:\n    # an array of the arena is exactly this record, so no second node describes it\n    # (Mikhail, 2026-09-17: \"N массивов в арене ... ЧТО ЕЩЁ НАДО?\").\n    @: LmxPool next\n    # The ordered subsequence of the hot kinds of that list (lmx_arena_hot_kind, K5a):\n    # the next hot array of the list, as next is the next array.\n    @: LmxPool hot_next\n    # Counts the times a chunk left this array's chain (lmx_pool_chunk_drop, lmx_pool_release, an arena drop of the\n    # array's block).  A growing chain leaves it alone.  An index entry's cached chunk is good while this is the\n    # value it was cached at (LmxRange chunk_gen).  Never reset: a new array starts at 0 from its zeroed record.\n    size_t: chain_gen\nend: LmxPool\n", f) < 0
         return: 1
@@ -1321,7 +1321,7 @@ fn: decl_types (c.FILE@: f) int
         return: 1
     if: c.fputs("# code_dead removed ones); the counters and the next code.\n", f) < 0
         return: 1
-    if: c.fputs("struct: LmxTypes\n    @: LmxTypeRow rows\n    size_t: cap\n    size_t: used\n", f) < 0
+    if: c.fputs("struct: LmxTypes\n    @: LmxArena type_arena\n    @: Lmx int_type_ref\n    @: Lmx int_array_type_ref\n    @: LmxTypeRow rows\n    size_t: cap\n    size_t: used\n", f) < 0
         return: 1
     if: c.fputs("    size_t: free_head\n    @: size_t by_key\n    @: size_t by_model\n", f) < 0
         return: 1
@@ -1331,7 +1331,7 @@ fn: decl_types (c.FILE@: f) int
         return: 1
     if: c.fputs("    size_t: index_rebuilds\n    int: next_code\nend: LmxTypes\n\nprototype:\n", f) < 0
         return: 1
-    if: c.fputs("    fn: lmx_types_context () @: LmxTypes\n", f) < 0
+    if: c.fputs("    fn: lmx_types_context () @: LmxTypes\n    fn: lmx_types_reference (@: LmxArena arena; int: type) @: Lmx\n    fn: lmx_types_record_reference (@: LmxArena arena; @: void value) @: Lmx\n", f) < 0
         return: 1
     if: c.fputs("    fn: lmx_types_intern (int: ctor; int: operand) int\n", f) < 0
         return: 1
@@ -2332,7 +2332,7 @@ end: bld_primitive_profile
 fn: bld_kernel_l2 (c.FILE@: rec; char@: repo; char@: stage; char@: base; char@: fe; char@: out; int@: res) int
     char@@: list_names c.calloc(9U, sizeof(char@))
     char@@: range_names c.calloc(32U, sizeof(char@))
-    char@@: pool_names c.calloc(21U, sizeof(char@))
+    char@@: pool_names c.calloc(22U, sizeof(char@))
     char@@: block_names c.calloc(6U, sizeof(char@))
     char@@: arena_names c.calloc(38U, sizeof(char@))
     char@@: chars_names c.calloc(3U, sizeof(char@))
@@ -2344,7 +2344,7 @@ fn: bld_kernel_l2 (c.FILE@: rec; char@: repo; char@: stage; char@: base; char@: 
     char@@: value_names c.calloc(64U, sizeof(char@))
     char@@: source_names c.calloc(16U, sizeof(char@))
     char@@: ids_names c.calloc(6U, sizeof(char@))
-    char@@: types_names c.calloc(12U, sizeof(char@))
+    char@@: types_names c.calloc(14U, sizeof(char@))
     char@@: gc_graph_names c.calloc(5U, sizeof(char@))
     char@@: implements_names c.calloc(78U, sizeof(char@))
     char@@: copy_names c.calloc(32U, sizeof(char@))
@@ -3233,6 +3233,7 @@ fn: bld_kernel_l2 (c.FILE@: rec; char@: repo; char@: stage; char@: base; char@: 
     pool_names[18] := "lmx_pool_chunk_head"
     pool_names[19] := "lmx_pool_chunk_at"
     pool_names[20] := "lmx_pool_chunk_drop"
+    pool_names[21] := "lmx_pool_take_array_record"
     block_names[0] := "lmx_arena_blocks_tail"
     block_names[1] := "lmx_arena_blocks_push"
     block_names[2] := "lmx_arena_blocks_remove"
@@ -3411,6 +3412,8 @@ fn: bld_kernel_l2 (c.FILE@: rec; char@: repo; char@: stage; char@: base; char@: 
     types_names[9] := "lmx_types_forget"
     types_names[10] := "lmx_types_attach"
     types_names[11] := "lmx_types_arena_next"
+    types_names[12] := "lmx_types_reference"
+    types_names[13] := "lmx_types_record_reference"
     gc_graph_names[0] := "lmx_gc_note"
     gc_graph_names[1] := "lmx_gc_cells"
     gc_graph_names[2] := "lmx_gc_mark_value"
@@ -3419,7 +3422,7 @@ fn: bld_kernel_l2 (c.FILE@: rec; char@: repo; char@: stage; char@: base; char@: 
     # The pool API is the first generated API dependency of the other modules.
     # Full L1 bodies may refer forward; they are read by the L1 backend only
     # after all modules/APIs have been generated, never from an old output seed.
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_pool", pool_names, 21, 1) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_pool", pool_names, 22, 1) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_list_owned", list_names, 9, 1) != 0
         return: 1
@@ -3460,7 +3463,7 @@ fn: bld_kernel_l2 (c.FILE@: rec; char@: repo; char@: stage; char@: base; char@: 
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_ids", ids_names, 6, 0) != 0
         return: 1
     # The type context (Р155) declares its functions itself: decls_write_all wrote lmx_types.h.lm1.
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_types", types_names, 12, 0) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_types", types_names, 14, 0) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_source_names", source_names, 16, 0) != 0
         return: 1

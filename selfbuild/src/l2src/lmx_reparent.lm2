@@ -17,16 +17,21 @@ fn: lmx_reparent_profile_root (c.LmxArena@: view; c.Lmx@: profile_value) c.Lmx@
     size_t: i 0U
     size_t: p
     size_t: limit_addr
-    size_t: step c.sizeof(c.Lmx)
+    size_t: step
+    size_t: width c.sizeof(c.Lmx)
     if: view = 0 || profile_value = 0
         return: 0
     ---
     while: i < c.lmx_arena_index_len(view)
         entry := c.lmx_arena_index_data(view) + i
-        if: entry\array != 0 && entry\array\profile = profile_value && entry\array\sealed != 0U && (entry\array\kind = c.LMX_KIND_STRUCT || entry\array\kind = c.LMX_KIND_ARRAY) && entry\array\stride = step
+        if: entry\array != 0 && entry\array\profile = profile_value && entry\array\sealed != 0U && (entry\array\kind = c.LMX_KIND_STRUCT || entry\array\kind = c.LMX_KIND_ARRAY) && (entry\array\stride = width || (entry\array\type_ref != 0 && entry\array\stride = width + sizeof(@)))
             p := (cast: (size_t) entry\lo)
             limit_addr := (cast: (size_t) entry\hi)
-            while: p < limit_addr && limit_addr - p >= step
+            step := entry\array\stride
+            if: entry\array\type_ref != 0
+                p := p + sizeof(@)
+            ---
+            while: p < limit_addr && limit_addr - p >= width
                 if: c.lmx_graph_node_in(view, (cast: (@) p)) != 0
                     part := (cast: (c.Lmx@) p)
                     if: part\parent = 0 || c.lmx_range_profile(view, (cast: (@) part\parent)) != profile_value

@@ -27,6 +27,9 @@
 predef: "l2src/lmx_arena.h.lm1"
 predef: "l2src/lmx_types.h.lm1"
 predef: "l2src/lmx_types_state.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdlib.h>"
 include: "<string.h>"
@@ -467,6 +470,120 @@ fn: lmx_types_context () c.LmxTypes@
     ctx := lmx_types_state()
     lmx_types_leave()
     return: ctx
+
+# A system TYPE is an immutable Structure. The array description carries
+# its written TYPE, element description and rank.
+fn: lmx_types_fixed_description (c.LmxArena@: arena; const: (char@: spelling); size_t: width; c.Lmx@: element) c.Lmx@
+    c.Lmx@: description (cast: (c.Lmx@) c.lmx_arena_take(arena, c.sizeof(c.Lmx), c.LMX_KIND_STRUCT, 0 - c.LMX_TYPE_STRUCT))
+    c.Lmx@: name (cast: (c.Lmx@) c.lmx_arena_take(arena, c.sizeof(c.Lmx), c.LMX_KIND_ARRAY, 0 - c.LMX_TYPE_ARRAY_OF_CHAR))
+    @: bytes void c.lmx_arena_take_n(arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, 0 - c.LMX_TYPE_CHAR, width)
+    size_t: count 1U
+    int@: rank 0
+    @@: slots void 0
+    c.VoidArray@: fields 0
+    c.VoidArray@: text 0
+    if: description = 0 || name = 0 || bytes = 0
+        return: 0
+    ---
+    c.memcpy(bytes, (cast: (const: @) spelling), width)
+    text := @ name\array
+    text\size := width
+    text\data := bytes
+    name\parent := description
+    if: element != 0
+        count := 3U
+        rank := (cast: (int@) c.lmx_arena_take(arena, c.sizeof(c.int), c.LMX_KIND_PRIMITIVE, 0 - c.LMX_TYPE_INT))
+        if: rank = 0
+            return: 0
+        ---
+        \rank := 1
+    ---
+    if: c.lmx_arena_refs_open_owned(arena, description, count) != 0
+        return: 0
+    ---
+    fields := @ description\array
+    slots := (cast: (@@) fields\data)
+    slots[0] := (cast: (@) name)
+    if: element != 0
+        slots[1] := (cast: (@) element)
+        slots[2] := (cast: (@) rank)
+    ---
+    return: description
+end: lmx_types_fixed_description
+
+# Bootstrap this type family before exposing any references. Its arena is
+# process-owned and sealed before another arena borrows its ordinary ranges.
+fn: lmx_types_bootstrap_references (c.LmxTypes@: ctx) int
+    c.LmxArena@: arena (cast: (c.LmxArena@) c.calloc(1U, c.sizeof(c.LmxArena)))
+    c.Lmx@: int_type 0
+    c.Lmx@: array_type 0
+    c.LmxPool@: pool 0
+    if: arena = 0
+        return: 1
+    ---
+    if: c.lmx_arena_open(arena) != 0
+        c.free((cast: (@) arena))
+        return: 1
+    ---
+    int_type := lmx_types_fixed_description(arena, "int", 3U, 0)
+    if: int_type != 0
+        array_type := lmx_types_fixed_description(arena, "[]int", 5U, int_type)
+    ---
+    if: array_type = 0
+        c.lmx_arena_release(arena)
+        c.free((cast: (@) arena))
+        return: 1
+    ---
+    pool := (cast: (c.LmxPool@) arena\arrays)
+    while: pool != 0
+        c.lmx_pool_seal(pool)
+        pool := pool\next
+    ---
+    ctx\int_type_ref := int_type
+    ctx\int_array_type_ref := array_type
+    ctx\type_arena := arena
+    return: 0
+end: lmx_types_bootstrap_references
+
+fn: lmx_types_reference (c.LmxArena@: arena; int: type) c.Lmx@
+    c.LmxTypes@: ctx 0
+    c.LmxArena@: system_arena 0
+    c.Lmx@: result 0
+    if: arena = 0 || (type != c.LMX_TYPE_INT && type != c.LMX_TYPE_ARRAY_OF_INT)
+        return: 0
+    ---
+    lmx_types_enter()
+    ctx := lmx_types_state()
+    if: ctx != 0 && ctx\type_arena = 0
+        if: lmx_types_bootstrap_references(ctx) != 0
+            lmx_types_leave()
+            return: 0
+        ---
+    ---
+    if: ctx != 0
+        result := ctx\int_type_ref
+        if: type = c.LMX_TYPE_ARRAY_OF_INT
+            result := ctx\int_array_type_ref
+        ---
+        system_arena := ctx\type_arena
+        if: c.lmx_range_classify(arena, (cast: (@) result)) != c.LMX_KIND_STRUCT && c.lmx_range_import(arena, system_arena) != 0
+            result := 0
+        ---
+    ---
+    lmx_types_leave()
+    return: result
+end: lmx_types_reference
+
+# An exact live payload of the typed pool has a readable TypeRef prefix.
+fn: lmx_types_record_reference (c.LmxArena@: arena; @: value) c.Lmx@
+    c.LmxPool@: pool c.lmx_range_cell_pool(arena, value)
+    c.Lmx@@: prefix 0
+    if: pool = 0 || pool\type_ref = 0
+        return: 0
+    ---
+    prefix := (cast: (c.Lmx@@) ((cast: (char@) value) - sizeof(@)))
+    return: prefix[0]
+end: lmx_types_record_reference
 
 # The code of ctor (LMX_TYPE_CTOR_ARRAY, _POINTER or _UNINIT) applied to the code operand; the same type always gives
 # the same code. 0 when no such type can be made.

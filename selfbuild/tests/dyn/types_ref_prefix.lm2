@@ -1,0 +1,71 @@
+# Check the stored address and the arena operations on the typed Array header.
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_array_owned.h.lm1"
+predef: "l2src/lmx_types.h.lm1"
+predef: "l2src/lmx_gc.h.lm1"
+predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l2src/lmx_graph_copy_owned.h.lm1"
+include: "<string.h>"
+
+fn: type_ref_prefix_check () int
+    c.LmxArena: arena
+    c.LmxArena: other
+    c.memset(@ arena, 0, c.sizeof(c.LmxArena))
+    c.memset(@ other, 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ arena) != 0 || c.lmx_arena_open(@ other) != 0
+        return: 100
+    ---
+    c.LmxArray@: a c.lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, 2U, @ arena)
+    c.LmxArray@: b c.lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, 3U, @ arena)
+    c.LmxArray@: empty c.lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, 0U, @ other)
+    c.Lmx@: type_ref c.lmx_types_reference(@ arena, c.LMX_TYPE_ARRAY_OF_INT)
+    c.Lmx@: int_ref c.lmx_types_reference(@ arena, c.LMX_TYPE_INT)
+    if: a = 0 || b = 0 || empty = 0 || type_ref = 0 || int_ref = 0 || type_ref = int_ref
+        return: 101
+    ---
+    char@: bytes (cast: (char@) a)
+    c.Lmx@@: prefix (cast: (c.Lmx@@) (bytes - sizeof(@)))
+    if: prefix[0] != type_ref || c.lmx_types_record_reference(@ arena, a) != type_ref || c.lmx_types_record_reference(@ arena, b) != type_ref || c.lmx_types_record_reference(@ other, empty) != type_ref
+        return: 102
+    ---
+    if: c.lmx_range_type_of(@ arena, type_ref) != 0 - c.LMX_TYPE_STRUCT || c.lmx_range_stride(@ arena, a) != c.sizeof(c.Lmx) || c.lmx_range_cell_pool(@ arena, prefix) != 0
+        return: 103
+    ---
+    c.VoidArray@: contents @ type_ref\array
+    @@: fields void (cast: (@@) contents\data)
+    if: contents\size != 3U || c.lmx_graph_value_in(@ arena, type_ref, 1U) != int_ref || c.lmx_int_value_known(fields[2]) != 1
+        return: 104
+    ---
+    c.VoidArray@: dense @ b\array
+    int@: data (cast: (int@) dense\data)
+    if: dense\size != 3U || data = 0 || c.lmx_range_stride(@ arena, data + 1) != c.sizeof(c.int) || c.lmx_types_record_reference(@ arena, data + 1) != 0
+        return: 105
+    ---
+    data[1] := 37
+    unsigned: generation c.lmx_arena_generation_next(@ arena)
+    if: generation = 0U || c.lmx_gc_mark_value(@ arena, b, generation, 0) != c.LMX_GC_OK || c.lmx_gc_sweep(@ arena, generation) != c.LMX_GC_OK
+        return: 106
+    ---
+    if: data[1] != 37 || c.lmx_types_record_reference(@ arena, b) != type_ref
+        return: 107
+    ---
+    c.Lmx@: copy 0
+    if: c.lmx_graph_copy_owned((cast: (c.Lmx@) b), @ arena, @ other, @ copy) != c.LMX_GRAPH_COPY_OK || copy = 0 || copy = (cast: (c.Lmx@) b)
+        return: 111
+    ---
+    c.VoidArray@: copied @ copy\array
+    int@: copied_data (cast: (int@) copied\data)
+    if: c.lmx_types_record_reference(@ other, copy) != type_ref || copied\size != 3U || copied_data = 0 || copied_data = data || copied_data[1] != 37
+        return: 112
+    ---
+    if: c.lmx_arena_attach(@ other, @ arena) != 0 || c.lmx_arena_release(@ arena) != 0
+        return: 110
+    ---
+    if: c.lmx_types_reference(@ other, c.LMX_TYPE_ARRAY_OF_INT) != type_ref || c.lmx_types_record_reference(@ other, empty) != type_ref || c.lmx_types_record_reference(@ other, b) != type_ref || data[1] != 37
+        return: 108
+    ---
+    if: c.lmx_arena_release(@ other) != 0
+        return: 109
+    ---
+    return: 7
+end: type_ref_prefix_check

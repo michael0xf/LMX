@@ -254,6 +254,7 @@ fn: lmx_pool_open_profiled (c.LmxArena@: arena; c.LmxPool@: pool; size_t: stride
     if: pool\head != 0
         return: 1
     pool\stride := stride
+    pool\type_ref := 0
     pool\chunk_capacity := chunk_capacity
     pool\kind := kind
     pool\type := type
@@ -344,6 +345,8 @@ fn: lmx_pool_take_n (c.LmxArena@: arena; c.LmxPool@: pool; size_t: count) @
     size_t: room 0U
     if: pool = 0 || count = 0U
         return: 0
+    if: pool\type_ref != 0 && count != 1U
+        return: 0
     if: pool\sealed != 0U
         return: 0
     chunk := pool\tail
@@ -396,9 +399,21 @@ fn: lmx_pool_take_n (c.LmxArena@: arena; c.LmxPool@: pool; size_t: count) @
         chunk := pool\tail
     ---
     first := (cast: (@) ((cast: (char@) lmx_chunk_data(chunk)) + lmx_chunk_cells(chunk, (cast: (size_t) pool\stride)) * (cast: (size_t) pool\stride)))
+    if: pool\type_ref != 0
+        c.Lmx@: type_ref (cast: (c.Lmx@) pool\type_ref)
+        first := lmx_pool_record_payload(first, type_ref)
+    ---
     lmx_chunk_set_used(chunk, (cast: (size_t) pool\stride), lmx_chunk_cells(chunk, (cast: (size_t) pool\stride)) + count)
     return: first
 end: lmx_pool_take_n
+
+# A native Lmx record starts with one pointer cell. Lmx consists of pointer
+# and size_t fields and its payload starts at the next native pointer slot.
+fn: lmx_pool_record_payload (@: first; c.Lmx@: type_ref) @
+    c.Lmx@@: prefix (cast: (c.Lmx@@) first)
+    prefix[0] := type_ref
+    return: (cast: (@) ((cast: (char@) first) + sizeof(@)))
+end: lmx_pool_record_payload
 
 # ONE array of the arena holding exactly `bytes` of storage for `bytes / stride`
 # cells, which the arena allocates and owns: the payload block joins the arena's
@@ -417,6 +432,10 @@ end: lmx_pool_take_n
 # the arena (Mikhail, 2026-09-17: "N массивов где лежат дескрипторы или примитивные
 # значения"), never to the caller.
 fn: lmx_pool_make_profiled (c.LmxArena@: arena; size_t: bytes; size_t: stride; int: kind; int: type; c.Lmx@: pool_profile) c.LmxPool@
+    return: lmx_pool_make_storage(arena, bytes, stride, kind, type, pool_profile, 0)
+end: lmx_pool_make_profiled
+
+fn: lmx_pool_make_storage (c.LmxArena@: arena; size_t: bytes; size_t: stride; int: kind; int: type; c.Lmx@: pool_profile; c.Lmx@: type_ref) c.LmxPool@
     if: type = c.INT_MIN
         return: 0
     c.LmxArenaBlock@: mark 0
@@ -468,10 +487,15 @@ fn: lmx_pool_make_profiled (c.LmxArena@: arena; size_t: bytes; size_t: stride; i
     pool\head := chunk
     pool\tail := chunk
     pool\stride := stride
+    pool\type_ref := type_ref
     pool\chunk_capacity := count
     pool\kind := kind
     pool\type := type
     pool\role := c.LMX_POOL_ROLE_PLAIN
+    if: type_ref != 0
+        pool\role := c.LMX_POOL_ROLE_TYPED_RECORD
+        lmx_pool_record_payload(payload, type_ref)
+    ---
     pool\profile := pool_profile
     pool\sealed := 0U
     pool\next := 0
@@ -519,7 +543,32 @@ fn: lmx_pool_make_profiled (c.LmxArena@: arena; size_t: bytes; size_t: stride; i
     ---
     c.lmx_range_keep_chunk(arena, pool, chunk)
     return: pool
-end: lmx_pool_make_profiled
+end: lmx_pool_make_storage
+
+fn: lmx_pool_take_array_record (c.LmxArena@: arena; int: type; c.Lmx@: pool_profile; c.Lmx@: type_ref) c.LmxArray@
+    c.LmxPool@: pool 0
+    c.LmxChunk@: head 0
+    size_t: stride c.sizeof(c.LmxArray) + sizeof(@)
+    if: arena = 0 || arena\source_view != 0U || type_ref = 0 || c.lmx_range_classify(arena, (cast: (@) type_ref)) != c.LMX_KIND_STRUCT
+        return: 0
+    ---
+    if: c.lmx_type_is_immutable(c.lmx_range_type_of(arena, (cast: (@) type_ref))) = 0
+        return: 0
+    ---
+    pool := (cast: (LmxPool@) arena\arrays)
+    while: pool != 0
+        if: pool\kind = c.LMX_KIND_ARRAY && pool\type = type && pool\profile = pool_profile && pool\type_ref = type_ref
+            return: (cast: (c.LmxArray@) lmx_pool_take(arena, pool))
+        ---
+        pool := pool\next
+    ---
+    pool := lmx_pool_make_storage(arena, stride, stride, c.LMX_KIND_ARRAY, type, pool_profile, type_ref)
+    if: pool = 0
+        return: 0
+    ---
+    head := pool\head
+    return: (cast: (c.LmxArray@) ((cast: (char@) lmx_chunk_data(head)) + sizeof(@)))
+end: lmx_pool_take_array_record
 
 fn: lmx_pool_make (c.LmxArena@: arena; size_t: bytes; size_t: stride; int: kind; int: type) c.LmxPool@
     return: lmx_pool_make_profiled(arena, bytes, stride, kind, type, 0)
@@ -548,6 +597,7 @@ fn: lmx_pool_over (c.LmxArena@: arena; c.LmxPool@: pool; c.LmxChunk@: chunk; @: 
     pool\head := chunk
     pool\tail := chunk
     pool\stride := stride
+    pool\type_ref := 0
     pool\chunk_capacity := count
     pool\kind := kind
     pool\type := type

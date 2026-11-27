@@ -456,6 +456,12 @@ fn: lmx_range_cell_pool (c.LmxArena@: arena; @: p) c.LmxPool@
         return: 0
     ---
     offset := (cast: (size_t) p) - (cast: (size_t) entry\lo)
+    if: array\type_ref != 0
+        if: offset < sizeof(@)
+            return: 0
+        ---
+        offset := offset - sizeof(@)
+    ---
     if: offset % array\stride != 0U
         return: 0
     if: offset / array\stride >= c.lmx_chunk_cells(chunk, array\stride)
@@ -507,6 +513,9 @@ fn: lmx_range_stride (c.LmxArena@: arena; @: p) size_t
         return: 0U
     array := lmx_range_cell_pool(arena, p)
     if: array != 0
+        if: array\type_ref != 0
+            return: array\stride - sizeof(@)
+        ---
         return: (cast: (size_t) array\stride)
     ---
     return: 0U

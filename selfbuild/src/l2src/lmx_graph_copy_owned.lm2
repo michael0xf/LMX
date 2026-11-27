@@ -2112,12 +2112,15 @@ fn: lmx_copy_sequence_cell_owner (c.LmxArena@: arena; @: cell; int@: ambiguous) 
     while: r < c.lmx_arena_index_len(arena)
         entry := ranges + r
         pool := entry\array
-        if: pool != 0 && ((pool\kind = c.LMX_KIND_ARRAY && pool\stride = c.sizeof(c.LmxArray)) || (pool\kind = c.LMX_KIND_LIST && pool\stride = c.sizeof(c.VoidDynamicArray) && cell_pool\kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_reference_cell((cast: (int) cell_pool\type)) != 0))
+        if: pool != 0 && ((pool\kind = c.LMX_KIND_ARRAY && (pool\stride = c.sizeof(c.LmxArray) || (pool\type_ref != 0 && pool\stride = c.sizeof(c.LmxArray) + sizeof(@)))) || (pool\kind = c.LMX_KIND_LIST && pool\stride = c.sizeof(c.VoidDynamicArray) && cell_pool\kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_reference_cell((cast: (int) cell_pool\type)) != 0))
             chunk := c.lmx_pool_chunk_at(pool, entry\lo)
             if: chunk != 0
                 i := 0U
                 while: i < c.lmx_chunk_cells(chunk, pool\stride)
                     candidate := (cast: (@) ((cast: (size_t) c.lmx_chunk_data(chunk)) + i * pool\stride))
+                    if: pool\type_ref != 0
+                        candidate := (cast: (@) ((cast: (char@) candidate) + sizeof(@)))
+                    ---
                     list := 0
                     allow_scalar := 1
                     if: pool\kind = c.LMX_KIND_ARRAY

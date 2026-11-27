@@ -17,6 +17,7 @@ predef: "l2src/lmx_arena.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
 predef: "l2src/lmx_chars.h.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l2src/lmx_types.h.lm1"
 include: "<stdlib.h>"
 
 # An Array of one element type: TWO arrays of the arena.  The descriptor is a cell of the
@@ -33,6 +34,7 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; c.LmxArena@: aren
     int: base_type c.lmx_type_base(type)
     int: element_type c.lmx_type_element(type)
     c.LmxArray@: desc 0
+    c.Lmx@: type_ref 0
     c.VoidArray@: va 0
     @: backing void 0
     ulong: ulong_probe 0U
@@ -82,7 +84,15 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; c.LmxArena@: aren
     # The descriptor is one cell of the array of Array descriptors of this type; the
     # backing is `count` consecutive cells of the array of that element type.  Both are
     # the arena's arrays: found if the arena has them, made here if it does not.
-    desc := (cast: (LmxArray@) c.lmx_arena_take_profiled(arena, c.sizeof(c.LmxArray), c.LMX_KIND_ARRAY, type, array_profile))
+    if: type = c.LMX_TYPE_ARRAY_OF_INT
+        type_ref := c.lmx_types_reference(arena, type)
+        if: type_ref = 0
+            return: 0
+        ---
+        desc := c.lmx_pool_take_array_record(arena, type, array_profile, type_ref)
+    else:
+        desc := (cast: (LmxArray@) c.lmx_arena_take_profiled(arena, c.sizeof(c.LmxArray), c.LMX_KIND_ARRAY, type, array_profile))
+    ---
     if: desc = 0
         return: 0
     desc\parent := parent

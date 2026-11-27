@@ -85,6 +85,7 @@ fn: lmx_gc_cells (c.LmxArena@: arena; c.LmxPool@: pool; c.LmxChunk@: chunk; unsi
     size_t: index 0U
     size_t: cells 0U
     size_t: stride 0U
+    size_t: prefix 0U
     size_t: words 0U
     size_t: word 0U
     char@: cell 0
@@ -104,7 +105,10 @@ fn: lmx_gc_cells (c.LmxArena@: arena; c.LmxPool@: pool; c.LmxChunk@: chunk; unsi
         return: c.LMX_GC_OK
     if: lmx_gc_scalar(pool) != 0 && chunk\value_contexts = 0
         return: c.LMX_GC_OK
-    if: (pool\kind = c.LMX_KIND_STRUCT || pool\kind = c.LMX_KIND_ARRAY) && pool\stride != c.sizeof(c.Lmx)
+    if: pool\type_ref != 0
+        prefix := sizeof(@)
+    ---
+    if: (pool\kind = c.LMX_KIND_STRUCT || pool\kind = c.LMX_KIND_ARRAY) && pool\stride != c.sizeof(c.Lmx) + prefix
         return: c.LMX_GC_INVALID
     # The external spelling bindings has weak keys. Neither its key nor its
     # text descriptor is an ordinary graph edge; handle it after graph mark.
@@ -117,7 +121,7 @@ fn: lmx_gc_cells (c.LmxArena@: arena; c.LmxPool@: pool; c.LmxChunk@: chunk; unsi
         status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@) pool\profile), gen, depth + 1))
     index := 0U
     while: index < cells
-        cell := (cast: (char@) c.lmx_chunk_data(chunk)) + (index * stride)
+        cell := (cast: (char@) c.lmx_chunk_data(chunk)) + (index * stride) + prefix
         if: pool\kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(pool\type) = c.LMX_TYPE_FOREIGN
             if: chunk\value_contexts != 0
                 contexts := chunk\value_contexts

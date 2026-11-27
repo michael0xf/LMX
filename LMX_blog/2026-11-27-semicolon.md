@@ -13,4 +13,6 @@
 
 > (print: a b c; D E f;) НЕ идентичен (print: a b c; D E f)
 
+> В многострочном `print:` тоже должно быть два поля: безымянные структуры `(a b c)` и `(D E f)`.
+
 [Грамматика](../docs/spec/LMX_grammar.ru.md#separators).

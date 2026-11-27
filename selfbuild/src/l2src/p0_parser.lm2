@@ -6496,6 +6496,14 @@ fn: lm_p0_lower_types_frame (c.LmP0Document@: document; c.LmP0Node@: p0_node) in
         while: base_start < head_size && head_text[base_start] = '@'
             base_start := base_start + 1U
         ---
+        # A counted pointer (LMX_grammar 32): the count group `(X)` stays in the run when a plain word is the base, as `@(2)int: p`.
+        if: base_start < head_size && head_text[base_start] = '('
+            size_t: count_end
+            count_end := 0U
+            if: lm_p0_skip_bounded(head_text, head_size, base_start, @ count_end) != 0 && count_end < head_size && lm_p0_is_word_start_byte(head_text[count_end]) != 0
+                base_start := count_end
+            ---
+        ---
         if: base_start = head_size || head_text[base_start] = '['
             return: 1
         ---

@@ -5995,6 +5995,7 @@ fn: lm_compiler_check_body (const: (c.LmP0Structure@: body); int: mi; const: (ch
     int: retained
     c.LmP0Text@: sw 0
     c.LmP0Node@: mg 0
+    char@: count_problem
     if: body = 0
         return: (cast: (int) (c.lm_compiler_error(path, 0, "unsupported body")))
     unit_body := c.lm_compiler_part_source_body(body)
@@ -6010,6 +6011,10 @@ fn: lm_compiler_check_body (const: (c.LmP0Structure@: body); int: mi; const: (ch
                 break
         ---
         stmt := field\value
+        count_problem := c.lm_compiler_counted_reason(stmt)
+        if: count_problem != 0
+            return: c.lm_compiler_error(path, stmt, count_problem)
+        ---
         c.lm_compiler_vis_stmt(mi, stmt)
         q_at_cell[0] := stmt
         c.lm_compiler_here_at(stmt)

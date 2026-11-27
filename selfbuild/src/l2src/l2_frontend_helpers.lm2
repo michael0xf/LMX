@@ -1,6 +1,7 @@
 # Ordinary L2 frontend helpers; declarations come from the existing L3 recipe.
 # One inherited descriptor-word cache cell is explicit; no new state/context/registry.
 predef: "l2src/l2_application.h.lm1"
+predef: "l1src/p0.h.lm1"
 include: "<stddef.h>" "<stdio.h>" "<stdlib.h>" "<string.h>" "<limits.h>"
 
 fn: lm_compiler_text_eq (const: (c.LmP0Text@: text); const: (char@: s)) int
@@ -865,14 +866,191 @@ fn: lm_compiler_bind_at (const: (c.LmP0Node@: at); const: (c.LmP0Text@: t)) cons
     return: (cast: (const: c.LmP0Node@) (at))
 end: lm_compiler_bind_at
 
+# The count of a counted pointer head `@…@(X)` (LMX_grammar 32): the head of `@(X)int: p` keeps its group as its end. The head is
+# read by the P0 parser, the same one that read the source. The boundary here is cheap (the `@` run, the `(` after it and the `)`
+# that ends the head); the tree and the count are checked on the parsed head. Status: 0 not a counted head; 1 a literal count,
+# out_depth = the `@`s before the group plus the count; 2 zero; 3 negative (a single `-` and digits); 4 not an integer;
+# 5 a name, a count known only at run time; 6 an expression this backend cannot prove; 7 out of range.
+fn: lm_compiler_counted_pointer_read (c.LmP0Document@: document; size_t: run; int@: out_depth) int
+    const: (c.LmP0Node@: root)
+    c.LmP0Structure@: root_structure
+    c.LmP0Field@: field
+    c.LmP0Node@: field_node
+    c.LmP0Frame@: frame_node
+    c.LmP0Structure@: body
+    c.LmP0Field@: arg
+    c.LmP0Text@: text
+    size_t: bits 0U
+    int: st2 0
+    root := c.lm_p0_document_root((cast: (const: c.LmP0Document@) (document)))
+    if: root = 0 || root\kind != c.LM_P0_NODE_STRUCTURE || root\as = 0 || root\as\structure = 0
+        return: (cast: (int) (0))
+    ---
+    root_structure := (cast: (c.LmP0Structure@) (root\as\structure))
+    if: lm_compiler_count_active((cast: (const: c.LmP0Structure@) (root_structure))) != 1
+        return: (cast: (int) (0))
+    ---
+    field := lm_compiler_next_active((cast: (c.LmP0Field@) (root_structure\first_field)))
+    if: field = 0 || field\value = 0
+        return: (cast: (int) (0))
+    ---
+    field_node := field\value
+    if: field_node\kind != c.LM_P0_NODE_FRAME || field_node\as = 0
+        return: (cast: (int) (0))
+    ---
+    frame_node := (cast: (c.LmP0Frame@) (field_node\as\frame))
+    if: frame_node = 0 || frame_node\head = 0 || frame_node\body = 0
+        return: (cast: (int) (0))
+    ---
+    # The one root Frame is the COMPACT call of the head: its head is the `@` run and its body is the count group.
+    if: (frame_node\flags & c.LM_P0_FRAME_COMPACT) = 0U || frame_node\head\length != run
+        return: (cast: (int) (0))
+    ---
+    body := frame_node\body
+    if: lm_compiler_count_active((cast: (const: c.LmP0Structure@) (body))) != 1
+        return: (cast: (int) (6))
+    ---
+    arg := lm_compiler_next_active((cast: (c.LmP0Field@) (body\first_field)))
+    if: arg = 0 || arg\value = 0 || arg\value\kind != c.LM_P0_NODE_ATOM || arg\value\as = 0 || arg\value\as\atom = 0
+        return: (cast: (int) (6))
+    ---
+    text := arg\value\as\atom
+    if: text\length = 0U
+        return: (cast: (int) (4))
+    ---
+    st2 := lm_compiler_int_literal_bits(text, @ bits)
+    if: st2 = 2
+        return: (cast: (int) (7))
+    ---
+    if: st2 = 1
+        if: bits = 0U
+            return: (cast: (int) (2))
+        ---
+        # The shared reader returns negative int literals as unsigned bits.
+        if: bits > (cast: (size_t) c.INT_MAX)
+            return: (cast: (int) (3))
+        ---
+        if: bits + (run - 1U) > (cast: (size_t) c.INT_MAX)
+            return: (cast: (int) (7))
+        ---
+        out_depth[0] := (cast: (int) (bits + (run - 1U)))
+        return: (cast: (int) (1))
+    ---
+    if: lm_compiler_ident(text) != 0
+        return: (cast: (int) (5))
+    ---
+    return: (cast: (int) (4))
+end: lm_compiler_counted_pointer_read
+
+fn: lm_compiler_counted_pointer_status (const: (c.LmP0Text@: head); int@: out_depth) int
+    size_t: run 0U
+    int: st 0
+    c.LmP0Document@: document
+    out_depth[0] := 0
+    if: head = 0 || head\data = 0 || head\length < 3U || head\data[0] != 64
+        return: (cast: (int) (0))
+    ---
+    while: run < head\length && head\data[run] = 64
+        run := run + 1U
+    ---
+    # A cheap boundary: the `(` after the `@` run and the `)` that ends the head. The P0 parser checks the group itself.
+    if: run >= head\length || head\data[run] != 40 || head\data[head\length - 1U] != 41
+        return: (cast: (int) (0))
+    ---
+    document := 0
+    if: c.lm_p0_parse_bytes((cast: (const: char@) (head\data)), head\length, (cast: (c.LmP0Document@@) (@ document))) != 0 || document = 0
+        if: document != 0
+            c.lm_p0_document_destroy(document)
+        ---
+        return: (cast: (int) (0))
+    ---
+    st := lm_compiler_counted_pointer_read(document, run, out_depth)
+    c.lm_p0_document_destroy(document)
+    return: (cast: (int) (st))
+end: lm_compiler_counted_pointer_status
+
+# A lowered counted declaration keeps its base as the second field. The base's original
+# span in the head comes before the name in the body. Check that provenance before
+# reading the count so grouped bases and compact applications keep their own contracts.
+fn: lm_compiler_counted_reason (const: (c.LmP0Node@: source_node)) char@
+    int: st 0
+    int: depth 0
+    c.LmP0Frame@: frame_node
+    c.LmP0Text@: head_text
+    c.LmP0Structure@: body_structure
+    c.LmP0Field@: name_field
+    c.LmP0Field@: type_field
+    c.LmP0Node@: name_node
+    c.LmP0Node@: type_node
+    if: source_node = 0 || source_node\kind != c.LM_P0_NODE_FRAME || source_node\as = 0
+        return: 0
+    ---
+    frame_node := (cast: (c.LmP0Frame@) (source_node\as\frame))
+    if: frame_node = 0 || frame_node\head = 0 || frame_node\body = 0
+        return: 0
+    ---
+    if: (frame_node\flags & c.LM_P0_FRAME_COLON) = 0U || (frame_node\flags & (c.LM_P0_FRAME_COMPACT | c.LM_P0_FRAME_ASSIGN)) != 0U
+        return: 0
+    ---
+    head_text := (cast: (c.LmP0Text@) (frame_node\head))
+    if: head_text\length < 3U || head_text\data = 0 || head_text\data[0] != 64 || head_text\data[head_text\length - 1U] != 41
+        return: 0
+    ---
+    body_structure := (cast: (c.LmP0Structure@) (frame_node\body))
+    name_field := lm_compiler_next_active((cast: (c.LmP0Field@) (body_structure\first_field)))
+    if: name_field = 0
+        return: 0
+    ---
+    type_field := lm_compiler_next_active((cast: (c.LmP0Field@) (name_field\next)))
+    if: type_field = 0
+        return: 0
+    ---
+    name_node := name_field\value
+    type_node := type_field\value
+    if: name_node = 0 || type_node = 0 || type_node\kind != c.LM_P0_NODE_ATOM || type_node\span\offset >= name_node\span\offset
+        return: 0
+    ---
+    st := lm_compiler_counted_pointer_status(head_text, @ depth)
+    if: st <= 1
+        return: 0
+    ---
+    if: st = 2 || st = 3
+        return: "pointer count must be a positive integer"
+    ---
+    if: st = 4
+        return: "pointer count must be an integer"
+    ---
+    if: st = 5
+        return: "pointer count must be a literal integer in this backend"
+    ---
+    if: st = 6
+        return: "computed pointer count is not provable by this backend yet"
+    ---
+    if: st = 7
+        return: "pointer count is out of range"
+    ---
+    return: 0
+end: lm_compiler_counted_reason
+
 fn: lm_compiler_address_depth (const: (c.LmP0Text@: head)) int
     size_t: i 0U
+    int: counted_depth 0
     if: head = 0 || head\data = 0 || head\length = 0U || head\length > (cast: (size_t) c.INT_MAX)
         return: (cast: (int) (0))
+    ---
+    if: head\data[0] != 64
+        return: (cast: (int) (0))
+    ---
     while: i < head\length
         if: head\data[i] != 64
+            # A counted pointer head ends in its count group, `@(2)` (LMX_grammar 32); only a literal count has a depth here.
+            if: lm_compiler_counted_pointer_status(head, @ counted_depth) = 1
+                return: (cast: (int) (counted_depth))
+            ---
             return: (cast: (int) (0))
+        ---
         i := i + 1U
+    ---
     return: (cast: (int) ((cast: (int) head\length)))
 end: lm_compiler_address_depth
 

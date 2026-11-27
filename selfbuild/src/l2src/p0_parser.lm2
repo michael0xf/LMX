@@ -2419,7 +2419,7 @@ fn: lm_p0_type_base_follows (const: (char@: text); size_t: end_index; size_t: po
     return: lm_p0_is_word_start_byte(text[pos])
 end: lm_p0_type_base_follows
 
-fn: lm_p0_append_compact_atom_pieces (c.LmP0Document@: document; c.LmP0Structure@: structure; const: (char@: text); size_t: byte_count; size_t: line; size_t: column; size_t: offset; size_t: start; size_t: end_index) int
+fn: lm_p0_append_compact_atom_pieces (c.LmP0Document@: document; c.LmP0Structure@: structure; const: (char@: text); size_t: byte_count; size_t: line; size_t: column; size_t: offset; size_t: start; size_t: end_index; int: implicit_address_base) int
     size_t: i
     int: allow_signed_number
     int: prefix_chain
@@ -2444,7 +2444,7 @@ fn: lm_p0_append_compact_atom_pieces (c.LmP0Document@: document; c.LmP0Structure
             group_close := 0U
             if: lm_p0_counter_after(document, text, end_index, i, line, column, @ counted_after, @ group_close) = 0
                 return: 0
-            if: (after_count != 0) || (counted_after != 0U)
+            if: after_count != 0 || counted_after != 0U || implicit_address_base != 0
                 # The attached `@` before an admitted group is a prefix, not a postfix (Р156).
                 if: (text[i - 1U] = '@') && (structure\last_field != 0) && (structure\last_field\value != 0)
                     structure\last_field\value\flags := structure\last_field\value\flags - (structure\last_field\value\flags & c.LM_P0_NODE_POSTFIX)
@@ -2468,7 +2468,7 @@ fn: lm_p0_append_compact_atom_pieces (c.LmP0Document@: document; c.LmP0Structure
             square_after := (close_index + 1U)
             # A square glued to a prefix chain with a base after it is a bounded Square Structure (LMX_grammar 29, 33):
             # `@(P)[pick(n)]int`, `@(R)[](N)int`. Any other square is an ordinary index or constructor and keeps its atoms.
-            if: (prefix_chain != 0) && (i = prefix_end) && (i > start) && (lm_p0_type_base_follows(text, end_index, square_after) != 0)
+            if: prefix_chain != 0 && i = prefix_end && (implicit_address_base != 0 || (i > start && lm_p0_type_base_follows(text, end_index, square_after) != 0))
                 if: (text[i - 1U] = '@') && (structure\last_field != 0) && (structure\last_field\value != 0)
                     structure\last_field\value\flags := structure\last_field\value\flags - (structure\last_field\value\flags & c.LM_P0_NODE_POSTFIX)
                 ---
@@ -2501,7 +2501,7 @@ fn: lm_p0_append_compact_atom_pieces (c.LmP0Document@: document; c.LmP0Structure
         if: (lm_p0_append_atom_slice(document, structure, text, byte_count, line, column, offset, i, piece_end) = 0)
             return: 0
         # A series of `@` glued on the left to the end of a completed operand is a postfix (Р156), unless a counted prefix follows it.
-        if: (text[i] = '@') && (i > 0U) && (lm_p0_byte_ends_operand(text[i - 1U]) != 0) && (after_count = 0) && (structure\last_field != 0) && (structure\last_field\value != 0)
+        if: implicit_address_base = 0 && (text[i] = '@') && (i > 0U) && (lm_p0_byte_ends_operand(text[i - 1U]) != 0) && (after_count = 0) && (structure\last_field != 0) && (structure\last_field\value != 0)
             structure\last_field\value\flags := structure\last_field\value\flags | c.LM_P0_NODE_POSTFIX
         # The prefix chain: a run of `@` alone, glued to the previous prefix, keeps it open; any other piece ends it.
         if: (text[i] = '@')
@@ -3155,7 +3155,7 @@ end: lm_p0_counter_after
 # Original: parser.lm1:2107 lm_p0_field_start_looks_explicit_frame
 # One head-span reader for the parser and its explicit-frame lookahead. Quoted path components
 # retain their boundaries; strings/chars/C surfaces retain their existing isolated-token rules.
-fn: lm_p0_scan_head (c.LmP0Document@: document; const: (char@: text); size_t: byte_count; size_t@: index; size_t: line; size_t: column; int@: quoted_head) int
+fn: lm_p0_scan_head (c.LmP0Document@: document; const: (char@: text); size_t: byte_count; size_t@: index; size_t: line; size_t: column; int@: quoted_head; int@: implicit_address_base) int
     size_t: start index[0]
     size_t: i start
     size_t: close_index 0U
@@ -3169,8 +3169,10 @@ fn: lm_p0_scan_head (c.LmP0Document@: document; const: (char@: text); size_t: by
     size_t: closed_end 0U
     size_t: counted_end 0U
     size_t: counter_close 0U
+    size_t: pointer_count_end 0U
     int: prefix_open 0
     quoted_head[0] := 0
+    implicit_address_base[0] := 0
     if: i >= byte_count
         return: 1
     if: c.lm_p0_starts_c_surface_atom(text, byte_count, i)
@@ -3206,10 +3208,15 @@ fn: lm_p0_scan_head (c.LmP0Document@: document; const: (char@: text); size_t: by
             if: lm_p0_counter_after(document, text, byte_count, i, line, column, @ counter_after, @ counter_close) = 0
                 return: 0
             if: counter_after = 0U
-                break
+                # In a composed Array prefix, the address prefix can be the last constructor. A bare `@(name)` still follows the compact route.
+                if: text[start] != '[' || i != pointer_end
+                    break
+                counter_after := counter_close + 1U
+            if: i = pointer_end
+                pointer_count_end := counter_after
             i := counter_after
             counted_end := i
-            occurrence_label := (cast: (int) (text[i] = 96))
+            occurrence_label := (cast: (int) (i < byte_count && text[i] = 96))
             continue
         if: text[i] = '['
             occurrence_label := (cast: (int) (i > start && text[i - 1U] = 92))
@@ -3244,14 +3251,17 @@ fn: lm_p0_scan_head (c.LmP0Document@: document; const: (char@: text); size_t: by
         occurrence_label := 0
         i := i + 1U
     ---
+    if: prefix_open != 0 && text[start] = '[' && i != start && i = pointer_count_end && (i >= byte_count || text[i] != '(')
+        implicit_address_base[0] := 1
     index[0] := i
     return: 1
 end: lm_p0_scan_head
 
-fn: lm_p0_field_start_looks_explicit_frame (c.LmP0Document@: document; const: (char@: text); size_t: byte_count; size_t: index; size_t: line; size_t: column) int
+fn: lm_p0_field_start_looks_explicit_frame (c.LmP0Document@: document; const: (char@: text); size_t: byte_count; size_t: index; size_t: line; size_t: column; int: include_implicit_type) int
     size_t: i index
     size_t: close_index 0U
     int: quoted_head 0
+    int: implicit_address_base 0
     if: index >= byte_count
         return: 0
     if: lm_p0_depth_decorator_at(text, byte_count, index) != 0
@@ -3263,8 +3273,10 @@ fn: lm_p0_field_start_looks_explicit_frame (c.LmP0Document@: document; const: (c
     # A depth-one operator head (`.:`, `.=`) is an atom, never a Frame head, whatever follows it (`(a b).:(b a)`, `a.=(b)`).
     if: lm_p0_dot_operator_at(text, byte_count, i) != 0
         return: 0
-    if: lm_p0_scan_head(document, text, byte_count, @ i, line, column, @ quoted_head) = 0
+    if: lm_p0_scan_head(document, text, byte_count, @ i, line, column, @ quoted_head, @ implicit_address_base) = 0
         return: 0
+    if: include_implicit_type != 0 && implicit_address_base != 0
+        return: 1
     return: i > index && i < byte_count && ((text[i] = ':' && (i + 1U >= byte_count || text[i + 1U] != ':')) || text[i] = '(')
 end: lm_p0_field_start_looks_explicit_frame
 
@@ -3423,7 +3435,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                 break
             if: (i >= byte_count)
                 break
-            if: (((((headless_group_after_separator && (text[i] != '(')) && (text[i] != ')')) && (text[i] != '#')) && (c.lm_p0_is_field_separator(text[i]) = 0)) && (lm_p0_field_start_looks_explicit_frame(document, text, byte_count, i, line, column) = 0))
+            if: (((((headless_group_after_separator && (text[i] != '(')) && (text[i] != ')')) && (text[i] != '#')) && (c.lm_p0_is_field_separator(text[i]) = 0)) && (lm_p0_field_start_looks_explicit_frame(document, text, byte_count, i, line, column, 0) = 0))
                 c.LmP0Node@: group_node
                 group_node := lm_p0_new_node(document, c.LM_P0_NODE_STRUCTURE)
                 if: (group_node = 0)
@@ -3697,7 +3709,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                     break
                 ---
             else:
-                if: ((((text[i] = '[') && (lm_p0_field_start_looks_explicit_frame(document, text, byte_count, i, line, column) = 0)) && ((i = 0U) || (text[i - 1U] != ')'))))
+                if: ((((text[i] = '[') && (lm_p0_field_start_looks_explicit_frame(document, text, byte_count, i, line, column, 1) = 0)) && ((i = 0U) || (text[i - 1U] != ')'))))
                     if: (lm_p0_find_matching_bracket(document, text, byte_count, i, line, column, @ close_index) = 0)
                         return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                     p0_node := lm_p0_new_node(document, c.LM_P0_NODE_STRUCTURE)
@@ -3747,14 +3759,15 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                     break
                 else:
                     int: quoted_head 0
-                    if: lm_p0_scan_head(document, text, byte_count, @ i, line, column, @ quoted_head) = 0
+                    int: implicit_address_base 0
+                    if: lm_p0_scan_head(document, text, byte_count, @ i, line, column, @ quoted_head, @ implicit_address_base) = 0
                         return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                     head_end := i
                     # A depth-one operator head (`.:`, `.=`) is an atom of its own: nothing after it makes a Frame or a call
                     # here (`(a b).:(b a)`, `a.=(b)`), so its span goes straight to the compact atom path.
                     if: (head_end = (start + 2U) && lm_p0_dot_operator_at(text, byte_count, start) != 0)
                         i := head_end
-                        if: (lm_p0_append_compact_atom_pieces(document, structure, text, byte_count, line, column, offset, start, head_end) = 0)
+                        if: (lm_p0_append_compact_atom_pieces(document, structure, text, byte_count, line, column, offset, start, head_end, 0) = 0)
                             return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                         expect_field := 0
                         continue
@@ -3867,7 +3880,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                                     allow_signed_number := 0
                                 ---
                                 if: head_start > start
-                                    if: lm_p0_append_compact_atom_pieces(document, structure, text, byte_count, line, column, offset, start, head_start) = 0
+                                    if: lm_p0_append_compact_atom_pieces(document, structure, text, byte_count, line, column, offset, start, head_start, 0) = 0
                                         return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                                     start := head_start
                                 ---
@@ -3997,7 +4010,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                                 return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                             if: (quoted_head = 0)
                                 i := head_end
-                                if: (lm_p0_append_compact_atom_pieces(document, structure, text, byte_count, line, column, offset, start, head_end) = 0)
+                                if: (lm_p0_append_compact_atom_pieces(document, structure, text, byte_count, line, column, offset, start, head_end, implicit_address_base) = 0)
                                     return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                                 expect_field := 0
                                 continue

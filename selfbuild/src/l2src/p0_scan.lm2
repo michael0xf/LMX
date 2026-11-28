@@ -36,7 +36,7 @@ fn: lm_p0_scan_registry_compact_atom_piece (const: (char@: text); size_t: end_in
     if: text[start] = 58 && text[start + 1U] = 58
         best := 2U
     # The depth-one atom `.:` is one token (the grammar's operators section); a trailing `:` keeps its old reading
-    # (`.::`, `.:=`). The other dotted operators are decorators of the parser (lm_p0_depth_decorator_at).
+    # (`.::`, `.:=`). The other dotted operators begin at a dot boundary of the parser (lm_p0_dot_boundary_at).
     if: text[start] = 46 && text[start + 1U] = 58 && (start + 2U >= end_index || (text[start + 2U] != 58 && text[start + 2U] != 61))
         best := 2U
     # The power `**` and its assignment `**=` (LMX_grammar section 21): one token each, the longest match first.

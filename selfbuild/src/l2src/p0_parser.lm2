@@ -2984,16 +2984,19 @@ fn: lm_p0_dot_operator_at (const: (char@: text); size_t: byte_count; size_t: ind
     return: (cast: (int) (c.lm_p0_scan_compact_atom_piece(text, byte_count, index, 0) = index + 2U))
 end: lm_p0_dot_operator_at
 
-# The bytes that start an operator designator after a decorator's dot (`.+`, `./`, `.**`, `.=`, `.<<`).
+# The bytes that start an operator designator (`.+`, `./`, `.**`, `.=`, `.<<`): after the dot of `.(E)op` the token names the
+# operation; after a dot outside that form it makes the shortened `.op`, which is refused.
 fn: lm_p0_is_depth_operator_byte (char: value) int
     return: value = '+' || value = '-' || value = '*' || value = '/' || value = '%' || value = '=' || value = '!' || value = '<' || value = '>' || value = '&' || value = '|' || value = '^' || value = '~'
 end: lm_p0_is_depth_operator_byte
 
-# A depth decorator at index: the dot of `.(E)op` or of `.op` (LMX_grammar section 15, OPERATOR_DEPTH.en.md). The immediate `.(`
-# always decorates. The atom `.:` is its own token (section 30 does not introduce `.:=`); the positive pair is `.::`, which decorates
-# the designator `::`. Another dot decorates before a backquoted exact name, a word byte that does not start a number, or an operator
-# byte. 1 or 0.
-fn: lm_p0_depth_decorator_at (const: (char@: text); size_t: byte_count; size_t: index) int
+# A general boundary predicate of the dot at index, 1 or 0. Two kinds of dot end the text before them:
+# - the entry of the depth modifier: the dot immediately before `(` (LMX_grammar section 15, OPERATOR_DEPTH);
+# - a boundary marker: the dot before `::`, before a backquoted exact name, before a word byte that does not start a number,
+#   or before an operator byte. That is the dot of a shortened `.op`, which is no form of the grammar (there are no `.op`
+#   abbreviations); the common reading refuses it where it is met (lm_p0_joined_dot_refused).
+# The atom `.:` is its own token (section 30 does not introduce `.:=`); the pair `.::` is the marker of the designator `::`.
+fn: lm_p0_dot_boundary_at (const: (char@: text); size_t: byte_count; size_t: index) int
     char: next 0
     if: index + 1U >= byte_count || text[index] != '.'
         return: 0
@@ -3007,7 +3010,7 @@ fn: lm_p0_depth_decorator_at (const: (char@: text); size_t: byte_count; size_t: 
     if: next = 96 || lm_p0_is_word_start_byte(next) != 0
         return: 1
     return: lm_p0_is_depth_operator_byte(next)
-end: lm_p0_depth_decorator_at
+end: lm_p0_dot_boundary_at
 
 # A field of the level counts only when its value is active: a disabled node or an inactive node is not a field (LMX_grammar section 30).
 fn: lm_p0_active_node (c.LmP0Node@: p0_node) int
@@ -3094,15 +3097,31 @@ fn: lm_p0_dot_ends_piece (const: (char@: text); size_t: byte_count; size_t: star
     return: 1
 end: lm_p0_dot_ends_piece
 
-# The stop of a head before a depth decorator at index: always before the immediate `.(`; before another decorator unless
-# the dot is inside a piece of the head (lm_p0_dot_ends_piece). 1 or 0.
+# The stop of a head before a dot boundary at index: always before the dot of `.(E)op`; before a boundary marker unless the
+# dot is inside a piece of the head (lm_p0_dot_ends_piece: then the head reads the token on and refuses or keeps it there).
+# 1 or 0.
 fn: lm_p0_depth_stop_at (const: (char@: text); size_t: byte_count; size_t: start; size_t: index) int
-    if: lm_p0_depth_decorator_at(text, byte_count, index) = 0
+    if: lm_p0_dot_boundary_at(text, byte_count, index) = 0
         return: 0
     if: text[index + 1U] = '('
         return: 1
     return: (cast: (int) (lm_p0_dot_ends_piece(text, byte_count, start, index) != 0))
 end: lm_p0_depth_stop_at
+
+# The refusal of a boundary marker at index: a dot that is no form of the grammar (LMX_grammar section 15, OPERATOR_DEPTH: the
+# only joined form of the depth modifier is `.(expression)op`; there are no `.op` abbreviations), outside every protected token
+# (lm_p0_dot_ends_piece: a C surface `c.name` and a number keep their dot). The common reading refuses it where it is met, before a
+# head or an atom reaches the tree: 1 with the diagnostic set, or 0. The dot of `.(E)op` and a dot inside a token give 0 at once.
+fn: lm_p0_joined_dot_refused (c.LmP0Document@: document; const: (char@: text); size_t: byte_count; size_t: start; size_t: index; size_t: line; size_t: column) int
+    size_t: diagnostic_line
+    size_t: diagnostic_column
+    if: lm_p0_dot_boundary_at(text, byte_count, index) = 0 || text[index + 1U] = '('
+        return: 0
+    if: lm_p0_dot_ends_piece(text, byte_count, start, index) = 0
+        return: 0
+    lm_p0_position_in_slice(text, byte_count, index, line, column, @ diagnostic_line, @ diagnostic_column)
+    lm_p0_set_diagnostic(document, 6, diagnostic_line, diagnostic_column, "unexpected dot before a designator; write .(expression)op for depth")
+    return: 1
 
 # The designator after a decorator's dot, from index: the assignment family `:` or `:=` (canonical `:=`), `::`, or a path
 # of segments joined by backslashes, each a word or a backquoted exact name (`Lib\`operator with spaces\``), or one
@@ -3248,8 +3267,8 @@ fn: lm_p0_scan_head (c.LmP0Document@: document; const: (char@: text); size_t: by
             quoted_head[0] := 1
             return: 1
     ---
-    # A depth-one operator at the head start is the head span `.:` or `.=`; inside a head the dot of such an operator
-    # ends the head (`a.:f()` is the name `a`, then `.:`, then `f()`), so the operator is never read as a Frame colon.
+    # The assignment operator `.:` at the head start is the head span `.:`; inside a head its dot ends the head
+    # (`a.:f()` is the name `a`, then `.:`, then `f()`), so the operator is never read as a Frame colon.
     if: lm_p0_dot_operator_at(text, byte_count, i) != 0
         index[0] := i + 2U
         return: 1
@@ -3304,6 +3323,10 @@ fn: lm_p0_scan_head (c.LmP0Document@: document; const: (char@: text); size_t: by
         occurrence_label := 0
         i := i + 1U
     ---
+    # The head stopped before a dot that starts a shortened depth form: no form of the grammar, refused here, before the
+    # head reaches the tree. The dot of `.(E)op` ends the head as before.
+    if: (i < byte_count) && (text[i] = '.') && (lm_p0_joined_dot_refused(document, text, byte_count, start, i, line, column) != 0)
+        return: 0
     if: prefix_open != 0 && text[start] = '[' && i != start && i = pointer_count_end && (i >= byte_count || text[i] != '(')
         implicit_address_base[0] := 1
     index[0] := i
@@ -3317,13 +3340,13 @@ fn: lm_p0_field_start_looks_explicit_frame (c.LmP0Document@: document; const: (c
     int: implicit_address_base 0
     if: index >= byte_count
         return: 0
-    if: lm_p0_depth_decorator_at(text, byte_count, index) != 0
+    if: lm_p0_dot_boundary_at(text, byte_count, index) != 0
         return: 0
     if: text[i] = '('
         if: lm_p0_find_matching_paren(document, text, byte_count, i, line, column, @ close_index) = 0
             return: 0
         return: close_index + 1U < byte_count && text[close_index + 1U] = ':' && (close_index + 2U >= byte_count || text[close_index + 2U] != ':')
-    # A depth-one operator head (`.:`, `.=`) is an atom, never a Frame head, whatever follows it (`(a b).:(b a)`, `a.=(b)`).
+    # The assignment operator `.:` as a head is an atom, never a Frame head, whatever follows it (`(a b).:(b a)`).
     if: lm_p0_dot_operator_at(text, byte_count, i) != 0
         return: 0
     if: lm_p0_scan_head(document, text, byte_count, @ i, line, column, @ quoted_head, @ implicit_address_base) = 0
@@ -3600,36 +3623,29 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
             start := i
             head_end := i
             p0_node := 0
-            # A depth decorator (`.(E)op`, `.op`): one Frame whose head is the designator (the assignment family `:` is the
-            # canonical `:=`) and whose body is the depth E (LMX_grammar section 15, OPERATOR_DEPTH.en.md). `.op` has no group,
-            # so its body is the Frame's own empty Structure. A multi-line E is a group (lm_p0_parse_group); a single-line E is
+            # The depth modifier `.(E)op` (LMX_grammar section 15, OPERATOR_DEPTH): one Frame whose head is the designator (the
+            # assignment family `:` is the canonical `:=`) and whose body is the depth E. A shortened `.op` is no form of the
+            # grammar and is refused here (lm_p0_joined_dot_refused). A multi-line E is a group (lm_p0_parse_group); a single-line E is
             # the compact frame body on the field stack, resumed at the designator's end (its close index is the last byte of
             # the designator), while the child's bounds stay inside the real parentheses.
-            if: lm_p0_depth_decorator_at(text, byte_count, i) != 0
+            if: lm_p0_dot_boundary_at(text, byte_count, i) != 0
                 size_t: depth_close_index
                 size_t: depth_designator_index
                 size_t: depth_designator_end
                 int: depth_canonical
-                int: depth_explicit
                 int: depth_grouped
-                depth_close_index := i
-                depth_designator_index := (i + 1U)
-                depth_explicit := (cast: (int) (text[i + 1U] = '('))
-                depth_grouped := 0
-                if: depth_explicit != 0
-                    if: (lm_p0_find_matching_paren(document, text, byte_count, (i + 1U), line, column, @ depth_close_index) = 0)
-                        return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
-                    depth_designator_index := (depth_close_index + 1U)
-                ---
+                if: lm_p0_joined_dot_refused(document, text, byte_count, i, i, line, column) != 0
+                    return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                if: (lm_p0_find_matching_paren(document, text, byte_count, (i + 1U), line, column, @ depth_close_index) = 0)
+                    return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                depth_designator_index := (depth_close_index + 1U)
                 if: (lm_p0_depth_designator(document, text, byte_count, depth_designator_index, line, column, @ depth_designator_end, @ depth_canonical) = 0)
                     return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
-                if: depth_explicit != 0
-                    lm_p0_probe_form(document, 1, 4, ((text + i) + 1U), (text + depth_close_index), (text + (depth_designator_end - 1U)))
-                ---
+                lm_p0_probe_form(document, 1, 4, ((text + i) + 1U), (text + depth_close_index), (text + (depth_designator_end - 1U)))
                 p0_node := lm_p0_new_node(document, c.LM_P0_NODE_FRAME)
                 if: (p0_node = 0)
                     return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
-                p0_node\as\frame\flags := c.LM_P0_FRAME_DEPTH
+                p0_node\as\frame\flags := (c.LM_P0_FRAME_DEPTH | c.LM_P0_FRAME_INLINE_BODY)
                 if: depth_canonical != 0
                     p0_node\as\frame\head\data := ":="
                     p0_node\as\frame\head\length := 2U
@@ -3637,10 +3653,8 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                     p0_node\as\frame\head\data := (text + depth_designator_index)
                     p0_node\as\frame\head\length := (depth_designator_end - depth_designator_index)
                 ---
-                if: depth_explicit != 0
-                    p0_node\as\frame\flags := (p0_node\as\frame\flags | c.LM_P0_FRAME_INLINE_BODY)
-                ---
-                if: (depth_explicit != 0) && (lm_p0_count_line_breaks(text, (i + 2U), depth_close_index) != 0U)
+                depth_grouped := 0
+                if: lm_p0_count_line_breaks(text, (i + 2U), depth_close_index) != 0U
                     c.LmP0Structure@: depth_group
                     if: (lm_p0_parse_group(document, text, byte_count, line, column, (i + 1U), depth_close_index, c.LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS, @ depth_group) = 0)
                         return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
@@ -3648,7 +3662,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                     depth_grouped := 1
                     lm_p0_probe_return(document, (text + (depth_designator_end - 1U)), (text + depth_designator_end))
                 ---
-                if: (depth_explicit != 0) && (depth_grouped = 0)
+                if: depth_grouped = 0
                     child_indent_stack := lm_p0_indent_stack_new_empty()
                     if: (child_indent_stack = 0)
                         lm_p0_set_diagnostic(document, 1, line, column, "out of memory while creating indentation stack")
@@ -3877,8 +3891,8 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                     if: lm_p0_scan_head(document, text, byte_count, @ i, line, column, @ quoted_head, @ implicit_address_base) = 0
                         return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                     head_end := i
-                    # A depth-one operator head (`.:`, `.=`) is an atom of its own: nothing after it makes a Frame or a call
-                    # here (`(a b).:(b a)`, `a.=(b)`), so its span goes straight to the compact atom path.
+                    # The assignment operator `.:` as a head is an atom of its own: nothing after it makes a Frame or a call
+                    # here (`(a b).:(b a)`), so its span goes straight to the compact atom path.
                     if: (head_end = (start + 2U) && lm_p0_dot_operator_at(text, byte_count, start) != 0)
                         i := head_end
                         if: (lm_p0_append_compact_atom_pieces(document, structure, text, byte_count, line, column, offset, start, head_end, 0) = 0)

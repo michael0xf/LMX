@@ -3480,6 +3480,38 @@ fn: lm_graph_bounds_first_trailer (c.LmP0Trailer@: trailer; c.LmP0Document@: doc
     ---
     return: lm_graph_bounds_least(best, lm_graph_bounds_first_structure((cast: (c.LmP0Structure@) trailer\body), doc, limit))
 
+# The depth Frame of a form `.(E)op` whose row lies in the observation: the node of the tree that is a Frame with the
+# depth flag and whose span runs from the dot at dot_at to the continuation at next_at. The tree is walked in its
+# order -- the fields of a Structure, the body of a Frame, the marks of an atom -- as lm_graph_bounds_first_node
+# walks it. 0 when the tree holds no such Frame.
+fn: lm_graph_bounds_depth_node (c.LmP0Node@: item; size_t: dot_at; size_t: next_at) c.LmP0Node@
+    c.LmP0Frame@: frame 0
+    if: item = 0
+        return: 0
+    if: item\kind = c.LM_P0_NODE_FRAME
+        frame := (cast: (c.LmP0Frame@) item\as\frame)
+        if: ((frame\flags & c.LM_P0_FRAME_DEPTH) != 0U) && ((cast: (size_t) item\span\offset) = dot_at) && (((cast: (size_t) item\span\offset) + (cast: (size_t) item\span\length)) = next_at)
+            return: item
+        return: lm_graph_bounds_depth_structure((cast: (c.LmP0Structure@) frame\body), dot_at, next_at)
+    if: item\kind = c.LM_P0_NODE_STRUCTURE
+        return: lm_graph_bounds_depth_structure((cast: (c.LmP0Structure@) item\as\structure), dot_at, next_at)
+    if: item\kind = c.LM_P0_NODE_ATOM
+        return: lm_graph_bounds_depth_structure((cast: (c.LmP0Structure@) item\marks), dot_at, next_at)
+    return: 0
+
+fn: lm_graph_bounds_depth_structure (c.LmP0Structure@: structure; size_t: dot_at; size_t: next_at) c.LmP0Node@
+    c.LmP0Field@: field 0
+    c.LmP0Node@: found 0
+    if: structure = 0
+        return: 0
+    field := (cast: (c.LmP0Field@) structure\first_field)
+    while: field != 0
+        found := lm_graph_bounds_depth_node((cast: (c.LmP0Node@) field\value), dot_at, next_at)
+        if: found != 0
+            return: found
+        field := (cast: (c.LmP0Field@) field\next)
+    return: 0
+
 # `p0 FILE bounds`: the observation of a parse checked against the bytes of its source and against its tree. For every
 # row: the source has the opening delimiter of its kind at open_at and its closing one at close_at; its owner resumed
 # right after that delimiter (after the designator, for a depth form; at the anchor of its item, for a leading Mix
@@ -3502,6 +3534,10 @@ fn: lm_graph_p0_bounds (c.FILE@: out; c.LmP0Document@: doc) int
     size_t: multiline 0U
     size_t: mix 0U
     int: inside 0
+    c.LmP0Node@: depth 0
+    c.LmP0Frame@: frame 0
+    size_t: written 0U
+    int: head_ok 0
     char: opener
     char: closer
     source := doc\source
@@ -3542,16 +3578,40 @@ fn: lm_graph_p0_bounds (c.FILE@: out; c.LmP0Document@: doc) int
                 c.fprintf(out, "FAIL row %zu: the owner resumed at %zu, not after its delimiter at %zu\n", i, (cast: (size_t) row\next_at), (cast: (size_t) row\close_at))
                 fails := (fails + 1U)
             if: row\route = 4
-                # the designator of a depth form: bytes that are no spaces and no brackets
-                j := (row\close_at + 1U)
-                while: j < row\next_at
-                    if: source[j] = 32 || source[j] = 9 || source[j] = 13 || source[j] = 10 || source[j] = 40 || source[j] = 41 || source[j] = 91 || source[j] = 93
-                        c.fprintf(out, "FAIL row %zu: a space or a bracket at %zu inside the designator the owner read\n", i, j)
-                        fails := (fails + 1U)
-                    j := (j + 1U)
-                if: row\next_at = (row\close_at + 1U)
-                    c.fprintf(out, "FAIL row %zu: the designator of the depth form is empty\n", i)
+                # The depth modifier `.(E)op`: the form opens with a dot and a parenthesis; the designator stands between
+                # the closing parenthesis and the continuation and is not empty; the token is its last byte; the tree
+                # holds the depth Frame whose span runs from the dot to the continuation, and its raw head is the
+                # designator as written -- or the canonical `:=` that the reader keeps for a written `:`. An exact name in
+                # the designator may hold spaces and brackets: the common parser read it (lm_p0_depth_designator), and its
+                # bytes are not walked a second time here.
+                if: row\open_at = 0U || source[(row\open_at - 1U)] != 46
+                    c.fprintf(out, "FAIL row %zu: no dot opens the depth form before its parenthesis at %zu\n", i, (cast: (size_t) row\open_at))
                     fails := (fails + 1U)
+                if: row\next_at <= (row\close_at + 1U) || row\next_at > byte_count
+                    c.fprintf(out, "FAIL row %zu: the designator of the depth form is empty or runs past the source\n", i)
+                    fails := (fails + 1U)
+                else:
+                    if: row\token_at != (row\next_at - 1U)
+                        c.fprintf(out, "FAIL row %zu: the token of the depth form is %zu, not the last byte of its designator\n", i, (cast: (size_t) row\token_at))
+                        fails := (fails + 1U)
+                    depth := lm_graph_bounds_depth_node((cast: (c.LmP0Node@) c.lm_p0_document_root(doc)), (cast: (size_t) (row\open_at - 1U)), (cast: (size_t) row\next_at))
+                    if: depth = 0
+                        c.fprintf(out, "FAIL row %zu: the tree holds no depth Frame from the dot at %zu to the continuation at %zu\n", i, (cast: (size_t) (row\open_at - 1U)), (cast: (size_t) row\next_at))
+                        fails := (fails + 1U)
+                    else:
+                        frame := (cast: (c.LmP0Frame@) depth\as\frame)
+                        written := (row\next_at - (row\close_at + 1U))
+                        head_ok := 0
+                        if: (cast: (size_t) frame\head\length) = written && c.strncmp((cast: (const: char@) frame\head\data), (source + (row\close_at + 1U)), (cast: (size_t) written)) = 0
+                            head_ok := 1
+                        if: (cast: (size_t) frame\head\length) = 2U && written = 1U && source[(row\close_at + 1U)] = 58 && c.strncmp((cast: (const: char@) frame\head\data), ":=", 2U) = 0
+                            head_ok := 1
+                        if: head_ok = 0
+                            c.fprintf(out, "FAIL row %zu: the head of the depth Frame differs from the designator written from %zu to %zu\n", i, (cast: (size_t) (row\close_at + 1U)), (cast: (size_t) row\next_at))
+                            fails := (fails + 1U)
+                        ---
+                    ---
+                ---
                 ---
             if: row\anchor_at != (cast: (size_t) -1)
                 if: row\anchor_at < row\next_at || row\anchor_at > byte_count || lm_graph_bounds_only_spaces(source, row\next_at, row\anchor_at) = 0

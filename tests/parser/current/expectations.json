@@ -3749,5 +3749,71 @@
     "exit": 1,
     "authority": "`:=` at the start of a field (coder, 2026-11-28; DESIGN-ASSIGN-1 section 4): a single colon followed by `=` is no token of the grammar (p0_scan.lm2:32-34: `:=` is one token); the reading of the base stays: code 6",
     "diagnostic": "6@1:9"
+  },
+  {
+    "path": "tests/parser/current/depth_line_exact_with_spaces.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "The single-line depth form by return (coder, 2026-11-28; DESIGN-DEPTH-LINE-1 D1-D2; Sol, Request ID SOL-CODER-V3-RESUME-20261129): the body of `.(E)op` on one line is read in a context of the loop of fields that stops before its closing parenthesis and leaves it to the owner; the tree stays that of the accepted P0 before the slice (coder-assign01), reviewed against the input",
+    "stdout_exact": "structure fields=1 ##\n  frame head=\"x\" body=structure fields=2 ## {COLON INLINE}\n    frame head=\"Lib\\`op with (spaces)\\`\" body=structure fields=1 ## {INLINE DEPTH}\n      frame head=\"f\" body=structure fields=1 ## {COMPACT}\n        atom \"2\" ##\n    atom \"tail\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/depth_line_custom_operand_kept.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "The single-line depth form by return (coder, 2026-11-28; DESIGN-DEPTH-LINE-1 D1-D2; Sol, Request ID SOL-CODER-V3-RESUME-20261129): the body of `.(E)op` on one line is read in a context of the loop of fields that stops before its closing parenthesis and leaves it to the owner; the tree stays that of the accepted P0 before the slice (coder-assign01), reviewed against the input",
+    "stdout_exact": "structure fields=1 ##\n  frame head=\"x\" body=structure fields=2 ## {COLON INLINE}\n    frame head=\"myFunc\" body=structure fields=1 ## {INLINE DEPTH}\n      atom \"1\" ##\n    structure fields=2 ##\n      structure fields=1 ## [SEMICOLON]\n        atom \"a\" ## [SEP]\n      structure fields=1 ##\n        atom \"b\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/depth_line_multiline_kept.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "The single-line depth form by return (coder, 2026-11-28; DESIGN-DEPTH-LINE-1 D1-D2; Sol, Request ID SOL-CODER-V3-RESUME-20261129): the body of `.(E)op` on one line is read in a context of the loop of fields that stops before its closing parenthesis and leaves it to the owner; the tree stays that of the accepted P0 before the slice (coder-assign01), reviewed against the input",
+    "stdout_exact": "structure fields=1 ##\n  frame head=\"x\" body=structure fields=3 ## {COLON INLINE}\n    atom \"a\" ##\n    frame head=\"+\" body=structure fields=3 ## {INLINE DEPTH}\n      atom \"1\" ## [DOCUMENT]\n      atom \"+\" ## [DOCUMENT]\n      atom \"1\" ## [DOCUMENT]\n    atom \"b\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/depth_line_next_line_kept.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "The single-line depth form by return (coder, 2026-11-28; DESIGN-DEPTH-LINE-1 D1-D2; Sol, Request ID SOL-CODER-V3-RESUME-20261129): the body of `.(E)op` on one line is read in a context of the loop of fields that stops before its closing parenthesis and leaves it to the owner; the tree stays that of the accepted P0 before the slice (coder-assign01), reviewed against the input",
+    "stdout_exact": "structure fields=1 ##\n  frame head=\"x\" body=structure fields=4 ## {COLON INLINE}\n    atom \"a\" ##\n    frame head=\"+\" body=structure fields=1 ## {INLINE DEPTH}\n      atom \"0\" ##\n    atom \"b\" ##\n    structure fields=1 ##\n      atom \"c\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/depth_line_quiet_call_control.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "The single-line depth form by return (coder, 2026-11-28; DESIGN-DEPTH-LINE-1 D1-D2; Sol, Request ID SOL-CODER-V3-RESUME-20261129): the body of `.(E)op` on one line is read in a context of the loop of fields that stops before its closing parenthesis and leaves it to the owner; the tree stays that of the accepted P0 before the slice (coder-assign01), reviewed against the input",
+    "stdout_exact": "structure fields=1 ##\n  frame head=\"x\" body=structure fields=1 ## {COLON INLINE}\n    atom \"\"a {f(a ] b)} {ok}\"\" ##\n      MIX at 14 structure fields=1 ## [MIX STRMARK]\n        atom \"ok\" ## [DOCUMENT]\n"
+  },
+  {
+    "path": "tests/parser/current/depth_line_quiet_depth_mark.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "The single-line depth form by return (coder, 2026-11-28; DESIGN-DEPTH-LINE-1 D1-D2; Sol, Request ID SOL-CODER-V3-RESUME-20261129): the body of `.(E)op` on one line is read in a context of the loop of fields that stops before its closing parenthesis and leaves it to the owner; the tree stays that of the accepted P0 before the slice (coder-assign01), reviewed against the input",
+    "stdout_exact": "structure fields=1 ##\n  frame head=\"x\" body=structure fields=1 ## {COLON INLINE}\n    atom \"\"a {.(2)} {ok}\"\" ##\n      MIX at 10 structure fields=1 ## [MIX STRMARK]\n        atom \"ok\" ## [DOCUMENT]\n"
+  },
+  {
+    "path": "tests/parser/current/depth_line_bracket_unclosed_refused.lmx",
+    "exit": 1,
+    "authority": "The single-line depth form by return (coder, 2026-11-28; DESIGN-DEPTH-LINE-1 section 4): the body is read before the closing parenthesis, so the first defect met is reported (the rule accepted for slices 1a-1c); the diagnostic is fixed here by that rule before the run",
+    "diagnostic": "33@1:8"
+  },
+  {
+    "path": "tests/parser/current/depth_line_bracket_then_close_refused.lmx",
+    "exit": 1,
+    "authority": "The single-line depth form by return (coder, 2026-11-28; DESIGN-DEPTH-LINE-1 section 4): the body is read before the closing parenthesis, so the first defect met is reported (the rule accepted for slices 1a-1c); the diagnostic is fixed here by that rule before the run",
+    "diagnostic": "33@1:8"
+  },
+  {
+    "path": "tests/parser/current/depth_line_unclosed_kept.lmx",
+    "exit": 1,
+    "authority": "The single-line depth form by return (coder, 2026-11-28; DESIGN-DEPTH-LINE-1 section 4): the body is read before the closing parenthesis, so the first defect met is reported (the rule accepted for slices 1a-1c); the diagnostic is fixed here by that rule before the run",
+    "diagnostic": "5@1:7"
+  },
+  {
+    "path": "tests/parser/current/depth_line_bracket_group_kept.lmx",
+    "exit": 1,
+    "authority": "The single-line depth form by return (coder, 2026-11-28; DESIGN-DEPTH-LINE-1 section 4): the body is read before the closing parenthesis, so the first defect met is reported (the rule accepted for slices 1a-1c); the diagnostic is fixed here by that rule before the run",
+    "diagnostic": "6@1:10"
   }
 ]

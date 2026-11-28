@@ -12,12 +12,12 @@ if (-not (Test-Path -LiteralPath (Join-Path $RepoRoot 'lm1\build\printTree.lm1.c
     Write-Error ("Not LMX repo root: {0}" -f $RepoRoot)
     exit 2
 }
-if ($Fixture -eq 'own' -and -not (Test-Path -LiteralPath (Join-Path $RepoRoot 'include_languages\vm\own_harness_main.c'))) {
-    Write-Error 'Missing include_languages/vm/own_harness_main.c'
+if ($Fixture -eq 'own' -and -not (Test-Path -LiteralPath (Join-Path $RepoRoot 'tests\vm\patha\own_harness_main.c'))) {
+    Write-Error 'Missing tests/vm/patha/own_harness_main.c'
     exit 2
 }
-if ($Fixture -eq 'parser' -and -not (Test-Path -LiteralPath (Join-Path $RepoRoot 'include_languages\vm\parser_harness_main.c'))) {
-    Write-Error 'Missing include_languages/vm/parser_harness_main.c'
+if ($Fixture -eq 'parser' -and -not (Test-Path -LiteralPath (Join-Path $RepoRoot 'tests\vm\patha\parser_harness_main.c'))) {
+    Write-Error 'Missing tests/vm/patha/parser_harness_main.c'
     exit 2
 }
 if ($Fixture -eq 'l1trans' -and -not (Test-Path -LiteralPath (Join-Path $RepoRoot 'lm1\build\l1trans.lm1.c'))) {
@@ -146,7 +146,7 @@ function Run-Mir-Own {
     $body = @(
         '#!/bin/bash','set -e','cd /mnt/c/Nyasha_Planet/LMX',
         'C2M=build/vm/mir-build/c2m',"OUT=build/vm_porting/$Stamp",'mkdir -p "$OUT"',
-        '"$C2M" -I. -Ilm1/build include_languages/vm/own_harness_main.c lm1/build/own.lm1.c -ei','echo OWN_EI=$?'
+        '"$C2M" -I. -Ilm1/build tests/vm/patha/own_harness_main.c lm1/build/own.lm1.c -ei','echo OWN_EI=$?'
     ) -join $nl
     $r = Invoke-WslBash 'mir_own' $body
     if ($r.Exit -eq 0 -and $r.Output -match 'VM_OWN_OK checks=') { Add-Result 'mir' 'OK' 0 'own harness -ei' }
@@ -164,7 +164,7 @@ function Run-Wasm-Own {
         'CLANG=build/vm/wasi-sdk-34.0-x86_64-linux/bin/clang',
         'WT=build/vm/wasmtime-v48.0.2-x86_64-linux/wasmtime',
         "OUT=build/vm_porting/$Stamp",'mkdir -p "$OUT"',
-        '"$CLANG" --target=wasm32-wasip1 -std=c99 -Wall -O2 -I. -Ilm1/build -o "$OUT/own.wasm" include_languages/vm/own_harness_main.c lm1/build/own.lm1.c',
+        '"$CLANG" --target=wasm32-wasip1 -std=c99 -Wall -O2 -I. -Ilm1/build -o "$OUT/own.wasm" tests/vm/patha/own_harness_main.c lm1/build/own.lm1.c',
         'echo CC=$?','"$WT" "$OUT/own.wasm"','echo RUN=$?'
     ) -join $nl
     $r = Invoke-WslBash 'wasm_own' $body
@@ -184,7 +184,7 @@ function Run-Riscv-Own {
         'QEMU=build/vm/qemu-user-static-root/usr/bin/qemu-riscv64-static',
         "OUT=build/vm_porting/$Stamp",'mkdir -p "$OUT"',
         'SYSROOT=$("$GCC" -print-sysroot)',
-        '"$GCC" -std=c99 -Wall -O2 -I. -Ilm1/build -o "$OUT/own_rv.elf" include_languages/vm/own_harness_main.c lm1/build/own.lm1.c',
+        '"$GCC" -std=c99 -Wall -O2 -I. -Ilm1/build -o "$OUT/own_rv.elf" tests/vm/patha/own_harness_main.c lm1/build/own.lm1.c',
         'echo CC=$?','"$QEMU" -L "$SYSROOT" "$OUT/own_rv.elf"','echo RUN=$?'
     ) -join $nl
     $r = Invoke-WslBash 'riscv_own' $body
@@ -200,7 +200,7 @@ function Run-Mir-Parser {
     $body = @(
         '#!/bin/bash','set -e','cd /mnt/c/Nyasha_Planet/LMX',
         'C2M=build/vm/mir-build/c2m',"OUT=build/vm_porting/$Stamp",'mkdir -p "$OUT"',
-        '"$C2M" -I. -Ilm1/build include_languages/vm/parser_harness_main.c lm1/build/parser.lm1.c -ei','echo PARSER_EI=$?'
+        '"$C2M" -I. -Ilm1/build tests/vm/patha/parser_harness_main.c lm1/build/parser.lm1.c -ei','echo PARSER_EI=$?'
     ) -join $nl
     $r = Invoke-WslBash 'mir_parser' $body
     if ($r.Exit -eq 0 -and $r.Output -match 'VM_PARSER_OK checks=') { Add-Result 'mir' 'OK' 0 'parser harness -ei' }
@@ -218,7 +218,7 @@ function Run-Wasm-Parser {
         'CLANG=build/vm/wasi-sdk-34.0-x86_64-linux/bin/clang',
         'WT=build/vm/wasmtime-v48.0.2-x86_64-linux/wasmtime',
         "OUT=build/vm_porting/$Stamp",'mkdir -p "$OUT"',
-        '"$CLANG" --target=wasm32-wasip1 -std=c99 -Wall -Wno-unused-parameter -O2 -I. -Ilm1/build -o "$OUT/parser.wasm" include_languages/vm/parser_harness_main.c lm1/build/parser.lm1.c',
+        '"$CLANG" --target=wasm32-wasip1 -std=c99 -Wall -Wno-unused-parameter -O2 -I. -Ilm1/build -o "$OUT/parser.wasm" tests/vm/patha/parser_harness_main.c lm1/build/parser.lm1.c',
         'echo CC=$?','"$WT" "$OUT/parser.wasm"','echo RUN=$?'
     ) -join $nl
     $r = Invoke-WslBash 'wasm_parser' $body
@@ -238,7 +238,7 @@ function Run-Riscv-Parser {
         'QEMU=build/vm/qemu-user-static-root/usr/bin/qemu-riscv64-static',
         "OUT=build/vm_porting/$Stamp",'mkdir -p "$OUT"',
         'SYSROOT=$("$GCC" -print-sysroot)',
-        '"$GCC" -std=c99 -Wall -Wno-unused-parameter -O2 -I. -Ilm1/build -o "$OUT/parser_rv.elf" include_languages/vm/parser_harness_main.c lm1/build/parser.lm1.c',
+        '"$GCC" -std=c99 -Wall -Wno-unused-parameter -O2 -I. -Ilm1/build -o "$OUT/parser_rv.elf" tests/vm/patha/parser_harness_main.c lm1/build/parser.lm1.c',
         'echo CC=$?','"$QEMU" -L "$SYSROOT" "$OUT/parser_rv.elf"','echo RUN=$?'
     ) -join $nl
     $r = Invoke-WslBash 'riscv_parser' $body

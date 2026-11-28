@@ -10,7 +10,7 @@ This inventory is dependency-ordered preparation. It does **not** start L1→L2�
 
 ## Final target (recorded)
 
-After the interpreter gate closes: all supported L1 becomes L2, then predominantly L3; the final self-build runs **on L3** with **explicit, justified L2 machine inserts**. Goal statement (no work plan): `dev/mixa_sandbox/FINAL_TARGET_AND_STAGE_IMPLICATIONS.md`. Self-build ownership and chain: `steps/core-self-build.md`. Receiver / interpreter contract: `steps/l3-receiver.md`. VM Path A order (MIR first): `include_languages/vm_porting_plan_en.txt`.
+After the interpreter gate closes: all supported L1 becomes L2, then predominantly L3; the final self-build runs **on L3** with **explicit, justified L2 machine inserts**. Goal statement (no work plan): `dev/mixa_sandbox/FINAL_TARGET_AND_STAGE_IMPLICATIONS.md`. Self-build ownership and chain: `steps/core-self-build.md`. Receiver / interpreter contract: `steps/l3-receiver.md`. [Path A checks](vm-porting.md) start with MIR.
 
 ## Prerequisites before any migration batch (36B)
 
@@ -59,7 +59,7 @@ No mass rewrite in this ticket.
 After interpreter gate + L2 replacement of supported L1:
 
 - Graph walk / callable body execution currently sketched under `dev/l3_interp/` (`l3_exec`, `l3_admit`, role/path).
-- Managed Path B printers (JVM / wasm-gc / Lua / CIL) per `include_languages/vm_porting_plan_en.txt` items 4–7 — **cancelled by the author 2026-11-23**, history only; Path A (MIR/WASM-linear/RISC-V over generated C99) is retained.
+- Managed Path B printers (JVM / wasm-gc / Lua / CIL) were **cancelled by the author 2026-11-23**. Path A (MIR/WASM-linear/RISC-V over generated C99) is retained.
 
 ---
 
@@ -140,7 +140,7 @@ When N5/N6/N8 + runner + plan consumer are green:
 
 1. Claim **one** small L2-complete unit with existing selftest (prefer already-GREEN L2 sandbox module).
 2. Do **not** touch Fable/`lmx_walk`, DeepSeek self-build, or unowned translator gap files in the same batch.
-3. Path A smoke (separate from language migration): earliest uncovered item in `include_languages/vm_porting_plan_en.txt` is **MIR** — build/load smoke only, claim exact files, no other owners.
+3. Path A smoke (separate from language migration): start at **MIR**, with build/load smoke only. [Path A controls](vm-patha-canonical-fixtures.md).
 
 This inventory does **not** authorize that batch.
 

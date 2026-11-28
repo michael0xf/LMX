@@ -20,7 +20,7 @@ Path A manager ports.
 | --- | --- |
 | Record shared host surface via existing seams; profiles; routes; acceptance | Qt; redesign of LMX Message core for a windowing library |
 | Two-axis complexity (kernel/compiler vs full manager product) vs JVM / .NET CIL / WASM GC / Lua 5.4 | Downloads, builds, runner edits, seed/kernel source changes |
-| Tie claims to `steps/*.md` evidence | Editing `include_languages/vm_porting_plan_*.txt` or other owned WIP |
+| Tie claims to `steps/*.md` evidence | Editing another owner's platform profiles or WIP |
 
 **Hard non-claim:** Path A core smoke (`tools/run_vm_patha_smoke.ps1` fixtures
 printTree / own / parser / l1trans) proves **executable C99 seeds** on MIR /

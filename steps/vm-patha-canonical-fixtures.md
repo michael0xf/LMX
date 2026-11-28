@@ -165,7 +165,7 @@ They remain compile-only seeds until a main harness exists. Evidence:
 Tracked seed `lm1/build/own.lm1.c` has **no `main`**. Executable coverage is provided by a
 small tracked C99 harness that **links the seed unchanged**:
 
-- Harness: `include_languages/vm/own_harness_main.c`
+- Harness: `tests/vm/patha/own_harness_main.c`
 - Header resolution: `-I. -Ilm1/build` so the seed's `#include "l1src/p0.lm1.h"` finds
   tracked `lm1/build/l1src/p0.lm1.h`
 - Exercises real ownership (not a stub): `lm_own_copy_bytes` content+NUL; pointer-stack
@@ -178,7 +178,7 @@ small tracked C99 harness that **links the seed unchanged**:
 
 | Path | Command sketch | Exit | Output |
 |------|----------------|-----:|--------|
-| Host C99 (oracle) | `gcc -std=c99 -O2 -I. -Ilm1/build -o build/vm_porting/own_harness/own_host.exe include_languages/vm/own_harness_main.c lm1/build/own.lm1.c` then run | **0** | `VM_OWN_OK checks=21` |
+| Host C99 (oracle) | `gcc -std=c99 -O2 -I. -Ilm1/build -o build/vm_porting/own_harness/own_host.exe tests/vm/patha/own_harness_main.c lm1/build/own.lm1.c` then run | **0** | `VM_OWN_OK checks=21` |
 | MIR | `build/vm/mir-build/c2m -I. -Ilm1/build … -ei` | **0** | `VM_OWN_OK checks=21` |
 | WASM | wasi-sdk clang → `own.wasm`; `wasmtime own.wasm` | **0** | `VM_OWN_OK checks=21` |
 | RISC-V | cross gcc → `own_rv.elf`; qemu-riscv64-static | **0** | `VM_OWN_OK checks=21` |
@@ -200,7 +200,7 @@ powershell -NoProfile -File tools/run_vm_patha_smoke.ps1 -Fixture own -Target al
 Tracked seed `lm1/build/parser.lm1.c` has **no `main`**. Executable coverage is a small
 tracked C99 harness that **links the seed unchanged**:
 
-- Harness: `include_languages/vm/parser_harness_main.c`
+- Harness: `tests/vm/patha/parser_harness_main.c`
 - Includes: `-I. -Ilm1/build` → tracked `lm1/build/l1src/p0.lm1.h`
 - Public ABI only: `lm_p0_parse_string`, `lm_p0_document_root`, `lm_p0_dump_alloc`,
   `lm_p0_document_diagnostic`, `lm_p0_document_destroy`, `lm_p0_free`

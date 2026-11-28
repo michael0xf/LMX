@@ -1,10 +1,10 @@
 # VM: последовательная подготовка и проверка сборки
 
-**Отменено автором 2026-11-23:** внешние L3 VM — JVM classfile, .NET CIL, WASM GC и Lua 5.4 — отменены полностью и сняты из очереди; сохраняются Path A (C99, MIR, WASM linear, RISC-V ISA). Всё, что ниже об этих четырёх целях, — история, а не требования и не очередь; ссылки на пункты 4–7 плана портирования считать снятыми. Основание: [план](../next_core_tasks_v3.md#backends-20261123).
+**Отменено автором 2026-11-23:** внешние L3 VM — JVM classfile, .NET CIL, WASM GC и Lua 5.4 — сняты из очереди. Сохраняется Path A (C99, MIR, WASM linear, RISC-V ISA). Сведения об отменённых целях и прежней нумерации сохранены как история. [План](../next_core_tasks_v3.md#backends-20261123).
 
 Поручение автора от 2026-09-20. Исполнитель: **существующий Grok Bot**, не Grok CLI. Координация и приёмка: Codex. Код задания: `LMX-VM-BOOTSTRAP-20260920-01`.
 
-Основание и порядок: [vm_porting_plan_en.txt](../include_languages/vm_porting_plan_en.txt), пункты 1–3. Общая координация: [implementation-plan.md](implementation-plan.md). Это рабочее задание, а не новая спецификация языка.
+Действующие договоры Path A задают [MIR](../include_languages/platforms/mir/README.md), [WASM linear](../include_languages/platforms/wasm_linear/README.md) и [RISC-V](../include_languages/platforms/riscv/README.md). [Общий план](implementation-plan.md) и [контроли Path A](vm-patha-canonical-fixtures.md) описывают работу и её наблюдения.
 
 Рабочая записка по переносимости **Mixa/myxa_manager** на VM-профили (существующие BACKEND/FILE/PROCESS seams, матрица сложности, отличие Path A smoke от продукта): [mixa-vm-integration.md](mixa-vm-integration.md).
 

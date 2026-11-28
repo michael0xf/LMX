@@ -288,6 +288,16 @@ fn: lm_p0_single_line_known (const: (char@: text); size_t: byte_count; size_t: k
         return: known
     return: lm_p0_single_line_from(text, byte_count)
 
+# Does the body of a bounded form, from the byte past its opening delimiter at text[open_index] to text[close_index],
+# hold a line break? The sign of a single-line text (found now when it was not looked for yet) answers at once;
+# otherwise the bytes of the body are counted once. The answer is one for the choice between a context of the loop
+# and a document of its own and for the observation.
+fn: lm_p0_body_spans_lines (const: (char@: text); size_t: byte_count; size_t: open_index; size_t: close_index; size_t@: single_line_from) int
+    single_line_from[0] := lm_p0_single_line_known(text, byte_count, single_line_from[0])
+    if: (single_line_from[0] <= (open_index + 1U))
+        return: 0
+    return: (cast: (int) (lm_p0_count_line_breaks(text, (open_index + 1U), close_index) != 0U))
+
 # Original: parser.lm1:445 lm_p0_position_in_slice
 sub: lm_p0_position_in_slice (const: (char@: text); size_t: byte_count; size_t: index; size_t: base_line; size_t: base_column; size_t@: out_line; size_t@: out_column)
     size_t: i
@@ -3759,9 +3769,11 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                     p0_node := lm_p0_new_node(document, c.LM_P0_NODE_STRUCTURE)
                     if: (p0_node = 0)
                         return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
-                    lm_p0_probe_group(document, 1, text, i, close_index)
+                    int: spans_lines
+                    spans_lines := lm_p0_body_spans_lines(text, byte_count, i, close_index, @ single_line_from)
+                    lm_p0_probe_body(document, 1, spans_lines, (text + i), (text + close_index))
                     # A group that spans lines is a document of its own (lm_p0_parse_group).
-                    if: (lm_p0_count_line_breaks(text, (i + 1U), close_index) != 0U)
+                    if: spans_lines
                         c.LmP0Structure@: group_structure
                         if: (lm_p0_parse_group(document, text, byte_count, line, column, i, close_index, c.LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS, @ group_structure) = 0)
                             return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
@@ -3813,9 +3825,11 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                         return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                     # The explicit group of elements: a Structure written in square brackets at a field start (Р156). The brackets of an index or of a suffix are atoms and carry no flag.
                     p0_node\flags := p0_node\flags | c.LM_P0_NODE_SQUARE
-                    lm_p0_probe_group(document, 2, text, i, close_index)
+                    int: spans_lines
+                    spans_lines := lm_p0_body_spans_lines(text, byte_count, i, close_index, @ single_line_from)
+                    lm_p0_probe_body(document, 2, spans_lines, (text + i), (text + close_index))
                     # A group that spans lines is a document of its own (lm_p0_parse_group).
-                    if: (lm_p0_count_line_breaks(text, (i + 1U), close_index) != 0U)
+                    if: spans_lines
                         c.LmP0Structure@: group_structure
                         if: (lm_p0_parse_group(document, text, byte_count, line, column, i, close_index, c.LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS, @ group_structure) = 0)
                             return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
@@ -4029,9 +4043,11 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                             # a document of its own when a line break stands among its bytes.
                             if: (lm_p0_find_matching_paren(document, text, byte_count, i, line, column, @ close_index) = 0)
                                 return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
-                            lm_p0_probe_group(document, 1, text, i, close_index)
-                            # Arguments that span lines are a document of their own (lm_p0_parse_group).
-                            if: (lm_p0_count_line_breaks(text, (i + 1U), close_index) != 0U)
+                            int: spans_lines
+                            spans_lines := lm_p0_body_spans_lines(text, byte_count, i, close_index, @ single_line_from)
+                            lm_p0_probe_body(document, 1, spans_lines, (text + i), (text + close_index))
+                            # Arguments that span lines are a document of its own (lm_p0_parse_group).
+                            if: spans_lines
                                 c.LmP0Structure@: group_structure
                                 if: (lm_p0_parse_group(document, text, byte_count, line, column, i, close_index, c.LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS, @ group_structure) = 0)
                                     return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
@@ -4263,7 +4279,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
             restart_parse_context := 1
             continue
         if: (frame\continuation = c.LM_P0_FIELD_PARSE_LOOP_BOUNDED_STRUCTURE)
-            # The owner of the group resumes right after its closing delimiter (lm_p0_probe_group).
+            # The owner of the group resumes right after its closing delimiter (lm_p0_probe_body).
             lm_p0_probe_return(document, (text + close_index), (text + (close_index + 1U)))
             c.LmP0Structure@: group_structure p0_node\as\structure
             if: lm_p0_group_segments(document, group_structure) = 0
@@ -4300,7 +4316,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
             else:
                 # The parenthesis was looked for first: the owner resumes after the token it kept for the observation,
                 # the closing delimiter of a call or the last byte of the designator of a depth form
-                # (lm_p0_probe_group, lm_p0_probe_form).
+                # (lm_p0_probe_body, lm_p0_probe_form).
                 lm_p0_probe_return(document, (text + close_index), (text + (close_index + 1U)))
             p0_node\span\line := line
             lm_p0_position_in_slice(text, byte_count, start, line, column, (cast: (size_t@) (@ p0_node\span\line)), (cast: (size_t@) (@ p0_node\span\column)))
@@ -6406,15 +6422,13 @@ fn: lm_p0_probe_form (c.LmP0Document@: document; int: kind; int: route; const: (
     return: lm_p0_probe_row(document, kind, route, 1, lm_p0_probe_root_offset(document, open_pointer), lm_p0_probe_root_offset(document, close_pointer), lm_p0_probe_root_offset(document, token_pointer))
 end: lm_p0_probe_form
 
-# A group of the loop of fields entered at text[open_index] and closed at text[close_index]: its body is read in a
-# context of the loop (route 1) or, with a line break among its bytes, as a nested document (route 2).
-fn: lm_p0_probe_group (c.LmP0Document@: document; int: kind; const: (char@: text); size_t: open_index; size_t: close_index) size_t
-    if: document\probe = 0
-        return: (cast: (size_t) -1)
-    if: lm_p0_count_line_breaks(text, (open_index + 1U), close_index) != 0U
-        return: lm_p0_probe_form(document, kind, 2, (text + open_index), (text + close_index), (text + close_index))
-    return: lm_p0_probe_form(document, kind, 1, (text + open_index), (text + close_index), (text + close_index))
-end: lm_p0_probe_group
+# A bounded form entered at open_pointer and closed at close_pointer whose closing delimiter was looked for first:
+# its body is read in a context of the loop (route 1) or, when it holds a line break, as a nested document (route 2).
+# The caller holds that one answer (lm_p0_body_spans_lines); nothing is counted here.
+fn: lm_p0_probe_body (c.LmP0Document@: document; int: kind; int: spans_lines; const: (char@: open_pointer); const: (char@: close_pointer)) size_t
+    if: spans_lines
+        return: lm_p0_probe_form(document, kind, 2, open_pointer, close_pointer, close_pointer)
+    return: lm_p0_probe_form(document, kind, 1, open_pointer, close_pointer, close_pointer)
 
 # The owner of a form continues from next_pointer; lm_p0_probe_form says which row is its own.
 sub: lm_p0_probe_return (c.LmP0Document@: document; const: (char@: token_pointer); const: (char@: next_pointer))

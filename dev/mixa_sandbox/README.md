@@ -28,8 +28,35 @@ Work directory for ongoing mixa_manager C→L1 migration. Merged from the short-
 
 ## Build
 
-Prefer `tools\build_mixa.ps1` from this sandbox (see REPORT.md). Do **not** sync to
-`C:\Nyasha_Planet\L1\mixa_manager\` until build is green.
+The legacy build uses [`tools/build_mixa.ps1`](tools/build_mixa.ps1) and the
+saved [`tools/legacy/l1trans.exe`](tools/legacy/l1trans.exe). From the LMX
+repository root, run:
+
+```powershell
+$mixa = Join-Path $PWD 'dev/mixa_sandbox/tools'
+$legacy = Join-Path $mixa 'legacy'
+$inputs = @{
+    Translator = Join-Path $legacy 'l1trans.exe'
+    ExpectedTranslatorSha256 = '601D350E853CA16A35EC4B7ED7C2B5B82248A63E96B72A545329B1D8C6AA2196'
+    KernelEvidenceDir = $legacy
+}
+& (Join-Path $mixa 'build_mixa.ps1') @inputs -BuildOnly
+```
+
+Use `-ExactChainGuardOnly` in place of `-BuildOnly` to verify the input paths
+and hashes without compiling. A build uses the current sandbox sources and
+the checkout's `dev/l2src_sandbox` and `lm1/build` inputs. It also requires
+`gcc` and `nm` on `PATH`. Keep the old `L1\mixa_manager` publish target as
+described in [REPORT.md](REPORT.md).
+
+| Saved input | Provenance |
+| --- | --- |
+| `tools/legacy/l1trans.exe` | Byte-for-byte copy of `bin/l1trans.exe` from Git commit `7bb8962fab7ad94be01efc266c725500857e696b` (2026-09-27). The SHA-256 above matches that revision's `L1_PIN.txt`. |
+| `tools/legacy/headers/l2src/` | 46 generated headers preserved from the Mixa build `20260922_004742`, recorded in Git commit `fc0dbbf11`. The build script reports the header-set digest `D3931C398E9A4469A06530BD09254C773FE016FBE3928938088DBA377A2A5B55`. |
+
+The September 22 build recorded in `fc0dbbf11` used a different B2 executable
+with SHA-256 prefix `571fa34e`. The command above checks the current sandbox
+with the saved September 27 executable.
 
 ## History
 

@@ -425,6 +425,8 @@ call(
 
 Непустая группа перед `:=` задаёт левую часть поэлементной записи ([§2](#structure)); P0 сохраняет группу, а общий механизм Expression подготавливает её. Пустая `(): value` остаётся отдельной формой головы `()`.
 
+Каждая структурная `[`, включая оси TYPE, символические головы, VALUE, DATA и вхождение поля, проходит [общий квадратный подпарсер](BRACKET_SUBPARSER.ru.md). В `s\[myIndex()]field` номер задаётся полным выражением; общий P0 присоединяет написанный NAME после возвращённой позиции за `]`.
+
 **Исходный фрагмент** — `Lingvamyxa_spec.txt`, 3227–3228.
 
 ````text
@@ -916,7 +918,7 @@ L2:
 
 `P0 = (S, E, delta, O)`. Состояние S содержит исходную позицию/базу диапазона, лексический режим, нормализованный уровень, стек форм и курсор вставки результата. Режимы: `SOURCE`, `C_STRING`, `EXACT_IDENTIFIER`, `PYTHON_RAW_QUOTE`, `BLOCK_STRING`, `RAW_COMMENT`, `LINE_COMMENT`. Формы стека: корень уровня 0, вертикальная форма K, короткая голова N с телом N + 1, круглые/индексные скобки с базой B, Mix с локальной базой 0.
 
-События E: `LEVEL(K)`, `BLANK_LINE`, `ATOM(value)`, `HEAD(value)`, `COLON`, `CONDITIONAL_QUESTION`, `NEWLINE`, `COMMA_SEPARATOR`, `SEMICOLON_SEPARATOR`, открытие/закрытие круглой скобки, индексной скобки и разделителей Mix, кандидат `TAIL_CUTTER` и `EOF`. Переходы определяются предыдущими разделами. Все ограниченные формы используют контексты и лексические правила этого автомата. Его квадратный подпарсер обслуживает компактные операции `[op` и INDEX-суффиксы, делегируя полные выражения и вложенные области обратно P0. Независимого парсера строк, фигурных скобок или выражений не вводится.
+События E: `LEVEL(K)`, `BLANK_LINE`, `ATOM(value)`, `HEAD(value)`, `COLON`, `CONDITIONAL_QUESTION`, `NEWLINE`, `COMMA_SEPARATOR`, `SEMICOLON_SEPARATOR`, открытие/закрытие круглой скобки, индексной скобки и разделителей Mix, кандидат `TAIL_CUTTER` и `EOF`. Переходы определяются предыдущими разделами. Все ограниченные формы используют контексты и лексические правила этого автомата. Каждая структурная `[` входит в один квадратный подпарсер. Тот делегирует полные выражения и вложенные области обратно P0, потребляет свою `]` и возвращает точную позицию продолжения. Независимого парсера строк, фигурных скобок или выражений не вводится.
 
 В защищённом лексическом режиме знаки скобок, разделители, двоеточия, точки и слова закрытия — содержимое до закрытия режима. Режим строчного комментария (`LINE_COMMENT`, `#`) кончается на конце строки или документа, а у документа метки Mix концом служит её закрывающая `}` ([§9](#comments), [§19](#mix)). Распознавание парных разделителей принадлежит этому же парсеру и использует его лексические режимы. Квадратный подпарсер не ищет заранее конец делегированного выражения или Mix-области; он продолжает с позиции, возвращённой основным парсером. Фигурные скобки — не комментарий и не лексический режим: метка — ограниченная форма, её содержимое разбирает тот же автомат, и закрывающая скобка внутри метки с ошибкой не становится парой внешней открывающей (`f(a {)} b)` — ошибка). Содержимое уже выделенного строкового payload проходит сканер Mix как отдельный ограниченный контекст: он не отменяет эту защиту, не меняет границ строки, а ошибка в метке строку не роняет ([§19](#mix)).
 
@@ -939,6 +941,8 @@ P0 никогда не раскрывает единственную анони�
 Комментарии заканчиваются на конце строки или документа, в том числе на закрывающей `}` метки Mix. Содержимое круглых и квадратных скобок использует те же правила на уровне исходного текста, что и вне скобок: более глубокая строка открывает анонимную Structure, точка после пробелов отступа является атомом, кроме начала модификатора `.(`; закрывающий элемент без пары является ошибкой. Полное закрытие пустой строкой следует правилам локального документа и разделителей в [§14](#bounded), [§15](#levels) и [§19](#mix).
 
 Голый идентификатор в `nullary_line_body` остаётся атомом. Доступность, роль, арность и обнаружение операндов являются проверками потребителя после построения полной модели. P0 не выполняет поиска зарегистрированного нульарного ресивера и не превращает голую ссылку на вызываемое в вызов.
+
+Квадратные продукции входят через `square_form`; ограничения позиции проверяет общий P0. Подробности выбора и возврата позиции задаёт [договор подпарсера](BRACKET_SUBPARSER.ru.md).
 
 **Текущая проекция EBNF** — derived from `Lingvamyxa_spec.txt`, 8760–8946, with the accepted corrections incorporated.
 
@@ -1039,12 +1043,13 @@ P0 никогда не раскрывает единственную анони�
                           | common_composed_head
 
     head_base           ::= bare_identifier | exact_identifier
-                          | symbolic_head | bounded_structure
+                          | symbolic_head | square_form(DECLARATION_HEAD)
+                          | bounded_structure
 
     type_prefix         ::= array_axis_prefix | dynamic_array_rank_prefix
                           | pointer_prefix | dynamic_pointer_count_prefix
-    array_axis_prefix   ::= "[" [ expression ] "]"
-    dynamic_array_rank_prefix ::= "[]" "(" expression ")"
+    array_axis_prefix   ::= square_form(TYPE_AXIS)
+    dynamic_array_rank_prefix ::= square_form(EMPTY_TYPE_AXIS) "(" expression ")"
     pointer_prefix      ::= "@"
     dynamic_pointer_count_prefix ::= "@" "(" expression ")"
     // Prefixes precede the complete base TYPE; no postfix T[] or T@ alias.
@@ -1132,16 +1137,29 @@ P0 никогда не раскрывает единственную анони�
                             local level-0 context and stored as a Mix-flagged
                             Structure node
 
-    index_access_suffix ::= square_form(INDEX)
+    access_suffix       ::= index_access_suffix | path_step
                             attached to a preceding admitted target
+    index_access_suffix ::= square_form(INDEX)
+    path_step           ::= "\" name
+                          | "\" square_form(INDEX)
+                          | "\" square_form(OCCURRENCE) name
+    // A path step retains its boundary; it does not extend a dense Array
+    // coordinate chain. The name after an occurrence pair stays in its step.
 
-    square_form(context) ::= "[" common_or_delegated_square_body(context) "]"
-    // TYPE and VALUE/initializer keep the common bounded-form path.
-    // INDEX suffixes and compact [op operation occurrences delegate to
-    // BRACKET_SUBPARSER. The operation designator starts immediately after [.
-    // The main parser parses every nested expression, group, literal and Mix region.
-    // The square helper calls that same parser and never duplicates its scan.
-    // The helper owns only its current-level separators and final ].
+    square_form(context) ::= "[" square_body(context) "]"
+    // Every structural [ enters this same subparser. The common P0
+    // validates the recognized production against the enclosing position.
+    // Recognize the full compact operation production first; a leading
+    // sign alone is insufficient. Whitespace before the designator keeps
+    // the ordinary group production. The helper owns its final ] and
+    // delegates each expression and nested region to the common P0.
+    square_body(TYPE_AXIS)         ::= [ expression ]
+    square_body(EMPTY_TYPE_AXIS)   ::= empty
+    square_body(DECLARATION_HEAD)  ::= empty
+    square_body(VALUE_OR_DATA)     ::= [ argument_list | vertical_argument_list ]
+    square_body(INDEX)             ::= index_body
+    square_body(OCCURRENCE)        ::= expression
+    square_body(OPERATION)         ::= square_operation_body
 
     index_body          ::= expression
                           | [ expression ] ":" [ expression ]
@@ -1164,9 +1182,14 @@ P0 никогда не раскрывает единственную анони�
     structural_value
                          ::= compact_frame
                           | bounded_structure
-                          | square_form(admitted_context)
+                          | square_form(VALUE_OR_DATA)
+                          | square_form(OPERATION)
+                          | indexed_or_named_occurrence
                           | mix_structure
                           | atom_or_value
+
+    indexed_or_named_occurrence ::= admitted_target access_suffix
+                                    { access_suffix }
 
     expression          ::= [ notation_operator ] expression_region
     notation_operator   ::= "prefix" | "infix"
@@ -1363,7 +1386,9 @@ matrix[:][:] .: row
 
 ### Квадратные целостные и индексные методы
 
-В синтаксической позиции, допускающей квадратную операцию, компактное начало `[op` без пробела между `[` и designator операции вызывает квадратный подпарсер. INDEX-суффикс вроде `a[start:stop:step]` входит в тот же компонент со своим контекстом INDEX. TYPE-префиксы, VALUE-конструкторы и обычные квадратные группы с пробелом сохраняют существующий путь общего парсера; `[ op]` не становится автоматически другим написанием `[op]`. Общий парсер сохраняет охватывающую роль и разбирает designator метода и все встроенные выражения. Настройка сохраняется обычными Structure и ссылками на методы; runtime-парсер строки и новый реестр операций не вводятся.
+Любая структурная `[` входит в общий квадратный подпарсер. Компактная продукция `[op …]` имеет приоритет распознавания по полному designator и настройке. Пробельная `[ op]` сохраняет грамматику обычной группы. Для любой распознанной продукции общий P0 проверяет допустимость категории в позиции. Например, `A [*1:0] B` допустимо, а `[*1:0]int: a` даёт синтаксический отказ на операции в TYPE. Этот приоритет чтения отделён от приоритета операнда в Expression. Этот общий контроль, ошибки тела и разделителей проверяются [по классам отказов](BRACKET_SUBPARSER.ru.md#square-rejections).
+
+Квадратная запись и [явный вызов точного ресивера `` `[]` ``](BRACKET_SUBPARSER.ru.md#square-receiver) используют обычное разрешение и одинаковую подготовку аргументов данного договора. Явное имя — один токен с ключом `60 5B 5D 60`. Настройка сохраняется обычными Structure и ссылками на методы.
 
 | Форма | Список осей | Значение |
 | --- | --- | --- |

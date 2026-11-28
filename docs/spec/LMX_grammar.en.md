@@ -425,6 +425,8 @@ Implementation status is separate from this normative grammar; consult the [impl
 
 A nonempty group followed by `:=` supplies the left side of an elementwise write ([§2](#structure)); P0 retains that group and the common Expression mechanism prepares it. `(): value` retains the separate empty-head form `()`.
 
+Every structural `[`, including TYPE axes, symbolic heads, VALUE, DATA and field occurrences, enters the [common square subparser](BRACKET_SUBPARSER.en.md). In `s\[myIndex()]field` the occurrence number is a full expression; the common P0 attaches the written NAME at the position returned after `]`.
+
 **Source excerpt** — `Lingvamyxa_spec.txt`, 3227–3228.
 
 ````text
@@ -940,7 +942,7 @@ Source: §15.0; this is the normative recognition model, and the EBNF below is i
 
 `P0 = (S, E, delta, O)`. State S contains source position/span base, lexical mode, normalized level, form stack, and output insertion cursor. Modes are `SOURCE`, `C_STRING`, `EXACT_IDENTIFIER`, `PYTHON_RAW_QUOTE`, `BLOCK_STRING`, `RAW_COMMENT`, and `LINE_COMMENT`. Stack forms are the level-0 root, vertical form K, short head N with body N + 1, parenthesized/index forms with base B, and Mix with local base 0.
 
-Events E are `LEVEL(K)`, `BLANK_LINE`, `ATOM(value)`, `HEAD(value)`, `COLON`, `CONDITIONAL_QUESTION`, `NEWLINE`, `COMMA_SEPARATOR`, `SEMICOLON_SEPARATOR`, opening/closing parenthesis, index, and Mix delimiters, a `TAIL_CUTTER` candidate, and `EOF`. Transitions follow the preceding sections. All bounded forms use the contexts and lexical rules of this automaton. Its square-form subparser handles compact `[op` operation forms and INDEX suffixes; it delegates complete expressions and nested regions back to P0. No independent line, brace, or expression parser is introduced.
+Events E are `LEVEL(K)`, `BLANK_LINE`, `ATOM(value)`, `HEAD(value)`, `COLON`, `CONDITIONAL_QUESTION`, `NEWLINE`, `COMMA_SEPARATOR`, `SEMICOLON_SEPARATOR`, opening/closing parenthesis, index, and Mix delimiters, a `TAIL_CUTTER` candidate, and `EOF`. Transitions follow the preceding sections. All bounded forms use the contexts and lexical rules of this automaton. Every structural `[` enters one square subparser. It delegates full expressions and nested regions back to P0, consumes its own `]` and returns the exact continuation position. No independent line, brace, or expression parser is introduced.
 
 In a shielded lexical mode, brackets, separators, colons, dots, and closer words are content until the mode closes. The line-comment mode (`LINE_COMMENT`, `#`) ends at the end of the line or of the document, and for the document of a Mix mark that end is its closing `}` ([§9](#comments), [§19](#mix)). Delimiter recognition belongs to this same parser and uses those same modes. The square subparser never pre-scans a delegated expression or Mix region for its end; it resumes at the position returned by the main parser. Braces are neither a comment nor a lexical mode: a mark is a bounded form, its content is parsed by the same automaton, and a closing bracket inside a mark with an error does not become the pair of an outer opening bracket (`f(a {)} b)` is an error). The content of an already delimited string payload passes the Mix scanner as a separate bounded context: it does not remove this shielding, does not alter the string's bounds, and an error in a mark does not fail the string ([§19](#mix)).
 
@@ -963,6 +965,8 @@ P0 never unwraps the sole anonymous Structure occupying an argument list ([empty
 Comments stop at newline or document end, including the closing `}` of Mix. Round and square bounded content uses the same source-level rules: a deeper line opens an anonymous Structure, a dot after indentation spaces is an atom unless it starts `.(`, and an unmatched closer is an error. Blank-line full closure follows the local-document and delimiter rules in [§14](#bounded), [§15](#levels), and [§19](#mix).
 
 A bare identifier in `nullary_line_body` remains an atom. Availability, role, arity, and operand discovery are consumer checks after construction of the complete model. P0 performs no registered-nullary-receiver lookup and does not turn a bare callable reference into a call.
+
+Square productions enter through `square_form`; the common P0 validates position constraints. The [subparser contract](BRACKET_SUBPARSER.en.md) specifies recognition and cursor return.
 
 **Current EBNF projection** — derived from `Lingvamyxa_spec.txt`, 8760–8946, with the accepted corrections incorporated.
 
@@ -1063,12 +1067,13 @@ A bare identifier in `nullary_line_body` remains an atom. Availability, role, ar
                           | common_composed_head
 
     head_base           ::= bare_identifier | exact_identifier
-                          | symbolic_head | bounded_structure
+                          | symbolic_head | square_form(DECLARATION_HEAD)
+                          | bounded_structure
 
     type_prefix         ::= array_axis_prefix | dynamic_array_rank_prefix
                           | pointer_prefix | dynamic_pointer_count_prefix
-    array_axis_prefix   ::= "[" [ expression ] "]"
-    dynamic_array_rank_prefix ::= "[]" "(" expression ")"
+    array_axis_prefix   ::= square_form(TYPE_AXIS)
+    dynamic_array_rank_prefix ::= square_form(EMPTY_TYPE_AXIS) "(" expression ")"
     pointer_prefix      ::= "@"
     dynamic_pointer_count_prefix ::= "@" "(" expression ")"
     // Prefixes precede the complete base TYPE; no postfix T[] or T@ alias.
@@ -1156,16 +1161,29 @@ A bare identifier in `nullary_line_body` remains an atom. Availability, role, ar
                             local level-0 context and stored as a Mix-flagged
                             Structure node
 
-    index_access_suffix ::= square_form(INDEX)
+    access_suffix       ::= index_access_suffix | path_step
                             attached to a preceding admitted target
+    index_access_suffix ::= square_form(INDEX)
+    path_step           ::= "\" name
+                          | "\" square_form(INDEX)
+                          | "\" square_form(OCCURRENCE) name
+    // A path step retains its boundary; it does not extend a dense Array
+    // coordinate chain. The name after an occurrence pair stays in its step.
 
-    square_form(context) ::= "[" common_or_delegated_square_body(context) "]"
-    // TYPE and VALUE/initializer keep the common bounded-form path.
-    // INDEX suffixes and compact [op operation occurrences delegate to
-    // BRACKET_SUBPARSER. The operation designator starts immediately after [.
-    // The main parser parses every nested expression, group, literal and Mix region.
-    // The square helper calls that same parser and never duplicates its scan.
-    // The helper owns only its current-level separators and final ].
+    square_form(context) ::= "[" square_body(context) "]"
+    // Every structural [ enters this same subparser. The common P0
+    // validates the recognized production against the enclosing position.
+    // Recognize the full compact operation production first; a leading
+    // sign alone is insufficient. Whitespace before the designator keeps
+    // the ordinary group production. The helper owns its final ] and
+    // delegates each expression and nested region to the common P0.
+    square_body(TYPE_AXIS)         ::= [ expression ]
+    square_body(EMPTY_TYPE_AXIS)   ::= empty
+    square_body(DECLARATION_HEAD)  ::= empty
+    square_body(VALUE_OR_DATA)     ::= [ argument_list | vertical_argument_list ]
+    square_body(INDEX)             ::= index_body
+    square_body(OCCURRENCE)        ::= expression
+    square_body(OPERATION)         ::= square_operation_body
 
     index_body          ::= expression
                           | [ expression ] ":" [ expression ]
@@ -1188,9 +1206,14 @@ A bare identifier in `nullary_line_body` remains an atom. Availability, role, ar
     structural_value
                          ::= compact_frame
                           | bounded_structure
-                          | square_form(admitted_context)
+                          | square_form(VALUE_OR_DATA)
+                          | square_form(OPERATION)
+                          | indexed_or_named_occurrence
                           | mix_structure
                           | atom_or_value
+
+    indexed_or_named_occurrence ::= admitted_target access_suffix
+                                    { access_suffix }
 
     expression          ::= [ notation_operator ] expression_region
     notation_operator   ::= "prefix" | "infix"
@@ -1400,7 +1423,9 @@ Backticks preserve one exact token with all its bytes. The bare operation `+` ha
 
 ### Square whole and indexed operations
 
-In a syntactic position admitting a square operation, the compact opening `[op` with no space between `[` and the operation designator triggers the square subparser. An INDEX suffix such as `a[start:stop:step]` enters the same component with its INDEX context. TYPE prefixes, VALUE constructors and spaced ordinary square groups keep their existing common-parser path; `[ op]` is not automatically an alternative spelling of `[op]`. The common parser retains the surrounding role and parses the method designator and every embedded expression. Configuration is retained as ordinary Structures and method references; no runtime string parser or new operation registry is introduced.
+Every structural `[` enters the common square subparser. The compact `[op …]` production takes recognition precedence based on the full designator and configuration. A spaced `[ op]` retains ordinary group grammar. The common P0 checks category against position for every recognized production. For example, `A [*1:0] B` is admissible, while `[*1:0]int: a` fails syntactically at the operation in TYPE. This recognition precedence is distinct from the operand's priority in an Expression. The [rejection controls](BRACKET_SUBPARSER.en.md#square-rejections) cover this general category check, body errors and delimiters.
+
+Bracket notation and an [explicit call of the exact receiver `` `[]` ``](BRACKET_SUBPARSER.en.md#square-receiver) use ordinary resolution and the same argument preparation for the contract. The explicit name is one token with key `60 5B 5D 60`. Configuration is retained as ordinary Structures and method references.
 
 | Form | Axis list | Meaning |
 | --- | --- | --- |

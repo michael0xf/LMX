@@ -31,7 +31,15 @@ add('slice','signed-strided-slice',['VALUE','VALUE'],'shared slice normalization
 def build():
     OUT.mkdir(parents=True,exist_ok=True)
     data=dict(edition='2026-11-28',scope='Documentation profiles, not runtime registration.',source_sha256=hashlib.sha256((ROOT/SOURCE).read_bytes()).hexdigest(),canonical_spec='spec/TENSOR_EXPRESSIONS.md',forms=ROWS,note='Ordinary LMX configuration; absent depth and axisRules remain absent; exact names are opaque.')
-    (OUT/'array_expression_forms.json').write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
+    data["square_receiver"] = {
+        "key": "`[]`",
+        "key_hex": "60 5B 5D 60",
+        "contracts": ["TYPE", "VALUE", "DATA", "declaration", "index", "slice",
+                      "named field occurrence", "matrix operation"],
+        "spec": "spec/BRACKET_SUBPARSER.en.md#square-receiver",
+        "production_binding": "NOT_RUN",
+    }
+    (OUT/'array_expression_forms.json').write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n', encoding='utf-8', newline='\n')
     lines=['# Tensor/RAW/PLACE profile inventory, 2026-11-28.','# DATA only; production binding and LMX execution: NOT_RUN.','','ArrayExpressionForms:']
     for i,row in enumerate(ROWS,1):
         lines.append(f'    entry{i:03}:')
@@ -43,7 +51,14 @@ def build():
 
 Редакция 2026-11-28. [LMX-опись](array_expression_forms.lmx) и
 [JSON-проекция](array_expression_forms.json) описывают канонические операции и
-профили; это не второй runtime-диспетчер.
+профили.
+
+Все структурные применения квадратных скобок идут через общий P0 и
+[единый подпарсер](../../spec/BRACKET_SUBPARSER.ru.md). Для индексов, срезов,
+вхождения поля, TYPE, VALUE, DATA, голов объявлений и матричных операций
+явный [ресивер `` `[]` ``](../../spec/BRACKET_SUBPARSER.ru.md#square-receiver)
+использует ключ `60 5B 5D 60`. Каждая пара записей разделяет подготовку и
+выбранное тело своего договора.
 
 Обычные арифметика, сравнения и обновления работают поэлементно. `*` и `[*]`
 различаются выбором Map и whole матричного профиля. Явные `[op rules]` выбирают
@@ -81,6 +96,6 @@ Production parser/translator/runtime: **NOT_RUN**.
     for row in ROWS:
         esc=lambda x:x.replace('|',r'\|')
         text+=f"| `{esc(row['name'])}` | `{esc(row['expression_form'])}` | {row['family']} | {', '.join(row['roles'])} | `{esc(row['implementation'])}` |\n"
-    (OUT/'ARRAY_EXPRESSIONS.md').write_text(text)
+    (OUT/'ARRAY_EXPRESSIONS.md').write_text(text, encoding='utf-8', newline='\n')
     return len(ROWS)
 if __name__=='__main__':print(f'{build()} documented profiles; production NOT_RUN.')

@@ -10,24 +10,25 @@
 
 The component is inside **one main parser**. Ignoring a delegated region means not inspecting it in the square subparser; the main parser consumes it and returns its graph node and continuation position. There is also **one shared semantic grouper**. Duplicate expression parsers, boundary scanners and independent grouping implementations are removed; all consumers use the common code.
 
-The common parser delegates an opening `[` to the square-form subparser for an INDEX suffix or a compact operation occurrence beginning `[op`, retaining the current syntactic context. TYPE prefixes and ordinary VALUE/initializer groups keep the common bounded-form path. The subparser recognizes its own current-level separators and final `]`. It delegates **every expression and nested source region** to the common parser. It is not a second expression parser, numeric-expression parser, brace scanner, or implementation of tensor operations.
+The common P0 delegates every structural `[` to one square subparser. This covers TYPE, VALUE and DATA, the symbolic head `[]:`, indexing, slicing, field occurrence selection and compact matrix operations. Shielded bracket bytes belong to their string, comment or exact name. An explicit call such as `` `[]`(…) `` starts with one identifier.
 
-Compact `[op` **with no space between `[` and the operation designator** is the trigger in a position admitting an operation. Examples are `A [*] B`, `A [*1:0] B`, `A [+1:0; reduce := min] B` and `A [* ()] B`. A spaced `[ op]` stays on the ordinary square-group path; it is not automatically an alternative spelling of the special operation. This does not forbid ordinary square groups with spaces. An operation designator is the ordinary permitted name, exact name, path or symbolic designator, not a fixed one-character whitelist.
+The subparser owns the separators of its current production and its `]`. The common P0 reads every full expression and Mix region. Nested structural `[` uses the same entry. The grouper receives a clean graph with spans and contexts. Method resolution and argument evaluation follow parsing.
 
-Source parsing produces the ordinary LMX graph and retains the necessary boundaries and occurrence contexts. The later Expression grouper consumes this **clean graph**; it neither searches source brackets nor repeats square parsing. Operation selection, actual types, operation depth, axis sizes, numerical algorithms, and whether a `fuse` plan is supported belong to the existing consumers after parsing.
+## 2. Production recognition and context validation
 
-## 2. Context selects the square form
-
-| Context supplied by the common parser | Meaning and parser route | Examples |
+| Enclosing form | Square production | Examples |
 | --- | --- | --- |
-| TYPE prefix | Unspecified/computed axis extent; common bounded-form path | `[]int`, `[rows + 1][cols]int`, `[](rankValue)int` |
-| INDEX suffix of an existing value or place | Index expression or up to three slice fields; square subparser | `a[i + 1]`, `a[start:stop:step]`, `a[::2]` |
-| VALUE / admitted initializer | Array element stream and ordinary row/group boundaries; common path | `[1 2 3]`, `[[1 2] [3 4]]`, `[1 2; 3 4]` |
-| Compact operand designator with configuration | Whole/default or indexed operation; square subparser triggered by `[op` | `[*]`, `[* ()]`, `[/ 0=0]`, `[* -> 1 0]` |
+| TYPE | Unspecified axis extent or full expression; a rank or extent-vector argument stays outside the pair | `[]int`, `[rows() + 1][cols()]int`, `[](sizes())int` |
+| VALUE / DATA / initializer | Element stream with ordinary group and field boundaries | `[]`, `[arr2]`, `[1 2; 3 4]` |
+| Declaration head | Empty pair with external name and initializer when present | `[]: pending`, `[](pending)`, `[]: [1 2]` |
+| INDEX / PLACE | Index, slice fields or occurrence expression before the external NAME | `a[i()]`, `v[lo():hi():step()]`, `struct\[myIndex()]field` |
+| Compact operation | Full designator, axis rules, permutation and ordinary named options | `A [*1:0] B`, `A [**] n`, `A .(d())[op …] B` |
 
-The enclosing grammar first supplies the prefix, suffix, value or operation context. Within an operation context the designator must immediately follow `[` to select the delegated operation path. This trigger does not override an already established TYPE, INDEX or VALUE role. The component must not try a callable, inspect an initializer's runtime elements, or guess a type in order to choose a source parse. Where the enclosing syntax alone leaves competing interpretations, retain the ordinary unresolved graph description for the normal structural role resolution; it must establish one interpretation before effects or report ambiguity. A declared operator name is resolved by the same method/operand mechanism as outside brackets, not by a new registry.
+The compact `[op …]` production takes recognition precedence. The subparser uses common tokens, the full designator and the configuration structure. The initial sign alone does not identify the production. A spaced `[ op]` uses the same entry and retains ordinary group grammar. Production recognition precedence and operator priority in the surrounding Expression are separate.
 
-`[arr2]` in VALUE is one Array containing one whole value; it is not an Expression grouping wrapper. Empty `[]` is a present empty Array in VALUE and an unspecified extent in TYPE. Neither means an absent actual. The common parser preserves these receiving contexts without adding a permanent “square bracket” flag to runtime Array values.
+The common P0 checks whether the recognized production is admissible at its position. `A [*1:0] B` and `[rows() * cols()]int: a` are syntactically admissible; `[*1:0]int: a` fails on the matrix form in TYPE in P0 itself, for both file and buffer input. In `[(length(A [*1:0] B))]int: a` the operation is admitted inside the argument and the outer TYPE receives an extent expression. The common structural mechanism resolves residual ambiguity among admissible readings before effects. The consumer validates values.
+
+`[arr2]` in VALUE yields an Array with one whole element. `[]` in VALUE gives a present empty Array; in TYPE it gives an unspecified extent. In `[]: pending` an absent initializer leaves the place uninitialized.
 
 ## 3. Interface and cursor ownership
 
@@ -35,7 +36,7 @@ The integration contract has two entries of one parser. Their concrete native bi
 
 | Entry | Receives | Returns |
 | --- | --- | --- |
-| Square subparser | Source, `openPosition`, established INDEX/OPERATION context and the actual common parser | Ordinary square-form graph, `nextPosition` after its closer and source span |
+| Square subparser | Source, `openPosition`, enclosing role, connections to adjacent nodes and the actual common parser | Ordinary square-form graph, `nextPosition` after its closer and source span |
 | Common region parser | The same source, start position, receiving context and structural boundary policy | Ordinary region graph when present, exact `nextPosition` and recognized current-level boundary; absence of a region is retained separately from a present empty graph |
 
 `openPosition` points to the `[` owned by this invocation. A successful square-subparser entry returns `nextPosition` **immediately after its matching `]`**. It never consumes a following operator, TYPE base, adjacent suffix or caller delimiter. The caller resumes from that exact position. A missing closer is an error with its source location, not successful EOF completion.
@@ -49,7 +50,7 @@ An omitted field remains an ordinary absent field. This does not introduce a new
 <a id="bracket-boundaries"></a>
 ## 4. Boundary policies
 
-TYPE and VALUE rows below state the existing common-parser policies for comparison; they are not additional triggers for the operation subparser. The delegated INDEX and operation paths use the same complete-region interface.
+All productions use one delegation interface. The current production supplies its boundaries.
 
 The common lexer/parser recognizes complete tokens before testing a current-level boundary. `:=`, `.:`, `->`, `<=` and other compound tokens are never split to obtain a separator. There is one contextual rule already required for Python-like slicing: at the current INDEX level, `::` supplies two slice separators. In a nested ordinary group, `::` retains its signature-operand meaning.
 
@@ -109,9 +110,7 @@ An arrow or named options alone do not manufacture an axis list. Presence is an 
 
 ## 7. Shared outer wrapper
 
-The wrapper checks its opening `[` token and the supplied INDEX/OPERATION context. In OPERATION, the designator starts immediately after `[`, without whitespace. The body selected by that context from §5 or §6 receives the position after the opening token and returns its graph with the position of its own closing boundary. The wrapper validates the returned `]`, consumes it exactly once and returns the graph, source span and position after the closing token. Another token or EOF instead of that `]` is an error.
-
-TYPE and VALUE regions stay with the common parser and its existing bounded-region algorithms. When a delegated expression contains another square region, the common parser selects its role again and can recursively invoke this component for a nested INDEX or compact operation. No helper searches for the “next `]`”; only its own returned top-level closer is accepted. Blank-line closure still cannot synthesize a missing bounded delimiter.
+The wrapper accepts `[` and the enclosing context. The selected production reads its body, leaving its closing `]` for the wrapper. The wrapper validates and consumes that delimiter once, retains the span and returns the position after the bracket. A different token or EOF in place of `]` is an error. A blank line cannot synthesize a delimiter. In `struct\[myIndex()]field` the returned position points to `field`; the common P0 attaches that name to the same step.
 
 Actual LMX forms accepted by this contract:
 
@@ -130,7 +129,7 @@ This is LMX source for project acceptance. The documentation does not create a s
 
 ## 8. Required acceptance observations
 
-- Compact `[op` starts the operation subparser in an admitted operation position; `[ op]` keeps the ordinary square-group path and is not silently normalized into the same operation/configuration graph.
+- Record one entry per structural pair and one return after its own `]` on success. Exercise distinct `[op` and `[ op]` productions through that entry.
 - `A [*] B`, `A [* ()] B` and `A [* -> 1 0] B` keep their three different configuration states.
 - `a[lo():hi():step()]` stores three complete expression occurrences without evaluating them.
 - `a[flag ? lo() : mid():hi()]` does not split the conditional's colon.
@@ -141,3 +140,38 @@ This is LMX source for project acceptance. The documentation does not create a s
 - On success the returned position is after the owned `]`; a following suffix/operator/base type remains unread. On failure no invented closing token is returned.
 
 These are implementation requirements. Host-model slice or graph tests do not prove that this source subparser is implemented. The production parser, translator and runtime acceptance of these forms remains **NOT_RUN** until checked in the project.
+
+<a id="square-rejections"></a>
+
+### Rejections by production and position
+
+For each production, test admissible positions and rejection at every inadmissible position where that production can be recognized. Apply one category check to all productions and designators. P0 rejects a recognized but inadmissible production at its source location without rereading it as a different form. Compare phase, span or coordinate, and boundary owner on files and on the same bytes in memory.
+
+| Rejection class | Distinguishing test |
+| --- | --- |
+| Recognized production is inadmissible at its position | A compact operation in an axis-extent position, with different full designators. Pair with an operation in Expression, a full extent expression and an admissible nested operation inside an extent expression. |
+| Body does not match its production | A required region of a simple index or occurrence number is absent. Omitted slice fields are allowed. Test excess slice separators and malformed axis rules and options. |
+| Error in a delegated expression or bounded region | Retain the common P0's original failure. Test a missing or foreign delimiter, EOF before closure and malformed nesting. Shielded `]` and `:` stay inside their tokens. Test errors within Mix and the separate recovery rule for a string mark, including preservation of neighboring marks. |
+| Multiple grammatically admissible readings | If common structural resolution yields no unique reading, reject the ambiguity before effects. |
+| Value fails the selected contract | A computed zero slice stride, invalid occurrence number or invalid extent is checked by the consumer. Record successful source parsing and the separate consumer rejection for syntactically admissible input. |
+
+<a id="square-receiver"></a>
+
+## 9. Shared receiver and arguments
+
+The explicit call uses the exact key `60 5B 5D 60` (`` `[]` ``). With equivalent arguments, bracket notation and the explicit call share preparation and select the same method and body for the contract. Field occurrence selection, TYPE, slicing and matrix operations may have different contracts. Method declarations supply the formal parameter names.
+
+| Source | Target explicit call |
+| --- | --- |
+| `a[i()]` | `` `[]`(source := a; index := i()) `` |
+| `struct\[myIndex()]field` | `` `[]`(source := struct; occurrence := myIndex(); name := field) `` |
+| `v[lo():hi():step()]` | `` `[]`(source := v; slice := (start: lo(); stop: hi(); step: step())) `` |
+| `[]` | `` `[]`(items := ()) `` |
+| `[extent()]int` | `` `[]`(base := int; extent := extent()) `` |
+| `A [*1:0] B` | `` `[]`(op := "*"; left := A; right := B; axisRules := (contract: 1 0)) `` |
+
+The graph preserves internal argument order, absence separately from present emptiness, external operands, depth, TYPE, NAME and the receiving role. `name := field` supplies the written key even if a variable shares the name. Occurrences are counted from zero among the owner's same-named fields. Physical slot access `S[i]` and dense Array coordinates have their own contracts. Reads, writes and address-taking use the selected place.
+
+Arguments can be computed. Parsing, printing and clean graph construction retain their expressions without running them. The consumer obtains each demanded argument once in contract order. A slice obtains the source and each present start, stop and step. A named occurrence obtains the owner and index before selecting by name. User matrix methods are installed by ordinary declarations.
+
+Acceptance compares targets, arguments, effects, results and rejection phase for each pair. [Task and full controls](../tasks/28-Nov-2026/SQUARE_BRACKET_RECEIVER.md) · [v3 schedule](../../next_core_tasks_v3.md#square-bracket-receiver-20261128).

@@ -1,7 +1,7 @@
 # Возврат курсора для круглой группы на одной строке: срез 1b грамматики (28 ноября 2026 года)
 
 Ведущий `coder`. Граница согласована Sol и Astra: `CODER-SOL-DESIGN-G1B-20261128-01` (записка
-`build2/coder-grammar-20261127/DESIGN-G1-1b.md`). База: набор `coder-g1a03` срезa 1a (`e6ad4faf5`).
+`build2/coder-grammar-20261127/DESIGN-G1-1b.md`). База: набор `coder-g1a03` среза 1a (`e6ad4faf5`).
 План: этап 1, переходный критерий (5) — область возвращает курсор вызывающему, владелец потребляет
 разделитель один раз ([очередь](../../../next_core_tasks_v3.md#grammar-complete-20261127)).
 
@@ -43,13 +43,13 @@
 
 | Проверка | Результат | Расписка (`build2/coder-grammar-20261127/g1b-01/`) |
 | --- | --- | --- |
-| Контроли срезa: 16 источников с реестром (`x[(a)]`, `x[(a):b]`, `x[()]`, `x[((a))]`, `a ? (b) : c` и соседние) | деревья и отказы равны базе во всех 16; 8 различаются только меткой круглой строки `PRE_SCAN` → `RETURNED` (группы в индексе и под открытым `?`); квадратная строка индекса остаётся `PRE_SCAN`; вложенная группа `((a))`, обычная группа, голова, многострочный индекс — без изменений | `probes-1b-final.after.out`; ожидания до запуска: `gen-05/probes-1b-final/EXPECTATIONS.md`, ответы базы: `probes-1b-final.before.out` |
+| Контроли среза: 16 источников с реестром (`x[(a)]`, `x[(a):b]`, `x[()]`, `x[((a))]`, `a ? (b) : c` и соседние) | деревья и отказы равны базе во всех 16; 8 различаются только меткой круглой строки `PRE_SCAN` → `RETURNED` (группы в индексе и под открытым `?`); квадратная строка индекса остаётся `PRE_SCAN`; вложенная группа `((a))`, обычная группа, голова, многострочный индекс — без изменений | `probes-1b-final.after.out`; ожидания до запуска: `gen-05/probes-1b-final/EXPECTATIONS.md`, ответы базы: `probes-1b-final.before.out` |
 | `parser-suite` | PARSER-SUITE 511 cases, 0 failed; база на том же списке — 511, 0 failed | `light-511/ps-candidate/`, `light-511/ps-base/` |
 | `parser-bounds` | PARSER-BOUNDS cases 446, rows 486, nested 93, empty 75, multiline 41, mix 69, failed 0 | `light-511/pb-candidate/` |
 | Корпус, база против кандидата: `p0 FILE` / `flags` / `nodes` | SAME 1518, DIFFERENT 0 | `light-511/p0-same.out` |
 | Деревья собственных исходников проекта (`selfbuild/src`, `tools`, `tests`, `tests/parser`) | 1922 файла: SAME 1922 (обоими приняты 1817, отвергнуты 105) | `light/tree-same.out` |
 | Деревья исходников `docs` | 2603 файла: SAME 2603 | `light/tree-same-docs.out` |
-| 26 проб срезa 1a с диагностикой | SAME 26, DIFFERENT 0 | `light/probes.out` |
+| 26 проб среза 1a с диагностикой | SAME 26, DIFFERENT 0 | `light/probes.out` |
 | Перебор тел из одних скобок до четырёх байт в пяти рамках, 1705 источников | SAME 1705, DIFFERENT 0 | `light-511/bracket-fuzz.out` |
 | Реестр по корпусу (497 случаев, 431 строка) | 7 строк в 3 случаях меняют только метку `PRE_SCAN` → `RETURNED`; строк с другими числами 0 | `light/bounds-diff.out` |
 | lmx-dev, связка `cursor-return-g1a03`, `check:syntax` изменённого модуля | passed, achievedPhase `P0 syntax`; runId `20261127-234152-d13a04e61d14` | `build2/lmx_dev/runs/` |

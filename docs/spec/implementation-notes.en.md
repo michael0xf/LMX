@@ -525,7 +525,7 @@ three actual header addresses. For the canonical system TYPE object, the more
 specific contract returns that same type description, so
 `sys\descriptor(typeof(obj))` performs no integer-code lookup. sys\capacity
 checks the optional association, otherwise returns length, allocating nothing.
-The [TypeRef revision](../TYPE_REFERENCES_CHANGE.md) is the current normative
+The [TypeRef revision](TYPE_REFERENCES.md#type-reference) is the current normative
 contract; old witnesses below do not establish its implementation.
 
 `LmxThread` embeds `LmxMsg message` by value as its first field; a

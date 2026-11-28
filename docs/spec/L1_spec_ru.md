@@ -41,7 +41,7 @@ TypeRef. Плотные элементы и native-локали не получ�
 метаописание с обычными циклами графа. [Массивы](L2_spec_ru.md#array-capacity).
 
 Это целевой ABI, production acceptance **NOT_RUN**. Генератор и старые int-code
-листинги требуют [миграции TypeRef](../TYPE_REFERENCES_CHANGE.md); прежние receipts
+листинги требуют [миграции TypeRef](../../projects/kernel-runtime.md#type-layout); прежние receipts
 не доказывают совместимости. [Состояние реализации](implementation-notes.ru.md#l2-status).
 Имена и скрытые поля исполнения в записи не добавляются; List детей Thread отдельный.
 

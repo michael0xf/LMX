@@ -174,7 +174,7 @@ The graph preserves internal argument order, absence separately from present emp
 
 Arguments can be computed. Parsing, printing and clean graph construction retain their expressions without running them. The consumer obtains each demanded argument once in contract order. A slice obtains the source and each present start, stop and step. A named occurrence obtains the owner and index before selecting by name. User matrix methods are installed by ordinary declarations.
 
-Acceptance compares targets, arguments, effects, results and rejection phase for each pair. [End-to-end checks](#square-acceptance) · [v3 schedule](../../next_core_tasks_v3.md#square-bracket-receiver-20261128).
+Acceptance compares targets, arguments, effects, results and rejection phase for each pair. [End-to-end checks](#square-acceptance).
 
 <a id="square-acceptance"></a>
 

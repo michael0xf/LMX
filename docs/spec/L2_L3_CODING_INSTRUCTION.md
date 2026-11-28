@@ -698,7 +698,7 @@ storage/compatibility rules; instance capacity remains sys\capacity(obj).
 [complete representation](ARRAY_STORAGE.en.md#array-profiles),
 [sized forms and derivation](ARRAY_STORAGE.en.md#sized-postfix).
 
-**Migration gate:** [TYPE_REFERENCES_CHANGE.md](../TYPE_REFERENCES_CHANGE.md)
+**Migration gate:** [TypeRef migration checklist](../../projects/kernel-runtime.md#type-layout)
 identifies unchanged prior-ABI LMX reflection/type-return sources, int-record
 normalizer bridges and the teaching C runtime. Their []int type sequences,
 return:int type queries, p-4 reads and four-byte tag assertions require source

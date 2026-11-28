@@ -411,6 +411,7 @@ The following author-provided forms are admitted under the same rule:
 ```lmx
 int: N 3
 [][N]int: [1 2 3    4 5 6]
+[][N + 1]int: [1 2 3 4 5 6 7 8]
 [2][5]int: [[1 2 3 4 5] [1 2 3 4 5]]
 [2][5]Struct: [[a b c d e] [e d c b a]]
 [2]Struct: [a b]
@@ -565,7 +566,7 @@ is a different ordinary operation.
 
 The Structure exposes the complete normalized type, written rank/size
 constraints, element/storage contract, direct compatibility relations, and
-common rules for deriving sizes or reading capacity from an actual value.
+the rules for deriving available sizes. A capacity query reads the instance’s reserve association or its length.
 It contains no per-instance initializer shape or reserve. Description objects
 have a finite bootstrapped meta-description; ordinary graph cycles support
 `typeof(typeof(obj))` without infinite allocation.

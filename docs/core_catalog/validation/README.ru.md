@@ -3,7 +3,7 @@
 > **Граница ABI:** native-проверки прототипов ниже относятся к прежнему
 > int-code представлению. Они не подтверждают прямую TypeRef и новый размер
 > префикса. Требования миграции находятся в
-> [TYPE_REFERENCES_CHANGE.md](../../TYPE_REFERENCES_CHANGE.md) и
+> [Представление TypeRef](../../spec/TYPE_REFERENCES.md#type-reference) и
 > [README прототипов](../new_primitives/README.ru.md).
 
 Первичные объекты проверок — [core/inventory.lmx](../core/inventory.lmx),

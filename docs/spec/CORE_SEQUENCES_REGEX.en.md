@@ -37,7 +37,7 @@ Array. It allocates no Array value or separate STRUCT/ARRAY kind. An ordinary
 integer does not become a type or metadata address. Normalizing a model introduces
 no special C object layout or second graph.
 
-The [TypeRef ABI and migration](../TYPE_REFERENCES_CHANGE.md) supersede integer-code
+The [TypeRef ABI and migration](TYPE_REFERENCES.md#type-reference) supersede integer-code
 listings. Existing [reflection.lmx](patterns/LMX_Fn_Receivers/src/reflection.lmx), [operation_forms.lmx](patterns/LMX_Fn_Receivers/src/operation_forms.lmx) and int-record normalizer
 contracts in the source package still require the stated migration; their old
 fixtures are not validation of this documentation-only ABI. Production **NOT_RUN**.

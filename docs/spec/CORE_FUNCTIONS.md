@@ -4,7 +4,7 @@
 > type descriptions. Linked `reflection.lmx`, `operation_forms.lmx` and generated
 > assembly still contain the previous int-code interfaces and require migration
 > before execution under this ABI. They do not establish support for this update.
-> See [the migration and validation boundary](../ARRAY_TYPE_MIGRATION.md).
+> See [the migration and validation boundary](../../projects/kernel-runtime.md#type-layout).
 
 Edition: **26 November 2026**, canonical forms, generic operation contracts and Array/RAW/PLACE expression profiles.
 

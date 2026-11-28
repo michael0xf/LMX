@@ -5,7 +5,7 @@
 
 Complete the common parser and Expression grouper first. The kernel then completes one program graph, Message/Thread, directed `satisfies`, the Message-local primitive conversion table, the `test` receiver and the migration of every project script to L3. Share target selection, argument reception, physical places, owner/root lifetime, result and exit handling. Keep actor-local data out of shared machine code. Preserve level-specific checks, hidden ABI arguments, calls with a known target, and cleanup on `return`, failure, `finally` and `endturn`. The interpreter visits the chosen arm; a generator emits both control-flow arms without executing user code. Choose a walker before body entry so effects are observed once.
 
-Every build excludes `third_party` until kernel acceptance. Full runtime SLJIT follows that boundary. Its acceptance covers all four interpreter/native call directions, explicit compilation with interpreted build tests before installation, direct known calls, fallback on unsupported targets, and separate measurements of generation time, code size, memory and run time. [Interpreter/JIT design](../LMX_INTERPRETER_JIT.md#kernel-before-jit) · [Implementation sequence](../TENSOR_IMPLEMENTATION_PLAN.md#integration-v3).
+Every build excludes `third_party` until kernel acceptance. Full runtime SLJIT follows that boundary. Its acceptance covers all four interpreter/native call directions, explicit compilation with interpreted build tests before installation, direct known calls, fallback on unsupported targets, and separate measurements of generation time, code size, memory and run time. [Interpreter/JIT design](INTERPRETER_AND_NATIVE.md#kernel-before-jit) · [Runtime implementation and checks](../../projects/kernel-runtime.md#jit-rollout).
 
 
 **Shared implementation requirement, 2026-11-27.** The target has one main LMX parser containing the square subparser, which calls that same main parser for every expression and `{...}` region and resumes at its returned position. After parsing, every Expression consumer calls one shared implementation of semantic grouping. Duplicate parsers, independent binding algorithms and their tables are removed; independent scale adapters do not satisfy this requirement. Backend emission and actual preparation consume the common grouping result. [Architecture contract](EXPRESSION_ALGORITHM.md#single-parser-and-grouper).
@@ -193,7 +193,7 @@ have a finite bootstrapped meta-description; ordinary cycles handle their own ty
 without infinite allocation or a second registry. Retain every description while
 live records, saved TYPE values or native entries depend on it.
 
-The [TypeRef migration](../TYPE_REFERENCES_CHANGE.md) lists old int-code sources.
+The [TypeRef migration](../../projects/kernel-runtime.md#type-layout) lists old int-code sources.
 Existing C teaching-runtime/native receipts are prior-ABI evidence only; production
 implementation and acceptance of this pointer-prefix contract are **NOT_RUN**.
 

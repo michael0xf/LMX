@@ -1,6 +1,6 @@
 # LMX core architecture
 
-The active kernel milestone completes one graph, Message, `satisfies`, the receiving `test`, the primitive conversion table reachable in each Message, and every project script on L3. First finish grammar, parsing and Expression grouping. All builds exclude `third_party` through kernel acceptance. Full runtime SLJIT and the remaining integrations follow. [Kernel acceptance](../TENSOR_IMPLEMENTATION_PLAN.md#integration-v3) · [Interpreter and JIT](kernel-implementation.en.md#interpreter-jit-stages).
+The active kernel milestone completes one graph, Message, `satisfies`, the receiving `test`, the primitive conversion table reachable in each Message, and every project script on L3. First finish grammar, parsing and Expression grouping. All builds exclude `third_party` through kernel acceptance. Full runtime SLJIT and the remaining integrations follow. [Kernel acceptance](kernel-implementation.en.md#interpreter-jit-stages) · [Interpreter and JIT](INTERPRETER_AND_NATIVE.md#kernel-before-jit).
 
 
 **Current extension:** [types, universal sequences, generic patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
@@ -99,7 +99,7 @@ the absence description alone: `sizeof(value) = 0`, with no reserved T payload.
 The prefix width is `sizeof(TypeRef)` and both prefix and payload alignment are
 maintained by padding before the prefix or between records. Physical access comes
 from the type description; ownership ranges do not infer type. See the
-[detailed TypeRef contract](../TYPE_REFERENCES_CHANGE.md).
+[detailed TypeRef contract](TYPE_REFERENCES.md#type-reference).
 
 [P01 is resolved by the author](implementation-notes.en.md#uninit-layout-conflict).
 Assigning 5 to an explicit graph field holding `{uninit:int}` replaces that

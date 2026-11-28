@@ -10,7 +10,7 @@
 
 > Даже если для []int нет capacity и его структура одна, все равно у него есть _общий для таких массивов служебный дескриптор описывающий данный тип_
 
-[Формы TYPE](../docs/spec/TYPE_DECLARATION_FORMS.md) · [Договор TypeRef](../docs/TYPE_REFERENCES_CHANGE.md) · [Примеры сигнатур](../docs/spec/ARROW_EXAMPLES.md).
+[Формы TYPE](../docs/spec/TYPE_DECLARATION_FORMS.md) · [Договор TypeRef](../docs/spec/TYPE_REFERENCES.md#type-reference) · [Примеры сигнатур](../docs/spec/ARROW_EXAMPLES.md).
 
 <a id="grouped-place-assignment"></a>
 ## Присваивание группе мест

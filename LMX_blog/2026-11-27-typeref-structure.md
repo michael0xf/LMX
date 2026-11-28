@@ -4,4 +4,4 @@
 
 > проследи чтоы дескриптор был хоть и служебной но LMX структурой, не LMX структура у нас только {type value} в арене
 
-[Договор TypeRef](../docs/TYPE_REFERENCES_CHANGE.md#1-основная-норма).
+[Договор TypeRef](../docs/spec/TYPE_REFERENCES.md#type-reference).

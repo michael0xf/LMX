@@ -1,24 +1,10 @@
 # Lingvamyxa — current specification and examples
 
-**28 November.** [Literal identifiers and string keys](LMX_grammar.en.md#identifiers) update names from source to graph. The [migration and checks](../IDENTIFIER_BYTES_AND_STRING_KEYS.md) enter the grammar queue before the remaining parser work. The [matrix review](../MATRIX_REVIEW_2026-11-28.md) supplies the updated [matrix contracts](TENSOR_EXPRESSIONS.md), LMX drafts and [backend integration](../core_catalog/matrix/README.ru.md).
+**Working contracts.** [Grammar](LMX_grammar.en.md), [semantics](LMX_semantics.en.md) and the [L2 specification](L2_spec_en.md) define the language. [Identifier and string-key bytes](reference/field-name-keys.md) gives byte examples for field access, tables and serialization. [Source to graph](LMX_semantics.en.md#from-lmx-contract) covers source files and messages before translation.
 
-**Tensor revision, 27 November.** The [complete specification](TENSOR_EXPRESSIONS.md) defines Array, depth, square operations, writes and fuse. The [square subparser](BRACKET_SUBPARSER.en.md) and [notation operators](LMX_grammar.en.md#expression-notation) belong to the first implementation stage. The [technical proposal](../TENSOR_IMPLEMENTATION_PLAN.md#integration-v3) maps the operator inventory to the active implementation stages.
+[Prefix type forms](TYPE_DECLARATION_FORMS.md), [TypeRef and typed-record layout](TYPE_REFERENCES.md) and [Array storage](ARRAY_STORAGE.en.md) define types, instance capacity, View geometry and initializer admission. [Tensor expressions](TENSOR_EXPRESSIONS.md) includes the 529-operation catalogue. [Square regions](BRACKET_SUBPARSER.en.md), [Expression notation](LMX_grammar.en.md#expression-notation) and [grouping](EXPRESSION_ALGORITHM.md) specify how the same source becomes one graph. [Matrix backend profiles](../core_catalog/matrix/README.ru.md) state the conditions for each library entry.
 
-
-**Sized axes and direct TypeRef for every type.**
-[The migration guide](../ARRAY_TYPE_MIGRATION.md) covers dynamic `[N]T`,
-complete LEFT identity, optional capacity storage and `sys\descriptor(typeof(obj))`.
-The [TypeRef migration](../TYPE_REFERENCES_CHANGE.md) replaces integer type codes
-with references to canonical immutable system Structures. This is a documentation
-addition; source migration and production acceptance remain **NOT_RUN**.
-
-[Interpreter and SLJIT design](../LMX_INTERPRETER_JIT.md) describes the supported implementation plan for the shared graph and the direct generator. The [migration guide](../ARRAY_TYPE_MIGRATION.md) identifies the pending implementation and acceptance work.
-
-**Revision 2026-11-27 — integrated tensor expressions.** [Full specification](TENSOR_EXPRESSIONS.md) and its complete operation catalogue are now normative documentation. Ordinary operations are pointwise; `[op]` selects whole algebra and explicit `[op rules]` selects indexed profiles. `:=` assigns pointwise; `.:` broadcasts into a slice. [Traversal depth](OPERATOR_DEPTH.en.md) preserves absent versus explicit zero, and [minimum fuse](FUSION.en.md) supports Scalar/Map with a fresh result.
-
-[Bracket subparser](BRACKET_SUBPARSER.en.md) documents the grammar integration: contiguous `[op` is supported, and expressions plus `{…}` are delegated to the main parser, which returns nextPosition. This archive documents production integration; it does not claim a new production parser was implemented.
-
-[Integration instructions](../ARRAY_EXPRESSION_INTEGRATION.md) include the blank-line closure rule and the instruction to fix that parser bug in the implementation plan if normative examples reject it.
+[Interpreter and native execution](INTERPRETER_AND_NATIVE.md) describes the common operations and execution ABI. The [implementation plans](../../projects/README.md) track delivery and acceptance. [Array and matrix verification records](validation/array-matrix-receipts.md) identify the snapshot, inputs and scope of each published result.
 
 **Current core:** [types, universal sequences, generic patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
 

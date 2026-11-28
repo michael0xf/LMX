@@ -166,7 +166,7 @@ CODE и неизменяемые DATA не копируются в арены а
 `independent: immutable:` значения сохраняется ссылка без клонирования payload. Проверено сохранение `1+2^-100` при 256 битах и работа копии после
 уничтожения исходного контекста. Этот проверенный ранее прототип использует старый ABI: естественное выравнивание
 payload и четырёхбайтовый int-код перед ним. Для нового
-[TypeRef ABI](../TYPE_REFERENCES_CHANGE.md) его префикс, registry и provider-интерфейсы
+[TypeRef ABI](../spec/TYPE_REFERENCES.md#type-reference) его префикс, registry и provider-интерфейсы
 нужно мигрировать; прежние результаты не подтверждают новую раскладку. Инструкция и исходники находятся
 в [new_primitives/README.ru.md](new_primitives/README.ru.md).
 

@@ -34,7 +34,7 @@
 или особая категория STRUCT/ARRAY не выделяется. Обычное целое не становится типом
 или адресом metadata. Нормализация модели не вводит отдельной C-раскладки или графа.
 
-[Миграция TypeRef ABI](../TYPE_REFERENCES_CHANGE.md) отменяет integer-code листинги.
+[Миграция TypeRef ABI](TYPE_REFERENCES.md#type-reference) отменяет integer-code листинги.
 Имеющиеся [reflection.lmx](patterns/LMX_Fn_Receivers/src/reflection.lmx), [operation_forms.lmx](patterns/LMX_Fn_Receivers/src/operation_forms.lmx) и int-record normalizer в исходном
 комплекте ещё требуют указанного переноса; старые фикстуры новую норму не проверяют.
 Это изменение документации, production **NOT_RUN**.

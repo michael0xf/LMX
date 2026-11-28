@@ -25,7 +25,7 @@ CUTTER = re.compile(r'^(?:-{3,80}|end\s*:\s*([^\s:;()\[\]{}]+))\s*$')
 # cases, or are inputs tied to external parser expectations. Their closers are
 # not formatting noise. User-facing ordinary examples remain eligible.
 FIXTURE_PARTS = {'parser_cases', 'parser_tests', 'p0_cases', 'negative', 'invalid'}
-# This newly supplied design note must remain byte-identical to its attachment.
+# The original standalone attachment keeps its published bytes when replaying older inputs.
 VERBATIM_DOCUMENTS = {'LMX_INTERPRETER_JIT.md'}
 
 

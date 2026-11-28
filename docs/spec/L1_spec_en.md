@@ -43,7 +43,7 @@ Type descriptions use a finite bootstrapped meta-description, with ordinary grap
 cycles if required. [Array contract](L2_spec_en.md#array-capacity).
 
 This is the target ABI, with production acceptance **NOT_RUN**. The generator and
-old int-code listings still require the [TypeRef migration](../TYPE_REFERENCES_CHANGE.md);
+old int-code listings still require the [TypeRef migration](../../projects/kernel-runtime.md#type-layout);
 existing receipts do not establish compatibility. [Implementation status](implementation-notes.en.md#l2-status).
 Graph records gain no names or hidden execution fields. Thread's child List remains separate.
 

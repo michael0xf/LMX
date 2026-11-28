@@ -38,7 +38,7 @@ backend, которым умеет пользоваться. Общими ост
 
 **Граница редакций:** перечисленные ниже исходники и результаты относятся к
 прежнему int-code ABI. Текущая норма хранит прямую TypeRef перед payload;
-она описана в [главе о дескрипторах](../../TYPE_REFERENCES_CHANGE.md).
+она описана в [главе о дескрипторах](../../spec/TYPE_REFERENCES.md#type-reference).
 `primitive_runtime.*`, `numeric_provider.*`, `real_provider.*` и их проверки
 требуют согласованной миграции префикса, размеров, типовых аргументов и
 восстановления ссылок. Здесь не заявлена проверка нового ABI.
@@ -77,7 +77,7 @@ temporary C strings, extent Tensor и PCM16↔float. Эти функции по�
 
 Основание: [L2 value record](../../spec/L2_spec_en.md#value-record), строки
 210–287; [kernel arena](../../spec/kernel-implementation.en.md#arena), строки
-133–206; [TypeRef](../../TYPE_REFERENCES_CHANGE.md), §3. Непосредственно перед
+133–206; [адрес префикса TypeRef](../../spec/TYPE_REFERENCES.md#record-prefix). Непосредственно перед
 payload лежит TypeRef — прямой адрес канонической неизменяемой системной
 Structure полного типа. Её размер — размер реально хранимой ссылки, а не
 фиксированные четыре байта. Payload выровнен и по своему типу, и по TypeRef;

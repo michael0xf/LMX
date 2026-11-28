@@ -282,7 +282,7 @@ or native binding needs them. No bit flags or second type interner are introduce
 For every primitive T, omitted initialization retains the language place's T
 requirement while the graph record refers to `uninit:T`. Absence is `nil: T`, or
 `nil` where T is known; it is distinct from truthiness and input `required` selection.
-The [migration guide](../TYPE_REFERENCES_CHANGE.md) identifies old int-code sources
+The [migration guide](../../projects/kernel-runtime.md#type-layout) identifies old int-code sources
 and integration gates. Their existing receipts do not validate this new ABI;
 production implementation and parser/runtime acceptance remain **NOT_RUN**.
 
@@ -437,7 +437,7 @@ the dimensions actually determined by TYPE and length.
 This representation and the TypeRef migration are **DOC_SPEC_ADDITION_ONLY**;
 production P0/translator/runtime acceptance is **NOT_RUN**. Historical code and
 host-model receipts are not evidence for the new pointer-width prefix.
-[Migration and remaining source work](../TYPE_REFERENCES_CHANGE.md).
+[Migration and remaining source work](../../projects/kernel-runtime.md#type-layout).
 
 An L3 Array-element pointer has its own type with an Array-descriptor reference and explicit index.
 It stores no storage address: access derives the element address from the current header and final offset.
@@ -1341,7 +1341,7 @@ full descriptions and relocates them. An admitted Array<A> keeps actual A storag
 stride. Dense access prepares a value record only when ordinary consumption requires
 one; dense elements gain no mandatory tags or second graph.
 See [the unified type contract](CORE_SEQUENCES_REGEX.en.md#types) and the
-[TypeRef migration](../TYPE_REFERENCES_CHANGE.md).
+[TypeRef migration](../../projects/kernel-runtime.md#type-layout).
 
 <a id="array-expression-forms"></a>
 ### Array expression forms and evaluation

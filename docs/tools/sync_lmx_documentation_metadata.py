@@ -286,7 +286,7 @@ class Sync:
         for path in sorted((self.docs / 'spec/patterns').rglob('*.md')):
             if any(part in {'validation', 'tests'} for part in path.parts):
                 continue
-            if path.name.startswith(('CHANGELOG', 'VALIDATION_')) or path.name == 'LMX_INTERPRETER_JIT.md':
+            if path.name.startswith(('CHANGELOG', 'VALIDATION_')):
                 continue
             text = self.read(path)
             count = 0

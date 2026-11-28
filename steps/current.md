@@ -8,7 +8,7 @@
 
 ## Текущий приоритет с 27 ноября
 
-`coder` с `helper` сначала завершает грамматику, общий P0 и все варианты разбора Expression по [активной очереди v3](../next_core_tasks_v3.md#grammar-complete-20261127). Затем доводит [ядро и все проектные скрипты на L3](../next_core_tasks_v3.md#kernel-complete-20261127). До завершения ядра во всех сборках исключён `third_party`. Полный runtime SLJIT и остальные работы идут после него. [Подпарсер](../docs/spec/BRACKET_SUBPARSER.ru.md) · [Нотация и степень](../docs/spec/EXPRESSION_ALGORITHM.md#expression-notation) · [Техническая карта](../docs/TENSOR_IMPLEMENTATION_PLAN.md#integration-v3).
+`coder` с `helper` сначала завершает грамматику, общий P0 и все варианты разбора Expression по [активной очереди v3](../next_core_tasks_v3.md#grammar-complete-20261127). Затем доводит [ядро и все проектные скрипты на L3](../next_core_tasks_v3.md#kernel-complete-20261127). До завершения ядра во всех сборках исключён `third_party`. Полный runtime SLJIT и остальные работы идут после него. [Подпарсер](../docs/spec/BRACKET_SUBPARSER.ru.md) · [Нотация и степень](../docs/spec/EXPRESSION_ALGORITHM.md#expression-notation) · [Техническая карта](../projects/tensor-expressions.md#integration-v3).
 
 Ниже сохранены результаты отдельных проверок прежней грамматики и связок.
 
@@ -270,7 +270,7 @@ Graph `67d1be08` прошёл 472 теста P0 и разобрал 37 гото�
 Парные спецификации, каталог, примеры и средства проверки синхронизированы. В [§29.8 плана v3](../next_core_tasks_v3.md#types-arrays-20261126)
 выделены проверка P0, миграция типового ABI, хранение и операции Array, Expression, обновление каталога
 и общий договор интерпретатора с прямым генератором SLJIT. Нормативная цель описана в
-[договоре TypeRef](../docs/TYPE_REFERENCES_CHANGE.md) и [руководстве миграции](../docs/ARRAY_TYPE_MIGRATION.md).
+[договоре TypeRef](../docs/spec/TYPE_REFERENCES.md#type-reference) и [руководстве миграции](../docs/spec/TYPE_DECLARATION_FORMS.md#sized-postfix).
 Результаты существующих сборок относятся к прежнему ABI. Производственная приёмка новых форм открыта.
 
 ## 2026-11-26 — K2, S3: для `call` остаются ровно `[code]` и `[args, code]` — промежуточное состояние, не принято
@@ -1341,7 +1341,7 @@ frontend — кандидат среза; так приняты срезы «п�
 Малый срез opus «проверка строки-отказа сверяет напечатанный граф» (Р104) принят 2026-11-20
 ([свидетельство](witnesses/one-graph-refusal-dump-20261120/notes.md)): граф сверяется у строки-отказа во всех
 трёх режимах; пять строк красные намеренно до шага «серия = библиотека».
-Норма 2026-11-19 «связывание и вызываемые» ([ТЗ](../docs/spec/LMX_semantics.ru.md#binding-decisions),
+Норма 2026-11-19 «связывание и вызываемые» ([Норма](../docs/spec/LMX_semantics.ru.md#binding-decisions),
 [план](../next_core_tasks_v3.md#binding-callables-20261119)) идёт впереди шага a2 и шага «серия = библиотека»:
 она меняет формы вызова и выбор объявления, на которых те стоят. Шаг 1 плана — сверка кода с ТЗ — сделан
 ([запись](witnesses/binding-callables-step1-20261119/notes.md)); срезы кода идут в порядке 4, 3, 2, 6, 5, 7.
@@ -3693,7 +3693,7 @@ Codex согласовал источник семантики, ручные RU/
 
 ## 2026-11-13 — уточнение документов и плана M13, без изменения кода
 
-По поручению автора подготовлены [ТЗ](../add_all_struct_fields.md), источник семантики,
+По поручению автора подготовлены [Норма](../add_all_struct_fields.md), источник семантики,
 ручные пары L1/L2, спецификация ядра, руководство, заметки, CORE и [M13](../next_core_tasks_v3.md#flat-lmx-descriptor).
 Заголовок — parent/native/length/storage; одноимённые ресиверы с одним аргументом либо без него
 от текущей data читают значения полей. В data одноимённые записи остаются обычными Structure,
@@ -3735,7 +3735,7 @@ graph-m8-values-01/graph_trans-prod.exe той же стадии использ�
 и смена P0 остаются M8.2–4. Далее M11 и настоящая самосборка L3/L2.
 
 По отдельному поручению автора включены два документа Astra:
-[ТЗ](../add_all_struct_fields.md), [дословный источник](../LMX_blog/2026-11-13-get-descriptor.md).
+[Норма](../add_all_struct_fields.md), [дословный источник](../LMX_blog/2026-11-13-get-descriptor.md).
 Недостающие доработки добавлены в [M13](../next_core_tasks_v3.md#flat-lmx-descriptor):
 плоский Lmx, Array<@>/Lmx, getDescriptor, произвольные конечные глубина указателя и мерность
 Array, общий явный путь записи. Нормативные RU/EN пары и карта ядра согласованы;

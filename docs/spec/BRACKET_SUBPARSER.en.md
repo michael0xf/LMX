@@ -174,4 +174,24 @@ The graph preserves internal argument order, absence separately from present emp
 
 Arguments can be computed. Parsing, printing and clean graph construction retain their expressions without running them. The consumer obtains each demanded argument once in contract order. A slice obtains the source and each present start, stop and step. A named occurrence obtains the owner and index before selecting by name. User matrix methods are installed by ordinary declarations.
 
-Acceptance compares targets, arguments, effects, results and rejection phase for each pair. [Task and full controls](../tasks/28-Nov-2026/SQUARE_BRACKET_RECEIVER.md) · [v3 schedule](../../next_core_tasks_v3.md#square-bracket-receiver-20261128).
+Acceptance compares targets, arguments, effects, results and rejection phase for each pair. [End-to-end checks](#square-acceptance) · [v3 schedule](../../next_core_tasks_v3.md#square-bracket-receiver-20261128).
+
+<a id="square-acceptance"></a>
+
+## 10. End-to-end acceptance of bracket notation and explicit calls
+
+Run each pair from the same initial state. Compare its selected method and argument map or actual body, then its place, TypeRef, result and effects. Record the rejection phase separately using the [rejection classes](#square-rejections).
+
+| Check | Distinguishing observation |
+| --- | --- |
+| P0 entry and return | `v[cond ? a[j] : hi():stop()]` has two structural pairs. Each owner consumes its `]`, and the conditional retains its colon. Repeat with nested Mix and a shielded `]`, using file and buffer input. |
+| Same-named occurrence number | D has fields `field=10, a=100, field=20, field=30, b=200, field=40, field=50, field=60` in order. `D\[5]field`, `D\[myIndex()]field` and the explicit call with index 5 select 60 at physical slot 7. A write through the selected place changes the sixth occurrence. `D\field` is ambiguous; `D\[6]field` is absent even though physical slot 6 exists. An outside variable of the same name does not affect NAME. |
+| Occurrence expression effects | Two calls to `myIndex()` return 0 and 5. Observe reads of 10 and 60 with two evaluations. Repeat writes and address-taking. A skipped branch makes zero calls. An evaluation error propagates before writing. |
+| Slice | For `v[startFn():stopFn():stepFn()]` obtain the source, start, stop and step once each in order. A failing `stopFn()` prevents `stepFn()`. Read backing after the bounds' effects. Cover omissions, `[::2]`, `[::-1]` versus `[:-1:-1]`, zero stride and overlapping `v[::-1] := v`. |
+| Value, TYPE and declaration | `[]` gives an empty Array; `[arr2]` gives one element. `[]T` has an unknown extent, `[0]T` a zero extent and `[](2)T` two axes. Compare uninit in `[]int: v` with explicit empty Array in `[]int: v []`. In `[rows() + 1][cols()]int: a makeValues()` parsing makes no calls, and consumption evaluates each demanded expression once. Cover compatible groups and the ambiguous initializer under the [Array contract](ARRAY_STORAGE.en.md). |
+| Place and access chain | In `[2][2][2]int` linear index 5 and `[1][0][1]` select the same place. Compare with successive `\` steps in Structure, `plane[i][:]`, and `v[-1]` versus `v[-1:]`. Do not execute an invalid physical access in native L2. |
+| Recognition and configuration | Test full designators in `A [\] B`, `A [/] B`, `A [*] B` and `A [**] n`. Distinguish axis-rule, slice and conditional colons. In `A [* (axisA()):(axisB())] B` and a computed named actual, parsing has no effects and consumption evaluates each demanded expression once. |
+| Method and result | For `A=[1 2; 3 4]` and `B=[5 6; 7 8]` the bracket product and explicit call give `[19 22; 43 50]`. Elementwise `A * B` gives `[5 12; 21 32]`. Explicit `()` gives an outer product with 16 elements. Test permutation without axisRules, `i:j`, `i=j`, `i*j`, unary reduction and explicit depth. A user designator with a path or exact name takes both forms through its declared profile. |
+| Codec and routes | Compare boundaries and roles in the original and restored `fromLmx(toLmx(S))` graphs, including NAME and the source occurrence expression. Compare target, result, effect order and cause of failure in the interpreter and native routes. The explicit receiver has a four-byte key; `` `[* 1:0]` `` remains one exact name. |
+
+The source parser and shared graph preparation belong to grammar acceptance. Execution of access and codec state restoration are checked in the kernel stage. Numerical profiles follow tensor acceptance.

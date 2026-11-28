@@ -51,6 +51,6 @@ Message сам не создаёт deadlock. Здесь сохраняются �
 
 ## Проверка
 
-[message_protocol_cases_20261128.json](../validation/message_protocol_cases_20261128.json) содержит входные последовательности и ожидаемые различающие наблюдения. [message_patterns_20261128.json](../validation/message_patterns_20261128.json) фиксирует выполненные статические проверки исходников, публикаций и ограничение NOT_RUN.
+[message_protocol_cases_20261128.json](../validation/message_protocol_cases_20261128.json) содержит входные последовательности и ожидаемые различающие наблюдения. [message_patterns_20261128.json](../validation/message_patterns_20261128.json) фиксирует статические проверки при выпуске поставки. Поля `workbook_publication`, `pdf_publication` и `visual_review` в этой расписке именуют архивные отчёты о той поставке. Состав рабочих изданий указан в [оглавлении группы](README.md). Для исполнения LMX, Go и Erlang в расписке стоит `NOT_RUN`.
 
 Размеры считают все показанные объявления, helper bodies и комментарии. Реализация native ports, launcher, runtime и transport не считается бесплатной: она явно не включена в размер данного protocol/core листинга. Таблица не измеряет быстродействие и не выбирает победителя полного production приложения.

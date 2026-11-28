@@ -6,6 +6,8 @@ Go показывает каналы и goroutine, Erlang — изолирова
 
 ## Файлы
 
+Markdown и CSV включают все 15 сравнений. XLSX и PDF в рабочем каталоге относятся к предыдущей редакции с 11 сравнениями.
+
 - [Markdown](LMX_Comparison_06_async_and_messages.md)
 - [Excel](LMX_Comparison_06_async_and_messages.xlsx)
 - [PDF](LMX_Comparison_06_async_and_messages.pdf)

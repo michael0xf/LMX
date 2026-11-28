@@ -18,6 +18,7 @@
 | 26 ноября (3), размеры осей и TypeRef | [Статус](26-Nov-2026-3/STATUS.md) | [29.8](../../next_core_tasks_v3.md#types-arrays-20261126), [29.9](../../next_core_tasks_v3.md#prefix-types-20261126) |
 | 27 ноября, Expression, массивы и каталог | [Статус](27-Nov-2026/STATUS.md) | [Грамматика и общий P0](../../next_core_tasks_v3.md#grammar-complete-20261127) |
 | 28 ноября, матрицы, имена и квадратные формы | [Статус](28-Nov-2026/STATUS.md) | [Имена](../../next_core_tasks_v3.md#identifier-bytes-priority-20261128), [квадратный подпарсер](../../next_core_tasks_v3.md#square-bracket-receiver-20261128), [матрицы](../../next_core_tasks_v3.md#matrix-bridge-20261128) |
+| 28 ноября (2), платформы и Python, P0/MIX и Message 109–112 | [Статус](28-Nov-2026-2/STATUS.md) | [Подготовка P0](../../next_core_tasks_v3.md#p0-mix-python-priority-20261128), [исполнение после ядра и API](../../next_core_tasks_v3.md#mix-python-message-after-kernel) |
 
 ## Пометки к прежним выпускам по редакции 28 ноября
 

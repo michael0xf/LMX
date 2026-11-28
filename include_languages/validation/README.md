@@ -4,7 +4,7 @@
 
 | Проверка | Что действительно проверяет | Чего не доказывает |
 | --- | --- | --- |
-| `static_check.py` → `static_report.json` | 16 LMX-файлов: отсутствие пустых строк перед вложенным продолжением, баланс разделителей вне строк/комментариев, наличие верхних declarations и 15 явных gate references; восемь пар platform/Python страниц; локальные ссылки | Полную грамматику, типизацию, эффекты `throws`, lifetime, native execution |
+| `static_check.py` → `static_report.json` | 16 LMX-файлов: отсутствие пустых строк перед вложенным продолжением, баланс разделителей вне строк/комментариев, объявления, обычные ссылки на тела управления сессией и прямые Python-цели в примерах; восемь пар platform/Python страниц; локальные ссылки | Полную грамматику, типизацию, эффекты `throws`, lifetime, native execution |
 | `run_host_probe.py` → `host_probe_report.json` | Компилирует C99 helper и вызывает настоящий host CPython C API: isolated init, object call, exception capture, None, UTF-8 с NUL, собственную reference из borrowed, buffer с negative byte stride, attach/release GIL | Установку выбранных дистрибутивов, production provider, LMX `py.*`, остальные ОС/ISA |
 | [acceptance_cases.lmx](../examples/acceptance_cases.lmx) | Явные входы и ожидаемые различающие исходы для будущего LMX harness | Сам факт выполнения этих случаев |
 
@@ -21,8 +21,8 @@ Static report фиксирует hashes входных файлов. Прове�
 
 ## Следующая реальная приёмка
 
-1. Запустить исходники через общий production P0 с новой нормой `py.*`; подготовить binding таблицы и проверить типы, finite throws и Frame arguments.
-2. Реализовать native ports с действительным host registry и ownership; подключить LMX к выбранному shared CPython либо Pyodide, запустить factorial и все различающие отказы.
+1. Проверить общий production P0 на слитной цели, целой цепочке атрибутов и точном имени LMX. В готовой сессии вызвать встроенную и пользовательскую функции через один переход. Отдельно проверить отсутствие цели, исключение тела и обычные LMX-вызовы `installPython`, `openPython` и `closePython`.
+2. Реализовать native ports с проверкой фактического владельца сессии и её ресурсов; подключить LMX к выбранному shared CPython либо Pyodide, запустить factorial и все различающие отказы.
 3. Проверить отказ во время каждого этапа установки: поколение до публикации не становится активным, старое поколение остаётся доступно. Выполнить реальный relocation и smoke imports совместимых native wheels.
 4. Проверить потерю worker response после side effect, повтор того же sequence и конфликт payload; подтвердить единственный эффект и `unknown-outcome` без скрытого retry.
 5. На каждой платформе отдельно проверить ABI/loader, shutdown, Android lifecycle и 16-KB native dependencies, WASM host boundary, RISC-V toolchain/ABI. Конкретные acceptance условия находятся в отдельных platform README и PYTHON.

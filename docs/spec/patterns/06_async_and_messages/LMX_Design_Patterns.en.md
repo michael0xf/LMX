@@ -6,6 +6,8 @@ Go illustrates channels and goroutines; Erlang illustrates isolated processes, m
 
 ## Files
 
+Markdown and CSV cover all 15 comparisons. The XLSX and PDF in this directory belong to the earlier edition with 11 comparisons.
+
 - [Markdown](LMX_Comparison_06_async_and_messages.md)
 - [Excel](LMX_Comparison_06_async_and_messages.xlsx)
 - [PDF](LMX_Comparison_06_async_and_messages.pdf)

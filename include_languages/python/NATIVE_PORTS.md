@@ -10,6 +10,12 @@ Native adapter компилируется под точные headers выбра
 
 `open` заполняет session только после успешного init/attach. `close` останавливает admission и освобождает session leases; общий service финализируется один раз своим владельцем после завершения всех Python calls/threads. Он не выгружает библиотеку под чужими finalizers. Reopen after incompatible runtime shutdown требует нового service/process.
 
+## Разрешение цели в сессии
+
+Для `py.math.factorial` провайдер сначала получает `math` из пространства имён выбранной сессии по правилам Python, затем читает атрибут `factorial`. Тот же первый шаг находит доступные встроенные имена и определения приложения. Вызов использует уже полученный объект. При отсутствии имени или атрибута провайдер возвращает исходную структурированную ошибку Python. Ни этот поиск, ни транспорт worker не требуют регистрации имён в LMX.
+
+В черновике порта представлены вызов объекта, импорт и работа с атрибутами. Поиск первого имени в контексте сессии и перенос этого действия через внешний протокол ещё предстоит реализовать. Для приёмки нужна одна программа, переведённая до определения пользовательской функции в Python, с вызовом этой функции в нужной сессии. [Договор и примеры](API.md).
+
 ## Соответствие операций
 
 | Port | Реальный CPython API / правило |
@@ -34,7 +40,7 @@ Tuple/list setters могут **забирать** reference; dict/attribute/ite
 
 Host загружает один фиксированный комплект Pyodide assets. `loadPyodide`, `pyimport`, PyProxy attribute/item/call APIs и `toJs`/`toPy` обеспечивают операции без склеивания Python-кода. Каждый созданный PyProxy освобождается через `destroy`; copied scalar value не маскируется под proxy. [JS API](https://pyodide.org/en/stable/usage/api/js-api.html), [type conversions](https://pyodide.org/en/stable/usage/type-conversions.html).
 
-Локальный Pyodide Worker — единственный владелец своего interpreter. Main UI передаёт сообщения, не блокирует browser loop и не делит произвольные Python pointers. Async loading является installation/open stage; `py.call` не объявляется завершённым по delivery ACK. Поддержка async Python return в baseline ограничена handle результата, отдельный await contract не придуман.
+Локальный Pyodide Worker — единственный владелец своего interpreter. Main UI передаёт сообщения, не блокирует browser loop и не делит произвольные Python pointers. Async loading является installation/open stage; обычный вызов Python завершается ответом исполнителя. Поддержка async Python return в baseline ограничена handle результата, отдельный await contract не придуман.
 
 ## System-worker provider
 

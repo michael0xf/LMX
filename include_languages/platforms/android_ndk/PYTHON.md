@@ -8,7 +8,7 @@
 
 ## Что означает установка runtime
 
-Первый `py.install` может устанавливать bundled runtime assets в app-private generation без каких-либо настроек ОС. NDK допускает сценарий copy+`dlopen`, но binary должен иметь подходящий ABI, API, dependencies и alignment. Downloaded native bundle не считается доступным на любом канале доставки автоматически.
+Первый `installPython` может устанавливать bundled runtime assets в app-private generation без каких-либо настроек ОС. NDK допускает сценарий copy+`dlopen`, но binary должен иметь подходящий ABI, API, dependencies и alignment. Downloaded native bundle не считается доступным на любом канале доставки автоматически.
 
 **Для Google Play** native `.so` доставляется допустимым Play/app-механизмом; публичная policy ограничивает загрузку executable native code вне Play. Исключение для кода интерпретаторов не превращает произвольный CPython extension `.so` в pure Python. Поэтому runtime download pure-Python packages и доставка native runtime/wheels разделены в install plan. Для иного канала распространения native-download profile проверяется отдельно. [Google Play policy](https://support.google.com/googleplay/android-developer/answer/16559646).
 

@@ -910,9 +910,9 @@ Prefix `@x` (a VALUE address), prefix `@T` (a TYPE constructor), and `\x` differ
 
 Sources: §§6.6.6, 20.2.2–20.3.
 
-**Python gateways.** This contract defines Python through `py.*` as the connected-language profile. In head position an adjacent `py.name` is read by the common P0 as one token with its source span. `py.` takes one valid bare identifier. A second dot, the separated spelling `py .name`, and arbitrary `a.b` do not form gateways. The exact identifier `` `py.call` `` keeps its own bytes under §5, including its quoting delimiters.
+**Direct access to Python.** In L3 and L2 the `py.` prefix addresses Python in the selected session. The common P0 reads the compact spelling up to the same boundaries as `c.*`. In `py.math.sqrt(9)` it retains the head `py.math.sqrt`, its source span and an ordinary LMX argument group. A dot within the target stays in the head. Whitespace ends the token. Backticks in `` `py.abs` `` form a literal LMX identifier under §5. The rule for an arbitrary head such as `a.b` still applies.
 
-The common P0 keeps the bare head, ordinary LMX nodes for its arguments, and the continuation position. Admission of the finite set of operations in the [Python API](../../include_languages/python/API.md) follows parsing. An unknown `py.unknown` is refused at call preparation, before execution. Python modules and attributes are passed as parameters, without parsing Python code or looking up a dotted chain in the head. The gates are available to L3 and L2 through an explicit session and provider; direct `c.*` remains the L2 boundary. Binding and native providers await implementation.
+After parsing, Python name and attribute lookup determine the target in the selected session. Any available name can be used through `py.`, including names introduced after translation. Preparation preserves the arguments until execution. Name lookup, attribute access and invocation take place when the program reaches the Python operation. Installation and session creation use the ordinary LMX receivers `installPython` and `openPython`. [Boundary contract](../../include_languages/python/API.md).
 
 `c.name` is an explicit C-surface form, not an ordinary LMX field. A compact token beginning with `c.` continues to an LMX boundary: horizontal space, newline, `,`, `;`, `(`, `)`, `:`, comment start, or item end. Dotted continuations remain C surface; calls and indices use bounded forms in the common stream. Names following `c.` pass through the common raw C door; particular C names have no separate registration or special parsing ([L2](L2_spec_en.md#lowlevel-abi)).
 
@@ -1076,7 +1076,8 @@ Square productions enter through `square_form`; the common P0 validates position
                           | symbolic_head | square_form(DECLARATION_HEAD)
                           | bounded_structure
 
-    python_gate         ::= "py." bare_identifier
+    python_gate         ::= "py." compact_foreign_tail
+    compact_foreign_tail ::= ? nonempty foreign spelling up to the common LMX boundary in §23 ?
 
     type_prefix         ::= array_axis_prefix | dynamic_array_rank_prefix
                           | pointer_prefix | dynamic_pointer_count_prefix

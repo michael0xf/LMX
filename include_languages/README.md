@@ -26,15 +26,15 @@
 ## Что читать и подключать
 
 1. [Архитектура Python-границы](python/ARCHITECTURE.md): владелец, Message, GIL, handles, callbacks и ошибки.
-2. [API `py.*`](python/API.md): точные имена ворот, аргументы, результаты и общий binding.
+2. [API `py.*`](python/API.md): разрешение Python-имени, аргументы, результаты и ресиверы управления сессией.
 3. [Установка и обновление](python/DEPLOYMENT.md): app-private поколения, wheels, rollback и system mode.
 4. [Договор native providers](python/NATIVE_PORTS.md): конкретные CPython/Pyodide API, обязательная оставшаяся интеграция.
 5. [Примеры](examples/README.md) и [проверки](validation/README.md).
 6. [Первичные источники](SOURCES.md), проверенные 28 ноября 2026.
 
-Порядок сборки единого LMX-графа: `src/models.lmx`, `src/ports.lmx`, `src/profiles.lmx`, `src/install.lmx`, `src/handles.lmx`, `src/calls.lmx`, `src/conversions.lmx`, `src/gates.lmx`, `src/external.lmx`, `src/gate_bindings.lmx`; затем нужный пример. Имена верхнего уровня объединяются обычной подготовкой проекта, а не текстовой подстановкой файлов.
+Порядок сборки единого LMX-графа: `src/models.lmx`, `src/ports.lmx`, `src/profiles.lmx`, `src/install.lmx`, `src/handles.lmx`, `src/calls.lmx`, `src/conversions.lmx`, `src/gates.lmx`, `src/external.lmx`, `src/lifecycle.lmx`; затем нужный пример. Имена верхнего уровня объединяются обычной подготовкой проекта, а не текстовой подстановкой файлов.
 
-`PythonGate\...\run` — действительные LMX-тела по текущим примерам. Нормативные формы `py.*` выбирают эти CODE references через общий механизм подготовки вызова. Binding в production frontend и native providers пока имеют статус `REQUIRE_IMPLEMENTATION`; `ports.lmx` не содержит фиктивных успешных реализаций.
+Обычные ресиверы `installPython`, `openPython` и `closePython` управляют установкой и сессией. Голова `py.*` адресует Python напрямую в текущей сессии. Нативные провайдеры и соединение этого перехода с ядром имеют статус `REQUIRE_IMPLEMENTATION`. [Публичные имена LMX](src/lifecycle.lmx) · [Прямой вызов](python/API.md).
 
 Алгоритмы установки, допуска ABI, упаковки аргументов, владения handles и защиты от повторного исполнения запроса написаны на LMX. Узкие границы загрузчика, Python C API, сети и файловой системы оформлены явными contracts. C-проба в `validation/` проверяет только реальные свойства host CPython, а не исполнение LMX.
 

@@ -29,7 +29,7 @@ Android использует собственный delivery profile: базов
 
 ## Runtime generations
 
-Путь поколения определяется identity и lock, не пользовательским module name. Новая установка создаёт новый каталог. Пока session удерживает runtime lease, этот каталог и его native libraries не удаляются. Успешное изменение active marker влияет только на следующие `py.open`.
+Путь поколения определяется identity и lock, не пользовательским module name. Новая установка создаёт новый каталог. Пока session удерживает runtime lease, этот каталог и его native libraries не удаляются. Успешное изменение active marker влияет только на следующие `openPython`.
 
 Повторная загрузка CPython и многократные `Py_Initialize`/`Py_Finalize` внутри процесса не используются как механизм обновления. Native service удерживает библиотеку до своего согласованного shutdown; новый incompatible runtime запускается в новом worker/process или после перезапуска владельца.
 

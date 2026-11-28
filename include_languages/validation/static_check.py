@@ -12,15 +12,6 @@ from urllib.parse import unquote
 BASE = Path(__file__).resolve().parents[1]
 PLATFORMS = ("windows", "linux_ubuntu", "macos", "android_ndk",
              "mir", "wasm_linear", "riscv", "c99_other")
-GATES = {
-    "py.install": "install", "py.open": "open", "py.close": "close",
-    "py.import": "importModule", "py.getattr": "getAttribute",
-    "py.setattr": "setAttribute", "py.call": "call",
-    "py.getitem": "getItem", "py.setitem": "setItem",
-    "py.retain": "retain", "py.release": "release",
-    "py.toValue": "toValue", "py.fromValue": "fromValue",
-    "py.buffer": "buffer", "py.releaseBuffer": "releaseBuffer",
-}
 errors: list[str] = []
 
 
@@ -66,8 +57,8 @@ top_names: set[str] = set()
 masked: dict[Path, str] = {}
 input_hashes = {}
 for file in sources:
-    relative = str(file.relative_to(BASE))
-    content = file.read_text()
+    relative = file.relative_to(BASE).as_posix()
+    content = file.read_text(encoding="utf-8")
     input_hashes[relative] = hashlib.sha256(file.read_bytes()).hexdigest()
     require("\t" not in content, f"{relative}: tab indentation")
     lines = content.splitlines()
@@ -100,18 +91,21 @@ for file, code in masked.items():
     unknown = references - top_names - declared_outcomes
     require(not unknown, f"{file.name}: unknown Python-prefixed names {sorted(unknown)}")
 
-bindings = (BASE / "src/gate_bindings.lmx").read_text()
-found = re.findall(r'spelling "(py\.[A-Za-z]+)"; @: code PythonGate\\([A-Za-z]+)\\run',
-                   bindings)
-require(len(found) == 15 and dict(found) == GATES, "finite gate binding mismatch")
-gate_source = (BASE / "src/gates.lmx").read_text()
-for spelling, implementation in GATES.items():
-    require(re.search(r"^    " + implementation + r":\n(?:(?:[ ]{8}.*|#)\n)*?        run:",
-                      gate_source, re.M) is not None,
-            f"{spelling}: ordinary LMX CODE body missing")
-for file, code in masked.items():
-    actual = set(re.findall(r"\bpy\.[A-Za-z]+", code))
-    require(actual <= set(GATES), f"{file.name}: undefined py gate {sorted(actual-set(GATES))}")
+# These are ordinary LMX references. Python member names are resolved by the
+# session at execution, so a static source inventory cannot admit or reject them.
+lifecycle = masked[BASE / "src/lifecycle.lmx"]
+references = dict(re.findall(r"^@:\s+(\w+)\s+PythonGate\\(\w+)\\run$", lifecycle, re.M))
+bridge = masked[BASE / "src/gates.lmx"]
+for name in ("installPython", "openPython", "closePython"):
+    target = name.removesuffix("Python")
+    require(references.get(name) == target, f"{name}: missing lifecycle reference")
+    body = re.search(r"^    " + target + r":\n(?:(?:[ ]{8}.*|#)\n)*?        run:", bridge, re.M)
+    require(body is not None, f"{name}: referenced LMX body missing")
+
+direct_examples = sorted({head for file, code in masked.items()
+                          if file.parent.name == "examples"
+                          for head in re.findall(r"\bpy\.[^\s(),;:\[\]#]+(?=\()", code)})
+require("py.score" in direct_examples, "missing example of a session-defined callable")
 
 markdown = [BASE / "README.md", BASE / "SOURCES.md"]
 markdown += sorted(BASE.glob("python/*.md"))
@@ -126,7 +120,7 @@ link_count = 0
 for file in markdown:
     if not file.exists():
         continue
-    text = file.read_text()
+    text = file.read_text(encoding="utf-8")
     for target in re.findall(r"\[[^\]]*\]\(([^)]+)\)", text):
         if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", target) or target.startswith("#"):
             continue
@@ -143,7 +137,8 @@ report = {
     "lmx_files": len(sources),
     "platform_directories": len(PLATFORMS),
     "separate_platform_pages": len(PLATFORMS) * 2,
-    "finite_gate_bindings": len(found),
+    "lifecycle_receivers": sorted(references),
+    "direct_calls_in_examples": direct_examples,
     "local_links_checked": link_count,
     "input_sha256": input_hashes,
     "errors": errors,
@@ -151,12 +146,12 @@ report = {
                 "LMX runtime/native/interpreter execution", "target platform builds",
                 "distribution installs", "Python native provider integration",
                 "external worker integration"],
-    "require_implementation": ["production py.* binding", "PythonNativePort",
+    "require_implementation": ["direct py.* name lookup and invocation in the selected session", "PythonNativePort",
                                "PythonInstallerPort", "wire transport/bootstrap"],
 }
 (BASE / "validation/static_report.json").write_text(
-    json.dumps(report, ensure_ascii=False, indent=2) + "\n")
+    json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
 print(json.dumps({key: report[key] for key in ("status", "lmx_files",
-      "platform_directories", "finite_gate_bindings", "local_links_checked", "errors")},
+      "platform_directories", "direct_calls_in_examples", "local_links_checked", "errors")},
       ensure_ascii=False, indent=2))
 raise SystemExit(bool(errors))

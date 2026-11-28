@@ -7,13 +7,13 @@ PythonPrivateExample:
     return: i64
     run:
         throws: copy(PythonBridgeThrows)
-        private: @PythonInstallation: installed py.install(context := context; plan := plan)
+        private: @PythonInstallation: installed installPython(context := context; plan := plan)
         private: @PythonOpenRequest: request (copy(PythonOpenRequest))
         request\mode := 1
         request\installation := installed
-        private: @PythonSession: session py.open(context := context; request := request)
+        private: @PythonSession: session openPython(context := context; request := request)
         finally:
-            py.close(context := context; session := session)
+            closePython(context := context; session := session)
         return: PythonMathDemo\run(context; session)
 
 # The same body serves Windows/Linux/macOS/Android/MIR-host/Pyodide/RV64 Linux.

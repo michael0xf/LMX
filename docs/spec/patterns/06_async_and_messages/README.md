@@ -2,7 +2,7 @@
 
 [Руководство RU](LMX_Design_Patterns.ru.md) · [Guide EN](LMX_Design_Patterns.en.md)
 
-Исходные 8 паттернов дополнены structured concurrency, supervision и MapReduce (88–90). Во всех LMX-примерах параллельная ветка означает отдельно созданный Message; один владелец никогда не исполняет два turn одновременно. Общий lifecycle/HTTP/provider профиль указан явно и не учитывается как бесплатный код.
+В группе 15 сравнений. К исходным восьми добавились structured concurrency, supervision и MapReduce (088–090), затем четыре прикладных протокола Message (109–112). Во всех LMX-примерах параллельная ветка означает отдельно созданный Message; один владелец никогда не исполняет два turn одновременно. Общий lifecycle/HTTP/provider профиль указан явно и не учитывается как бесплатный код.
 
 [Актуальная таблица Markdown](LMX_Comparison_06_async_and_messages.md) · [CSV](LMX_Comparison_06_async_and_messages.csv). [XLSX](LMX_Comparison_06_async_and_messages.xlsx) и [PDF](LMX_Comparison_06_async_and_messages.pdf) относятся к предыдущей редакции и ждут регенерации.
 

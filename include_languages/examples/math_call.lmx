@@ -1,4 +1,4 @@
-# DRAFT. Normative py.* surface; production binding/native execution NOT_RUN.
+# DRAFT. Direct Python names and LMX bridge helpers. Production execution NOT_RUN.
 # Run from an existing R0 or Message owner with a ready session.
 PythonMathDemo:
     @PythonGateContext: context
@@ -13,19 +13,34 @@ PythonMathDemo:
         finally:
             while: count > 0
                 count -= 1
-                py.release(context := context; session := session; handle := held[count])
+                PythonGate\release\run(context := context; session := session; handle := held[count])
         ---
-        held[0] := py.import(context := context; session := session; name := "math")
+        held[0] := py.__import__("math")
         count := 1
-        held[1] := py.getattr(context := context; session := session; object := held[0]; name := "factorial")
+        held[1] := py.getattr(held[0]; "factorial")
         count := 2
-        held[2] := py.fromValue(context := context; session := session; value := PythonInteger\make(6))
+        held[2] := PythonGate\fromValue\run(context := context; session := session; value := PythonInteger\make(6))
         count := 3
-        held[3] := py.call(context := context; session := session; callable := held[1]; args := (held[2]); kwargs := (copy(())))
+        held[3] := PythonGate\call\run(context := context; session := session; callable := held[1]; args := (held[2]); kwargs := (copy(())))
         count := 4
-        private: @PythonValue: result py.toValue(context := context; session := session; handle := held[3]; maxDepth := 1; maxItems := 1)
+        private: @PythonValue: result PythonGate\toValue\run(context := context; session := session; handle := held[3]; maxDepth := 1; maxItems := 1)
         return: PythonIntegerRead\read(result)
 
 # Expected actual execution result: 720. No Python source string or eval.
 # Four handles are held in a preallocated cleanup stack; no allocation follows
 # native result publication before its reference is recorded.
+
+# Second fixture: the application supplies score(x) = 2*x in this Python
+# session after LMX translation. Its name has no corresponding LMX receiver.
+PythonDirectExample:
+    @PythonGateContext: context
+    @PythonSession: session
+    required: context session
+    return: i64
+    run:
+        throws: copy(PythonBridgeThrows)
+        private: @PythonHandle: answer py.score(21)
+        finally:
+            PythonGate\release\run(context; session; answer)
+        private: @PythonValue: result PythonGate\toValue\run(context; session; answer; 1; 1)
+        return: PythonIntegerRead\read(result)

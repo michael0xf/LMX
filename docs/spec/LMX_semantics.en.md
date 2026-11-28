@@ -89,7 +89,7 @@ The wrappers are L3 code and the one place of the checks; the interpreter uses t
 <a id="python-gateway"></a>
 ### Connected Python runtime
 
-The `py.*` receivers use ordinary call admission and an explicit session and provider. They are available in L3 and L2 and retain the common LMX graph. The direct `c.*` door belongs to L2. Python calls preserve structured exceptions, handle ownership, and buffer lifetime. An external process passes bounded DATA and opaque identifiers without turning a Python pointer into an LMX reference.
+L2 and L3 share the `py.*` boundary for addressing Python directly, just as L2 can address C through `c.*`. In the selected session `py.abs(-7)` calls the Python name `abs` with one argument. Python resolves module names, attributes and user-defined functions. Names require no registration in LMX. An unavailable name or attribute raises an error at that access. Ordinary LMX receivers `installPython`, `openPython` and `closePython` manage installation and session lifetime. The boundary preserves structured exceptions, reference ownership and buffer lifetime. External processes exchange bounded DATA and opaque identifiers. [Direct access contract](../../include_languages/python/API.md).
 
 An application-private Python installation and a selected external endpoint follow one gate contract with distinct capability profiles. Interpreter state belongs to an explicit owner. [Profiles, API, and implementation status](../../include_languages/README.md).
 

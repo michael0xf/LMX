@@ -6217,12 +6217,23 @@ fn: lmx_graph_flat_array_extent (const: (size_t@: axes); size_t: rank; size_t: i
 end: lmx_graph_flat_array_extent
 
 # Dense literal construction shares the same layout validation for a
-# literal TypeRef and for a TypeRef produced when the declaration is reached.
+# literal TypeRef and for a TypeRef produced when the declaration is reached. The base of the reference -- int or
+# char -- selects the admission of an element and the laying of the array (lmx_graph_literal_cells); the check of the
+# shape and the making of the descriptor with its whole reference are one for both (the prerequisite П1 of the names,
+# Sol and Astra 2026-11-28). 0 and the array in out; 1 without memory; 2 when the literal does not read as a dense
+# array of this base; -1 when a field is no cell of the row (the declaration stays a written computation).
 fn: lmx_graph_array_literal (c.LmxGraph@: g; c.Lmx@: parent; c.Lmx@: reference; @: initializer; @@: out) int
     size_t: rank 0U
     size_t: depth 0U
     size_t@: axes 0
-    if: c.lmx_types_reference_parts(g\arena, reference, @ axes, @ rank, @ depth) = 0 || depth != 0U || rank = 0U
+    int: base c.LMX_TYPE_NONE
+    c.LmxArray@: array 0
+    c.VoidArray@: data 0
+    char@: bytes 0
+    int@: values 0
+    int@: codes 0
+    size_t: i 0U
+    if: c.lmx_types_reference_details(g\arena, reference, @ axes, @ rank, @ depth, @ base) = 0 || depth != 0U || rank = 0U
         return: 2
     ---
     if: c.lmx_graph_kind(g, initializer) != 4
@@ -6245,7 +6256,7 @@ fn: lmx_graph_array_literal (c.LmxGraph@: g; c.Lmx@: parent; c.Lmx@: reference; 
         c.memcpy((cast: (@) shape), (cast: (const: @) axes), shape_bytes)
     ---
     size_t: count 0U
-    int: admitted lmx_graph_literal_ints(g, region, shape, counts, 0U, rank, 0, @ count)
+    int: admitted lmx_graph_literal_cells(g, region, shape, counts, 0U, rank, base, 0, @ count)
     if: admitted != 1
         c.free((cast: (@) shape))
         if: admitted < 0
@@ -6266,19 +6277,44 @@ fn: lmx_graph_array_literal (c.LmxGraph@: g; c.Lmx@: parent; c.Lmx@: reference; 
         ---
         axis := axis + 1U
     ---
-    c.LmxArray@: array c.lmx_array_new_int_with_reference(g\arena, parent, reference, count)
-    if: array != 0
-        c.VoidArray@: data @ array\array
-        int@: values (cast: (int@) data\data)
-        count := 0U
-        lmx_graph_literal_ints(g, region, shape, counts, 0U, rank, values, @ count)
-        out[0] := (cast: (@) array)
+    if: base = c.LMX_TYPE_CHAR
+        array := c.lmx_array_new_chars_with_reference((cast: (c.LmxArena@) g\arena), parent, reference, count)
+        if: array != 0
+            data := @ array\array
+            bytes := (cast: (char@) (data\data))
+            codes := (cast: (int@) c.malloc((count + 1U) * sizeof(c.int)))
+            if: codes = 0
+                c.free((cast: (@) shape))
+                return: 1
+            ---
+            count := 0U
+            lmx_graph_literal_cells(g, region, shape, counts, 0U, rank, base, codes, @ count)
+            i := 0U
+            while: i < count
+                bytes[i] := (cast: (char) codes[i])
+                i := i + 1U
+            ---
+            c.free((cast: (@) codes))
+        ---
+    else:
+        array := c.lmx_array_new_int_with_reference(g\arena, parent, reference, count)
+        if: array != 0
+            data := @ array\array
+            values := (cast: (int@) (data\data))
+            count := 0U
+            lmx_graph_literal_cells(g, region, shape, counts, 0U, rank, base, values, @ count)
+        ---
     ---
+    out[0] := (cast: (@) array)
     c.free((cast: (@) shape))
     return: (cast: (int) (array = 0))
 end: lmx_graph_array_literal
 
-fn: lmx_graph_literal_ints (c.LmxGraph@: g; c.Lmx@: region; size_t@: shape; size_t@: counts; size_t: level; size_t: rank; int@: values; size_t@: cursor) int
+# The cells of the written region in the order of the array: each is a cell of the base's row; the geometry -- the
+# groups of a rank above one, the open axes, the counts -- is read the same way for int and for char. With values the
+# cells are written there (an int cell gives its number, a cell of the char row its byte), without them only counted.
+# 1; 0 when an axis is still open; -1 for a field that is no cell.
+fn: lmx_graph_literal_cells (c.LmxGraph@: g; c.Lmx@: region; size_t@: shape; size_t@: counts; size_t: level; size_t: rank; int: base; int@: values; size_t@: cursor) int
     if: c.lmx_graph_kind(g, region) != 4 || c.lmx_graph_name_of(g, region) != 0
         return: 0
     ---
@@ -6286,6 +6322,9 @@ fn: lmx_graph_literal_ints (c.LmxGraph@: g; c.Lmx@: region; size_t@: shape; size
     size_t: unknown (cast: (size_t) -1)
     size_t: start cursor[0]
     int: grouped 0
+    @: cell void 0
+    char@: text 0
+    int: code 0
     if: rank > 1U && count != 0U
         @: first void c.lmx_graph_get_in(g, region, 0U)
         if: c.lmx_graph_kind(g, first) = 4 && c.lmx_graph_name_of(g, first) = 0
@@ -6303,7 +6342,7 @@ fn: lmx_graph_literal_ints (c.LmxGraph@: g; c.Lmx@: region; size_t@: shape; size
         char@: item_name c.lmx_graph_name_of(g, item)
         if: grouped != 0 || (rank = 1U && kind = 4 && item_name = 0)
             size_t: child_level level + (cast: (size_t) grouped)
-            int: admitted lmx_graph_literal_ints(g, (cast: (c.Lmx@) item), shape, counts, child_level, rank, values, cursor)
+            int: admitted lmx_graph_literal_cells(g, (cast: (c.Lmx@) item), shape, counts, child_level, rank, base, values, cursor)
             if: admitted != 1
                 return: admitted
             ---
@@ -6311,14 +6350,34 @@ fn: lmx_graph_literal_ints (c.LmxGraph@: g; c.Lmx@: region; size_t@: shape; size
             if: kind = 4 && item_name = 0
                 return: 0
             ---
-            if: kind != 1 || item_name != 0
+            if: (kind != 1 && kind != 2) || item_name != 0
                 return: -1
+            ---
+            cell := item
+            code := 0
+            if: kind = 2
+                # A written character literal -- the builder leaves it a word: no reader of it exists on this route outside
+                # this admission (lmx_graph_char_read) -- is received by the char row here and gives its byte; for any other
+                # base, and for any other word, it is no cell of the row.
+                text := c.lmx_graph_word_text(g, item)
+                if: base != c.LMX_TYPE_CHAR || text = 0 || c.lmx_graph_char_read(g, text, c.strlen(text), @ code) != 0
+                    return: -1
+                ---
+                cell := 0
             ---
             if: cursor[0] = unknown
                 return: 0
             ---
             if: values != 0
-                values[cursor[0]] := c.lmx_int_value_known(item)
+                if: cell = 0
+                    values[cursor[0]] := code
+                else:
+                    if: base = c.LMX_TYPE_CHAR && c.lmx_range_type_of(g\arena, cell) = c.LMX_TYPE_CHAR
+                        values[cursor[0]] := c.lmx_char_value(cell)
+                    else:
+                        values[cursor[0]] := c.lmx_int_value_known(cell)
+                    ---
+                ---
             ---
             cursor[0] := cursor[0] + 1U
         ---
@@ -6332,7 +6391,7 @@ fn: lmx_graph_literal_ints (c.LmxGraph@: g; c.Lmx@: region; size_t@: shape; size
         counts[level] := elements
     ---
     return: 1
-end: lmx_graph_literal_ints
+end: lmx_graph_literal_cells
 
 fn: lmx_graph_array_place (c.LmxGraph@: g; c.Lmx@: code; c.Lmx@: declaration; @@: out) int
     c.Lmx@: reference 0
@@ -6410,12 +6469,21 @@ fn: lmx_graph_eval_value (c.LmxGraph@: g; c.Lmx@: scope; @: raw; @@: out) int
             out[0] := raw
             return: 0
         ---
+        # An Array of char passes as a value as an Array of int does (the prerequisite П1 of the names).
+        if: c.lmx_range_type_of(g\arena, raw) = c.LMX_TYPE_ARRAY_OF_CHAR
+            out[0] := raw
+            return: 0
+        ---
         if: c.lmx_range_type_of(g\arena, raw) = c.LMX_TYPE_UNINIT_COMPOSED
             return: 5
         ---
         if: lmx_graph_scalar_pool(g, raw) = 0
             return: 2
         return: lmx_graph_scalar_operand(g, raw, out)
+    if: kind = 2 && lmx_graph_string_literal(g, raw) != 0
+        # A written string literal demanded as a VALUE is an Array<Char> of the bytes of its ordinary reading
+        # (the prerequisite П1 of the names); the graph keeps the word, nothing was computed when it was built.
+        return: lmx_graph_literal_chars(g, raw, out)
     if: kind = 2
         status := lmx_graph_operand_read(g, scope, c.lmx_graph_word_text(g, raw), @ value)
         if: status != 0
@@ -10150,16 +10218,15 @@ fn: lmx_graph_hex_digit (int: ch) int
     return: -1
 end: lmx_graph_hex_digit
 
-# The value of an ordinary string literal a word primitive holds (the grammar §6, by the rules of C99): the bytes
+# The bytes of an ordinary string literal a word primitive holds (the grammar §6, by the rules of C99): the bytes
 # between its quotes with each escape decoded -- the simple escapes, up to three octal digits, `\x` with the
 # hexadecimal digits after it, `\u` and `\U` as the UTF-8 of the character, a backslash before a line break joining the
-# lines --, as a canonical spelling (§4). 0 for a word that is no ordinary string literal (an identifier, a wide or a
-# character literal), a malformed literal, a value holding a zero byte (no canonical spelling is a C string with one),
-# or without memory.
-fn: lmx_graph_string_value (c.LmxGraph@: g; @: value) char@
+# lines --, and their number in count; a zero byte among them is data of the value (the prerequisite П1 of the names,
+# Sol and Astra 2026-11-28). bytes takes a buffer the caller frees. 0 for a word that is no ordinary string literal
+# (an identifier, a wide or a character literal), a malformed literal, or without memory.
+fn: lmx_graph_string_bytes (c.LmxGraph@: g; @: value; char@@: bytes; size_t@: count) int
     char@: text c.lmx_graph_word_text(g, value)
     char@: buf 0
-    char@: canon 0
     size_t: n 0U
     size_t: i 1U
     size_t: o 0U
@@ -10169,7 +10236,7 @@ fn: lmx_graph_string_value (c.LmxGraph@: g; @: value) char@
     int: d 0
     int: code 0
     int: bad 0
-    if: text = 0
+    if: text = 0 || bytes = 0 || count = 0
         return: 0
     while: text[n] != (cast: (char) 0)
         n := n + 1U
@@ -10288,14 +10355,10 @@ fn: lmx_graph_string_value (c.LmxGraph@: g; @: value) char@
                         ---
                     ---
                 ---
-                if: code = 0
-                    bad := 1
             ---
             continue
         ---
         if: code < 0
-            bad := 1
-        if: code = 0
             bad := 1
         if: bad = 0
             buf[o] := (cast: (char) code)
@@ -10303,10 +10366,71 @@ fn: lmx_graph_string_value (c.LmxGraph@: g; @: value) char@
         ---
     ---
     if: bad = 0
-        canon := c.lmx_graph_intern((cast: (char@) buf), o)
+        bytes[0] := buf
+        count[0] := o
+        return: 1
+    c.free((cast: (@) buf))
+    return: 0
+end: lmx_graph_string_bytes
+
+# The contract of a NAME (the name a written value gives a part of a receiver, lmx_graph_name_value): the bytes of
+# the literal as one canonical spelling; the whole range holds no zero byte -- 0 for a literal with one, as before
+# for a word that is no ordinary string literal or a malformed one.
+fn: lmx_graph_string_value (c.LmxGraph@: g; @: value) char@
+    char@: buf 0
+    char@: canon 0
+    size_t: count 0U
+    size_t: i 0U
+    if: lmx_graph_string_bytes(g, value, @ buf, @ count) = 0
+        return: 0
+    while: i < count && buf[i] != (cast: (char) 0)
+        i := i + 1U
+    ---
+    if: i = count
+        canon := c.lmx_graph_intern(buf, count)
     c.free((cast: (@) buf))
     return: canon
 end: lmx_graph_string_value
+
+# Is the word an ordinary string literal: its text begins and ends with the double quote (the P0 gives a word whole).
+fn: lmx_graph_string_literal (c.LmxGraph@: g; @: value) int
+    char@: text c.lmx_graph_word_text(g, value)
+    size_t: n 0U
+    if: text = 0
+        return: 0
+    while: text[n] != (cast: (char) 0)
+        n := n + 1U
+    ---
+    return: (cast: (int) (n >= 2U && text[0] = (cast: (char) 34) && text[n - 1U] = (cast: (char) 34)))
+end: lmx_graph_string_literal
+
+# The VALUE of a written string literal (the prerequisite П1 of the names, Sol and Astra 2026-11-28): an Array<Char>
+# holding the bytes of the ordinary reading of the literal, their number included -- a zero byte among them is data
+# here; refusing it belongs to the contract of a name. An ordinary temporary of the execution: an owned array of the
+# arena, as the int cell of a written number is (lmx_graph_int); nothing is interned and no table keeps it. 0 and the
+# array in out; 4 without memory; 5 for a literal the reading refuses.
+fn: lmx_graph_literal_chars (c.LmxGraph@: g; @: value; @@: out) int
+    char@: bytes 0
+    size_t: count 0U
+    c.LmxArray@: text 0
+    c.VoidArray@: fields 0
+    char@: data 0
+    if: out = 0
+        return: 4
+    if: lmx_graph_string_bytes(g, value, @ bytes, @ count) = 0
+        return: 5
+    text := c.lmx_array_new_chars_with_reference((cast: (c.LmxArena@) g\arena), 0, c.lmx_types_reference((cast: (c.LmxArena@) g\arena), c.LMX_TYPE_ARRAY_OF_CHAR), count)
+    if: text = 0
+        c.free((cast: (@) bytes))
+        return: 4
+    fields := (cast: (c.VoidArray@) (@ text\array))
+    data := (cast: (char@) (fields\data))
+    if: count != 0U
+        c.memcpy((cast: (@) data), (cast: (const: @) bytes), count)
+    c.free((cast: (@) bytes))
+    out[0] := (cast: (@) text)
+    return: 0
+end: lmx_graph_literal_chars
 
 # A word description reads anonymous grouping without resolving or applying the
 # written value. A numeric field stays a Structure; empty and multiple fields,

@@ -1023,6 +1023,13 @@ fn: lm_graph_build_type_reference (c.LmxGraph@: g; c.Lmx@: scope; c.LmP0Structur
             nd := 0
             break
         ---
+        # The base char of a written Array of char (the prerequisite П1 of the names, Sol and Astra 2026-11-28): the
+        # same literal TYPE as int, built by the same construction of an array (lm_graph_build_typed_composition).
+        if: width = 4U && c.memcmp((cast: (const: @) bytes), "char", 4U) = 0 && field = 0
+            base := c.LMX_TYPE_CHAR
+            nd := 0
+            break
+        ---
         if: depth = 0 || (cast: (size_t) depth) != width
             break
         ---
@@ -1065,7 +1072,8 @@ fn: lm_graph_build_type_reference (c.LmxGraph@: g; c.Lmx@: scope; c.LmP0Structur
         if: n = 0U && base = c.LMX_TYPE_INT
             reference := c.lmx_types_reference(g\arena, base)
         else:
-            if: n > array_ops || base = c.LMX_TYPE_INT
+            # the two literal bases, int and char, are composed by the same recipe (lm_graph_make_type)
+            if: n > array_ops || base != c.LMX_TYPE_NONE
                 status := lm_graph_make_type(g, scope, base, ops, n, @ reference)
             ---
         ---
@@ -1098,6 +1106,40 @@ fn: lm_graph_make_type (c.LmxGraph@: g; c.Lmx@: scope; int: base; @@: ops; size_
     return: status
 end: lm_graph_make_type
 
+# The static admission of the elements of a written literal of an Array of char (the prerequisite П1 of the names): a
+# number is received by the char row, as `char: c 65` receives it (lm_graph_build_typed_place), and what the row does
+# not take is refused here, at the place of the literal; a character literal goes by the same row; a field that is no
+# atom (a group, a name) is not judged here -- the declaration stays a written computation until it is reached.
+# 1, or 0 after the refusal is printed.
+fn: lm_graph_char_literals (c.LmxGraph@: g; c.LmP0Structure@: literal) int
+    c.LmP0Field@: field lm_graph_next_active(lm_graph_p0_first(literal))
+    c.LmP0Node@: nd 0
+    c.LmP0Text@: token 0
+    char@: declared c.lmx_graph_intern("char", 4U)
+    @: cell void 0
+    int: status 0
+    while: field != 0
+        nd := lm_graph_p0_value(field)
+        if: nd\kind = c.LM_P0_NODE_ATOM
+            token := lm_graph_p0_atom(nd)
+            status := c.lmx_graph_number_in(g, lm_graph_p0_data(token), lm_graph_p0_length(token), declared, @ cell)
+            if: status = 1
+                if: c.fprintf(c.stderr, "graph: %zu:%zu: the literal is out of the range of the char row\n", (cast: (size_t) nd\span\line), (cast: (size_t) nd\span\column)) < 0
+                    return: 0
+                ---
+                return: 0
+            ---
+        else:
+            # a group of a rank above one holds its elements the same way
+            if: nd\kind = c.LM_P0_NODE_STRUCTURE && lm_graph_char_literals(g, lm_graph_p0_structure(nd)) = 0
+                return: 0
+            ---
+        ---
+        field := lm_graph_next_active(lm_graph_p0_next(field))
+    ---
+    return: 1
+end: lm_graph_char_literals
+
 fn: lm_graph_build_typed_composition (c.LmxGraph@: g; c.Lmx@: parent; c.Lmx@: scope; c.LmP0Frame@: frame; @@: out) int
     c.LmP0Text@: head lm_graph_p0_head(frame)
     const: (char@: bytes lm_graph_p0_data(head))
@@ -1128,6 +1170,21 @@ fn: lm_graph_build_typed_composition (c.LmxGraph@: g; c.Lmx@: parent; c.Lmx@: sc
             if: field != 0
                 item := lm_graph_p0_value(field)
             ---
+        ---
+    ---
+    # A base of char engages the construction of an array only for a written square literal: without one the Frame is
+    # left to the later branches, as it was before the base was known. With one, every number among the elements is
+    # received by the char row here, at its place (lm_graph_char_literals); what the row does not take is refused.
+    size_t@: char_axes 0
+    size_t: char_rank 0U
+    size_t: char_depth 0U
+    int: char_base 0
+    if: c.lmx_types_reference_details(g\arena, reference, @ char_axes, @ char_rank, @ char_depth, @ char_base) != 0 && char_base = c.LMX_TYPE_CHAR
+        if: item = 0 || (item\flags & c.LM_P0_NODE_SQUARE) = 0U
+            return: 0
+        ---
+        if: lm_graph_char_literals(g, lm_graph_p0_structure(item)) = 0
+            return: 2
         ---
     ---
     if: bytes[0] = '@' && item != 0

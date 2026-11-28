@@ -517,6 +517,8 @@ fn: lmx_types_bootstrap_references (c.LmxTypes@: ctx) int
     c.LmxArena@: arena (cast: (c.LmxArena@) c.calloc(1U, c.sizeof(c.LmxArena)))
     c.Lmx@: int_type 0
     c.Lmx@: array_type 0
+    c.Lmx@: char_type 0
+    c.Lmx@: char_array_type 0
     c.LmxPool@: pool 0
     if: arena = 0
         return: 1
@@ -529,7 +531,15 @@ fn: lmx_types_bootstrap_references (c.LmxTypes@: ctx) int
     if: int_type != 0
         array_type := lmx_types_fixed_description(arena, "[]int", 5U, int_type)
     ---
-    if: array_type = 0
+    # The base char and its Array are fixed descriptions of the same family: an Array of char is composed by the
+    # same construction of a type reference as an Array of int (the prerequisite П1 of the names, 2026-11-28).
+    if: array_type != 0
+        char_type := lmx_types_fixed_description(arena, "char", 4U, 0)
+    ---
+    if: char_type != 0
+        char_array_type := lmx_types_fixed_description(arena, "[]char", 6U, char_type)
+    ---
+    if: char_array_type = 0
         c.lmx_arena_release(arena)
         c.free((cast: (@) arena))
         return: 1
@@ -541,6 +551,8 @@ fn: lmx_types_bootstrap_references (c.LmxTypes@: ctx) int
     ---
     ctx\int_type_ref := int_type
     ctx\int_array_type_ref := array_type
+    ctx\char_type_ref := char_type
+    ctx\char_array_type_ref := char_array_type
     ctx\type_arena := arena
     return: 0
 end: lmx_types_bootstrap_references
@@ -549,7 +561,7 @@ fn: lmx_types_reference (c.LmxArena@: arena; int: type) c.Lmx@
     c.LmxTypes@: ctx 0
     c.LmxArena@: system_arena 0
     c.Lmx@: result 0
-    if: arena = 0 || (type != c.LMX_TYPE_INT && type != c.LMX_TYPE_ARRAY_OF_INT)
+    if: arena = 0 || (type != c.LMX_TYPE_INT && type != c.LMX_TYPE_ARRAY_OF_INT && type != c.LMX_TYPE_CHAR && type != c.LMX_TYPE_ARRAY_OF_CHAR)
         return: 0
     ---
     lmx_types_enter()
@@ -564,6 +576,12 @@ fn: lmx_types_reference (c.LmxArena@: arena; int: type) c.Lmx@
         result := ctx\int_type_ref
         if: type = c.LMX_TYPE_ARRAY_OF_INT
             result := ctx\int_array_type_ref
+        ---
+        if: type = c.LMX_TYPE_CHAR
+            result := ctx\char_type_ref
+        ---
+        if: type = c.LMX_TYPE_ARRAY_OF_CHAR
+            result := ctx\char_array_type_ref
         ---
         system_arena := ctx\type_arena
         if: c.lmx_range_classify(arena, (cast: (@) result)) != c.LMX_KIND_STRUCT && c.lmx_range_import(arena, system_arena) != 0
@@ -684,13 +702,19 @@ fn: lmx_types_composed_reference (c.LmxArena@: arena; size_t: depth; const: (siz
 end: lmx_types_composed_reference
 
 fn: lmx_types_composed_base (c.LmxArena@: arena; int: base; size_t: depth; const: (size_t@: axes); size_t: rank) c.Lmx@
-    if: arena = 0 || (base != c.LMX_TYPE_NONE && base != c.LMX_TYPE_INT) || (base = c.LMX_TYPE_NONE && depth = 0U) || (rank != 0U && axes = 0) || rank > (((cast: (size_t) -1) - c.sizeof(c.LmxTypeRefRow)) / c.sizeof(c.size_t))
+    if: arena = 0 || (base != c.LMX_TYPE_NONE && base != c.LMX_TYPE_INT && base != c.LMX_TYPE_CHAR) || (base = c.LMX_TYPE_NONE && depth = 0U) || (rank != 0U && axes = 0) || rank > (((cast: (size_t) -1) - c.sizeof(c.LmxTypeRefRow)) / c.sizeof(c.size_t))
         return: 0
     ---
     if: depth = 0U && rank = 0U
+        if: base = c.LMX_TYPE_CHAR
+            return: lmx_types_reference(arena, c.LMX_TYPE_CHAR)
+        ---
         return: lmx_types_reference(arena, c.LMX_TYPE_INT)
     ---
     if: depth = 0U && rank = 1U && axes[0] = (cast: (size_t) -1)
+        if: base = c.LMX_TYPE_CHAR
+            return: lmx_types_reference(arena, c.LMX_TYPE_ARRAY_OF_CHAR)
+        ---
         return: lmx_types_reference(arena, c.LMX_TYPE_ARRAY_OF_INT)
     ---
     c.Lmx@: element 0
@@ -700,7 +724,7 @@ fn: lmx_types_composed_base (c.LmxArena@: arena; int: base; size_t: depth; const
             return: 0
         ---
     else:
-        if: base = c.LMX_TYPE_INT
+        if: base = c.LMX_TYPE_INT || base = c.LMX_TYPE_CHAR
             element := lmx_types_reference(arena, base)
             if: element = 0
                 return: 0
@@ -729,16 +753,26 @@ fn: lmx_types_reference_details (c.LmxArena@: arena; @: value; size_t@@: axes; s
         return: 0
     ---
     int: found 0
+    int: family c.LMX_TYPE_NONE
     lmx_types_enter()
     c.LmxTypes@: ctx lmx_types_state()
     if: ctx != 0
-        found := (cast: (int) (value = (cast: (@) ctx\int_type_ref) || value = (cast: (@) ctx\int_array_type_ref)))
+        # The four fixed descriptions -- int, []int, char, []char -- are told apart here, and the metadata (the base,
+        # the rank, the axes, the depth) leave by one exit (the prerequisite П1 of the names, 2026-11-28).
+        if: value = (cast: (@) ctx\int_type_ref) || value = (cast: (@) ctx\int_array_type_ref)
+            found := 1
+            family := c.LMX_TYPE_INT
+        ---
+        if: found = 0 && (value = (cast: (@) ctx\char_type_ref) || value = (cast: (@) ctx\char_array_type_ref))
+            found := 1
+            family := c.LMX_TYPE_CHAR
+        ---
         if: found != 0
             if: base != 0
-                base[0] := c.LMX_TYPE_INT
+                base[0] := family
             ---
             if: rank != 0
-                rank[0] := (cast: (size_t) (value = (cast: (@) ctx\int_array_type_ref)))
+                rank[0] := (cast: (size_t) (value = (cast: (@) ctx\int_array_type_ref) || value = (cast: (@) ctx\char_array_type_ref)))
             ---
             if: axes != 0
                 axes[0] := 0

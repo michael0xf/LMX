@@ -1321,7 +1321,7 @@ fn: decl_types (c.FILE@: f) int
         return: 1
     if: c.fputs("# code_dead removed ones); the counters and the next code.\n", f) < 0
         return: 1
-    if: c.fputs("struct: LmxTypeRefRow\n    @: LmxTypeRefRow next\n    @: LmxArena arena\n    @: Lmx description\n    @: size_t axes\n    size_t: rank\n    size_t: depth\n    int: base\nend: LmxTypeRefRow\n\nstruct: LmxTypes\n    @: LmxArena type_arena\n    @: Lmx int_type_ref\n    @: Lmx int_array_type_ref\n    @: LmxTypeRefRow type_refs\n    @: LmxTypeRow rows\n    size_t: cap\n    size_t: used\n", f) < 0
+    if: c.fputs("struct: LmxTypeRefRow\n    @: LmxTypeRefRow next\n    @: LmxArena arena\n    @: Lmx description\n    @: size_t axes\n    size_t: rank\n    size_t: depth\n    int: base\nend: LmxTypeRefRow\n\nstruct: LmxTypes\n    @: LmxArena type_arena\n    @: Lmx int_type_ref\n    @: Lmx int_array_type_ref\n    @: Lmx char_type_ref\n    @: Lmx char_array_type_ref\n    @: LmxTypeRefRow type_refs\n    @: LmxTypeRow rows\n    size_t: cap\n    size_t: used\n", f) < 0
         return: 1
     if: c.fputs("    size_t: free_head\n    @: size_t by_key\n    @: size_t by_model\n", f) < 0
         return: 1
@@ -2341,7 +2341,7 @@ fn: bld_kernel_l2 (c.FILE@: rec; char@: repo; char@: stage; char@: base; char@: 
     char@@: chars_owned_names c.calloc(2U, sizeof(char@))
     char@@: array_ref_names c.calloc(4U, sizeof(char@))
     char@@: refs_names c.calloc(15U, sizeof(char@))
-    char@@: array_names c.calloc(8U, sizeof(char@))
+    char@@: array_names c.calloc(9U, sizeof(char@))
     char@@: scratch_names c.calloc(5U, sizeof(char@))
     char@@: value_names c.calloc(64U, sizeof(char@))
     char@@: source_names c.calloc(16U, sizeof(char@))
@@ -2371,7 +2371,7 @@ fn: bld_kernel_l2 (c.FILE@: rec; char@: repo; char@: stage; char@: base; char@: 
     char@@: walk_value_names c.calloc(200U, sizeof(char@))
     char@@: checks_names c.calloc(6U, sizeof(char@))
     char@@: language_names c.calloc(3U, sizeof(char@))
-    char@@: graph_names c.calloc(115U, sizeof(char@))
+    char@@: graph_names c.calloc(116U, sizeof(char@))
     char@@: graph_run_names c.calloc(98U, sizeof(char@))
     char@: src txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
@@ -2509,6 +2509,7 @@ fn: bld_kernel_l2 (c.FILE@: rec; char@: repo; char@: stage; char@: base; char@: 
     graph_names[112] := "lmx_graph_number_in"
     graph_names[113] := "lmx_graph_scalar_typed_text"
     graph_names[114] := "lmx_graph_type_form"
+    graph_names[115] := "lmx_graph_char_read"
     # The module of checks and the types of L3 (plan #one-graph-plan, P1), below lmx_graph: the graph's operations and the
     # interpreter call it.
     checks_names[0] := "lmx_l3_type"
@@ -3316,6 +3317,7 @@ fn: bld_kernel_l2 (c.FILE@: rec; char@: repo; char@: stage; char@: base; char@: 
     array_names[5] := "lmx_array_cell_in"
     array_names[6] := "lmx_array_new_positive_owned"
     array_names[7] := "lmx_array_new_int_with_reference"
+    array_names[8] := "lmx_array_new_chars_with_reference"
     scratch_names[0] := "lmx_scratch_open"
     scratch_names[1] := "lmx_scratch_take"
     scratch_names[2] := "lmx_scratch_mark"
@@ -3453,7 +3455,7 @@ fn: bld_kernel_l2 (c.FILE@: rec; char@: repo; char@: stage; char@: base; char@: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_arena_refs", refs_names, 15, 1) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_array_owned", array_names, 8, 1) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_array_owned", array_names, 9, 1) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_scratch", scratch_names, 5, 0) != 0
         return: 1
@@ -3469,7 +3471,7 @@ fn: bld_kernel_l2 (c.FILE@: rec; char@: repo; char@: stage; char@: base; char@: 
     language_names[2] := "lmx_language_call_word"
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_language_words", language_names, 3, 1) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph", graph_names, 115, 1) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph", graph_names, 116, 1) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_run", graph_run_names, 98, 1) != 0
         return: 1

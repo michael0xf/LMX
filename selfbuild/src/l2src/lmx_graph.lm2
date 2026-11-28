@@ -1422,6 +1422,28 @@ fn: lmx_graph_number_in (c.LmxGraph@: g; const: (char@: bytes); size_t: n; const
     return: status
 end: lmx_graph_number_in
 
+# The char row receives a written character literal of one byte: three bytes -- an apostrophe, one byte, an apostrophe
+# -- give that byte, as the hosted readers receive it (lm_compiler_char_literal; lm_compiler_rw_char_lit also knows the
+# escapes \0, \n, \t, \\ and \'). This reader takes that one case only: it is a boundary of the slice П1.1 of the names
+# (2026-11-28), not the contract of the character literals of the language -- an escape is no character literal HERE
+# and stays to be admitted. The row itself takes -128..127: a byte above 127 stands outside it. 0 and the byte in value;
+# 1 outside the row; 2 no character literal for this reader. On this route a character literal was a word everywhere
+# and no reader of it existed (`char: q 'a'` is an Lmx of two words, not a place, and stays so); today the reader
+# serves the element admission of an Array of char only.
+fn: lmx_graph_char_read (c.LmxGraph@: g; const: (char@: bytes); size_t: n; int@: value) int
+    int: byte 0
+    if: value = 0
+        return: 2
+    value[0] := 0
+    if: g = 0 || bytes = 0 || n != 3U || bytes[0] != 39 || bytes[2] != 39 || bytes[1] = 39
+        return: 2
+    byte := (cast: (int) (cast: (unsigned char) bytes[1]))
+    if: byte > 127
+        return: 1
+    value[0] := byte
+    return: 0
+end: lmx_graph_char_read
+
 # The written magnitude as a value cell of the row of type: the kernel receives the literal by the row's scalar type
 # (lmx_walk_value_lit with the written u, lmx_walk_value_receive: its range is the kernel's), the received value takes
 # the row's ABI and description, and lmx_graph_scalar_box copies its C object into a cell of that ABI. The answers are
@@ -2858,6 +2880,10 @@ fn: lmx_graph_dump_type_head (c.LmxArena@: arena; c.Lmx@: type_ref; c.FILE@: f) 
     if: base = c.LMX_TYPE_INT
         c.fputs("int", f)
     ---
+    # The base char of an Array of char is printed by its own name (the prerequisite П1 of the names, 2026-11-28).
+    if: base = c.LMX_TYPE_CHAR
+        c.fputs("char", f)
+    ---
     return: 0
 end: lmx_graph_dump_type_head
 
@@ -2898,6 +2924,22 @@ fn: lmx_graph_dump_token (c.LmxGraph@: g; @: value; c.FILE@: f; @@: path) int
                         c.fputc(' ', f)
                     ---
                     c.fprintf(f, "%d", values[i])
+                    i := i + 1U
+                ---
+                c.fputc(']', f)
+            ---
+            # The bytes of an Array of char as the numbers of the char row (a reader of the dump receives them by the
+            # same row); the written form of the literal is not restored (the prerequisite П1 of the names, 2026-11-28).
+            if: c.lmx_range_type_of(g\arena, value) = c.LMX_TYPE_ARRAY_OF_CHAR
+                c.LmxArray@: chars (cast: (c.LmxArray@) value)
+                c.VoidArray@: char_text @ chars\array
+                char@: char_bytes (cast: (char@) (char_text\data))
+                c.fputs(" [", f)
+                while: i < char_text\size
+                    if: i != 0U
+                        c.fputc(' ', f)
+                    ---
+                    c.fprintf(f, "%d", (cast: (int) char_bytes[i]))
                     i := i + 1U
                 ---
                 c.fputc(']', f)
@@ -3719,7 +3761,8 @@ fn: lmx_graph_index_parts (c.LmxGraph@: g; @: value; ullong: magnitude; int: neg
     c.LmxPointerCellRead: read 0
     c.LmxPointerCellWrite: write 0
     int: status 0
-    if: out != 0 && c.lmx_range_type_of(g\arena, value) = c.LMX_TYPE_ARRAY_OF_INT
+    # The element of a dense Array -- of int, and of char (the prerequisite П1 of the names, 2026-11-28): the cell of the backing.
+    if: out != 0 && (c.lmx_range_type_of(g\arena, value) = c.LMX_TYPE_ARRAY_OF_INT || c.lmx_range_type_of(g\arena, value) = c.LMX_TYPE_ARRAY_OF_CHAR)
         c.LmxArray@: array (cast: (c.LmxArray@) value)
         c.VoidArray@: payload @ array\array
         if: negative != 0 || magnitude >= (cast: (ullong) payload\size)
@@ -3817,11 +3860,13 @@ fn: lmx_graph_index_store (c.LmxGraph@: g; @: value; int: index; @: source) int
     return: lmx_graph_element_store((cast: (c.LmxArena@) g\arena), (cast: (@) (slots + index)), lmx_graph_reference_target(g, source))
 end: lmx_graph_index_store
 
-# `length(S)`: the number of the fields of the Structure value stands for. 0 and the number in out; 4 for a value that
+# `length(S)`: the number of the fields of the Structure value stands for, or of the elements of an Array of int or of
+# char (the prerequisite П1 of the names, Sol and Astra 2026-11-28). 0 and the number in out; 4 for a value that
 # stands for no Structure.
 fn: lmx_graph_length (c.LmxGraph@: g; @: value; int@: out) int
     @: base void lmx_graph_target(g, value)
-    if: out != 0 && c.lmx_range_type_of(g\arena, base) = c.LMX_TYPE_ARRAY_OF_INT
+    int: items c.lmx_range_type_of(g\arena, base)
+    if: out != 0 && (items = c.LMX_TYPE_ARRAY_OF_INT || items = c.LMX_TYPE_ARRAY_OF_CHAR)
         c.LmxArray@: array (cast: (c.LmxArray@) base)
         c.VoidArray@: payload @ array\array
         if: payload\size > (cast: (size_t) c.INT_MAX)

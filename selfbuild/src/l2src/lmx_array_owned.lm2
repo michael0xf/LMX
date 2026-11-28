@@ -92,7 +92,16 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; c.LmxArena@: aren
         ---
         desc := c.lmx_pool_take_array_record(arena, type, array_profile, type_ref)
     else:
-        desc := (cast: (LmxArray@) c.lmx_arena_take_profiled(arena, c.sizeof(c.LmxArray), c.LMX_KIND_ARRAY, type, array_profile))
+        # An Array of char that carries its type reference takes its descriptor the same way (the prerequisite П1 of the
+        # names, 2026-11-28); one without a reference -- the text of a message, the arguments of a launch -- as before.
+        if: type = c.LMX_TYPE_ARRAY_OF_CHAR && type_ref != 0
+            desc := (cast: (LmxArray@) c.lmx_pool_take_array_record(arena, type, array_profile, type_ref))
+            if: desc = 0
+                return: 0
+            ---
+        else:
+            desc := (cast: (LmxArray@) c.lmx_arena_take_profiled(arena, c.sizeof(c.LmxArray), c.LMX_KIND_ARRAY, type, array_profile))
+        ---
     ---
     if: desc = 0
         return: 0
@@ -126,6 +135,19 @@ fn: lmx_array_new_int_with_reference (c.LmxArena@: arena; c.Lmx@: parent; c.Lmx@
     ---
     return: lmx_array_new_physical_profiled(c.LMX_TYPE_ARRAY_OF_INT, count, arena, 0, 0U, 0, 0, parent, type_ref)
 end: lmx_array_new_int_with_reference
+
+# An Array of char carrying its type reference, as an Array of int carries one (the prerequisite П1 of the names,
+# 2026-11-28): the reference names the base char, a rank and axes, and the descriptor is taken from the pool of that
+# reference. 0 for a reference of another base, of no rank or of a pointer depth, or without memory.
+fn: lmx_array_new_chars_with_reference (c.LmxArena@: arena; c.Lmx@: parent; c.Lmx@: type_ref; size_t: count) c.LmxArray@
+    size_t: rank 0U
+    size_t: depth 0U
+    int: base c.LMX_TYPE_NONE
+    if: c.lmx_types_reference_details(arena, (cast: (@) type_ref), 0, @ rank, @ depth, @ base) = 0 || rank = 0U || depth != 0U || base != c.LMX_TYPE_CHAR
+        return: 0
+    ---
+    return: lmx_array_new_physical_profiled(c.LMX_TYPE_ARRAY_OF_CHAR, count, arena, 0, 0U, 0, 0, parent, type_ref)
+end: lmx_array_new_chars_with_reference
 
 # A lexical child is constructed with its actual graph parent. Neither a
 # later alias store nor the allocation profile reparents an existing Array.

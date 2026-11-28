@@ -1,0 +1,1086 @@
+{
+  "group_title_ru": "Асинхронность, исполнители и Message",
+  "group_title_en": "Asynchrony, workers and Message",
+  "languages": [
+    "Go",
+    "Erlang"
+  ],
+  "rationale_ru": "Go показывает каналы и goroutine, Erlang — изолированные процессы, mail и OTP supervision. Это характерные контроли для Message-модели LMX. Сравнения явно различают логического исполнителя, OS thread, readiness и завершение I/O.",
+  "rationale_en": "Go illustrates channels and goroutines; Erlang illustrates isolated processes, mail and OTP supervision. They are characteristic controls for LMX Message. Comparisons distinguish logical workers, OS threads, readiness and completed I/O.",
+  "overview_ru": "15 сравнений: базовые исполнители/Message, structured concurrency, supervision, MapReduce и четыре явных прикладных протокола 109–112. Message сохраняет штатное исполнение; физические блокирующие native операции остаются на L2 boundary.",
+  "overview_en": "15 comparisons cover basic workers/Message, structured concurrency, supervision, MapReduce and four explicit application protocols 109–112. Message keeps ordinary execution; physically blocking native operations remain at the L2 boundary.",
+  "patterns": [
+    {
+      "id": 58,
+      "name": "Thread Pool",
+      "slug": "thread_pool",
+      "summary_ru": "Ограниченный набор исполнителей переиспользуется для последовательности заданий.",
+      "summary_en": "A bounded set of workers is reused for a sequence of jobs.",
+      "scenario_ru": "Два worker обрабатывают четыре задания 1,2,3,4, вычисляя квадрат.",
+      "scenario_en": "Two workers process four jobs 1,2,3,4, computing their squares.",
+      "expected_ru": "Получено множество результатов {1,4,9,16}; одновременно активны не более двух worker. Порядок ответов не задан.",
+      "expected_en": "The result multiset is {1,4,9,16}; no more than two workers are active. Reply order is unspecified.",
+      "lmx_notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. Хост создаёт ровно два WorkerMessage и один PoolMessage, явно передавая ссылки worker0/worker1/collector. collector.accept(int):void собирает четыре результата и используется как barrier. Pool хранит только прикладные адресаты; runtime membership остаётся Thread.children. Завершение работников после drain выполняет lifecycle harness.",
+      "lmx_notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. The host creates exactly two WorkerMessages and one PoolMessage, explicitly passing worker0/worker1/collector. collector.accept(int):void collects four results as a barrier. Pool stores application destinations; runtime membership remains Thread.children. The lifecycle harness closes workers after drain.",
+      "comparison_ru": "LMX ограничивает количество логических исполнителей; отображение на OS threads определяется штатным Thread scheduler. Go goroutine и Erlang process также не равны одному выделенному OS thread.",
+      "comparison_en": "LMX bounds logical workers; the ordinary Thread scheduler determines OS-thread mapping. Go goroutines and Erlang processes likewise are not dedicated OS threads.",
+      "limits_ru": "Показан пул задач, а не доказательство двух OS threads. Размер почты/буфера и fairness задаются отдельно; round-robin LMX не является work stealing.",
+      "limits_en": "This is a task pool, not proof of two OS threads. Mail/buffer capacity and fairness are separate; LMX round-robin is not work stealing.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "PoolMessage:\n    int: job\n    int: next 0\n    @: worker0\n    @: worker1\n    submit:\n        @: selected worker0\n        if: node\\next = 1\n            selected := worker1\n        node\\next := 1 - node\\next\n        post:\n            ask:\n                selected\\work(job := job)\n\nWorkerMessage:\n    int: job\n    @: collector\n    work:\n        post:\n            ask:\n                collector\\accept(value := job * job)\n",
+          "notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. Хост создаёт ровно два WorkerMessage и один PoolMessage, явно передавая ссылки worker0/worker1/collector. collector.accept(int):void собирает четыре результата и используется как barrier. Pool хранит только прикладные адресаты; runtime membership остаётся Thread.children. Завершение работников после drain выполняет lifecycle harness.",
+          "notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. The host creates exactly two WorkerMessages and one PoolMessage, explicitly passing worker0/worker1/collector. collector.accept(int):void collects four results as a barrier. Pool stores application destinations; runtime membership remains Thread.children. The lifecycle harness closes workers after drain.",
+          "metrics": {
+            "characters": 233,
+            "nonblank_lines": 20,
+            "utf8_bytes": 418,
+            "sha256": "ab954febaa5b0b73f6248ebcc67dad366ade0038db0d188b05f7fa2a48b36c20"
+          }
+        },
+        {
+          "language": "Go",
+          "code": "func Pool(input []int) []int {\n    jobs := make(chan int, len(input))\n    results := make(chan int, len(input))\n    for worker := 0; worker < 2; worker++ {\n        go func() { for job := range jobs { results <- job * job } }()\n    }\n    for _, job := range input { jobs <- job }; close(jobs)\n    out := make([]int, 0, len(input))\n    for range input { out = append(out, <-results) }\n    return out\n}\n",
+          "notes_ru": "Фрагмент Go; import перечислен там, где нужен; package/harness вынесен. Хост создаёт ровно два WorkerMessage и один PoolMessage, явно передавая ссылки worker0/worker1/collector. collector.accept(int):void собирает четыре результата и используется как barrier. Pool хранит только прикладные адресаты; runtime membership остаётся Thread.children. Завершение работников после drain выполняет lifecycle harness.",
+          "notes_en": "Go fragment; imports are included where needed; package/harness is separate. The host creates exactly two WorkerMessages and one PoolMessage, explicitly passing worker0/worker1/collector. collector.accept(int):void collects four results as a barrier. Pool stores application destinations; runtime membership remains Thread.children. The lifecycle harness closes workers after drain.",
+          "metrics": {
+            "characters": 290,
+            "nonblank_lines": 11,
+            "utf8_bytes": 400,
+            "sha256": "5f221eebfe53eb3c68306688d8cffc5f9465753f929c44881f8c0a0d89474c10"
+          }
+        },
+        {
+          "language": "Erlang",
+          "code": "pool(Input) ->\n    Parent = self(),\n    A = spawn(fun() -> worker(Parent) end),\n    B = spawn(fun() -> worker(Parent) end),\n    distribute(Input, A, B),\n    A ! stop, B ! stop,\n    [receive {result, V} -> V end || _ <- Input].\ndistribute([], _, _) -> ok;\ndistribute([X | Xs], A, B) -> A ! {job, X}, distribute(Xs, B, A).\nworker(Parent) ->\n    receive\n        {job, X} -> Parent ! {result, X * X}, worker(Parent);\n        stop -> ok\n    end.\n",
+          "notes_ru": "Функции Erlang для одного модуля; -module/-export и запускающий тест вынесены. Хост создаёт ровно два WorkerMessage и один PoolMessage, явно передавая ссылки worker0/worker1/collector. collector.accept(int):void собирает четыре результата и используется как barrier. Pool хранит только прикладные адресаты; runtime membership остаётся Thread.children. Завершение работников после drain выполняет lifecycle harness.",
+          "notes_en": "Erlang functions for one module; -module/-export and the test harness are separate. The host creates exactly two WorkerMessages and one PoolMessage, explicitly passing worker0/worker1/collector. collector.accept(int):void collects four results as a barrier. Pool stores application destinations; runtime membership remains Thread.children. The lifecycle harness closes workers after drain.",
+          "metrics": {
+            "characters": 322,
+            "nonblank_lines": 14,
+            "utf8_bytes": 441,
+            "sha256": "f84ac7f17d6c88b71a22a845a2669118fb640ba6951056f7471698e06ea33100"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Go — Effective Go concurrency",
+          "url": "https://go.dev/doc/effective_go",
+          "why_ru": "Ограниченный набор исполнителей переиспользуется для последовательности заданий.",
+          "why_en": "A bounded set of workers is reused for a sequence of jobs."
+        },
+        {
+          "title": "Erlang — Concurrent Programming",
+          "url": "https://www.erlang.org/doc/system/conc_prog.html",
+          "why_ru": "Ограниченный набор исполнителей переиспользуется для последовательности заданий.",
+          "why_en": "A bounded set of workers is reused for a sequence of jobs."
+        }
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
+    },
+    {
+      "id": 59,
+      "name": "Producer-Consumer",
+      "slug": "producer_consumer",
+      "summary_ru": "Производитель и потребитель связываются очередью, сохраняя порядок одного отправителя.",
+      "summary_en": "A producer and consumer communicate through a queue while preserving one sender order.",
+      "scenario_ru": "Один producer отправляет 1,2,3, затем finish. Consumer суммирует значения.",
+      "scenario_en": "One producer sends 1,2,3 and then finish. The consumer sums the values.",
+      "expected_ru": "После finish получен 6; каждый элемент принят один раз в данном безаварийном локальном сценарии.",
+      "expected_en": "After finish the result is 6; each item is consumed once in this failure-free local scenario.",
+      "lmx_notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. sink.write(int):void — supplied result sink. Хост запускает два Message и связывает consumer. Все четыре письма идут от одного отправителя к одному получателю; публикация и admission сохраняют их порядок. Между разными отправителями finish требует явного barrier.",
+      "lmx_notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. sink.write(int):void is a supplied result sink. The host launches two Messages and binds consumer. All four letters go from one sender to one recipient; publication/admission preserve their order. Across senders, finish needs an explicit barrier.",
+      "comparison_ru": "LMX и Erlang выражают consumer владельцем состояния; Go показывает канал между producer goroutine и вызывающей goroutine. Буфер Go ограничен двумя; базовый mailbox не получает такой предел автоматически.",
+      "comparison_en": "LMX and Erlang make the consumer an owner of state; Go uses a channel between producer and caller goroutines. The Go buffer is bounded at two; the base mailbox does not acquire that limit automatically.",
+      "limits_ru": "Одинаков итог, но не поведение перегрузки: для ограниченного LMX/Erlang пути нужен credit/capacity protocol, показанный отдельно в 87.",
+      "limits_en": "The result matches, but overload behavior differs: bounded LMX/Erlang delivery needs the credit/capacity protocol shown separately in 87.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "ProducerMessage:\n    @: consumer\n    run:\n        post:\n            ask:\n                consumer\\accept(value := 1)\n                consumer\\accept(value := 2)\n                consumer\\accept(value := 3)\n                consumer\\finish()\n\nConsumerMessage:\n    int: value\n    int: total 0\n    @: sink\n    accept:\n        node\\total += value\n    finish:\n        sink\\write(node\\total)\n",
+          "notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. sink.write(int):void — supplied result sink. Хост запускает два Message и связывает consumer. Все четыре письма идут от одного отправителя к одному получателю; публикация и admission сохраняют их порядок. Между разными отправителями finish требует явного barrier.",
+          "notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. sink.write(int):void is a supplied result sink. The host launches two Messages and binds consumer. All four letters go from one sender to one recipient; publication/admission preserve their order. Across senders, finish needs an explicit barrier.",
+          "metrics": {
+            "characters": 225,
+            "nonblank_lines": 17,
+            "utf8_bytes": 384,
+            "sha256": "abbb789a17b46c949c8669dc462a9f524c2cc9f54dbf9f5f9453f0dcb867f5f0"
+          }
+        },
+        {
+          "language": "Go",
+          "code": "func ProducerConsumer() int {\n    items := make(chan int, 2)\n    go func() { for _, v := range []int{1, 2, 3} { items <- v }; close(items) }()\n    total := 0\n    for v := range items { total += v }\n    return total\n}\n",
+          "notes_ru": "Фрагмент Go; import перечислен там, где нужен; package/harness вынесен. sink.write(int):void — supplied result sink. Хост запускает два Message и связывает consumer. Все четыре письма идут от одного отправителя к одному получателю; публикация и admission сохраняют их порядок. Между разными отправителями finish требует явного barrier.",
+          "notes_en": "Go fragment; imports are included where needed; package/harness is separate. sink.write(int):void is a supplied result sink. The host launches two Messages and binds consumer. All four letters go from one sender to one recipient; publication/admission preserve their order. Across senders, finish needs an explicit barrier.",
+          "metrics": {
+            "characters": 154,
+            "nonblank_lines": 7,
+            "utf8_bytes": 217,
+            "sha256": "2c0b053b2780484c2f8ef4f92c22b0b4d41c1b0f23a51ff125aef60c3aeca97f"
+          }
+        },
+        {
+          "language": "Erlang",
+          "code": "producer_consumer() ->\n    Parent = self(),\n    Consumer = spawn(fun() -> consume(0, Parent) end),\n    Consumer ! {item, 1}, Consumer ! {item, 2}, Consumer ! {item, 3},\n    Consumer ! finish,\n    receive {total, Total} -> Total end.\nconsume(Total, Parent) ->\n    receive\n        {item, V} -> consume(Total + V, Parent);\n        finish -> Parent ! {total, Total}\n    end.\n",
+          "notes_ru": "Функции Erlang для одного модуля; -module/-export и запускающий тест вынесены. sink.write(int):void — supplied result sink. Хост запускает два Message и связывает consumer. Все четыре письма идут от одного отправителя к одному получателю; публикация и admission сохраняют их порядок. Между разными отправителями finish требует явного barrier.",
+          "notes_en": "Erlang functions for one module; -module/-export and the test harness are separate. sink.write(int):void is a supplied result sink. The host launches two Messages and binds consumer. All four letters go from one sender to one recipient; publication/admission preserve their order. Across senders, finish needs an explicit barrier.",
+          "metrics": {
+            "characters": 276,
+            "nonblank_lines": 11,
+            "utf8_bytes": 371,
+            "sha256": "d3909fd3cdece3238d92818b389d411eb056d7ea35a3ddb593c1c68df22de8fd"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Go — Pipelines and cancellation",
+          "url": "https://go.dev/blog/pipelines",
+          "why_ru": "Производитель и потребитель связываются очередью, сохраняя порядок одного отправителя.",
+          "why_en": "A producer and consumer communicate through a queue while preserving one sender order."
+        },
+        {
+          "title": "Erlang — Concurrent Programming",
+          "url": "https://www.erlang.org/doc/system/conc_prog.html",
+          "why_ru": "Производитель и потребитель связываются очередью, сохраняя порядок одного отправителя.",
+          "why_en": "A producer and consumer communicate through a queue while preserving one sender order."
+        }
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
+    },
+    {
+      "id": 60,
+      "name": "Actor Model",
+      "slug": "actor_model",
+      "summary_ru": "Владелец изолированного состояния принимает целые операции через сообщения.",
+      "summary_en": "An isolated state owner receives complete operations through messages.",
+      "scenario_ru": "Два клиента отправляют add(2) и add(5) в один счётчик из состояния 0.",
+      "scenario_en": "Two clients send add(2) and add(5) to one counter initially at zero.",
+      "expected_ru": "После подтверждённого выполнения обеих операций read возвращает 7 при любом порядке их admission.",
+      "expected_en": "After both operations are confirmed complete, read returns 7 in either admission order.",
+      "lmx_notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. LMX создаёт один CounterMessage; add/read — обычные методы в адресованных post requests. Общий sender ожидает два семантических результата перед read. В Go каждая команда содержит отдельный reply channel; в Erlang From/Ref коррелируют ответы. После обновления add вызывает уже показанный read: это обычный локальный вызов того же владельца, без нового письма.",
+      "lmx_notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. LMX creates one CounterMessage; add/read are ordinary methods in addressed post requests. The harness waits for both semantic replies before read. Go commands use separate reply channels; Erlang From/Ref correlate responses. After the update, add reuses the included read method: an ordinary local call on the same owner, with no new letter.",
+      "comparison_ru": "Message непосредственно соответствует выбранной actor-модели: один владелец mutable graph и последовательное исполнение. Структурный callable и транспорт не создают общего mutable heap между владельцами.",
+      "comparison_en": "Message directly realizes this actor model: one mutable-graph owner and serial execution. Structural callables and transport do not create a shared mutable heap across owners.",
+      "limits_ru": "Нет общего sender-clock порядка, exactly-once delivery или автоматического rollback. Повтор add после потерянного ответа может удвоить эффект.",
+      "limits_en": "There is no global sender-clock ordering, exactly-once delivery or automatic rollback. Retrying add after a lost reply may duplicate the effect.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "CounterMessage:\n    int: delta\n    int: total 0\n    return: int\n    add:\n        node\\total += delta\n        return: read()\n    read:\n        return: node\\total\n",
+          "notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. LMX создаёт один CounterMessage; add/read — обычные методы в адресованных post requests. Общий sender ожидает два семантических результата перед read. В Go каждая команда содержит отдельный reply channel; в Erlang From/Ref коррелируют ответы. После обновления add вызывает уже показанный read: это обычный локальный вызов того же владельца, без нового письма.",
+          "notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. LMX creates one CounterMessage; add/read are ordinary methods in addressed post requests. The harness waits for both semantic replies before read. Go commands use separate reply channels; Erlang From/Ref correlate responses. After the update, add reuses the included read method: an ordinary local call on the same owner, with no new letter.",
+          "metrics": {
+            "characters": 100,
+            "nonblank_lines": 9,
+            "utf8_bytes": 161,
+            "sha256": "da987c3a720df3c48c4629c3dff78edbbe2b69f37b275aae3fda97f799de94ce"
+          }
+        },
+        {
+          "language": "Go",
+          "code": "type Command struct { delta int; read bool; reply chan int }\nfunc Counter(in <-chan Command) {\n    total := 0\n    for c := range in {\n        if !c.read { total += c.delta }\n        c.reply <- total\n    }\n}\n",
+          "notes_ru": "Фрагмент Go; import перечислен там, где нужен; package/harness вынесен. LMX создаёт один CounterMessage; add/read — обычные методы в адресованных post requests. Общий sender ожидает два семантических результата перед read. В Go каждая команда содержит отдельный reply channel; в Erlang From/Ref коррелируют ответы.",
+          "notes_en": "Go fragment; imports are included where needed; package/harness is separate. LMX creates one CounterMessage; add/read are ordinary methods in addressed post requests. The harness waits for both semantic replies before read. Go commands use separate reply channels; Erlang From/Ref correlate responses.",
+          "metrics": {
+            "characters": 141,
+            "nonblank_lines": 8,
+            "utf8_bytes": 207,
+            "sha256": "250b6ec7f12c870b72106611bd5ef70c054b7b95211ec0cb82ffdf672cd346b2"
+          }
+        },
+        {
+          "language": "Erlang",
+          "code": "counter(Total) ->\n    receive\n        {add, Delta, From, Ref} ->\n            Next = Total + Delta, From ! {Ref, Next}, counter(Next);\n        {read, From, Ref} ->\n            From ! {Ref, Total}, counter(Total)\n    end.\n",
+          "notes_ru": "Функции Erlang для одного модуля; -module/-export и запускающий тест вынесены. LMX создаёт один CounterMessage; add/read — обычные методы в адресованных post requests. Общий sender ожидает два семантических результата перед read. В Go каждая команда содержит отдельный reply channel; в Erlang From/Ref коррелируют ответы.",
+          "notes_en": "Erlang functions for one module; -module/-export and the test harness are separate. LMX creates one CounterMessage; add/read are ordinary methods in addressed post requests. The harness waits for both semantic replies before read. Go commands use separate reply channels; Erlang From/Ref correlate responses.",
+          "metrics": {
+            "characters": 144,
+            "nonblank_lines": 7,
+            "utf8_bytes": 220,
+            "sha256": "391c9c7b2bcbef81dbe68833e2d6052ced0d9d42024392434ec8c475ace3be78"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Erlang — Concurrent Programming",
+          "url": "https://www.erlang.org/doc/system/conc_prog.html",
+          "why_ru": "Владелец изолированного состояния принимает целые операции через сообщения.",
+          "why_en": "An isolated state owner receives complete operations through messages."
+        },
+        {
+          "title": "Go — Effective Go concurrency",
+          "url": "https://go.dev/doc/effective_go",
+          "why_ru": "Владелец изолированного состояния принимает целые операции через сообщения.",
+          "why_en": "An isolated state owner receives complete operations through messages."
+        }
+      ],
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами.",
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
+    },
+    {
+      "id": 61,
+      "name": "Active Object",
+      "slug": "active_object",
+      "summary_ru": "Вызов ставит операцию в очередь владельца и отделён от её исполнения.",
+      "summary_en": "Invocation queues an operation for its owner and is separated from execution.",
+      "scenario_ru": "Клиент отправляет compute(6); отдельный исполнитель вычисляет удвоение и доставляет 12.",
+      "scenario_en": "The client submits compute(6); a separate executor doubles it and delivers 12.",
+      "expected_ru": "Submit не исполняет compute на полосе клиента; получен один результат 12.",
+      "expected_en": "Submit does not execute compute on the client lane; one result 12 is delivered.",
+      "lmx_notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. sink.accept(int):void — supplied destination, заранее привязанный в answer. service — отдельно созданный Message. post дерево выведено из нормативного ask/answer контракта; буквального parser fixture в исходной документации нет. В Go Submit может ждать admission в unbuffered queue, но не завершения compute.",
+      "lmx_notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. sink.accept(int):void is a supplied destination bound before sending. service is a separately created Message. The post tree follows the normative ask/answer contract; the source documentation contains no literal parser fixture. Go Submit may wait for unbuffered queue admission, but not compute completion.",
+      "comparison_ru": "В LMX транспорт обычного вызова уже описан через post. Go выделяет request/reply object; Erlang использует envelope с Ref. Методы результата не выбираются заново по списку слушателей.",
+      "comparison_en": "LMX already specifies transport of ordinary calls through post. Go uses a request/reply object; Erlang uses an envelope with Ref. Result destinations are not rediscovered through listener enumeration.",
+      "limits_ru": "Отмена, timeout и прекращение service требуют lifecycle policy. Завершение scope клиента не должно оставлять callback на умерший стек; destination здесь долгоживущий Message.",
+      "limits_en": "Cancellation, timeouts and service shutdown require lifecycle policy. Client scope exit must not leave a callback into a dead stack; the destination here is a long-lived Message.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "ClientMessage:\n    @: service\n    @: sink\n    start:\n        post:\n            ask:\n                service\\compute(value := 6)\n            answer:\n                sink\\accept\n\nServiceMessage:\n    int: value\n    return: int\n    compute:\n        return: value * 2\n",
+          "notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. sink.accept(int):void — supplied destination, заранее привязанный в answer. service — отдельно созданный Message. post дерево выведено из нормативного ask/answer контракта; буквального parser fixture в исходной документации нет. В Go Submit может ждать admission в unbuffered queue, но не завершения compute.",
+          "notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. sink.accept(int):void is a supplied destination bound before sending. service is a separately created Message. The post tree follows the normative ask/answer contract; the source documentation contains no literal parser fixture. Go Submit may wait for unbuffered queue admission, but not compute completion.",
+          "metrics": {
+            "characters": 143,
+            "nonblank_lines": 14,
+            "utf8_bytes": 263,
+            "sha256": "31af3e6545ef4b7cbd998d7b270c3b76bbfe25b231243488bfe9c63c326e41e0"
+          }
+        },
+        {
+          "language": "Go",
+          "code": "type Request struct { value int; reply chan int }\ntype Active chan Request\nfunc NewActive() Active {\n    a := make(Active)\n    go func() { for r := range a { r.reply <- r.value * 2 } }()\n    return a\n}\nfunc (a Active) Submit(value int) <-chan int {\n    reply := make(chan int, 1)\n    a <- Request{value, reply}; return reply\n}\n",
+          "notes_ru": "Фрагмент Go; import перечислен там, где нужен; package/harness вынесен. sink.accept(int):void — supplied destination, заранее привязанный в answer. service — отдельно созданный Message. post дерево выведено из нормативного ask/answer контракта; буквального parser fixture в исходной документации нет. В Go Submit может ждать admission в unbuffered queue, но не завершения compute.",
+          "notes_en": "Go fragment; imports are included where needed; package/harness is separate. sink.accept(int):void is a supplied destination bound before sending. service is a separately created Message. The post tree follows the normative ask/answer contract; the source documentation contains no literal parser fixture. Go Submit may wait for unbuffered queue admission, but not compute completion.",
+          "metrics": {
+            "characters": 247,
+            "nonblank_lines": 11,
+            "utf8_bytes": 327,
+            "sha256": "a2e7cedb8c508f155bd6d36799fb20c8695f21fecda0bba3266159fd97d7cc92"
+          }
+        },
+        {
+          "language": "Erlang",
+          "code": "active() ->\n    receive\n        {compute, Value, From, Ref} ->\n            From ! {Ref, Value * 2}, active();\n        stop -> ok\n    end.\nsubmit(Pid, Value) ->\n    Ref = make_ref(), Pid ! {compute, Value, self(), Ref}, Ref.\nresult(Ref) -> receive {Ref, Value} -> Value end.\n",
+          "notes_ru": "Функции Erlang для одного модуля; -module/-export и запускающий тест вынесены. sink.accept(int):void — supplied destination, заранее привязанный в answer. service — отдельно созданный Message. post дерево выведено из нормативного ask/answer контракта; буквального parser fixture в исходной документации нет. В Go Submit может ждать admission в unbuffered queue, но не завершения compute.",
+          "notes_en": "Erlang functions for one module; -module/-export and the test harness are separate. sink.accept(int):void is a supplied destination bound before sending. service is a separately created Message. The post tree follows the normative ask/answer contract; the source documentation contains no literal parser fixture. Go Submit may wait for unbuffered queue admission, but not compute completion.",
+          "metrics": {
+            "characters": 194,
+            "nonblank_lines": 9,
+            "utf8_bytes": 274,
+            "sha256": "2e053433cd6f71a242abe8c333667be224cc65a77ae449c9937653a47374327f"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Douglas Schmidt — Active Object and concurrency patterns",
+          "url": "https://www.dre.vanderbilt.edu/~schmidt/patterns-ace.html",
+          "why_ru": "Вызов ставит операцию в очередь владельца и отделён от её исполнения.",
+          "why_en": "Invocation queues an operation for its owner and is separated from execution."
+        },
+        {
+          "title": "Erlang — gen_server behaviour",
+          "url": "https://www.erlang.org/doc/system/gen_server_concepts.html",
+          "why_ru": "Вызов ставит операцию в очередь владельца и отделён от её исполнения.",
+          "why_en": "Invocation queues an operation for its owner and is separated from execution."
+        }
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
+    },
+    {
+      "id": 62,
+      "name": "Reactor",
+      "slug": "reactor",
+      "summary_ru": "Готовность дескриптора запускает обработчик, который сам выполняет неблокирующее чтение.",
+      "summary_en": "Descriptor readiness triggers a handler that performs a nonblocking read itself.",
+      "scenario_ru": "Провайдер сообщает ready(fd=3); ReadReady(3) возвращает 2 байта, затем would-block=0.",
+      "scenario_en": "A provider reports ready(fd=3); ReadReady(3) returns 2 bytes, then would-block=0.",
+      "expected_ru": "Первая готовность приводит к чтению и одному sink(2); would-block не завершает соединение.",
+      "expected_en": "The first readiness event performs a read and emits sink(2); would-block does not close the connection.",
+      "lmx_notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. io.readReady(fd:int):int — supplied nonblocking adapter: >0 количество байт, 0 would-block, −1 закрытие; unregister(fd):void отключает readiness. sink.write(int):void фиксирует число байт. Readiness demultiplexer принадлежит I/O-провайдеру и публикует письма owner, не запускает второй turn.",
+      "lmx_notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. io.readReady(fd:int):int is a supplied nonblocking adapter: >0 byte count, 0 would-block, -1 closure; unregister(fd):void disables readiness. sink.write(int):void records the byte count. The I/O provider owns readiness demultiplexing and mails the owner without starting a second turn.",
+      "comparison_ru": "У LMX событие готовности становится Message. Существенный признак Reactor сохранён: реальные байты читает handler после уведомления. Go/Erlang loops показывают тот же adapter boundary.",
+      "comparison_en": "An LMX readiness notification becomes a Message. The Reactor distinction is preserved: the handler reads actual bytes after notification. Go/Erlang loops show the same adapter boundary.",
+      "limits_ru": "Это не реализация epoll/kqueue и не zero-copy I/O. Буферы, edge-triggered drain, повторная регистрация и ошибки провайдера требуют расширения контракта.",
+      "limits_en": "This does not implement epoll/kqueue or zero-copy I/O. Buffers, edge-triggered draining, rearming and provider errors require an extended contract.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "ReactorMessage:\n    int: fd\n    @: io\n    @: sink\n    ready:\n        int: n io\\readReady(fd)\n        if: n > 0\n            sink\\write(n)\n        if: n < 0\n            io\\unregister(fd)\n",
+          "notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. io.readReady(fd:int):int — supplied nonblocking adapter: >0 количество байт, 0 would-block, −1 закрытие; unregister(fd):void отключает readiness. sink.write(int):void фиксирует число байт. Readiness demultiplexer принадлежит I/O-провайдеру и публикует письма owner, не запускает второй turn.",
+          "notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. io.readReady(fd:int):int is a supplied nonblocking adapter: >0 byte count, 0 would-block, -1 closure; unregister(fd):void disables readiness. sink.write(int):void records the byte count. The I/O provider owns readiness demultiplexing and mails the owner without starting a second turn.",
+          "metrics": {
+            "characters": 100,
+            "nonblank_lines": 10,
+            "utf8_bytes": 185,
+            "sha256": "6945ac2ec48d8366b88646384abe515b7ed5706c1b6c086ff4055861939657c3"
+          }
+        },
+        {
+          "language": "Go",
+          "code": "func Reactor(ready <-chan int, readReady func(int) int,\n             unregister func(int), write func(int)) {\n    for fd := range ready {\n        n := readReady(fd)\n        if n > 0 { write(n) }\n        if n < 0 { unregister(fd) }\n    }\n}\n",
+          "notes_ru": "Фрагмент Go; import перечислен там, где нужен; package/harness вынесен. io.readReady(fd:int):int — supplied nonblocking adapter: >0 количество байт, 0 would-block, −1 закрытие; unregister(fd):void отключает readiness. sink.write(int):void фиксирует число байт. Readiness demultiplexer принадлежит I/O-провайдеру и публикует письма owner, не запускает второй turn.",
+          "notes_en": "Go fragment; imports are included where needed; package/harness is separate. io.readReady(fd:int):int is a supplied nonblocking adapter: >0 byte count, 0 would-block, -1 closure; unregister(fd):void disables readiness. sink.write(int):void records the byte count. The I/O provider owns readiness demultiplexing and mails the owner without starting a second turn.",
+          "metrics": {
+            "characters": 157,
+            "nonblank_lines": 8,
+            "utf8_bytes": 239,
+            "sha256": "b44357b0d34b520bc34ed1ff94066ce257f3eaf0fa005388def7de220e3777f4"
+          }
+        },
+        {
+          "language": "Erlang",
+          "code": "reactor(ReadReady, Unregister, Write) ->\n    receive\n        {ready, Fd} ->\n            N = ReadReady(Fd),\n            if N > 0 -> Write(N); N < 0 -> Unregister(Fd); true -> ok end,\n            reactor(ReadReady, Unregister, Write);\n        stop -> ok\n    end.\n",
+          "notes_ru": "Функции Erlang для одного модуля; -module/-export и запускающий тест вынесены. io.readReady(fd:int):int — supplied nonblocking adapter: >0 количество байт, 0 would-block, −1 закрытие; unregister(fd):void отключает readiness. sink.write(int):void фиксирует число байт. Readiness demultiplexer принадлежит I/O-провайдеру и публикует письма owner, не запускает второй turn.",
+          "notes_en": "Erlang functions for one module; -module/-export and the test harness are separate. io.readReady(fd:int):int is a supplied nonblocking adapter: >0 byte count, 0 would-block, -1 closure; unregister(fd):void disables readiness. sink.write(int):void records the byte count. The I/O provider owns readiness demultiplexing and mails the owner without starting a second turn.",
+          "metrics": {
+            "characters": 168,
+            "nonblank_lines": 8,
+            "utf8_bytes": 261,
+            "sha256": "a8da8715e3066178719d138887488248b23601f911600682ec203b4a992b6444"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Douglas Schmidt — Reactor",
+          "url": "https://www.dre.vanderbilt.edu/~schmidt/patterns-ace.html",
+          "why_ru": "Готовность дескриптора запускает обработчик, который сам выполняет неблокирующее чтение.",
+          "why_en": "Descriptor readiness triggers a handler that performs a nonblocking read itself."
+        }
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
+    },
+    {
+      "id": 63,
+      "name": "Proactor",
+      "slug": "proactor",
+      "summary_ru": "Операция чтения запускается заранее; обработчик получает уже завершённый результат.",
+      "summary_en": "Reading is initiated in advance; the handler receives an already completed result.",
+      "scenario_ru": "SubmitRead(fd=3,token=7) затем completion(7,2). Handler не вызывает дополнительное чтение.",
+      "scenario_en": "SubmitRead(fd=3,token=7), then completion(7,2). The handler does not perform another read.",
+      "expected_ru": "Ровно один submit и sink(2); completion с чужим token игнорируется.",
+      "expected_en": "Exactly one submit and sink(2); a completion with a different token is ignored.",
+      "lmx_notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. io.submitRead(fd:int,token:int,target:MessageAddress):void — supplied completion I/O provider, выполняющий чтение до отправки completed(token,bytes). Он удерживает буфер до завершения, а completionTarget — живой адрес именно ProactorMessage. sink.write(int):void получает byte count, −1 означает выбранную ошибку. Erlang Ref — тот же корреляционный token.",
+      "lmx_notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. io.submitRead(fd:int,token:int,target:MessageAddress):void is a supplied completion I/O provider that performs the read before sending completed(token,bytes). It retains the buffer until completion; completionTarget is the live ProactorMessage address. sink.write(int):void receives byte count, with -1 denoting the fixture error. Erlang Ref is the correlation token.",
+      "comparison_ru": "От Reactor отличается момент выполнения I/O и содержимое уведомления. Сообщение LMX само не превращает readiness provider в completion provider.",
+      "comparison_en": "It differs from Reactor in when I/O happens and what the notification contains. An LMX Message does not itself turn a readiness provider into a completion provider.",
+      "limits_ru": "Провайдер должен действительно поддерживать завершение операции: имитация чтения в handler была бы Reactor. Cancellation/completion races и lifetime буфера остаются обязанностями I/O-адаптера.",
+      "limits_en": "The provider must genuinely complete the operation: reading inside the handler would be Reactor. Cancellation/completion races and buffer lifetime remain I/O-adapter obligations.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "ProactorMessage:\n    int: token\n    int: bytes\n    @: io\n    @: completionTarget\n    @: sink\n    begin:\n        io\\submitRead(3; 7; completionTarget)\n    completed:\n        if: token = 7\n            sink\\write(bytes)\n",
+          "notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. io.submitRead(fd:int,token:int,target:MessageAddress):void — supplied completion I/O provider, выполняющий чтение до отправки completed(token,bytes). Он удерживает буфер до завершения, а completionTarget — живой адрес именно ProactorMessage. sink.write(int):void получает byte count, −1 означает выбранную ошибку. Erlang Ref — тот же корреляционный token.",
+          "notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. io.submitRead(fd:int,token:int,target:MessageAddress):void is a supplied completion I/O provider that performs the read before sending completed(token,bytes). It retains the buffer until completion; completionTarget is the live ProactorMessage address. sink.write(int):void receives byte count, with -1 denoting the fixture error. Erlang Ref is the correlation token.",
+          "metrics": {
+            "characters": 140,
+            "nonblank_lines": 11,
+            "utf8_bytes": 217,
+            "sha256": "74f6ce0587bce895d7134f0f2dc34d726903895d255fac35f62f40e248f28aa1"
+          }
+        },
+        {
+          "language": "Go",
+          "code": "type Completion struct { token, bytes int }\nfunc Proactor(submit func(int, int, chan<- Completion), write func(int)) {\n    completed := make(chan Completion, 1)\n    submit(3, 7, completed)\n    for c := range completed {\n        if c.token == 7 { write(c.bytes); return }\n    }\n}\n",
+          "notes_ru": "Фрагмент Go; import перечислен там, где нужен; package/harness вынесен. io.submitRead(fd:int,token:int,target:MessageAddress):void — supplied completion I/O provider, выполняющий чтение до отправки completed(token,bytes). Он удерживает буфер до завершения, а completionTarget — живой адрес именно ProactorMessage. sink.write(int):void получает byte count, −1 означает выбранную ошибку. Erlang Ref — тот же корреляционный token.",
+          "notes_en": "Go fragment; imports are included where needed; package/harness is separate. io.submitRead(fd:int,token:int,target:MessageAddress):void is a supplied completion I/O provider that performs the read before sending completed(token,bytes). It retains the buffer until completion; completionTarget is the live ProactorMessage address. sink.write(int):void receives byte count, with -1 denoting the fixture error. Erlang Ref is the correlation token.",
+          "metrics": {
+            "characters": 214,
+            "nonblank_lines": 8,
+            "utf8_bytes": 279,
+            "sha256": "f1f307266156f67a56c609ce45040122eb69fe7f99e40360889d4e0a2b8f825e"
+          }
+        },
+        {
+          "language": "Erlang",
+          "code": "proactor(Submit, Write) ->\n    Ref = make_ref(), Submit(3, Ref, self()),\n    receive {completed, Ref, Bytes} -> Write(Bytes) end.\n",
+          "notes_ru": "Функции Erlang для одного модуля; -module/-export и запускающий тест вынесены. io.submitRead(fd:int,token:int,target:MessageAddress):void — supplied completion I/O provider, выполняющий чтение до отправки completed(token,bytes). Он удерживает буфер до завершения, а completionTarget — живой адрес именно ProactorMessage. sink.write(int):void получает byte count, −1 означает выбранную ошибку. Erlang Ref — тот же корреляционный token.",
+          "notes_en": "Erlang functions for one module; -module/-export and the test harness are separate. io.submitRead(fd:int,token:int,target:MessageAddress):void is a supplied completion I/O provider that performs the read before sending completed(token,bytes). It retains the buffer until completion; completionTarget is the live ProactorMessage address. sink.write(int):void receives byte count, with -1 denoting the fixture error. Erlang Ref is the correlation token.",
+          "metrics": {
+            "characters": 106,
+            "nonblank_lines": 3,
+            "utf8_bytes": 130,
+            "sha256": "cfbd1bb14871beac4db9329ba3f478c848228c74098d1fee58845bf0411ff55c"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Douglas Schmidt — Proactor and completion dispatch",
+          "url": "https://www.dre.vanderbilt.edu/~schmidt/patterns-ace.html",
+          "why_ru": "Операция чтения запускается заранее; обработчик получает уже завершённый результат.",
+          "why_en": "Reading is initiated in advance; the handler receives an already completed result."
+        }
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
+    },
+    {
+      "id": 64,
+      "name": "Future / Promise",
+      "slug": "future_promise",
+      "summary_ru": "Однократно завершённый результат доступен всем ожидающим и поздним читателям.",
+      "summary_en": "A once-completed result is available to current waiters and later readers.",
+      "scenario_ru": "Два клиента запрашивают результат до resolve(7), третий — после. Повтор resolve(9) отклоняется.",
+      "scenario_en": "Two clients request the result before resolve(7), and a third after it. A second resolve(9) is rejected.",
+      "expected_ru": "Три клиента получают 7; resolve принимает только первое значение.",
+      "expected_en": "All three clients receive 7; resolve accepts only the first value.",
+      "lmx_notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. waiters — supplied owner-local FIFO ID; replies.send(id,value):void доставляет ответ живому клиентскому Message. Это явно выбранный future protocol, не встроенный тип Future LMX; callback не ссылается на завершённый кадр. Повтор resolve игнорируется без изменения результата во всех трёх версиях. Общий reply полностью включён в листинг и подсчёт. reply() получает requestId по обычному автозаполнению DATA, а reply(waiters\\pop()) получает очередной ID позиционно; оба читают текущее node\\value.",
+      "lmx_notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. waiters is a supplied owner-local FIFO of IDs; replies.send(id,value):void delivers to a live client Message. This is an explicit future protocol, not a built-in LMX Future type; callbacks do not refer to ended frames. Repeated resolve is ignored without changing the result in all versions. The shared reply body is included and counted. reply() receives requestId through ordinary DATA autofill, while reply(waiters\\pop()) receives the next ID positionally; both read the current node\\value.",
+      "comparison_ru": "LMX/Erlang сохраняют ожидающих у владельца. Go close(done) одновременно публикует значение и разблокирует читателей по контракту каналов; это не polling.",
+      "comparison_en": "LMX/Erlang retain waiters at the owner. Go close(done) publishes the value and releases readers under channel synchronization; it is not polling.",
+      "limits_ru": "Ошибка, cancellation, срок жизни, удаление потерянных клиентов и распределённая доставка — отдельные расширения. «Отклоняется» в сценарии означает отсутствие изменения, без отдельного error reply.",
+      "limits_en": "Error, cancellation, lifetime, dead-client removal and remote delivery are extensions. Rejected in the scenario means no state change, without a separate error reply.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "FutureMessage:\n    int: requestId\n    int: next\n    int: ready 0\n    int: value 0\n    @: waiters\n    @: replies\n    reply:\n        replies\\send(requestId; node\\value)\n    get:\n        if: node\\ready = 1\n            reply()\n            return\n        waiters\\push(requestId)\n    resolve:\n        if: node\\ready = 1\n            return\n        node\\value := next\n        node\\ready := 1\n        while: waiters\\size() > 0\n            reply(waiters\\pop())\n",
+          "notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. waiters — supplied owner-local FIFO ID; replies.send(id,value):void доставляет ответ живому клиентскому Message. Это явно выбранный future protocol, не встроенный тип Future LMX; callback не ссылается на завершённый кадр. Повтор resolve игнорируется без изменения результата во всех трёх версиях. Общий reply полностью включён в листинг и подсчёт. reply() получает requestId по обычному автозаполнению DATA, а reply(waiters\\pop()) получает очередной ID позиционно; оба читают текущее node\\value.",
+          "notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. waiters is a supplied owner-local FIFO of IDs; replies.send(id,value):void delivers to a live client Message. This is an explicit future protocol, not a built-in LMX Future type; callbacks do not refer to ended frames. Repeated resolve is ignored without changing the result in all versions. The shared reply body is included and counted. reply() receives requestId through ordinary DATA autofill, while reply(waiters\\pop()) receives the next ID positionally; both read the current node\\value.",
+          "metrics": {
+            "characters": 268,
+            "nonblank_lines": 21,
+            "utf8_bytes": 451,
+            "sha256": "2ea827638b00cb005448be8b2110fff045364ad48f1b9f66749b85646b265235"
+          }
+        },
+        {
+          "language": "Go",
+          "code": "import \"sync\"\ntype Future struct { once sync.Once; done chan struct{}; value int }\nfunc NewFuture() *Future { return &Future{done: make(chan struct{})} }\nfunc (f *Future) Resolve(value int) {\n    f.once.Do(func() { f.value = value; close(f.done) })\n}\nfunc (f *Future) Get() int { <-f.done; return f.value }\n",
+          "notes_ru": "Фрагмент Go; import перечислен там, где нужен; package/harness вынесен. waiters — supplied owner-local FIFO ID; replies.send(id,value):void доставляет ответ живому клиентскому Message. Это явно выбранный future protocol, не встроенный тип Future LMX; callback не ссылается на завершённый кадр. Повтор resolve игнорируется без изменения результата во всех трёх версиях.",
+          "notes_en": "Go fragment; imports are included where needed; package/harness is separate. waiters is a supplied owner-local FIFO of IDs; replies.send(id,value):void delivers to a live client Message. This is an explicit future protocol, not a built-in LMX Future type; callbacks do not refer to ended frames. Repeated resolve is ignored without changing the result in all versions.",
+          "metrics": {
+            "characters": 256,
+            "nonblank_lines": 7,
+            "utf8_bytes": 307,
+            "sha256": "a29b83e90588af64df80e17c74091dc57b4cfb3583492214548c3db4b84f406a"
+          }
+        },
+        {
+          "language": "Erlang",
+          "code": "future(pending, Waiters) ->\n    receive\n        {get, From, Ref} -> future(pending, [{From,Ref}|Waiters]);\n        {resolve, Value} ->\n            [P ! {R,Value} || {P,R} <- Waiters], future({ready,Value}, [])\n    end;\nfuture({ready,Value}, []) ->\n    receive\n        {get, From, Ref} -> From ! {Ref,Value}, future({ready,Value}, []);\n        {resolve, _} -> future({ready,Value}, [])\n    end.\n",
+          "notes_ru": "Функции Erlang для одного модуля; -module/-export и запускающий тест вынесены. waiters — supplied owner-local FIFO ID; replies.send(id,value):void доставляет ответ живому клиентскому Message. Это явно выбранный future protocol, не встроенный тип Future LMX; callback не ссылается на завершённый кадр. Повтор resolve игнорируется без изменения результата во всех трёх версиях.",
+          "notes_en": "Erlang functions for one module; -module/-export and the test harness are separate. waiters is a supplied owner-local FIFO of IDs; replies.send(id,value):void delivers to a live client Message. This is an explicit future protocol, not a built-in LMX Future type; callbacks do not refer to ended frames. Repeated resolve is ignored without changing the result in all versions.",
+          "metrics": {
+            "characters": 292,
+            "nonblank_lines": 11,
+            "utf8_bytes": 394,
+            "sha256": "bbe41e410029bab3534c40c4054a16ffdf0c55d237910a10808a7349d096d47d"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Go — Effective Go concurrency",
+          "url": "https://go.dev/doc/effective_go",
+          "why_ru": "Однократно завершённый результат доступен всем ожидающим и поздним читателям.",
+          "why_en": "A once-completed result is available to current waiters and later readers."
+        },
+        {
+          "title": "Erlang — Concurrent Programming",
+          "url": "https://www.erlang.org/doc/system/conc_prog.html",
+          "why_ru": "Однократно завершённый результат доступен всем ожидающим и поздним читателям.",
+          "why_en": "A once-completed result is available to current waiters and later readers."
+        }
+      ],
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами.",
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
+    },
+    {
+      "id": 71,
+      "name": "Half-Sync / Half-Async",
+      "slug": "half_sync_half_async",
+      "summary_ru": "Асинхронный ввод отделён очередью от синхронной обработки и выдачи результата.",
+      "summary_en": "Asynchronous ingress is separated by a queue from synchronous processing and response delivery.",
+      "scenario_ru": "Ввод доставляет frame 3 и 4; worker синхронно вычисляет квадрат; writer получает 9 и 16.",
+      "scenario_en": "Ingress delivers frames 3 and 4; a worker computes each square synchronously; the writer receives 9 and 16.",
+      "expected_ru": "Обработка не выполняется внутри I/O callback; результаты 9,16 переданы writer.",
+      "expected_en": "Processing does not run inside the I/O callback; the writer receives 9,16.",
+      "lmx_notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. Входной I/O adapter посылает уже выделенный frame:int в IngressMessage и не выполняет process на I/O callback. writer.write(int):void — поставленный выходной adapter; в LMX это отдельный Message. Хост явно запускает ingress,worker,writer. Контрольные версии получают decoded frames и Write.",
+      "lmx_notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. The ingress I/O adapter mails a framed int to IngressMessage without executing process on its I/O callback. writer.write(int):void is a supplied output adapter; in LMX it is another Message. The host explicitly launches ingress, worker and writer. Controls receive decoded frames and Write.",
+      "comparison_ru": "Разделение ролей выражается самостоятельными Message и почтой. Go канал соединяет async-facing слой и sync worker; Erlang отделяет процесс worker от отправителя.",
+      "comparison_en": "Independent Messages and mail express the role separation. A Go channel connects the async-facing layer to a synchronous worker; Erlang separates the worker process from the sender.",
+      "limits_ru": "Сама арифметика намеренно коротка; полезность проявляется при blocking/CPU work. Capacity и backpressure должны быть согласованы, иначе очередь только переместит перегрузку.",
+      "limits_en": "Arithmetic is deliberately small; the pattern matters with blocking/CPU work. Capacity and backpressure must be coordinated or the queue merely relocates overload.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "IngressMessage:\n    int: frame\n    @: worker\n    received:\n        post:\n            ask:\n                worker\\process(frame := frame)\n\nWorkerMessage:\n    int: frame\n    @: writer\n    process:\n        int: result frame * frame\n        post:\n            ask:\n                writer\\write(value := result)\n",
+          "notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. Входной I/O adapter посылает уже выделенный frame:int в IngressMessage и не выполняет process на I/O callback. writer.write(int):void — поставленный выходной adapter; в LMX это отдельный Message. Хост явно запускает ingress,worker,writer. Контрольные версии получают decoded frames и Write.",
+          "notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. The ingress I/O adapter mails a framed int to IngressMessage without executing process on its I/O callback. writer.write(int):void is a supplied output adapter; in LMX it is another Message. The host explicitly launches ingress, worker and writer. Controls receive decoded frames and Write.",
+          "metrics": {
+            "characters": 174,
+            "nonblank_lines": 15,
+            "utf8_bytes": 306,
+            "sha256": "a16829ce3594d36fdf292191369e16a987f264349f1e1f4e8af9a5b5183a3fd6"
+          }
+        },
+        {
+          "language": "Go",
+          "code": "func HalfSync(frames <-chan int, write func(int)) {\n    jobs := make(chan int, 2)\n    done := make(chan struct{})\n    go func() {\n        for frame := range jobs { write(frame * frame) }\n        close(done)\n    }()\n    for frame := range frames { jobs <- frame }\n    close(jobs); <-done\n}\n",
+          "notes_ru": "Фрагмент Go; import перечислен там, где нужен; package/harness вынесен. Входной I/O adapter посылает уже выделенный frame:int в IngressMessage и не выполняет process на I/O callback. writer.write(int):void — поставленный выходной adapter; в LMX это отдельный Message. Хост явно запускает ingress,worker,writer. Контрольные версии получают decoded frames и Write.",
+          "notes_en": "Go fragment; imports are included where needed; package/harness is separate. The ingress I/O adapter mails a framed int to IngressMessage without executing process on its I/O callback. writer.write(int):void is a supplied output adapter; in LMX it is another Message. The host explicitly launches ingress, worker and writer. Controls receive decoded frames and Write.",
+          "metrics": {
+            "characters": 205,
+            "nonblank_lines": 10,
+            "utf8_bytes": 289,
+            "sha256": "681b195c7dfc000b5ca6ffe8578c1060a17789f2055418ecfb0791c56ac0b817"
+          }
+        },
+        {
+          "language": "Erlang",
+          "code": "half_sync(Frames, Write) ->\n    Parent = self(),\n    Worker = spawn(fun() -> sync_worker(Write, Parent) end),\n    [Worker ! {frame,F} || F <- Frames], Worker ! stop,\n    receive drained -> ok end.\nsync_worker(Write, Parent) ->\n    receive\n        {frame,F} -> Write(F * F), sync_worker(Write, Parent);\n        stop -> Parent ! drained\n    end.\n",
+          "notes_ru": "Функции Erlang для одного модуля; -module/-export и запускающий тест вынесены. Входной I/O adapter посылает уже выделенный frame:int в IngressMessage и не выполняет process на I/O callback. writer.write(int):void — поставленный выходной adapter; в LMX это отдельный Message. Хост явно запускает ingress,worker,writer. Контрольные версии получают decoded frames и Write.",
+          "notes_en": "Erlang functions for one module; -module/-export and the test harness are separate. The ingress I/O adapter mails a framed int to IngressMessage without executing process on its I/O callback. writer.write(int):void is a supplied output adapter; in LMX it is another Message. The host explicitly launches ingress, worker and writer. Controls receive decoded frames and Write.",
+          "metrics": {
+            "characters": 259,
+            "nonblank_lines": 10,
+            "utf8_bytes": 344,
+            "sha256": "6cd8d9b2c62b4420f3413529045b519002dfb015467a5bbbdd76b6fb4a7d305e"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Douglas Schmidt — Half-Sync/Half-Async",
+          "url": "https://www.dre.vanderbilt.edu/~schmidt/patterns-ace.html",
+          "why_ru": "Асинхронный ввод отделён очередью от синхронной обработки и выдачи результата.",
+          "why_en": "Asynchronous ingress is separated by a queue from synchronous processing and response delivery."
+        }
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
+    },
+    {
+      "id": 88,
+      "name": "Structured Concurrency",
+      "slug": "structured_concurrency",
+      "summary_ru": "Родитель ограничивает время жизни двух дочерних задач своим scope и дожидается обеих даже при ошибке.",
+      "summary_en": "A parent bounds two child tasks to its scope and waits for both even after a failure.",
+      "scenario_ru": "Дочерние задачи возвращают 2 и 3: итог 5. Если первая отказывает, вторая получает stop request; scope завершается только после обоих stopped notifications.",
+      "scenario_en": "Children return 2 and 3: result 5. If one fails, the other receives a stop request; scope finishes only after both stopped notifications.",
+      "expected_ru": "Успех даёт 5. При ошибке ошибка возвращается после завершения обеих задач; живого ребёнка за границей scope нет.",
+      "expected_en": "Success yields 5. A failure is returned only after both tasks finish; no live child outlives the scope.",
+      "lmx_notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. Хост запускает ровно двух прямых детей ScopeMessage; stopped(childId:0|1,ok:0|1,value:int) приходит только после cleanup и безопасной остановки ребёнка. lifecycle.requestStopChildren():void посылает stop через штатный Thread.children без второго реестра. result.finish(ok:int,total:int):void закрывает scope после barrier; при ok=0 total не является успешным результатом. Сокращение 23-Nov: The two child IDs 0 and 1 select one shared duplicate-notification branch; lifecycle and result barrier are unchanged.",
+      "lmx_notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. The host launches exactly two direct children of ScopeMessage; stopped(childId:0|1,ok:0|1,value:int) arrives only after cleanup and safe child termination. lifecycle.requestStopChildren():void sends stop through ordinary Thread.children without a second registry. result.finish(ok:int,total:int):void closes the scope after the barrier; total is not a successful result when ok=0.",
+      "comparison_ru": "LMX использует уже описанную иерархию Message и добавляет явный result barrier. Go показывает cooperative cancellation, Erlang — monitor и принудительный shutdown; эти способы отмены не тождественны.",
+      "comparison_en": "LMX uses its existing Message hierarchy and adds an explicit result barrier. Go shows cooperative cancellation; Erlang uses monitors and shutdown signals. These cancellation mechanisms are not identical.",
+      "limits_ru": "Parent-child hierarchy сама по себе не вычисляет join результата. Зависшая некооперативная Go задача задержит scope; LMX применяет свой close/watchdog профиль; Erlang shutdown может не выполнить пользовательский finally. В этом ограниченном fixture scope вызывается один раз в отдельном новом collector process с пустым mailbox; в него поступают только результаты и DOWN двух созданных monitored children. Для использования в общем mailbox необходимы scope correlation и фильтрация своих monitor references; показанный gather такой общей маршрутизацией не является.",
+      "limits_en": "Parent-child hierarchy does not automatically join results. A noncooperative Go task delays the scope; LMX uses its close/watchdog profile; Erlang shutdown may skip application cleanup. In this bounded fixture, scope runs once in a dedicated new collector process with an empty mailbox; only results and DOWN notifications from its two monitored children reach it. Use in a shared mailbox requires scope correlation and filtering of owned monitor references; the shown gather is not a general mailbox router.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "ScopeMessage:\n    int: childId\n    int: ok\n    int: value\n    []int: seen [0 0]\n    int: remaining 2\n    int: failed 0\n    int: total 0\n    @: lifecycle\n    @: result\n    stopped:\n        if: node\\seen[childId] = 1\n            return\n        node\\seen[childId] := 1\n        if: ok = 0\n            node\\failed := 1\n            lifecycle\\requestStopChildren()\n        if: ok = 1\n            node\\total += value\n        node\\remaining -= 1\n        if: node\\remaining = 0\n            result\\finish(1 - node\\failed; node\\total)\n",
+          "notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. Хост запускает ровно двух прямых детей ScopeMessage; stopped(childId:0|1,ok:0|1,value:int) приходит только после cleanup и безопасной остановки ребёнка. lifecycle.requestStopChildren():void посылает stop через штатный Thread.children без второго реестра. result.finish(ok:int,total:int):void закрывает scope после barrier; при ok=0 total не является успешным результатом. Сокращение 23-Nov: The two child IDs 0 and 1 select one shared duplicate-notification branch; lifecycle and result barrier are unchanged.",
+          "notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. The host launches exactly two direct children of ScopeMessage; stopped(childId:0|1,ok:0|1,value:int) arrives only after cleanup and safe child termination. lifecycle.requestStopChildren():void sends stop through ordinary Thread.children without a second registry. result.finish(ok:int,total:int):void closes the scope after the barrier; total is not a successful result when ok=0.",
+          "metrics": {
+            "characters": 316,
+            "nonblank_lines": 22,
+            "utf8_bytes": 523,
+            "sha256": "d15e6d018737727a0f400bc94ad36ab013a2d230bba69abaf039c4f1441cecbe"
+          }
+        },
+        {
+          "language": "Go",
+          "code": "import (\"context\"; \"sync\")\ntype Outcome struct { value int; err error }\nfunc Scope(a, b func(context.Context) (int, error)) (int, error) {\n    ctx, cancel := context.WithCancel(context.Background()); defer cancel()\n    out := make(chan Outcome, 2)\n    var wg sync.WaitGroup\n    for _, fn := range []func(context.Context)(int,error){a,b} {\n        wg.Add(1)\n        go func(f func(context.Context)(int,error)) {\n            defer wg.Done(); v,e := f(ctx); out <- Outcome{v,e}\n        }(fn)\n    }\n    total := 0; var first error\n    for i:=0; i<2; i++ {\n        r := <-out\n        if r.err != nil && first == nil { first = r.err; cancel() }\n        total += r.value\n    }\n    wg.Wait(); return total, first\n}\n",
+          "notes_ru": "Фрагмент Go; import перечислен там, где нужен; package/harness вынесен. Хост запускает ровно двух прямых детей ScopeMessage; stopped(childId:0|1,ok:0|1,value:int) приходит только после cleanup и безопасной остановки ребёнка. lifecycle.requestStopChildren():void посылает stop через штатный Thread.children без второго реестра. result.finish(ok:int,total:int):void закрывает scope после barrier; при ok=0 total не является успешным результатом.",
+          "notes_en": "Go fragment; imports are included where needed; package/harness is separate. The host launches exactly two direct children of ScopeMessage; stopped(childId:0|1,ok:0|1,value:int) arrives only after cleanup and safe child termination. lifecycle.requestStopChildren():void sends stop through ordinary Thread.children without a second registry. result.finish(ok:int,total:int):void closes the scope after the barrier; total is not a successful result when ok=0.",
+          "metrics": {
+            "characters": 517,
+            "nonblank_lines": 20,
+            "utf8_bytes": 707,
+            "sha256": "ffb7d5e7b5ef6a3cea69f2dda2f540dda5e99c976facce1f4a3d0067b7466bc2"
+          }
+        },
+        {
+          "language": "Erlang",
+          "code": "scope(A, B) ->\n    Parent = self(),\n    Children = [spawn_monitor(fun() -> Parent ! {result,self(),F()} end) || F <- [A,B]],\n    gather(Children, 0, none).\ngather([], Total, none) -> {ok,Total};\ngather([], _, Error) -> {error,Error};\ngather(Children, Total, Error) ->\n    receive\n        {result,_,{ok,V}} -> gather(Children, Total+V, Error);\n        {result,_,{error,E}} ->\n            [exit(P,shutdown) || {P,_} <- Children], gather(Children, Total, E);\n        {'DOWN',Ref,process,_,normal} ->\n            gather(lists:keydelete(Ref,2,Children), Total, Error);\n        {'DOWN',Ref,process,_,Reason} ->\n            Rest = lists:keydelete(Ref,2,Children),\n            [exit(P,shutdown) || {P,_} <- Rest],\n            gather(Rest, Total, case Error of none -> Reason; _ -> Error end)\n    end.\n",
+          "notes_ru": "Функции Erlang для одного модуля; -module/-export и запускающий тест вынесены. Хост запускает ровно двух прямых детей ScopeMessage; stopped(childId:0|1,ok:0|1,value:int) приходит только после cleanup и безопасной остановки ребёнка. lifecycle.requestStopChildren():void посылает stop через штатный Thread.children без второго реестра. result.finish(ok:int,total:int):void закрывает scope после barrier; при ok=0 total не является успешным результатом. В этом ограниченном fixture scope вызывается один раз в отдельном новом collector process с пустым mailbox; в него поступают только результаты и DOWN двух созданных monitored children. Для использования в общем mailbox необходимы scope correlation и фильтрация своих monitor references; показанный gather такой общей маршрутизацией не является.",
+          "notes_en": "Erlang functions for one module; -module/-export and the test harness are separate. The host launches exactly two direct children of ScopeMessage; stopped(childId:0|1,ok:0|1,value:int) arrives only after cleanup and safe child termination. lifecycle.requestStopChildren():void sends stop through ordinary Thread.children without a second registry. result.finish(ok:int,total:int):void closes the scope after the barrier; total is not a successful result when ok=0. In this bounded fixture, scope runs once in a dedicated new collector process with an empty mailbox; only results and DOWN notifications from its two monitored children reach it. Use in a shared mailbox requires scope correlation and filtering of owned monitor references; the shown gather is not a general mailbox router.",
+          "metrics": {
+            "characters": 602,
+            "nonblank_lines": 18,
+            "utf8_bytes": 793,
+            "sha256": "810bcf886736dcd2bd44eeadbc656de1e609a75b21b0bf00ecdd07e9e8b6631f"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Go — Pipelines and cancellation",
+          "url": "https://go.dev/blog/pipelines",
+          "why_ru": "Родитель ограничивает время жизни двух дочерних задач своим scope и дожидается обеих даже при ошибке.",
+          "why_en": "A parent bounds two child tasks to its scope and waits for both even after a failure."
+        },
+        {
+          "title": "Erlang — Supervision principles",
+          "url": "https://www.erlang.org/doc/system/sup_princ.html",
+          "why_ru": "Родитель ограничивает время жизни двух дочерних задач своим scope и дожидается обеих даже при ошибке.",
+          "why_en": "A parent bounds two child tasks to its scope and waits for both even after a failure."
+        }
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
+    },
+    {
+      "id": 89,
+      "name": "Supervision Tree",
+      "slug": "supervision_tree",
+      "summary_ru": "Родитель наблюдает за прямым ребёнком и ограниченно перезапускает его после отказа.",
+      "summary_en": "A parent monitors its direct child and restarts it after failure under a bounded policy.",
+      "scenario_ru": "Первый запуск ребёнка отказывает, второй успешен. Разрешён один restart; повторный отказ останавливает восстановление.",
+      "scenario_en": "The first child launch fails and the second succeeds. Allow one restart; a second failure stops recovery.",
+      "expected_ru": "Созданы две разные child identities; успешный ребёнок не перезапускается.",
+      "expected_en": "Two distinct child identities are created; a successful child is not restarted.",
+      "lmx_notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. lifecycle.startChild(template):MessageAddress явно создаёт нового прямого ребёнка с копией шаблона/своей ареной; reportExhausted():void сообщает отказ родителю. Lifecycle-провайдер передаёт stopped однократно, только для текущего child и после его полной остановки; события прежних поколений не поступают в этот handler. child — прикладная ссылка, не альтернативный membership registry. Erlang фрагмент — callbacks модуля -behaviour(supervisor), WorkerModule поставляет start_link/0.",
+      "lmx_notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. lifecycle.startChild(template):MessageAddress explicitly creates a new direct child with copied template and its own arena; reportExhausted():void reports exhaustion to the parent. The lifecycle provider delivers stopped exactly once for the current child and only after full termination; stale notifications from prior generations do not enter this handler. child is an application reference, not an alternative membership registry. The Erlang fragment supplies callbacks for a -behaviour(supervisor) module; WorkerModule provides start_link/0.",
+      "comparison_ru": "LMX использует штатное отношение прямого родительства; restart strategy остаётся приложением. Erlang OTP поставляет зрелый supervisor; Go пример реализует короткий ограниченный контроллер.",
+      "comparison_en": "LMX uses ordinary direct parenthood; restart strategy remains application policy. Erlang OTP supplies a supervisor; the Go example implements a small bounded controller.",
+      "limits_ru": "Политики бюджета различаются: LMX/Go — один restart за жизнь примера, OTP — один за 60 секунд. Сценарий исполняется внутри этого окна. Recovery внешних эффектов и повтор jobs отдельно.",
+      "limits_en": "Budgets differ: LMX/Go permit one restart over this example lifetime, OTP one per 60 seconds. The scenario runs within that window. External-effect recovery and job redelivery are separate.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "SupervisorMessage:\n    int: failed\n    int: restarts 0\n    @: template\n    @: lifecycle\n    @: child\n    stopped:\n        if: failed = 0\n            return\n        if: node\\restarts >= 1\n            lifecycle\\reportExhausted()\n            return\n        node\\restarts += 1\n        node\\child := lifecycle\\startChild(template)\n",
+          "notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. lifecycle.startChild(template):MessageAddress явно создаёт нового прямого ребёнка с копией шаблона/своей ареной; reportExhausted():void сообщает отказ родителю. Lifecycle-провайдер передаёт stopped однократно, только для текущего child и после его полной остановки; события прежних поколений не поступают в этот handler. child — прикладная ссылка, не альтернативный membership registry. Erlang фрагмент — callbacks модуля -behaviour(supervisor), WorkerModule поставляет start_link/0.",
+          "notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. lifecycle.startChild(template):MessageAddress explicitly creates a new direct child with copied template and its own arena; reportExhausted():void reports exhaustion to the parent. The lifecycle provider delivers stopped exactly once for the current child and only after full termination; stale notifications from prior generations do not enter this handler. child is an application reference, not an alternative membership registry. The Erlang fragment supplies callbacks for a -behaviour(supervisor) module; WorkerModule provides start_link/0.",
+          "metrics": {
+            "characters": 204,
+            "nonblank_lines": 14,
+            "utf8_bytes": 326,
+            "sha256": "757183035fc098349e3923c1f7f76aaf5dc6349e1fdf4240545f1174c880fcc6"
+          }
+        },
+        {
+          "language": "Go",
+          "code": "func Supervise(run func() error) error {\n    for attempt:=0; attempt<2; attempt++ {\n        done := make(chan error, 1)\n        go func() { done <- run() }()\n        err := <-done\n        if err == nil { return nil }\n        if attempt == 1 { return err }\n    }\n    return nil\n}\n",
+          "notes_ru": "Фрагмент Go; import перечислен там, где нужен; package/harness вынесен. lifecycle.startChild(template):MessageAddress явно создаёт нового прямого ребёнка с копией шаблона/своей ареной; reportExhausted():void сообщает отказ родителю. Lifecycle-провайдер передаёт stopped однократно, только для текущего child и после его полной остановки; события прежних поколений не поступают в этот handler. child — прикладная ссылка, не альтернативный membership registry. Erlang фрагмент — callbacks модуля -behaviour(supervisor), WorkerModule поставляет start_link/0.",
+          "notes_en": "Go fragment; imports are included where needed; package/harness is separate. lifecycle.startChild(template):MessageAddress explicitly creates a new direct child with copied template and its own arena; reportExhausted():void reports exhaustion to the parent. The lifecycle provider delivers stopped exactly once for the current child and only after full termination; stale notifications from prior generations do not enter this handler. child is an application reference, not an alternative membership registry. The Erlang fragment supplies callbacks for a -behaviour(supervisor) module; WorkerModule provides start_link/0.",
+          "metrics": {
+            "characters": 181,
+            "nonblank_lines": 10,
+            "utf8_bytes": 279,
+            "sha256": "bb3ddfe56e20bb614623e18e3f62fbf10c8a24d50888b0ed0d0d0273c91de010"
+          }
+        },
+        {
+          "language": "Erlang",
+          "code": "start_link(WorkerModule) -> supervisor:start_link(?MODULE, WorkerModule).\ninit(WorkerModule) ->\n    Flags = #{strategy => one_for_one, intensity => 1, period => 60},\n    Child = #{id => worker, start => {WorkerModule,start_link,[]},\n              restart => transient, shutdown => 5000, type => worker},\n    {ok,{Flags,[Child]}}.\n",
+          "notes_ru": "Функции Erlang для одного модуля; -module/-export и запускающий тест вынесены. lifecycle.startChild(template):MessageAddress явно создаёт нового прямого ребёнка с копией шаблона/своей ареной; reportExhausted():void сообщает отказ родителю. Lifecycle-провайдер передаёт stopped однократно, только для текущего child и после его полной остановки; события прежних поколений не поступают в этот handler. child — прикладная ссылка, не альтернативный membership registry. Erlang фрагмент — callbacks модуля -behaviour(supervisor), WorkerModule поставляет start_link/0.",
+          "notes_en": "Erlang functions for one module; -module/-export and the test harness are separate. lifecycle.startChild(template):MessageAddress explicitly creates a new direct child with copied template and its own arena; reportExhausted():void reports exhaustion to the parent. The lifecycle provider delivers stopped exactly once for the current child and only after full termination; stale notifications from prior generations do not enter this handler. child is an application reference, not an alternative membership registry. The Erlang fragment supplies callbacks for a -behaviour(supervisor) module; WorkerModule provides start_link/0.",
+          "metrics": {
+            "characters": 269,
+            "nonblank_lines": 6,
+            "utf8_bytes": 330,
+            "sha256": "cc5ffa7fac97b61036afdc1a1aae7bf678076449c339282ef7bb5b2318a452fb"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Erlang — Supervisor Behaviour",
+          "url": "https://www.erlang.org/doc/system/sup_princ.html",
+          "why_ru": "Родитель наблюдает за прямым ребёнком и ограниченно перезапускает его после отказа.",
+          "why_en": "A parent monitors its direct child and restarts it after failure under a bounded policy."
+        }
+      ],
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
+    },
+    {
+      "id": 90,
+      "name": "MapReduce",
+      "slug": "map_reduce",
+      "summary_ru": "Map порождает ключи, shuffle направляет их владельцам, reduce объединяет значения по ключу.",
+      "summary_en": "Map emits keys, shuffle routes them to owners, and reduce combines values per key.",
+      "scenario_ru": "Две входные части [1,2] и [3,4] группируются по чётности. Map выдаёт (n mod 2,1); reduce считает элементы.",
+      "scenario_en": "Two partitions [1,2] and [3,4] are grouped by parity. Map emits (n mod 2,1); reduce counts values.",
+      "expected_ru": "Результат {0:2,1:2}. Чтение итогов выполняется после четырёх подтверждённых reduce-операций.",
+      "expected_en": "Result {0:2,1:2}. Final reads occur after four acknowledged reduce operations.",
+      "lmx_notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. Хост запускает два MapperMessage и два ReducerMessage. Каждый элемент partition посылается своему mapper. barrier.accepted(int):void считает четыре семантических ответа add; только затем хост запрашивает read у обоих reducers. Barrier не выводится из группировки post автоматически. Go/Erlang используют один reducer для двух ключей — та же агрегация с иным размещением. ReducerMessage повторно использует свой read после изменения count; mapper, отдельные владельцы и подтверждения барьера остаются прежними.",
+      "lmx_notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. The host launches two MapperMessages and two ReducerMessages. Partition items are mailed to their mapper. barrier.accepted(int):void counts four semantic add replies; only then does the host read both reducers. post grouping does not imply a barrier. Go/Erlang use one reducer for both keys: the same aggregation with different placement. ReducerMessage reuses its read after changing count; the mapper, separate owners and barrier acknowledgements are unchanged.",
+      "comparison_ru": "LMX выражает shuffle явным выбором Message-владельца ключа; Go channel и Erlang mail переносят ключи. Это раскрывает алгоритм map/group/reduce, но ещё не распределённый движок Google MapReduce.",
+      "comparison_en": "LMX expresses shuffle as explicit selection of the key owner Message; Go channels and Erlang mail carry keys. This exposes map/group/reduce without claiming to implement the distributed Google MapReduce engine.",
+      "limits_ru": "Нет spill-to-disk, сбойного перезапуска map, dedup, сортировки ключей и durable shuffle. Неотрицательные целые ограничены четырьмя значениями; порядок обработки не влияет на сумму.",
+      "limits_en": "There is no disk spill, failed-map restart, deduplication, key sorting or durable shuffle. The fixture uses four nonnegative integers; processing order does not affect the count.",
+      "scope": "protocol",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "MapperMessage:\n    int: value\n    @: even\n    @: odd\n    @: barrier\n    map:\n        @: reducer even\n        if: value % 2 = 1\n            reducer := odd\n        post:\n            ask:\n                reducer\\add()\n            answer:\n                barrier\\accepted\n\nReducerMessage:\n    int: count 0\n    return: int\n    add:\n        node\\count += 1\n        return: read()\n    read:\n        return: node\\count\n",
+          "notes_ru": "LMX использует отдельные исполняемые Message с собственной ареной и последовательными turns. Шаблоны явно запускаются хостом; адресованные вызовы проходят общий post, а удалённый профиль — описанный HTTP transport. Полный контракт обвязки находится в MESSAGE_HTTP_PROFILE.md. Приведён авторский protocol/core пример, не проверенный парсером runtime fixture. Хост запускает два MapperMessage и два ReducerMessage. Каждый элемент partition посылается своему mapper. barrier.accepted(int):void считает четыре семантических ответа add; только затем хост запрашивает read у обоих reducers. Barrier не выводится из группировки post автоматически. Go/Erlang используют один reducer для двух ключей — та же агрегация с иным размещением. ReducerMessage повторно использует свой read после изменения count; mapper, отдельные владельцы и подтверждения барьера остаются прежними.",
+          "notes_en": "LMX uses separate executable Messages with their own arenas and serial turns. Templates are explicitly launched by the host; addressed calls use post and remote delivery uses the documented HTTP transport. MESSAGE_HTTP_PROFILE.md defines shared integration. This is an original protocol/core example, not a parser-validated runtime fixture. The host launches two MapperMessages and two ReducerMessages. Partition items are mailed to their mapper. barrier.accepted(int):void counts four semantic add replies; only then does the host read both reducers. post grouping does not imply a barrier. Go/Erlang use one reducer for both keys: the same aggregation with different placement. ReducerMessage reuses its read after changing count; the mapper, separate owners and barrier acknowledgements are unchanged.",
+          "metrics": {
+            "characters": 216,
+            "nonblank_lines": 22,
+            "utf8_bytes": 411,
+            "sha256": "6ceba3c0a4c88d9f38c49f9da3aed19d031d27b5d60effa028e6eeea418397ce"
+          }
+        },
+        {
+          "language": "Go",
+          "code": "import \"sync\"\nfunc MapReduce(parts [][]int) map[int]int {\n    keys := make(chan int)\n    var wg sync.WaitGroup\n    for _, part := range parts {\n        wg.Add(1)\n        go func(xs []int) {\n            defer wg.Done()\n            for _, x := range xs { keys <- x % 2 }\n        }(part)\n    }\n    go func(){ wg.Wait(); close(keys) }()\n    totals := map[int]int{0:0,1:0}\n    for key := range keys { totals[key]++ }\n    return totals\n}\n",
+          "notes_ru": "Фрагмент Go; import перечислен там, где нужен; package/harness вынесен. Хост запускает два MapperMessage и два ReducerMessage. Каждый элемент partition посылается своему mapper. barrier.accepted(int):void считает четыре семантических ответа add; только затем хост запрашивает read у обоих reducers. Barrier не выводится из группировки post автоматически. Go/Erlang используют один reducer для двух ключей — та же агрегация с иным размещением.",
+          "notes_en": "Go fragment; imports are included where needed; package/harness is separate. The host launches two MapperMessages and two ReducerMessages. Partition items are mailed to their mapper. barrier.accepted(int):void counts four semantic add replies; only then does the host read both reducers. post grouping does not imply a barrier. Go/Erlang use one reducer for both keys: the same aggregation with different placement.",
+          "metrics": {
+            "characters": 290,
+            "nonblank_lines": 16,
+            "utf8_bytes": 432,
+            "sha256": "ec35e2cd2f33478bea61792dafb65504f3a57d52b9efa3e8a9b4d6638a1f7e5f"
+          }
+        },
+        {
+          "language": "Erlang",
+          "code": "map_reduce(Parts) ->\n    Parent = self(),\n    [spawn(fun() -> [Parent ! {key,X rem 2} || X <- Part] end) || Part <- Parts],\n    reduce(lists:sum([length(P) || P <- Parts]), #{0=>0,1=>0}).\nreduce(0, Totals) -> Totals;\nreduce(N, Totals) ->\n    receive {key,K} -> reduce(N-1, maps:update_with(K,fun(V)->V+1 end,1,Totals)) end.\n",
+          "notes_ru": "Функции Erlang для одного модуля; -module/-export и запускающий тест вынесены. Хост запускает два MapperMessage и два ReducerMessage. Каждый элемент partition посылается своему mapper. barrier.accepted(int):void считает четыре семантических ответа add; только затем хост запрашивает read у обоих reducers. Barrier не выводится из группировки post автоматически. Go/Erlang используют один reducer для двух ключей — та же агрегация с иным размещением.",
+          "notes_en": "Erlang functions for one module; -module/-export and the test harness are separate. The host launches two MapperMessages and two ReducerMessages. Partition items are mailed to their mapper. barrier.accepted(int):void counts four semantic add replies; only then does the host read both reducers. post grouping does not imply a barrier. Go/Erlang use one reducer for both keys: the same aggregation with different placement.",
+          "metrics": {
+            "characters": 267,
+            "nonblank_lines": 7,
+            "utf8_bytes": 324,
+            "sha256": "0eab9fa54be25f79eef389c00787c94f621cca3bd7430c45b7bfbf8408af0e85"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Dean and Ghemawat — MapReduce",
+          "url": "https://research.google/pubs/mapreduce-simplified-data-processing-on-large-clusters/",
+          "why_ru": "Map порождает ключи, shuffle направляет их владельцам, reduce объединяет значения по ключу.",
+          "why_en": "Map emits keys, shuffle routes them to owners, and reduce combines values per key."
+        },
+        {
+          "title": "Go — Pipelines and cancellation",
+          "url": "https://go.dev/blog/pipelines",
+          "why_ru": "Map порождает ключи, shuffle направляет их владельцам, reduce объединяет значения по ключу.",
+          "why_en": "Map emits keys, shuffle routes them to owners, and reduce combines values per key."
+        }
+      ],
+      "minor_alternatives_note_en": "Named arguments can replace the shown positional arguments; a Boolean return can be written as if/return. Such local spelling or leaf-method substitutions are not repeated as complete algorithms.",
+      "minor_alternatives_note_ru": "Позиционные аргументы можно записать именованными, булев return — через if/return. Такие местные изменения записи и вызовов уже показанных leaf-методов не повторяются целыми листингами.",
+      "post_scope_note_en": "The shown application protocol runs on existing Message turns. post already supplies addressed invocation, reply correlation and handler delivery; it needs no second scheduler here. It does not supply this protocol’s queue, transaction, cancellation barrier or external I/O provider. Those explicitly declared ports retain their stated contracts; this listing is not a hidden implementation of an entire networking/storage library.",
+      "post_scope_note_ru": "Прикладной протокол выполняется обычными turns Message. post уже обеспечивает адресованный вызов, корреляцию и доставку обработчиков; второй scheduler не требуется. post не реализует очередь, транзакцию, barrier отмены или внешний I/O provider этого протокола: явно объявленные порты сохраняют свои договоры."
+    },
+    {
+      "id": 109,
+      "name": "Request-Response / Ask",
+      "slug": "request_response_ask",
+      "summary_ru": "Запрос завершается поздним reply либо deadline; owner продолжает обслуживать сообщения.",
+      "summary_en": "A request finishes through a later reply or deadline while its owner continues serving messages.",
+      "scenario_ru": "Один запрос с token=1 истекает. После этого начинается token=2. Поздний reply token=1 игнорируется; reply token=2 со значением 12 принимается. Query обслуживается при active=1.",
+      "scenario_en": "Request token 1 expires, then token 2 starts. A late reply for token 1 is ignored; token 2 accepts value 12. Query remains serviceable while active.",
+      "expected_ru": "Для token=1 один terminal timeout, для token=2 один результат 12; повторный reply/deadline не создаёт нового результата. Busy и исчерпание i64 counter дают отдельный отказ.",
+      "expected_en": "Token 1 has one terminal timeout and token 2 one result 12; repeated replies/deadlines create no further result. Busy and i64 counter exhaustion are separate rejections.",
+      "comparison_ru": "LMX показывает post/answer и owner state; Go — тот же автомат в channel loop с явными nonblocking Compute/Schedule ports; Erlang — process receive и send_after. Это прикладное управление deadline, а не новый блокирующий ask primitive.",
+      "comparison_en": "LMX shows post/answer and owner state, Go the same state machine in a channel loop with nonblocking Compute/Schedule ports, and Erlang receive/send_after. This is application deadline policy, not a new blocking ask primitive.",
+      "limits_ru": "Один in-flight request на экземпляр; durable retries, exactly-once effect, service cancellation и общий multiplexed pending map не обещаны. Token counter не переиспользуется; новая owner identity отделяет следующий запуск. Все значения примера малы и не переполняют арифметику service.",
+      "limits_en": "One in-flight request per instance. No durable retry, exactly-once effect, service cancellation or general multiplexed pending map. Tokens are not reused; a new owner identity separates restarts. Fixture values do not overflow service arithmetic.",
+      "scope": "protocol",
+      "kind": "pattern",
+      "lmx_notes_ru": "Исполняемые экземпляры создаются штатным R0/Message host profile. Message не вводит deadlock; синхронного ожидания потока и LMX synchronized здесь нет. post сам связывает адресованный обмен и корреляцию. Поля token/epoch относятся к прикладному deadline или поколению ресурса, не реализуют второй scheduler. events — nonblocking owner-local observer для проверяемого trace; он не обращается синхронно к чужому Message. Физические timer/lifecycle/native adapters остаются REQUIRE_IMPLEMENTATION. LMX parser/type/runtime: NOT_RUN. timer.schedule(token,selfAddress) только регистрирует поздний expire(token), не вызывает его внутри start. Service возвращает AskReply, answer выбирает received. Timeout переводит только локальный запрос в terminal state и не отменяет совершённый сервисом эффект. finished(token,status,value): status=0 success, status=1 timeout; при timeout value не является результатом. Host сохраняет ожидаемый failure route обычного post при transport rejection; здесь service/timer admission заранее принят.",
+      "lmx_notes_en": "Executable instances use the ordinary R0/Message host profile. Message itself does not introduce deadlock; no blocking thread wait or LMX synchronized is added. post already binds addressed exchange and correlation. token/epoch are application deadline or resource-generation data, not a second scheduler. events is a nonblocking owner-local observation sink, never a synchronous call into another Message. Physical timer/lifecycle/native adapters remain REQUIRE_IMPLEMENTATION. LMX parser/type/runtime: NOT_RUN. timer.schedule(token,selfAddress) registers a later expire(token), never reenters start. The service returns AskReply and answer selects received. Timeout ends only the local request and does not undo a service effect. finished status 0 means success and 1 timeout; the timeout value is inactive. The ordinary post failure route handles transport rejection; this fixture pre-admits service/timer delivery.",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "# DRAFT. One pending business request; ordinary post owns transport correlation.\nAskReply:\n    i64: token\n    int: value\n\nAskClientMessage:\n    int: value\n    i64: token\n    @AskReply: response\n    @: service\n    @: timer\n    @: selfAddress\n    @: events\n    private: int: active 0\n    private: i64: next 0\n    private: i64: current 0\n    start:\n        if: node\\active = 1\n            events\\rejected(1)\n            return\n        if: node\\next = 9223372036854775807\n            events\\rejected(2)\n            return\n        node\\next += 1\n        node\\current := node\\next\n        node\\active := 1\n        timer\\schedule(node\\current; selfAddress)\n        post:\n            ask:\n                service\\compute(token := node\\current; value := value)\n            answer:\n                selfAddress\\received\n    received:\n        if: node\\active = 0 || response\\token != node\\current\n            return\n        node\\active := 0\n        events\\finished(response\\token; 0; response\\value)\n    expire:\n        if: node\\active = 0 || token != node\\current\n            return\n        node\\active := 0\n        events\\finished(token; 1; 0)\n    query:\n        events\\status(node\\active; node\\current)\n\nAskServiceMessage:\n    i64: token\n    int: value\n    return: @AskReply\n    compute:\n        private: @AskReply: result (copy(AskReply))\n        result\\token := token\n        result\\value := value * 2\n        return: result\n",
+          "notes_ru": "Исполняемые экземпляры создаются штатным R0/Message host profile. Message не вводит deadlock; синхронного ожидания потока и LMX synchronized здесь нет. post сам связывает адресованный обмен и корреляцию. Поля token/epoch относятся к прикладному deadline или поколению ресурса, не реализуют второй scheduler. events — nonblocking owner-local observer для проверяемого trace; он не обращается синхронно к чужому Message. Физические timer/lifecycle/native adapters остаются REQUIRE_IMPLEMENTATION. LMX parser/type/runtime: NOT_RUN. timer.schedule(token,selfAddress) только регистрирует поздний expire(token), не вызывает его внутри start. Service возвращает AskReply, answer выбирает received. Timeout переводит только локальный запрос в terminal state и не отменяет совершённый сервисом эффект. finished(token,status,value): status=0 success, status=1 timeout; при timeout value не является результатом. Host сохраняет ожидаемый failure route обычного post при transport rejection; здесь service/timer admission заранее принят.",
+          "notes_en": "Executable instances use the ordinary R0/Message host profile. Message itself does not introduce deadlock; no blocking thread wait or LMX synchronized is added. post already binds addressed exchange and correlation. token/epoch are application deadline or resource-generation data, not a second scheduler. events is a nonblocking owner-local observation sink, never a synchronous call into another Message. Physical timer/lifecycle/native adapters remain REQUIRE_IMPLEMENTATION. LMX parser/type/runtime: NOT_RUN. timer.schedule(token,selfAddress) registers a later expire(token), never reenters start. The service returns AskReply and answer selects received. Timeout ends only the local request and does not undo a service effect. finished status 0 means success and 1 timeout; the timeout value is inactive. The ordinary post failure route handles transport rejection; this fixture pre-admits service/timer delivery.",
+          "metrics": {
+            "characters": 930,
+            "nonblank_lines": 52,
+            "utf8_bytes": 1418,
+            "sha256": "a79d8ae7b81e287ed5c33494c0f7ce9cfbf04012d82be32ca415d72c39cedefe"
+          }
+        },
+        {
+          "language": "Go",
+          "code": "type AskReply struct { Token int64; Value int }\ntype AskEvent struct { Kind int; Token int64; Value int; Reply AskReply }\ntype AskPorts struct {\n    Compute func(int64, int)\n    Schedule func(int64)\n    Finished func(int64, bool, int)\n    Rejected func(int)\n    Status func(bool, int64)\n}\nfunc RunAsk(in <-chan AskEvent, p AskPorts) {\n    var next, current int64\n    active := false\n    for event := range in {\n        switch event.Kind {\n        case 0:\n            if active { p.Rejected(1); continue }\n            if next == 9223372036854775807 { p.Rejected(2); continue }\n            next++; current = next; active = true\n            p.Schedule(current)\n            p.Compute(current, event.Value)\n        case 1:\n            if active && event.Reply.Token == current {\n                active = false\n                p.Finished(current, false, event.Reply.Value)\n            }\n        case 2:\n            if active && event.Token == current {\n                active = false\n                p.Finished(current, true, 0)\n            }\n        case 3:\n            p.Status(active, current)\n        }\n    }\n}\nfunc DoubleReply(token int64, value int) AskReply {\n    return AskReply{Token: token, Value: value * 2}\n}\n",
+          "notes_ru": "Полный channel loop. Compute ставит DoubleReply в отдельный service; Schedule публикует позднее событие Kind=2. Оба supplied ports возвращаются сразу. Finished/Rejected/Status — nonblocking observer. Host wiring и физический таймер перечислены отдельно.",
+          "notes_en": "Go channel loop is complete; Compute queues DoubleReply on a separate service, Schedule queues a later Kind=2 event. Both supplied ports return immediately. Finished/Rejected/Status are nonblocking observers. Host wiring and timer implementation are outside the measured listing.",
+          "metrics": {
+            "characters": 799,
+            "nonblank_lines": 38,
+            "utf8_bytes": 1215,
+            "sha256": "24760ba888f4f85f877c6b7407f10af561ee7170d6b54a1e4bae3d30a55b412c"
+          }
+        },
+        {
+          "language": "Erlang",
+          "code": "ask_client(Service, Observer, Delay) ->\n    ask_loop(Service, Observer, Delay, 0, 0, false).\nask_loop(Service, Observer, Delay, Next, Current, Active) ->\n    receive\n        {start, _} when Active ->\n            Observer ! {rejected, 1},\n            ask_loop(Service, Observer, Delay, Next, Current, Active);\n        {start, _} when Next =:= 9223372036854775807 ->\n            Observer ! {rejected, 2},\n            ask_loop(Service, Observer, Delay, Next, Current, Active);\n        {start, Value} ->\n            Token = Next + 1,\n            erlang:send_after(Delay, self(), {expire, Token}),\n            Service ! {compute, self(), Token, Value},\n            ask_loop(Service, Observer, Delay, Token, Token, true);\n        {computed, Current, Value} when Active ->\n            Observer ! {finished, Current, false, Value},\n            ask_loop(Service, Observer, Delay, Next, Current, false);\n        {expire, Current} when Active ->\n            Observer ! {finished, Current, true, 0},\n            ask_loop(Service, Observer, Delay, Next, Current, false);\n        query ->\n            Observer ! {status, Active, Current},\n            ask_loop(Service, Observer, Delay, Next, Current, Active);\n        stop -> ok;\n        _ -> ask_loop(Service, Observer, Delay, Next, Current, Active)\n    end.\nask_service() ->\n    receive\n        {compute, From, Token, Value} ->\n            From ! {computed, Token, Value * 2}, ask_service();\n        stop -> ok\n    end.\n",
+          "notes_ru": "Функции одного обычного модуля; module/export и launcher вне фрагмента. Service и client — разные процессы; send_after — настоящий timer. Fixture задаёт порядок событий; timeout не доказывает отсутствие эффекта сервиса.",
+          "notes_en": "Functions belong to one ordinary Erlang module; module/export and launcher are outside the fragment. The service and client are separate processes. send_after is an actual timer. The fixture injects controlled completion order; it does not assert a timed-out operation never ran.",
+          "metrics": {
+            "characters": 1024,
+            "nonblank_lines": 33,
+            "utf8_bytes": 1458,
+            "sha256": "c3f428075c1a6f4f890489ce5e1c79828332f8d234d9f49df01e3b3ff9cc0755"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Go specification: channel and select",
+          "url": "https://go.dev/ref/spec",
+          "why_ru": "Channel loop и порядок событий.",
+          "why_en": "Channel loop and event ordering."
+        },
+        {
+          "title": "Erlang gen_statem: asynchronous requests",
+          "url": "https://www.erlang.org/doc/apps/stdlib/gen_statem.html",
+          "why_ru": "Поздний reply и явный request identity.",
+          "why_en": "Later replies and request identity."
+        }
+      ],
+      "post_scope_note_ru": "Ошибки маршрута, deadline, stale generation и blanket stash относятся к прикладному протоколу. Они не означают deadlock механизма Message. Все handlers завершают текущий turn; результаты приходят штатными сообщениями, без LMX synchronized или ожидания потока.",
+      "post_scope_note_en": "Routing, deadline, stale-generation and blanket-stash mistakes are application protocol errors, not Message scheduling deadlocks. Handlers finish their turns and receive ordinary later messages; no LMX synchronized or thread wait is introduced."
+    },
+    {
+      "id": 110,
+      "name": "Become / Selective Stash",
+      "slug": "become_selective_stash",
+      "summary_ru": "Изменение поведения откладывает только work; control, queries и replies сохраняют обслуживание.",
+      "summary_en": "A behavior change defers only work; control, queries and replies remain serviceable.",
+      "scenario_ru": "В paused phase принять work(1,2) и work(2,3), третий work отклонить из-за capacity=2. Между ними обслужить query и reply. become(1) запускает FIFO pump по одному элементу на turn; stop отменяет оставшийся stash.",
+      "scenario_en": "While paused, accept work(1,2) and work(2,3), reject the third work at capacity two, and serve query/reply. become(1) pumps FIFO work one item per turn; stop rejects any remainder.",
+      "expected_ru": "Query видит phase=0,count=2; reply доставлен сразу по своему handler. Принятые work дают 4 и 6 по FIFO, без повторного эффекта от лишнего pump. Stop не помещается в stash и оставляет count=0.",
+      "expected_en": "Query observes phase 0/count 2 and reply runs through its own handler. Accepted work yields 4 then 6, with no repeated effect from extra pumps. Stop is never stashed and leaves count zero.",
+      "comparison_ru": "Go использует ограниченный slice и отдельный wake channel; Erlang — bounded list и self message. gen_statem postpone служит концептуальным аналогом, но здесь список явно ограничен и отложены только work. Полный небольшой FIFO включён во все листинги.",
+      "comparison_en": "Go uses a bounded slice and a separate wake channel; Erlang a bounded list and self message. gen_statem postpone is the conceptual analogue, but this queue is explicitly bounded and only work is deferred. Each listing includes its complete small FIFO.",
+      "limits_ru": "Нет durable mailbox, общей selective-receive политики или автоматического повторения всех сообщений. Capacity=2 выбрана для проверяемого сценария. Внешний host не закрывает вход Go до завершения stop; hard termination вне этого договора.",
+      "limits_en": "No durable mailbox, general selective-receive policy or automatic replay of all messages. Capacity two makes the fixture bounded. The Go host keeps input open until stop completes; hard termination is outside this contract.",
+      "scope": "protocol",
+      "kind": "pattern",
+      "lmx_notes_ru": "Исполняемые экземпляры создаются штатным R0/Message host profile. Message не вводит deadlock; синхронного ожидания потока и LMX synchronized здесь нет. post сам связывает адресованный обмен и корреляцию. Поля token/epoch относятся к прикладному deadline или поколению ресурса, не реализуют второй scheduler. events — nonblocking owner-local observer для проверяемого trace; он не обращается синхронно к чужому Message. Физические timer/lifecycle/native adapters остаются REQUIRE_IMPLEMENTATION. LMX parser/type/runtime: NOT_RUN. Кольцо из двух элементов полностью реализовано внутри LMX: ids,values,head,count. phase 0 paused, 1 running, 2 stopped. become меняет обычные данные поведения; это не встроенный scheduler opcode. pump удаляет item до эффекта и публикует лишь следующий обычный self Message. Control/query/reply ни в одной ветви не идут в очередь work. Stash содержит copied scalar values, не ссылки на умерший Frame.",
+      "lmx_notes_en": "Executable instances use the ordinary R0/Message host profile. Message itself does not introduce deadlock; no blocking thread wait or LMX synchronized is added. post already binds addressed exchange and correlation. token/epoch are application deadline or resource-generation data, not a second scheduler. events is a nonblocking owner-local observation sink, never a synchronous call into another Message. Physical timer/lifecycle/native adapters remain REQUIRE_IMPLEMENTATION. LMX parser/type/runtime: NOT_RUN. The two-item ring is entirely implemented in LMX using ids/values/head/count. Phases are paused 0, running 1, stopped 2. become changes ordinary behavior data, not a scheduler opcode. pump removes the item before its effect and posts only the next ordinary self Message. Control/query/reply never enter the work queue; stored values are scalars, not references to a dead Frame.",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "# DRAFT. Only work is deferred. Control, queries and replies keep their routes.\nSelectiveMessage:\n    int: requestId\n    int: value\n    int: mode\n    @: selfAddress\n    @: events\n    private: int: phase 0\n    private: int: head 0\n    private: int: count 0\n    private: []int: ids [0 0]\n    private: []int: values [0 0]\n    work:\n        if: node\\phase = 2\n            events\\rejected(requestId; 2)\n            return\n        if: node\\phase = 1 && node\\count = 0\n            events\\finished(requestId; value * 2)\n            return\n        if: node\\count = 2\n            events\\rejected(requestId; 1)\n            return\n        private: int: index (node\\head + node\\count) % 2\n        node\\ids[index] := requestId\n        node\\values[index] := value\n        node\\count += 1\n        if: node\\phase = 1\n            post:\n                ask:\n                    selfAddress\\pump()\n    become:\n        if: node\\phase = 2 || mode < 0 || mode > 1\n            return\n        node\\phase := mode\n        if: node\\phase = 1 && node\\count > 0\n            post:\n                ask:\n                    selfAddress\\pump()\n    pump:\n        if: node\\phase != 1 || node\\count = 0\n            return\n        private: int: id node\\ids[node\\head]\n        private: int: nextValue node\\values[node\\head]\n        node\\head := (node\\head + 1) % 2\n        node\\count -= 1\n        events\\finished(id; nextValue * 2)\n        if: node\\count > 0\n            post:\n                ask:\n                    selfAddress\\pump()\n    reply:\n        events\\replySeen(requestId; value)\n    query:\n        events\\status(node\\phase; node\\count)\n    stop:\n        if: node\\phase = 2\n            return\n        node\\phase := 2\n        while: node\\count > 0\n            private: int: id node\\ids[node\\head]\n            node\\head := (node\\head + 1) % 2\n            node\\count -= 1\n            events\\rejected(id; 2)\n        events\\stopped()\n",
+          "notes_ru": "Исполняемые экземпляры создаются штатным R0/Message host profile. Message не вводит deadlock; синхронного ожидания потока и LMX synchronized здесь нет. post сам связывает адресованный обмен и корреляцию. Поля token/epoch относятся к прикладному deadline или поколению ресурса, не реализуют второй scheduler. events — nonblocking owner-local observer для проверяемого trace; он не обращается синхронно к чужому Message. Физические timer/lifecycle/native adapters остаются REQUIRE_IMPLEMENTATION. LMX parser/type/runtime: NOT_RUN. Кольцо из двух элементов полностью реализовано внутри LMX: ids,values,head,count. phase 0 paused, 1 running, 2 stopped. become меняет обычные данные поведения; это не встроенный scheduler opcode. pump удаляет item до эффекта и публикует лишь следующий обычный self Message. Control/query/reply ни в одной ветви не идут в очередь work. Stash содержит copied scalar values, не ссылки на умерший Frame.",
+          "notes_en": "Executable instances use the ordinary R0/Message host profile. Message itself does not introduce deadlock; no blocking thread wait or LMX synchronized is added. post already binds addressed exchange and correlation. token/epoch are application deadline or resource-generation data, not a second scheduler. events is a nonblocking owner-local observation sink, never a synchronous call into another Message. Physical timer/lifecycle/native adapters remain REQUIRE_IMPLEMENTATION. LMX parser/type/runtime: NOT_RUN. The two-item ring is entirely implemented in LMX using ids/values/head/count. Phases are paused 0, running 1, stopped 2. become changes ordinary behavior data, not a scheduler opcode. pump removes the item before its effect and posts only the next ordinary self Message. Control/query/reply never enter the work queue; stored values are scalars, not references to a dead Frame.",
+          "metrics": {
+            "characters": 1144,
+            "nonblank_lines": 64,
+            "utf8_bytes": 1901,
+            "sha256": "85cb965c1079a22ddd8afee6d90d3c89a10a0d7142850fdf5fbd3e29773dc84d"
+          }
+        },
+        {
+          "language": "Go",
+          "code": "type StashEvent struct { Kind, ID, Value, Mode int }\nfunc RunSelective(in <-chan StashEvent, emit func(string, int, int)) {\n    phase := 0\n    queue := make([]StashEvent, 0, 2)\n    wake := make(chan struct{}, 1)\n    pump := func() { select { case wake <- struct{}{}: default: } }\n    for {\n        select {\n        case event, open := <-in:\n            if !open { return }\n            switch event.Kind {\n            case 0:\n                if phase == 2 { emit(\"rejected\", event.ID, 2); continue }\n                if phase == 1 && len(queue) == 0 {\n                    emit(\"finished\", event.ID, event.Value * 2); continue\n                }\n                if len(queue) == 2 { emit(\"rejected\", event.ID, 1); continue }\n                queue = append(queue, event)\n                if phase == 1 { pump() }\n            case 1:\n                if phase != 2 && event.Mode >= 0 && event.Mode <= 1 {\n                    phase = event.Mode\n                    if phase == 1 && len(queue) > 0 { pump() }\n                }\n            case 2:\n                emit(\"reply\", event.ID, event.Value)\n            case 3:\n                emit(\"status\", phase, len(queue))\n            case 4:\n                if phase == 2 { continue }\n                phase = 2\n                for _, item := range queue { emit(\"rejected\", item.ID, 2) }\n                queue = queue[:0]\n                emit(\"stopped\", 0, 0)\n            }\n        case <-wake:\n            if phase != 1 || len(queue) == 0 { continue }\n            item := queue[0]; queue = queue[1:]\n            emit(\"finished\", item.ID, item.Value * 2)\n            if len(queue) > 0 { pump() }\n        }\n    }\n}\n",
+          "notes_ru": "Полный channel/select loop: Kind 0 work, 1 become, 2 reply, 3 query, 4 stop. emit — nonblocking observer. Host сохраняет input до завершения stop; wake объединяет только scheduling hints, не work items.",
+          "notes_en": "Complete channel/select owner loop. Kind 0 work, 1 become, 2 reply, 3 query, 4 stop. emit is a nonblocking observer; the host keeps the input channel live through stop. The wake channel coalesces scheduling hints, not work items.",
+          "metrics": {
+            "characters": 936,
+            "nonblank_lines": 43,
+            "utf8_bytes": 1651,
+            "sha256": "16949daf5b53729bf30ae167b0996c374e80739096a9aca77e8a0d0aaf4f7bd4"
+          }
+        },
+        {
+          "language": "Erlang",
+          "code": "selective(Observer) -> selective_loop(Observer, 0, []).\nselective_loop(Observer, Phase, Queue) ->\n    receive\n        {work, Id, _} when Phase =:= 2 ->\n            Observer ! {rejected, Id, 2},\n            selective_loop(Observer, Phase, Queue);\n        {work, Id, Value} when Phase =:= 1, Queue =:= [] ->\n            Observer ! {finished, Id, Value * 2},\n            selective_loop(Observer, Phase, Queue);\n        {work, Id, _} when length(Queue) =:= 2 ->\n            Observer ! {rejected, Id, 1},\n            selective_loop(Observer, Phase, Queue);\n        {work, Id, Value} ->\n            case Phase of 1 -> self() ! pump; _ -> ok end,\n            selective_loop(Observer, Phase, Queue ++ [{Id, Value}]);\n        {become, Mode} when Phase =/= 2, (Mode =:= 0 orelse Mode =:= 1) ->\n            case {Mode, Queue} of {1, [_|_]} -> self() ! pump; _ -> ok end,\n            selective_loop(Observer, Mode, Queue);\n        pump when Phase =:= 1, Queue =/= [] ->\n            [{Id, Value}|Rest] = Queue,\n            Observer ! {finished, Id, Value * 2},\n            case Rest of [] -> ok; _ -> self() ! pump end,\n            selective_loop(Observer, Phase, Rest);\n        {reply, Id, Value} ->\n            Observer ! {reply_seen, Id, Value},\n            selective_loop(Observer, Phase, Queue);\n        query ->\n            Observer ! {status, Phase, length(Queue)},\n            selective_loop(Observer, Phase, Queue);\n        stop when Phase =/= 2 ->\n            [Observer ! {rejected, Id, 2} || {Id, _} <- Queue],\n            Observer ! stopped,\n            selective_loop(Observer, 2, []);\n        terminate -> ok;\n        _ -> selective_loop(Observer, Phase, Queue)\n    end.\n",
+          "notes_ru": "Обычный process loop с полной bounded queue. Только work помещается в stash. После stop query/reply остаются доступными до отдельного terminate от harness; module/export и launcher вне листинга.",
+          "notes_en": "Ordinary process functions, with module/export and launcher outside the fragment. Only work tuples enter the bounded queue. The process keeps answering query/reply after stop until the harness sends terminate.",
+          "metrics": {
+            "characters": 1120,
+            "nonblank_lines": 36,
+            "utf8_bytes": 1672,
+            "sha256": "2a8876b6e4fd6c9527fae74343e67722f629b7ce19c175dfc3efca66f0511bff"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Erlang gen_statem behavior",
+          "url": "https://www.erlang.org/doc/system/statem.html",
+          "why_ru": "Изменение состояния, postpone и сохранение системного обслуживания.",
+          "why_en": "State changes, postpone and continued system-message service."
+        },
+        {
+          "title": "Go specification: select",
+          "url": "https://go.dev/ref/spec",
+          "why_ru": "Независимое обслуживание control и wake channels.",
+          "why_en": "Separate control and wake channel service."
+        }
+      ],
+      "post_scope_note_ru": "Ошибки маршрута, deadline, stale generation и blanket stash относятся к прикладному протоколу. Они не означают deadlock механизма Message. Все handlers завершают текущий turn; результаты приходят штатными сообщениями, без LMX synchronized или ожидания потока.",
+      "post_scope_note_en": "Routing, deadline, stale-generation and blanket-stash mistakes are application protocol errors, not Message scheduling deadlocks. Handlers finish their turns and receive ordinary later messages; no LMX synchronized or thread wait is introduced."
+    },
+    {
+      "id": 111,
+      "name": "Phased Message Lifecycle",
+      "slug": "phased_message_lifecycle",
+      "summary_ru": "Живой parent сначала завершает работу детей, затем закрывает их, затем закрывается сам.",
+      "summary_en": "A live parent drains children, then closes them, then closes itself.",
+      "scenario_ru": "Два текущих ребёнка получают drain. Каждый запускает native flush и продолжает query; flushed освобождает завершённый native ресурс и посылает drained. После двух drained parent запрашивает закрытие children, после двух stopped публикует итог и закрывает себя.",
+      "scenario_en": "Two current children receive drain. Each starts native flush and keeps serving query; flushed releases the completed native resource and sends drained. After both drained events the parent requests child close; after both stopped events it publishes the result and closes itself.",
+      "expected_ru": "Порядок phase parent: 0→1→2→3; duplicate и чужое epoch ничего не уменьшают. Query работает в phases 1 и 2. Итог ровно один, и нет запроса или ожидания из уже остановленного parent/poststop.",
+      "expected_en": "Parent phases progress 0→1→2→3; duplicates and foreign epochs do not decrement counts. Query works in phases 1 and 2. Exactly one result is published, with no request or wait from a stopped parent/poststop.",
+      "comparison_ru": "Это дополнение к 089 Supervision Tree: рестарт и его budget остаются отдельной политикой. Go явно хранит phases и seen arrays, Erlang подтверждает остановку monitor references/DOWN, LMX использует штатный lifecycle provider. Фаза остановки не переносится в poststop.",
+      "comparison_en": "This complements 089 Supervision Tree; restart and its budget remain separate policy. Go stores phases/seen arrays, Erlang confirms termination through monitor references/DOWN, and LMX uses its ordinary lifecycle provider. Shutdown coordination never moves into poststop.",
+      "limits_ru": "Ограниченный graceful fixture: оба ребёнка живы при beginStop, все native flush завершаются, host сообщает actual stopped. Неожиданный hard crash, watchdog и restart — дополнительные сценарии 089/host provider, не фиктивный успешный drain. Flush failure передаётся как failed итог после корректного освобождения ресурса.",
+      "limits_en": "Bounded graceful fixture: both children are alive at beginStop, native flushes complete, and the host reports actual stopped. Hard crash, watchdog and restart remain separate 089/host scenarios, never a fabricated successful drain. A flush failure yields a failed result after resources are released.",
+      "scope": "protocol",
+      "kind": "pattern",
+      "lmx_notes_ru": "Исполняемые экземпляры создаются штатным R0/Message host profile. Message не вводит deadlock; синхронного ожидания потока и LMX synchronized здесь нет. post сам связывает адресованный обмен и корреляцию. Поля token/epoch относятся к прикладному deadline или поколению ресурса, не реализуют второй scheduler. events — nonblocking owner-local observer для проверяемого trace; он не обращается синхронно к чужому Message. Физические timer/lifecycle/native adapters остаются REQUIRE_IMPLEMENTATION. LMX parser/type/runtime: NOT_RUN. lifecycle.requestChildrenClose(epoch) только инициирует штатное закрытие двух прямых Thread.children; stopped(id,epoch) доставляется после действительной остановки и cleanup. Прикладные first/second являются адресатами drain, не вторым membership registry. requestOwnerClose инициируется в живом handler только после всех stopped. native.beginFlush возвращает admission сразу и позже посылает flushed(epoch,ok); releaseCompleted не ждёт будущего callback. childId 0/1 и generation задаёт host при создании отдельных экземпляров.",
+      "lmx_notes_en": "Executable instances use the ordinary R0/Message host profile. Message itself does not introduce deadlock; no blocking thread wait or LMX synchronized is added. post already binds addressed exchange and correlation. token/epoch are application deadline or resource-generation data, not a second scheduler. events is a nonblocking owner-local observation sink, never a synchronous call into another Message. Physical timer/lifecycle/native adapters remain REQUIRE_IMPLEMENTATION. LMX parser/type/runtime: NOT_RUN. requestChildrenClose(epoch) only initiates ordinary close of the two direct Thread.children; stopped arrives after actual termination and cleanup. first/second are drain destinations, not another membership registry. requestOwnerClose starts from the live handler after all stopped events. beginFlush admits immediately and later sends flushed; releaseCompleted never waits for another callback. The host binds childId 0/1 and the generation when creating distinct instances.",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "# DRAFT. A live parent drains, requests child close, then closes itself.\nPhasedParentMessage:\n    int: childId\n    i64: epoch\n    int: ok\n    @: first\n    @: second\n    @: lifecycle\n    @: events\n    private: i64: generation 1\n    private: int: phase 0\n    private: int: failed 0\n    private: int: pendingDrain 2\n    private: int: pendingStop 2\n    private: []int: drainedSeen [0 0]\n    private: []int: stoppedSeen [0 0]\n    beginStop:\n        if: node\\phase != 0\n            return\n        node\\phase := 1\n        post:\n            ask:\n                first\\drain(epoch := node\\generation)\n                second\\drain(epoch := node\\generation)\n    drained:\n        if: node\\phase != 1 || epoch != node\\generation || childId < 0 || childId > 1\n            return\n        if: node\\drainedSeen[childId] = 1\n            return\n        node\\drainedSeen[childId] := 1\n        if: ok != 1\n            node\\failed := 1\n        node\\pendingDrain -= 1\n        if: node\\pendingDrain = 0\n            node\\phase := 2\n            lifecycle\\requestChildrenClose(node\\generation)\n    stopped:\n        if: node\\phase != 2 || epoch != node\\generation || childId < 0 || childId > 1\n            return\n        if: node\\stoppedSeen[childId] = 1\n            return\n        node\\stoppedSeen[childId] := 1\n        node\\pendingStop -= 1\n        if: node\\pendingStop = 0\n            node\\phase := 3\n            events\\finished(1 - node\\failed)\n            lifecycle\\requestOwnerClose()\n    query:\n        events\\status(node\\phase; node\\pendingDrain; node\\pendingStop)\n\nPhasedChildMessage:\n    i64: epoch\n    int: ok\n    int: value\n    @: parentAddress\n    @: selfAddress\n    @: native\n    @: events\n    private: int: childId\n    private: i64: generation 1\n    private: int: phase 0\n    work:\n        if: node\\phase != 0\n            events\\rejected()\n            return\n        events\\value(value * 2)\n    drain:\n        if: node\\phase != 0 || epoch != node\\generation\n            return\n        node\\phase := 1\n        native\\beginFlush(node\\generation; selfAddress)\n    flushed:\n        if: node\\phase != 1 || epoch != node\\generation\n            return\n        native\\releaseCompleted()\n        node\\phase := 2\n        post:\n            ask:\n                parentAddress\\drained(childId := node\\childId; epoch := node\\generation; ok := ok)\n    query:\n        events\\childStatus(node\\childId; node\\phase)\n",
+          "notes_ru": "Исполняемые экземпляры создаются штатным R0/Message host profile. Message не вводит deadlock; синхронного ожидания потока и LMX synchronized здесь нет. post сам связывает адресованный обмен и корреляцию. Поля token/epoch относятся к прикладному deadline или поколению ресурса, не реализуют второй scheduler. events — nonblocking owner-local observer для проверяемого trace; он не обращается синхронно к чужому Message. Физические timer/lifecycle/native adapters остаются REQUIRE_IMPLEMENTATION. LMX parser/type/runtime: NOT_RUN. lifecycle.requestChildrenClose(epoch) только инициирует штатное закрытие двух прямых Thread.children; stopped(id,epoch) доставляется после действительной остановки и cleanup. Прикладные first/second являются адресатами drain, не вторым membership registry. requestOwnerClose инициируется в живом handler только после всех stopped. native.beginFlush возвращает admission сразу и позже посылает flushed(epoch,ok); releaseCompleted не ждёт будущего callback. childId 0/1 и generation задаёт host при создании отдельных экземпляров.",
+          "notes_en": "Executable instances use the ordinary R0/Message host profile. Message itself does not introduce deadlock; no blocking thread wait or LMX synchronized is added. post already binds addressed exchange and correlation. token/epoch are application deadline or resource-generation data, not a second scheduler. events is a nonblocking owner-local observation sink, never a synchronous call into another Message. Physical timer/lifecycle/native adapters remain REQUIRE_IMPLEMENTATION. LMX parser/type/runtime: NOT_RUN. requestChildrenClose(epoch) only initiates ordinary close of the two direct Thread.children; stopped arrives after actual termination and cleanup. first/second are drain destinations, not another membership registry. requestOwnerClose starts from the live handler after all stopped events. beginFlush admits immediately and later sends flushed; releaseCompleted never waits for another callback. The host binds childId 0/1 and the generation when creating distinct instances.",
+          "metrics": {
+            "characters": 1562,
+            "nonblank_lines": 80,
+            "utf8_bytes": 2384,
+            "sha256": "87dded3374cc792ab15017491b96c5afa8cc537164a1ad41da9857c43abbc526"
+          }
+        },
+        {
+          "language": "Go",
+          "code": "type PhaseEvent struct { Kind, Child, Value int; Epoch int64; OK bool }\ntype ParentPorts struct {\n    Drain func(int, int64)\n    CloseChildren func(int64)\n    CloseOwner func()\n    Finished func(bool)\n    Status func(int, int, int)\n}\nfunc RunPhaseParent(in <-chan PhaseEvent, epoch int64, p ParentPorts) {\n    phase, drain, stop := 0, 2, 2\n    failed := false\n    var drained, stopped [2]bool\n    for e := range in {\n        switch e.Kind {\n        case 0:\n            if phase != 0 { continue }\n            phase = 1; p.Drain(0, epoch); p.Drain(1, epoch)\n        case 1:\n            if phase != 1 || e.Epoch != epoch || e.Child < 0 || e.Child > 1 || drained[e.Child] { continue }\n            drained[e.Child] = true; failed = failed || !e.OK; drain--\n            if drain == 0 { phase = 2; p.CloseChildren(epoch) }\n        case 2:\n            if phase != 2 || e.Epoch != epoch || e.Child < 0 || e.Child > 1 || stopped[e.Child] { continue }\n            stopped[e.Child] = true; stop--\n            if stop == 0 { phase = 3; p.Finished(!failed); p.CloseOwner() }\n        case 3:\n            p.Status(phase, drain, stop)\n        }\n    }\n}\ntype ChildPorts struct {\n    Flush func(int64)\n    ReleaseCompleted func()\n    Drained func(int, int64, bool)\n    Value func(int)\n    Rejected func()\n    Status func(int, int)\n}\nfunc RunPhaseChild(in <-chan PhaseEvent, id int, epoch int64, p ChildPorts) {\n    phase := 0\n    for e := range in {\n        switch e.Kind {\n        case 0:\n            if phase != 0 { p.Rejected() } else { p.Value(e.Value * 2) }\n        case 1:\n            if phase == 0 && e.Epoch == epoch { phase = 1; p.Flush(epoch) }\n        case 2:\n            if phase == 1 && e.Epoch == epoch {\n                p.ReleaseCompleted(); phase = 2; p.Drained(id, epoch, e.OK)\n            }\n        case 3:\n            p.Status(id, phase)\n        }\n    }\n}\n",
+          "notes_ru": "Полные parent/child handlers. Ports асинхронно маршрутизируют Drain, Flush, Drained и actual stopped. CloseChildren/CloseOwner инициируют lifecycle без join в handler. Host задаёт generation и два child IDs.",
+          "notes_en": "Complete parent/child channel handlers; ports asynchronously route Drain, Flush, Drained and actual stopped events. CloseChildren/CloseOwner initiate lifecycle requests without joining a goroutine inside a handler. The host supplies generation and two child IDs.",
+          "metrics": {
+            "characters": 1233,
+            "nonblank_lines": 55,
+            "utf8_bytes": 1856,
+            "sha256": "468e15438a13a03b26590a03f4faaf504fe11aacb98082b19727e33c0a1f4b38"
+          }
+        },
+        {
+          "language": "Erlang",
+          "code": "phase_parent(A, B, Observer) ->\n    RA = monitor(process, A), RB = monitor(process, B),\n    phase_loop(A, B, RA, RB, Observer, 1, 0, #{}, #{}, false).\nphase_loop(A, B, RA, RB, Observer, Gen, Phase, Drained, Stopped, Failed) ->\n    receive\n        begin_stop when Phase =:= 0 ->\n            A ! {drain, self(), Gen}, B ! {drain, self(), Gen},\n            phase_loop(A,B,RA,RB,Observer,Gen,1,Drained,Stopped,Failed);\n        {drained, Id, Gen, _} when Phase =:= 1, is_map_key(Id, Drained) ->\n            phase_loop(A,B,RA,RB,Observer,Gen,Phase,Drained,Stopped,Failed);\n        {drained, Id, Gen, OK} when Phase =:= 1, Id >= 0, Id =< 1 ->\n            D = Drained#{Id => true}, F = Failed orelse not OK,\n            P = case map_size(D) of\n                2 -> A ! stop, B ! stop, 2;\n                _ -> 1\n            end,\n            phase_loop(A,B,RA,RB,Observer,Gen,P,D,Stopped,F);\n        {'DOWN', Ref, process, Pid, _} when Phase =:= 2,\n              ((Ref =:= RA andalso Pid =:= A) orelse\n               (Ref =:= RB andalso Pid =:= B)) ->\n            S = Stopped#{Ref => true},\n            case map_size(S) of\n                2 -> Observer ! {finished, not Failed}, ok;\n                _ -> phase_loop(A,B,RA,RB,Observer,Gen,Phase,Drained,S,Failed)\n            end;\n        query ->\n            Observer ! {status, Phase, 2-map_size(Drained), 2-map_size(Stopped)},\n            phase_loop(A,B,RA,RB,Observer,Gen,Phase,Drained,Stopped,Failed);\n        _ -> phase_loop(A,B,RA,RB,Observer,Gen,Phase,Drained,Stopped,Failed)\n    end.\nphase_child(Id, Gen, Observer, Flush, Release) ->\n    phase_child_loop(Id,Gen,Observer,Flush,Release,0,undefined).\nphase_child_loop(Id,Gen,Observer,Flush,Release,Phase,Parent) ->\n    receive\n        {work, Value} when Phase =:= 0 ->\n            Observer ! {value, Value*2},\n            phase_child_loop(Id,Gen,Observer,Flush,Release,Phase,Parent);\n        {work, _} ->\n            Observer ! rejected,\n            phase_child_loop(Id,Gen,Observer,Flush,Release,Phase,Parent);\n        {drain, From, Gen} when Phase =:= 0 ->\n            Flush(Gen, self()),\n            phase_child_loop(Id,Gen,Observer,Flush,Release,1,From);\n        {flushed, Gen, OK} when Phase =:= 1 ->\n            Release(), Parent ! {drained, Id, Gen, OK},\n            phase_child_loop(Id,Gen,Observer,Flush,Release,2,Parent);\n        query ->\n            Observer ! {child_status,Id,Phase},\n            phase_child_loop(Id,Gen,Observer,Flush,Release,Phase,Parent);\n        stop when Phase =:= 2 -> ok;\n        _ -> phase_child_loop(Id,Gen,Observer,Flush,Release,Phase,Parent)\n    end.\n",
+          "notes_ru": "Parent и children — отдельные процессы. Parent использует настоящие monitors и сверяет monitor reference вместе с PID. Flush — явно поставленный async native adapter; Release вызывается после completion. Child не вызывает блокирующий stop своего supervisor.",
+          "notes_en": "Parent and children are separate ordinary processes. Parent uses real process monitors and matches both monitor reference and PID. Flush is an explicitly supplied asynchronous native adapter, Release returns after completed flush cleanup. No child calls a blocking parent supervisor stop.",
+          "metrics": {
+            "characters": 1858,
+            "nonblank_lines": 52,
+            "utf8_bytes": 2586,
+            "sha256": "6a4508192282ca808cd61042ec374f871eca8f9f1917bc7e42458bc2c38dacf1"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Erlang supervisor behavior",
+          "url": "https://www.erlang.org/doc/system/sup_princ.html",
+          "why_ru": "Shutdown является фазой жизненного цикла, restart — отдельная стратегия.",
+          "why_en": "Shutdown is a lifecycle phase and restart a separate strategy."
+        },
+        {
+          "title": "Go pipelines and cancellation",
+          "url": "https://go.dev/blog/pipelines",
+          "why_ru": "Прекращение admission отличается от завершения уже запущенной работы.",
+          "why_en": "Stopping admission differs from completing already running work."
+        }
+      ],
+      "post_scope_note_ru": "Ошибки маршрута, deadline, stale generation и blanket stash относятся к прикладному протоколу. Они не означают deadlock механизма Message. Все handlers завершают текущий turn; результаты приходят штатными сообщениями, без LMX synchronized или ожидания потока.",
+      "post_scope_note_en": "Routing, deadline, stale-generation and blanket-stash mistakes are application protocol errors, not Message scheduling deadlocks. Handlers finish their turns and receive ordinary later messages; no LMX synchronized or thread wait is introduced."
+    },
+    {
+      "id": 112,
+      "name": "External Blocking Adapter",
+      "slug": "external_blocking_adapter",
+      "summary_ru": "Физический блокирующий вызов вынесен в native L2 worker; LMX получает обычный Message completion.",
+      "summary_en": "A physically blocking call runs in a native L2 worker; LMX receives an ordinary Message completion.",
+      "scenario_ru": "Принять один native job, обслужить query, начать close, отклонить новые jobs. Native completion возвращает действительный ok/value после освобождения native holds; затем owner освобождает idle adapter и закрывается.",
+      "scenario_en": "Admit one native job, serve query, begin close and reject new jobs. A native completion reports real ok/value after releasing native holds; then the owner releases the idle adapter and closes.",
+      "expected_ru": "Пока native call не завершён, active=1 и query обслуживается. beginClose не считает job завершённым. Один completion даёт один итог; stale token ничего не меняет; releaseIdle и close происходят только при active=0.",
+      "expected_en": "While the native call runs, active is one and query remains serviceable. beginClose does not mark the job complete. One completion yields one result; a stale token changes nothing. releaseIdle/close occur only when inactive.",
+      "comparison_ru": "Go запускает ровно одну goroutine с действительным supplied blocking function и bounded completion channel; Erlang запускает отдельный процесс, а native Call обязан быть port либо корректно dirty-scheduled NIF. Сам spawn не делает произвольный блокирующий NIF безопасным. LMX-автомат не маскирует отсутствие физического adapter.",
+      "comparison_en": "Go starts one goroutine with the supplied blocking function and a bounded completion channel. Erlang starts a process, but native Call must use a port or correctly dirty-scheduled NIF; spawn alone does not make an arbitrary blocking NIF safe. The LMX state machine does not hide its missing physical adapter.",
+      "limits_ru": "Один job и один owner. Hard worker crash требует отдельного failure completion либо явного unknown outcome от host; force-kill native thread и подтверждённая отмена не обещаны. В данном fixture call в итоге возвращает либо выдаёт перехваченный failure. Числовой value при ok=0 не считается успешным результатом.",
+      "limits_en": "One job and owner. Hard worker crash requires a separate failure completion or explicit unknown outcome; force-killing a native thread and confirmed cancellation are not promised. This fixture's call eventually returns or raises a captured failure. A value with ok=false is inactive.",
+      "scope": "protocol",
+      "kind": "pattern",
+      "lmx_notes_ru": "Исполняемые экземпляры создаются штатным R0/Message host profile. Message не вводит deadlock; синхронного ожидания потока и LMX synchronized здесь нет. post сам связывает адресованный обмен и корреляцию. Поля token/epoch относятся к прикладному deadline или поколению ресурса, не реализуют второй scheduler. events — nonblocking owner-local observer для проверяемого trace; он не обращается синхронно к чужому Message. Физические timer/lifecycle/native adapters остаются REQUIRE_IMPLEMENTATION. LMX parser/type/runtime: NOT_RUN. native.submit(token,value,selfAddress):int — узкая L2/host граница: 1 означает admission, 0 отказ без запуска. Она копирует вход, удерживает ресурсы и немедленно возвращается; blocking I/O, C API locks и OS waits исполняются только вне Message owner в выбранном native executor/process. completed(token,ok,value) публикуется после возврата native call и освобождения его holds, не синхронным callback в submit. releaseIdle допустим лишь после последнего completion. c.* и физические synchronization primitives остаются L2. Успешная admission не является successful job result.",
+      "lmx_notes_en": "Executable instances use the ordinary R0/Message host profile. Message itself does not introduce deadlock; no blocking thread wait or LMX synchronized is added. post already binds addressed exchange and correlation. token/epoch are application deadline or resource-generation data, not a second scheduler. events is a nonblocking owner-local observation sink, never a synchronous call into another Message. Physical timer/lifecycle/native adapters remain REQUIRE_IMPLEMENTATION. LMX parser/type/runtime: NOT_RUN. native.submit(token,value,selfAddress):int is a narrow L2/host boundary: one admits and zero rejects without launching. It copies input, retains resources and returns immediately. Blocking I/O, C API locks and OS waits run outside the Message owner in the selected native executor/process. completed is posted after the native call returns and its holds are released, never as a reentrant submit callback. releaseIdle runs only after the last completion. c.* and physical synchronization remain L2. Admission is not job success.",
+      "listings": [
+        {
+          "language": "LMX",
+          "code": "# DRAFT. submit is nonblocking; the physical blocking call belongs to native L2.\nBlockingClientMessage:\n    int: value\n    i64: token\n    int: ok\n    @: native\n    @: selfAddress\n    @: lifecycle\n    @: events\n    private: int: phase 0\n    private: int: active 0\n    private: i64: next 0\n    private: i64: current 0\n    submit:\n        if: node\\phase != 0 || node\\active = 1\n            events\\rejected(1)\n            return\n        if: node\\next = 9223372036854775807\n            events\\rejected(2)\n            return\n        node\\next += 1\n        node\\current := node\\next\n        node\\active := 1\n        private: int: admitted native\\submit(node\\current; value; selfAddress)\n        if: admitted != 1\n            node\\active := 0\n            events\\rejected(3)\n    completed:\n        if: node\\active = 0 || token != node\\current\n            return\n        node\\active := 0\n        events\\finished(token; ok; value)\n        if: node\\phase = 1\n            finishClose()\n    beginClose:\n        if: node\\phase != 0\n            return\n        node\\phase := 1\n        if: node\\active = 0\n            finishClose()\n    finishClose:\n        if: node\\phase != 1 || node\\active != 0\n            return\n        native\\releaseIdle()\n        node\\phase := 2\n        events\\closed()\n        lifecycle\\requestOwnerClose()\n    query:\n        events\\status(node\\phase; node\\active)\n",
+          "notes_ru": "Исполняемые экземпляры создаются штатным R0/Message host profile. Message не вводит deadlock; синхронного ожидания потока и LMX synchronized здесь нет. post сам связывает адресованный обмен и корреляцию. Поля token/epoch относятся к прикладному deadline или поколению ресурса, не реализуют второй scheduler. events — nonblocking owner-local observer для проверяемого trace; он не обращается синхронно к чужому Message. Физические timer/lifecycle/native adapters остаются REQUIRE_IMPLEMENTATION. LMX parser/type/runtime: NOT_RUN. native.submit(token,value,selfAddress):int — узкая L2/host граница: 1 означает admission, 0 отказ без запуска. Она копирует вход, удерживает ресурсы и немедленно возвращается; blocking I/O, C API locks и OS waits исполняются только вне Message owner в выбранном native executor/process. completed(token,ok,value) публикуется после возврата native call и освобождения его holds, не синхронным callback в submit. releaseIdle допустим лишь после последнего completion. c.* и физические synchronization primitives остаются L2. Успешная admission не является successful job result.",
+          "notes_en": "Executable instances use the ordinary R0/Message host profile. Message itself does not introduce deadlock; no blocking thread wait or LMX synchronized is added. post already binds addressed exchange and correlation. token/epoch are application deadline or resource-generation data, not a second scheduler. events is a nonblocking owner-local observation sink, never a synchronous call into another Message. Physical timer/lifecycle/native adapters remain REQUIRE_IMPLEMENTATION. LMX parser/type/runtime: NOT_RUN. native.submit(token,value,selfAddress):int is a narrow L2/host boundary: one admits and zero rejects without launching. It copies input, retains resources and returns immediately. Blocking I/O, C API locks and OS waits run outside the Message owner in the selected native executor/process. completed is posted after the native call returns and its holds are released, never as a reentrant submit callback. releaseIdle runs only after the last completion. c.* and physical synchronization remain L2. Admission is not job success.",
+          "metrics": {
+            "characters": 877,
+            "nonblank_lines": 49,
+            "utf8_bytes": 1371,
+            "sha256": "67dc3251c18326179cadc35857cd308024c2edf9e94cfa676088a31129ca2e02"
+          }
+        },
+        {
+          "language": "Go",
+          "code": "type BlockingEvent struct { Kind, Value int }\ntype BlockingResult struct { Token int64; OK bool; Value int }\nfunc RunBlocking(in <-chan BlockingEvent, call func(int) (int, error),\n    emit func(string, int64, bool, int), releaseIdle func()) {\n    done := make(chan BlockingResult, 1)\n    var next int64\n    active, closing := false, false\n    finish := func() { releaseIdle(); emit(\"closed\", 0, true, 0) }\n    for {\n        select {\n        case e, open := <-in:\n            if !open { in = nil; closing = true; if !active { finish(); return }; continue }\n            switch e.Kind {\n            case 0:\n                if active || closing { emit(\"rejected\", 0, false, 1); continue }\n                if next == 9223372036854775807 { emit(\"rejected\", 0, false, 2); continue }\n                next++; active = true\n                go func(token int64, value int) {\n                    result := BlockingResult{Token: token}\n                    defer func() { if recover() != nil { result.OK = false }; done <- result }()\n                    v, err := call(value)\n                    result.OK, result.Value = err == nil, v\n                }(next, e.Value)\n            case 1:\n                closing = true\n                if !active { finish(); return }\n            case 2:\n                emit(\"status\", next, active, map[bool]int{false:0,true:1}[closing])\n            }\n        case result := <-done:\n            if !active || result.Token != next { continue }\n            active = false\n            emit(\"finished\", result.Token, result.OK, result.Value)\n            if closing { finish(); return }\n        }\n    }\n}\n",
+          "notes_ru": "Полный owner loop и goroutine wrapper. call — действительная supplied blocking function, releaseIdle освобождает ресурс, emit не блокирует. Panic даёт failed completion. У done channel один slot для единственного принятого job. Компиляция и исполнение NOT_RUN.",
+          "notes_en": "Complete owner loop and goroutine wrapper; call is the real supplied blocking function, releaseIdle is the resource finalizer, emit is a nonblocking observer. A panic becomes a failed completion. The buffered done channel has one slot for the single admitted job. Compiler/runtime NOT_RUN.",
+          "metrics": {
+            "characters": 1031,
+            "nonblank_lines": 37,
+            "utf8_bytes": 1620,
+            "sha256": "0a39b8e3a7f32b5ec0e2f16c80ae786bbde53e88698dd3ec9fcbf7f902e88c74"
+          }
+        },
+        {
+          "language": "Erlang",
+          "code": "blocking_client(Call, ReleaseIdle, Observer) ->\n    blocking_loop(Call, ReleaseIdle, Observer, 0, false, false).\nblocking_loop(Call, ReleaseIdle, Observer, Token, Active, Closing) ->\n    receive\n        {submit, _} when Active; Closing ->\n            Observer ! {rejected, 1},\n            blocking_loop(Call,ReleaseIdle,Observer,Token,Active,Closing);\n        {submit, _} when Token =:= 9223372036854775807 ->\n            Observer ! {rejected, 2},\n            blocking_loop(Call,ReleaseIdle,Observer,Token,Active,Closing);\n        {submit, Value} ->\n            Next = Token+1, Parent = self(),\n            spawn(fun() ->\n                Result = try Call(Value) of V -> {true,V}\n                         catch _:_ -> {false,0} end,\n                Parent ! {completed, Next, Result}\n            end),\n            blocking_loop(Call,ReleaseIdle,Observer,Next,true,Closing);\n        {completed, Token, {OK, Value}} when Active ->\n            Observer ! {finished, Token, OK, Value},\n            case Closing of\n                true -> ReleaseIdle(), Observer ! closed, ok;\n                false -> blocking_loop(Call,ReleaseIdle,Observer,Token,false,false)\n            end;\n        begin_close when Active ->\n            blocking_loop(Call,ReleaseIdle,Observer,Token,true,true);\n        begin_close ->\n            ReleaseIdle(), Observer ! closed, ok;\n        query ->\n            Observer ! {status, Closing, Active},\n            blocking_loop(Call,ReleaseIdle,Observer,Token,Active,Closing);\n        _ -> blocking_loop(Call,ReleaseIdle,Observer,Token,Active,Closing)\n    end.\n",
+          "notes_ru": "Полный process loop и worker invocation. Call обязан использовать внешний port или корректно dirty-scheduled NIF. Обычные exceptions превращаются в failure; неконтролируемая гибель процесса/VM требует отдельного host failure signal.",
+          "notes_en": "Complete ordinary process loop and worker invocation; Call must be an external port-backed operation or an appropriately scheduled dirty NIF. Normal exceptions become failure. An uncatchable process/VM termination is outside the bounded fixture and requires host failure signaling.",
+          "metrics": {
+            "characters": 1109,
+            "nonblank_lines": 33,
+            "utf8_bytes": 1577,
+            "sha256": "47c19cca7fc69528ef2d99dde0f8fcd072f20ecffd437076b96416b4e086dbf0"
+          }
+        }
+      ],
+      "sources": [
+        {
+          "title": "Erlang native functions: dirty schedulers",
+          "url": "https://www.erlang.org/doc/apps/erts/erl_nif.html",
+          "why_ru": "Длительная native работа требует соответствующей physical execution boundary.",
+          "why_en": "Long native work requires the appropriate physical execution boundary."
+        },
+        {
+          "title": "Erlang ports",
+          "url": "https://www.erlang.org/doc/system/c_port.html",
+          "why_ru": "Внешний процесс и framed native completion.",
+          "why_en": "External processes and framed native completion."
+        },
+        {
+          "title": "Go pipelines and cancellation",
+          "url": "https://go.dev/blog/pipelines",
+          "why_ru": "Завершение уже принятой работы и жизненный цикл producer/consumer.",
+          "why_en": "Completion of admitted work and producer/consumer lifetime."
+        }
+      ],
+      "post_scope_note_ru": "Ошибки маршрута, deadline, stale generation и blanket stash относятся к прикладному протоколу. Они не означают deadlock механизма Message. Все handlers завершают текущий turn; результаты приходят штатными сообщениями, без LMX synchronized или ожидания потока.",
+      "post_scope_note_en": "Routing, deadline, stale-generation and blanket-stash mistakes are application protocol errors, not Message scheduling deadlocks. Handlers finish their turns and receive ordinary later messages; no LMX synchronized or thread wait is introduced."
+    }
+  ]
+}

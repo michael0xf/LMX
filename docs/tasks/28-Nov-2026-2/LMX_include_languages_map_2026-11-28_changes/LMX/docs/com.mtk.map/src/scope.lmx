@@ -1,0 +1,245 @@
+# DRAFT. The shared ISrc/Item/Cursor facade; Java overloads select a profile
+# here rather than duplicating getString/getInt/getObject/link resolution.
+
+MapScopeContext:
+    @: cursor
+    int: create 0
+    required: cursor
+    return: @
+    context:
+        throws: copy(MapThrows)
+        private: int: position MapCursor\position(cursor)
+        private: @: tag MapTag\at(cursor\document; position)
+        if: tag = MapNil
+            if: create = 0
+                return: MapNil
+            tag := MapTag\create(cursor\document; MapKeys\intern(cursor\document; "document"); 0; MapTree\length(cursor\document))
+        private: @: item (copy(MapItemModel))
+        item\document := cursor\document
+        item\cursor := cursor
+        item\tail := cursor
+        item\tag := tag
+        item\key := tag\key
+        return: item
+
+MapScopeFind:
+    @: cursor
+    []char: name
+    int: mode 36
+    int: create 0
+    required: cursor name
+    return: @
+    find:
+        throws: copy(MapThrows)
+        private: @: context MapScopeContext\context(cursor; create)
+        if: context = MapNil
+            return: MapNil
+        return: MapQuery\lookup(context; MapKeys\intern(cursor\document; name); mode; create)
+
+MapScopeRead:
+    @: cursor
+    []char: name
+    int: mode 36
+    int: create 0
+    required: cursor name
+    return: @
+    read:
+        throws: copy(MapThrows)
+        private: @: item MapScopeFind\find(cursor; name; mode; create)
+        if: item = MapNil
+            return: MapNil
+        return: MapItem\value(item; create)
+
+MapScopeInteger:
+    @: cursor
+    []char: name
+    int: mode 36
+    int: create 0
+    required: cursor name
+    return: int
+    read:
+        throws: copy(MapThrows)
+        private: @: item MapScopeFind\find(cursor; name; mode; create)
+        if: item = MapNil
+            return: 0
+        return: MapItem\integer(item; create)
+
+MapScopeString:
+    @: cursor
+    []char: name
+    int: mode 36
+    int: create 0
+    required: cursor name
+    return: []char
+    read:
+        throws: copy(MapThrows)
+        private: @: item MapScopeFind\find(cursor; name; mode; create)
+        if: item = MapNil
+            return: ""
+        return: MapItem\string(item; create)
+
+MapScopeProject:
+    @: cursor
+    []char: name
+    @: accept
+    int: create 0
+    required: cursor name accept
+    return: @
+    project:
+        throws: copy(MapThrows)
+        private: @: value MapScopeRead\read(cursor; name; create := create)
+        if: value = MapNil
+            return: MapNil
+        return: accept(value)
+
+MapScopeWrite:
+    @: cursor
+    []char: name
+    @: value
+    int: create 1
+    int: local 1
+    required: cursor name value
+    return: @
+    write:
+        throws: copy(MapThrows)
+        private: int: mode 36
+        if: local != 0
+            mode := 37
+        private: @: item MapScopeFind\find(cursor; name; mode; create)
+        if: item = MapNil
+            return: MapNil
+        return: MapItem\setValue(item; value)
+
+MapScopeLink:
+    @: cursor
+    []char: text
+    int: create 0
+    int: nearest 0
+    required: cursor text
+    return: @
+    resolve:
+        throws: copy(MapThrows)
+        private: @: item MapScopeContext\context(cursor; create)
+        if: item = MapNil
+            return: MapNil
+        private: @: link MapLinks\parse(cursor\document; text)
+        return: MapLinks\resolve(item; link; create; nearest)
+
+MapScopeProperties:
+    @: cursor
+    @: names
+    required: cursor names
+    return: @
+    collect:
+        throws: copy(MapThrows)
+        private: @: result MapTable\create()
+        private: int: i 0
+        while: i < MapVector\size(names)
+            private: @: name MapVector\get(names; i)
+            private: @: value MapScopeRead\read(cursor; name)
+            if: value != MapNil
+                MapTable\put(result; MapKeys\intern(cursor\document; name); value)
+            i += 1
+        return: result
+
+MapScopeRun:
+    @: cursor
+    []char: name
+    required: cursor name
+    return: int
+    run:
+        throws: copy(MapThrows)
+        private: @: item MapScopeFind\find(cursor; name)
+        if: item = MapNil
+            return: 0
+        return: MapFactory\run(item)
+
+MapItemInside:
+    @: item
+    @: tag
+    int: overlap 0
+    required: item tag
+    return: int
+    inside:
+        throws: copy(MapThrows)
+        if: item = tag || item\document != tag\document
+            return: 0
+        private: int: a MapCursor\position(item\cursor)
+        private: int: b MapCursor\position(item\tail)
+        private: int: c MapCursor\position(tag\cursor)
+        private: int: d MapCursor\position(tag\tail)
+        if: overlap != 0
+            return: a < d && b > c
+        return: a >= c && b <= d
+
+MapTagCopyAttributes:
+    @: source
+    @: target
+    required: source target
+    return: @
+    copyTo:
+        throws: copy(MapThrows)
+        if: source\document != target\document
+            if: source\valueKind = 2
+                throw: MapFailure("cross-document attributes need snapshot mapping")
+            private: int: j 0
+            while: j < MapVector\size(source\attributes)
+                if: source\attributes[j]\valueKind = 2
+                    throw: MapFailure("cross-document attributes need snapshot mapping")
+                j += 1
+        ---
+        MapTree\begin(target\document; 3)
+        private: @: value source\value
+        if: source\valueKind = 1
+            value := MapLinks\clone(target\document; value)
+        if: source\valueKind = 2 && source\document != target\document
+            throw: MapFailure("copy external Item reference through snapshot mapping")
+        MapItem\setValue(target; value; source\valueKind)
+        private: int: i 0
+        while: i < MapVector\size(source\attributes)
+            private: @: item MapVector\get(source\attributes; i)
+            private: @: targetKey MapKeys\intern(target\document; item\key\text)
+            value := item\value
+            if: item\valueKind = 1
+                value := MapLinks\clone(target\document; value)
+            if: item\valueKind = 2 && source\document != target\document
+                throw: MapFailure("copy external Item reference through snapshot mapping")
+            private: @: copied MapTag\setAttribute(target; targetKey; MapNil; item\local)
+            MapItem\setValue(copied; value; item\valueKind)
+            i += 1
+        MapTree\commit(target\document)
+        return: target
+
+MapTagText:
+    @: tag
+    required: tag
+    return: []char
+    text:
+        throws: copy(MapThrows)
+        private: @: bytes MapBytes\allocate()
+        private: int: begin MapCursor\position(tag\cursor)
+        private: int: end MapCursor\position(tag\tail)
+        private: int: i begin
+        while: i < end
+            private: @: record MapTree\itemAt(tag\document; i)
+            private: int: code \record
+            if: code < 0
+                code += 256
+            MapBytes\append(bytes; code)
+            i += 1
+        return: MapBytes\toText(bytes)
+
+MapScope:
+    @: context MapScopeContext\context
+    @: find MapScopeFind\find
+    @: read MapScopeRead\read
+    @: integer MapScopeInteger\read
+    @: string MapScopeString\read
+    @: project MapScopeProject\project
+    @: write MapScopeWrite\write
+    @: link MapScopeLink\resolve
+    @: properties MapScopeProperties\collect
+    @: run MapScopeRun\run
+    @: inside MapItemInside\inside
+    @: copyAttributes MapTagCopyAttributes\copyTo
+    @: text MapTagText\text

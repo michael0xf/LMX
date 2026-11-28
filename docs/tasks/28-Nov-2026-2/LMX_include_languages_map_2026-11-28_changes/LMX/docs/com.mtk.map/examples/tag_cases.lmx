@@ -1,0 +1,152 @@
+# DRAFT executable cases. Production parser/typechecker/runtime: NOT_RUN.
+# Load every src/*.lmx in the README order, then call MapTagCases\run().
+
+MapExampleDocument:
+    int: amount 12
+    required: amount
+    return: @
+    create:
+        throws: copy(MapThrows)
+        private: @: document MapTree\create(3)
+        MapTree\begin(document; 1)
+        private: int: i 0
+        while: i < amount
+            MapTree\insert(document; i; (65 record))
+            i += 1
+        MapTree\commit(document)
+        return: document
+
+MapTagCases:
+    return: int
+    overlapsAndValues:
+        throws: copy(MapThrows)
+        private: @: document MapExampleDocument\create(12)
+        private: @: color MapKeys\intern(document; "color")
+        private: @: red MapTag\create(document; color; 1; 7; "red")
+        private: @: green MapTag\create(document; color; 4; 10; "green")
+        private: @: overlaps MapQuery\range(document; color; 5; 6; relation := 2)
+        if: length(overlaps) != 2 || MapScope\inside(red; green; overlap := 1) = 0
+            throw: MapFailure("crossing intervals lost")
+        private: @: size MapKeys\intern(document; "size")
+        private: @: local MapTag\setAttribute(red; size; (42 record); local := 1)
+        if: MapItem\integer(local) != 42 || MapTag\getAttribute(red; size) != local
+            throw: MapFailure("local integer attribute")
+        if: length(MapQuery\range(document; size; 0; 12)) != 0
+            throw: MapFailure("local attribute leaked into outer index")
+        MapDictionary\setIndexed(color\dictionary; 1)
+        MapTag\rename(red; MapKeys\intern(document; "style"))
+        if: MapVector\contains(color\dictionary\values; red) != 0
+            throw: MapFailure("renamed value stayed in old index")
+        return: 1
+    crossingAnchors:
+        throws: copy(MapThrows)
+        private: @: document MapExampleDocument\create(12)
+        private: @: color MapKeys\intern(document; "color")
+        private: @: red MapKeys\intern(document; "red")
+        private: @: green MapKeys\intern(document; "green")
+        private: @: a MapAnchors\create(document; 1; 1; headKey := color; closeKey := red; payload := "red")
+        private: @: b MapAnchors\create(document; 3; 1; headKey := color; closeKey := green; payload := "green")
+        private: @: c MapAnchors\create(document; 6; 2; closeKey := red)
+        private: @: d MapAnchors\create(document; 9; 2; closeKey := green)
+        private: int: revision document\revision
+        private: @: result MapAnchors\scan(document)
+        if: length(result\intervals) != 2 || a\partner != c || b\partner != d
+            throw: MapFailure("named closing must preserve crossing intervals")
+        if: MapCursor\position(a\span\tail) != 6 || MapCursor\position(b\span\cursor) != 3
+            throw: MapFailure("Var span positions")
+        if: document\revision != revision
+            throw: MapFailure("derived scan changed source revision")
+        return: 1
+    latestValueAndUnnamedClose:
+        throws: copy(MapThrows)
+        private: @: document MapExampleDocument\create(9)
+        private: @: red MapKeys\intern(document; "red")
+        private: @: a MapAnchors\create(document; 1; 1; headKey := MapKeys\intern(document; "style"); closeKey := red)
+        private: @: b MapAnchors\create(document; 2; 1; headKey := MapKeys\intern(document; "color"); closeKey := red)
+        private: @: c MapAnchors\create(document; 5; 2; closeKey := red)
+        private: @: d MapAnchors\create(document; 7; 2)
+        MapAnchors\scan(document)
+        if: b\partner != c || a\partner != d
+            throw: MapFailure("closing value ignores head and unnamed close uses latest active")
+        return: 1
+    isolatedChildAndSnapshot:
+        throws: copy(MapThrows)
+        private: @: document MapExampleDocument\create(12)
+        private: @: child MapSpan\create(document; 3; 9)
+        private: @: red MapKeys\intern(document; "red")
+        private: @: host MapAnchors\create(document; 2; 3; childDocument := child; sourceTokenChar := 4; rawByteOffset := 6; coordinateKind := 1)
+        child\anchor := host
+        private: @: outer MapAnchors\create(document; 1; 1; closeKey := red)
+        private: @: inner MapAnchors\create(document; 4; 1; closeKey := red; scope := child)
+        private: @: close MapAnchors\create(document; 7; 2; closeKey := red; scope := child)
+        private: @: a MapAnchors\scan(document; scope := child)
+        private: @: b MapAnchors\scan(document)
+        if: inner\partner != close || outer\partner != MapNil || length(b\unclosed) != 1
+            throw: MapFailure("child MIX pairing escaped scope")
+        if: host\sourceTokenChar != 4 || host\rawByteOffset != 6
+            throw: MapFailure("source-token scalar index confused with bytes")
+        private: @: snapshot MapSnapshot\export(document; end := 12)
+        private: @: target MapTree\create(2)
+        private: @: mapping MapSnapshot\import(target; 0; sys\fromLmx(sys\toLmx(snapshot)))
+        private: @: imported MapTable\getInt(mapping; inner\id)
+        private: @: importedClose MapTable\getInt(mapping; close\id)
+        private: @: importedHost MapTable\getInt(mapping; host\id)
+        if: imported\partner != importedClose || imported\scope != importedHost\childDocument
+            throw: MapFailure("snapshot Var/pair/scope reconstruction")
+        if: importedHost\childDocument\document != target
+            throw: MapFailure("snapshot retained foreign document")
+        return: 1
+    collapsedHalfOpenSpan:
+        throws: copy(MapThrows)
+        private: @: document MapExampleDocument\create(6)
+        private: @: tag MapTag\create(document; MapKeys\intern(document; "p0"); 2; 4; beginBias := 1; endBias := 0)
+        private: @: begin tag\cursor
+        private: @: end tag\tail
+        MapTree\begin(document)
+        MapTree\erase(document; 2; 4)
+        MapTag\normalize(document)
+        MapTree\insert(document; 2; (66 record))
+        MapTree\commit(document)
+        if: tag\cursor != begin || tag\tail != end || MapCursor\position(begin) != MapCursor\position(end)
+            throw: MapFailure("collapsed interval inverted or lost endpoint identity")
+        return: 1
+    sameDocumentClone:
+        throws: copy(MapThrows)
+        private: @: document MapExampleDocument\create(9)
+        private: @: target MapTag\create(document; MapKeys\intern(document; "target"); 0; 1)
+        private: @: source MapTag\create(document; MapKeys\intern(document; "source"); 2; 5)
+        private: @: attr MapTag\setAttribute(source; MapKeys\intern(document; "ref"); MapNil)
+        MapItem\setValue(attr; target; 2)
+        private: @: copied MapTag\cloneTo(source; document; 9)
+        private: @: copiedAttr MapTag\getAttribute(copied; attr\key)
+        if: copied = source || copiedAttr = attr || copiedAttr\value != target
+            throw: MapFailure("same-document clone external Item reference")
+        return: 1
+    nativeP0Omitted:
+        throws: copy(MapThrows)
+        private: @: document MapExampleDocument\create(12)
+        private: @: native (copy(MapExampleNativeNode))
+        native\context := document
+        private: @: source MapTag\create(document; MapKeys\intern(document; "p0.source"); 0; 12; native)
+        source\cursor\parserNode := native
+        source\tail\parserNode := native
+        private: @: child MapSpan\create(document; 3; 7)
+        child\p0Root := native
+        private: @: mark MapAnchors\create(document; 2; 3; payload := "pure mark DATA"; childDocument := child)
+        child\anchor := mark
+        mark\cursor\parserNode := native
+        private: @: snapshot MapSnapshot\export(document; end := 12)
+        if: length(snapshot\items) != 0 || length(snapshot\anchors) != 1 || length(snapshot\scopes) != 1
+            throw: MapFailure("native P0 annotations entered snapshot or real mark was lost")
+        private: @: target MapTree\create()
+        private: @: mapping MapSnapshot\import(target; 0; sys\fromLmx(sys\toLmx(snapshot)))
+        private: @: restored MapTable\getInt(mapping; mark\id)
+        if: restored\childDocument\p0Root != MapNil || MapTree\length(target) != 12
+            throw: MapFailure("snapshot restored frozen native P0 state")
+        return: 1
+    run:
+        throws: copy(MapThrows)
+        return: overlapsAndValues() + crossingAnchors() + latestValueAndUnnamedClose() + isolatedChildAndSnapshot() + collapsedHalfOpenSpan() + sameDocumentClone() + nativeP0Omitted()
+
+MapExampleNativeNode:
+    @: context MapNil

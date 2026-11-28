@@ -1,0 +1,49 @@
+# DRAFT. Host supplies already running owner/source/subscriber Message addresses.
+# These examples use post. Creating a Structure is not a Message launch.
+
+MapMessageExample:
+    @: owner
+    @: source
+    @: request
+    @: receipt
+    []char: snapshotText ""
+    int: completed 0
+    required: owner request
+    submit:
+        throws: copy(MapThrows)
+        post:
+            ask:
+                owner\apply(request := request)
+            answer:
+                accepted
+    ---
+    accepted:
+        throws: copy(MapThrows)
+        node\receipt := receipt
+        node\completed := 1
+    readSnapshot:
+        throws: copy(MapThrows)
+        post:
+            ask:
+                owner\snapshot()
+            answer:
+                snapshotReceived
+    ---
+    snapshotReceived:
+        throws: copy(MapThrows)
+        node\snapshotText := sys\toLmx(receipt)
+
+# Execute this method inside the destination document's owner Message. Cursor
+# never appears in the outgoing file request; it remains in pendingTransfers.
+MapLoadExample:
+    @: owner
+    @: fileOwner
+    []char: path
+    required: owner fileOwner path
+    return: int
+    start:
+        throws: copy(MapThrows)
+        private: @: cursor MapCursor\create(owner\document; MapTree\length(owner\document))
+        private: int: requestId MapTransfer\start(owner; fileOwner; cursor; path := path)
+        MapCursor\release(cursor)
+        return: requestId

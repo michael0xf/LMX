@@ -141,3 +141,7 @@ The shown application protocol runs on existing Message turns. post already supp
 ## Проверка
 
 Runtime LMX отсутствует в документационном архиве; его выполнение не заявляется. Применимые отдельные проверки контрольных языков и исходников отмечены в [общем отчёте](../VALIDATION.md).
+
+## Дополнение 28 ноября 2026
+
+[110 Become / Selective Stash](../06_async_and_messages/110_become_selective_stash_comparision.md) развивает отдельный прикладной договор с явными поздними handlers и текущим поколением; исходный ограниченный сценарий этого сравнения сохраняется.

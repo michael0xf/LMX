@@ -1,0 +1,206 @@
+# DRAFT. Current-LMX bodies for the normative py.* surface.
+# All gates are called on the session owner's Message lane.
+# Exact backtick names are NOT aliases for the reserved bare py.* spellings.
+PythonGate:
+    install:
+        @PythonGateContext: context
+        @PythonInstallPlan: plan
+        required: context plan
+        return: @PythonInstallation
+        run:
+            throws: copy(PythonBridgeThrows)
+            return: PythonInstall\apply(context\installer; plan)
+#
+    open:
+        @PythonGateContext: context
+        @PythonOpenRequest: request
+        required: context request
+        return: @PythonSession
+        run:
+            throws: copy(PythonBridgeThrows)
+            if: request\mode != 1 && request\mode != 2
+                throw: PythonBridgeFailure(PythonProblemMake\make("python-open-mode"; request))
+            return: context\native\open(request)
+#
+    close:
+        @PythonGateContext: context
+        @PythonSession: session
+        required: context session
+        run:
+            throws: copy(PythonBridgeThrows)
+            context\native\assertOwner(session)
+            if: session\state != 1
+                throw: PythonBridgeFailure(PythonProblemMake\make("session-not-ready"; session))
+            if: session\liveHandles != 0 || session\liveBuffers != 0
+                throw: PythonBridgeFailure(PythonProblemMake\make("outstanding-python-resources"; session))
+            session\state := 2
+            finally:
+                session\state := 3
+            context\native\close(session)
+#
+    importModule:
+        @PythonGateContext: context
+        @PythonSession: session
+        []char: name
+        required: context session name
+        return: @PythonHandle
+        run:
+            throws: copy(PythonBridgeThrows)
+            return: PythonObjectCall\invoke(context\native; session; context\native\importModule; (name record))
+#
+    getAttribute:
+        @PythonGateContext: context
+        @PythonSession: session
+        @PythonHandle: object
+        []char: name
+        required: context session object name
+        return: @PythonHandle
+        run:
+            throws: copy(PythonBridgeThrows)
+            private: @PythonSlot: source PythonHandleLookup\slot(context\native; session; object)
+            return: PythonObjectCall\invoke(context\native; session; context\native\getAttribute; PythonRequest\attribute(source\token; name; (copy(()))))
+#
+    setAttribute:
+        @PythonGateContext: context
+        @PythonSession: session
+        @PythonHandle: object
+        []char: name
+        @PythonHandle: value
+        required: context session object name value
+        return: @PythonHandle
+        run:
+            throws: copy(PythonBridgeThrows)
+            private: @PythonSlot: source PythonHandleLookup\slot(context\native; session; object)
+            private: @PythonSlot: assigned PythonHandleLookup\slot(context\native; session; value)
+            return: PythonObjectCall\invoke(context\native; session; context\native\setAttribute; PythonRequest\attribute(source\token; name; assigned\token))
+#
+    call:
+        @PythonGateContext: context
+        @PythonSession: session
+        @PythonHandle: callable
+        []@PythonHandle: args
+        []@PythonKeyword: kwargs
+        required: context session callable args kwargs
+        return: @PythonHandle
+        run:
+            throws: copy(PythonBridgeThrows)
+            private: @PythonCallRequest: request PythonCallPack\prepare(context\native; session; callable; args; kwargs)
+            return: PythonObjectCall\invoke(context\native; session; context\native\callObject; request)
+#
+    getItem:
+        @PythonGateContext: context
+        @PythonSession: session
+        @PythonHandle: object
+        @PythonHandle: key
+        required: context session object key
+        return: @PythonHandle
+        run:
+            throws: copy(PythonBridgeThrows)
+            private: @PythonSlot: source PythonHandleLookup\slot(context\native; session; object)
+            private: @PythonSlot: index PythonHandleLookup\slot(context\native; session; key)
+            return: PythonObjectCall\invoke(context\native; session; context\native\getItem; PythonItemRequest\item(source\token; index\token; (copy(()))))
+#
+    setItem:
+        @PythonGateContext: context
+        @PythonSession: session
+        @PythonHandle: object
+        @PythonHandle: key
+        @PythonHandle: value
+        required: context session object key value
+        return: @PythonHandle
+        run:
+            throws: copy(PythonBridgeThrows)
+            private: @PythonSlot: source PythonHandleLookup\slot(context\native; session; object)
+            private: @PythonSlot: index PythonHandleLookup\slot(context\native; session; key)
+            private: @PythonSlot: assigned PythonHandleLookup\slot(context\native; session; value)
+            return: PythonObjectCall\invoke(context\native; session; context\native\setItem; PythonItemRequest\item(source\token; index\token; assigned\token))
+#
+    retain:
+        @PythonGateContext: context
+        @PythonSession: session
+        @PythonHandle: handle
+        required: context session handle
+        return: @PythonHandle
+        run:
+            throws: copy(PythonBridgeThrows)
+            private: @PythonSlot: source PythonHandleLookup\slot(context\native; session; handle)
+            return: PythonObjectCall\invoke(context\native; session; context\native\newReference; source\token)
+#
+    release:
+        @PythonGateContext: context
+        @PythonSession: session
+        @PythonHandle: handle
+        required: context session handle
+        run:
+            throws: copy(PythonBridgeThrows)
+            private: @: guard context\native\enter(session)
+            finally:
+                context\native\leave(guard)
+            PythonHandleRelease\drop(context\native; session; handle)
+#
+    fromValue:
+        @PythonGateContext: context
+        @PythonSession: session
+        @PythonValue: value
+        required: context session value
+        return: @PythonHandle
+        run:
+            throws: copy(PythonBridgeThrows)
+            return: PythonObjectCall\invoke(context\native; session; context\native\fromValue; value)
+#
+    toValue:
+        @PythonGateContext: context
+        @PythonSession: session
+        @PythonHandle: handle
+        int: maxDepth
+        int: maxItems
+        required: context session handle maxDepth maxItems
+        return: @PythonValue
+        run:
+            throws: copy(PythonBridgeThrows)
+            if: maxDepth < 0 || maxItems < 0
+                throw: PythonBridgeFailure(PythonProblemMake\make("conversion-budget"; handle))
+            private: @: guard context\native\enter(session)
+            finally:
+                context\native\leave(guard)
+            private: @PythonSlot: source PythonHandleLookup\slot(context\native; session; handle)
+            return: context\native\toValue(session\runtime; source\token; maxDepth; maxItems)
+#
+    buffer:
+        @PythonGateContext: context
+        @PythonSession: session
+        @PythonHandle: handle
+        int: writable
+        required: context session handle writable
+        return: @PythonBufferLease
+        run:
+            throws: copy(PythonBridgeThrows)
+            if: writable != 0 && writable != 1
+                throw: PythonBridgeFailure(PythonProblemMake\make("buffer-mode"; handle))
+            private: @: guard context\native\enter(session)
+            finally:
+                context\native\leave(guard)
+            private: @PythonSlot: source PythonHandleLookup\slot(context\native; session; handle)
+            private: @: nativeLease context\native\buffer(session\runtime; source\token; writable)
+            return: PythonBufferAdopt\take(context\native; session; nativeLease)
+#
+    releaseBuffer:
+        @PythonGateContext: context
+        @PythonSession: session
+        @PythonBufferLease: lease
+        required: context session lease
+        run:
+            throws: copy(PythonBridgeThrows)
+            context\native\assertOwner(session)
+            if: lease\session != session || lease\generation != session\generation || lease\live != 1
+                throw: PythonBridgeFailure(PythonProblemMake\make("foreign-or-released-buffer"; lease))
+            if: session\liveBuffers <= 0
+                throw: PythonBridgeFailure(PythonProblemMake\make("buffer-count-invariant"; session))
+            private: int: count session\liveBuffers - 1
+            private: @: guard context\native\enter(session)
+            finally:
+                context\native\leave(guard)
+            lease\live := 0
+            session\liveBuffers := count
+            context\native\releaseBuffer(session\runtime; lease\nativeLease)
+#

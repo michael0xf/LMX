@@ -1,0 +1,900 @@
+# DRAFT: variable-depth MIX pages, isolated bunches and retained edit queue.
+# Calls are owner-lane operations. No OS lock is held over Message delivery.
+# Nested begin/commit is batching, not rollback on allocation/runtime failure.
+
+MapTreeAllocateId:
+    @: document
+    required: document
+    return: int
+    allocateId:
+        throws: copy(MapThrows)
+        @: scope document\scope
+        if: scope\nextId <= 0 || scope\nextId >= scope\limit
+            throw: MapFailure("stable id exhausted")
+        int: result scope\nextId
+        scope\nextId += 1
+        return: result
+
+MapStorageDocument:
+    @: scope
+    int: pageCapacity
+    required: scope pageCapacity
+    return: @
+    document:
+        throws: copy(MapThrows)
+        if: pageCapacity < 1 || pageCapacity > scope\limit
+            throw: MapFailure("page capacity")
+        @: document (copy(MapDocumentModel))
+        document\scope := scope
+        document\id := MapTree\allocateId(document)
+        document\root := scope\root
+        document\pageCapacity := pageCapacity
+        document\pending := MapVector\create()
+        document\events := MapVector\create()
+        document\tags := MapVector\create()
+        document\keys := MapVector\create()
+        document\entries := MapVector\create()
+        document\properties := MapVector\create()
+        MapVector\push(scope\documents; document)
+        return: document
+
+MapStorageNewNode:
+    @: document
+    int: kind
+    int: capacity
+    required: document kind capacity
+    return: @
+    newNode:
+        throws: copy(MapThrows)
+        if: capacity < 1 || capacity > document\scope\limit || kind < 0 || kind > 1
+            throw: MapFailure("node shape")
+        @: page (copy(MapNodeModel))
+        page\id := MapTree\allocateId(document)
+        page\document := document
+        page\kind := kind
+        page\capacity := capacity
+        page\slots := MapVector\create()
+        page\anchors := MapVector\create()
+        return: page
+
+MapTreeCreate:
+    int: pageCapacity 32
+    int: limit 2147483647
+    return: @
+    create:
+        throws: copy(MapThrows)
+        if: limit < 3 || pageCapacity < 1 || pageCapacity > limit
+            throw: MapFailure("document capacity")
+        @: scope (copy(MapScopeModel))
+        scope\limit := limit
+        scope\documents := MapVector\create()
+        @: document MapStorage\document(scope; pageCapacity)
+        int: branchCapacity pageCapacity
+        if: branchCapacity < 2
+            branchCapacity := 2
+        @: root MapStorage\newNode(document; 0; branchCapacity)
+        @: leaf MapStorage\newNode(document; 1; pageCapacity)
+        MapVector\push(root\slots; leaf)
+        leaf\parent := root
+        scope\root := root
+        document\root := root
+        document\first := leaf
+        document\last := leaf
+        return: document
+
+MapTreeLength:
+    @: document
+    required: document
+    return: int
+    length:
+        throws: copy(MapThrows)
+        return: document\count
+
+MapStorageRenumber:
+    @: page
+    int: begin 0
+    required: page
+    return: @
+    renumber:
+        throws: copy(MapThrows)
+        int: i begin
+        while: i < length(page\slots)
+            @: entry page\slots[i]
+            if: entry != MapNil
+                entry\index := i
+                if: page\kind = 0
+                    entry\parent := page
+                else:
+                    entry\leaf := page
+            ---
+            i += 1
+        return: page
+
+MapStorageEnsureParent:
+    @: page
+    required: page
+    return: @
+    ensureParent:
+        throws: copy(MapThrows)
+        if: page\parent != MapNil
+            return: page\parent
+        @: document page\document
+        int: capacity page\capacity
+        if: capacity < 2
+            capacity := 2
+        @: parent MapStorage\newNode(document; 0; capacity)
+        MapVector\push(parent\slots; page)
+        page\parent := parent
+        page\index := 0
+        document\scope\root := parent
+        int: i 0
+        while: i < length(document\scope\documents)
+            document\scope\documents[i]\root := parent
+            i += 1
+        return: parent
+
+MapStorageInsertChild:
+    @: parent
+    int: at
+    @: child
+    required: parent at child
+    return: @
+    insertChild:
+        throws: copy(MapThrows)
+        if: parent\kind != 0 || at < 0 || at > length(parent\slots)
+            throw: MapFailure("child insertion")
+        if: length(parent\slots) < parent\capacity
+            MapVector\insert(parent\slots; at; child)
+            MapStorage\renumber(parent; at)
+            return: child
+        @: higher MapStorage\ensureParent(parent)
+        @: sibling MapStorage\newNode(parent\document; 0; parent\capacity)
+        MapStorage\insertChild(higher; parent\index + 1; sibling)
+        if: at = length(parent\slots)
+            MapVector\push(sibling\slots; child)
+            MapStorage\renumber(sibling)
+            return: child
+        @: moved MapVector\pop(parent\slots)
+        MapVector\push(sibling\slots; moved)
+        MapStorage\renumber(sibling)
+        MapVector\insert(parent\slots; at; child)
+        MapStorage\renumber(parent; at)
+        return: child
+
+MapStorageUnlinkNode:
+    @: page
+    required: page
+    return: @
+    unlinkNode:
+        throws: copy(MapThrows)
+        @: parent page\parent
+        if: parent = MapNil
+            return: page
+        MapVector\remove(parent\slots; page\index)
+        MapStorage\renumber(parent; page\index)
+        page\parent := MapNil
+        page\index := 0
+        if: length(parent\slots) = 0 && parent\parent != MapNil
+            MapStorage\unlinkNode(parent)
+        return: page
+
+MapTreeNewBranch:
+    @: document
+    @: parent
+    int: at
+    int: capacity 32
+    required: document parent at
+    return: @
+    newBranch:
+        throws: copy(MapThrows)
+        if: document\scope != parent\document\scope || parent\kind != 0
+            throw: MapFailure("foreign branch")
+        @: branch MapStorage\newNode(document; 0; capacity)
+        MapStorage\insertChild(parent; at; branch)
+        return: branch
+
+MapTreeNewBunch:
+    @: document
+    @: vertex
+    int: pageCapacity 32
+    required: document vertex
+    return: @
+    newBunch:
+        throws: copy(MapThrows)
+        if: document\scope != vertex\document\scope
+            throw: MapFailure("foreign bunch vertex")
+        @: parent vertex
+        int: at length(vertex\slots)
+        if: vertex\kind = 1
+            parent := MapStorage\ensureParent(vertex)
+            at := vertex\index + 1
+        @: sibling MapStorage\document(document\scope; pageCapacity)
+        @: leaf MapStorage\newNode(sibling; 1; pageCapacity)
+        MapStorage\insertChild(parent; at; leaf)
+        sibling\root := document\scope\root
+        sibling\first := leaf
+        sibling\last := leaf
+        return: sibling
+
+MapTreeSetLength:
+    @: page
+    int: capacity
+    required: page capacity
+    return: @
+    setLength:
+        throws: copy(MapThrows)
+        if: capacity < 1 || capacity < length(page\slots) || capacity > page\document\scope\limit
+            throw: MapFailure("occupied page exceeds capacity")
+        page\capacity := capacity
+        return: page
+
+MapTreeLevel:
+    @: page
+    required: page
+    return: int
+    level:
+        throws: copy(MapThrows)
+        int: result 0
+        @: current page\parent
+        while: current != MapNil
+            result := MapSize\sum(result; 1)
+            current := current\parent
+        return: result
+
+MapTreePath:
+    @: page
+    int: slot
+    required: page slot
+    return: @
+    path:
+        throws: copy(MapThrows)
+        if: slot < 0 || slot > page\capacity
+            throw: MapFailure("path slot")
+        @: result MapVector\create()
+        MapVector\push(result; (slot record))
+        @: current page
+        while: current\parent != MapNil
+            MapVector\insert(result; 0; (current\index record))
+            current := current\parent
+        return: result
+
+MapTreePackedAddress:
+    @: page
+    int: slot
+    int: limit 2147483647
+    required: page slot
+    return: int
+    packedAddress:
+        throws: copy(MapThrows)
+        if: slot < 0 || slot >= page\capacity || slot > limit
+            throw: MapFailure("packed slot")
+        int: address slot
+        int: factor page\capacity
+        @: current page
+        while: current\parent != MapNil
+            int: digit current\index
+            if: digit > 0 && factor > (limit - address) / digit
+                throw: MapFailure("packed address overflow")
+            address += digit * factor
+            current := current\parent
+            if: current\parent != MapNil
+                if: factor > limit / current\capacity
+                    throw: MapFailure("packed address factor overflow")
+                factor *= current\capacity
+        return: address
+
+MapStorageLocate:
+    @: document
+    int: position
+    int: allowEnd 0
+    required: document position
+    return: @
+    locate:
+        throws: copy(MapThrows)
+        if: position < 0 || position > document\count || (allowEnd = 0 && position = document\count)
+            throw: MapFailure("document position")
+        if: allowEnd != 0 && position = document\count
+            @: last (copy(MapLocationModel))
+            last\leaf := document\last
+            last\slot := length(document\last\slots)
+            return: last
+        @: leaf document\first
+        int: remaining position
+        while: leaf != MapNil
+            int: size length(leaf\slots)
+            if: remaining < size || (allowEnd != 0 && remaining = size)
+                @: location (copy(MapLocationModel))
+                location\leaf := leaf
+                location\slot := remaining
+                return: location
+            remaining -= size
+            leaf := leaf\next
+        throw: MapFailure("broken bunch extent")
+
+MapTreeItemAt:
+    @: document
+    int: position
+    required: document position
+    return: @
+    itemAt:
+        throws: copy(MapThrows)
+        @: location MapStorage\locate(document; position)
+        return: location\leaf\slots[location\slot]\value
+
+MapStorageMoveAnchor:
+    @: cursor
+    @: leaf
+    int: slot
+    required: cursor leaf slot
+    return: @
+    moveAnchor:
+        throws: copy(MapThrows)
+        if: cursor\registered != 0 && cursor\leaf = leaf
+            cursor\slot := slot
+            return: cursor
+        MapVector\reserve(leaf\anchors; MapSize\sum(length(leaf\anchors); 1))
+        if: cursor\registered != 0 && cursor\leaf != MapNil
+            MapVector\removeValue(cursor\leaf\anchors; cursor)
+        cursor\leaf := leaf
+        cursor\document := leaf\document
+        cursor\slot := slot
+        MapVector\push(leaf\anchors; cursor)
+        cursor\registered := 1
+        return: cursor
+
+MapStorageSplitLeaf:
+    @: leaf
+    int: at
+    required: leaf at
+    return: @
+    splitLeaf:
+        throws: copy(MapThrows)
+        if: leaf\kind != 1 || at < 0 || at > length(leaf\slots)
+            throw: MapFailure("leaf split")
+        @: sibling MapStorage\newNode(leaf\document; 1; leaf\capacity)
+        @: parent MapStorage\ensureParent(leaf)
+        MapStorage\insertChild(parent; leaf\index + 1; sibling)
+        sibling\slots := MapVector\range(leaf\slots; at; length(leaf\slots))
+        sys\resize(leaf\slots; at)
+        MapStorage\renumber(sibling)
+        sibling\prev := leaf
+        sibling\next := leaf\next
+        if: leaf\next != MapNil
+            leaf\next\prev := sibling
+        else:
+            leaf\document\last := sibling
+        leaf\next := sibling
+        int: i 0
+        while: i < length(leaf\anchors)
+            @: cursor leaf\anchors[i]
+            if: cursor\slot > at || (cursor\slot = at && cursor\bias != 0)
+                MapStorage\moveAnchor(cursor; sibling; cursor\slot - at)
+            else:
+                i += 1
+        return: sibling
+
+MapStorageBoundary:
+    @: left
+    @: right
+    required: left right
+    return: @
+    boundary:
+        throws: copy(MapThrows)
+        if: left = MapNil || right = MapNil || left\next != right
+            return: right
+        int: i 0
+        while: i < length(right\anchors)
+            @: cursor right\anchors[i]
+            if: cursor\slot = 0 && cursor\bias = 0
+                MapStorage\moveAnchor(cursor; left; length(left\slots))
+            else:
+                i += 1
+        return: right
+
+MapStorageDropEmpty:
+    @: leaf
+    required: leaf
+    return: @
+    dropEmpty:
+        throws: copy(MapThrows)
+        if: length(leaf\slots) != 0
+            return: leaf
+        @: document leaf\document
+        @: destination leaf\prev
+        int: slot 0
+        if: destination != MapNil
+            slot := length(destination\slots)
+        else:
+            destination := leaf\next
+        if: destination = MapNil
+            return: leaf
+        while: length(leaf\anchors) > 0
+            MapStorage\moveAnchor(leaf\anchors[0]; destination; slot)
+        @: previous leaf\prev
+        @: next leaf\next
+        if: previous != MapNil
+            previous\next := next
+        else:
+            document\first := next
+        if: next != MapNil
+            next\prev := previous
+        else:
+            document\last := previous
+        leaf\prev := MapNil
+        leaf\next := MapNil
+        MapStorage\unlinkNode(leaf)
+        MapStorage\boundary(previous; next)
+        return: destination
+
+MapTreeBegin:
+    @: document
+    int: origin 1
+    required: document
+    return: @
+    begin:
+        throws: copy(MapThrows)
+        if: origin < 1 || origin > 3
+            throw: MapFailure("change origin")
+        if: document\txDepth = 0
+            if: origin != 2 && document\revision >= document\scope\limit
+                throw: MapFailure("revision exhausted")
+            document\pending := MapVector\create()
+            document\txOrigin := origin
+            document\txBeforeRevision := document\revision
+            document\txBeforeLength := document\count
+        document\txDepth := MapSize\sum(document\txDepth; 1; document\scope\limit)
+        return: document
+
+MapStorageBeginMutation:
+    @: document
+    required: document
+    return: @
+    beginMutation:
+        throws: copy(MapThrows)
+        if: document\txDepth > 0 && document\txOrigin = 2
+            throw: MapFailure("parser-derived turn cannot edit source")
+        return: MapTree\begin(document)
+
+MapStorageRecord:
+    @: document
+    int: kind
+    int: begin
+    int: oldEnd
+    int: newEnd
+    @: removed
+    @: inserted
+    int: itemId 0
+    required: document kind begin oldEnd newEnd removed inserted
+    return: @
+    record:
+        throws: copy(MapThrows)
+        if: document\txDepth <= 0
+            throw: MapFailure("edit outside owner batch")
+        @: edit (copy(MapEditModel))
+        edit\sequence := length(document\pending)
+        edit\kind := kind
+        edit\begin := begin
+        edit\oldEnd := oldEnd
+        edit\newEnd := newEnd
+        edit\itemId := itemId
+        edit\removed := removed
+        edit\inserted := inserted
+        MapVector\push(document\pending; edit)
+        return: edit
+
+MapTreeCommit:
+    @: document
+    required: document
+    return: @
+    commit:
+        throws: copy(MapThrows)
+        if: document\txDepth <= 0
+            throw: MapFailure("unmatched commit")
+        document\txDepth -= 1
+        if: document\txDepth > 0
+            return: MapNil
+        if: document\txOrigin = 2 || length(document\pending) = 0
+            document\pending := MapVector\create()
+            return: MapNil
+        @: event (copy(MapChangeModel))
+        event\documentId := document\id
+        event\beforeRevision := document\txBeforeRevision
+        event\revision := document\revision + 1
+        event\origin := document\txOrigin
+        event\oldLength := document\txBeforeLength
+        event\newLength := document\count
+        event\edits := MapVector\copy(document\pending)
+        if: length(event\edits) = 1
+            @: edit event\edits[0]
+            event\hasSingleRange := 1
+            event\kind := edit\kind
+            event\begin := edit\begin
+            event\oldEnd := edit\oldEnd
+            event\newEnd := edit\newEnd
+        MapVector\push(document\events; event)
+        document\revision := event\revision
+        document\pending := MapVector\create()
+        return: event
+
+MapTreeTouch:
+    @: document
+    int: begin
+    int: end
+    int: kind 2
+    int: itemId 0
+    required: document begin end
+    return: @
+    touch:
+        throws: copy(MapThrows)
+        if: begin < 0 || end < begin || end > document\count || kind < 2 || kind > 3
+            throw: MapFailure("metadata range")
+        MapTree\begin(document; 3)
+        MapStorage\record(document; kind; begin; end; end; MapVector\create(); MapVector\create(); itemId)
+        return: MapTree\commit(document)
+
+MapTreeTakeChanges:
+    @: document
+    required: document
+    return: @
+    takeChanges:
+        throws: copy(MapThrows)
+        return: MapVector\copy(document\events)
+
+MapTreeAcknowledge:
+    @: document
+    int: revision
+    required: document revision
+    return: int
+    acknowledge:
+        throws: copy(MapThrows)
+        if: revision < 0 || revision > document\revision
+            throw: MapFailure("acknowledgement revision")
+        int: amount 0
+        while: amount < length(document\events)
+            if: document\events[amount]\revision > revision
+                break
+            amount += 1
+        MapVector\erase(document\events; 0; amount)
+        return: amount
+
+MapTreeInsert:
+    @: document
+    int: position
+    @: value
+    required: document position value
+    return: @
+    insert:
+        throws: copy(MapThrows)
+        int: newLength MapSize\sum(document\count; 1; document\scope\limit)
+        @: location MapStorage\locate(document; position; 1)
+        @: admitted MapStorage\admitValue(document; value)
+        @: cell (copy(MapCellModel))
+        cell\id := MapTree\allocateId(document)
+        cell\value := admitted
+        MapStorage\beginMutation(document)
+        @: leaf location\leaf
+        int: slot location\slot
+        if: length(leaf\slots) = leaf\capacity
+            int: half length(leaf\slots) / 2
+            if: leaf\capacity = 1
+                half := slot
+            @: sibling MapStorage\splitLeaf(leaf; half)
+            if: slot > half || (slot = half && length(leaf\slots) >= leaf\capacity)
+                leaf := sibling
+                slot -= half
+        ---
+        MapStorage\boundary(leaf\prev; leaf)
+        int: i 0
+        while: i < length(leaf\anchors)
+            @: cursor leaf\anchors[i]
+            if: cursor\slot > slot || (cursor\slot = slot && cursor\bias != 0)
+                cursor\slot += 1
+            i += 1
+        MapVector\insert(leaf\slots; slot; cell)
+        MapStorage\renumber(leaf; slot)
+        document\count := newLength
+        @: inserted MapVector\create()
+        MapVector\push(inserted; admitted)
+        MapStorage\record(document; 1; position; position; position + 1; MapVector\create(); inserted)
+        MapTree\commit(document)
+        return: cell
+
+MapStorageEraseOne:
+    @: document
+    int: position
+    required: document position
+    return: @
+    eraseOne:
+        throws: copy(MapThrows)
+        @: location MapStorage\locate(document; position)
+        @: leaf location\leaf
+        int: slot location\slot
+        @: cell MapVector\remove(leaf\slots; slot)
+        MapStorage\renumber(leaf; slot)
+        int: i 0
+        while: i < length(leaf\anchors)
+            @: cursor leaf\anchors[i]
+            if: cursor\slot > slot
+                cursor\slot -= 1
+            i += 1
+        cell\leaf := MapNil
+        cell\index := 0
+        document\count -= 1
+        MapStorage\dropEmpty(leaf)
+        return: cell\value
+
+MapTreeErase:
+    @: document
+    int: begin
+    int: end
+    required: document begin end
+    return: int
+    erase:
+        throws: copy(MapThrows)
+        if: begin < 0 || end < begin || end > document\count
+            throw: MapFailure("erase source range")
+        if: begin = end
+            return: 0
+        @: removed MapVector\create()
+        MapStorage\beginMutation(document)
+        int: amount end - begin
+        int: i 0
+        while: i < amount
+            MapVector\push(removed; MapStorage\eraseOne(document; begin))
+            i += 1
+        MapStorage\record(document; 1; begin; end; begin; removed; MapVector\create())
+        MapTree\commit(document)
+        return: amount
+
+MapTreeReplace:
+    @: document
+    int: begin
+    int: end
+    @: values
+    required: document begin end values
+    return: int
+    replace:
+        throws: copy(MapThrows)
+        if: begin < 0 || end < begin || end > document\count
+            throw: MapFailure("replace source range")
+        int: finalLength MapSize\sum(document\count - (end - begin); length(values); document\scope\limit)
+        @: staged MapStorage\admitValues(document; values)
+        MapStorage\beginMutation(document)
+        MapTree\erase(document; begin; end)
+        int: i 0
+        while: i < length(staged)
+            MapTree\insert(document; begin + i; staged[i])
+            i += 1
+        MapTree\commit(document)
+        return: finalLength
+
+MapTreeSnapshot:
+    @: document
+    int: begin 0
+    int: end -1
+    required: document
+    return: @
+    snapshot:
+        throws: copy(MapThrows)
+        if: end < 0
+            end := document\count
+        if: begin < 0 || end < begin || end > document\count
+            throw: MapFailure("snapshot range")
+        @: result MapVector\create()
+        if: begin = end
+            return: result
+        @: location MapStorage\locate(document; begin)
+        @: leaf location\leaf
+        int: slot location\slot
+        int: remaining end - begin
+        while: remaining > 0
+            while: slot < length(leaf\slots) && remaining > 0
+                MapVector\push(result; leaf\slots[slot]\value)
+                slot += 1
+                remaining -= 1
+            leaf := leaf\next
+            slot := 0
+        return: result
+
+MapTreeSameBunch:
+    @: left
+    @: right
+    required: left right
+    return: int
+    sameBunch:
+        throws: copy(MapThrows)
+        if: left = MapNil || right = MapNil
+            return: 0
+        @: a left
+        @: b right
+        while: a\prev != MapNil
+            a := a\prev
+        while: b\prev != MapNil
+            b := b\prev
+        return: a = b
+
+MapTreeSplitBunch:
+    @: document
+    int: position
+    @: admission MapNil
+    required: document position
+    return: @
+    splitBunch:
+        throws: copy(MapThrows)
+        if: position < 0 || position > document\count || document\txDepth != 0
+            throw: MapFailure("bunch split position or active batch")
+        if: length(document\tags) > 0 || length(document\entries) > 0
+            if: admission = MapNil
+                throw: MapFailure("metadata cut preflight required")
+            if: admission\documentId != document\id || admission\revision != document\revision || admission\position != position || admission\approved != 1
+                throw: MapFailure("stale bunch cut admission")
+        @: location MapStorage\locate(document; position; 1)
+        @: right location\leaf
+        if: location\slot > 0 || right\prev = MapNil
+            right := MapStorage\splitLeaf(right; location\slot)
+        @: left right\prev
+        @: target MapStorage\document(document\scope; document\pageCapacity)
+        target\p0Source := document\p0Source
+        int: moved document\count - position
+        MapStorage\beginMutation(document)
+        target\first := right
+        target\last := document\last
+        target\root := document\scope\root
+        target\count := moved
+        document\last := left
+        document\count := position
+        left\next := MapNil
+        right\prev := MapNil
+        @: current right
+        while: current != MapNil
+            current\document := target
+            int: i 0
+            while: i < length(current\anchors)
+                current\anchors[i]\document := target
+                i += 1
+            current := current\next
+        MapStorage\record(document; 3; position; position + moved; position; MapVector\create(); MapVector\create())
+        MapTree\commit(document)
+        return: target
+
+
+MapTreeEnsureSlot:
+    @: page
+    int: index
+    return: @
+    ensureSlot:
+        throws: copy(MapThrows)
+        if: page\kind != 0 || index < 0 || index >= page\capacity
+            throw: MapFailure("branch hole position")
+        MapVector\ensureSlot(page\slots; index)
+        return: page
+
+
+# A one-cell source replacement stages all allocations before publication.
+# It deliberately does not enter begin/commit; a failure in preflight cannot
+# strand an open batch. All three final writes address admitted owner fields.
+MapTreeSetAt:
+    @: document
+    int: position
+    @: value
+    int: origin 1
+    required: document position value
+    return: @
+    setAt:
+        throws: copy(MapThrows)
+        if: document\txDepth != 0 || (origin != 1 && origin != 3)
+            throw: MapFailure("standalone source replacement required")
+        if: document\revision >= document\scope\limit
+            throw: MapFailure("revision exhausted")
+        @: location MapStorage\locate(document; position)
+        @: admitted MapStorage\admitValue(document; value)
+        @: cell location\leaf\slots[location\slot]
+        @: removed MapVector\create()
+        @: inserted MapVector\create()
+        MapVector\push(removed; cell\value)
+        MapVector\push(inserted; admitted)
+        @: edit (copy(MapEditModel))
+        edit\begin := position
+        edit\oldEnd := position + 1
+        edit\newEnd := position + 1
+        edit\removed := removed
+        edit\inserted := inserted
+        @: edits MapVector\create()
+        MapVector\push(edits; edit)
+        @: event (copy(MapChangeModel))
+        event\documentId := document\id
+        event\beforeRevision := document\revision
+        event\revision := document\revision + 1
+        event\origin := origin
+        event\oldLength := document\count
+        event\newLength := document\count
+        event\hasSingleRange := 1
+        event\kind := 1
+        event\begin := position
+        event\oldEnd := position + 1
+        event\newEnd := position + 1
+        event\edits := edits
+        @: queued MapVector\copy(document\events)
+        MapVector\push(queued; event)
+        cell\value := admitted
+        document\events := queued
+        document\revision := event\revision
+        return: event
+
+MapTree:
+    @: setAt MapTreeSetAt\setAt
+    @: ensureSlot MapTreeEnsureSlot\ensureSlot
+    @: allocateId MapTreeAllocateId\allocateId
+    @: create MapTreeCreate\create
+    @: length MapTreeLength\length
+    @: newBranch MapTreeNewBranch\newBranch
+    @: newBunch MapTreeNewBunch\newBunch
+    @: setLength MapTreeSetLength\setLength
+    @: level MapTreeLevel\level
+    @: path MapTreePath\path
+    @: packedAddress MapTreePackedAddress\packedAddress
+    @: itemAt MapTreeItemAt\itemAt
+    @: begin MapTreeBegin\begin
+    @: commit MapTreeCommit\commit
+    @: touch MapTreeTouch\touch
+    @: takeChanges MapTreeTakeChanges\takeChanges
+    @: acknowledge MapTreeAcknowledge\acknowledge
+    @: insert MapTreeInsert\insert
+    @: erase MapTreeErase\erase
+    @: replace MapTreeReplace\replace
+    @: snapshot MapTreeSnapshot\snapshot
+    @: sameBunch MapTreeSameBunch\sameBunch
+    @: splitBunch MapTreeSplitBunch\splitBunch
+
+MapStorage:
+    @: admitValue MapStorageAdmitValue\admitValue
+    @: admitValues MapStorageAdmitValues\admitValues
+    @: document MapStorageDocument\document
+    @: newNode MapStorageNewNode\newNode
+    @: renumber MapStorageRenumber\renumber
+    @: ensureParent MapStorageEnsureParent\ensureParent
+    @: insertChild MapStorageInsertChild\insertChild
+    @: unlinkNode MapStorageUnlinkNode\unlinkNode
+    @: locate MapStorageLocate\locate
+    @: moveAnchor MapStorageMoveAnchor\moveAnchor
+    @: splitLeaf MapStorageSplitLeaf\splitLeaf
+    @: boundary MapStorageBoundary\boundary
+    @: dropEmpty MapStorageDropEmpty\dropEmpty
+    @: beginMutation MapStorageBeginMutation\beginMutation
+    @: record MapStorageRecord\record
+    @: eraseOne MapStorageEraseOne\eraseOne
+
+# P0 source admission is shared by every source mutation path. Generic MIX
+# values remain references; byte-source documents retain a fresh int record.
+# This is preflight: a rejected value never starts a mutation or a batch.
+MapStorageAdmitValue:
+    @: document
+    @: value
+    required: document value
+    return: @
+    admitValue:
+        throws: copy(MapThrows)
+        if: document\p0Source = 0
+            return: value
+        int: sample 0
+        if: sys\typeof(value) != sys\typeof(@sample)
+            throw: MapFailure("P0 source requires an int byte record")
+        int: octet \value
+        if: octet < 0 || octet > 255
+            throw: MapFailure("P0 source byte outside 0..255")
+        return: (octet record)
+
+MapStorageAdmitValues:
+    @: document
+    @: values
+    required: document values
+    return: @
+    admitValues:
+        throws: copy(MapThrows)
+        @: admitted MapVector\create()
+        MapVector\reserve(admitted; length(values))
+        int: i 0
+        while: i < length(values)
+            MapVector\push(admitted; MapStorage\admitValue(document; values[i]))
+            i += 1
+        return: admitted

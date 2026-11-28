@@ -1,0 +1,102 @@
+# DRAFT profile DATA; exact release URLs, versions and hashes live in InstallPlan.
+# Profile selection does not download files, probe PATH or change OS settings.
+PythonProfiles:
+    windows:
+        []char: id "windows"
+        []char: implementation "CPython"
+        []char: distribution "python-build-standalone"
+        []char: hostAbi "selected Windows C ABI"
+        []char: nativeProvider "cpython-shared"
+        []char: packageProvider "locked-compatible-wheels"
+        []char: systemRoute "explicit-python-worker"
+        int: requiresJsHost 0
+    linux:
+        []char: id "linux"
+        []char: implementation "CPython"
+        []char: distribution "python-build-standalone"
+        []char: hostAbi "selected Linux libc and ISA"
+        []char: nativeProvider "cpython-shared"
+        []char: packageProvider "locked-compatible-wheels"
+        []char: systemRoute "explicit-python-worker"
+        int: requiresJsHost 0
+    macos:
+        []char: id "macos"
+        []char: implementation "CPython"
+        []char: distribution "python-build-standalone"
+        []char: hostAbi "selected macOS Mach-O slice"
+        []char: nativeProvider "cpython-shared"
+        []char: packageProvider "locked-compatible-wheels"
+        []char: systemRoute "explicit-python-worker"
+        int: requiresJsHost 0
+    android:
+        []char: id "android"
+        []char: implementation "CPython"
+        []char: distribution "python.org Android embeddable"
+        []char: hostAbi "Android NDK bionic ABI and API"
+        []char: nativeProvider "cpython-android-shared"
+        []char: packageProvider "locked-android-or-pure-python-wheels"
+        []char: systemRoute "explicit-existing-python-service"
+        int: requiresJsHost 0
+    wasm:
+        []char: id "wasm-linear"
+        []char: implementation "CPython"
+        []char: distribution "Pyodide"
+        []char: hostAbi "Emscripten/Pyodide release ABI"
+        []char: nativeProvider "pyodide-host"
+        []char: packageProvider "Pyodide-lock-and-micropip"
+        []char: systemRoute "explicit-host-python-service"
+        int: requiresJsHost 1
+    riscv:
+        []char: id "riscv64-linux"
+        []char: implementation "CPython"
+        []char: distribution "python-build-standalone"
+        []char: hostAbi "riscv64-unknown-linux-gnu, exact ISA/psABI lock"
+        []char: nativeProvider "cpython-shared"
+        []char: packageProvider "locked-compatible-wheels"
+        []char: systemRoute "explicit-python-worker"
+        int: requiresJsHost 0
+    portable:
+        []char: id "other-c99-host"
+        []char: implementation "CPython"
+        []char: distribution "project-built app-local CPython"
+        []char: hostAbi "explicitly admitted host ABI"
+        []char: nativeProvider "cpython-shared-if-available"
+        []char: packageProvider "locked-host-compatible-wheels"
+        []char: systemRoute "explicit-python-service"
+        int: requiresJsHost 0
+
+# target: 1 native C; 2 MIR; 3 WASM linear; 4 RISC-V.
+# host: 1 Windows; 2 Linux; 3 macOS; 4 Android; 5 other C99 host.
+PythonProfileSelect:
+    int: target
+    int: host
+    int: hosted
+    int: jsHost
+    int: rv64Linux
+    required: target host hosted jsHost rv64Linux
+    return: @PythonProfile
+    choose:
+        throws: copy(PythonBridgeThrows)
+        if: target = 3
+            if: jsHost != 1
+                throw: PythonBridgeFailure(PythonProblemMake\make("pyodide-needs-emscripten-js-host"; (target record)))
+            return: PythonProfiles\wasm
+        if: hosted != 1
+            throw: PythonBridgeFailure(PythonProblemMake\make("python-host-services-required"; (target record)))
+        if: target = 4
+            if: rv64Linux = 1 && host = 2
+                return: PythonProfiles\riscv
+            throw: PythonBridgeFailure(PythonProblemMake\make("riscv-python-profile-not-admitted"; (host record)))
+        if: target != 1 && target != 2
+            throw: PythonBridgeFailure(PythonProblemMake\make("unknown-execution-target"; (target record)))
+        if: host = 1
+            return: PythonProfiles\windows
+        if: host = 2
+            return: PythonProfiles\linux
+        if: host = 3
+            return: PythonProfiles\macos
+        if: host = 4
+            return: PythonProfiles\android
+        if: host = 5
+            return: PythonProfiles\portable
+        throw: PythonBridgeFailure(PythonProblemMake\make("unknown-c99-host"; (host record)))

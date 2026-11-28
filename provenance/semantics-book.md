@@ -23,6 +23,13 @@ L3 сохраняет изменение графа, структурные вы
 
 Обёртки — код L3 и единственное место проверок; интерпретатор использует тот же код для интерпретируемого L2, поэтому второго набора проверок нет. Они делают массивы и указатели безопасными настоящим механизмом [адресных операций](L2_spec_ru.md#lowlevel-address): индекс массива проверяется по явно хранимой длине (соседние индексы сводятся к одному линейному индексу и одной проверке), а указатель L3 на элемент — обёртка, хранящая ссылку на дескриптор Array и явный индекс, поэтому перемещение хранилища не требует обхода указателей. Исходники L3 и набор его операндов отличаются от L2 только отсутствием прямых дверей `c.*` (уточнение автора, 23 ноября 2026). Двери `c.*` и возможности `include` в L2 остаются: это низкоуровневый интерфейс самого L2 и часть сборки C99, а не другой язык. Вызов `c.*` — вызов через границу адаптера [ABI](L2_spec_ru.md#lowlevel-abi): проверки относятся к операциям LMX и к стороне LMX вызова, а тело вызываемой функции C не инструментируется, не изолируется и не перехватывается; ни один распределитель или функция памяти C не оборачивается.
 
+<a id="python-gateway"></a>
+### Подключаемая среда Python
+
+Ресиверы `py.*` используют обычный допуск вызова и явно указанные session и provider. Они доступны из L3 и L2 и сохраняют общий граф LMX. Прямые ворота `c.*` принадлежат L2. Вызовы Python сохраняют структурированные исключения, владение handles и время жизни буферов. Внешний процесс передаёт ограниченные DATA и непрозрачные идентификаторы, без преобразования Python-указателя в ссылку LMX.
+
+Частная установка Python и выбранный внешний endpoint следуют одному договору ворот и отдельным профилям возможностей. Состояние интерпретатора принадлежит явному владельцу. [Профили, API и статусы реализации](../../include_languages/README.md).
+
 <a id="program-representation"></a>
 ### Полный граф и скомпилированные методы
 
@@ -82,6 +89,13 @@ Where the checks stand follows from the level of the code and the way it is exec
 | L2 | checks: the same L3 wrappers; a `c.*` door, which L3 lacks, is a call across the C/ABI boundary with the interpreter's own checks of the call | none: the operation as written, as in C |
 
 The wrappers are L3 code and the one place of the checks; the interpreter uses the same code for interpreted L2, so there is no second set of checks. They make arrays and pointers safe by the real mechanism of the [address operations](L2_spec_en.md#lowlevel-address): an array index is checked against the explicitly stored length (adjacent indices reduce to one linear index and one check), and an L3 pointer to an element is a wrapper holding the Array-descriptor reference and the explicit index, so moving storage needs no pointer traversal. The source of L3 and its set of operands differ from L2 only by the absence of the direct `c.*` doors (the author's clarification of 23 November 2026). The `c.*` doors and the `include` abilities of L2 remain: they are the low-level interface of L2 itself and part of the C99 build, not another language. A `c.*` call is a call across the adapter boundary of the [ABI](L2_spec_en.md#lowlevel-abi): the checks above govern LMX operations and the LMX side of the call, and the body of the called C function is not instrumented, sandboxed or intercepted; no allocator or memory function of C is wrapped.
+
+<a id="python-gateway"></a>
+### Connected Python runtime
+
+The `py.*` receivers use ordinary call admission and an explicit session and provider. They are available in L3 and L2 and retain the common LMX graph. The direct `c.*` door belongs to L2. Python calls preserve structured exceptions, handle ownership, and buffer lifetime. An external process passes bounded DATA and opaque identifiers without turning a Python pointer into an LMX reference.
+
+An application-private Python installation and a selected external endpoint follow one gate contract with distinct capability profiles. Interpreter state belongs to an explicit owner. [Profiles, API, and implementation status](../../include_languages/README.md).
 
 <a id="program-representation"></a>
 ### The full graph and compiled methods

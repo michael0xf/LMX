@@ -1,0 +1,56 @@
+{
+  "status": "NOT_RUN_PRODUCTION_LMX",
+  "source": "../examples/storage_cases.lmx",
+  "entry": "MapStorageCases\\run",
+  "expected_return": 8,
+  "cases": [
+    "different depths under one placement root; isolated bunches and geometric holes",
+    "capacity one, insert at front/end without exceeding page capacity",
+    "left/right affinity and retained cursor identity",
+    "ordered edit coordinates, one revision per batch, acknowledgement retention",
+    "parser-derived metadata causes no source revision/event feedback",
+    "child span over parent bytes, local-coordinate rebasing, shared edits",
+    "signed MIN decimal, UTF-8 non-BMP and legacy surrogate-pair codec",
+    "P0 byte-source insert and replacement copy caller scalar records"
+  ],
+  "negative_cases": [
+    {
+      "operation": "MapBytes\\parseText",
+      "input": ":",
+      "expected": "MapFailure"
+    },
+    {
+      "operation": "MapBytes\\parseText",
+      "input": "2147483648",
+      "expected": "MapFailure"
+    },
+    {
+      "operation": "MapBytes\\decodeUtf8",
+      "input_octets": [
+        192,
+        128
+      ],
+      "expected": "MapFailure"
+    },
+    {
+      "operation": "MapTree\\insert",
+      "context": "active origin=2 batch",
+      "expected": "MapFailure before source mutation"
+    },
+    {
+      "operation": "MapCursor\\rehome",
+      "context": "different owner scope",
+      "expected": "MapFailure"
+    },
+    {
+      "operation": "MapTree\\splitBunch",
+      "context": "live Tag metadata without preflight admission",
+      "expected": "MapFailure"
+    },
+    {
+      "operation": "MapStorage\\admitValues",
+      "context": "p0Source=1, second input value is 256 or a non-int record",
+      "expected": "MapFailure before source mutation; whole payload is preflighted"
+    }
+  ]
+}

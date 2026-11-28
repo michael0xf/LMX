@@ -1,0 +1,116 @@
+# DRAFT. Owner-lane handle table, no raw machine address in a public handle.
+PythonHandleLookup:
+    @PythonNativePort: port
+    @PythonSession: session
+    @PythonHandle: handle
+    required: port session handle
+    return: @PythonSlot
+    slot:
+        throws: copy(PythonBridgeThrows)
+        port\assertOwner(session)
+        if: session\state != 1
+            throw: PythonBridgeFailure(PythonProblemMake\make("session-not-ready"; session))
+        if: handle\session != session || handle\generation != session\generation
+            throw: PythonBridgeFailure(PythonProblemMake\make("foreign-or-stale-handle"; handle))
+        if: handle\slot < 0 || handle\slot >= length(session\slots)
+            throw: PythonBridgeFailure(PythonProblemMake\make("handle-index"; handle))
+        private: @PythonSlot: slot session\slots[handle\slot]
+        if: slot\live != 1 || slot\serial != handle\serial
+            throw: PythonBridgeFailure(PythonProblemMake\make("released-handle"; handle))
+        return: slot
+
+PythonHandleAdopt:
+    @PythonNativePort: port
+    @PythonSession: session
+    @: token
+    required: port session token
+    return: @PythonHandle
+    take:
+        throws: copy(PythonBridgeThrows)
+        private: int: published 0
+        finally:
+            if: published = 0
+                port\drop(session\runtime; token)
+        ---
+        if: session\state != 1
+            throw: PythonBridgeFailure(PythonProblemMake\make("session-not-ready"; session))
+        if: session\nextSerial < 0 || session\nextSerial = 9223372036854775807
+            throw: PythonBridgeFailure(PythonProblemMake\make("handle-serial-exhausted"; session))
+        if: session\liveHandles < 0 || session\liveHandles >= 32766
+            throw: PythonBridgeFailure(PythonProblemMake\make("handle-quota-or-count"; session))
+        if: length(session\slots) > 32766
+            throw: PythonBridgeFailure(PythonProblemMake\make("handle-table-limit"; session))
+        private: i64: serial session\nextSerial + 1
+        private: int: live session\liveHandles + 1
+        private: int: index 0
+        while: index < length(session\slots)
+            private: @PythonSlot: candidate session\slots[index]
+            if: candidate\live = 0
+                break
+            index += 1
+        if: index = 32766
+            throw: PythonBridgeFailure(PythonProblemMake\make("handle-table-limit"; session))
+        private: @PythonSlot: slot (copy(PythonSlot))
+        private: @PythonHandle: handle (copy(PythonHandle))
+        slot\serial := serial
+        slot\token := token
+        slot\live := 1
+        handle\session := session
+        handle\generation := session\generation
+        handle\slot := index
+        handle\serial := serial
+        if: index = length(session\slots)
+            sys\resize(session\slots; index + 1)
+        ---
+        session\slots[index] := slot
+        session\nextSerial := serial
+        session\liveHandles := live
+        published := 1
+        return: handle
+
+PythonHandleRelease:
+    @PythonNativePort: port
+    @PythonSession: session
+    @PythonHandle: handle
+    required: port session handle
+    drop:
+        throws: copy(PythonBridgeThrows)
+        private: @PythonSlot: slot PythonHandleLookup\slot(port; session; handle)
+        private: @: token slot\token
+        if: session\liveHandles <= 0
+            throw: PythonBridgeFailure(PythonProblemMake\make("handle-count-invariant"; session))
+        private: int: count session\liveHandles - 1
+        slot\live := 0
+        session\liveHandles := count
+        port\drop(session\runtime; token)
+
+# Mark a slot dead BEFORE decref: Py_DECREF can run arbitrary finalizers.
+# A reused index has a fresh checked serial. Assignment aliases one handle.
+# Never deep-copy a live handle/session/buffer graph; use retain for a new lease.
+# release of an already released handle is a named failure, not a silent success.
+# Caller holds enter/leave scope during take/drop. No foreign Thread mutates table.
+
+PythonBufferAdopt:
+    @PythonNativePort: port
+    @PythonSession: session
+    @: nativeLease
+    required: port session nativeLease
+    return: @PythonBufferLease
+    take:
+        throws: copy(PythonBridgeThrows)
+        private: int: published 0
+        finally:
+            if: published = 0
+                port\releaseBuffer(session\runtime; nativeLease)
+        ---
+        if: session\liveBuffers < 0 || session\liveBuffers >= 32766
+            throw: PythonBridgeFailure(PythonProblemMake\make("buffer-quota-or-count"; session))
+        private: int: count session\liveBuffers + 1
+        private: @PythonBufferLease: lease (copy(PythonBufferLease))
+        lease\description := port\describeBuffer(nativeLease)
+        lease\session := session
+        lease\generation := session\generation
+        lease\nativeLease := nativeLease
+        session\liveBuffers := count
+        published := 1
+        return: lease

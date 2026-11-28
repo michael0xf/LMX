@@ -1,0 +1,139 @@
+# DRAFT executable cases. Production LMX execution: NOT_RUN.
+# Load src/contracts, collections, bytes, storage, cursor before this file.
+
+MapStorageCases:
+    return: int
+    variableDepth:
+        throws: copy(MapThrows)
+        @: document MapTree\create(3)
+        @: branch MapTree\newBranch(document; document\root; 1; 7)
+        @: other MapTree\newBunch(document; branch; 5)
+        if: MapTree\level(document\first) != 1 || MapTree\level(other\first) != 2
+            throw: MapFailure("unequal depths")
+        if: document\scope != other\scope || MapTree\sameBunch(document\first; other\first)
+            throw: MapFailure("bunch isolation")
+        MapTree\ensureSlot(document\root; 2)
+        if: document\root\slots[2] != MapNil
+            throw: MapFailure("branch hole")
+        return: 1
+    capacityOne:
+        throws: copy(MapThrows)
+        @: document MapTree\create(1)
+        MapTree\insert(document; 0; (65 record))
+        MapTree\insert(document; 0; (66 record))
+        MapTree\insert(document; 2; (67 record))
+        if: MapTree\length(document) != 3
+            throw: MapFailure("capacity-one count")
+        @: first MapTree\itemAt(document; 0)
+        @: middle MapTree\itemAt(document; 1)
+        @: last MapTree\itemAt(document; 2)
+        if: \first != 66 || \middle != 65 || \last != 67
+            throw: MapFailure("capacity-one order")
+        return: 1
+    anchorAffinity:
+        throws: copy(MapThrows)
+        @: document MapTree\create(2)
+        MapTree\insert(document; 0; (65 record))
+        @: left MapCursor\create(document; 0; 0)
+        @: right MapCursor\create(document; 0; 1)
+        int: leftId left\id
+        int: rightId right\id
+        MapTree\insert(document; 0; (66 record))
+        if: MapCursor\position(left) != 0 || MapCursor\position(right) != 1
+            throw: MapFailure("insertion affinity")
+        MapTree\erase(document; 0; 1)
+        if: left\id != leftId || right\id != rightId || MapCursor\position(right) != 0
+            throw: MapFailure("stable cursor identity")
+        return: 1
+    orderedBatch:
+        throws: copy(MapThrows)
+        @: document MapTree\create(3)
+        int: i 0
+        while: i < 6
+            MapTree\insert(document; i; (i record))
+            i += 1
+        MapTree\acknowledge(document; document\revision)
+        int: previous document\revision
+        MapTree\begin(document)
+        MapTree\insert(document; 1; (99 record))
+        MapTree\erase(document; 3; 5)
+        MapTree\commit(document)
+        @: events MapTree\takeChanges(document)
+        if: length(events) != 1 || events[0]\beforeRevision != previous || document\revision != previous + 1
+            throw: MapFailure("batch revision")
+        if: events[0]\hasSingleRange != 0 || length(events[0]\edits) != 2 || events[0]\edits[1]\begin != 3
+            throw: MapFailure("ordered edit coordinates")
+        if: length(MapTree\takeChanges(document)) != 1
+            throw: MapFailure("event lost before acknowledgement")
+        MapTree\acknowledge(document; document\revision)
+        if: length(MapTree\takeChanges(document)) != 0
+            throw: MapFailure("event acknowledgement")
+        return: 1
+    parserBookkeeping:
+        throws: copy(MapThrows)
+        @: document MapTree\create()
+        int: previous document\revision
+        MapTree\begin(document; 2)
+        MapTree\touch(document; 0; 0; 2)
+        MapTree\commit(document)
+        if: document\revision != previous || length(MapTree\takeChanges(document)) != 0
+            throw: MapFailure("parser feedback loop")
+        return: 1
+    childDocument:
+        throws: copy(MapThrows)
+        @: document MapTree\create(2)
+        int: i 0
+        while: i < 6
+            MapTree\insert(document; i; (i record))
+            i += 1
+        @: child MapSpan\create(document; 1; 5)
+        @: cursor MapSpan\cursor(child; 1)
+        int: stable cursor\id
+        MapTree\insert(document; 0; (90 record))
+        if: MapSpan\length(child) != 4 || MapSpan\localPosition(child; cursor) != 1
+            throw: MapFailure("child offset rebase")
+        MapSpan\insert(child; 0; (91 record))
+        if: MapSpan\length(child) != 5 || MapSpan\localPosition(child; cursor) != 2 || cursor\id != stable
+            throw: MapFailure("child insertion")
+        MapSpan\erase(child; 1; 3)
+        if: MapSpan\length(child) != 3
+            throw: MapFailure("child erase")
+        return: 1
+    scalarCodecs:
+        throws: copy(MapThrows)
+        if: MapBytes\parseText("-2147483648") != (-2147483647 - 1)
+            throw: MapFailure("minimum signed integer")
+        @: codes MapVector\create()
+        MapVector\push(codes; (65 record))
+        MapVector\push(codes; (128578 record))
+        @: encoded MapBytes\encodeUtf8(codes)
+        @: decoded MapBytes\decodeUtf8(encoded)
+        if: encoded\count != 5 || length(decoded) != 2 || \decoded[1] != 128578
+            throw: MapFailure("UTF-8 scalar round trip")
+        @: legacy MapBytes\allocate(utf16 := 1)
+        MapBytes\appendLegacyUnit(legacy; 55357)
+        MapBytes\appendLegacyUnit(legacy; 56898)
+        @: fromLegacy MapBytes\decodeLegacy(legacy)
+        if: length(fromLegacy) != 1 || \fromLegacy[0] != 128578
+            throw: MapFailure("legacy escaped surrogate pair")
+        return: 1
+    byteSourceOwnership:
+        throws: copy(MapThrows)
+        @: document MapTree\create()
+        document\p0Source := 1
+        int: callerValue 65
+        MapTree\insert(document; 0; @callerValue)
+        callerValue := 66
+        @: first MapTree\itemAt(document; 0)
+        if: \first != 65
+            throw: MapFailure("P0 insert retained caller scalar")
+        @: cursor MapCursor\create(document; 0)
+        @: changed MapCursor\replace(cursor; @callerValue)
+        callerValue := 67
+        @: second MapTree\itemAt(document; 0)
+        if: \second != 66 || changed\revision != document\revision
+            throw: MapFailure("P0 replacement retained caller scalar")
+        return: 1
+    run:
+        throws: copy(MapThrows)
+        return: variableDepth() + capacityOne() + anchorAffinity() + orderedBatch() + parserBookkeeping() + childDocument() + scalarCodecs() + byteSourceOwnership()

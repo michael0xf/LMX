@@ -1,0 +1,72 @@
+# DRAFT. These are finite typed integration contracts, not implemented providers.
+# Every actual provider is admitted with its full throws, owner and lifetime.
+# Cleanup providers have no declared recoverable exit and release only owned holds.
+PythonStageAPI :: (@PythonInstallPlan: plan; return: @; throws: copy(PythonBridgeThrows))
+PythonFetchAPI :: (@: stage; @PythonArtifact: artifact; return: @; throws: copy(PythonBridgeThrows))
+PythonVerifyAPI :: (@: blob; @PythonArtifact: artifact; throws: copy(PythonBridgeThrows))
+PythonExtractRuntimeAPI :: (@: stage; @: blob; throws: copy(PythonBridgeThrows))
+PythonInspectAPI :: (@: stage; return: @PythonRuntimeIdentity; throws: copy(PythonBridgeThrows))
+PythonInstallWheelAPI :: (@: stage; @: blob; @PythonWheel: wheel; throws: copy(PythonBridgeThrows))
+PythonProbeAPI :: (@: stage; []@: modules; throws: copy(PythonBridgeThrows))
+PythonPublishAPI :: (@: stage; @PythonInstallPlan: plan; return: @PythonInstallation; throws: copy(PythonBridgeThrows))
+PythonDiscardAPI :: (@: stage)
+
+PythonInstallerPort:
+    @PythonStageAPI: stage
+    @PythonFetchAPI: fetch
+    @PythonVerifyAPI: verify
+    @PythonExtractRuntimeAPI: extractRuntime
+    @PythonInspectAPI: inspect
+    @PythonInstallWheelAPI: installWheel
+    @PythonProbeAPI: probe
+    @PythonPublishAPI: publish
+    @PythonDiscardAPI: discard
+
+PythonOpenAPI :: (@PythonOpenRequest: request; return: @PythonSession; throws: copy(PythonBridgeThrows))
+PythonCloseAPI :: (@PythonSession: session; throws: copy(PythonBridgeThrows))
+PythonOwnerAPI :: (@PythonSession: session; throws: copy(PythonBridgeThrows))
+PythonEnterAPI :: (@PythonSession: session; return: @; throws: copy(PythonBridgeThrows))
+PythonLeaveAPI :: (@: guard)
+PythonNativeObjectAPI :: (@: runtime; @: request; return: @PythonNativeResult; throws: copy(PythonBridgeThrows))
+PythonDropAPI :: (@: runtime; @: token)
+PythonToValueAPI :: (@: runtime; @: token; int: maxDepth; int: maxItems; return: @PythonValue; throws: copy(PythonBridgeThrows))
+PythonBufferAPI :: (@: runtime; @: token; int: writable; return: @; throws: copy(PythonBridgeThrows))
+PythonBufferDescribeAPI :: (@: lease; return: @; throws: copy(PythonBridgeThrows))
+PythonReleaseBufferAPI :: (@: runtime; @: lease)
+
+PythonNativePort:
+    @PythonOpenAPI: open
+    @PythonCloseAPI: close
+    @PythonOwnerAPI: assertOwner
+    @PythonEnterAPI: enter
+    @PythonLeaveAPI: leave
+    @PythonNativeObjectAPI: importModule
+    @PythonNativeObjectAPI: getAttribute
+    @PythonNativeObjectAPI: setAttribute
+    @PythonNativeObjectAPI: callObject
+    @PythonNativeObjectAPI: getItem
+    @PythonNativeObjectAPI: setItem
+    @PythonNativeObjectAPI: newReference
+    @PythonNativeObjectAPI: fromValue
+    @PythonDropAPI: drop
+    @PythonToValueAPI: toValue
+    @PythonBufferAPI: buffer
+    @PythonBufferDescribeAPI: describeBuffer
+    @PythonReleaseBufferAPI: releaseBuffer
+
+PythonGateContext:
+    @PythonNativePort: native
+    @PythonInstallerPort: installer
+
+# NativeObjectAPI request is one of the ordinary records constructed by gates.
+# ok=1 transfers ONE strong reference / one remote or PyProxy lease into LMX.
+# ok=0 initializes error, owns no value; Python exception is consumed and retained
+# as structured error data before the thread state/GIL is detached.
+# Malformed results are rejected. Providers release a transferred token if their
+# own return cannot be completed. They never publish borrowed PyObject pointers.
+# assertOwner checks actual session identity against the provider registry and
+# its current owner lane; copied DATA cannot register a second native owner.
+# enter repeats owner/ready admission, pins runtime and attaches the SAME
+# interpreter's thread state. leave restores it. Neither may race finalization.
+# Native providers use PyConfig + CPython C API; Pyodide uses JS-host PyProxy API;
+# external providers use the negotiated worker protocol. LMX stays the same.

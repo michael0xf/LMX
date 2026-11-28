@@ -1,0 +1,106 @@
+# DRAFT. Explicit ordinary DATA conversions; no type guesses from display text.
+PythonValueMake:
+    int: kind
+    @: payload
+    required: kind payload
+    return: @PythonValue
+    box:
+        throws: copy(PythonBridgeThrows)
+        if: kind < 0 || kind > 9
+            throw: PythonBridgeFailure(PythonProblemMake\make("python-value-kind"; payload))
+        private: @PythonValue: result (copy(PythonValue))
+        result\kind := kind
+        result\payload := payload
+        return: result
+
+PythonNone:
+    return: @PythonValue
+    make:
+        throws: copy(PythonBridgeThrows)
+        return: PythonValueMake\box(0; (copy(())))
+
+PythonBool:
+    int: value
+    required: value
+    return: @PythonValue
+    make:
+        throws: copy(PythonBridgeThrows)
+        if: value != 0 && value != 1
+            throw: PythonBridgeFailure(PythonProblemMake\make("boolean-not-zero-or-one"; (value record)))
+        return: PythonValueMake\box(1; (value record))
+
+PythonInteger:
+    i64: value
+    required: value
+    return: @PythonValue
+    make:
+        throws: copy(PythonBridgeThrows)
+        return: PythonValueMake\box(2; (value record))
+
+PythonFloat:
+    double: value
+    required: value
+    return: @PythonValue
+    make:
+        throws: copy(PythonBridgeThrows)
+        return: PythonValueMake\box(4; (value record))
+
+PythonString:
+    []char: value
+    required: value
+    return: @PythonValue
+    make:
+        throws: copy(PythonBridgeThrows)
+        return: PythonValueMake\box(5; (copy(value) record))
+
+PythonBytes:
+    []u8: value
+    required: value
+    return: @PythonValue
+    make:
+        throws: copy(PythonBridgeThrows)
+        return: PythonValueMake\box(6; (copy(value) record))
+
+PythonSequence:
+    int: tuple
+    []@PythonValue: values
+    required: tuple values
+    return: @PythonValue
+    make:
+        throws: copy(PythonBridgeThrows)
+        if: tuple != 0 && tuple != 1
+            throw: PythonBridgeFailure(PythonProblemMake\make("sequence-kind"; (tuple record)))
+        private: @: snapshot (copy(()))
+        sys\resize(snapshot; length(values))
+        private: size_t: i 0
+        while: i < length(values)
+            snapshot[i] := copy(values[i])
+            i += 1
+        return: PythonValueMake\box(7 + tuple; snapshot)
+
+PythonIntegerRead:
+    @PythonValue: value
+    required: value
+    return: i64
+    read:
+        throws: copy(PythonBridgeThrows)
+        if: value\kind != 2
+            throw: PythonBridgeFailure(PythonProblemMake\make("expected-i64"; value))
+        return: \value\payload
+
+PythonKeywordMake:
+    []char: name
+    @PythonHandle: value
+    required: name value
+    return: @PythonKeyword
+    make:
+        private: @PythonKeyword: result (copy(PythonKeyword))
+        result\name := name
+        result\value := value
+        return: result
+
+# Native fromValue verifies the recursive schema, budgets and UTF-8, preserving
+# arbitrary embedded NUL in strings/bytes by length-based CPython constructors.
+# kind=3 is an exact decimal integer string, not float or an unchecked i64 cast.
+# kind=9 is an ordered sequence of (PythonValue key, PythonValue value) rows.
+# LMX Structure field names are not silently converted to Python object attrs.

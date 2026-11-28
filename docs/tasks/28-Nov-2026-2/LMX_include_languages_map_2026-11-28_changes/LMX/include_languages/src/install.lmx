@@ -1,0 +1,96 @@
+# DRAFT. Real LMX installation transaction over narrow file/runtime providers.
+# Only an app-owned staging directory is mutated; the active generation is not.
+PythonText:
+    []char: left
+    []char: right
+    required: left right
+    return: int
+    equal:
+        if: length(left) != length(right)
+            return: 0
+        private: size_t: index 0
+        while: index < length(left)
+            if: left[index] != right[index]
+                return: 0
+            index += 1
+        return: 1
+
+PythonIdentity:
+    @PythonRuntimeIdentity: expected
+    @PythonRuntimeIdentity: actual
+    required: expected actual
+    check:
+        throws: copy(PythonBridgeThrows)
+        if: PythonText\equal(expected\implementation; actual\implementation) = 0
+            throw: PythonBridgeFailure(PythonProblemMake\make("implementation"; actual))
+        if: PythonText\equal(expected\version; actual\version) = 0
+            throw: PythonBridgeFailure(PythonProblemMake\make("python-version"; actual))
+        if: PythonText\equal(expected\abi; actual\abi) = 0
+            throw: PythonBridgeFailure(PythonProblemMake\make("python-abi"; actual))
+        if: PythonText\equal(expected\target; actual\target) = 0
+            throw: PythonBridgeFailure(PythonProblemMake\make("target"; actual))
+        if: PythonText\equal(expected\libc; actual\libc) = 0
+            throw: PythonBridgeFailure(PythonProblemMake\make("libc"; actual))
+        if: expected\pointerBits != actual\pointerBits || expected\littleEndian != actual\littleEndian
+            throw: PythonBridgeFailure(PythonProblemMake\make("data-model"; actual))
+        if: expected\gilEnabled != actual\gilEnabled || expected\minimumApi != actual\minimumApi
+            throw: PythonBridgeFailure(PythonProblemMake\make("runtime-build"; actual))
+        if: expected\nativeExtensions != actual\nativeExtensions
+            throw: PythonBridgeFailure(PythonProblemMake\make("extension-loader"; actual))
+
+PythonWheelAdmission:
+    @PythonWheel: wheel
+    @PythonRuntimeIdentity: runtime
+    required: wheel runtime
+    check:
+        throws: copy(PythonBridgeThrows)
+        private: size_t: i 0
+        while: i < length(wheel\tags)
+            private: size_t: j 0
+            while: j < length(runtime\wheelTags)
+                if: PythonText\equal(\wheel\tags[i]; \runtime\wheelTags[j])
+                    return
+                j += 1
+            i += 1
+        throw: PythonBridgeFailure(PythonProblemMake\make("no-compatible-wheel-tag"; wheel))
+
+PythonInstall:
+    @PythonInstallerPort: port
+    @PythonInstallPlan: plan
+    required: port plan
+    return: @PythonInstallation
+    apply:
+        throws: copy(PythonBridgeThrows)
+        if: length(plan\installId) = 0 || length(plan\applicationRoot) = 0
+            throw: PythonBridgeFailure(PythonProblemMake\make("invalid-install-plan"; plan))
+        private: @: stage port\stage(plan)
+        private: int: published 0
+        finally:
+            if: published = 0
+                port\discard(stage)
+        ---
+        private: @: runtimeBlob port\fetch(stage; plan\runtime)
+        port\verify(runtimeBlob; plan\runtime)
+        port\extractRuntime(stage; runtimeBlob)
+        private: @PythonRuntimeIdentity: observed port\inspect(stage)
+        PythonIdentity\check(plan\identity; observed)
+        private: size_t: index 0
+        while: index < length(plan\wheels)
+            private: @PythonWheel: wheel plan\wheels[index]
+            PythonWheelAdmission\check(wheel; observed)
+            private: @: wheelBlob port\fetch(stage; wheel\artifact)
+            port\verify(wheelBlob; wheel\artifact)
+            port\installWheel(stage; wheelBlob; wheel)
+            index += 1
+        port\probe(stage; plan\smokeImports)
+        private: @PythonInstallation: installed port\publish(stage; plan)
+        published := 1
+        return: installed
+
+# stage validates lock closure, containment and immutable generation names.
+# inspect checks artifact metadata and loadability without trusting filename tags.
+# installWheel parses wheel metadata/RECORD, refuses unsupported native payloads
+# and path traversal, installs only into staging; no sdist build is hidden here.
+# publish performs compare-and-replace against expectedActiveId atomically.
+# All files/handles are owned by stage until successful publish transfers them.
+# Failed fetch/verify/extract/probe/publication leaves old active runtime intact.

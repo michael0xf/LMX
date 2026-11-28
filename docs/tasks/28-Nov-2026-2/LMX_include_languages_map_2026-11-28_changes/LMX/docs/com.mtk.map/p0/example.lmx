@@ -1,0 +1,187 @@
+# DRAFT. Host starts ordinary R0, supplies the admitted common P0 adapter,
+# then calls this fixture normally. These routines do not replace R0 entry.
+P0MixOpen:
+    @P0MixEngine: engine
+    @: engineContext
+    @: sourceBytes
+    required: engine engineContext sourceBytes
+    return: @
+    open:
+        throws: copy(P0MixThrows)
+        private: @: session (copy(P0MixSessionModel))
+        session\document := MapTree\create(32)
+        session\document\p0Source := 1
+        session\engine := engine
+        session\engineContext := engineContext
+        session\sink := P0MixSink
+        session\checkpoints := MapVector\create()
+        session\bindings := MapVector\create()
+        session\parsedRevision := 0
+        session\reader := P0MixReader\create(session\document; sourceBytes)
+        private: @: start (copy(P0MixCheckpoint))
+        start\cursor := MapCursor\create(session\document; 0; 0)
+        start\state := engine\initialState(engineContext)
+        start\rootBoundary := 1
+        MapVector\push(session\checkpoints; start)
+        private: @: dirty (copy(P0MixRange))
+        dirty\present := 1
+        dirty\sourceChanged := 1
+        dirty\end := length(sourceBytes)
+        private: @: candidate P0MixCandidate\create(session)
+        private: @: prepared MapNil
+        private: int: retained 0
+        session\pendingRejected := candidate
+        MapTree\begin(session\document; 1)
+        finally:
+            # An exception aborts this newly constructed, unpublished session.
+            # Do not append more source or retry a failed commit in cleanup.
+            if: retained != 0 && MapVector\indexOf(session\checkpoints; start) < 0
+                MapCursor\release(start\cursor)
+            if: retained = 0
+                P0MixDrain\complete(session)
+        # Opening the source is a recorded metadata event, even for empty input.
+        # This reserves one explicit revision for the initial source batch.
+        ---
+        MapTree\touch(session\document; 0; 0; kind := 2; itemId := session\document\id)
+        dirty\revision := session\document\revision + 1
+        candidate\targetRevision := dirty\revision
+        # P0 hooks use origin1 while this initial source transaction is open.
+        prepared := engine\resume(engineContext; candidate; P0MixReader\read; candidate\reader; start; dirty)
+        session\rejectedPrepared := prepared
+        P0MixReader\finishLoad(session\reader)
+        MapTree\commit(session\document)
+        # Initial parse provider prepares the known next committed revision.
+        if: prepared\sourceRevision != session\document\revision
+            throw: P0MixFailure("bootstrap parser revision")
+        if: prepared\syntaxValid = 0
+            session\lastDiagnostic := (copy(prepared\diagnostic))
+            session\stale := 1
+            session\observedRevision := session\document\revision
+            return: session
+        private: @: retired P0MixCandidate\create(session)
+        retired\bindings := prepared\retiredBindings
+        retired\checkpoints := prepared\retiredCheckpoints
+        session\root := engine\publish(engineContext; session; prepared)
+        session\checkpoints := prepared\checkpoints
+        session\bindings := prepared\bindings
+        session\parsedRevision := session\document\revision
+        session\observedRevision := session\parsedRevision
+        session\validTree := 1
+        session\semanticRevision := session\parsedRevision
+        session\semanticTarget := session\parsedRevision
+        session\pendingRetired := retired
+        session\pendingRejected := MapNil
+        session\rejectedPrepared := MapNil
+        retained := 1
+        P0MixDrain\complete(session)
+        P0MixAcknowledge\acknowledge(session; session\parsedRevision)
+        return: session
+
+# A local editor changes a byte through its live cursor. The retained owner
+# endpoint receives notification after commit. The Message owns session as
+# ordinary DATA; it does not receive a foreign mutable session in the letter.
+P0MixEditAtCursor:
+    @: session
+    @: cursor
+    int: replacement
+    @: parserOwner
+    required: session cursor replacement parserOwner
+    return: int
+    replaceByte:
+        throws: copy(P0MixThrows)
+        if: cursor\document != session\document || replacement < 0 || replacement > 255
+            throw: P0MixFailure("edit cursor or byte")
+        if: session\journalExclusive = 0
+            throw: P0MixFailure("shared owner edits use MapOwnerApply and its subscribers")
+        private: int: position MapCursor\position(cursor)
+        if: position >= MapTree\length(session\document)
+            throw: P0MixFailure("replace at source EOF")
+        if: parserOwner\State\session != session
+            throw: P0MixFailure("notification endpoint belongs to another owner session")
+        # setAt/replace preflight one value replacement and its event before
+        # publication. They preserve Cursor identity and require txDepth=0.
+        private: @: change MapCursor\replace(cursor; (replacement record))
+        post:
+            ask:
+                parserOwner\Changed\changed(documentId := change\documentId; revision := change\revision)
+            answer:
+                parserOwner\Result\accept
+            catch: MapFailure (@: cause)
+                parserOwner\Failure\accept(cause := cause)
+            catch: P0MixFailure (@: cause)
+                parserOwner\Failure\accept(cause := cause)
+            catch: P0MixPortFailure (@: cause)
+                parserOwner\Failure\accept(cause := cause)
+        ---
+        return: change\revision
+
+P0MixReceiptBuild:
+    @: session
+    required: session
+    return: @P0MixReceipt
+    build:
+        private: @: receipt (copy(P0MixReceipt))
+        receipt\documentId := session\document\id
+        receipt\revision := session\document\revision
+        receipt\parsedRevision := session\parsedRevision
+        receipt\validTree := session\validTree
+        receipt\stale := session\stale
+        receipt\ready := P0MixStatus\ready(session)
+        return: receipt
+
+# Ordinary persistent endpoints on the document owner. The host starts the
+# normal R0/Thread; naming this Structure does not launch another scheduler.
+# A reply is six scalar values. No handler waits for another Message.
+P0MixOwner:
+    State:
+        @: session MapNil
+        @: lastReceipt MapNil
+        @: lastFailure MapNil
+    Changed:
+        int: documentId
+        int: revision
+        required: documentId revision
+        return: @P0MixReceipt
+        changed:
+            throws: copy(P0MixThrows)
+            private: @: owner parent(node)
+            P0MixChangedMessage\changed(owner\State\session; documentId; revision)
+            return: P0MixReceiptBuild\build(owner\State\session)
+    ---
+    Result:
+        @P0MixReceipt: receipt
+        required: receipt
+        accept:
+            private: @: owner parent(node)
+            owner\State\lastReceipt := receipt
+    ---
+    Failure:
+        @: cause
+        required: cause
+        accept:
+            private: @: owner parent(node)
+            owner\State\lastFailure := cause
+
+P0MixOwnerCreate:
+    @: session
+    required: session
+    return: @
+    create:
+        private: @: owner (copy(P0MixOwner))
+        owner\State\session := session
+        return: owner
+
+# Used after the matching source revision has a valid P0 tree.
+# A bounded LMX mark is an independent scan scope over the same source.
+P0MixScanChild:
+    @: session
+    @: markBinding
+    required: session markBinding
+    return: @
+    scan:
+        throws: copy(P0MixThrows)
+        if: P0MixStatus\ready(session) = 0
+            throw: P0MixFailure("MIX analysis requires the current P0 revision")
+        if: markBinding\childDocument = MapNil
+            throw: P0MixFailure("P0 node has no child MIX document")
+        return: MapAnchors\scan(session\document; scope := markBinding\childDocument)

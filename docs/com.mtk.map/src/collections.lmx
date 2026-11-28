@@ -1,0 +1,1358 @@
+# DRAFT: shared LMX collection algorithms. No Java reflection or host ports.
+# Scalar collections box actual scalar records; object collections compare references.
+
+MapSizeSum:
+    int: left
+    int: right
+    int: limit 2147483647
+    required: left right
+    return: int
+    sum:
+        throws: copy(MapThrows)
+        if: left < 0 || right < 0 || left > limit || right > limit - left
+            throw: MapFailure("size overflow")
+        return: left + right
+
+MapVectorCreate:
+    return: @
+    create:
+        throws: copy(MapThrows)
+        return: (copy(()))
+
+MapVectorSize:
+    @: vector
+    required: vector
+    return: int
+    size:
+        throws: copy(MapThrows)
+        return: length(vector)
+
+MapVectorGet:
+    @: vector
+    int: index
+    required: vector index
+    return: @
+    get:
+        throws: copy(MapThrows)
+        if: index < 0 || index >= length(vector)
+            throw: MapFailure("vector index")
+        return: vector[index]
+
+MapVectorSet:
+    @: vector
+    int: index
+    @: value
+    required: vector index value
+    return: @
+    set:
+        throws: copy(MapThrows)
+        @: previous MapVector\get(vector; index)
+        vector[index] := value
+        return: previous
+
+MapVectorInsert:
+    @: vector
+    int: index
+    @: value
+    required: vector index value
+    return: int
+    insert:
+        throws: copy(MapThrows)
+        int: count length(vector)
+        if: index < 0 || index > count
+            throw: MapFailure("insert index")
+        int: nextSize MapSize\sum(count; 1)
+        sys\resize(vector; nextSize)
+        int: i count
+        while: i > index
+            vector[i] := vector[i - 1]
+            i -= 1
+        vector[index] := value
+        return: index
+
+MapVectorPush:
+    @: vector
+    @: value
+    required: vector value
+    return: int
+    push:
+        throws: copy(MapThrows)
+        return: MapVector\insert(vector; length(vector); value)
+
+MapVectorRemove:
+    @: vector
+    int: index
+    required: vector index
+    return: @
+    remove:
+        throws: copy(MapThrows)
+        @: previous MapVector\get(vector; index)
+        int: count length(vector)
+        int: i index
+        while: i + 1 < count
+            vector[i] := vector[i + 1]
+            i += 1
+        sys\resize(vector; count - 1)
+        return: previous
+
+MapVectorIndexOf:
+    @: vector
+    @: value
+    required: vector value
+    return: int
+    indexOf:
+        throws: copy(MapThrows)
+        int: i 0
+        while: i < length(vector)
+            if: vector[i] = value
+                return: i
+            i += 1
+        return: -1
+
+MapVectorContains:
+    @: vector
+    @: value
+    required: vector value
+    return: int
+    contains:
+        throws: copy(MapThrows)
+        return: MapVector\indexOf(vector; value) >= 0
+
+MapVectorRange:
+    @: vector
+    int: begin
+    int: end
+    required: vector begin end
+    return: @
+    range:
+        throws: copy(MapThrows)
+        if: begin < 0 || end < begin || end > length(vector)
+            throw: MapFailure("vector range")
+        @: out (copy(()))
+        sys\resize(out; end - begin)
+        int: i begin
+        while: i < end
+            out[i - begin] := vector[i]
+            i += 1
+        return: out
+
+MapVectorCopy:
+    @: vector
+    required: vector
+    return: @
+    copy:
+        throws: copy(MapThrows)
+        return: MapVector\range(vector; 0; length(vector))
+
+MapVectorClear:
+    @: vector
+    required: vector
+    return: @
+    clear:
+        throws: copy(MapThrows)
+        sys\resize(vector; 0)
+        return: vector
+
+MapVectorErase:
+    @: vector
+    int: begin
+    int: end
+    required: vector begin end
+    return: int
+    erase:
+        throws: copy(MapThrows)
+        if: begin < 0 || end < begin || end > length(vector)
+            throw: MapFailure("erase range")
+        int: removed end - begin
+        int: count length(vector)
+        int: i end
+        while: i < count
+            vector[i - removed] := vector[i]
+            i += 1
+        sys\resize(vector; count - removed)
+        return: removed
+
+MapVectorCopyFrom:
+    @: vector
+    @: source
+    int: offset
+    int: at
+    int: count
+    required: vector source offset at count
+    return: int
+    copyFrom:
+        throws: copy(MapThrows)
+        if: offset < 0 || count < 0 || offset > length(source) || count > length(source) - offset || at < 0
+            throw: MapFailure("copy range")
+        if: count = 0
+            return: 0
+        @: staged MapVector\range(source; offset; offset + count)
+        int: end MapSize\sum(at; count)
+        int: oldSize length(vector)
+        if: end > oldSize
+            sys\resize(vector; end)
+        int: i oldSize
+        while: i < at
+            vector[i] := MapNil
+            i += 1
+        i := 0
+        while: i < count
+            vector[at + i] := staged[i]
+            i += 1
+        return: count
+
+MapVectorInsertArray:
+    @: vector
+    @: source
+    int: offset
+    int: at
+    int: count
+    required: vector source offset at count
+    return: int
+    insertArray:
+        throws: copy(MapThrows)
+        if: offset < 0 || count < 0 || offset > length(source) || count > length(source) - offset || at < 0 || at > length(vector)
+            throw: MapFailure("insert array range")
+        @: staged MapVector\range(source; offset; offset + count)
+        int: oldSize length(vector)
+        int: newSize MapSize\sum(oldSize; count)
+        sys\resize(vector; newSize)
+        int: i oldSize
+        while: i > at
+            i -= 1
+            vector[i + count] := vector[i]
+        i := 0
+        while: i < count
+            vector[at + i] := staged[i]
+            i += 1
+        return: count
+
+MapVectorMove:
+    @: vector
+    int: index
+    int: destination
+    required: vector index destination
+    return: int
+    move:
+        throws: copy(MapThrows)
+        if: index < 0 || destination < 0 || index >= length(vector) || destination >= length(vector)
+            throw: MapFailure("move index")
+        @: value MapVector\remove(vector; index)
+        MapVector\insert(vector; destination; value)
+        return: destination
+
+MapVectorSwap:
+    @: vector
+    int: left
+    int: right
+    required: vector left right
+    return: @
+    swap:
+        throws: copy(MapThrows)
+        @: a MapVector\get(vector; left)
+        @: b MapVector\get(vector; right)
+        vector[left] := b
+        vector[right] := a
+        return: vector
+
+MapVectorPop:
+    @: vector
+    required: vector
+    return: @
+    pop:
+        throws: copy(MapThrows)
+        if: length(vector) = 0
+            return: MapNil
+        return: MapVector\remove(vector; length(vector) - 1)
+
+MapVectorFirst:
+    @: vector
+    required: vector
+    return: @
+    first:
+        throws: copy(MapThrows)
+        if: length(vector) = 0
+            return: MapNil
+        return: vector[0]
+
+MapVectorLast:
+    @: vector
+    required: vector
+    return: @
+    last:
+        throws: copy(MapThrows)
+        if: length(vector) = 0
+            return: MapNil
+        return: vector[length(vector) - 1]
+
+MapVectorRemoveValue:
+    @: vector
+    @: value
+    required: vector value
+    return: int
+    removeValue:
+        throws: copy(MapThrows)
+        int: at MapVector\indexOf(vector; value)
+        if: at >= 0
+            MapVector\remove(vector; at)
+        return: at
+
+MapVectorUnique:
+    @: vector
+    @: value
+    required: vector value
+    return: int
+    unique:
+        throws: copy(MapThrows)
+        int: at MapVector\indexOf(vector; value)
+        if: at >= 0
+            return: at
+        return: MapVector\push(vector; value)
+
+MapOrderedLowerBound:
+    @: vector
+    int: value
+    required: vector value
+    return: int
+    lowerBound:
+        throws: copy(MapThrows)
+        int: low 0
+        int: high length(vector)
+        while: low < high
+            int: middle low + (high - low) / 2
+            if: \vector[middle] < value
+                low := middle + 1
+            else:
+                high := middle
+        return: low
+
+MapOrderedUpperBound:
+    @: vector
+    int: value
+    required: vector value
+    return: int
+    upperBound:
+        throws: copy(MapThrows)
+        int: low 0
+        int: high length(vector)
+        while: low < high
+            int: middle low + (high - low) / 2
+            if: \vector[middle] <= value
+                low := middle + 1
+            else:
+                high := middle
+        return: low
+
+MapOrderedIndexOf:
+    @: vector
+    int: value
+    required: vector value
+    return: int
+    indexOf:
+        throws: copy(MapThrows)
+        int: at MapOrdered\lowerBound(vector; value)
+        if: at < length(vector)
+            if: \vector[at] = value
+                return: at
+        return: -1
+
+MapOrderedInsert:
+    @: vector
+    int: value
+    int: unique 0
+    required: vector value
+    return: int
+    insert:
+        throws: copy(MapThrows)
+        int: at MapOrdered\lowerBound(vector; value)
+        if: unique != 0 && at < length(vector)
+            if: \vector[at] = value
+                return: at
+        MapVector\insert(vector; at; (value record))
+        return: at
+
+MapOrderedEraseRange:
+    @: vector
+    int: first
+    int: last
+    required: vector first last
+    return: int
+    eraseRange:
+        throws: copy(MapThrows)
+        if: last < first
+            throw: MapFailure("ordered range")
+        int: begin MapOrdered\lowerBound(vector; first)
+        int: end MapOrdered\upperBound(vector; last)
+        return: MapVector\erase(vector; begin; end)
+
+MapOrderedReplace:
+    @: vector
+    int: index
+    int: value
+    int: unique 0
+    required: vector index value
+    return: int
+    replace:
+        throws: copy(MapThrows)
+        MapVector\remove(vector; index)
+        return: MapOrdered\insert(vector; value; unique)
+
+MapTableCreate:
+    @: keyEquals MapNil
+    return: @
+    create:
+        throws: copy(MapThrows)
+        @: table (copy(MapTableModel))
+        table\keyEquals := keyEquals
+        table\keys := MapVector\create()
+        table\values := MapVector\create()
+        table\values2 := MapVector\create()
+        return: table
+
+MapTableIndex:
+    @: table
+    @: key
+    required: table key
+    return: int
+    index:
+        throws: copy(MapThrows)
+        if: table\keyEquals != MapNil
+            return: MapVector\indexBy(table\keys; key; table\keyEquals)
+        return: MapVector\indexOf(table\keys; key)
+
+MapTableGet:
+    @: table
+    @: key
+    required: table key
+    return: @
+    get:
+        throws: copy(MapThrows)
+        int: at MapTable\index(table; key)
+        if: at < 0
+            return: MapNil
+        return: table\values[at]
+
+MapTablePut:
+    @: table
+    @: key
+    @: value
+    @: second MapNil
+    required: table key value
+    return: @
+    put:
+        throws: copy(MapThrows)
+        int: at MapTable\index(table; key)
+        if: at < 0
+            MapVector\push(table\keys; key)
+            MapVector\push(table\values; value)
+            MapVector\push(table\values2; second)
+            return: MapNil
+        @: previous table\values[at]
+        table\values[at] := value
+        table\values2[at] := second
+        return: previous
+
+MapTableRemove:
+    @: table
+    @: key
+    required: table key
+    return: @
+    remove:
+        throws: copy(MapThrows)
+        int: at MapTable\index(table; key)
+        if: at < 0
+            return: MapNil
+        MapVector\remove(table\keys; at)
+        MapVector\remove(table\values2; at)
+        return: MapVector\remove(table\values; at)
+
+MapTableClear:
+    @: table
+    required: table
+    return: @
+    clear:
+        throws: copy(MapThrows)
+        MapVector\clear(table\keys)
+        MapVector\clear(table\values)
+        MapVector\clear(table\values2)
+        return: table
+
+MapTableIndexInt:
+    @: table
+    int: key
+    required: table key
+    return: int
+    indexInt:
+        throws: copy(MapThrows)
+        int: i 0
+        while: i < length(table\keys)
+            if: \table\keys[i] = key
+                return: i
+            i += 1
+        return: -1
+
+MapTableGetInt:
+    @: table
+    int: key
+    required: table key
+    return: @
+    getInt:
+        throws: copy(MapThrows)
+        int: at MapTable\indexInt(table; key)
+        if: at < 0
+            return: MapNil
+        return: table\values[at]
+
+MapTablePutInt:
+    @: table
+    int: key
+    @: value
+    @: second MapNil
+    required: table key value
+    return: @
+    putInt:
+        throws: copy(MapThrows)
+        int: at MapTable\indexInt(table; key)
+        if: at < 0
+            MapVector\push(table\keys; (key record))
+            MapVector\push(table\values; value)
+            MapVector\push(table\values2; second)
+            return: MapNil
+        @: previous table\values[at]
+        table\values[at] := value
+        table\values2[at] := second
+        return: previous
+
+MapTableRemoveInt:
+    @: table
+    int: key
+    required: table key
+    return: @
+    removeInt:
+        throws: copy(MapThrows)
+        int: at MapTable\indexInt(table; key)
+        if: at < 0
+            return: MapNil
+        MapVector\remove(table\keys; at)
+        MapVector\remove(table\values2; at)
+        return: MapVector\remove(table\values; at)
+
+MapIteratorCreate:
+    @: vector
+    int: begin 0
+    int: end -1
+    int: direction 1
+    required: vector
+    return: @
+    create:
+        throws: copy(MapThrows)
+        if: end < 0
+            end := length(vector)
+        if: begin < 0 || end < begin || end > length(vector) || (direction != 1 && direction != -1)
+            throw: MapFailure("iterator range")
+        @: iterator (copy(MapIteratorModel))
+        iterator\values := vector
+        iterator\begin := begin
+        iterator\end := end
+        iterator\direction := direction
+        iterator\position := begin
+        if: direction < 0
+            iterator\position := end
+        return: iterator
+
+MapIteratorHasNext:
+    @: iterator
+    required: iterator
+    return: int
+    hasNext:
+        throws: copy(MapThrows)
+        if: iterator\direction > 0
+            return: iterator\position < iterator\end
+        return: iterator\position > iterator\begin
+
+MapIteratorNext:
+    @: iterator
+    required: iterator
+    return: @
+    next:
+        throws: copy(MapThrows)
+        if: MapIterator\hasNext(iterator) = 0
+            return: MapNil
+        if: iterator\direction > 0
+            @: value MapVector\get(iterator\values; iterator\position)
+            iterator\position += 1
+            return: value
+        iterator\position -= 1
+        return: MapVector\get(iterator\values; iterator\position)
+
+MapIteratorReset:
+    @: iterator
+    required: iterator
+    return: @
+    reset:
+        throws: copy(MapThrows)
+        iterator\position := iterator\begin
+        if: iterator\direction < 0
+            iterator\position := iterator\end
+        return: iterator
+
+MapIteratorPrevious:
+    @: iterator
+    required: iterator
+    return: @
+    previous:
+        throws: copy(MapThrows)
+        if: iterator\direction > 0
+            if: iterator\position <= iterator\begin
+                return: MapNil
+            iterator\position -= 1
+            return: MapVector\get(iterator\values; iterator\position)
+        if: iterator\position >= iterator\end
+            return: MapNil
+        @: value MapVector\get(iterator\values; iterator\position)
+        iterator\position += 1
+        return: value
+
+MapSize:
+    @: sum MapSizeSum\sum
+
+
+MapVectorCompact:
+    @: vector
+    required: vector
+    return: int
+    compact:
+        throws: copy(MapThrows)
+        int: write 0
+        int: read 0
+        while: read < length(vector)
+            if: vector[read] != MapNil
+                vector[write] := vector[read]
+                write += 1
+            read += 1
+        sys\resize(vector; write)
+        return: write
+
+MapVector:
+    @: indexBy MapVectorIndexBy\indexBy
+    @: offset MapVectorOffset\offset
+    @: addElement MapVectorAddElement\addElement
+    @: setExtended MapVectorSetExtended\setExtended
+    @: copyTo MapVectorCopyTo\copyTo
+    @: compact MapVectorCompact\compact
+    @: reserve MapVectorReserve\reserve
+    @: capacity MapVectorCapacity\capacity
+    @: optional MapVectorOptional\optional
+    @: ensureSlot MapVectorEnsureSlot\ensureSlot
+    @: create MapVectorCreate\create
+    @: size MapVectorSize\size
+    @: get MapVectorGet\get
+    @: set MapVectorSet\set
+    @: insert MapVectorInsert\insert
+    @: push MapVectorPush\push
+    @: remove MapVectorRemove\remove
+    @: indexOf MapVectorIndexOf\indexOf
+    @: contains MapVectorContains\contains
+    @: range MapVectorRange\range
+    @: copy MapVectorCopy\copy
+    @: clear MapVectorClear\clear
+    @: erase MapVectorErase\erase
+    @: copyFrom MapVectorCopyFrom\copyFrom
+    @: insertArray MapVectorInsertArray\insertArray
+    @: move MapVectorMove\move
+    @: swap MapVectorSwap\swap
+    @: pop MapVectorPop\pop
+    @: first MapVectorFirst\first
+    @: last MapVectorLast\last
+    @: removeValue MapVectorRemoveValue\removeValue
+    @: unique MapVectorUnique\unique
+
+MapOrdered:
+    @: lowerBound MapOrderedLowerBound\lowerBound
+    @: upperBound MapOrderedUpperBound\upperBound
+    @: indexOf MapOrderedIndexOf\indexOf
+    @: insert MapOrderedInsert\insert
+    @: eraseRange MapOrderedEraseRange\eraseRange
+    @: replace MapOrderedReplace\replace
+
+MapTable:
+    @: removeAt MapTableRemoveAt\removeAt
+    @: erase MapTableErase\erase
+    @: pop MapTablePop\pop
+    @: truncate MapTableTruncate\truncate
+    @: create MapTableCreate\create
+    @: index MapTableIndex\index
+    @: get MapTableGet\get
+    @: put MapTablePut\put
+    @: remove MapTableRemove\remove
+    @: clear MapTableClear\clear
+    @: indexInt MapTableIndexInt\indexInt
+    @: getInt MapTableGetInt\getInt
+    @: putInt MapTablePutInt\putInt
+    @: removeInt MapTableRemoveInt\removeInt
+
+MapIterator:
+    @: snapshot MapIteratorSnapshot\snapshot
+    @: dispose MapIteratorDispose\dispose
+    @: toFirst MapIteratorToFirst\toFirst
+    @: toLast MapIteratorToLast\toLast
+    @: create MapIteratorCreate\create
+    @: hasNext MapIteratorHasNext\hasNext
+    @: next MapIteratorNext\next
+    @: reset MapIteratorReset\reset
+    @: previous MapIteratorPrevious\previous
+
+MapVectorReserve:
+    @: vector
+    int: count
+    return: @
+    reserve:
+        throws: copy(MapThrows)
+        if: count < length(vector)
+            throw: MapFailure("reserve below logical length")
+        sys\reserve(vector; count)
+        return: vector
+
+MapVectorCapacity:
+    @: vector
+    return: int
+    capacity:
+        throws: copy(MapThrows)
+        return: sys\capacity(vector)
+
+MapVectorOptional:
+    @: vector
+    int: index
+    return: @
+    optional:
+        throws: copy(MapThrows)
+        if: index < 0 || index >= length(vector)
+            return: MapNil
+        return: vector[index]
+
+MapVectorEnsureSlot:
+    @: vector
+    int: index
+    return: @
+    ensureSlot:
+        throws: copy(MapThrows)
+        if: index < 0
+            throw: MapFailure("negative slot")
+        int: needed MapSize\sum(index; 1)
+        int: old length(vector)
+        if: needed > old
+            sys\resize(vector; needed)
+            int: i old
+            while: i < needed
+                vector[i] := MapNil
+                i += 1
+        return: vector
+
+MapNumberIndexOf:
+    @: vector
+    @: value
+    return: int
+    indexOf:
+        throws: copy(MapThrows)
+        int: i 0
+        while: i < length(vector)
+            if: \vector[i] = \value
+                return: i
+            i += 1
+        return: -1
+
+MapNumberUnique:
+    @: vector
+    @: value
+    return: int
+    unique:
+        throws: copy(MapThrows)
+        int: at MapNumber\indexOf(vector; value)
+        if: at >= 0
+            return: at
+        return: MapVector\push(vector; value)
+
+MapNumberRemove:
+    @: vector
+    @: value
+    return: int
+    remove:
+        throws: copy(MapThrows)
+        int: at MapNumber\indexOf(vector; value)
+        if: at >= 0
+            MapVector\remove(vector; at)
+        return: at
+
+MapIndexCreate:
+    return: @
+    create:
+        throws: copy(MapThrows)
+        return: MapTable\create()
+
+MapIndexFirst:
+    @: index
+    int: code
+    return: int
+    first:
+        throws: copy(MapThrows)
+        int: at MapOrdered\lowerBound(index\keys; code)
+        if: at < length(index\keys)
+            if: \index\keys[at] = code
+                return: at
+        return: -1
+
+MapIndexLast:
+    @: index
+    int: code
+    return: int
+    last:
+        throws: copy(MapThrows)
+        int: at MapOrdered\upperBound(index\keys; code) - 1
+        if: at >= 0
+            if: \index\keys[at] = code
+                return: at
+        return: -1
+
+MapIndexGet:
+    @: index
+    int: code
+    return: @
+    get:
+        throws: copy(MapThrows)
+        int: at MapIndex\first(index; code)
+        if: at < 0
+            return: MapNil
+        return: index\values[at]
+
+MapIndexGetLast:
+    @: index
+    int: code
+    return: @
+    getLast:
+        throws: copy(MapThrows)
+        int: at MapIndex\last(index; code)
+        if: at < 0
+            return: MapNil
+        return: index\values[at]
+
+MapIndexPut:
+    @: index
+    int: code
+    @: value
+    int: uniqueCode 0
+    int: uniqueReference 0
+    return: int
+    put:
+        throws: copy(MapThrows)
+        int: at MapOrdered\lowerBound(index\keys; code)
+        int: end MapOrdered\upperBound(index\keys; code)
+        if: uniqueCode != 0 && at < end
+            index\values[at] := value
+            return: at
+        if: uniqueReference != 0
+            int: i at
+            while: i < end
+                if: index\values[i] = value
+                    return: i
+                i += 1
+        ---
+        MapVector\insert(index\keys; end; (code record))
+        MapVector\insert(index\values; end; value)
+        return: end
+
+MapIndexRemove:
+    @: index
+    int: code
+    @: value MapNil
+    return: @
+    remove:
+        throws: copy(MapThrows)
+        int: at MapOrdered\lowerBound(index\keys; code)
+        int: end MapOrdered\upperBound(index\keys; code)
+        while: at < end
+            if: value = MapNil || index\values[at] = value
+                MapVector\remove(index\keys; at)
+                return: MapVector\remove(index\values; at)
+            at += 1
+        return: MapNil
+
+MapIndexRemoveRange:
+    @: index
+    int: first
+    int: last
+    return: int
+    removeRange:
+        throws: copy(MapThrows)
+        if: last < first
+            throw: MapFailure("index range")
+        int: begin MapOrdered\lowerBound(index\keys; first)
+        int: end MapOrdered\upperBound(index\keys; last)
+        MapVector\erase(index\keys; begin; end)
+        return: MapVector\erase(index\values; begin; end)
+
+MapIndexRekey:
+    @: index
+    int: oldCode
+    int: newCode
+    @: value
+    int: uniqueCode 0
+    return: int
+    rekey:
+        throws: copy(MapThrows)
+        @: removed MapIndex\remove(index; oldCode; value)
+        if: removed = MapNil
+            throw: MapFailure("index entry missing")
+        return: MapIndex\put(index; newCode; value; uniqueCode)
+
+MapIndexCheck:
+    @: index
+    return: int
+    check:
+        throws: copy(MapThrows)
+        if: length(index\keys) != length(index\values)
+            throw: MapFailure("index columns differ")
+        int: i 1
+        while: i < length(index\keys)
+            if: \index\keys[i - 1] > \index\keys[i]
+                throw: MapFailure("index order")
+            i += 1
+        return: 1
+
+MapNumber:
+    @: hash MapNumberHash\hash
+    @: indexOf MapNumberIndexOf\indexOf
+    @: unique MapNumberUnique\unique
+    @: remove MapNumberRemove\remove
+
+MapIndex:
+    @: create MapIndexCreate\create
+    @: first MapIndexFirst\first
+    @: last MapIndexLast\last
+    @: get MapIndexGet\get
+    @: getLast MapIndexGetLast\getLast
+    @: put MapIndexPut\put
+    @: remove MapIndexRemove\remove
+    @: removeRange MapIndexRemoveRange\removeRange
+    @: rekey MapIndexRekey\rekey
+    @: check MapIndexCheck\check
+
+
+MapVectorAddElement:
+    @: vector
+    @: value
+    return: int
+    addElement:
+        throws: copy(MapThrows)
+        MapVector\push(vector; value)
+        return: length(vector)
+
+MapVectorSetExtended:
+    @: vector
+    int: index
+    @: value
+    return: @
+    setExtended:
+        throws: copy(MapThrows)
+        MapVector\ensureSlot(vector; index)
+        return: MapVector\set(vector; index; value)
+
+MapVectorCopyTo:
+    @: source
+    @: destination
+    int: append 0
+    return: int
+    copyTo:
+        throws: copy(MapThrows)
+        @: staged MapVector\copy(source)
+        if: append = 0
+            MapVector\clear(destination)
+        return: MapVector\insertArray(destination; staged; 0; length(destination); length(staged))
+
+MapNumberHash:
+    @: vector
+    return: int
+    hash:
+        throws: copy(MapThrows)
+        i64: value 0
+        int: i 0
+        while: i < length(vector)
+            i64: digit \vector[i]
+            if: digit < (-2147483647 - 1) || digit > 2147483647
+                throw: MapFailure("Java IntArray hash requires signed32 cells")
+            value := (value * 31 + digit) % 4294967296
+            if: value < 0
+                value += 4294967296
+            i += 1
+        if: value >= 2147483648
+            value -= 4294967296
+        return: value
+
+
+# Table row mutations always update every column together on the owner lane.
+MapTableRemoveAt:
+    @: table
+    int: at
+    required: table at
+    return: @
+    removeAt:
+        throws: copy(MapThrows)
+        if: at < 0 || at >= length(table\keys)
+            throw: MapFailure("table row")
+        @: result table\values[at]
+        MapVector\remove(table\keys; at)
+        MapVector\remove(table\values; at)
+        MapVector\remove(table\values2; at)
+        return: result
+
+MapTableErase:
+    @: table
+    int: begin
+    int: end
+    required: table begin end
+    return: int
+    erase:
+        throws: copy(MapThrows)
+        if: begin < 0 || end < begin || end > length(table\keys)
+            throw: MapFailure("table row range")
+        MapVector\erase(table\keys; begin; end)
+        MapVector\erase(table\values; begin; end)
+        MapVector\erase(table\values2; begin; end)
+        return: end - begin
+
+MapTablePop:
+    @: table
+    int: keyResult 0
+    required: table
+    return: @
+    pop:
+        throws: copy(MapThrows)
+        int: at length(table\keys) - 1
+        if: at < 0
+            return: MapNil
+        @: key table\keys[at]
+        @: value MapTable\removeAt(table; at)
+        if: keyResult != 0
+            return: key
+        return: value
+
+MapTableTruncate:
+    @: table
+    int: size
+    required: table size
+    return: int
+    truncate:
+        throws: copy(MapThrows)
+        if: size < 0
+            throw: MapFailure("table size")
+        if: size < length(table\keys)
+            MapTable\erase(table; size; length(table\keys))
+        return: length(table\keys)
+
+# Snapshot enumeration does not retain a global Java buffer pool. The caller
+# chooses create for a live owner-local vector or snapshot for a stable list.
+MapIteratorSnapshot:
+    @: vector
+    int: begin 0
+    int: end -1
+    int: direction 1
+    required: vector
+    return: @
+    snapshot:
+        throws: copy(MapThrows)
+        if: end < 0
+            end := length(vector)
+        @: values MapVector\range(vector; begin; end)
+        return: MapIterator\create(values; 0; length(values); direction)
+
+MapIteratorDispose:
+    @: iterator
+    required: iterator
+    return: @
+    dispose:
+        throws: copy(MapThrows)
+        iterator\values := MapNil
+        iterator\begin := 0
+        iterator\end := 0
+        iterator\position := 0
+        return: iterator
+
+MapIteratorToFirst:
+    @: iterator
+    required: iterator
+    return: @
+    toFirst:
+        throws: copy(MapThrows)
+        iterator\direction := 1
+        iterator\position := iterator\begin
+        return: iterator
+
+MapIteratorToLast:
+    @: iterator
+    required: iterator
+    return: @
+    toLast:
+        throws: copy(MapThrows)
+        iterator\direction := -1
+        iterator\position := iterator\end
+        return: iterator
+
+MapLongIndexOf:
+    @: vector
+    i64: value
+    required: vector value
+    return: int
+    indexOf:
+        throws: copy(MapThrows)
+        int: i 0
+        while: i < length(vector)
+            if: \vector[i] = value
+                return: i
+            i += 1
+        return: -1
+
+MapLongRemove:
+    @: vector
+    i64: value
+    required: vector value
+    return: int
+    remove:
+        throws: copy(MapThrows)
+        int: at MapLong\indexOf(vector; value)
+        if: at >= 0
+            MapVector\remove(vector; at)
+        return: at
+
+MapLong:
+    @: indexOf MapLongIndexOf\indexOf
+    @: remove MapLongRemove\remove
+
+# A live vector contains explicit membership records; values remain ordinary
+# shared references. One entry can belong to one vector at a time.
+MapLiveEntry:
+    @: value
+    required: value
+    return: @
+    entry:
+        throws: copy(MapThrows)
+        @: result (copy(MapLiveEntryModel))
+        result\value := value
+        return: result
+
+MapLiveEnumerate:
+    @: vector
+    int: begin 0
+    int: end -1
+    required: vector
+    return: int
+    enumerate:
+        throws: copy(MapThrows)
+        if: end < 0
+            end := length(vector)
+        if: begin < 0 || end < begin || end > length(vector)
+            throw: MapFailure("live enumeration range")
+        int: i begin
+        while: i < end
+            @: entry vector[i]
+            if: entry != MapNil
+                entry\vector := vector
+                entry\index := i
+            i += 1
+        return: end - begin
+
+MapLiveNilling:
+    @: vector
+    int: begin
+    int: end
+    required: vector begin end
+    return: int
+    nilling:
+        throws: copy(MapThrows)
+        if: begin < 0 || end < begin || end > length(vector)
+            throw: MapFailure("live detach range")
+        int: i begin
+        while: i < end
+            @: entry vector[i]
+            if: entry != MapNil && entry\vector = vector
+                entry\vector := MapNil
+                entry\index := -1
+            i += 1
+        return: end - begin
+
+MapLiveInsert:
+    @: vector
+    int: at
+    @: entry
+    required: vector at entry
+    return: int
+    insert:
+        throws: copy(MapThrows)
+        if: entry != MapNil && entry\vector != MapNil
+            throw: MapFailure("entry already belongs to a live vector")
+        MapVector\insert(vector; at; entry)
+        MapLive\enumerate(vector; at)
+        return: at
+
+MapLiveRemove:
+    @: vector
+    int: at
+    required: vector at
+    return: @
+    remove:
+        throws: copy(MapThrows)
+        @: entry MapVector\get(vector; at)
+        MapLive\nilling(vector; at; at + 1)
+        MapVector\remove(vector; at)
+        MapLive\enumerate(vector; at)
+        return: entry
+
+MapLiveDetach:
+    @: entry
+    @: expected MapNil
+    required: entry
+    return: @
+    detach:
+        throws: copy(MapThrows)
+        if: entry\vector = MapNil
+            return: entry
+        if: expected != MapNil && expected != entry\vector
+            return: entry
+        return: MapLive\remove(entry\vector; entry\index)
+
+MapLiveSet:
+    @: vector
+    int: at
+    @: entry
+    required: vector at entry
+    return: @
+    set:
+        throws: copy(MapThrows)
+        @: old MapVector\get(vector; at)
+        if: old = entry
+            return: old
+        if: entry != MapNil && entry\vector != MapNil
+            throw: MapFailure("entry already belongs to a live vector")
+        MapLive\nilling(vector; at; at + 1)
+        vector[at] := entry
+        MapLive\enumerate(vector; at; at + 1)
+        return: old
+
+MapLiveErase:
+    @: vector
+    int: begin
+    int: end
+    required: vector begin end
+    return: int
+    erase:
+        throws: copy(MapThrows)
+        MapLive\nilling(vector; begin; end)
+        MapVector\erase(vector; begin; end)
+        MapLive\enumerate(vector; begin)
+        return: end - begin
+
+MapLiveClear:
+    @: vector
+    required: vector
+    return: @
+    clear:
+        throws: copy(MapThrows)
+        MapLive\erase(vector; 0; length(vector))
+        return: vector
+
+MapLiveMove:
+    @: vector
+    int: from
+    int: to
+    required: vector from to
+    return: int
+    move:
+        throws: copy(MapThrows)
+        MapVector\move(vector; from; to)
+        int: begin from
+        int: end to
+        if: begin > end
+            begin := to
+            end := from
+        MapLive\enumerate(vector; begin; end + 1)
+        return: to
+
+MapLiveSwap:
+    @: vector
+    int: left
+    int: right
+    required: vector left right
+    return: int
+    swap:
+        throws: copy(MapThrows)
+        MapVector\swap(vector; left; right)
+        MapLive\enumerate(vector; left; left + 1)
+        MapLive\enumerate(vector; right; right + 1)
+        return: 1
+
+MapLiveCopyFrom:
+    @: vector
+    @: source
+    int: offset
+    int: at
+    int: count
+    required: vector source offset at count
+    return: int
+    copyFrom:
+        throws: copy(MapThrows)
+        if: at < 0 || at > length(vector)
+            throw: MapFailure("live copy destination")
+        @: values MapVector\range(source; offset; MapSize\sum(offset; count))
+        @: staged MapVector\create()
+        int: i 0
+        while: i < length(values)
+            @: entry values[i]
+            if: entry = MapNil
+                MapVector\push(staged; MapNil)
+            else:
+                MapVector\push(staged; MapLive\entry(entry\value))
+            i += 1
+        int: end MapSize\sum(at; count)
+        MapVector\reserve(vector; end)
+        int: replaced end
+        if: replaced > length(vector)
+            replaced := length(vector)
+        MapLive\nilling(vector; at; replaced)
+        MapVector\copyFrom(vector; staged; 0; at; count)
+        MapLive\enumerate(vector; at)
+        return: count
+
+MapLive:
+    @: create MapVectorCreate\create
+    @: entry MapLiveEntry\entry
+    @: enumerate MapLiveEnumerate\enumerate
+    @: nilling MapLiveNilling\nilling
+    @: insert MapLiveInsert\insert
+    @: remove MapLiveRemove\remove
+    @: detach MapLiveDetach\detach
+    @: set MapLiveSet\set
+    @: erase MapLiveErase\erase
+    @: clear MapLiveClear\clear
+    @: move MapLiveMove\move
+    @: swap MapLiveSwap\swap
+    @: copyFrom MapLiveCopyFrom\copyFrom
+
+MapVectorOffset:
+    return: int
+    offset:
+        return: 0
+
+# A content comparator is an ordinary CODE reference with parameters left/right
+# and int result. It must not mutate the searched collection during this call.
+MapVectorIndexBy:
+    @: vector
+    @: value
+    @: equal
+    required: vector value equal
+    return: int
+    indexBy:
+        throws: copy(MapThrows)
+        int: i 0
+        while: i < length(vector)
+            if: equal(left := vector[i]; right := value)
+                return: i
+            i += 1
+        return: -1

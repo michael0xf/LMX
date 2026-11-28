@@ -1,0 +1,28 @@
+# DRAFT profile selections. The resulting DATA still needs a real release lock.
+PythonPlatformExamples:
+    mirOnLinux:
+        return: @PythonProfile
+        run:
+            throws: copy(PythonBridgeThrows)
+            return: PythonProfileSelect\choose(target := 2; host := 2; hosted := 1; jsHost := 0; rv64Linux := 0)
+#
+    browserWasm:
+        return: @PythonProfile
+        run:
+            throws: copy(PythonBridgeThrows)
+            return: PythonProfileSelect\choose(target := 3; host := 5; hosted := 1; jsHost := 1; rv64Linux := 0)
+#
+    rv64Linux:
+        return: @PythonProfile
+        run:
+            throws: copy(PythonBridgeThrows)
+            return: PythonProfileSelect\choose(target := 4; host := 2; hosted := 1; jsHost := 0; rv64Linux := 1)
+#
+    android:
+        return: @PythonProfile
+        run:
+            throws: copy(PythonBridgeThrows)
+            return: PythonProfileSelect\choose(target := 1; host := 4; hosted := 1; jsHost := 0; rv64Linux := 0)
+
+# Expected IDs: linux, wasm-linear, riscv64-linux, android.
+# WASI without a JS host is intentionally rejected by the private profile.

@@ -6,6 +6,8 @@
 | --- | --- | --- |
 | Написание идентификатора, имена полей, профильные ключи | [Миграция и десять проверок](graph-input.md#names-rollout) | [Ключи полей](../docs/spec/reference/field-name-keys.md) |
 | Текст Message и исходного файла | [Файл, память, кодек и проверка графа](graph-input.md#from-lmx-research) | [Ресивер fromLmx](../docs/spec/LMX_semantics.ru.md#from-lmx-contract) |
+| P0, Cursor и MIX | [Подготовка в этапе грамматики](../next_core_tasks_v3.md#p0-mix-python-priority-20261128) | [Источник, продолжение и живые привязки](../docs/com.mtk.map/p0/README.md#p0-mix-parser-contract) |
+| MIX, Python и Message-протоколы | [Подключение и приёмка после ядра](../next_core_tasks_v3.md#mix-python-message-after-kernel) | [Платформы и Python](../include_languages/README.md) · [Протоколы 109–112](../docs/spec/patterns/06_async_and_messages/MESSAGE_PROTOCOLS_2026-11-28.md) |
 | Типизированная запись и размеры Array | [Переход потребителей ABI](kernel-runtime.md#type-layout) | [TypeRef](../docs/spec/TYPE_REFERENCES.md) · [Хранение](../docs/spec/ARRAY_STORAGE.ru.md) |
 | Интерпретатор и runtime SLJIT | [Этапы и измерения](kernel-runtime.md#jit-rollout) | [Общие операции и ABI](../docs/spec/INTERPRETER_AND_NATIVE.md) |
 | Тензорные выражения и матричные методы | [Этапы 0–8](tensor-expressions.md#integration-v3) | [Группировщик](../docs/spec/EXPRESSION_ALGORITHM.md) · [Тензорные операции](../docs/spec/TENSOR_EXPRESSIONS.md) |

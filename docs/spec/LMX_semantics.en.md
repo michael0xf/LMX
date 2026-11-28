@@ -86,6 +86,13 @@ Where the checks stand follows from the level of the code and the way it is exec
 
 The wrappers are L3 code and the one place of the checks; the interpreter uses the same code for interpreted L2, so there is no second set of checks. They make arrays and pointers safe by the real mechanism of the [address operations](L2_spec_en.md#lowlevel-address): an array index is checked against the explicitly stored length (adjacent indices reduce to one linear index and one check), and an L3 pointer to an element is a wrapper holding the Array-descriptor reference and the explicit index, so moving storage needs no pointer traversal. The source of L3 and its set of operands differ from L2 only by the absence of the direct `c.*` doors (the author's clarification of 23 November 2026). The `c.*` doors and the `include` abilities of L2 remain: they are the low-level interface of L2 itself and part of the C99 build, not another language. A `c.*` call is a call across the adapter boundary of the [ABI](L2_spec_en.md#lowlevel-abi): the checks above govern LMX operations and the LMX side of the call, and the body of the called C function is not instrumented, sandboxed or intercepted; no allocator or memory function of C is wrapped.
 
+<a id="python-gateway"></a>
+### Connected Python runtime
+
+The `py.*` receivers use ordinary call admission and an explicit session and provider. They are available in L3 and L2 and retain the common LMX graph. The direct `c.*` door belongs to L2. Python calls preserve structured exceptions, handle ownership, and buffer lifetime. An external process passes bounded DATA and opaque identifiers without turning a Python pointer into an LMX reference.
+
+An application-private Python installation and a selected external endpoint follow one gate contract with distinct capability profiles. Interpreter state belongs to an explicit owner. [Profiles, API, and implementation status](../../include_languages/README.md).
+
 <a id="program-representation"></a>
 ### The full graph and compiled methods
 

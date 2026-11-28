@@ -1,0 +1,54 @@
+# DRAFT. One pending business request; ordinary post owns transport correlation.
+AskReply:
+    i64: token
+    int: value
+
+AskClientMessage:
+    int: value
+    i64: token
+    @AskReply: response
+    @: service
+    @: timer
+    @: selfAddress
+    @: events
+    private: int: active 0
+    private: i64: next 0
+    private: i64: current 0
+    start:
+        if: node\active = 1
+            events\rejected(1)
+            return
+        if: node\next = 9223372036854775807
+            events\rejected(2)
+            return
+        node\next += 1
+        node\current := node\next
+        node\active := 1
+        timer\schedule(node\current; selfAddress)
+        post:
+            ask:
+                service\compute(token := node\current; value := value)
+            answer:
+                selfAddress\received
+    received:
+        if: node\active = 0 || response\token != node\current
+            return
+        node\active := 0
+        events\finished(response\token; 0; response\value)
+    expire:
+        if: node\active = 0 || token != node\current
+            return
+        node\active := 0
+        events\finished(token; 1; 0)
+    query:
+        events\status(node\active; node\current)
+
+AskServiceMessage:
+    i64: token
+    int: value
+    return: @AskReply
+    compute:
+        private: @AskReply: result (copy(AskReply))
+        result\token := token
+        result\value := value * 2
+        return: result

@@ -1,0 +1,87 @@
+# DRAFT. One scoped call path for CPython, Pyodide and external Python.
+PythonObjectCall:
+    @PythonNativePort: port
+    @PythonSession: session
+    @PythonNativeObjectAPI: operation
+    @: request
+    required: port session operation request
+    return: @PythonHandle
+    invoke:
+        throws: copy(PythonBridgeThrows)
+        private: @: guard port\enter(session)
+        finally:
+            port\leave(guard)
+        private: @PythonNativeResult: result operation(session\runtime; request)
+        if: result\ok = 0
+            throw: PythonBridgeFailure(result\error)
+        if: result\ok != 1
+            throw: PythonBridgeFailure(PythonProblemMake\make("invalid-native-result"; result))
+        return: PythonHandleAdopt\take(port; session; result\value)
+
+PythonCallPack:
+    @PythonNativePort: port
+    @PythonSession: session
+    @PythonHandle: callable
+    []@PythonHandle: args
+    []@PythonKeyword: kwargs
+    required: port session callable args kwargs
+    return: @PythonCallRequest
+    prepare:
+        throws: copy(PythonBridgeThrows)
+        private: @PythonSlot: function PythonHandleLookup\slot(port; session; callable)
+        private: @: rawArgs (copy(()))
+        private: @: names (copy(()))
+        private: @: values (copy(()))
+        sys\resize(rawArgs; length(args))
+        sys\resize(names; length(kwargs))
+        sys\resize(values; length(kwargs))
+        private: size_t: index 0
+        while: index < length(args)
+            private: @PythonSlot: item PythonHandleLookup\slot(port; session; args[index])
+            rawArgs[index] := item\token
+            index += 1
+        index := 0
+        while: index < length(kwargs)
+            private: @PythonKeyword: keyword kwargs[index]
+            private: size_t: previous 0
+            while: previous < index
+                private: @PythonKeyword: prior kwargs[previous]
+                if: PythonText\equal(keyword\name; prior\name)
+                    throw: PythonBridgeFailure(PythonProblemMake\make("duplicate-keyword"; keyword))
+                previous += 1
+            private: @PythonSlot: item PythonHandleLookup\slot(port; session; keyword\value)
+            names[index] := (keyword\name record)
+            values[index] := item\token
+            index += 1
+        private: @PythonCallRequest: result (copy(PythonCallRequest))
+        result\callable := function\token
+        result\args := rawArgs
+        result\names := names
+        result\values := values
+        return: result
+
+PythonRequest:
+    @: object
+    []char: name
+    @: value
+    required: object name value
+    return: @
+    attribute:
+        private: @PythonAttributeRequest: result (copy(PythonAttributeRequest))
+        result\object := object
+        result\name := name
+        result\value := value
+        return: result
+
+PythonItemRequest:
+    @: object
+    @: key
+    @: value
+    required: object key value
+    return: @
+    item:
+        private: @PythonItemCallRequest: result (copy(PythonItemCallRequest))
+        result\object := object
+        result\key := key
+        result\value := value
+        return: result

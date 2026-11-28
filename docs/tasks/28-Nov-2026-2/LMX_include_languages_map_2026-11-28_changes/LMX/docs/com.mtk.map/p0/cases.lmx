@@ -1,0 +1,78 @@
+# DRAFT. These ordinary callable cases need the real LMX runtime.
+# They do not require a native P0 provider. Current execution: NOT_RUN.
+P0MixFixtureChange:
+    @: changes
+    int: beforeRevision
+    int: begin
+    int: oldEnd
+    int: newEnd
+    int: kind 1
+    required: changes beforeRevision begin oldEnd newEnd
+    return: @
+    add:
+        throws: copy(P0MixThrows)
+        private: @: event (copy(MapChangeModel))
+        event\beforeRevision := beforeRevision
+        event\revision := beforeRevision + 1
+        event\edits := MapVector\create()
+        private: @: edit (copy(MapEditModel))
+        edit\kind := kind
+        edit\begin := begin
+        edit\oldEnd := oldEnd
+        edit\newEnd := newEnd
+        MapVector\push(event\edits; edit)
+        MapVector\push(changes; event)
+        return: event
+
+P0MixCases:
+    return: int
+    rebasedInsertions:
+        throws: copy(P0MixThrows)
+        private: @: changes MapVector\create()
+        P0MixFixtureChange\add(changes; 0; 8; 8; 12)
+        P0MixFixtureChange\add(changes; 1; 0; 0; 2)
+        private: @: dirty P0MixDirtyRange\collect(changes; 0; 2)
+        if: dirty\begin != 0 || dirty\end != 14 || dirty\sourceChanged != 1
+            throw: P0MixFailure("dirty range mixed two coordinate systems")
+        return: 1
+    deletionThenInsertion:
+        throws: copy(P0MixThrows)
+        private: @: changes MapVector\create()
+        P0MixFixtureChange\add(changes; 0; 4; 8; 4)
+        P0MixFixtureChange\add(changes; 1; 1; 1; 4)
+        private: @: dirty P0MixDirtyRange\collect(changes; 0; 2)
+        if: dirty\begin != 1 || dirty\end != 7
+            throw: P0MixFailure("deleted boundary was not rebased")
+        return: 1
+    metadataOnly:
+        throws: copy(P0MixThrows)
+        private: @: changes MapVector\create()
+        P0MixFixtureChange\add(changes; 0; 3; 3; 3; kind := 2)
+        private: @: dirty P0MixDirtyRange\collect(changes; 0; 1)
+        if: dirty\sourceChanged != 0 || dirty\metadataChanged != 1 || dirty\present != 0
+            throw: P0MixFailure("metadata invented a source splice")
+        return: 1
+    validCheckpointBeforeInvalidTail:
+        throws: copy(P0MixThrows)
+        private: @: session (copy(P0MixSessionModel))
+        session\document := MapTree\create(3)
+        session\checkpoints := MapVector\create()
+        private: int: i 0
+        while: i < 7
+            MapTree\insert(session\document; i; (i record))
+            i += 1
+        i := 0
+        while: i < 7
+            private: @: checkpoint (copy(P0MixCheckpoint))
+            checkpoint\cursor := MapCursor\create(session\document; i; 0)
+            checkpoint\valid := i < 3
+            checkpoint\rootBoundary := i = 0
+            MapVector\push(session\checkpoints; checkpoint)
+            i += 1
+        private: @: selected P0MixSelectCheckpoint\select(session; 6)
+        if: MapCursor\position(selected\cursor) != 2
+            throw: P0MixFailure("invalid midpoint hid the preceding live checkpoint")
+        return: 1
+    run:
+        throws: copy(P0MixThrows)
+        return: P0MixCases\rebasedInsertions() + P0MixCases\deletionThenInsertion() + P0MixCases\metadataOnly() + P0MixCases\validCheckpointBeforeInvalidTail()

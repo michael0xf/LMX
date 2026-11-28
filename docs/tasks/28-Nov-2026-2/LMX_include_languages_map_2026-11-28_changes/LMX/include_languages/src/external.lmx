@@ -1,0 +1,104 @@
+# DRAFT. Protocol policy shared by native external workers and browser host links.
+# Transport decoder admits bounded ordinary DATA, resolves wire handle identities
+# to owner-local PythonHandles, and computes contentHash from the admitted bytes.
+# It never interprets request payload as CODE or executes text from fromLmx.
+PythonExternalAdmit:
+    @PythonExternalHello: hello
+    required: hello
+    check:
+        throws: copy(PythonBridgeThrows)
+        if: hello\protocol != 1 || length(hello\sessionId) = 0
+            throw: PythonBridgeFailure(PythonProblemMake\make("python-protocol"; hello))
+        if: hello\generation < 0 || hello\handles != 1 || hello\structuredValues != 1
+            throw: PythonBridgeFailure(PythonProblemMake\make("python-capabilities"; hello))
+
+PythonExternalDispatch:
+    @PythonGateContext: context
+    @PythonSession: session
+    @PythonExternalRequest: request
+    required: context session request
+    return: @
+    invoke:
+        throws: copy(PythonBridgeThrows)
+        private: @: p request\payload
+        if: request\operation = 1
+            return: PythonGate\importModule\run(context := context; session := session; name := p\name)
+        if: request\operation = 2
+            return: PythonGate\getAttribute\run(context := context; session := session; object := p\object; name := p\name)
+        if: request\operation = 3
+            return: PythonGate\call\run(context := context; session := session; callable := p\callable; args := p\args; kwargs := p\kwargs)
+        if: request\operation = 4
+            return: PythonGate\getItem\run(context := context; session := session; object := p\object; key := p\key)
+        if: request\operation = 5
+            return: PythonGate\setItem\run(context := context; session := session; object := p\object; key := p\key; value := p\value)
+        if: request\operation = 6
+            return: PythonGate\setAttribute\run(context := context; session := session; object := p\object; name := p\name; value := p\value)
+        if: request\operation = 7
+            return: PythonGate\retain\run(context := context; session := session; handle := p\handle)
+        if: request\operation = 8
+            PythonGate\release\run(context := context; session := session; handle := p\handle)
+            return: PythonNone\make()
+        if: request\operation = 9
+            return: PythonGate\toValue\run(context := context; session := session; handle := p\handle; maxDepth := p\maxDepth; maxItems := p\maxItems)
+        if: request\operation = 10
+            return: PythonGate\fromValue\run(context := context; session := session; value := p\value)
+        throw: PythonBridgeFailure(PythonProblemMake\make("unsupported-worker-operation"; request))
+
+PythonExternalCapture:
+    @PythonGateContext: context
+    @PythonSession: session
+    @PythonExternalRequest: request
+    required: context session request
+    return: @PythonReply
+    invoke:
+        private: @PythonReply: result (copy(PythonReply))
+        catch: PythonBridgeFailure (@: failure)
+            result\ok := 0
+            result\payload := failure
+            return: result
+        result\payload := PythonExternalDispatch\invoke(context; session; request)
+        result\ok := 1
+        return: result
+
+PythonExternalTurn:
+    @PythonGateContext: context
+    @PythonSession: session
+    @PythonExternalState: state
+    @PythonExternalRequest: request
+    required: context session state request
+    return: @PythonReply
+    accept:
+        throws: copy(PythonBridgeThrows)
+        context\native\assertOwner(session)
+        PythonExternalAdmit\check(state\hello)
+        if: request\protocol != state\hello\protocol || request\generation != state\hello\generation
+            throw: PythonBridgeFailure(PythonProblemMake\make("stale-worker-generation"; request))
+        if: PythonText\equal(request\sessionId; state\hello\sessionId) = 0
+            throw: PythonBridgeFailure(PythonProblemMake\make("foreign-worker-session"; request))
+        if: request\sequence = state\lastSequence && state\lastSequence > 0
+            if: PythonText\equal(request\contentHash; state\lastHash) = 0
+                throw: PythonBridgeFailure(PythonProblemMake\make("sequence-payload-conflict"; request))
+            if: state\hasResponse = 1
+                return: state\lastResponse
+            throw: PythonBridgeFailure(PythonProblemMake\make("unknown-outcome"; request))
+        if: state\lastSequence > 0 && state\hasResponse = 0
+            throw: PythonBridgeFailure(PythonProblemMake\make("worker-needs-reconciliation"; request))
+        if: state\lastSequence < 0 || state\lastSequence = 9223372036854775807
+            throw: PythonBridgeFailure(PythonProblemMake\make("worker-sequence-exhausted"; request))
+        if: request\sequence != state\lastSequence + 1
+            throw: PythonBridgeFailure(PythonProblemMake\make("out-of-order-request"; request))
+        state\lastSequence := request\sequence
+        state\lastHash := request\contentHash
+        state\hasResponse := 0
+        private: @PythonReply: reply PythonExternalCapture\invoke(context; session; request)
+        state\lastResponse := reply
+        state\hasResponse := 1
+        return: reply
+
+# Completed replies are retained until the next sequence is admitted. Their
+# handle leases remain owned by the session; reply replay does not call retain.
+# A missing reply is UNKNOWN_OUTCOME, never automatic retry of a side effect.
+# Worker death invalidates its generation. Raw pointers never cross the channel.
+# Baseline external capabilities: handles=1, structuredValues=1,
+# sharedBuffers=0, callbacks=0. buffer gates refuse this route unless a separate
+# shared-memory lease transport is actually negotiated and implemented.

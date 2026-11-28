@@ -1,0 +1,169 @@
+# DRAFT 2026-11-28. Ordinary LMX DATA and real method bodies.
+# Uninitialized fields are not successful outcomes or fabricated native handles.
+# Load this file before ports, installation, handles, calls and public gates.
+PythonBridgeThrows:
+    PythonBridgeFailure
+
+PythonProblem:
+    []char: reason
+    @: detail
+
+PythonProblemMake:
+    []char: reason
+    @: detail
+    required: reason detail
+    return: @PythonProblem
+    make:
+        private: @: result (copy(PythonProblem))
+        result\reason := reason
+        result\detail := detail
+        return: result
+
+PythonArtifact:
+    []char: url
+    []char: sha256
+    size_t: bytes
+    []char: filename
+
+PythonRuntimeIdentity:
+    []char: implementation
+    []char: version
+    []char: abi
+    []char: target
+    []char: libc
+    int: pointerBits
+    int: littleEndian
+    int: gilEnabled
+    int: minimumApi
+    int: nativeExtensions
+    []@: wheelTags
+
+PythonWheel:
+    @PythonArtifact: artifact
+    []@: tags
+    []char: distribution
+    []char: version
+
+PythonInstallPlan:
+    []char: profile
+    []char: installId
+    []char: applicationRoot
+    []char: expectedActiveId
+    @PythonArtifact: runtime
+    @PythonRuntimeIdentity: identity
+    []@PythonWheel: wheels
+    []@: smokeImports
+
+PythonInstallation:
+    []char: installId
+    []char: runtimeRoot
+    []char: siteRoot
+    []char: nativeLibrary
+    @PythonRuntimeIdentity: identity
+    @: lease
+
+PythonSlot:
+    int: live 0
+    i64: serial 0
+    @: token
+
+PythonSession:
+    int: state 1
+    i64: generation
+    i64: nextSerial 0
+    int: liveHandles 0
+    int: liveBuffers 0
+    @: runtime
+    @: owner
+    []@: slots
+    @PythonRuntimeIdentity: identity
+
+PythonHandle:
+    @PythonSession: session
+    i64: generation
+    int: slot
+    i64: serial
+
+# None is kind=0 with an empty payload. It is not an absent result.
+# 1 bool; 2 i64; 3 decimal big integer; 4 binary64; 5 UTF-8 text; 6 bytes;
+# 7 list; 8 tuple; 9 ordered dictionary entries. Cyclic/custom values stay handles.
+PythonValue:
+    int: kind
+    @: payload
+
+PythonKeyword:
+    []char: name
+    @PythonHandle: value
+
+PythonNativeResult:
+    int: ok
+    @: value
+    @: error
+
+PythonCallRequest:
+    @: callable
+    []@: args
+    []@: names
+    []@: values
+
+PythonAttributeRequest:
+    @: object
+    []char: name
+    @: value
+
+PythonItemCallRequest:
+    @: object
+    @: key
+    @: value
+
+PythonReply:
+    int: ok
+    @: payload
+
+PythonProfile:
+    []char: id
+    []char: implementation
+    []char: distribution
+    []char: hostAbi
+    []char: nativeProvider
+    []char: packageProvider
+    []char: systemRoute
+    int: requiresJsHost
+
+PythonBufferLease:
+    @PythonSession: session
+    i64: generation
+    int: live 1
+    @: nativeLease
+    @: description
+
+PythonOpenRequest:
+    int: mode
+    @PythonInstallation: installation
+    @: external
+
+PythonExternalHello:
+    int: protocol
+    []char: sessionId
+    i64: generation
+    @PythonRuntimeIdentity: identity
+    int: handles
+    int: structuredValues
+    int: sharedBuffers
+    int: callbacks
+
+PythonExternalRequest:
+    int: protocol
+    []char: sessionId
+    i64: generation
+    i64: sequence
+    []char: contentHash
+    int: operation
+    @: payload
+
+PythonExternalState:
+    @PythonExternalHello: hello
+    i64: lastSequence 0
+    []char: lastHash ""
+    @: lastResponse
+    int: hasResponse 0

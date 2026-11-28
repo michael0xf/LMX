@@ -1,0 +1,89 @@
+{
+  "edition": "2026-11-28",
+  "status": "EXPECTED_NOT_RUN",
+  "meaning": "Reviewable input sequences and expected observations, not a language test harness or an executed trace.",
+  "common_fixture": {
+    "execution": "Ordinary addressed LMX Message handlers, each finishing its current turn.",
+    "ports": "Timer, native and lifecycle providers are REQUIRE_IMPLEMENTATION and nonblocking at the owner boundary.",
+    "observer": "Owner-local events observer preserves observation order without waiting for another owner.",
+    "arithmetic": "Doubled fixture values are restricted to the small values shown here.",
+    "restart": "Each owner incarnation has a distinct address identity; callbacks for an older incarnation never route to its replacement."
+  },
+  "patterns": [
+    {
+      "id": 109,
+      "name": "Request-Response / Ask",
+      "sequence": [
+        {"input": "start(value=4)", "expected": ["schedule token=1", "post compute token=1", "active=1"]},
+        {"input": "start(value=9)", "expected": ["rejected reason=1", "token=1 remains active"]},
+        {"input": "query", "expected": ["status active=1,current=1"]},
+        {"input": "expire(token=1)", "expected": ["finished token=1,status=timeout exactly once", "active=0"]},
+        {"input": "start(value=6)", "expected": ["schedule token=2", "post compute token=2", "active=1"]},
+        {"input": "received(token=1,value=8)", "expected": ["no terminal event", "token=2 remains active"]},
+        {"input": "received(token=2,value=12)", "expected": ["finished token=2,status=success,value=12 exactly once", "active=0"]},
+        {"input": "expire(token=2), repeated received(token=2,value=12)", "expected": ["no additional terminal events"]}
+      ],
+      "boundary_constraints": [
+        "At next=9223372036854775807 and active=0, start rejects reason=2 before increment or posting.",
+        "A replacement owner uses a distinct address identity. A timer/reply addressed to the old instance is not delivered to its replacement even if its counter also starts at zero.",
+        "Timeout does not cancel or roll back an effect in the service."
+      ]
+    },
+    {
+      "id": 110,
+      "name": "Become / Selective Stash",
+      "sequence": [
+        {"input": "work(1,2), work(2,3)", "expected": ["phase=0,count=2", "no finished work events"]},
+        {"input": "work(3,4)", "expected": ["rejected requestId=3,reason=1", "count=2"]},
+        {"input": "query, reply(9,17)", "expected": ["status phase=0,count=2", "replySeen 9,17"]},
+        {"input": "become(1), pump", "expected": ["finished requestId=1,value=4", "count=1", "next self pump posted"]},
+        {"input": "become(0), pump, query", "expected": ["no second work result while paused", "status phase=0,count=1"]},
+        {"input": "become(1), pump, repeated pump", "expected": ["finished requestId=2,value=6 exactly once", "count=0"]},
+        {"input": "become(0), work(4,5), stop", "expected": ["rejected requestId=4,reason=2", "stopped exactly once", "phase=2,count=0"]},
+        {"input": "query, reply(10,18)", "expected": ["status phase=2,count=0", "replySeen 10,18"]}
+      ],
+      "boundary_constraints": [
+        "Only work occupies the two-slot FIFO; control/query/reply never enter it.",
+        "One pump removes at most one work item and never waits for a reply.",
+        "The host keeps the owner alive through the explicit stop observation."
+      ]
+    },
+    {
+      "id": 111,
+      "name": "Phased Message Lifecycle",
+      "sequence": [
+        {"input": "beginStop", "expected": ["parent phase=1", "drain epoch=1 sent to both current children"]},
+        {"input": "child0 flushed(epoch=1,ok=1)", "expected": ["child0 releaseCompleted", "child0 phase=2", "drained(0,1,1)"]},
+        {"input": "parent drained(0,1,1), duplicate drained(0,1,0)", "expected": ["pendingDrain=1", "failed remains 0"]},
+        {"input": "parent query", "expected": ["status phase=1,pendingDrain=1,pendingStop=2"]},
+        {"input": "child1 flushed(epoch=1,ok=0), parent drained(1,1,0)", "expected": ["child1 releaseCompleted", "pendingDrain=0", "parent phase=2,failed=1", "requestChildrenClose(1) once"]},
+        {"input": "stopped(0,epoch=0)", "expected": ["no change; stale generation"]},
+        {"input": "stopped(0,epoch=1), repeated stopped(0,epoch=1), query", "expected": ["status phase=2,pendingDrain=0,pendingStop=1"]},
+        {"input": "stopped(1,epoch=1)", "expected": ["parent phase=3", "finished success=0 exactly once", "requestOwnerClose exactly once"]}
+      ],
+      "boundary_constraints": [
+        "The graceful fixture starts with two live children and every native flush eventually completes.",
+        "Actual stopped means the host completed that child's termination and cleanup, not admission of a close request.",
+        "No required reply, query or wait is scheduled after parent close or from poststop.",
+        "Hard crash/restart policy remains the separate supervision contract."
+      ]
+    },
+    {
+      "id": 112,
+      "name": "External Blocking Adapter",
+      "sequence": [
+        {"input": "submit(value=7), native admission=1", "expected": ["current=1,active=1,phase=0", "no success result from admission alone"]},
+        {"input": "query", "expected": ["status phase=0,active=1 while native work remains in progress"]},
+        {"input": "beginClose, submit(value=8)", "expected": ["phase=1,active=1", "new work rejected reason=1", "no resource release"]},
+        {"input": "completed(token=0,ok=1,value=99)", "expected": ["no result and no state change"]},
+        {"input": "completed(token=1,ok=1,value=14)", "expected": ["active=0", "finished token=1,ok=1,value=14", "releaseIdle", "phase=2", "closed", "requestOwnerClose"]}
+      ],
+      "boundary_constraints": [
+        "For native admission=0, active returns to zero and reason=3 is emitted; no job or completion is owed.",
+        "At next=9223372036854775807, admission rejects reason=2 before increment.",
+        "The native call runs outside the Message owner; its completion is an ordinary later Message after native holds are released.",
+        "Closing admission is not proof that the in-flight native effect was cancelled."
+      ]
+    }
+  ]
+}

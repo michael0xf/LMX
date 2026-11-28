@@ -1,0 +1,459 @@
+# DRAFT. BaseFactoryImpl and MtkJava behaviour through ordinary LMX references.
+# No Java Class/Method reflection, generated evaluator or string dispatcher.
+
+MapFactoryInvoke:
+    @: item
+    @: key MapNil
+    required: item
+    return: int
+    run:
+        throws: copy(MapThrows)
+        private: @: target MapItem\terminal(item)
+        if: target = MapNil
+            return: 0
+        if: key = MapNil
+            key := MapFactoryMethod\get(target)
+        private: @: operation MapDictionary\calculator(key\dictionary)
+        if: operation = MapNil
+            return: 0
+        operation(target)
+        return: 1
+
+MapFactoryArgument:
+    @: item
+    []char: name
+    int: create 0
+    required: item name
+    return: @
+    get:
+        throws: copy(MapThrows)
+        private: @: key MapKeys\intern(item\document; name)
+        private: @: found MapQuery\lookup(item; key; 36; create)
+        if: found = MapNil
+            return: MapNil
+        return: MapItem\terminal(found; create)
+
+MapFactoryCopy:
+    @: item
+    required: item
+    return: @
+    run:
+        throws: copy(MapThrows)
+        private: @: source MapFactoryArgument\get(item; "from")
+        private: @: target MapFactoryArgument\get(item; "to")
+        if: source = MapNil
+            return: MapNil
+        if: target = MapNil
+            target := item
+        private: @: cloned MapTag\cloneTo(source\tag; target\document; MapCursor\position(target\tail))
+        MapItem\setValue(item; cloned; 2)
+        return: cloned
+
+MapFactoryIf:
+    @: item
+    required: item
+    return: int
+    run:
+        throws: copy(MapThrows)
+        private: @: selector MapFactoryArgument\get(item; "switch")
+        if: selector = MapNil
+            return: 0
+        private: @: key MapKeys\intern(item\document; MapItem\string(selector))
+        private: @: branch MapQuery\lookup(item; key; 35)
+        if: branch = MapNil
+            return: 0
+        return: MapFactoryInvoke\run(branch)
+
+# One body covers add/set/remove/wholeDelete: absent setters never silently
+# invent a successful call, and the legacy add operation may create an attribute.
+MapFactoryAttribute:
+    @: item
+    int: action
+    required: item action
+    return: @
+    apply:
+        throws: copy(MapThrows)
+        private: @: target MapFactoryArgument\get(item; "target")
+        private: @: named MapFactoryArgument\get(item; "name")
+        if: target = MapNil || named = MapNil
+            throw: MapFailure("attribute target/name")
+        private: @: key MapKeys\intern(target\document; MapItem\string(named))
+        private: @: attribute MapTag\getAttribute(target\tag; key)
+        if: action = 0 || action = 1
+            private: @: input MapFactoryArgument\get(item; "value"; 1)
+            private: @: value MapNil
+            if: input != MapNil
+                value := MapItem\value(input; 1)
+            if: attribute = MapNil && action = 0
+                return: MapTag\setAttribute(target\tag; key; value)
+            if: attribute != MapNil
+                return: MapItem\setValue(attribute; value)
+            return: MapNil
+        if: attribute = MapNil
+            return: MapNil
+        if: action = 3 && attribute\kind = 1
+            return: MapTag\wholeDelete(attribute)
+        return: MapItem\remove(attribute)
+
+MapFactoryAdd:
+    @: item
+    required: item
+    return: @
+    run:
+        throws: copy(MapThrows)
+        return: MapFactoryAttribute\apply(item; 0)
+
+MapFactorySet:
+    @: item
+    required: item
+    return: @
+    run:
+        throws: copy(MapThrows)
+        return: MapFactoryAttribute\apply(item; 1)
+
+MapFactoryRemove:
+    @: item
+    required: item
+    return: @
+    run:
+        throws: copy(MapThrows)
+        return: MapFactoryAttribute\apply(item; 2)
+
+MapFactoryDelete:
+    @: item
+    required: item
+    return: @
+    run:
+        throws: copy(MapThrows)
+        return: MapFactoryAttribute\apply(item; 3)
+
+MapFactoryNext:
+    @: item
+    required: item
+    return: int
+    run:
+        throws: copy(MapThrows)
+        private: @: next MapFactoryArgument\get(item; "next"; 1)
+        if: next = MapNil
+            return: 0
+        return: MapFactoryInvoke\run(next)
+
+MapFactoryCall:
+    @: item
+    required: item
+    return: int
+    run:
+        throws: copy(MapThrows)
+        private: @: target MapFactoryArgument\get(item; "target")
+        private: @: named MapFactoryArgument\get(item; "name")
+        if: target = MapNil || named = MapNil
+            return: 0
+        return: MapFactoryInvoke\run(target; MapKeys\intern(target\document; MapItem\string(named)))
+
+MapFactoryChildren:
+    @: item
+    @: keys
+    int: clear 0
+    int: scanOuter 0
+    required: item keys
+    return: int
+    apply:
+        throws: copy(MapThrows)
+        private: @: targets MapVector\create()
+        private: int: i 0
+        while: i < MapVector\size(keys)
+            private: @: key MapVector\get(keys; i)
+            private: int: begin MapCursor\position(item\tag\cursor)
+            private: int: end MapCursor\position(item\tag\tail)
+            if: scanOuter != 0
+                begin := 0
+                end := MapTree\length(item\document)
+            private: @: matches MapQuery\range(item\document; key; begin; end; exclude := item)
+            private: int: j 0
+            while: j < MapVector\size(matches)
+                private: @: found MapVector\get(matches; j)
+                if: MapVector\indexOf(targets; found) < 0
+                    MapVector\push(targets; found)
+                j += 1
+            i += 1
+        # Snapshot before mutation; callbacks never alter the live enumerator.
+        MapTree\begin(item\document; 3)
+        i := MapVector\size(targets)
+        while: i > 0
+            i -= 1
+            private: @: found MapVector\get(targets; i)
+            if: clear != 0
+                private: @: actual MapItem\terminal(found)
+                if: actual != MapNil
+                    MapItem\setValue(actual; MapNil)
+            ---
+            else:
+                MapItem\remove(found)
+        ---
+        MapTree\commit(item\document)
+        return: MapVector\size(targets)
+
+MapFactoryBody:
+    @: item
+    required: item
+    return: int
+    run:
+        throws: copy(MapThrows)
+        private: @: recipe MapTag\getAttribute(item\tag; MapKeys\intern(item\document; "recipe"))
+        if: recipe != MapNil
+            return: MapRecipeRun\run(item; MapItem\value(recipe))
+        private: @: children MapQuery\range(item\document; begin := MapCursor\position(item\cursor); end := MapCursor\position(item\tail); relation := 1; exclude := item)
+        private: int: i 0
+        private: int: consumed MapCursor\position(item\cursor)
+        private: int: count 0
+        while: i < MapVector\size(children)
+            private: @: child MapVector\get(children; i)
+            private: int: start MapCursor\position(child\cursor)
+            if: start >= consumed
+                count += MapFactoryInvoke\run(child)
+                consumed := MapCursor\position(child\tail)
+            i += 1
+        private: @: next MapFactoryArgument\get(item; "deleteAndGo")
+        if: next != MapNil
+            MapTag\wholeDelete(item\tag)
+            count += MapFactoryInvoke\run(next)
+        return: count
+
+MapFactoryBind:
+    @: document
+    []char: name
+    @: operation
+    required: document name operation
+    return: @
+    bind:
+        throws: copy(MapThrows)
+        private: @: key MapKeys\intern(document; name)
+        key\dictionary\calculator := operation
+        return: key
+
+MapFactoryInstall:
+    @: document
+    required: document
+    return: @
+    install:
+        throws: copy(MapThrows)
+        MapFactoryBind\bind(document; "copy"; MapFactoryCopy\run)
+        MapFactoryBind\bind(document; "If"; MapFactoryIf\run)
+        MapFactoryBind\bind(document; "add"; MapFactoryAdd\run)
+        MapFactoryBind\bind(document; "set"; MapFactorySet\run)
+        MapFactoryBind\bind(document; "remove"; MapFactoryRemove\run)
+        MapFactoryBind\bind(document; "wholeDelete"; MapFactoryDelete\run)
+        MapFactoryBind\bind(document; "next"; MapFactoryNext\run)
+        MapFactoryBind\bind(document; "call"; MapFactoryCall\run)
+        MapFactoryBind\bind(document; "run"; MapFactoryBody\run)
+        MapFactoryBind\bind(document; "clearBody"; MapFactoryClearBodies\run)
+        MapFactoryBind\bind(document; "removeAll"; MapFactoryRemoveAll\run)
+        MapFactoryBind\bind(document; "removeChildren"; MapFactoryRemoveChildren\run)
+        MapFactoryBind\bind(document; "clearChildren"; MapFactoryClearChildren\run)
+        MapFactoryBind\bind(document; "clearAll"; MapFactoryClearAll\run)
+        return: document
+
+# MtkJava's inheritance/reflection is replaced with explicit field descriptors.
+# The same read/write methods can be reused through copy/merge and CODE slots.
+# A typed setter performs ordinary LMX admission; a missing setter is read-only.
+MapFieldBinding:
+    @: key
+    @: read
+    @: write MapNil
+
+MapObjectBinding:
+    @: object
+    @: fields
+
+MapObjectTransfer:
+    @: binding
+    @: item
+    int: direction 0
+    int: create 0
+    int: local 0
+    required: binding item
+    return: int
+    transfer:
+        throws: copy(MapThrows)
+        private: int: count 0
+        private: int: i 0
+        while: i < MapVector\size(binding\fields)
+            private: @: field MapVector\get(binding\fields; i)
+            private: int: mode 36
+            if: local != 0
+                mode := 37
+            private: @: found MapQuery\lookup(item; field\key; mode; create)
+            if: found != MapNil
+                if: direction = 0 && field\write != MapNil
+                    field\write(binding\object; MapItem\value(found; create))
+                    count += 1
+                if: direction = 1
+                    MapItem\setValue(found; field\read(binding\object))
+                    count += 1
+            ---
+            i += 1
+        return: count
+
+MapFactory:
+    @: install MapFactoryInstall\install
+    @: bind MapFactoryBind\bind
+    @: run MapFactoryInvoke\run
+    @: argument MapFactoryArgument\get
+    @: children MapFactoryChildren\apply
+    @: transferObject MapObjectTransfer\transfer
+    @: recipe MapRecipeRun\run
+    @: step MapRecipeApply\apply
+    @: setAndRun MapFactorySetRun\run
+    @: method MapFactoryMethod\get
+
+# Native LMX recipes replace Java instanceof/reflection over mixed body cells.
+# The decoder/application constructs these DATA records; no code is eval'ed.
+MapRecipeStep:
+    int: kind
+    @: item MapNil
+    @: link MapNil
+    []char: name ""
+    @: operation MapNil
+
+MapRecipeApply:
+    @: context
+    @: step
+    required: context step
+    return: int
+    apply:
+        throws: copy(MapThrows)
+        if: step\kind = 1
+            return: MapFactory\run(step\item)
+        if: step\kind = 2
+            private: @: target MapLinks\resolve(context; step\link)
+            if: target = MapNil
+                return: 0
+            return: MapFactory\run(target)
+        if: step\kind = 3
+            private: @: target MapFactory\argument(context; "target")
+            if: target = MapNil
+                target := context
+            return: MapFactory\run(target; MapKeys\intern(target\document; step\name))
+        if: step\kind = 4 && step\operation != MapNil
+            step\operation(context)
+            return: 1
+        throw: MapFailure("recipe step kind/operation")
+
+MapRecipeRun:
+    @: item
+    @: steps
+    required: item steps
+    return: int
+    run:
+        throws: copy(MapThrows)
+        private: int: i 0
+        private: int: count 0
+        private: @: plan MapVector\copy(steps)
+        while: i < MapVector\size(plan)
+            count += MapRecipeApply\apply(item; MapVector\get(plan; i))
+            i += 1
+        return: count
+
+MapFactoryBulk:
+    @: item
+    int: clear 0
+    int: scanOuter 0
+    required: item
+    return: int
+    run:
+        throws: copy(MapThrows)
+        private: @: names MapFactory\argument(item; "names")
+        if: names = MapNil
+            throw: MapFailure("bulk operation needs comma-separated names DATA")
+        private: @: target item
+        if: scanOuter = 0
+            target := MapFactory\argument(item; "target")
+            if: target = MapNil
+                return: 0
+        return: MapFactory\children(target; MapAccess\keys(names); clear; scanOuter)
+
+MapFactoryRemoveAll:
+    @: item
+    required: item
+    return: int
+    run:
+        throws: copy(MapThrows)
+        return: MapFactoryBulk\run(item; 0; 1)
+
+MapFactoryRemoveChildren:
+    @: item
+    required: item
+    return: int
+    run:
+        throws: copy(MapThrows)
+        return: MapFactoryBulk\run(item; 0; 0)
+
+MapFactoryClearChildren:
+    @: item
+    required: item
+    return: int
+    run:
+        throws: copy(MapThrows)
+        return: MapFactoryBulk\run(item; 1; 0)
+
+MapFactoryClearAll:
+    @: item
+    required: item
+    return: int
+    run:
+        throws: copy(MapThrows)
+        return: MapFactoryBulk\run(item; 1; 1)
+
+MapFactoryClearBodies:
+    @: item
+    required: item
+    return: int
+    run:
+        throws: copy(MapThrows)
+        private: @: argument MapFactory\argument(item; "links")
+        if: argument = MapNil
+            return: 0
+        private: @: links MapItem\value(argument)
+        private: @: targets MapVector\create()
+        private: int: i 0
+        while: i < MapVector\size(links)
+            private: @: target MapLinks\resolve(item; MapVector\get(links; i))
+            if: target != MapNil && MapVector\indexOf(targets; target\tag) < 0
+                MapVector\push(targets; target\tag)
+            i += 1
+        MapTree\begin(item\document; 1)
+        i := 0
+        while: i < MapVector\size(targets)
+            MapTag\clearBody(MapVector\get(targets; i))
+            i += 1
+        MapTree\commit(item\document)
+        return: i
+
+MapFactorySetRun:
+    @: item
+    @: link
+    []char: name
+    @: value
+    required: item link name value
+    return: int
+    run:
+        throws: copy(MapThrows)
+        private: @: target MapLinks\resolve(item; link; create := 1)
+        if: target = MapNil
+            return: 0
+        MapTag\setAttribute(target\tag; MapKeys\intern(target\document; name); value)
+        return: MapFactory\run(target)
+
+MapFactoryMethod:
+    @: item
+    required: item
+    return: @
+    get:
+        throws: copy(MapThrows)
+        if: item\kind = 1
+            private: @: named MapTag\getAttribute(item; MapKeys\intern(item\document; "method"))
+            if: named != MapNil
+                private: []char: name MapItem\string(named)
+                if: length(name) > 0
+                    return: MapKeys\intern(item\document; name)
+        return: item\key

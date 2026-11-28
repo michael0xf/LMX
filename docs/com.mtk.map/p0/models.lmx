@@ -1,0 +1,157 @@
+# DRAFT. Same-owner source attachments and explicit P0 integration contracts.
+# MapNil is the qualified immutable independent sentinel from ../src/contracts.
+# No production parser or executable is supplied by these declarations.
+P0MixThrows:
+    MapFailure
+    P0MixFailure
+    P0MixPortFailure
+
+P0MixRange:
+    int: present 0
+    int: begin 0
+    int: end 0
+    int: beforeRevision 0
+    int: revision 0
+    int: sourceChanged 0
+    int: metadataChanged 0
+
+# state is the complete saved continuation of the EXISTING P0; see README.
+# The cursor is a live boundary, not a cached absolute coordinate.
+P0MixCheckpoint:
+    @: cursor MapNil
+    @: state MapNil
+    @: ownerNode MapNil
+    @: documentScope MapNil
+    int: sourceRevision 0
+    int: valid 1
+    int: rootBoundary 0
+
+P0MixNodeBinding:
+    @: syntaxNode MapNil
+    @: sourceBegin MapNil
+    @: sourceEnd MapNil
+    @: sourceTag MapNil
+    @: entryCheckpoint MapNil
+    @: exitCheckpoint MapNil
+    @: documentScope MapNil
+    @: markAnchor MapNil
+    @: childDocument MapNil
+    int: sourceRevision 0
+    int: live 1
+
+P0MixReaderModel:
+    @: document MapNil
+    @: sourceBytes MapNil
+    @: cursor MapNil
+    int: loading 0
+    int: loaded 0
+    int: nextOffset 0
+    int: bytesRead 0
+    int: jumps 0
+
+P0MixSessionModel:
+    @: document MapNil
+    @: engine MapNil
+    @: engineContext MapNil
+    @: sink MapNil
+    @: root MapNil
+    @: reader MapNil
+    @: checkpoints MapNil
+    @: priorCheckpoints MapNil
+    @: bindings MapNil
+    @: priorBindings MapNil
+    @: lastDiagnostic MapNil
+    @: pendingRejected MapNil
+    @: rejectedPrepared MapNil
+    @: pendingRetired MapNil
+    @: pendingSemantic MapNil
+    int: semanticTarget 0
+    int: semanticRevision 0
+    int: parsedRevision -1
+    int: targetRevision -1
+    int: observedRevision 0
+    int: journalExclusive 1
+    int: acknowledgedRevision 0
+    int: subscriptionId 0
+    int: validTree 0
+    int: stale 0
+
+P0MixDiagnostic:
+    int: sourceRevision
+    int: beginByte
+    int: endByte
+    []char: code
+    []char: message
+
+P0MixParseResult:
+    int: syntaxValid
+    int: sourceRevision
+    @: preparedPatch
+    @: root
+    @: checkpoints
+    @: bindings
+    @: retiredBindings
+    @: retiredCheckpoints
+    @P0MixDiagnostic: diagnostic
+    int: readBytes
+    int: replacedNodes
+    int: reusedNodes
+
+# Only values cross the notification/reply boundary; no live Cursor or session.
+P0MixReceipt:
+    int: documentId
+    int: revision
+    int: parsedRevision
+    int: validTree
+    int: stale
+    int: ready
+
+# The core freezes/compares its own state; caller code does not synthesize it.
+P0MixInitialStateAPI :: (@: context; return: @; throws: copy(P0MixThrows))
+P0MixReadAPI :: (@: reader; int: offset; return: int; throws: copy(P0MixThrows))
+P0MixStateEqualAPI :: (@: context; @: left; @: right; return: int; throws: copy(P0MixThrows))
+P0MixAttachAPI :: (@: context; @: syntaxNode; @: binding; return: @; throws: copy(P0MixThrows))
+
+# resume invokes the same parser as initial parsing. checkpoint supplies the
+# retained entry state. dirtyEnd is a minimum stopping point, not a forced EOF.
+# The provider checks exact context + unchanged suffix at a live old boundary,
+# performs scoped ordinary postprocessing, and prepares publication.
+# session.sink supplies the actual LMX onNode/onCheckpoint/onMark references.
+# No global hook lookup or copied parser is permitted. On a raised failure,
+# native storage already retained by a sink binding remains live until that
+# binding is detached; only unretained native preparation may be freed early.
+# Initial loading has an explicitly reserved dirty.revision; ordinary updates
+# use the already committed revision. The read-set covers the bounded source.
+P0MixResumeAPI :: (@: context; @: session; @P0MixReadAPI: read; @: reader; @: checkpoint; @: dirty; return: @P0MixParseResult; throws: copy(P0MixThrows))
+
+# Publication is preflight + one owner-side graph splice. It checks revision,
+# old node identities and source read-set. All failure-prone preparation must
+# precede the visible splice; it never mutates a frozen old tree in place.
+# The returned ordered indexes include retained old entries and new entries.
+# retiredBindings/retiredCheckpoints exclude every entry retained in them.
+# Old native storage remains retained through the live bindings while caller
+# cleanup detaches annotations; publication cannot free it beneath those refs.
+# Invalid-result diagnostics are ordinary LMX scalar/string data. No pointer
+# into a candidate native arena may be placed in that diagnostic.
+P0MixPublishAPI :: (@: context; @: session; @P0MixParseResult: prepared; return: @; throws: copy(P0MixThrows))
+
+# Semantic edits in both metadata-only and mixed batches invalidate dependent
+# consumers. This is idempotent invalidation by document/revision/item identity,
+# not a user callback with repeatable external side effects.
+# Returns a real result, not a success stub. Failed calls can be retried.
+P0MixMetadataAPI :: (@: context; @: session; @: changes; return: @; throws: copy(P0MixThrows))
+# discard is idempotent for this prepared token. It runs only after associated
+# LMX annotations have been detached, never from under live binding pointers.
+P0MixDiscardAPI :: (@: context; @P0MixParseResult: prepared; return: int; throws: copy(P0MixThrows))
+
+P0MixEngine:
+    @P0MixInitialStateAPI: initialState
+    @P0MixResumeAPI: resume
+    @P0MixStateEqualAPI: sameState
+    @P0MixAttachAPI: attach
+    @P0MixPublishAPI: publish
+    @P0MixMetadataAPI: metadataChanged
+    @P0MixDiscardAPI: discard
+
+# REQUIRE_IMPLEMENTATION: supply these actual core references at construction.
+# No default provider, foreign eval string, fake successful parse or parser copy.

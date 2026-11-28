@@ -1,0 +1,48 @@
+# DRAFT. Shared journal variant. Both services live on the document's existing
+# owner Thread; only notice text/scalar receipts travel in Messages.
+# Ordinary MapOwnerApply publishes each committed edit to all subscribers.
+P0MixNoticeReceiver:
+    State:
+        @: session MapNil
+        int: subscriberId 0
+    Endpoint:
+        []char: text
+        required: text
+        return: @MapNoticeAck
+        changed:
+            throws: copy(P0MixThrows)
+            private: @: receiver parent(node)
+            private: @: session receiver\State\session
+            private: @: notice sys\fromLmx(text)
+            if: notice\documentId != session\document\id || notice\subscriberId != receiver\State\subscriberId
+                throw: P0MixFailure("P0 notice identity")
+            if: notice\revision > session\document\revision
+                throw: P0MixFailure("P0 notice from a future revision")
+            P0MixApply\changed(session)
+            private: @: receipt (copy(MapNoticeAck))
+            receipt\subscriberId := notice\subscriberId
+            receipt\revision := session\parsedRevision
+            # One receive may consume newer committed edits as well. Never
+            # acknowledge beyond the revision this delivery actually sent.
+            if: receipt\revision > notice\revision
+                receipt\revision := notice\revision
+            return: receipt
+
+P0MixSubscribe:
+    @: session
+    @: documentOwner
+    required: session documentOwner
+    return: @
+    subscribe:
+        throws: copy(P0MixThrows)
+        if: session\document != documentOwner\document || session\subscriptionId != 0
+            throw: P0MixFailure("P0 subscription owner or duplicate subscription")
+        if: P0MixStatus\ready(session) = 0
+            throw: P0MixFailure("subscribe after an accepted current bootstrap")
+        private: @: receiver (copy(P0MixNoticeReceiver))
+        receiver\State\session := session
+        private: @: subscriber MapOwnerSubscribe\subscribe(documentOwner; receiver\Endpoint; session\parsedRevision)
+        session\journalExclusive := 0
+        session\subscriptionId := subscriber\id
+        receiver\State\subscriberId := subscriber\id
+        return: receiver

@@ -1,0 +1,278 @@
+# DRAFT. Java monitors are replaced by the normative Message single-writer
+# profile, not by unsynchronised shared access. Whole requests run on the owner.
+# Independent documents may run concurrently; one document never has two turns.
+# No locks, waits, callbacks or cross-arena Cursor reads occur in a commit.
+
+MapEditRequest:
+    int: baseRevision
+    int: begin
+    int: end
+    @: values
+
+MapEditReceipt:
+    int: documentId
+    int: revision
+    int: affected
+
+MapNoticeRange:
+    int: sequence
+    int: kind
+    int: begin
+    int: oldEnd
+    int: newEnd
+    int: itemId
+
+MapNotice:
+    int: subscriberId
+    int: documentId
+    int: beforeRevision
+    int: revision
+    int: origin
+    @: edits
+
+MapNoticeAck:
+    int: subscriberId
+    int: revision
+
+MapSubscription:
+    int: id
+    @: target
+    int: accepted
+    int: sent
+
+MapNoticeBuild:
+    @: change
+    int: subscriberId
+    required: change subscriberId
+    return: @
+    build:
+        throws: copy(MapThrows)
+        private: @: notice (copy(MapNotice))
+        notice\subscriberId := subscriberId
+        notice\documentId := change\documentId
+        notice\beforeRevision := change\beforeRevision
+        notice\revision := change\revision
+        notice\origin := change\origin
+        notice\edits := MapVector\create()
+        private: int: i 0
+        while: i < MapVector\size(change\edits)
+            private: @: edit MapVector\get(change\edits; i)
+            private: @: range (copy(MapNoticeRange))
+            range\sequence := edit\sequence
+            range\kind := edit\kind
+            range\begin := edit\begin
+            range\oldEnd := edit\oldEnd
+            range\newEnd := edit\newEnd
+            range\itemId := edit\itemId
+            MapVector\push(notice\edits; range)
+            i += 1
+        return: notice
+
+MapOwnerPublish:
+    @: owner
+    required: owner
+    return: @
+    publish:
+        throws: copy(MapThrows)
+        if: owner\document\txDepth != 0 || owner\healthy = 0
+            throw: MapFailure("uncommitted owner state")
+        private: @: events MapTree\takeChanges(owner\document)
+        private: int: i 0
+        while: i < MapVector\size(owner\subscribers)
+            private: @: subscriber MapVector\get(owner\subscribers; i)
+            private: int: j 0
+            while: j < MapVector\size(events)
+                private: @: change MapVector\get(events; j)
+                if: change\revision > subscriber\sent
+                    private: @: notice MapNoticeBuild\build(change; subscriber\id)
+                    private: []char: text sys\toLmx(notice)
+                    # This is a real asynchronous ordinary LMX call. The notice
+                    # contains IDs/ranges only; live payloads stay on the owner.
+                    post:
+                        ask:
+                            subscriber\target\changed(text := text)
+                        answer:
+                            owner\acknowledge
+                    ---
+                    subscriber\sent := change\revision
+                j += 1
+            i += 1
+        return: events
+
+MapOwnerApply:
+    @: owner
+    @: request
+    required: owner request
+    return: @
+    apply:
+        throws: copy(MapThrows)
+        private: @: document owner\document
+        if: owner\healthy = 0 || document\txDepth != 0
+            throw: MapFailure("owner recovery required")
+        if: request\baseRevision != document\revision
+            throw: MapFailure("stale edit revision")
+        if: request\begin < 0 || request\end < request\begin || request\end > MapTree\length(document)
+            throw: MapFailure("edit range")
+        private: @: values MapStorage\admitValues(document; request\values)
+        MapSize\sum(MapTree\length(document) - (request\end - request\begin); MapVector\size(values); document\scope\limit)
+        private: @: receipt (copy(MapEditReceipt))
+        # Failure after mutation is NOT rollback. A failed owner remains marked
+        # unhealthy and retains its pending/event state for explicit recovery.
+        owner\healthy := 0
+        MapTree\begin(document; 1)
+        MapTree\erase(document; request\begin; request\end)
+        MapTag\normalize(document)
+        private: int: i 0
+        while: i < MapVector\size(values)
+            MapTree\insert(document; request\begin + i; MapVector\get(values; i))
+            i += 1
+        MapTree\commit(document)
+        receipt\documentId := document\id
+        receipt\revision := document\revision
+        receipt\affected := i
+        owner\healthy := 1
+        MapOwnerPublish\publish(owner)
+        return: receipt
+
+MapOwnerSubscribe:
+    @: owner
+    @: target
+    int: since
+    required: owner target since
+    return: @
+    subscribe:
+        throws: copy(MapThrows)
+        if: since < 0 || since > owner\document\revision
+            throw: MapFailure("subscription revision")
+        private: @: events MapTree\takeChanges(owner\document)
+        private: int: earliest owner\document\revision
+        if: MapVector\size(events) > 0
+            earliest := events[0]\beforeRevision
+        if: since < earliest
+            throw: MapFailure("subscription needs a new snapshot baseline")
+        private: @: subscriber (copy(MapSubscription))
+        subscriber\id := MapTree\allocateId(owner\document)
+        subscriber\target := target
+        subscriber\accepted := since
+        subscriber\sent := since
+        MapVector\push(owner\subscribers; subscriber)
+        return: subscriber
+
+MapOwnerAcknowledge:
+    @: owner
+    @: receipt
+    required: owner receipt
+    return: @
+    acknowledge:
+        throws: copy(MapThrows)
+        private: int: i 0
+        private: int: accepted owner\document\revision
+        private: int: known 0
+        while: i < MapVector\size(owner\subscribers)
+            private: @: subscriber MapVector\get(owner\subscribers; i)
+            if: subscriber\id = receipt\subscriberId
+                if: receipt\revision > subscriber\sent || receipt\revision < 0
+                    throw: MapFailure("invalid subscriber acknowledgement")
+                if: receipt\revision > subscriber\accepted
+                    subscriber\accepted := receipt\revision
+                known := 1
+            if: subscriber\accepted < accepted
+                accepted := subscriber\accepted
+            i += 1
+        if: known = 0
+            throw: MapFailure("unknown subscriber")
+        MapTree\acknowledge(owner\document; accepted)
+        return: receipt
+
+MapOwnerReplay:
+    @: owner
+    int: subscriberId
+    required: owner subscriberId
+    return: @
+    replay:
+        throws: copy(MapThrows)
+        private: int: i 0
+        while: i < MapVector\size(owner\subscribers)
+            private: @: subscriber MapVector\get(owner\subscribers; i)
+            if: subscriber\id = subscriberId
+                subscriber\sent := subscriber\accepted
+                return: MapOwnerPublish\publish(owner)
+            i += 1
+        throw: MapFailure("unknown subscriber")
+
+# This template is launched by the existing LMX Message runtime. Naming a
+# Structure "...Message" does not by itself create a Thread or another scheduler.
+MapDocumentMessage:
+    @: document
+    @: subscribers
+    @: pendingTransfers
+    @: envelope
+    int: requestId
+    int: tagId
+    int: healthy 1
+    @: request
+    @: receipt
+    @: target
+    int: since
+    int: subscriberId
+    return: @
+    apply:
+        throws: copy(MapThrows)
+        return: MapOwnerApply\apply(node; request)
+    acknowledge:
+        throws: copy(MapThrows)
+        return: MapOwnerAcknowledge\acknowledge(node; receipt)
+    subscribe:
+        throws: copy(MapThrows)
+        return: MapOwnerSubscribe\subscribe(node; target; since)
+    replay:
+        throws: copy(MapThrows)
+        return: MapOwnerReplay\replay(node; subscriberId)
+    loaded:
+        throws: copy(MapThrows)
+        return: MapTransfer\accept(node; envelope)
+    exportTag:
+        throws: copy(MapThrows)
+        return: MapTransfer\export(node; tagId; requestId)
+    cancelLoad:
+        throws: copy(MapThrows)
+        private: int: removed MapTransfer\cancel(node; requestId)
+        return: (removed record)
+    snapshot:
+        throws: copy(MapThrows)
+        if: node\healthy = 0 || node\document\txDepth != 0
+            throw: MapFailure("owner recovery required")
+        return: MapSnapshot\export(node\document; end := MapTree\length(node\document))
+
+MapDocumentMessageCreate:
+    @: document
+    required: document
+    return: @
+    create:
+        throws: copy(MapThrows)
+        private: @: owner (copy(MapDocumentMessage))
+        owner\document := document
+        owner\subscribers := MapVector\create()
+        owner\pendingTransfers := MapTable\create()
+        return: owner
+
+# The reader is a separate serial owner. A missing revision is reported; it
+# never silently applies a patch to a different basis or reruns an edit.
+MapNoticeConsumer:
+    int: documentId
+    int: revision
+    []char: text
+    return: @
+    changed:
+        throws: copy(MapThrows)
+        private: @: notice sys\fromLmx(text)
+        if: notice\documentId != node\documentId
+            throw: MapFailure("notice document")
+        if: notice\revision > node\revision
+            if: notice\beforeRevision != node\revision
+                throw: MapFailure("notice gap; request owner snapshot")
+            node\revision := notice\revision
+        private: @: receipt (copy(MapNoticeAck))
+        receipt\subscriberId := notice\subscriberId
+        receipt\revision := notice\revision
+        return: receipt

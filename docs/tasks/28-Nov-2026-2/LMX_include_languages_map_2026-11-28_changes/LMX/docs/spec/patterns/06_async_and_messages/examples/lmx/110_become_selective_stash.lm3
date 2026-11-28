@@ -1,0 +1,64 @@
+# DRAFT. Only work is deferred. Control, queries and replies keep their routes.
+SelectiveMessage:
+    int: requestId
+    int: value
+    int: mode
+    @: selfAddress
+    @: events
+    private: int: phase 0
+    private: int: head 0
+    private: int: count 0
+    private: []int: ids [0 0]
+    private: []int: values [0 0]
+    work:
+        if: node\phase = 2
+            events\rejected(requestId; 2)
+            return
+        if: node\phase = 1 && node\count = 0
+            events\finished(requestId; value * 2)
+            return
+        if: node\count = 2
+            events\rejected(requestId; 1)
+            return
+        private: int: index (node\head + node\count) % 2
+        node\ids[index] := requestId
+        node\values[index] := value
+        node\count += 1
+        if: node\phase = 1
+            post:
+                ask:
+                    selfAddress\pump()
+    become:
+        if: node\phase = 2 || mode < 0 || mode > 1
+            return
+        node\phase := mode
+        if: node\phase = 1 && node\count > 0
+            post:
+                ask:
+                    selfAddress\pump()
+    pump:
+        if: node\phase != 1 || node\count = 0
+            return
+        private: int: id node\ids[node\head]
+        private: int: nextValue node\values[node\head]
+        node\head := (node\head + 1) % 2
+        node\count -= 1
+        events\finished(id; nextValue * 2)
+        if: node\count > 0
+            post:
+                ask:
+                    selfAddress\pump()
+    reply:
+        events\replySeen(requestId; value)
+    query:
+        events\status(node\phase; node\count)
+    stop:
+        if: node\phase = 2
+            return
+        node\phase := 2
+        while: node\count > 0
+            private: int: id node\ids[node\head]
+            node\head := (node\head + 1) % 2
+            node\count -= 1
+            events\rejected(id; 2)
+        events\stopped()

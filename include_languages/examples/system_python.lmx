@@ -1,0 +1,19 @@
+# DRAFT. selected describes a user/host-chosen executable or existing endpoint.
+# Desktop may launch a worker; Android/browser attach to an exposed service.
+PythonSystemExample:
+    @PythonGateContext: context
+    @: selected
+    required: context selected
+    return: i64
+    run:
+        throws: copy(PythonBridgeThrows)
+        private: @PythonOpenRequest: request (copy(PythonOpenRequest))
+        request\mode := 2
+        request\external := selected
+        private: @PythonSession: session py.open(context := context; request := request)
+        finally:
+            py.close(context := context; session := session)
+        return: PythonMathDemo\run(context; session)
+
+# No automatic PATH fallback, system package installation or in-process loading
+# of a second libpython. Worker generation and capabilities are verified at open.

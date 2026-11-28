@@ -1,0 +1,588 @@
+# DRAFT. Tags are intervals over MIX, not a forced parent/child storage tree.
+# Overlapping tags and local/global attributes retain separate identities.
+# All calls execute on the Document's Message owner. Key arguments are interned
+# MapKeyModel references; string overloads use MapKeys\intern once.
+
+MapTagCreate:
+    @: document
+    @: key
+    int: begin
+    int: end
+    @: value MapNil
+    int: beginBias 0
+    int: endBias 1
+    int: origin 3
+    @: beginCursor MapNil
+    @: endCursor MapNil
+    required: document key begin end
+    return: @
+    create:
+        throws: copy(MapThrows)
+        if: begin < 0 || end < begin || end > MapTree\length(document)
+            throw: MapFailure("tag range")
+        if: key\document != document
+            throw: MapFailure("foreign key")
+        private: @: tag (copy(MapTagModel))
+        tag\id := MapTree\allocateId(document)
+        tag\kind := 1
+        tag\document := document
+        tag\key := key
+        tag\value := value
+        tag\tag := tag
+        tag\attributes := MapVector\create()
+        tag\beginBias := beginBias
+        tag\endBias := endBias
+        if: beginCursor = MapNil
+            tag\cursor := MapCursor\create(document; begin; beginBias)
+        ---
+        else:
+            if: beginCursor\document != document
+                throw: MapFailure("foreign beginning anchor")
+            tag\cursor := MapCursor\cloneAt(beginCursor; beginBias)
+        tag\tail := tag\cursor
+        if: end > begin
+            if: endCursor = MapNil
+                tag\tail := MapCursor\create(document; end; endBias)
+            ---
+            else:
+                if: endCursor\document != document
+                    throw: MapFailure("foreign ending anchor")
+                tag\tail := MapCursor\cloneAt(endCursor; endBias)
+            tag\empty := 0
+        tag\cursor\tag := tag
+        tag\tail\tag := tag
+        MapTree\begin(document; origin)
+        MapVector\push(document\tags; tag)
+        MapVector\push(key\dictionary\mentions; tag)
+        MapDictionary\refresh(tag)
+        MapTree\touch(document; begin; end; kind := 2; itemId := tag\id)
+        MapTree\commit(document)
+        return: tag
+
+MapTagAttribute:
+    @: tag
+    @: key
+    required: tag key
+    return: @
+    get:
+        throws: copy(MapThrows)
+        if: tag\deleted != 0
+            return: MapNil
+        if: tag\key = key
+            return: tag
+        private: int: i 0
+        while: i < MapVector\size(tag\attributes)
+            private: @: item MapVector\get(tag\attributes; i)
+            if: item\deleted = 0 && item\key = key
+                return: item
+            i += 1
+        return: MapNil
+
+MapTagSetAttribute:
+    @: tag
+    @: key
+    @: value
+    int: local 1
+    int: origin 3
+    required: tag key value
+    return: @
+    set:
+        throws: copy(MapThrows)
+        private: @: item MapTagAttribute\get(tag; key)
+        if: item != MapNil
+            return: MapItem\setValue(item; value; origin := origin)
+        MapTree\begin(tag\document; origin)
+        item := MapItem\create(tag; key; value; kind := 2; position := MapCursor\position(tag\cursor); local := local; origin := origin)
+        if: local = 0 && tag\empty = 0
+            item\tail := MapCursor\create(tag\document; MapCursor\position(tag\tail); tag\endBias)
+        MapTree\commit(tag\document)
+        return: item
+
+MapTagResize:
+    @: tag
+    int: begin
+    int: end
+    int: origin 3
+    required: tag begin end
+    return: @
+    resize:
+        throws: copy(MapThrows)
+        private: @: document tag\document
+        if: tag\deleted != 0 || begin < 0 || end < begin || end > MapTree\length(document)
+            throw: MapFailure("tag resize")
+        # Allocate an extra endpoint before moving an existing shared anchor.
+        private: @: nextTail tag\tail
+        if: end > begin && tag\tail = tag\cursor
+            nextTail := MapCursor\create(document; end; tag\endBias)
+        MapTree\begin(document; origin)
+        private: int: oldBegin MapCursor\position(tag\cursor)
+        private: int: oldEnd MapCursor\position(tag\tail)
+        MapCursor\move(tag\cursor; begin)
+        tag\tail := nextTail
+        if: nextTail != tag\cursor
+            MapCursor\move(nextTail; end)
+        tag\empty := begin = end
+        tag\cursor\bias := tag\beginBias
+        tag\tail\bias := tag\endBias
+        if: begin = end
+            tag\tail\bias := tag\cursor\bias
+        # A collapsed pair keeps both identities and moves as one point.
+        private: int: i 0
+        while: i < MapVector\size(tag\attributes)
+            private: @: item MapVector\get(tag\attributes; i)
+            if: item\kind = 2
+                MapCursor\move(item\cursor; begin)
+                if: item\local = 0
+                    if: item\tail = item\cursor && end > begin
+                        item\tail := MapCursor\create(document; end; tag\endBias)
+                    if: item\tail != item\cursor
+                        MapCursor\move(item\tail; end)
+                    item\cursor\bias := tag\beginBias
+                    item\tail\bias := tag\endBias
+                    if: begin = end
+                        item\tail\bias := item\cursor\bias
+            ---
+            i += 1
+        MapTree\touch(document; oldBegin; oldEnd; kind := 2; itemId := tag\id)
+        MapTree\touch(document; begin; end; kind := 2; itemId := tag\id)
+        MapTree\commit(document)
+        return: tag
+
+MapTagRename:
+    @: tag
+    @: key
+    int: origin 3
+    required: tag key
+    return: @
+    rename:
+        throws: copy(MapThrows)
+        if: tag\deleted != 0 || key\document != tag\document
+            throw: MapFailure("tag rename")
+        if: key = tag\key
+            return: tag
+        MapTree\begin(tag\document; origin)
+        MapDictionary\refresh(tag; before := 1)
+        private: int: index MapVector\indexOf(tag\key\dictionary\mentions; tag)
+        if: index >= 0
+            MapVector\remove(tag\key\dictionary\mentions; index)
+        tag\key := key
+        MapVector\push(key\dictionary\mentions; tag)
+        MapDictionary\refresh(tag)
+        MapTree\touch(tag\document; MapCursor\position(tag\cursor); MapCursor\position(tag\tail); kind := 2; itemId := tag\id)
+        MapTree\commit(tag\document)
+        return: tag
+
+MapTagClearAttributes:
+    @: tag
+    int: origin 3
+    required: tag
+    return: @
+    clear:
+        throws: copy(MapThrows)
+        MapTree\begin(tag\document; origin)
+        while: MapVector\size(tag\attributes) > 0
+            MapItem\remove(MapVector\get(tag\attributes; MapVector\size(tag\attributes) - 1); origin)
+        MapTree\commit(tag\document)
+        return: tag
+
+MapTagRemove:
+    @: tag
+    int: origin 3
+    required: tag
+    return: @
+    remove:
+        throws: copy(MapThrows)
+        if: tag\deleted != 0
+            return: tag
+        if: origin != 2 && (tag\cursor\parserNode != MapNil || tag\tail\parserNode != MapNil)
+            throw: MapFailure("P0 annotation belongs to parser retire/discard")
+        private: @: document tag\document
+        private: int: begin MapCursor\position(tag\cursor)
+        private: int: end MapCursor\position(tag\tail)
+        MapTree\begin(document; origin)
+        MapTagClearAttributes\clear(tag; origin)
+        private: int: index MapVector\indexOf(document\tags; tag)
+        if: index >= 0
+            MapVector\remove(document\tags; index)
+        index := MapVector\indexOf(tag\key\dictionary\mentions; tag)
+        if: index >= 0
+            MapVector\remove(tag\key\dictionary\mentions; index)
+        tag\deleted := 1
+        if: tag\beginVar != MapNil
+            tag\beginVar\span := MapNil
+            tag\beginVar\partner := MapNil
+            tag\beginVar\pairId := 0
+        if: tag\endVar != MapNil
+            tag\endVar\span := MapNil
+            tag\endVar\partner := MapNil
+            tag\endVar\pairId := 0
+        MapDictionary\refresh(tag; before := 1)
+        MapCursor\release(tag\cursor)
+        if: tag\tail != tag\cursor
+            MapCursor\release(tag\tail)
+        MapTree\touch(document; begin; end; kind := 2; itemId := tag\id)
+        MapTree\commit(document)
+        return: tag
+
+# Return all matching starts in ascending current position; equal positions use
+# stable item ID. No index is hashed by a mutable address. relation 0=contained,
+# 1=start in half-open range, 2=overlap, 3=active at begin. local attributes are
+# accessed through MapTag.getAttribute, never through an enclosing scope query.
+MapQueryRange:
+    @: document
+    @: key MapNil
+    int: begin
+    int: end
+    int: relation 0
+    @: exclude MapNil
+    required: document begin end
+    return: @
+    select:
+        throws: copy(MapThrows)
+        private: @: candidates document\tags
+        if: key != MapNil
+            candidates := key\dictionary\mentions
+        private: @: result MapVector\create()
+        private: int: i 0
+        while: i < MapVector\size(candidates)
+            private: @: item MapVector\get(candidates; i)
+            i += 1
+            if: item = exclude || item\deleted != 0 || item\local != 0
+                continue
+            private: int: a MapCursor\position(item\cursor)
+            private: int: b MapCursor\position(item\tail)
+            private: int: selected 0
+            if: relation = 0
+                selected := a >= begin && b <= end
+            if: relation = 1
+                selected := a >= begin && a < end
+            if: relation = 2
+                selected := a < end && b > begin
+            if: relation = 3
+                selected := a <= begin && (b > begin || (a = b && a = begin))
+            if: selected = 0
+                continue
+            private: int: place 0
+            while: place < MapVector\size(result)
+                private: @: other MapVector\get(result; place)
+                private: int: oa MapCursor\position(other\cursor)
+                if: oa > a || (oa = a && other\id > item\id)
+                    break
+                place += 1
+            MapVector\insert(result; place; item)
+        return: result
+
+MapTagAt:
+    @: document
+    int: position
+    @: exclude MapNil
+    @: key MapNil
+    required: document position
+    return: @
+    at:
+        throws: copy(MapThrows)
+        private: @: candidates MapQueryRange\select(document; key; position; position; relation := 3; exclude := exclude)
+        private: @: best MapNil
+        private: int: i 0
+        while: i < MapVector\size(candidates)
+            private: @: item MapVector\get(candidates; i)
+            if: item\kind = 1
+                if: best = MapNil
+                    best := item
+                ---
+                else:
+                    private: int: a MapCursor\position(item\cursor)
+                    private: int: b MapCursor\position(best\cursor)
+                    if: a > b || (a = b && MapCursor\position(item\tail) < MapCursor\position(best\tail))
+                        best := item
+            ---
+            i += 1
+        return: best
+
+MapTagBody:
+    @: tag
+    required: tag
+    return: @
+    values:
+        throws: copy(MapThrows)
+        private: @: result MapVector\create()
+        private: int: i MapCursor\position(tag\cursor)
+        private: int: end MapCursor\position(tag\tail)
+        while: i < end
+            MapVector\push(result; MapTree\itemAt(tag\document; i))
+            i += 1
+        return: result
+
+MapTagClearBody:
+    @: tag
+    int: removeNested 1
+    int: origin 1
+    required: tag
+    return: @
+    clear:
+        throws: copy(MapThrows)
+        private: @: document tag\document
+        if: document\p0Source != 0
+            throw: MapFailure("P0 source body edits use the owner source-splice API")
+        private: int: begin MapCursor\position(tag\cursor)
+        private: int: end MapCursor\position(tag\tail)
+        private: @: nested MapQueryRange\select(document; begin := begin; end := end; exclude := tag)
+        MapTree\begin(document; origin)
+        if: removeNested != 0
+            private: int: i MapVector\size(nested)
+            while: i > 0
+                i -= 1
+                MapTagRemove\remove(MapVector\get(nested; i); origin)
+        ---
+        if: removeNested != 0
+            private: int: i MapVector\size(document\entries)
+            while: i > 0
+                i -= 1
+                private: @: mark MapVector\get(document\entries; i)
+                private: int: at MapCursor\position(mark\cursor)
+                if: at >= begin && at < end
+                    MapAnchors\remove(mark; origin)
+            ---
+            i := MapVector\size(tag\attributes)
+            while: i > 0
+                i -= 1
+                private: @: item MapVector\get(tag\attributes; i)
+                if: item\kind = 3 || item\kind = 4
+                    private: int: at MapCursor\position(item\cursor)
+                    if: at >= begin && at < end
+                        MapItem\remove(item; origin)
+        ---
+        MapTree\erase(document; begin; end)
+        MapTagNormalize\normalize(document)
+        tag\empty := 1
+        MapTree\commit(document)
+        return: tag
+
+MapTagWholeDelete:
+    @: tag
+    required: tag
+    return: @
+    remove:
+        throws: copy(MapThrows)
+        if: tag\document\p0Source != 0
+            throw: MapFailure("P0 source deletion uses the owner source-splice API")
+        MapTree\begin(tag\document; 1)
+        MapTagClearBody\clear(tag)
+        MapTagRemove\remove(tag; 1)
+        MapTree\commit(tag\document)
+        return: tag
+
+# Boundary motion changes the annotation, not the enclosed source bytes.
+MapTagMove:
+    @: tag
+    int: position
+    int: origin 3
+    required: tag position
+    return: @
+    move:
+        throws: copy(MapThrows)
+        private: int: width MapCursor\position(tag\tail) - MapCursor\position(tag\cursor)
+        return: MapTagResize\resize(tag; position; MapSize\sum(position; width); origin)
+
+MapTagCloneRow:
+    @: source
+    @: target
+    int: begin
+    int: end
+
+# Clone the finite interval closure: if a tag begins in the selected range but
+# ends later, include that end, just as Java cloneTo extended srcEnd. Capture all
+# coordinates before insertion, including when destination is the same document.
+MapTagClone:
+    @: tag
+    @: destination
+    int: position
+    required: tag destination position
+    return: @
+    clone:
+        throws: copy(MapThrows)
+        private: @: source tag\document
+        private: int: begin MapCursor\position(tag\cursor)
+        private: int: end MapCursor\position(tag\tail)
+        private: int: grew 1
+        while: grew != 0
+            grew := 0
+            private: int: i 0
+            while: i < MapVector\size(source\tags)
+                private: @: current MapVector\get(source\tags; i)
+                private: int: a MapCursor\position(current\cursor)
+                private: int: b MapCursor\position(current\tail)
+                if: a >= begin && a < end && b > end
+                    end := b
+                    grew := 1
+                i += 1
+        ---
+        private: @: snapshot MapSnapshot\export(source; begin; end)
+        private: @: external MapNil
+        if: destination = source
+            # Same-owner cloning preserves explicit references outside the
+            # copied fragment. IDs inside the fragment override this map.
+            external := MapTable\create()
+            private: int: i 0
+            while: i < MapVector\size(source\tags)
+                private: @: current MapVector\get(source\tags; i)
+                MapTable\putInt(external; current\id; current)
+                private: int: j 0
+                while: j < MapVector\size(current\attributes)
+                    private: @: attr MapVector\get(current\attributes; j)
+                    MapTable\putInt(external; attr\id; attr)
+                    j += 1
+                i += 1
+        ---
+        else:
+            snapshot := sys\fromLmx(sys\toLmx(snapshot))
+        private: @: mapping MapSnapshot\import(destination; position; snapshot; externalItems := external)
+        return: MapTable\getInt(mapping; tag\id)
+
+MapLookup:
+    @: item
+    @: key
+    int: mode 36
+    int: create 0
+    required: item key
+    return: @
+    find:
+        throws: copy(MapThrows)
+        private: @: tag item\tag
+        private: @: document item\document
+        private: int: position MapCursor\position(item\cursor)
+        private: @: local MapTagAttribute\get(tag; key)
+        if: mode = 37
+            if: local != MapNil || create = 0
+                return: local
+            return: MapTagSetAttribute\set(tag; key; MapNil; 1)
+        if: mode = 36 && local != MapNil && local != item
+            return: local
+        private: int: begin MapCursor\position(tag\cursor)
+        private: int: end MapCursor\position(tag\tail)
+        private: int: relation 0
+        if: mode = 64
+            begin := 0
+            end := MapTree\length(document)
+        if: mode = 42
+            begin := position
+            end := MapTree\length(document)
+        if: mode = 94 || mode = 36
+            begin := 0
+            end := position
+        private: @: found MapQueryRange\select(document; key; begin; end; relation := 1; exclude := item)
+        if: mode = 36 || mode = 94
+            # Enclosing binding wins over an unrelated earlier declaration.
+            private: @: active MapQueryRange\select(document; key; position; position; relation := 3; exclude := item)
+            if: MapVector\size(active) > 0
+                return: MapVector\get(active; MapVector\size(active) - 1)
+            if: MapVector\size(found) > 0
+                return: MapVector\get(found; MapVector\size(found) - 1)
+        if: mode = 42
+            private: int: i 0
+            while: i < MapVector\size(found)
+                private: @: candidate MapVector\get(found; i)
+                private: int: start MapCursor\position(candidate\cursor)
+                if: start > position || (start = position && candidate\id > item\id)
+                    return: candidate
+                i += 1
+        ---
+        else:
+            if: MapVector\size(found) > 0
+                return: MapVector\get(found; 0)
+        if: create = 0
+            return: MapNil
+        if: mode = 35
+            return: MapItem\create(tag; key; position := begin; local := 0)
+        if: mode = 42
+            return: MapTagCreate\create(document; key; end; end)
+        if: mode = 94
+            return: MapTagCreate\create(document; key; position; position)
+        if: mode = 64
+            private: @: root MapTagAt\at(document; 0)
+            if: root = MapNil
+                root := tag
+            return: MapTagSetAttribute\set(root; key; MapNil; 0)
+        return: MapTagSetAttribute\set(tag; key; MapNil; 0)
+
+MapLinkResolve:
+    @: item
+    @: link
+    int: create 0
+    int: nearest 0
+    @: seen MapNil
+    required: item link
+    return: @
+    resolve:
+        throws: copy(MapThrows)
+        if: seen = MapNil
+            seen := MapVector\create()
+        private: @: current item
+        private: int: i 0
+        while: i < MapVector\size(link\steps)
+            private: @: step MapVector\get(link\steps; i)
+            private: @: previous current
+            current := MapLookup\find(current; step\key; step\mode; create)
+            if: current != MapNil
+                current := MapItem\terminal(current; create; seen)
+            if: current = MapNil
+                if: nearest != 0
+                    return: previous
+                return: MapNil
+            i += 1
+        return: current
+
+MapTagNormalize:
+    @: document
+    required: document
+    return: int
+    normalize:
+        throws: copy(MapThrows)
+        private: int: changed 0
+        private: int: i 0
+        while: i < MapVector\size(document\tags)
+            private: @: tag MapVector\get(document\tags; i)
+            if: tag\deleted = 0
+                private: int: begin MapCursor\position(tag\cursor)
+                private: int: end MapCursor\position(tag\tail)
+                if: begin > end
+                    throw: MapFailure("inverted tag; normalize after erase before insert")
+                tag\empty := begin = end
+                if: tag\empty != 0
+                    tag\tail\bias := tag\cursor\bias
+                    private: int: j 0
+                    while: j < MapVector\size(tag\attributes)
+                        private: @: item MapVector\get(tag\attributes; j)
+                        if: item\local = 0 && MapCursor\samePosition(item\cursor; item\tail) != 0
+                            item\tail\bias := item\cursor\bias
+                        j += 1
+                    changed += 1
+            ---
+            i += 1
+        return: changed
+
+MapLinks:
+    @: parse MapLinkParse\parse
+    @: resolve MapLinkResolve\resolve
+    @: clone MapLinkRebind\clone
+
+MapQuery:
+    @: range MapQueryRange\select
+    @: lookup MapLookup\find
+
+MapTag:
+    @: create MapTagCreate\create
+    @: createAt MapTagCreate\create
+    @: getAttribute MapTagAttribute\get
+    @: setAttribute MapTagSetAttribute\set
+    @: resize MapTagResize\resize
+    @: rename MapTagRename\rename
+    @: clearAttributes MapTagClearAttributes\clear
+    @: remove MapTagRemove\remove
+    @: at MapTagAt\at
+    @: values MapTagBody\values
+    @: clearBody MapTagClearBody\clear
+    @: wholeDelete MapTagWholeDelete\remove
+    @: move MapTagMove\move
+    @: cloneTo MapTagClone\clone
+    @: normalize MapTagNormalize\normalize

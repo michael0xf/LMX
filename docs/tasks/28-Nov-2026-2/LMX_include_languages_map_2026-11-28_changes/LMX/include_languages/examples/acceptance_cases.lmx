@@ -1,0 +1,56 @@
+# DRAFT DATA for production acceptance. Expected observations are not run results.
+PythonAcceptanceCases:
+    math:
+        []char: entry "PythonMathDemo.run"
+        i64: expected 720
+        int: remainingHandles 0
+    wrongGeneration:
+        []char: expected "foreign-or-stale-handle"
+        int: nativeCalls 0
+    duplicateKeyword:
+        []char: expected "duplicate-keyword"
+        int: nativeCalls 0
+    repeatedRelease:
+        []char: expected "released-handle"
+        int: additionalDecrefs 0
+    closeWithLease:
+        []char: expected "outstanding-python-resources"
+        int: runtimeClosed 0
+    wheelMismatch:
+        []char: expected "no-compatible-wheel-tag"
+        int: activeGenerationChanged 0
+    probeFailure:
+        int: activeGenerationChanged 0
+        int: stageRetained 0
+    externalReplay:
+        int: totalSideEffects 1
+        int: sameReplyLease 1
+    externalChangedPayload:
+        []char: expected "sequence-payload-conflict"
+        int: additionalSideEffects 0
+    externalUnknown:
+        []char: expected "unknown-outcome"
+        int: automaticRetries 0
+    wasmNoHost:
+        []char: expected "pyodide-needs-emscripten-js-host"
+    bareRiscv:
+        []char: expected "python-host-services-required"
+    handleSerialExhaustion:
+        i64: nextSerial 9223372036854775807
+        []char: expected "handle-serial-exhausted"
+        int: transferredReferenceReleased 1
+    handleQuota:
+        int: liveHandles 32766
+        []char: expected "handle-quota-or-count"
+        int: additionalLeases 0
+    negativeHandleCount:
+        int: liveHandles -1
+        []char: expected "handle-quota-or-count"
+    bufferQuota:
+        int: liveBuffers 32766
+        []char: expected "buffer-quota-or-count"
+        int: acquiredBufferReleased 1
+    sequenceExhaustion:
+        i64: lastSequence 9223372036854775807
+        []char: expected "worker-sequence-exhausted"
+        int: newSideEffects 0

@@ -2,7 +2,7 @@
 
 Go показывает каналы и goroutine, Erlang — изолированные процессы, mail и OTP supervision. Это характерные контроли для Message-модели LMX. Сравнения явно различают логического исполнителя, OS thread, readiness и завершение I/O.
 
-Исходные 8 паттернов дополнены structured concurrency, supervision и MapReduce (88–90). Во всех LMX-примерах параллельная ветка означает отдельно созданный Message; один владелец никогда не исполняет два turn одновременно. Общий lifecycle/HTTP/provider профиль указан явно и не учитывается как бесплатный код.
+15 сравнений: базовые исполнители/Message, structured concurrency, supervision, MapReduce и четыре явных прикладных протокола 109–112. Message сохраняет штатное исполнение; физические блокирующие native операции остаются на L2 boundary.
 
 ## Файлы
 
@@ -122,3 +122,43 @@ Map порождает ключи, shuffle направляет их владе�
 **Наблюдение:** Результат {0:2,1:2}. Чтение итогов выполняется после четырёх подтверждённых reduce-операций.
 
 LMX выражает shuffle явным выбором Message-владельца ключа; Go channel и Erlang mail переносят ключи. Это раскрывает алгоритм map/group/reduce, но ещё не распределённый движок Google MapReduce.
+
+### 109. [Request-Response / Ask](109_request_response_ask_comparision.md)
+
+Запрос завершается поздним reply либо deadline; owner продолжает обслуживать сообщения.
+
+**Сценарий:** Один запрос с token=1 истекает. После этого начинается token=2. Поздний reply token=1 игнорируется; reply token=2 со значением 12 принимается. Query обслуживается при active=1.
+
+**Наблюдение:** Для token=1 один terminal timeout, для token=2 один результат 12; повторный reply/deadline не создаёт нового результата. Busy и исчерпание i64 counter дают отдельный отказ.
+
+LMX показывает post/answer и owner state; Go — тот же автомат в channel loop с явными nonblocking Compute/Schedule ports; Erlang — process receive и send_after. Это прикладное управление deadline, а не новый блокирующий ask primitive.
+
+### 110. [Become / Selective Stash](110_become_selective_stash_comparision.md)
+
+Изменение поведения откладывает только work; control, queries и replies сохраняют обслуживание.
+
+**Сценарий:** В paused phase принять work(1,2) и work(2,3), третий work отклонить из-за capacity=2. Между ними обслужить query и reply. become(1) запускает FIFO pump по одному элементу на turn; stop отменяет оставшийся stash.
+
+**Наблюдение:** Query видит phase=0,count=2; reply доставлен сразу по своему handler. Принятые work дают 4 и 6 по FIFO, без повторного эффекта от лишнего pump. Stop не помещается в stash и оставляет count=0.
+
+Go использует ограниченный slice и отдельный wake channel; Erlang — bounded list и self message. gen_statem postpone служит концептуальным аналогом, но здесь список явно ограничен и отложены только work. Полный небольшой FIFO включён во все листинги.
+
+### 111. [Phased Message Lifecycle](111_phased_message_lifecycle_comparision.md)
+
+Живой parent сначала завершает работу детей, затем закрывает их, затем закрывается сам.
+
+**Сценарий:** Два текущих ребёнка получают drain. Каждый запускает native flush и продолжает query; flushed освобождает завершённый native ресурс и посылает drained. После двух drained parent запрашивает закрытие children, после двух stopped публикует итог и закрывает себя.
+
+**Наблюдение:** Порядок phase parent: 0→1→2→3; duplicate и чужое epoch ничего не уменьшают. Query работает в phases 1 и 2. Итог ровно один, и нет запроса или ожидания из уже остановленного parent/poststop.
+
+Это дополнение к 089 Supervision Tree: рестарт и его budget остаются отдельной политикой. Go явно хранит phases и seen arrays, Erlang подтверждает остановку monitor references/DOWN, LMX использует штатный lifecycle provider. Фаза остановки не переносится в poststop.
+
+### 112. [External Blocking Adapter](112_external_blocking_adapter_comparision.md)
+
+Физический блокирующий вызов вынесен в native L2 worker; LMX получает обычный Message completion.
+
+**Сценарий:** Принять один native job, обслужить query, начать close, отклонить новые jobs. Native completion возвращает действительный ok/value после освобождения native holds; затем owner освобождает idle adapter и закрывается.
+
+**Наблюдение:** Пока native call не завершён, active=1 и query обслуживается. beginClose не считает job завершённым. Один completion даёт один итог; stale token ничего не меняет; releaseIdle и close происходят только при active=0.
+
+Go запускает ровно одну goroutine с действительным supplied blocking function и bounded completion channel; Erlang запускает отдельный процесс, а native Call обязан быть port либо корректно dirty-scheduled NIF. Сам spawn не делает произвольный блокирующий NIF безопасным. LMX-автомат не маскирует отсутствие физического adapter.

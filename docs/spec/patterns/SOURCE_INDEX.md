@@ -125,3 +125,17 @@
 - [ECMAScript — Array.prototype.map](https://tc39.es/ecma262/multipage/indexed-collections.html#sec-array.prototype.map) — 108. Fixed Timestep Game Loop.
 
 Источники интерфейсов Haskell, Julia, Perl и Common Lisp приведены в README наборов и на страницах соответствующих сравнений. Новые примеры `->` опираются на текущую спецификацию LMX: [ARROW_EXAMPLES](../ARROW_EXAMPLES.md).
+
+## Дополнение 28 ноября 2026
+
+| Первичный источник | Новые сравнения |
+| --- | --- |
+| [Go specification](https://go.dev/ref/spec) | 109, 110 |
+| [Erlang gen_statem API](https://www.erlang.org/doc/apps/stdlib/gen_statem.html) | 109 |
+| [Erlang gen_statem behavior](https://www.erlang.org/doc/system/statem.html) | 110 |
+| [Erlang supervision](https://www.erlang.org/doc/system/sup_princ.html) | 111 |
+| [Go pipelines](https://go.dev/blog/pipelines) | 111, 112 |
+| [Erlang native functions](https://www.erlang.org/doc/apps/erts/erl_nif.html) | 112 |
+| [Erlang ports](https://www.erlang.org/doc/system/c_port.html) | 112 |
+
+Это официальные договоры контрольных языков. Конкретные LMX алгоритмы и их границы являются проектными решениями новых записей каталога.

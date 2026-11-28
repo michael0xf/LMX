@@ -1,0 +1,446 @@
+# DRAFT. Upper layer of com.mtk.map, expressed as ordinary LMX.
+# Load contracts/collections/storage/cursor before this file.
+# References to primitive values are records; e.g. value := (42 record).
+# A key belongs to its Document owner. No process-global mutable intern table.
+
+MapItemModel:
+    int: id 0
+    int: kind 0
+    @: document MapNil
+    @: key MapNil
+    @: value MapNil
+    int: valueKind 0
+    @: cursor MapNil
+    @: tail MapNil
+    @: tag MapNil
+    int: local 0
+    int: deleted 0
+    @: constructor MapNil
+
+MapTagModel:
+    copy(MapItemModel)
+    @: attributes MapNil
+    int: empty 1
+    int: beginBias 0
+    int: endBias 1
+    @: beginVar MapNil
+    @: endVar MapNil
+    @: scope MapNil
+
+MapKeyModel:
+    int: id 0
+    @: document MapNil
+    @: text
+    @: dictionary MapNil
+
+MapDictionaryModel:
+    @: key
+    @: mentions
+    @: values
+    @: suffixes
+    @: codes MapNil
+    int: indexed 0
+    @: calculator MapNil
+    @: constructor MapNil
+
+MapLinkStepModel:
+    int: mode
+    @: key
+
+MapLinkModel:
+    @: steps
+
+MapTextEqual:
+    @: left
+    @: right
+    required: left right
+    return: int
+    equal:
+        throws: copy(MapThrows)
+        if: left = right
+            return: 1
+        if: length(left) != length(right)
+            return: 0
+        private: int: i 0
+        while: i < length(left)
+            if: left[i] != right[i]
+                return: 0
+            i += 1
+        return: 1
+
+MapTextCopy:
+    []char: text
+    int: begin 0
+    int: end
+    required: text end
+    return: []char
+    slice:
+        throws: copy(MapThrows)
+        if: begin < 0 || end < begin || end > length(text)
+            throw: MapFailure("text range")
+        private: @: out ([]char: [])
+        sys\resize(out; end - begin)
+        private: int: i begin
+        while: i < end
+            out[i - begin] := text[i]
+            i += 1
+        return: out
+
+MapTextJoin:
+    []char: left
+    []char: right
+    required: left right
+    return: []char
+    join:
+        throws: copy(MapThrows)
+        private: @: out ([]char: [])
+        private: int: total MapSize\sum(length(left); length(right))
+        sys\resize(out; total)
+        private: int: i 0
+        while: i < length(left)
+            out[i] := left[i]
+            i += 1
+        private: int: j 0
+        while: j < length(right)
+            out[i] := right[j]
+            i += 1
+            j += 1
+        return: out
+
+MapText:
+    @: equal MapTextEqual\equal
+    @: slice MapTextCopy\slice
+    @: join MapTextJoin\join
+
+MapKeyTrieNode:
+    @: key MapNil
+    @: children
+MapKeyTrieEdge:
+    int: code
+    @: target
+MapKeyTrie:
+    @: document
+    []char: text
+    int: create 0
+    required: document text
+    return: @
+    path:
+        throws: copy(MapThrows)
+        if: document\keyIndex = MapNil
+            if: create = 0
+                return: MapNil
+            document\keyIndex := (copy(MapKeyTrieNode))
+            document\keyIndex\children := MapVector\create()
+        private: @: current document\keyIndex
+        private: int: i 0
+        while: i < length(text)
+            private: int: code text[i]
+            if: code < 0
+                code += 256
+            private: @: found MapNil
+            private: int: j 0
+            while: j < MapVector\size(current\children)
+                private: @: edge MapVector\get(current\children; j)
+                if: edge\code = code
+                    found := edge\target
+                    break
+                j += 1
+            if: found = MapNil
+                if: create = 0
+                    return: MapNil
+                found := (copy(MapKeyTrieNode))
+                found\children := MapVector\create()
+                private: @: edge (copy(MapKeyTrieEdge))
+                edge\code := code
+                edge\target := found
+                MapVector\push(current\children; edge)
+            current := found
+            i += 1
+        return: current
+MapKeyFind:
+    @: document
+    []char: text
+    required: document text
+    return: @
+    find:
+        throws: copy(MapThrows)
+        private: @: node MapKeyTrie\path(document; text)
+        if: node = MapNil
+            return: MapNil
+        return: node\key
+
+MapKeyIntern:
+    @: document
+    []char: text
+    required: document text
+    return: @
+    intern:
+        throws: copy(MapThrows)
+        private: @: known MapKeyFind\find(document; text)
+        if: known != MapNil
+            return: known
+        private: @: key (copy(MapKeyModel))
+        key\id := MapTree\allocateId(document)
+        key\document := document
+        key\text := MapText\slice(text; end := length(text))
+        private: @: dictionary (copy(MapDictionaryModel))
+        dictionary\key := key
+        dictionary\mentions := MapVector\create()
+        dictionary\values := MapVector\create()
+        dictionary\suffixes := MapVector\create()
+        key\dictionary := dictionary
+        MapVector\push(document\keys; key)
+        private: @: trie MapKeyTrie\path(document; text; 1)
+        trie\key := key
+        return: key
+
+MapKeys:
+    @: find MapKeyFind\find
+    @: intern MapKeyIntern\intern
+
+# Only the spelling of legacy Link is parsed here. This is data syntax, not a
+# second LMX expression parser. A doubled initial sigil escapes a text value.
+MapLinkPrefix:
+    int: code
+    required: code
+    return: int
+    matches:
+        throws: copy(MapThrows)
+        return: code = 36 || code = 64 || code = 35 || code = 37 || code = 94 || code = 42
+
+MapLinkParse:
+    @: document
+    []char: text
+    required: document text
+    return: @
+    parse:
+        throws: copy(MapThrows)
+        private: @: link (copy(MapLinkModel))
+        link\steps := MapVector\create()
+        private: int: i 0
+        while: i < length(text)
+            private: int: mode text[i]
+            if: MapLinkPrefix\matches(mode) = 0
+                throw: MapFailure("link prefix")
+            i += 1
+            private: int: begin i
+            while: i < length(text) && MapLinkPrefix\matches(text[i]) = 0
+                i += 1
+            if: i = begin
+                throw: MapFailure("empty link name")
+            private: @: step (copy(MapLinkStepModel))
+            step\mode := mode
+            step\key := MapKeys\intern(document; MapText\slice(text; begin; i))
+            MapVector\push(link\steps; step)
+        return: link
+
+MapValueText:
+    []char: text
+    int: encode 0
+    required: text
+    return: []char
+    convert:
+        throws: copy(MapThrows)
+        if: length(text) = 0
+            return: text
+        if: MapLinkPrefix\matches(text[0]) = 0
+            return: text
+        if: encode != 0
+            return: MapText\join(MapText\slice(text; 0; 1); text)
+        if: length(text) > 1 && text[0] = text[1]
+            return: MapText\slice(text; 1; length(text))
+        return: text
+
+MapItemValue:
+    @: item
+    int: create 0
+    required: item
+    return: @
+    read:
+        throws: copy(MapThrows)
+        private: @: current MapItemTerminal\terminal(item; create)
+        if: current = MapNil
+            return: MapNil
+        if: current\value = MapNil && create != 0 && current\constructor != MapNil
+            private: @: made current\constructor(current)
+            MapItem\setValue(current; made)
+        return: current\value
+
+MapItemTerminal:
+    @: item
+    int: create 0
+    @: seen MapNil
+    required: item
+    return: @
+    terminal:
+        throws: copy(MapThrows)
+        if: item = MapNil
+            return: MapNil
+        if: item\deleted != 0
+            throw: MapFailure("deleted item")
+        if: seen = MapNil
+            seen := MapVector\create()
+        if: MapVector\indexOf(seen; item) >= 0
+            throw: MapFailure("cyclic Item/Link reference")
+        MapVector\push(seen; item)
+        private: @: result item
+        if: item\valueKind = 2
+            result := terminal(item\value; create; seen)
+        if: item\valueKind = 1
+            result := MapLinks\resolve(item; item\value; create := create; seen := seen)
+        # This is the active resolution path, not a global visited set. A later
+        # independent step may legally use the same object or Link again.
+        MapVector\removeValue(seen; item)
+        return: result
+
+MapItemInteger:
+    @: item
+    int: create 0
+    required: item
+    return: int
+    read:
+        throws: copy(MapThrows)
+        private: @: value MapItemValue\read(item; create)
+        private: int: sample 0
+        if: value = MapNil
+            return: 0
+        if: sys\typeof(value) != sys\typeof(@sample)
+            private: []char: text ""
+            if: sys\typeof(value) = sys\typeof(text)
+                return: MapBytes\parseText(value)
+            throw: MapFailure("integer record or decimal text required")
+        return: \value
+
+MapItemString:
+    @: item
+    int: create 0
+    required: item
+    return: []char
+    read:
+        throws: copy(MapThrows)
+        private: @: value MapItemValue\read(item; create)
+        if: value = MapNil
+            return: ""
+        private: []char: sample ""
+        if: sys\typeof(value) != sys\typeof(sample)
+            throw: MapFailure("text value required")
+        return: MapValueText\convert(value)
+
+MapItemSet:
+    @: item
+    @: value
+    int: valueKind 0
+    int: origin 3
+    required: item value
+    return: @
+    set:
+        throws: copy(MapThrows)
+        if: item\deleted != 0
+            throw: MapFailure("deleted item")
+        if: valueKind < 0 || valueKind > 2
+            throw: MapFailure("value kind")
+        private: @: document item\document
+        MapTree\begin(document; origin)
+        MapDictionary\refresh(item; before := 1)
+        item\value := value
+        item\valueKind := valueKind
+        MapDictionary\refresh(item)
+        private: int: begin MapCursor\position(item\cursor)
+        private: int: end begin
+        if: item\tail != MapNil
+            end := MapCursor\position(item\tail)
+        MapTree\touch(document; begin; end; kind := 2; itemId := item\id)
+        MapTree\commit(document)
+        return: item
+
+MapItemCreate:
+    @: tag
+    @: key
+    @: value MapNil
+    int: kind 3
+    int: position
+    int: local 0
+    int: origin 3
+    required: tag key position
+    return: @
+    create:
+        throws: copy(MapThrows)
+        if: key\document != tag\document || tag\deleted != 0
+            throw: MapFailure("attribute owner/key")
+        private: @: item (copy(MapItemModel))
+        item\id := MapTree\allocateId(tag\document)
+        item\kind := kind
+        item\document := tag\document
+        item\tag := tag
+        item\key := key
+        item\value := value
+        item\local := local
+        item\cursor := MapCursor\create(tag\document; position; 1)
+        item\tail := item\cursor
+        MapTree\begin(tag\document; origin)
+        MapVector\push(tag\attributes; item)
+        MapVector\push(key\dictionary\mentions; item)
+        MapDictionary\refresh(item)
+        MapTree\touch(tag\document; position; position; kind := 2; itemId := item\id)
+        MapTree\commit(tag\document)
+        return: item
+
+MapItemRemove:
+    @: item
+    int: origin 3
+    required: item
+    return: @
+    remove:
+        throws: copy(MapThrows)
+        if: item\kind = 1
+            return: MapTag\remove(item; origin)
+        if: MapVector\indexOf(item\document\entries; item) >= 0
+            return: MapAnchors\remove(item; origin)
+        if: item\deleted != 0
+            return: item
+        private: @: document item\document
+        private: int: begin MapCursor\position(item\cursor)
+        private: int: end MapCursor\position(item\tail)
+        MapTree\begin(document; origin)
+        private: int: index MapVector\indexOf(item\tag\attributes; item)
+        if: index >= 0
+            MapVector\remove(item\tag\attributes; index)
+        index := MapVector\indexOf(item\key\dictionary\mentions; item)
+        if: index >= 0
+            MapVector\remove(item\key\dictionary\mentions; index)
+        item\deleted := 1
+        MapDictionary\refresh(item; before := 1)
+        MapCursor\release(item\cursor)
+        if: item\tail != item\cursor
+            MapCursor\release(item\tail)
+        MapTree\touch(document; begin; end; kind := 2; itemId := item\id)
+        MapTree\commit(document)
+        return: item
+
+MapItem:
+    @: value MapItemValue\read
+    @: terminal MapItemTerminal\terminal
+    @: integer MapItemInteger\read
+    @: string MapItemString\read
+    @: setValue MapItemSet\set
+    @: create MapItemCreate\create
+    @: remove MapItemRemove\remove
+
+MapLinkRebind:
+    @: document
+    @: link
+    required: document link
+    return: @
+    clone:
+        throws: copy(MapThrows)
+        private: @: result (copy(MapLinkModel))
+        result\steps := MapVector\create()
+        private: int: i 0
+        while: i < MapVector\size(link\steps)
+            private: @: original MapVector\get(link\steps; i)
+            private: @: step (copy(MapLinkStepModel))
+            step\mode := original\mode
+            step\key := MapKeys\intern(document; original\key\text)
+            MapVector\push(result\steps; step)
+            i += 1
+        return: result

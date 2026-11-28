@@ -6,6 +6,8 @@
 
 [Interpreter and native execution](INTERPRETER_AND_NATIVE.md) describes the common operations and execution ABI. The [implementation plans](../../projects/README.md) track delivery and acceptance. [Array and matrix verification records](validation/array-matrix-receipts.md) identify the snapshot, inputs and scope of each published result.
 
+[P0, Cursor and MIX](../com.mtk.map/p0/README.md#p0-mix-parser-contract) defines the source and continuation boundary. [Platform profiles and Python](../../include_languages/README.md) and the [four Message protocols](patterns/06_async_and_messages/MESSAGE_PROTOCOLS_2026-11-28.md) include implementation drafts and their verification status.
+
 **Current core:** [types, universal sequences, generic patterns, and callable adapters](CORE_SEQUENCES_REGEX.en.md). The root specifications of this uploaded archive govern this edition; old contradictory spellings are superseded.
 
 **Previous revision: 2026-11-24.** The [revision report](REVISION_2026-11-24.md)

@@ -22,7 +22,7 @@
 - [20. Spelling intersecting marks](#mix-overlay)
 - [21. Operator tokens and expression boundaries](#operators)
 - [22. Address, index, and path forms](#paths)
-- [23. Explicit C surface and profile boundaries](#foreign)
+- [23. C and Python gateways and profile boundaries](#foreign)
 - [24. The single P0 automaton](#automaton)
 - [25. Surface-form EBNF](#ebnf)
 - [26. Structural-result EBNF](#normal-form)
@@ -906,9 +906,13 @@ Prefix `@x` (a VALUE address), prefix `@T` (a TYPE constructor), and `\x` differ
 
 <a id="foreign"></a>
 
-## 23. Explicit C surface and profile boundaries
+## 23. C and Python gateways and profile boundaries
 
 Sources: §§6.6.6, 20.2.2–20.3.
+
+**Python gateways.** This contract defines Python through `py.*` as the connected-language profile. In head position an adjacent `py.name` is read by the common P0 as one token with its source span. `py.` takes one valid bare identifier. A second dot, the separated spelling `py .name`, and arbitrary `a.b` do not form gateways. The exact identifier `` `py.call` `` keeps its own bytes under §5, including its quoting delimiters.
+
+The common P0 keeps the bare head, ordinary LMX nodes for its arguments, and the continuation position. Admission of the finite set of operations in the [Python API](../../include_languages/python/API.md) follows parsing. An unknown `py.unknown` is refused at call preparation, before execution. Python modules and attributes are passed as parameters, without parsing Python code or looking up a dotted chain in the head. The gates are available to L3 and L2 through an explicit session and provider; direct `c.*` remains the L2 boundary. Binding and native providers await implementation.
 
 `c.name` is an explicit C-surface form, not an ordinary LMX field. A compact token beginning with `c.` continues to an LMX boundary: horizontal space, newline, `,`, `;`, `(`, `)`, `:`, comment start, or item end. Dotted continuations remain C surface; calls and indices use bounded forms in the common stream. Names following `c.` pass through the common raw C door; particular C names have no separate registration or special parsing ([L2](L2_spec_en.md#lowlevel-abi)).
 
@@ -937,6 +941,8 @@ L2:
 ## 24. The single P0 automaton
 
 **Shared implementation requirement, 2026-11-27.** The target has one main LMX parser containing the square subparser, which calls that same main parser for every expression and `{...}` region and resumes at its returned position. After parsing, every Expression consumer calls one shared implementation of semantic grouping. Duplicate parsers, independent binding algorithms and their tables are removed; independent scale adapters do not satisfy this requirement. Backend emission and actual preparation consume the common grouping result. [Architecture contract](EXPRESSION_ALGORITHM.md#single-parser-and-grouper).
+
+**P0 source and continuation.** A complete read and resumption from saved state use the same automaton. For MIX, the consumer receives spans, child-document boundaries, and token state before resumption while retaining the complete clean graph of the nested region. A source-byte offset, a Unicode scalar index in the written token, and a character coordinate in the displayed text are distinct observations. Live bindings belong to the document owner. [Cursor and MIX contract](../com.mtk.map/p0/README.md#p0-mix-parser-contract).
 
 Source: §15.0; this is the normative recognition model, and the EBNF below is its projection.
 
@@ -1066,9 +1072,11 @@ Square productions enter through `square_form`; the common P0 validates position
     head                ::= { type_prefix } head_base
                           | common_composed_head
 
-    head_base           ::= bare_identifier | exact_identifier
+    head_base           ::= bare_identifier | exact_identifier | python_gate
                           | symbolic_head | square_form(DECLARATION_HEAD)
                           | bounded_structure
+
+    python_gate         ::= "py." bare_identifier
 
     type_prefix         ::= array_axis_prefix | dynamic_array_rank_prefix
                           | pointer_prefix | dynamic_pointer_count_prefix

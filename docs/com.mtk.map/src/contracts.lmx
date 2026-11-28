@@ -1,0 +1,156 @@
+# DRAFT — LMX source, not an executed production library.
+# Load contracts, collections, storage, cursor before upper-level modules.
+# All document mutations run on one ordinary Message owner lane. Mutable
+# references never authorize another OS thread to walk the live tree.
+
+MapThrows:
+    MapFailure
+
+const: @: MapNil (independent(immutable((int: absent 1))))
+
+MapScopeModel:
+    int: nextId 1
+    int: limit 2147483647
+    @: root MapNil
+    @: documents MapNil
+
+MapDocumentModel:
+    int: id 0
+    int: p0Source 0
+    @: scope MapNil
+    @: root MapNil
+    @: first MapNil
+    @: last MapNil
+    int: count 0
+    int: pageCapacity 32
+    int: revision 0
+    int: txDepth 0
+    int: txOrigin 1
+    int: txBeforeRevision 0
+    int: txBeforeLength 0
+    @: pending MapNil
+    @: events MapNil
+    @: tags MapNil
+    @: keys MapNil
+    @: keyIndex MapNil
+    @: properties MapNil
+    @: factory MapNil
+    @: entries MapNil
+
+# kind 0 = branch, 1 = leaf. Children may have different depths/capacities.
+# parent = MapNil marks the physical root; leaf prev/next only connect one bunch.
+MapNodeModel:
+    int: id 0
+    int: kind 0
+    int: capacity 32
+    int: index 0
+    @: document MapNil
+    @: parent MapNil
+    @: slots MapNil
+    @: anchors MapNil
+    @: prev MapNil
+    @: next MapNil
+
+MapCellModel:
+    int: id 0
+    int: index 0
+    @: leaf MapNil
+    @: value MapNil
+
+# A stable zero-width anchor. The cursor is not a UI-only caret.
+# position is a derived coordinate, never the identity; bias 0=left, 1=right.
+# parserNode/tag/attributes are ordinary graph links, not a hidden parser cache.
+MapCursorModel:
+    int: id 0
+    @: document MapNil
+    @: leaf MapNil
+    int: slot 0
+    int: bias 1
+    int: released 0
+    int: registered 0
+    @: scope MapNil
+    @: parserNode MapNil
+    @: tag MapNil
+    @: attributes MapNil
+
+MapLocationModel:
+    @: leaf MapNil
+    int: slot 0
+
+MapBunchModel:
+    @: document MapNil
+    @: member MapNil
+
+# Every edit's coordinates refer to the source immediately before that edit.
+# Events preserve this order. Do not combine min/max from different coordinate
+# systems. kind 1=splice, 2=semantic metadata, 3=topology.
+MapEditModel:
+    int: sequence 0
+    int: kind 1
+    int: begin 0
+    int: oldEnd 0
+    int: newEnd 0
+    int: itemId 0
+    @: removed MapNil
+    @: inserted MapNil
+
+# origin 1=user/source, 2=parser-derived annotation, 3=semantic attribute.
+# Origin 2 is bookkeeping-only: no source revision/event and no source edits.
+# edits, removed and inserted sequences are fresh snapshots of references;
+# payload references retain their actual ownership, not fictional deep copying.
+# Queue entries remain until acknowledge(revision) after downstream acceptance.
+MapChangeModel:
+    int: documentId 0
+    int: beforeRevision 0
+    int: revision 0
+    int: origin 1
+    int: oldLength 0
+    int: newLength 0
+    int: hasSingleRange 0
+    int: kind 0
+    int: begin 0
+    int: oldEnd 0
+    int: newEnd 0
+    @: edits MapNil
+
+MapTableModel:
+    @: keyEquals MapNil
+    @: keys MapNil
+    @: values MapNil
+    @: values2 MapNil
+
+MapIteratorModel:
+    @: values MapNil
+    int: begin 0
+    int: end 0
+    int: position 0
+    int: direction 1
+
+# units are unsigned bytes. utf16=1 preserves the Java legacy 0,hi,lo
+# escaped-code-unit format; it is NOT standard UTF-16. utf16=0 is UTF-8.
+# This model does not expose a host Java byte[] or StringBuffer.
+MapBytesModel:
+    @: units MapNil
+    int: begin 0
+    int: count 0
+    int: utf16 0
+
+# A child document is a bounded view of the original source, not a copied text.
+# head/tail remain ordinary parent cursors; ID is independent of current offset.
+MapSpanModel:
+    int: id 0
+    @: document MapNil
+    @: head MapNil
+    @: tail MapNil
+    int: createdRevision 0
+    int: parsedRevision -1
+    @: p0Root MapNil
+    @: checkpoints MapNil
+    @: ownerBinding MapNil
+    @: anchor MapNil
+
+# Generic live collection membership is explicit, without Java instanceof.
+MapLiveEntryModel:
+    @: vector MapNil
+    @: value MapNil
+    int: index -1

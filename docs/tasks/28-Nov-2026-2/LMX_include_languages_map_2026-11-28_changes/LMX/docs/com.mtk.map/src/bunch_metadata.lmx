@@ -1,0 +1,188 @@
+# DRAFT. Metadata preflight and migration around the storage bunch cut.
+# A Tag spanning two independent documents is refused before the physical cut.
+# Overlap within either result document remains supported.
+
+MapCutRow:
+    @: item
+    int: begin
+    int: end
+    int: right
+
+MapCutAdmission:
+    int: documentId
+    int: revision
+    int: position
+    int: approved 0
+    @: rows
+    @: scopes
+
+MapCutCapture:
+    @: plan
+    @: item
+    int: position
+    required: plan item position
+    capture:
+        throws: copy(MapThrows)
+        private: int: begin MapCursor\position(item\cursor)
+        private: int: end MapCursor\position(item\tail)
+        if: begin < position && end > position
+            throw: MapFailure("cut crosses an annotated interval")
+        private: @: row (copy(MapCutRow))
+        row\item := item
+        row\begin := begin
+        row\end := end
+        row\right := begin >= position
+        MapVector\push(plan\rows; row)
+
+MapTagCutPrepare:
+    @: document
+    int: position
+    required: document position
+    return: @
+    prepare:
+        throws: copy(MapThrows)
+        if: position < 0 || position > MapTree\length(document) || document\txDepth != 0
+            throw: MapFailure("metadata cut position")
+        private: @: page document\first
+        while: page != MapNil
+            private: int: c 0
+            while: c < MapVector\size(page\anchors)
+                if: page\anchors[c]\parserNode != MapNil
+                    throw: MapFailure("detach/rebuild P0 binding before cutting document ownership")
+                c += 1
+            page := page\next
+        private: @: plan (copy(MapCutAdmission))
+        plan\documentId := document\id
+        plan\revision := document\revision
+        plan\position := position
+        plan\rows := MapVector\create()
+        plan\scopes := MapVector\create()
+        private: int: i 0
+        while: i < MapVector\size(document\tags)
+            private: @: tag MapVector\get(document\tags; i)
+            MapCutCapture\capture(plan; tag; position)
+            private: int: j 0
+            while: j < MapVector\size(tag\attributes)
+                MapCutCapture\capture(plan; MapVector\get(tag\attributes; j); position)
+                j += 1
+            if: tag\scope != MapNil && MapVector\indexOf(plan\scopes; tag\scope) < 0
+                MapVector\push(plan\scopes; tag\scope)
+            i += 1
+        i := 0
+        while: i < MapVector\size(document\entries)
+            private: @: mark MapVector\get(document\entries; i)
+            MapCutCapture\capture(plan; mark; position)
+            if: mark\scope != MapNil && MapVector\indexOf(plan\scopes; mark\scope) < 0
+                MapVector\push(plan\scopes; mark\scope)
+            if: mark\childDocument != MapNil && MapVector\indexOf(plan\scopes; mark\childDocument) < 0
+                MapVector\push(plan\scopes; mark\childDocument)
+            i += 1
+        i := 0
+        while: i < MapVector\size(plan\scopes)
+            private: @: scope MapVector\get(plan\scopes; i)
+            if: scope\document != document
+                throw: MapFailure("cut contains a foreign document scope")
+            private: int: a MapCursor\position(scope\head)
+            private: int: b MapCursor\position(scope\tail)
+            if: a < position && b > position
+                throw: MapFailure("cut crosses a bounded MIX document")
+            i += 1
+        # Explicit object-valued links may not be silently redirected across
+        # the new local document boundary. A broader profile needs a handle.
+        i := 0
+        while: i < MapVector\size(plan\rows)
+            private: @: row MapVector\get(plan\rows; i)
+            if: row\item\kind != 1 && row\item\tag != MapNil
+                private: int: ownerSide MapCursor\position(row\item\tag\cursor) >= position
+                if: ownerSide != row\right
+                    throw: MapFailure("cut separates variable from owning tag")
+            if: row\item\valueKind = 2
+                private: int: side MapCursor\position(row\item\value\cursor) >= position
+                if: side != row\right
+                    throw: MapFailure("cut crosses an Item reference")
+            i += 1
+        plan\approved := 1
+        return: plan
+
+MapTagCutApply:
+    @: document
+    int: position
+    required: document position
+    return: @
+    split:
+        throws: copy(MapThrows)
+        private: @: plan MapTagCutPrepare\prepare(document; position)
+        # Capture scope coordinates before the raw cut changes the local bases.
+        private: @: scopes MapVector\create()
+        private: int: i 0
+        while: i < MapVector\size(plan\scopes)
+            private: @: scope MapVector\get(plan\scopes; i)
+            private: @: row (copy(MapCutRow))
+            row\item := scope
+            row\begin := MapCursor\position(scope\head)
+            row\end := MapCursor\position(scope\tail)
+            row\right := row\begin >= position
+            MapVector\push(scopes; row)
+            i += 1
+        private: @: target MapTree\splitBunch(document; position; plan)
+        i := 0
+        while: i < MapVector\size(scopes)
+            private: @: row MapVector\get(scopes; i)
+            private: @: scope row\item
+            private: @: owner document
+            private: int: offset 0
+            if: row\right != 0
+                owner := target
+                offset := position
+            scope\document := owner
+            MapCursor\rehome(scope\head; owner; row\begin - offset)
+            if: scope\tail != scope\head
+                MapCursor\rehome(scope\tail; owner; row\end - offset)
+            i += 1
+        i := 0
+        while: i < MapVector\size(plan\rows)
+            private: @: row MapVector\get(plan\rows; i)
+            private: @: item row\item
+            private: @: owner document
+            private: int: offset 0
+            private: int: isMark MapVector\contains(document\entries; item)
+            if: row\right != 0
+                owner := target
+                offset := position
+                if: item\kind = 1
+                    MapVector\removeValue(document\tags; item)
+                    MapVector\push(target\tags; item)
+                if: MapVector\indexOf(document\entries; item) >= 0
+                    MapVector\removeValue(document\entries; item)
+                    MapVector\push(target\entries; item)
+                if: item\key != MapNil && isMark = 0
+                    MapVector\removeValue(item\key\dictionary\mentions; item)
+                    MapDictionary\refresh(item; before := 1)
+                    private: @: old item\key
+                    item\key := MapKeys\intern(target; old\text)
+                    item\key\dictionary\calculator := old\dictionary\calculator
+                    item\key\dictionary\constructor := old\dictionary\constructor
+                    MapVector\push(item\key\dictionary\mentions; item)
+            ---
+            if: row\right != 0
+                if: item\valueKind = 1
+                    item\value := MapLinks\clone(target; item\value)
+                if: MapVector\indexOf(target\entries; item) >= 0
+                    if: item\headKey != MapNil
+                        item\headKey := MapKeys\intern(target; item\headKey\text)
+                        item\key := item\headKey
+                    if: item\closeKey != MapNil
+                        item\closeKey := MapKeys\intern(target; item\closeKey\text)
+            ---
+            item\document := owner
+            MapCursor\rehome(item\cursor; owner; row\begin - offset)
+            if: item\tail != item\cursor
+                MapCursor\rehome(item\tail; owner; row\end - offset)
+            if: item\key != MapNil && isMark = 0
+                MapDictionary\refresh(item)
+            i += 1
+        return: target
+
+MapBunchMetadata:
+    @: prepare MapTagCutPrepare\prepare
+    @: split MapTagCutApply\split

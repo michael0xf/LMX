@@ -1,0 +1,205 @@
+# DRAFT. Streaming source, direct P0 attachments and child MIX document hooks.
+# All methods execute on the document owner. Cross-Message transport uses
+# revision/IDs/snapshots, never these live mutable references.
+P0MixReaderCreate:
+    @: document
+    @: sourceBytes MapNil
+    required: document
+    return: @
+    create:
+        throws: copy(P0MixThrows)
+        private: @: result (copy(P0MixReaderModel))
+        result\document := document
+        result\sourceBytes := sourceBytes
+        result\cursor := MapCursor\create(document; 0; 0)
+        if: sourceBytes != MapNil
+            if: MapTree\length(document) != 0
+                throw: P0MixFailure("initial reader requires an empty source")
+            result\loading := 1
+        return: result
+
+# sourceBytes is the []@ units vector returned by MapBytes.fromText/view.
+# Every source cell receives its own scalar record, so later writes to the
+# caller's input vector or scalar records cannot silently change the document.
+P0MixReaderLoadOne:
+    @: reader
+    required: reader
+    return: int
+    append:
+        throws: copy(P0MixThrows)
+        if: reader\loading = 0 || reader\loaded >= length(reader\sourceBytes)
+            throw: P0MixFailure("no pending source byte")
+        private: @: raw reader\sourceBytes[reader\loaded]
+        private: int: value \raw
+        if: value < 0 || value > 255
+            throw: P0MixFailure("P0 source profile requires unsigned UTF-8 bytes")
+        MapTree\insert(reader\document; reader\loaded; (value record))
+        reader\loaded += 1
+        return: value
+
+P0MixReaderRead:
+    @: reader
+    int: offset
+    required: reader offset
+    return: int
+    read:
+        throws: copy(P0MixThrows)
+        if: offset < 0
+            throw: P0MixFailure("negative source offset")
+        if: reader\loading != 0
+            while: reader\loaded <= offset && reader\loaded < length(reader\sourceBytes)
+                P0MixReaderLoadOne\append(reader)
+        ---
+        if: offset >= MapTree\length(reader\document)
+            return: -1
+        if: offset != reader\nextOffset
+            MapCursor\move(reader\cursor; offset)
+            reader\jumps += 1
+        private: @: raw MapCursor\read(reader\cursor)
+        private: int: value \raw
+        if: value < 0 || value > 255
+            throw: P0MixFailure("P0 source profile requires unsigned UTF-8 bytes")
+        MapCursor\next(reader\cursor)
+        reader\nextOffset := offset + 1
+        reader\bytesRead += 1
+        return: value
+
+P0MixReaderFinishLoad:
+    @: reader
+    required: reader
+    return: int
+    finish:
+        throws: copy(P0MixThrows)
+        if: reader\loading != 0
+            while: reader\loaded < length(reader\sourceBytes)
+                P0MixReaderLoadOne\append(reader)
+            reader\loading := 0
+            reader\sourceBytes := MapNil
+        return: MapTree\length(reader\document)
+
+# The core supplies its exact live reader boundary at token/form entry/exit.
+# Clone a boundary directly; do not locate each token by walking from byte 0.
+P0MixBoundary:
+    @: cursor
+    int: bias 1
+    required: cursor
+    return: @
+    capture:
+        throws: copy(P0MixThrows)
+        return: MapCursor\cloneAt(cursor; bias)
+
+P0MixCheckpointMake:
+    @: session
+    @: cursor
+    @: state
+    @: ownerNode MapNil
+    @: documentScope MapNil
+    int: rootBoundary 0
+    required: session cursor state
+    return: @
+    make:
+        throws: copy(P0MixThrows)
+        private: @: result (copy(P0MixCheckpoint))
+        result\cursor := P0MixBoundary\capture(cursor; 0)
+        result\state := state
+        result\ownerNode := ownerNode
+        result\documentScope := documentScope
+        result\sourceRevision := session\targetRevision
+        result\rootBoundary := rootBoundary
+        MapVector\push(session\checkpoints; result)
+        return: result
+
+# begin/end are captured cursor references, with ordinary source byte units.
+# For empty spans the same boundary is retained, preventing inverted biases.
+# A native P0 node stores this exact binding, not a serialized duplicate.
+P0MixNodeAttach:
+    @: session
+    @: syntaxNode
+    @: begin
+    @: end
+    int: beginPosition
+    int: endPosition
+    @: entryCheckpoint MapNil
+    @: exitCheckpoint MapNil
+    @: documentScope MapNil
+    int: origin 2
+    required: session syntaxNode begin end beginPosition endPosition
+    return: @
+    onNode:
+        throws: copy(P0MixThrows)
+        private: @: binding (copy(P0MixNodeBinding))
+        private: int: first beginPosition
+        private: int: last endPosition
+        if: first > last
+            throw: P0MixFailure("inverted P0 source span")
+        private: @: key MapKeys\intern(session\document; "p0.source")
+        private: @: tag MapTag\createAt(session\document; key; first; last; syntaxNode; beginBias := 1; endBias := 0; origin := origin; beginCursor := begin; endCursor := end)
+        binding\syntaxNode := syntaxNode
+        binding\sourceBegin := tag\cursor
+        binding\sourceEnd := tag\tail
+        binding\sourceTag := tag
+        binding\entryCheckpoint := entryCheckpoint
+        binding\exitCheckpoint := exitCheckpoint
+        binding\documentScope := documentScope
+        binding\sourceRevision := session\targetRevision
+        tag\cursor\parserNode := syntaxNode
+        tag\tail\parserNode := syntaxNode
+        MapVector\push(session\bindings; binding)
+        session\engine\attach(session\engineContext; syntaxNode; binding)
+        return: binding
+
+# The existing P0 supplies mark span and atom_char. It also supplies a
+# non-executing projection of the mark's parsed fields to headKey/closeKey/role.
+# role 1=open, 2=close, 3=standalone nested LMX document.
+# No literal LMX/MIX marker words, no search for '}' and no endpoint pairing.
+P0MixMarkAttach:
+    @: session
+    @: binding
+    @: parentScope MapNil
+    @: localRoot
+    @: localCheckpoints
+    int: rawBegin
+    int: rawEnd
+    int: sourceTokenChar 0
+    int: coordinateKind 0
+    int: role 3
+    @: headKey MapNil
+    @: closeKey MapNil
+    @: payload MapNil
+    int: sourceOrdinal 0
+    int: origin 2
+    required: session binding localRoot localCheckpoints rawBegin rawEnd
+    return: @
+    onMark:
+        throws: copy(P0MixThrows)
+        if: rawBegin < 0 || rawEnd < rawBegin || rawEnd - rawBegin < 2
+            throw: P0MixFailure("bounded MIX mark span")
+        private: @: head MapCursor\cloneAt(binding\sourceBegin; 0)
+        finally:
+            MapCursor\release(head)
+        private: @: tail MapCursor\cloneAt(binding\sourceEnd; 1)
+        finally:
+            MapCursor\release(tail)
+        if: MapCursor\next(head) = 0 || MapCursor\prev(tail) = 0
+            throw: P0MixFailure("missing captured mark delimiters")
+        private: @: child MapSpan\createAt(head; tail)
+        binding\childDocument := child
+        child\p0Root := localRoot
+        child\checkpoints := localCheckpoints
+        child\ownerBinding := binding
+        private: @: mark MapAnchors\create(session\document; rawBegin; role; headKey := headKey; closeKey := closeKey; payload := payload; childDocument := child; sourceOrdinal := sourceOrdinal; rawByteOffset := rawBegin; sourceTokenChar := sourceTokenChar; coordinateKind := coordinateKind; origin := origin; scope := parentScope; atCursor := binding\sourceBegin)
+        child\anchor := mark
+        child\parsedRevision := session\targetRevision
+        binding\markAnchor := mark
+        mark\cursor\parserNode := binding\syntaxNode
+        return: mark
+
+P0MixSink:
+    @: onNode P0MixNodeAttach\onNode
+    @: onCheckpoint P0MixCheckpointMake\make
+    @: onMark P0MixMarkAttach\onMark
+
+P0MixReader:
+    @: create P0MixReaderCreate\create
+    @P0MixReadAPI: read P0MixReaderRead\read
+    @: finishLoad P0MixReaderFinishLoad\finish

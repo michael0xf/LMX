@@ -4,7 +4,7 @@
 
 Исходные 8 паттернов дополнены structured concurrency, supervision и MapReduce (88–90). Во всех LMX-примерах параллельная ветка означает отдельно созданный Message; один владелец никогда не исполняет два turn одновременно. Общий lifecycle/HTTP/provider профиль указан явно и не учитывается как бесплатный код.
 
-[LMX_Comparison_06_async_and_messages.xlsx](LMX_Comparison_06_async_and_messages.xlsx) · [LMX_Comparison_06_async_and_messages.pdf](LMX_Comparison_06_async_and_messages.pdf) · [LMX_Comparison_06_async_and_messages.md](LMX_Comparison_06_async_and_messages.md)
+[Актуальная таблица Markdown](LMX_Comparison_06_async_and_messages.md) · [CSV](LMX_Comparison_06_async_and_messages.csv). [XLSX](LMX_Comparison_06_async_and_messages.xlsx) и [PDF](LMX_Comparison_06_async_and_messages.pdf) относятся к предыдущей редакции и ждут регенерации.
 
 Редактируемый источник материалов — patterns.json. Листинги вынесены в examples.
 
@@ -41,3 +41,9 @@
 Программа всегда начинает выполнение с **R0**, обычного L3 Thread под родительской заглушкой, без DATA и пользовательских actuals. Отсутствие DATA пропускает только обработку входов; локальные переменные, обычные вызовы, диспетчеризация и выходы сохраняются. Именованный сценарий вызывается из уже запущенного корня или обработчика обычным механизмом и не заменяет точку старта.
 
 Для фрагмента указываются его принимающий контекст и обычный вызов сценария. Описание DATA получает эту роль только по существующему договору принимающей операции; оно не превращает CODE корня в DATA и не вводит отдельный профиль загрузки или выбор Main. Родительская заглушка может передать свои значения обычным сообщением корню; внутренние параметры запуска Thread не становятся пользовательскими actuals. См. [запуск корня](../../LMX_semantics.en.md#root-entry).
+
+## Редакция 28 ноября 2026: прикладные Message-протоколы
+
+Добавлены [109 Request-Response / Ask](109_request_response_ask_comparision.md), [110 Become / Selective Stash](110_become_selective_stash_comparision.md), [111 Phased Message Lifecycle](111_phased_message_lifecycle_comparision.md), [112 External Blocking Adapter](112_external_blocking_adapter_comparision.md). В группе 15 сравнений, 45 основных листингов. [Покрытие и границы providers](MESSAGE_PROTOCOLS_2026-11-28.md).
+
+Message сохраняет штатное исполнение и сам не создаёт deadlock. LMX synchronized не применяется; физические блокирующие операции и locks принадлежат L2/native adapter. Новые листинги содержат полные прикладные алгоритмы, а отсутствующие физические providers помечены REQUIRE_IMPLEMENTATION. LMX и контрольные языки в этой редакции не исполнялись.

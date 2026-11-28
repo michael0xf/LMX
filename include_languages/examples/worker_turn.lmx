@@ -1,0 +1,15 @@
+# DRAFT ordinary owner handler; receiving Message/lifecycle is the host contract.
+# request is already admitted DATA with wire handles resolved to owner-local refs.
+PythonWorkerHandler:
+    @PythonGateContext: context
+    @PythonSession: session
+    @PythonExternalState: state
+    @PythonExternalRequest: request
+    required: context session state request
+    return: @PythonReply
+    receive:
+        throws: copy(PythonBridgeThrows)
+        return: PythonExternalTurn\accept(context; session; state; request)
+
+# Wire delivery ACK is not this completed reply. The native/transport provider
+# retains pending request state until this method completes or fails explicitly.

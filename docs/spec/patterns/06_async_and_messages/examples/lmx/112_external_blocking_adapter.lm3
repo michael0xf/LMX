@@ -1,0 +1,49 @@
+# DRAFT. submit is nonblocking; the physical blocking call belongs to native L2.
+BlockingClientMessage:
+    int: value
+    i64: token
+    int: ok
+    @: native
+    @: selfAddress
+    @: lifecycle
+    @: events
+    private: int: phase 0
+    private: int: active 0
+    private: i64: next 0
+    private: i64: current 0
+    submit:
+        if: node\phase != 0 || node\active = 1
+            events\rejected(1)
+            return
+        if: node\next = 9223372036854775807
+            events\rejected(2)
+            return
+        node\next += 1
+        node\current := node\next
+        node\active := 1
+        private: int: admitted native\submit(node\current; value; selfAddress)
+        if: admitted != 1
+            node\active := 0
+            events\rejected(3)
+    completed:
+        if: node\active = 0 || token != node\current
+            return
+        node\active := 0
+        events\finished(token; ok; value)
+        if: node\phase = 1
+            finishClose()
+    beginClose:
+        if: node\phase != 0
+            return
+        node\phase := 1
+        if: node\active = 0
+            finishClose()
+    finishClose:
+        if: node\phase != 1 || node\active != 0
+            return
+        native\releaseIdle()
+        node\phase := 2
+        events\closed()
+        lifecycle\requestOwnerClose()
+    query:
+        events\status(node\phase; node\active)

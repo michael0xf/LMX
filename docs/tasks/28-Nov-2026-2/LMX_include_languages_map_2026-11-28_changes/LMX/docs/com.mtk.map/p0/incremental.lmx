@@ -1,0 +1,314 @@
+# DRAFT. Real LMX coordination; the existing P0 provider is an explicit
+# REQUIRE_IMPLEMENTATION dependency from models.lmx. This is not a parser.
+P0MixShiftBoundary:
+    int: position
+    @: edit
+    int: rightBias
+    required: position edit rightBias
+    return: int
+    shift:
+        throws: copy(P0MixThrows)
+        if: position < edit\begin
+            return: position
+        if: position > edit\oldEnd
+            return: MapSize\sum(position - edit\oldEnd; edit\newEnd)
+        if: position = edit\oldEnd && edit\oldEnd > edit\begin
+            return: edit\newEnd
+        if: rightBias != 0
+            return: edit\newEnd
+        return: edit\begin
+
+# Old/final dirty range is not guessed from min/max of intermediate offsets.
+# Each next splice first translates the already accumulated range.
+P0MixDirtyRange:
+    @: changes
+    int: baseRevision
+    int: targetRevision
+    required: changes baseRevision targetRevision
+    return: @
+    collect:
+        throws: copy(P0MixThrows)
+        private: @: result (copy(P0MixRange))
+        result\beforeRevision := baseRevision
+        result\revision := baseRevision
+        private: int: expected baseRevision
+        private: int: i 0
+        while: i < MapVector\size(changes)
+            private: @: change MapVector\get(changes; i)
+            if: change\revision > baseRevision && change\revision <= targetRevision
+                if: change\beforeRevision != expected
+                    throw: P0MixFailure("missing or out-of-order document revision")
+                private: int: j 0
+                while: j < MapVector\size(change\edits)
+                    private: @: edit MapVector\get(change\edits; j)
+                    if: edit\kind = 1 || edit\kind = 3
+                        if: result\present != 0
+                            result\begin := P0MixShiftBoundary\shift(result\begin; edit; 0)
+                            result\end := P0MixShiftBoundary\shift(result\end; edit; 1)
+                            if: edit\begin < result\begin
+                                result\begin := edit\begin
+                            if: edit\newEnd > result\end
+                                result\end := edit\newEnd
+                        ---
+                        else:
+                            result\begin := edit\begin
+                            result\end := edit\newEnd
+                            result\present := 1
+                        result\sourceChanged := 1
+                    else:
+                        result\metadataChanged := 1
+                    j += 1
+                expected := change\revision
+                result\revision := expected
+            i += 1
+        if: expected != targetRevision
+            throw: P0MixFailure("unavailable edit history")
+        return: result
+
+# Checkpoints are in source order. The core publishes a correctly spliced,
+# ordered index; erased/invalid checkpoints cannot become restart points.
+P0MixSelectCheckpoint:
+    @: session
+    int: before
+    required: session before
+    return: @
+    select:
+        throws: copy(P0MixThrows)
+        private: int: low 0
+        private: int: high MapVector\size(session\checkpoints)
+        while: low < high
+            private: int: middle low + (high - low) / 2
+            private: @: candidate MapVector\get(session\checkpoints; middle)
+            private: int: position MapCursor\position(candidate\cursor)
+            if: position < before || (candidate\rootBoundary != 0 && position = 0)
+                low := middle + 1
+            else:
+                high := middle
+        # Search the admissible prefix backwards. Skipping an invalid midpoint
+        # must not lose a later valid checkpoint in that same prefix.
+        ---
+        while: low > 0
+            low -= 1
+            private: @: candidate MapVector\get(session\checkpoints; low)
+            if: candidate\valid != 0
+                return: candidate
+        ---
+        throw: P0MixFailure("no admitted preceding P0 checkpoint")
+
+P0MixCandidate:
+    @: session
+    required: session
+    return: @
+    create:
+        throws: copy(P0MixThrows)
+        private: @: result (copy(P0MixSessionModel))
+        result\document := session\document
+        result\engine := session\engine
+        result\engineContext := session\engineContext
+        result\sink := session\sink
+        result\root := session\root
+        result\reader := session\reader
+        result\parsedRevision := session\parsedRevision
+        result\targetRevision := session\document\revision
+        result\journalExclusive := session\journalExclusive
+        result\priorCheckpoints := session\checkpoints
+        result\priorBindings := session\bindings
+        result\checkpoints := MapVector\create()
+        result\bindings := MapVector\create()
+        return: result
+
+# A standalone P0 session is the only journal consumer. In the shared owner
+# profile the normal MapOwner acknowledgement barrier retains other readers'
+# events; P0 must never truncate their history on its own.
+P0MixAcknowledge:
+    @: session
+    int: revision
+    required: session revision
+    return: int
+    acknowledge:
+        throws: copy(P0MixThrows)
+        if: session\document\txDepth != 0
+            throw: P0MixFailure("owner recovery required before acknowledgement")
+        if: revision < session\acknowledgedRevision || revision > session\parsedRevision
+            throw: P0MixFailure("P0 acknowledgement outside accepted revision")
+        if: session\semanticRevision < revision || session\pendingRejected != MapNil || session\rejectedPrepared != MapNil || session\pendingRetired != MapNil || session\pendingSemantic != MapNil
+            throw: P0MixFailure("P0 completion still pending")
+        session\acknowledgedRevision := revision
+        if: session\journalExclusive != 0
+            MapTree\acknowledge(session\document; revision)
+        return: revision
+
+# Called on a rejected candidate before its native P0 arena is released.
+# Source text is retained: this removes derived annotations and anchors only.
+P0MixAbandon:
+    @: candidate
+    required: candidate
+    return: int
+    discard:
+        throws: copy(P0MixThrows)
+        private: int: i 0
+        while: i < MapVector\size(candidate\bindings)
+            private: @: binding MapVector\get(candidate\bindings; i)
+            if: binding\markAnchor != MapNil
+                MapAnchors\remove(binding\markAnchor; 2)
+            if: binding\childDocument != MapNil
+                MapCursor\release(binding\childDocument\head)
+                MapCursor\release(binding\childDocument\tail)
+            if: binding\sourceTag != MapNil
+                binding\sourceBegin\parserNode := MapNil
+                binding\sourceEnd\parserNode := MapNil
+                MapTag\remove(binding\sourceTag; 2)
+            binding\live := 0
+            i += 1
+        i := 0
+        while: i < MapVector\size(candidate\checkpoints)
+            private: @: checkpoint MapVector\get(candidate\checkpoints; i)
+            checkpoint\valid := 0
+            MapCursor\release(checkpoint\cursor)
+            i += 1
+        return: 1
+
+# Pending work lives on the session, not solely in a returning stack frame.
+# A later turn finishes it before any new parse or acknowledgement. Failure
+# retains the envelope. Native discard follows annotation detachment; a
+# failed detach must not free storage still referenced by those annotations.
+P0MixDrain:
+    @: session
+    required: session
+    return: int
+    complete:
+        throws: copy(P0MixThrows)
+        if: session\pendingRejected != MapNil
+            P0MixAbandon\discard(session\pendingRejected)
+            session\pendingRejected := MapNil
+        if: session\rejectedPrepared != MapNil
+            session\engine\discard(session\engineContext; session\rejectedPrepared)
+            session\rejectedPrepared := MapNil
+        if: session\pendingRetired != MapNil
+            P0MixAbandon\discard(session\pendingRetired)
+            session\pendingRetired := MapNil
+        if: session\pendingSemantic != MapNil
+            session\engine\metadataChanged(session\engineContext; session; session\pendingSemantic)
+            session\semanticRevision := session\semanticTarget
+            session\pendingSemantic := MapNil
+        return: 1
+
+P0MixRevisionChanges:
+    @: changes
+    int: after
+    int: through
+    required: changes after through
+    return: @
+    select:
+        throws: copy(P0MixThrows)
+        private: @: result MapVector\create()
+        private: int: i 0
+        while: i < MapVector\size(changes)
+            private: @: event MapVector\get(changes; i)
+            if: event\revision > after && event\revision <= through
+                MapVector\push(result; event)
+            i += 1
+        return: result
+
+P0MixStatus:
+    @: session
+    required: session
+    return: int
+    ready:
+        return: session\document\txDepth = 0 && session\validTree != 0 && session\stale = 0 && session\parsedRevision = session\document\revision && session\semanticRevision = session\parsedRevision && session\pendingRejected = MapNil && session\rejectedPrepared = MapNil && session\pendingRetired = MapNil && session\pendingSemantic = MapNil
+
+P0MixApply:
+    @: session
+    required: session
+    return: @
+    changed:
+        throws: copy(P0MixThrows)
+        P0MixDrain\complete(session)
+        private: int: target session\document\revision
+        if: P0MixStatus\ready(session)
+            P0MixAcknowledge\acknowledge(session; target)
+            return: session
+        if: session\stale != 0 && session\observedRevision = target
+            return: session
+        private: @: changes MapTree\takeChanges(session\document)
+        private: @: dirty P0MixDirtyRange\collect(changes; session\parsedRevision; target)
+        private: @: semantic MapNil
+        if: dirty\metadataChanged != 0
+            semantic := P0MixRevisionChanges\select(changes; session\semanticRevision; target)
+        if: dirty\sourceChanged = 0
+            if: session\validTree = 0
+                throw: P0MixFailure("source has no accepted syntax tree")
+            session\pendingSemantic := semantic
+            session\semanticTarget := target
+            session\parsedRevision := target
+            session\observedRevision := target
+            if: semantic = MapNil
+                session\semanticRevision := target
+            P0MixDrain\complete(session)
+            P0MixAcknowledge\acknowledge(session; target)
+            return: session
+        private: @: checkpoint P0MixSelectCheckpoint\select(session; dirty\begin)
+        private: @: candidate P0MixCandidate\create(session)
+        private: @: prepared MapNil
+        private: int: published 0
+        session\pendingRejected := candidate
+        finally:
+            if: published = 0
+                P0MixDrain\complete(session)
+        ---
+        # The live cursor rebases on edits; its cached numeric nextOffset does
+        # not. Force exactly the first read of this new parse to reposition.
+        candidate\reader\nextOffset := -1
+        candidate\reader\bytesRead := 0
+        candidate\reader\jumps := 0
+        prepared := session\engine\resume(session\engineContext; candidate; P0MixReader\read; candidate\reader; checkpoint; dirty)
+        session\rejectedPrepared := prepared
+        if: prepared\sourceRevision != target || session\document\revision != target
+            throw: P0MixFailure("stale parser result")
+        if: prepared\syntaxValid = 0
+            session\lastDiagnostic := (copy(prepared\diagnostic))
+            session\stale := 1
+            session\observedRevision := target
+            # Keep old parsedRevision and all edits. A later edit is rebased
+            # from the last accepted tree, including this invalid interval.
+            return: session
+        private: @: retired P0MixCandidate\create(session)
+        retired\bindings := prepared\retiredBindings
+        retired\checkpoints := prepared\retiredCheckpoints
+        # Allocate the cleanup envelope before the visible native splice.
+        private: @: root session\engine\publish(session\engineContext; session; prepared)
+        session\root := root
+        session\checkpoints := prepared\checkpoints
+        session\bindings := prepared\bindings
+        session\parsedRevision := target
+        session\observedRevision := target
+        session\validTree := 1
+        session\stale := 0
+        session\lastDiagnostic := MapNil
+        session\pendingRetired := retired
+        session\pendingSemantic := semantic
+        session\semanticTarget := target
+        if: semantic = MapNil
+            session\semanticRevision := target
+        session\pendingRejected := MapNil
+        session\rejectedPrepared := MapNil
+        published := 1
+        P0MixDrain\complete(session)
+        P0MixAcknowledge\acknowledge(session; target)
+        return: session
+
+# This is an ordinary addressed handler on the SAME document owner.
+# A notification contains no mutable Cursor/P0 references or second inbox.
+P0MixChangedMessage:
+    @: session
+    int: documentId
+    int: revision
+    required: session documentId revision
+    return: @
+    changed:
+        throws: copy(P0MixThrows)
+        if: documentId != session\document\id
+            throw: P0MixFailure("wrong document notification")
+        if: revision > session\document\revision
+            throw: P0MixFailure("future document notification")
+        return: P0MixApply\changed(session)

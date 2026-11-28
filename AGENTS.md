@@ -2,6 +2,8 @@
 
 **Use general rules for all cases.** Treat author examples as checks of the same mechanism. If a general rule limits an example, report the decision, the reason, and the result for the original input. Explain any required grouping with the exact source and the boundary it establishes or the ambiguity it resolves.
 
+**Merge incoming task packages by content.** Ask `helper` to inventory the package, audit the proposed merge, and check the result. Compare each affected working file to the package base before editing. Preserve later changes and update the canonical sources for generated documentation. Keep task documents in `docs/tasks`; working documentation and plans link to the integrated contracts, never to their task copies.
+
 All implementation agents, including Opus when assigned, start with the
 [current first task in plan v3](next_core_tasks_v3.md#grammar-first-20261126).
 

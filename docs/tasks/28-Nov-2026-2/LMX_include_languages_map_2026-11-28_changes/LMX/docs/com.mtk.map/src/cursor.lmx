@@ -1,0 +1,654 @@
+# DRAFT: stable cursors and bounded child documents over the same live MIX.
+# Creating/moving an anchor is bookkeeping, not a source edit notification.
+
+MapCursorCreate:
+    @: document
+    int: position
+    int: bias 1
+    required: document position
+    return: @
+    create:
+        throws: copy(MapThrows)
+        @: location MapStorage\locate(document; position; 1)
+        @: cursor MapCursor\prepare(document; location\leaf; location\slot; bias)
+        MapStorage\moveAnchor(cursor; location\leaf; location\slot)
+        return: cursor
+
+MapCursorCheck:
+    @: cursor
+    required: cursor
+    return: @
+    check:
+        throws: copy(MapThrows)
+        if: cursor\released != 0 || cursor\registered = 0 || cursor\leaf = MapNil
+            throw: MapFailure("released cursor")
+        if: cursor\slot < 0 || cursor\slot > length(cursor\leaf\slots) || cursor\leaf\document != cursor\document
+            throw: MapFailure("cursor placement")
+        return: cursor
+
+MapCursorPosition:
+    @: cursor
+    required: cursor
+    return: int
+    position:
+        throws: copy(MapThrows)
+        MapCursor\check(cursor)
+        int: position cursor\slot
+        @: leaf cursor\leaf\prev
+        while: leaf != MapNil
+            position := MapSize\sum(position; length(leaf\slots); cursor\document\scope\limit)
+            leaf := leaf\prev
+        return: position
+
+MapCursorAddress:
+    @: cursor
+    required: cursor
+    return: int
+    address:
+        throws: copy(MapThrows)
+        if: cursor\released != 0 || cursor\leaf = MapNil
+            return: -1
+        return: MapCursor\position(cursor)
+
+MapCursorPath:
+    @: cursor
+    required: cursor
+    return: @
+    path:
+        throws: copy(MapThrows)
+        MapCursor\check(cursor)
+        return: MapTree\path(cursor\leaf; cursor\slot)
+
+MapCursorMove:
+    @: cursor
+    int: position
+    required: cursor position
+    return: @
+    move:
+        throws: copy(MapThrows)
+        MapCursor\check(cursor)
+        if: cursor\scope != MapNil
+            if: position < MapCursor\position(cursor\scope\head) || position > MapCursor\position(cursor\scope\tail)
+                throw: MapFailure("cursor escaped child document")
+        @: location MapStorage\locate(cursor\document; position; 1)
+        return: MapStorage\moveAnchor(cursor; location\leaf; location\slot)
+
+MapCursorRelease:
+    @: cursor
+    required: cursor
+    return: @
+    release:
+        throws: copy(MapThrows)
+        if: cursor\released = 0
+            if: cursor\leaf != MapNil
+                MapVector\removeValue(cursor\leaf\anchors; cursor)
+            cursor\leaf := MapNil
+            cursor\registered := 0
+            cursor\released := 1
+        return: cursor
+
+MapCursorClone:
+    @: cursor
+    required: cursor
+    return: @
+    clone:
+        throws: copy(MapThrows)
+        return: MapCursor\cloneAt(cursor)
+
+MapCursorRead:
+    @: cursor
+    required: cursor
+    return: @
+    read:
+        throws: copy(MapThrows)
+        MapCursor\check(cursor)
+        if: cursor\scope != MapNil
+            if: MapCursor\samePosition(cursor; cursor\scope\tail)
+                return: MapNil
+        @: leaf cursor\leaf
+        int: slot cursor\slot
+        while: leaf != MapNil
+            if: slot < length(leaf\slots)
+                return: leaf\slots[slot]\value
+            leaf := leaf\next
+            slot := 0
+        return: MapNil
+
+MapCursorPreviousValue:
+    @: cursor
+    required: cursor
+    return: @
+    previousValue:
+        throws: copy(MapThrows)
+        MapCursor\check(cursor)
+        if: cursor\scope != MapNil
+            if: MapCursor\samePosition(cursor; cursor\scope\head)
+                return: MapNil
+        @: leaf cursor\leaf
+        int: slot cursor\slot
+        while: leaf != MapNil
+            if: slot > 0
+                return: leaf\slots[slot - 1]\value
+            leaf := leaf\prev
+            if: leaf != MapNil
+                slot := length(leaf\slots)
+        return: MapNil
+
+MapCursorNext:
+    @: cursor
+    required: cursor
+    return: int
+    next:
+        throws: copy(MapThrows)
+        MapCursor\check(cursor)
+        if: cursor\scope != MapNil
+            if: MapCursor\samePosition(cursor; cursor\scope\tail)
+                return: 0
+        @: leaf cursor\leaf
+        int: slot cursor\slot
+        while: leaf != MapNil
+            if: slot < length(leaf\slots)
+                MapStorage\moveAnchor(cursor; leaf; slot + 1)
+                return: 1
+            leaf := leaf\next
+            slot := 0
+        return: 0
+
+MapCursorPrev:
+    @: cursor
+    required: cursor
+    return: int
+    prev:
+        throws: copy(MapThrows)
+        MapCursor\check(cursor)
+        if: cursor\scope != MapNil
+            if: MapCursor\samePosition(cursor; cursor\scope\head)
+                return: 0
+        @: leaf cursor\leaf
+        int: slot cursor\slot
+        while: leaf != MapNil
+            if: slot > 0
+                MapStorage\moveAnchor(cursor; leaf; slot - 1)
+                return: 1
+            leaf := leaf\prev
+            if: leaf != MapNil
+                slot := length(leaf\slots)
+        return: 0
+
+MapCursorCompare:
+    @: left
+    @: right
+    required: left right
+    return: int
+    compare:
+        throws: copy(MapThrows)
+        MapCursor\check(left)
+        MapCursor\check(right)
+        if: left\document != right\document
+            throw: MapFailure("cross-document cursor comparison")
+        int: a MapCursor\position(left)
+        int: b MapCursor\position(right)
+        if: a < b
+            return: -1
+        if: a > b
+            return: 1
+        return: 0
+
+MapCursorInside:
+    @: cursor
+    @: head
+    @: tail
+    required: cursor head tail
+    return: int
+    inside:
+        throws: copy(MapThrows)
+        if: cursor\document != head\document || cursor\document != tail\document
+            return: 0
+        return: MapCursor\compare(head; cursor) <= 0 && MapCursor\compare(cursor; tail) <= 0
+
+MapCursorValuesUntil:
+    @: cursor
+    @: end
+    required: cursor end
+    return: @
+    valuesUntil:
+        throws: copy(MapThrows)
+        if: cursor\document != end\document
+            throw: MapFailure("cross-document cursor range")
+        int: begin MapCursor\position(cursor)
+        int: finish MapCursor\position(end)
+        if: finish < begin
+            throw: MapFailure("reversed cursor range")
+        return: MapTree\snapshot(cursor\document; begin; finish)
+
+MapCursorAddPrev:
+    @: cursor
+    @: value
+    required: cursor value
+    return: @
+    addPrev:
+        throws: copy(MapThrows)
+        int: position MapCursor\position(cursor)
+        @: cell MapTree\insert(cursor\document; position; value)
+        MapCursor\move(cursor; position + 1)
+        return: cell
+
+MapCursorAddNext:
+    @: cursor
+    @: value
+    required: cursor value
+    return: @
+    addNext:
+        throws: copy(MapThrows)
+        int: position MapCursor\position(cursor)
+        @: cell MapTree\insert(cursor\document; position; value)
+        MapCursor\move(cursor; position)
+        return: cell
+
+MapCursorRemoveNext:
+    @: cursor
+    required: cursor
+    return: @
+    removeNext:
+        throws: copy(MapThrows)
+        int: position MapCursor\position(cursor)
+        if: cursor\scope != MapNil
+            if: position >= MapCursor\position(cursor\scope\tail)
+                return: MapNil
+        if: position >= cursor\document\count
+            return: MapNil
+        @: value MapCursor\read(cursor)
+        MapTree\erase(cursor\document; position; position + 1)
+        return: value
+
+MapCursorRemovePrev:
+    @: cursor
+    required: cursor
+    return: @
+    removePrev:
+        throws: copy(MapThrows)
+        int: position MapCursor\position(cursor)
+        if: cursor\scope != MapNil
+            if: position <= MapCursor\position(cursor\scope\head)
+                return: MapNil
+        if: position = 0
+            return: MapNil
+        @: value MapCursor\previousValue(cursor)
+        MapTree\erase(cursor\document; position - 1; position)
+        return: value
+
+MapCursorCollectAt:
+    @: leaf
+    int: slot
+    @: result
+    required: leaf slot result
+    return: @
+    collectAt:
+        throws: copy(MapThrows)
+        int: i 0
+        while: i < length(leaf\anchors)
+            @: anchor leaf\anchors[i]
+            if: anchor\released = 0 && anchor\slot = slot
+                int: j 0
+                while: j < length(anchor\attributes)
+                    MapVector\unique(result; anchor\attributes[j])
+                    j += 1
+            ---
+            i += 1
+        return: result
+
+MapCursorAnnotationsAt:
+    @: cursor
+    required: cursor
+    return: @
+    annotationsAt:
+        throws: copy(MapThrows)
+        MapCursor\check(cursor)
+        @: result MapVector\create()
+        @: leaf cursor\leaf
+        int: slot cursor\slot
+        MapCursor\collectAt(leaf; slot; result)
+        if: slot = 0
+            @: previous leaf\prev
+            while: previous != MapNil
+                MapCursor\collectAt(previous; length(previous\slots); result)
+                if: length(previous\slots) > 0
+                    break
+                previous := previous\prev
+        ---
+        if: slot = length(leaf\slots)
+            @: next leaf\next
+            while: next != MapNil
+                MapCursor\collectAt(next; 0; result)
+                if: length(next\slots) > 0
+                    break
+                next := next\next
+        return: result
+
+MapSpanCreate:
+    @: document
+    int: begin
+    int: end
+    required: document begin end
+    return: @
+    create:
+        throws: copy(MapThrows)
+        if: begin < 0 || end < begin || end > document\count
+            throw: MapFailure("child document range")
+        @: start MapStorage\locate(document; begin; 1)
+        @: finish MapStorage\locate(document; end; 1)
+        @: head MapCursor\prepare(document; start\leaf; start\slot; 0)
+        @: tail MapCursor\prepare(document; finish\leaf; finish\slot; 1)
+        return: MapSpan\publish(document; head; tail)
+
+MapSpanBounds:
+    @: span
+    required: span
+    return: @
+    bounds:
+        throws: copy(MapThrows)
+        MapCursor\check(span\head)
+        MapCursor\check(span\tail)
+        if: span\head\document != span\document || span\tail\document != span\document
+            throw: MapFailure("child document moved across bunch")
+        if: MapCursor\position(span\tail) < MapCursor\position(span\head)
+            throw: MapFailure("child document reversed")
+        return: span
+
+MapSpanLength:
+    @: span
+    required: span
+    return: int
+    length:
+        throws: copy(MapThrows)
+        MapSpan\bounds(span)
+        return: MapCursor\position(span\tail) - MapCursor\position(span\head)
+
+MapSpanParentPosition:
+    @: span
+    int: position
+    int: allowEnd 0
+    required: span position
+    return: int
+    parentPosition:
+        throws: copy(MapThrows)
+        int: size MapSpan\length(span)
+        if: position < 0 || position > size || (allowEnd = 0 && position = size)
+            throw: MapFailure("child document position")
+        return: MapSize\sum(MapCursor\position(span\head); position; span\document\scope\limit)
+
+MapSpanItemAt:
+    @: span
+    int: position
+    required: span position
+    return: @
+    itemAt:
+        throws: copy(MapThrows)
+        return: MapTree\itemAt(span\document; MapSpan\parentPosition(span; position))
+
+MapSpanCursor:
+    @: span
+    int: position
+    int: bias 1
+    required: span position
+    return: @
+    cursor:
+        throws: copy(MapThrows)
+        int: at MapSpan\parentPosition(span; position; 1)
+        @: cursor MapCursor\create(span\document; at; bias)
+        cursor\scope := span
+        return: cursor
+
+MapSpanLocalPosition:
+    @: span
+    @: cursor
+    required: span cursor
+    return: int
+    localPosition:
+        throws: copy(MapThrows)
+        MapSpan\bounds(span)
+        if: cursor\document != span\document
+            throw: MapFailure("foreign child cursor")
+        int: at MapCursor\position(cursor)
+        int: begin MapCursor\position(span\head)
+        int: end MapCursor\position(span\tail)
+        if: at < begin || at > end
+            throw: MapFailure("cursor outside child")
+        return: at - begin
+
+MapSpanInsert:
+    @: span
+    int: position
+    @: value
+    required: span position value
+    return: @
+    insert:
+        throws: copy(MapThrows)
+        int: at MapSpan\parentPosition(span; position; 1)
+        return: MapTree\insert(span\document; at; value)
+
+MapSpanErase:
+    @: span
+    int: begin
+    int: end
+    required: span begin end
+    return: int
+    erase:
+        throws: copy(MapThrows)
+        int: first MapSpan\parentPosition(span; begin; 1)
+        int: last MapSpan\parentPosition(span; end; 1)
+        if: last < first
+            throw: MapFailure("child erase range")
+        return: MapTree\erase(span\document; first; last)
+
+MapSpanSnapshot:
+    @: span
+    required: span
+    return: @
+    snapshot:
+        throws: copy(MapThrows)
+        MapSpan\bounds(span)
+        return: MapTree\snapshot(span\document; MapCursor\position(span\head); MapCursor\position(span\tail))
+
+
+MapCursorCloneAt:
+    @: cursor
+    int: bias -1
+    required: cursor
+    return: @
+    cloneAt:
+        throws: copy(MapThrows)
+        @: result MapCursor\prepareAt(cursor; bias)
+        MapStorage\moveAnchor(result; result\leaf; result\slot)
+        return: result
+
+MapCursorSamePosition:
+    @: left
+    @: right
+    required: left right
+    return: int
+    samePosition:
+        throws: copy(MapThrows)
+        MapCursor\check(left)
+        MapCursor\check(right)
+        if: left\document != right\document
+            return: 0
+        if: left\leaf = right\leaf
+            return: left\slot = right\slot
+        if: left\slot = length(left\leaf\slots) && right\slot = 0
+            @: page left\leaf\next
+            while: page != MapNil
+                if: page = right\leaf
+                    return: 1
+                if: length(page\slots) > 0
+                    break
+                page := page\next
+        ---
+        if: right\slot = length(right\leaf\slots) && left\slot = 0
+            @: page right\leaf\next
+            while: page != MapNil
+                if: page = left\leaf
+                    return: 1
+                if: length(page\slots) > 0
+                    break
+                page := page\next
+        return: 0
+
+
+MapCursorRehome:
+    @: cursor
+    @: document
+    int: position
+    required: cursor document position
+    return: @
+    rehome:
+        throws: copy(MapThrows)
+        MapCursor\check(cursor)
+        if: cursor\document\scope != document\scope
+            throw: MapFailure("rehome crosses owner scope")
+        if: cursor\scope != MapNil
+            if: cursor\scope\document != document
+                throw: MapFailure("rehome bounded child document as a unit")
+        @: location MapStorage\locate(document; position; 1)
+        return: MapStorage\moveAnchor(cursor; location\leaf; location\slot)
+
+
+MapCursorReplace:
+    @: cursor
+    @: value
+    required: cursor value
+    return: @
+    replace:
+        throws: copy(MapThrows)
+        MapCursor\check(cursor)
+        if: cursor\scope != MapNil
+            if: MapCursor\samePosition(cursor; cursor\scope\tail)
+                throw: MapFailure("replacement at child document end")
+        return: MapTree\setAt(cursor\document; MapCursor\position(cursor); value)
+
+MapCursor:
+    @: prepare MapCursorPrepare\prepare
+    @: prepareAt MapCursorPrepareAt\prepareAt
+    @: replace MapCursorReplace\replace
+    @: rehome MapCursorRehome\rehome
+    @: cloneAt MapCursorCloneAt\cloneAt
+    @: samePosition MapCursorSamePosition\samePosition
+    @: create MapCursorCreate\create
+    @: check MapCursorCheck\check
+    @: position MapCursorPosition\position
+    @: address MapCursorAddress\address
+    @: path MapCursorPath\path
+    @: move MapCursorMove\move
+    @: release MapCursorRelease\release
+    @: clone MapCursorClone\clone
+    @: read MapCursorRead\read
+    @: previousValue MapCursorPreviousValue\previousValue
+    @: next MapCursorNext\next
+    @: prev MapCursorPrev\prev
+    @: compare MapCursorCompare\compare
+    @: inside MapCursorInside\inside
+    @: valuesUntil MapCursorValuesUntil\valuesUntil
+    @: addPrev MapCursorAddPrev\addPrev
+    @: addNext MapCursorAddNext\addNext
+    @: removeNext MapCursorRemoveNext\removeNext
+    @: removePrev MapCursorRemovePrev\removePrev
+    @: collectAt MapCursorCollectAt\collectAt
+    @: annotationsAt MapCursorAnnotationsAt\annotationsAt
+
+
+# The caller already proved the pair's order while consuming one source stream.
+# Full bounds queries remain available; construction itself never rescans prefix.
+MapSpanCreateAt:
+    @: headCursor
+    @: tailCursor
+    required: headCursor tailCursor
+    return: @
+    createAt:
+        throws: copy(MapThrows)
+        MapCursor\check(headCursor)
+        MapCursor\check(tailCursor)
+        if: headCursor\document != tailCursor\document
+            throw: MapFailure("child boundaries belong to different documents")
+        @: head MapCursor\prepareAt(headCursor; 0)
+        @: tail MapCursor\prepareAt(tailCursor; 1)
+        return: MapSpan\publish(headCursor\document; head; tail)
+
+MapSpan:
+    @: publish MapSpanPublish\publish
+    @: createAt MapSpanCreateAt\createAt
+    @: create MapSpanCreate\create
+    @: bounds MapSpanBounds\bounds
+    @: length MapSpanLength\length
+    @: parentPosition MapSpanParentPosition\parentPosition
+    @: itemAt MapSpanItemAt\itemAt
+    @: cursor MapSpanCursor\cursor
+    @: localPosition MapSpanLocalPosition\localPosition
+    @: insert MapSpanInsert\insert
+    @: erase MapSpanErase\erase
+    @: snapshot MapSpanSnapshot\snapshot
+
+
+# Preparation owns only local, unregistered records. If a later allocation
+# fails, no leaf retains an orphan cursor. IDs may have gaps after a failure.
+MapCursorPrepare:
+    @: document
+    @: leaf
+    int: slot
+    int: bias 1
+    required: document leaf slot
+    return: @
+    prepare:
+        throws: copy(MapThrows)
+        if: bias != 0 && bias != 1
+            throw: MapFailure("cursor affinity")
+        if: leaf\document != document || slot < 0 || slot > length(leaf\slots)
+            throw: MapFailure("cursor placement")
+        @: cursor (copy(MapCursorModel))
+        cursor\id := MapTree\allocateId(document)
+        cursor\document := document
+        cursor\leaf := leaf
+        cursor\slot := slot
+        cursor\bias := bias
+        cursor\attributes := MapVector\create()
+        return: cursor
+
+MapCursorPrepareAt:
+    @: cursor
+    int: bias -1
+    required: cursor
+    return: @
+    prepareAt:
+        throws: copy(MapThrows)
+        MapCursor\check(cursor)
+        if: bias < 0
+            bias := cursor\bias
+        @: result MapCursor\prepare(cursor\document; cursor\leaf; cursor\slot; bias)
+        result\scope := cursor\scope
+        result\tag := cursor\tag
+        return: result
+
+MapSpanPublish:
+    @: document
+    @: head
+    @: tail
+    required: document head tail
+    return: @
+    publish:
+        throws: copy(MapThrows)
+        if: head\registered != 0 || tail\registered != 0 || head\document != document || tail\document != document
+            throw: MapFailure("child publication requires prepared anchors")
+        @: span (copy(MapSpanModel))
+        span\id := MapTree\allocateId(document)
+        span\document := document
+        span\head := head
+        span\tail := tail
+        span\createdRevision := document\revision
+        if: head\leaf = tail\leaf
+            MapVector\reserve(head\leaf\anchors; MapSize\sum(length(head\leaf\anchors); 2))
+        else:
+            MapVector\reserve(head\leaf\anchors; MapSize\sum(length(head\leaf\anchors); 1))
+            MapVector\reserve(tail\leaf\anchors; MapSize\sum(length(tail\leaf\anchors); 1))
+        MapStorage\moveAnchor(head; head\leaf; head\slot)
+        MapStorage\moveAnchor(tail; tail\leaf; tail\slot)
+        return: span
+

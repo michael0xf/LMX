@@ -1,0 +1,268 @@
+# DRAFT. One name index for Tag/Var/attribute/value queries. Native address
+# hashes are not persistent keys. Current coordinates are read from Cursor.
+
+MapValueSame:
+    @: left
+    @: right
+    required: left right
+    return: int
+    same:
+        throws: copy(MapThrows)
+        if: left = right
+            return: 1
+        if: left = MapNil || right = MapNil || sys\typeof(left) != sys\typeof(right)
+            return: 0
+        private: []char: text ""
+        if: sys\typeof(left) = sys\typeof(text)
+            return: MapText\equal(left; right)
+        private: int: number 0
+        if: sys\typeof(left) = sys\typeof(@number)
+            return: \left = \right
+        # An ordinary reference object has identity equality unless the caller
+        # explicitly supplies its own admitted equality method.
+        return: 0
+
+MapDictionaryValueQuery:
+    @: dictionary
+    @: tag
+    @: value
+    @: equal MapValueSame\same
+    int: followLinks 1
+    required: dictionary tag value
+    return: @
+    select:
+        throws: copy(MapThrows)
+        private: @: result MapVector\create()
+        private: @: candidates MapQuery\range(tag\document; dictionary\key; MapCursor\position(tag\cursor); MapCursor\position(tag\tail))
+        private: int: i 0
+        while: i < MapVector\size(candidates)
+            private: @: item MapVector\get(candidates; i)
+            private: @: actual item\value
+            if: followLinks != 0
+                actual := MapItem\value(item)
+            if: equal(actual; value) != 0
+                MapVector\push(result; item)
+            i += 1
+        return: result
+
+MapDictionarySetIndex:
+    @: dictionary
+    int: enabled
+    required: dictionary enabled
+    return: @
+    set:
+        throws: copy(MapThrows)
+        dictionary\indexed := enabled != 0
+        MapVector\clear(dictionary\values)
+        if: enabled != 0
+            private: int: i 0
+            while: i < MapVector\size(dictionary\mentions)
+                private: @: item MapVector\get(dictionary\mentions; i)
+                if: item\deleted = 0 && item\valueKind = 0 && item\value != MapNil
+                    MapVector\push(dictionary\values; item)
+                i += 1
+        return: dictionary
+
+MapDictionaryRefresh:
+    @: item
+    int: before 0
+    required: item
+    return: @
+    refresh:
+        throws: copy(MapThrows)
+        private: @: dictionary item\key\dictionary
+        private: int: index MapVector\indexOf(dictionary\values; item)
+        if: index >= 0
+            MapVector\remove(dictionary\values; index)
+        if: before = 0 && dictionary\indexed != 0 && item\deleted = 0 && item\valueKind = 0 && item\value != MapNil
+            MapVector\push(dictionary\values; item)
+        return: item
+
+MapDictionarySuffix:
+    @: dictionary
+    @: tag
+    int: remove 0
+    int: create 1
+    required: dictionary tag
+    return: int
+    suffix:
+        throws: copy(MapThrows)
+        private: int: index MapVector\indexOf(dictionary\suffixes; tag)
+        if: remove != 0
+            if: index >= 0
+                dictionary\suffixes[index] := MapNil
+            return: index
+        if: index < 0 && create != 0
+            # Tombstones preserve previously issued suffixes; size-reuse in
+            # Java could collide after removal.
+            index := MapVector\push(dictionary\suffixes; tag)
+        return: index
+
+MapDictionaryBoundary:
+    @: dictionary
+    @: document
+    int: position
+    int: direction 0
+    int: exact 0
+    required: dictionary document position
+    return: @
+    find:
+        throws: copy(MapThrows)
+        private: @: candidates MapQuery\range(document; dictionary\key; 0; MapTree\length(document))
+        private: @: result MapNil
+        private: int: i 0
+        while: i < MapVector\size(candidates)
+            private: @: item MapVector\get(candidates; i)
+            private: int: current MapCursor\position(item\cursor)
+            if: exact != 0 && current = position
+                return: item
+            if: exact = 0
+                if: direction >= 0 && current >= position
+                    return: item
+                if: direction < 0 && current < position
+                    result := item
+            ---
+            i += 1
+        return: result
+
+MapDictionarySetFactory:
+    @: dictionary
+    @: factory
+    required: dictionary factory
+    return: @
+    set:
+        throws: copy(MapThrows)
+        dictionary\constructor := factory
+        dictionary\calculator := MapNil
+        return: dictionary
+
+MapDictionaryCalculator:
+    @: dictionary
+    @: replacement MapNil
+    int: replace 0
+    required: dictionary
+    return: @
+    get:
+        throws: copy(MapThrows)
+        if: replace != 0
+            dictionary\calculator := replacement
+        if: dictionary\calculator = MapNil && dictionary\constructor != MapNil
+            dictionary\calculator := dictionary\constructor(dictionary\key)
+        return: dictionary\calculator
+
+MapSelectVisit:
+    @: values
+    @: selector
+    required: values selector
+    return: int
+    visit:
+        throws: copy(MapThrows)
+        selector\init(MapVector\size(values))
+        private: int: i 0
+        while: i < MapVector\size(values)
+            if: selector\addElement(MapVector\get(values; i)) = 0
+                selector\end()
+                return: i
+            i += 1
+        selector\end()
+        return: i
+
+MapSelectBufferModel:
+    @: items
+    int: count
+    @: item
+    return: int
+    init:
+        throws: copy(MapThrows)
+        node\items := MapVector\create()
+        return: 1
+    clear:
+        throws: copy(MapThrows)
+        MapVector\clear(node\items)
+        return: 1
+    addElement:
+        throws: copy(MapThrows)
+        MapVector\push(node\items; item)
+        return: 1
+    end:
+        throws: copy(MapThrows)
+        return: MapVector\size(node\items)
+
+MapDictionaryCode:
+    @: dictionary
+    @: value
+    required: dictionary value
+    return: int
+    code:
+        throws: copy(MapThrows)
+        private: int: number 0
+        if: sys\typeof(value) = sys\typeof(@number)
+            return: \value
+        private: []char: text ""
+        if: sys\typeof(value) = sys\typeof(text)
+            return: MapBytes\hash(MapBytes\fromText(value))
+        # Stable owner-local identity code, not a truncated native address.
+        if: dictionary\codes = MapNil
+            dictionary\codes := MapTable\create()
+        private: @: known MapTable\get(dictionary\codes; value)
+        if: known != MapNil
+            return: \known
+        private: int: code MapTree\allocateId(dictionary\key\document)
+        MapTable\put(dictionary\codes; value; (code record))
+        return: code
+
+MapCodeItem:
+    int: code
+    @: item
+
+MapDictionaryCodeRange:
+    @: dictionary
+    int: firstCode
+    int: lastCode
+    @: tag MapNil
+    required: dictionary firstCode lastCode
+    return: @
+    select:
+        throws: copy(MapThrows)
+        private: @: document dictionary\key\document
+        private: int: begin 0
+        private: int: end MapTree\length(document)
+        if: tag != MapNil
+            begin := MapCursor\position(tag\cursor)
+            end := MapCursor\position(tag\tail)
+        private: @: candidates MapQuery\range(document; dictionary\key; begin; end)
+        private: @: ordered MapVector\create()
+        private: int: i 0
+        while: i < MapVector\size(candidates)
+            private: @: item MapVector\get(candidates; i)
+            i += 1
+            if: item\valueKind != 0 || item\value = MapNil
+                continue
+            private: int: code MapDictionaryCode\code(dictionary; item\value)
+            if: code < firstCode || code > lastCode
+                continue
+            private: @: entry (copy(MapCodeItem))
+            entry\code := code
+            entry\item := item
+            private: int: at 0
+            while: at < MapVector\size(ordered) && ordered[at]\code <= code
+                at += 1
+            MapVector\insert(ordered; at; entry)
+        private: @: result MapVector\create()
+        i := 0
+        while: i < MapVector\size(ordered)
+            MapVector\push(result; ordered[i]\item)
+            i += 1
+        return: result
+
+MapDictionary:
+    @: values MapDictionaryValueQuery\select
+    @: setIndexed MapDictionarySetIndex\set
+    @: refresh MapDictionaryRefresh\refresh
+    @: suffix MapDictionarySuffix\suffix
+    @: boundary MapDictionaryBoundary\find
+    @: setFactory MapDictionarySetFactory\set
+    @: calculator MapDictionaryCalculator\get
+    @: visit MapSelectVisit\visit
+    @: code MapDictionaryCode\code
+    @: codeRange MapDictionaryCodeRange\select

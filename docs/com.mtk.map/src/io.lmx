@@ -1,0 +1,513 @@
+# DRAFT. Canonical persistence is LMX graph text. The old Java XML lexer,
+# org.json parser and mtk.util file/thread service were external dependencies.
+# Legacy event consumers below are real LMX; a legacy decoder supplies events.
+
+MapFileReadAPI :: ([]char: path; return: []char; throws: copy(MapThrows))
+MapFileWriteAPI :: ([]char: path; []char: text; throws: copy(MapThrows))
+
+MapFilePort:
+    @MapFileReadAPI: readText
+    @MapFileWriteAPI: writeText
+
+MapSavedItem:
+    int: id
+    int: ownerId 0
+    int: kind
+    []char: name
+    int: begin
+    int: end
+    int: local
+    int: valueKind
+    int: valuePresent 0
+    int: scopeId 0
+    @: value MapNil
+    int: targetId 0
+    int: beginBias 0
+    int: endBias 1
+
+MapSavedDocument:
+    int: format 2
+    int: revision
+    @: body
+    @: items
+    @: scopes
+    @: anchors
+
+MapSavedLinkStep:
+    int: mode
+    []char: name
+
+MapSnapshotValue:
+    @: item
+    @: row
+    required: item row
+    save:
+        throws: copy(MapThrows)
+        row\valueKind := item\valueKind
+        row\valuePresent := item\value != MapNil
+        if: item\valueKind = 2
+            row\targetId := item\value\id
+            return
+        if: item\valueKind = 1
+            row\value := MapVector\create()
+            private: int: i 0
+            while: i < MapVector\size(item\value\steps)
+                private: @: original MapVector\get(item\value\steps; i)
+                private: @: step (copy(MapSavedLinkStep))
+                step\mode := original\mode
+                step\name := original\key\text
+                MapVector\push(row\value; step)
+                i += 1
+            return
+        row\value := item\value
+
+MapSnapshotItem:
+    @: item
+    int: base 0
+    int: ownerId 0
+    required: item
+    return: @
+    save:
+        throws: copy(MapThrows)
+        private: @: row (copy(MapSavedItem))
+        row\id := item\id
+        row\ownerId := ownerId
+        row\kind := item\kind
+        row\name := item\key\text
+        row\begin := MapCursor\position(item\cursor) - base
+        row\end := MapCursor\position(item\tail) - base
+        row\local := item\local
+        if: item\kind = 1
+            row\beginBias := item\beginBias
+            row\endBias := item\endBias
+            if: item\scope != MapNil
+                row\scopeId := item\scope\id
+        ---
+        MapSnapshotValue\save(item; row)
+        return: row
+
+MapSnapshotExport:
+    @: document
+    int: begin 0
+    int: end
+    required: document end
+    return: @
+    export:
+        throws: copy(MapThrows)
+        if: begin < 0 || end < begin || end > MapTree\length(document)
+            throw: MapFailure("snapshot range")
+        private: @: result (copy(MapSavedDocument))
+        result\revision := document\revision
+        result\body := MapVector\create()
+        result\items := MapVector\create()
+        result\scopes := MapVector\create()
+        result\anchors := MapVector\create()
+        private: int: i begin
+        while: i < end
+            MapVector\push(result\body; MapTree\itemAt(document; i))
+            i += 1
+        private: @: tags MapQuery\range(document; begin := begin; end := end)
+        i := 0
+        while: i < MapVector\size(tags)
+            private: @: tag MapVector\get(tags; i)
+            if: tag\cursor\parserNode != MapNil || tag\tail\parserNode != MapNil
+                # Native P0 node/binding/context is owner state, not wire DATA.
+                # Bytes, semantic Tags and real Var/child scopes remain saved.
+                i += 1
+                continue
+            MapSaveScope\add(result; tag\scope; begin; end)
+            MapVector\push(result\items; MapSnapshotItem\save(tag; begin))
+            private: int: j 0
+            while: j < MapVector\size(tag\attributes)
+                MapVector\push(result\items; MapSnapshotItem\save(MapVector\get(tag\attributes; j); begin; tag\id))
+                j += 1
+            i += 1
+        MapSaveAnchors\save(document; result; begin; end)
+        # Metadata is projected to IDs; native payloads must be pure DATA.
+        # Native P0 source annotations were excluded above. Var payload is a
+        # non-executing pure DATA projection, never a native node/context.
+        # Native resources or application values that point back to live owner
+        # state require a selected application codec before this boundary.
+        return: result
+
+MapSnapshotValidate:
+    @: snapshot
+    @: externalItems MapNil
+    required: snapshot
+    return: int
+    validate:
+        throws: copy(MapThrows)
+        if: snapshot\format != 2
+            throw: MapFailure("snapshot format")
+        private: @: ids MapTable\create()
+        private: @: kinds MapTable\create()
+        private: int: i 0
+        while: i < MapVector\size(snapshot\items)
+            private: @: row MapVector\get(snapshot\items; i)
+            if: row\begin < 0 || row\end < row\begin || row\end > MapVector\size(snapshot\body)
+                throw: MapFailure("snapshot item range")
+            if: row\id <= 0 || MapTable\getInt(ids; row\id) != MapNil
+                throw: MapFailure("invalid/duplicate snapshot item")
+            MapTable\putInt(kinds; row\id; (1 record))
+            MapTable\putInt(ids; row\id; row)
+            i += 1
+        i := 0
+        while: i < MapVector\size(snapshot\scopes)
+            private: @: row MapVector\get(snapshot\scopes; i)
+            if: row\begin < 0 || row\end < row\begin || row\end > MapVector\size(snapshot\body)
+                throw: MapFailure("snapshot scope range")
+            if: row\id <= 0 || MapTable\getInt(ids; row\id) != MapNil
+                throw: MapFailure("invalid/duplicate snapshot scope")
+            MapTable\putInt(kinds; row\id; (2 record))
+            MapTable\putInt(ids; row\id; row)
+            i += 1
+        i := 0
+        while: i < MapVector\size(snapshot\anchors)
+            private: @: row MapVector\get(snapshot\anchors; i)
+            if: row\position < 0 || row\position > MapVector\size(snapshot\body) || row\role < 1 || row\role > 3
+                throw: MapFailure("snapshot anchor range/role")
+            if: row\id <= 0 || MapTable\getInt(ids; row\id) != MapNil
+                throw: MapFailure("invalid/duplicate snapshot anchor")
+            MapTable\putInt(kinds; row\id; (3 record))
+            MapTable\putInt(ids; row\id; row)
+            i += 1
+        i := 0
+        while: i < MapVector\size(snapshot\anchors)
+            private: @: row MapVector\get(snapshot\anchors; i)
+            if: row\scopeId != 0 && MapTable\getInt(ids; row\scopeId) = MapNil
+                throw: MapFailure("snapshot anchor scope")
+            if: row\childId != 0 && MapTable\getInt(ids; row\childId) = MapNil
+                throw: MapFailure("snapshot child scope")
+            if: row\partnerId != 0 && MapTable\getInt(ids; row\partnerId) = MapNil
+                throw: MapFailure("snapshot external partner")
+            if: row\spanId != 0 && MapTable\getInt(ids; row\spanId) = MapNil
+                throw: MapFailure("snapshot external paired tag")
+            i += 1
+        i := 0
+        while: i < MapVector\size(snapshot\scopes)
+            private: @: row MapVector\get(snapshot\scopes; i)
+            if: row\anchorId != 0 && MapTable\getInt(ids; row\anchorId) = MapNil
+                throw: MapFailure("snapshot scope anchor")
+            i += 1
+        i := 0
+        while: i < MapVector\size(snapshot\items)
+            private: @: row MapVector\get(snapshot\items; i)
+            if: row\scopeId != 0 && MapTable\getInt(ids; row\scopeId) = MapNil
+                throw: MapFailure("snapshot item scope")
+            if: row\kind < 1 || row\kind > 4 || row\valueKind < 0 || row\valueKind > 2
+                throw: MapFailure("snapshot item kind")
+            if: row\kind != 1 && MapTable\getInt(ids; row\ownerId) = MapNil
+                throw: MapFailure("snapshot attribute owner")
+            if: row\valueKind = 2 && MapTable\getInt(ids; row\targetId) = MapNil
+                if: externalItems = MapNil || MapTable\getInt(externalItems; row\targetId) = MapNil
+                    throw: MapFailure("snapshot external Item reference")
+            i += 1
+        # Cross-reference categories are checked before any destination write.
+        i := 0
+        while: i < MapVector\size(snapshot\items)
+            private: @: row MapVector\get(snapshot\items; i)
+            if: row\scopeId != 0
+                private: @: kind MapTable\getInt(kinds; row\scopeId)
+                if: \kind != 2
+                    throw: MapFailure("item scope is not a scope")
+            if: row\kind != 1
+                private: @: owner MapTable\getInt(ids; row\ownerId)
+                private: @: category MapTable\getInt(kinds; row\ownerId)
+                if: \category != 1 || owner\kind != 1
+                    throw: MapFailure("attribute owner is not a tag")
+            if: row\valueKind = 2
+                private: @: category MapTable\getInt(kinds; row\targetId)
+                if: category != MapNil && \category != 1
+                    throw: MapFailure("Item reference targets non-Item")
+            i += 1
+        i := 0
+        while: i < MapVector\size(snapshot\anchors)
+            private: @: row MapVector\get(snapshot\anchors; i)
+            if: row\scopeId != 0
+                private: @: category MapTable\getInt(kinds; row\scopeId)
+                if: \category != 2
+                    throw: MapFailure("anchor scope category")
+            if: row\childId != 0
+                private: @: category MapTable\getInt(kinds; row\childId)
+                if: \category != 2
+                    throw: MapFailure("anchor child category")
+            if: row\spanId != 0
+                private: @: category MapTable\getInt(kinds; row\spanId)
+                private: @: span MapTable\getInt(ids; row\spanId)
+                if: \category != 1 || span\kind != 1
+                    throw: MapFailure("anchor span category")
+            if: row\partnerId != 0
+                private: @: category MapTable\getInt(kinds; row\partnerId)
+                private: @: partner MapTable\getInt(ids; row\partnerId)
+                if: \category != 3 || partner\partnerId != row\id || partner\spanId != row\spanId || partner\scopeId != row\scopeId
+                    throw: MapFailure("anchor pairing consistency")
+            i += 1
+        return: 1
+
+MapSnapshotImport:
+    @: document
+    int: position
+    @: snapshot
+    @: externalItems MapNil
+    required: document position snapshot
+    return: @
+    import:
+        throws: copy(MapThrows)
+        MapSnapshotValidate\validate(snapshot; externalItems)
+        if: position < 0 || position > MapTree\length(document)
+            throw: MapFailure("snapshot destination")
+        MapSize\sum(MapTree\length(document); MapVector\size(snapshot\body); document\scope\limit)
+        private: @: mapping MapTable\create()
+        if: externalItems != MapNil
+            private: int: e 0
+            while: e < MapVector\size(externalItems\keys)
+                private: @: key MapVector\get(externalItems\keys; e)
+                private: @: item MapVector\get(externalItems\values; e)
+                if: item\document != document || item\deleted != 0
+                    throw: MapFailure("external clone reference must be live in the same document")
+                MapTable\putInt(mapping; \key; item)
+                e += 1
+        ---
+        MapTree\begin(document; 1)
+        private: int: i 0
+        while: i < MapVector\size(snapshot\body)
+            MapTree\insert(document; position + i; MapVector\get(snapshot\body; i))
+            i += 1
+        MapRestoreScopes\restore(document; snapshot; position; mapping)
+        # First create every tag so arbitrary attribute order is harmless.
+        i := 0
+        while: i < MapVector\size(snapshot\items)
+            private: @: row MapVector\get(snapshot\items; i)
+            if: row\kind = 1
+                private: @: tag MapTag\create(document; MapKeys\intern(document; row\name); position + row\begin; position + row\end; beginBias := row\beginBias; endBias := row\endBias)
+                tag\scope := MapTable\getInt(mapping; row\scopeId)
+                MapTable\putInt(mapping; row\id; tag)
+            i += 1
+        i := 0
+        while: i < MapVector\size(snapshot\items)
+            private: @: row MapVector\get(snapshot\items; i)
+            if: row\kind != 1
+                private: @: owner MapTable\getInt(mapping; row\ownerId)
+                private: @: item MapItem\create(owner; MapKeys\intern(document; row\name); kind := row\kind; position := position + row\begin; local := row\local)
+                if: row\end != row\begin
+                    item\tail := MapCursor\create(document; position + row\end; 1)
+                MapTable\putInt(mapping; row\id; item)
+            i += 1
+        MapRestoreAnchors\restore(document; snapshot; position; mapping)
+        # Reconnect Item references only after every identity has been mapped.
+        i := 0
+        while: i < MapVector\size(snapshot\items)
+            private: @: row MapVector\get(snapshot\items; i)
+            private: @: item MapTable\getInt(mapping; row\id)
+            private: @: value MapNil
+            if: row\valuePresent != 0
+                value := row\value
+            if: row\valueKind = 2
+                value := MapTable\getInt(mapping; row\targetId)
+            if: row\valueKind = 1
+                value := (copy(MapLinkModel))
+                value\steps := MapVector\create()
+                private: int: j 0
+                while: j < MapVector\size(row\value)
+                    private: @: saved MapVector\get(row\value; j)
+                    private: @: step (copy(MapLinkStepModel))
+                    step\mode := saved\mode
+                    step\key := MapKeys\intern(document; saved\name)
+                    MapVector\push(value\steps; step)
+                    j += 1
+            ---
+            MapItem\setValue(item; value; row\valueKind)
+            i += 1
+        MapTree\commit(document)
+        return: mapping
+
+MapIOWrite:
+    @MapFilePort: files
+    @: document
+    []char: path
+    required: files document path
+    write:
+        throws: copy(MapThrows)
+        private: @: snapshot MapSnapshotExport\export(document; end := MapTree\length(document))
+        files\writeText(path; sys\toLmx(snapshot))
+
+MapIORead:
+    @MapFilePort: files
+    @: document
+    []char: path
+    int: position 0
+    required: files document path
+    return: @
+    read:
+        throws: copy(MapThrows)
+        private: @: snapshot sys\fromLmx(files\readText(path))
+        return: MapSnapshotImport\import(document; position; snapshot)
+
+MapLegacyReaderModel:
+    @: document
+    @: cursor
+    @: opened
+    @: root MapNil
+
+MapLegacyReaderStart:
+    @: document
+    int: position 0
+    required: document
+    return: @
+    start:
+        throws: copy(MapThrows)
+        private: @: reader (copy(MapLegacyReaderModel))
+        reader\document := document
+        reader\cursor := MapCursor\create(document; position; 1)
+        reader\opened := MapVector\create()
+        return: reader
+
+MapLegacyReaderBegin:
+    @: reader
+    []char: name
+    @: attributes
+    required: reader name attributes
+    return: @
+    begin:
+        throws: copy(MapThrows)
+        private: int: position MapCursor\position(reader\cursor)
+        private: @: tag MapTag\create(reader\document; MapKeys\intern(reader\document; name); position; position; beginBias := 0)
+        if: reader\root = MapNil
+            reader\root := tag
+        private: int: i 0
+        while: i < MapVector\size(attributes)
+            private: @: attribute MapVector\get(attributes; i)
+            MapTag\setAttribute(tag; MapKeys\intern(reader\document; attribute\name); attribute\value; attribute\local)
+            i += 1
+        MapVector\push(reader\opened; tag)
+        return: tag
+
+MapLegacyReaderEnd:
+    @: reader
+    []char: name
+    required: reader name
+    return: @
+    end:
+        throws: copy(MapThrows)
+        private: @: key MapKeys\intern(reader\document; name)
+        private: int: i MapVector\size(reader\opened)
+        while: i > 0
+            i -= 1
+            private: @: tag MapVector\get(reader\opened; i)
+            if: tag\key = key
+                MapTag\resize(tag; MapCursor\position(tag\cursor); MapCursor\position(reader\cursor))
+                MapVector\remove(reader\opened; i)
+                MapLegacyRename\rename(tag)
+                return: tag
+        throw: MapFailure("unmatched legacy closing name")
+
+MapLegacyReaderText:
+    @: reader
+    []char: text
+    required: reader text
+    return: int
+    text:
+        throws: copy(MapThrows)
+        MapTree\begin(reader\document; 1)
+        private: int: i 0
+        while: i < length(text)
+            MapTree\insert(reader\document; MapCursor\position(reader\cursor); (text[i] record))
+            i += 1
+        MapTree\commit(reader\document)
+        return: i
+
+MapLegacyReaderFinish:
+    @: reader
+    required: reader
+    return: @
+    finish:
+        throws: copy(MapThrows)
+        MapCursor\release(reader\cursor)
+        if: MapVector\size(reader\opened) != 0
+            throw: MapFailure("unclosed legacy tags")
+        return: reader\root
+
+MapSnapshot:
+    @: export MapSnapshotExport\export
+    @: validate MapSnapshotValidate\validate
+    @: import MapSnapshotImport\import
+
+MapIO:
+    @: write MapIOWrite\write
+    @: read MapIORead\read
+
+MapReader:
+    @: start MapLegacyReaderStart\start
+    @: begin MapLegacyReaderBegin\begin
+    @: end MapLegacyReaderEnd\end
+    @: text MapLegacyReaderText\text
+    @: finish MapLegacyReaderFinish\finish
+    @: properties MapLegacyProperties\read
+    @: rename MapLegacyRename\rename
+
+# Optional legacy property-line adapter. JSON syntax is admitted by one explicit
+# caller-supplied decode method; this module does not invent a second JSON/LMX parser.
+MapLegacyProperties:
+    @: reader
+    []char: text
+    @: decodeJson MapNil
+    int: json 0
+    required: reader text
+    return: int
+    read:
+        throws: copy(MapThrows)
+        private: @: tag reader\root
+        if: MapVector\size(reader\opened) > 0
+            tag := MapVector\get(reader\opened; MapVector\size(reader\opened) - 1)
+        if: tag = MapNil
+            throw: MapFailure("property text needs a containing tag")
+        if: json != 0
+            if: decodeJson = MapNil
+                throw: MapFailure("JSON decoder was not supplied")
+            private: @: value decodeJson(text)
+            MapItem\create(tag; MapKeys\intern(reader\document; "JSON"); value; position := MapCursor\position(reader\cursor))
+            return: 1
+        private: int: begin 0
+        private: int: i 0
+        private: int: count 0
+        MapTree\begin(reader\document; 1)
+        while: i <= length(text)
+            if: i = length(text) || text[i] = 10
+                private: int: left begin
+                private: int: right i
+                while: left < right && (text[left] = 32 || text[left] = 9 || text[left] = 13)
+                    left += 1
+                if: right > left && text[right - 1] = 13
+                    right -= 1
+                if: left < right
+                    private: int: equals left
+                    while: equals < right && text[equals] != 61
+                        equals += 1
+                    if: equals < right
+                        private: @: value MapNil
+                        if: equals + 1 < right
+                            value := MapText\slice(text; equals + 1; right)
+                        private: @: item MapItem\create(tag; MapKeys\intern(reader\document; MapText\slice(text; left; equals)); value; position := MapCursor\position(reader\cursor))
+                        if: value != MapNil
+                            private: @: link MapAccess\checkLink(reader\document; value)
+                            if: link != MapNil
+                                MapItem\setValue(item; link; 1)
+                    ---
+                    else:
+                        MapLegacyReaderText\text(reader; MapText\slice(text; left; right))
+                    count += 1
+                begin := i + 1
+            i += 1
+        MapTree\commit(reader\document)
+        return: count
+
+MapLegacyRename:
+    @: tag
+    required: tag
+    return: @
+    rename:
+        throws: copy(MapThrows)
+        private: int: colon MapKeyIndex\find(tag\key; 58)
+        if: colon > 0
+            MapTag\rename(tag; MapKeySlice\subKey(tag\key; 0; colon))
+        return: tag

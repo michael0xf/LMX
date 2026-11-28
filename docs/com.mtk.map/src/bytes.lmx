@@ -1,0 +1,1024 @@
+# DRAFT: bounded byte views, scanning, integer/UTF-8/legacy codecs.
+# All ranges are half-open. ASCII-folding is explicit, never locale-dependent.
+# charSigned is supplied by the admitted C ABI (CHAR_MIN<0); raw bytes remain
+# 0..255. The historical utf16 flag means 0,hi,lo escaped UTF-16 units.
+MapTextAbi:
+    []char: encoding "UTF-8"
+    int: charSigned 1
+
+MapBytesView:
+    @: units
+    int: begin 0
+    int: count -1
+    int: utf16 0
+    required: units
+    return: @
+    view:
+        throws: copy(MapThrows)
+        if: count < 0
+            count := length(units) - begin
+        if: begin < 0 || count < 0 || begin > length(units) || count > length(units) - begin || (utf16 != 0 && utf16 != 1)
+            throw: MapFailure("byte view range")
+        int: i begin
+        while: i < begin + count
+            int: value \units[i]
+            if: value < 0 || value > 255
+                throw: MapFailure("unsigned byte required")
+            i += 1
+        @: result (copy(MapBytesModel))
+        result\units := units
+        result\begin := begin
+        result\count := count
+        result\utf16 := utf16
+        return: result
+
+MapBytesAllocate:
+    int: count 0
+    int: utf16 0
+    return: @
+    allocate:
+        throws: copy(MapThrows)
+        if: count < 0
+            throw: MapFailure("byte count")
+        @: units MapVector\create()
+        int: i 0
+        while: i < count
+            MapVector\push(units; (0 record))
+            i += 1
+        return: MapBytes\view(units; 0; count; utf16)
+
+MapBytesFromText:
+    []char: text
+    required: text
+    return: @
+    fromText:
+        throws: copy(MapThrows)
+        @: units MapVector\create()
+        int: i 0
+        while: i < length(text)
+            int: value text[i]
+            if: value < 0
+                value += 256
+            MapVector\push(units; (value record))
+            i += 1
+        return: MapBytes\view(units)
+
+MapBytesGet:
+    @: bytes
+    int: index
+    required: bytes index
+    return: int
+    get:
+        throws: copy(MapThrows)
+        if: index < 0 || index >= bytes\count
+            throw: MapFailure("byte index")
+        return: \bytes\units[bytes\begin + index]
+
+MapBytesGetSigned:
+    @: bytes
+    int: index
+    required: bytes index
+    return: int
+    getSigned:
+        throws: copy(MapThrows)
+        int: value MapBytes\get(bytes; index)
+        if: value >= 128
+            value -= 256
+        return: value
+
+MapBytesSet:
+    @: bytes
+    int: index
+    int: value
+    required: bytes index value
+    return: int
+    set:
+        throws: copy(MapThrows)
+        if: index < 0 || index >= bytes\count || value < 0 || value > 255
+            throw: MapFailure("byte store")
+        int: old MapBytes\get(bytes; index)
+        bytes\units[bytes\begin + index] := (value record)
+        return: old
+
+MapBytesSlice:
+    @: bytes
+    int: begin
+    int: end
+    required: bytes begin end
+    return: @
+    slice:
+        throws: copy(MapThrows)
+        if: begin < 0 || end < begin || end > bytes\count
+            throw: MapFailure("byte slice")
+        return: MapBytes\view(bytes\units; bytes\begin + begin; end - begin; bytes\utf16)
+
+MapBytesClone:
+    @: bytes
+    required: bytes
+    return: @
+    clone:
+        throws: copy(MapThrows)
+        return: MapBytes\view(bytes\units; bytes\begin; bytes\count; bytes\utf16)
+
+MapBytesSnapshot:
+    @: bytes
+    required: bytes
+    return: @
+    snapshot:
+        throws: copy(MapThrows)
+        @: units MapVector\range(bytes\units; bytes\begin; bytes\begin + bytes\count)
+        return: MapBytes\view(units; 0; bytes\count; bytes\utf16)
+
+MapBytesClear:
+    @: bytes
+    required: bytes
+    return: @
+    clear:
+        throws: copy(MapThrows)
+        bytes\units := MapVector\create()
+        bytes\begin := 0
+        bytes\count := 0
+        bytes\utf16 := 0
+        return: bytes
+
+MapBytesRetarget:
+    @: bytes
+    @: source
+    int: begin 0
+    int: end -1
+    required: bytes source
+    return: @
+    retarget:
+        throws: copy(MapThrows)
+        if: end < 0
+            end := source\count
+        @: checked MapBytes\slice(source; begin; end)
+        bytes\units := checked\units
+        bytes\begin := checked\begin
+        bytes\count := checked\count
+        bytes\utf16 := checked\utf16
+        return: bytes
+
+MapBytesSetLength:
+    @: bytes
+    int: count
+    required: bytes count
+    return: @
+    setLength:
+        throws: copy(MapThrows)
+        if: count < 0 || count > length(bytes\units) - bytes\begin
+            throw: MapFailure("byte view length")
+        bytes\count := count
+        return: bytes
+
+MapBytesSetOffset:
+    @: bytes
+    int: begin
+    required: bytes begin
+    return: @
+    setOffset:
+        throws: copy(MapThrows)
+        if: begin < 0 || begin > length(bytes\units) || bytes\count > length(bytes\units) - begin
+            throw: MapFailure("byte view offset")
+        bytes\begin := begin
+        return: bytes
+
+MapBytesShift:
+    @: bytes
+    int: amount
+    required: bytes amount
+    return: @
+    shift:
+        throws: copy(MapThrows)
+        if: amount >= 0
+            if: amount > bytes\count
+                throw: MapFailure("byte view advance")
+            bytes\begin += amount
+            bytes\count -= amount
+        else:
+            if: amount < 0 - bytes\begin
+                throw: MapFailure("byte view rewind")
+            bytes\begin += amount
+            bytes\count -= amount
+        return: bytes
+
+MapBytesAppend:
+    @: bytes
+    int: value
+    required: bytes value
+    return: int
+    append:
+        throws: copy(MapThrows)
+        if: value < 0 || value > 255
+            throw: MapFailure("unsigned byte required")
+        int: at MapSize\sum(bytes\begin; bytes\count)
+        if: at = length(bytes\units)
+            MapVector\push(bytes\units; (value record))
+        else:
+            bytes\units[at] := (value record)
+        bytes\count := MapSize\sum(bytes\count; 1)
+        return: bytes\count
+
+MapBytesCopyFrom:
+    @: bytes
+    @: source
+    int: offset
+    int: at
+    int: count
+    required: bytes source offset at count
+    return: int
+    copyFrom:
+        throws: copy(MapThrows)
+        if: offset < 0 || at < 0 || count < 0 || offset > source\count || count > source\count - offset || at > bytes\count || count > bytes\count - at
+            throw: MapFailure("byte copy bounds")
+        @: staged MapVector\range(source\units; source\begin + offset; source\begin + offset + count)
+        int: i 0
+        while: i < count
+            bytes\units[bytes\begin + at + i] := staged[i]
+            i += 1
+        return: count
+
+MapBytesFoldAscii:
+    int: value
+    required: value
+    return: int
+    foldAscii:
+        throws: copy(MapThrows)
+        if: value >= 65 && value <= 90
+            return: value + 32
+        return: value
+
+MapBytesMatches:
+    @: bytes
+    @: pattern
+    int: at 0
+    int: fold 0
+    required: bytes pattern
+    return: int
+    matches:
+        throws: copy(MapThrows)
+        if: at < 0 || at > bytes\count || pattern\count > bytes\count - at
+            return: 0
+        int: i 0
+        while: i < pattern\count
+            int: left MapBytes\get(bytes; at + i)
+            int: right MapBytes\get(pattern; i)
+            if: fold != 0
+                left := MapBytes\foldAscii(left)
+                right := MapBytes\foldAscii(right)
+            if: left != right
+                return: 0
+            i += 1
+        return: 1
+
+MapBytesEqual:
+    @: left
+    @: right
+    int: fold 0
+    required: left right
+    return: int
+    equal:
+        throws: copy(MapThrows)
+        if: left\count != right\count
+            return: 0
+        return: MapBytes\matches(left; right; 0; fold)
+
+MapBytesWordMatches:
+    @: bytes
+    @: pattern
+    int: at 0
+    required: bytes pattern
+    return: int
+    wordMatches:
+        throws: copy(MapThrows)
+        if: MapBytes\matches(bytes; pattern; at; 1) = 0
+            return: 0
+        int: next at + pattern\count
+        if: next >= bytes\count
+            return: 1
+        int: value MapBytes\get(bytes; next)
+        if: (value >= 48 && value <= 57) || (value >= 65 && value <= 90) || (value >= 97 && value <= 122) || value = 95 || value >= 128
+            return: 0
+        return: 1
+
+MapBytesFindSequence:
+    @: bytes
+    @: pattern
+    int: begin 0
+    int: end -1
+    int: fold 0
+    required: bytes pattern
+    return: int
+    findSequence:
+        throws: copy(MapThrows)
+        if: end < 0
+            end := bytes\count
+        if: begin < 0 || end < begin || end > bytes\count
+            throw: MapFailure("byte search range")
+        int: at begin
+        while: at <= end && pattern\count <= end - at
+            if: MapBytes\matches(bytes; pattern; at; fold)
+                return: at
+            at += 1
+        return: -1
+
+MapBytesFindSet:
+    @: bytes
+    @: set
+    int: begin 0
+    int: end -1
+    int: invert 0
+    int: direction 1
+    required: bytes set
+    return: int
+    findSet:
+        throws: copy(MapThrows)
+        if: end < 0
+            end := bytes\count
+        if: begin < 0 || end < begin || end > bytes\count || (direction != 1 && direction != -1)
+            throw: MapFailure("byte set search")
+        int: at begin
+        if: direction < 0
+            at := end - 1
+        while: at >= begin && at < end
+            int: value MapBytes\get(bytes; at)
+            int: found 0
+            int: j 0
+            while: j < length(set)
+                if: value = \set[j]
+                    found := 1
+                    break
+                j += 1
+            if: (found != 0 && invert = 0) || (found = 0 && invert != 0)
+                return: at
+            at += direction
+        return: -1
+
+MapBytesFind:
+    @: bytes
+    int: value
+    int: begin 0
+    int: end -1
+    int: direction 1
+    required: bytes value
+    return: int
+    find:
+        throws: copy(MapThrows)
+        @: set MapVector\create()
+        MapVector\push(set; (value record))
+        return: MapBytes\findSet(bytes; set; begin; end; 0; direction)
+
+MapBytesFindClass:
+    @: bytes
+    int: profile
+    int: begin 0
+    int: end -1
+    int: endSymbol 62
+    required: bytes profile
+    return: int
+    findClass:
+        throws: copy(MapThrows)
+        if: end < 0
+            end := bytes\count
+        if: begin < 0 || end < begin || end > bytes\count || profile < 0 || profile > 3
+            throw: MapFailure("byte class search")
+        int: at begin
+        while: at < end
+            int: value MapBytes\get(bytes; at)
+            if: profile = 0 && (value < 48 || value > 57)
+                return: at
+            if: profile = 1 && ((value >= 48 && value <= 57) || value > 64)
+                return: at
+            if: profile = 2 && ((value > 32 && value < 39) || (value > 41 && value < 58) || value > 64 || value = endSymbol)
+                return: at
+            if: profile = 3 && (value < 33 || (value > 38 && value < 42) || (value > 57 && value < 65))
+                return: at
+            at += 1
+        return: -1
+
+MapBytesAllInSet:
+    @: bytes
+    @: set
+    int: begin 0
+    int: end -1
+    required: bytes set
+    return: int
+    allInSet:
+        throws: copy(MapThrows)
+        return: MapBytes\findSet(bytes; set; begin; end; 1; 1) < 0
+
+MapBytesCollapse:
+    @: bytes
+    int: ignored
+    int: begin 0
+    int: end -1
+    required: bytes ignored
+    return: int
+    collapse:
+        throws: copy(MapThrows)
+        if: end < 0
+            end := bytes\count
+        if: begin < 0 || end < begin || end > bytes\count
+            throw: MapFailure("byte collapse range")
+        int: write begin
+        int: read begin
+        while: read < end
+            int: value MapBytes\get(bytes; read)
+            if: value != ignored
+                MapBytes\set(bytes; write; value)
+                write += 1
+            read += 1
+        int: removed end - write
+        while: read < bytes\count
+            MapBytes\set(bytes; read - removed; MapBytes\get(bytes; read))
+            read += 1
+        bytes\count -= removed
+        return: bytes\count
+
+MapBytesSplice:
+    @: bytes
+    int: begin
+    int: end
+    @: replacement
+    required: bytes begin end replacement
+    return: int
+    splice:
+        throws: copy(MapThrows)
+        if: begin < 0 || end < begin || end > bytes\count
+            throw: MapFailure("byte splice")
+        @: staged MapVector\range(replacement\units; replacement\begin; replacement\begin + replacement\count)
+        int: nextSize MapSize\sum(bytes\count - (end - begin); replacement\count)
+        MapVector\erase(bytes\units; bytes\begin + begin; bytes\begin + end)
+        MapVector\insertArray(bytes\units; staged; 0; bytes\begin + begin; length(staged))
+        bytes\count := nextSize
+        return: nextSize
+
+MapBytesReplaceAll:
+    @: bytes
+    @: pattern
+    @: replacement
+    required: bytes pattern replacement
+    return: int
+    replaceAll:
+        throws: copy(MapThrows)
+        if: pattern\count = 0
+            throw: MapFailure("empty replacement pattern")
+        @: old MapBytes\snapshot(pattern)
+        @: new MapBytes\snapshot(replacement)
+        int: amount 0
+        int: begin 0
+        while: begin <= bytes\count
+            int: at MapBytes\findSequence(bytes; old; begin)
+            if: at < 0
+                break
+            MapBytes\splice(bytes; at; at + old\count; new)
+            begin := at + new\count
+            amount += 1
+        return: amount
+
+MapBytesTrim:
+    @: bytes
+    int: beginOnly 0
+    required: bytes
+    return: @
+    trim:
+        throws: copy(MapThrows)
+        while: bytes\count > 0
+            if: MapBytes\get(bytes; 0) > 32
+                break
+            MapBytes\shift(bytes; 1)
+        if: beginOnly = 0
+            while: bytes\count > 0
+                if: MapBytes\get(bytes; bytes\count - 1) > 32
+                    break
+                bytes\count -= 1
+        return: bytes
+
+MapBytesTakePrefix:
+    @: bytes
+    int: at
+    int: skip 0
+    required: bytes at
+    return: @
+    takePrefix:
+        throws: copy(MapThrows)
+        if: at < 0 || at > bytes\count || skip < 0 || skip > bytes\count - at
+            throw: MapFailure("byte division")
+        @: result MapBytes\slice(bytes; 0; at)
+        MapBytes\shift(bytes; at + skip)
+        return: result
+
+MapBytesDivide:
+    @: bytes
+    int: separator
+    required: bytes separator
+    return: @
+    divide:
+        throws: copy(MapThrows)
+        int: at MapBytes\find(bytes; separator)
+        return: MapBytes\divideAt(bytes; at)
+
+MapBytesRemoveFirstLine:
+    @: bytes
+    required: bytes
+    return: @
+    removeFirstLine:
+        throws: copy(MapThrows)
+        if: bytes\count = 0
+            return: MapNil
+        int: at MapBytes\find(bytes; 10)
+        int: skip 1
+        if: at < 0
+            at := bytes\count
+            skip := 0
+        @: result MapBytes\takePrefix(bytes; at; skip)
+        MapBytes\trim(result)
+        return: result
+
+MapBytesRemoveWord:
+    @: bytes
+    @: separators
+    int: fromEnd 0
+    required: bytes separators
+    return: @
+    removeWord:
+        throws: copy(MapThrows)
+        int: at MapBytes\findSet(bytes; separators; 0; bytes\count; 0; 1)
+        if: fromEnd != 0
+            at := MapBytes\findSet(bytes; separators; 0; bytes\count; 0; -1)
+        if: at < 0
+            return: MapBytes\takePrefix(bytes; bytes\count)
+        if: fromEnd = 0
+            return: MapBytes\takePrefix(bytes; at; 1)
+        @: result MapBytes\slice(bytes; at + 1; bytes\count)
+        bytes\count := at
+        return: result
+
+MapBytesParseInt:
+    @: bytes
+    int: begin 0
+    int: end -1
+    int: limit 2147483647
+    required: bytes
+    return: int
+    parseInt:
+        throws: copy(MapThrows)
+        if: end < 0
+            end := bytes\count
+        if: begin < 0 || end <= begin || end > bytes\count || limit < 1
+            throw: MapFailure("integer text range")
+        int: at begin
+        int: negative 0
+        int: first MapBytes\get(bytes; at)
+        if: first = 45 || first = 43
+            negative := first = 45
+            at += 1
+        if: at = end
+            throw: MapFailure("integer has no digits")
+        int: minimum 0 - limit
+        if: negative != 0
+            minimum -= 1
+        int: cutoff minimum / 10
+        int: result 0
+        while: at < end
+            int: digit MapBytes\get(bytes; at) - 48
+            if: digit < 0 || digit > 9 || result < cutoff
+                throw: MapFailure("invalid or overflowing decimal")
+            result *= 10
+            if: result < minimum + digit
+                throw: MapFailure("decimal overflow")
+            result -= digit
+            at += 1
+        if: negative != 0
+            return: result
+        return: 0 - result
+
+MapBytesParseText:
+    []char: text
+    int: limit 2147483647
+    required: text
+    return: int
+    parseText:
+        throws: copy(MapThrows)
+        return: MapBytes\parseInt(MapBytes\fromText(text); limit := limit)
+
+MapBytesParseLittleEndian:
+    @: bytes
+    int: begin
+    int: count
+    int: limit 2147483647
+    required: bytes begin count
+    return: int
+    parseLittleEndian:
+        throws: copy(MapThrows)
+        if: begin < 0 || count < 0 || begin > bytes\count || count > bytes\count - begin
+            throw: MapFailure("little-endian range")
+        int: result 0
+        int: i count
+        while: i > 0
+            i -= 1
+            int: digit MapBytes\get(bytes; begin + i)
+            if: digit > limit || result > (limit - digit) / 256
+                throw: MapFailure("little-endian integer overflow")
+            result := result * 256 + digit
+        return: result
+
+MapBytesHash:
+    @: bytes
+    required: bytes
+    return: int
+    hash:
+        throws: copy(MapThrows)
+        i64: value 0
+        int: i 0
+        while: i < bytes\count
+            int: digit MapBytes\getSigned(bytes; i)
+            value := (value * 31 + digit) % 4294967296
+            if: value < 0
+                value += 4294967296
+            i += 1
+        if: value >= 2147483648
+            value -= 4294967296
+        return: value
+
+MapBytesAppendScalar:
+    @: bytes
+    int: code
+    required: bytes code
+    return: @
+    appendScalar:
+        throws: copy(MapThrows)
+        if: code < 0 || code > 1114111 || (code >= 55296 && code <= 57343)
+            throw: MapFailure("invalid Unicode scalar")
+        if: code < 128
+            MapBytes\append(bytes; code)
+        else:
+            if: code < 2048
+                MapBytes\append(bytes; 192 + code / 64)
+                MapBytes\append(bytes; 128 + code % 64)
+            else:
+                if: code < 65536
+                    MapBytes\append(bytes; 224 + code / 4096)
+                    MapBytes\append(bytes; 128 + (code / 64) % 64)
+                    MapBytes\append(bytes; 128 + code % 64)
+                else:
+                    MapBytes\append(bytes; 240 + code / 262144)
+                    MapBytes\append(bytes; 128 + (code / 4096) % 64)
+                    MapBytes\append(bytes; 128 + (code / 64) % 64)
+                    MapBytes\append(bytes; 128 + code % 64)
+        return: bytes
+
+MapBytesEncodeUtf8:
+    @: scalars
+    required: scalars
+    return: @
+    encodeUtf8:
+        throws: copy(MapThrows)
+        @: result MapBytes\allocate()
+        int: i 0
+        while: i < length(scalars)
+            MapBytes\appendScalar(result; \scalars[i])
+            i += 1
+        return: result
+
+MapBytesDecodeUtf8:
+    @: bytes
+    required: bytes
+    return: @
+    decodeUtf8:
+        throws: copy(MapThrows)
+        @: result MapVector\create()
+        int: at 0
+        while: at < bytes\count
+            int: first MapBytes\get(bytes; at)
+            int: width 1
+            int: code first
+            int: minimum 0
+            if: first >= 128
+                if: first >= 194 && first <= 223
+                    width := 2
+                    code := first - 192
+                    minimum := 128
+                else:
+                    if: first >= 224 && first <= 239
+                        width := 3
+                        code := first - 224
+                        minimum := 2048
+                    else:
+                        if: first >= 240 && first <= 244
+                            width := 4
+                            code := first - 240
+                            minimum := 65536
+                        else:
+                            throw: MapFailure("invalid UTF-8 lead")
+            if: width > bytes\count - at
+                throw: MapFailure("truncated UTF-8")
+            int: tail 1
+            while: tail < width
+                int: digit MapBytes\get(bytes; at + tail)
+                if: digit < 128 || digit > 191
+                    throw: MapFailure("invalid UTF-8 continuation")
+                code := code * 64 + digit - 128
+                tail += 1
+            if: code < minimum || code > 1114111 || (code >= 55296 && code <= 57343)
+                throw: MapFailure("non-scalar or overlong UTF-8")
+            MapVector\push(result; (code record))
+            at += width
+        return: result
+
+MapBytesAppendLegacyUnit:
+    @: bytes
+    int: unit
+    required: bytes unit
+    return: @
+    appendLegacyUnit:
+        throws: copy(MapThrows)
+        if: unit < 0 || unit > 65535
+            throw: MapFailure("legacy UTF-16 unit")
+        bytes\utf16 := 1
+        MapBytes\append(bytes; 0)
+        MapBytes\append(bytes; unit / 256)
+        MapBytes\append(bytes; unit % 256)
+        return: bytes
+
+MapBytesDecodeLegacy:
+    @: bytes
+    required: bytes
+    return: @
+    decodeLegacy:
+        throws: copy(MapThrows)
+        @: units MapVector\create()
+        int: i 0
+        while: i < bytes\count
+            int: value MapBytes\get(bytes; i)
+            i += 1
+            if: value = 0
+                if: bytes\count - i < 2
+                    throw: MapFailure("truncated legacy escaped unit")
+                value := MapBytes\get(bytes; i) * 256 + MapBytes\get(bytes; i + 1)
+                i += 2
+            else:
+                if: value >= 128
+                    throw: MapFailure("ambiguous unescaped legacy non-ASCII byte")
+            MapVector\push(units; (value record))
+        @: result MapVector\create()
+        i := 0
+        while: i < length(units)
+            int: value \units[i]
+            i += 1
+            if: value >= 55296 && value <= 56319
+                if: i >= length(units)
+                    throw: MapFailure("missing legacy low surrogate")
+                int: low \units[i]
+                if: low < 56320 || low > 57343
+                    throw: MapFailure("invalid legacy low surrogate")
+                value := 65536 + (value - 55296) * 1024 + low - 56320
+                i += 1
+            else:
+                if: value >= 56320 && value <= 57343
+                    throw: MapFailure("unpaired legacy low surrogate")
+            MapVector\push(result; (value record))
+        return: result
+
+MapBytesToText:
+    @: bytes
+    int: charSigned MapTextAbi\charSigned
+    required: bytes
+    return: []char
+    toText:
+        throws: copy(MapThrows)
+        if: charSigned != 0 && charSigned != 1
+            throw: MapFailure("unadmitted C char profile")
+        @: source bytes
+        if: bytes\utf16 != 0
+            source := MapBytes\encodeUtf8(MapBytes\decodeLegacy(bytes))
+        else:
+            MapBytes\decodeUtf8(bytes)
+        []char: result []
+        sys\resize(result; source\count)
+        int: i 0
+        while: i < source\count
+            int: value MapBytes\get(source; i)
+            if: charSigned != 0 && value >= 128
+                value -= 256
+            result[i] := value
+            i += 1
+        return: result
+
+MapBytesEscapeHtml:
+    @: bytes
+    required: bytes
+    return: @
+    escapeHtml:
+        throws: copy(MapThrows)
+        @: result MapBytes\allocate()
+        int: i 0
+        while: i < bytes\count
+            int: value MapBytes\get(bytes; i)
+            []char: replacement ""
+            if: value = 38
+                replacement := "&amp;"
+            if: value = 60
+                replacement := "&lt;"
+            if: value = 62
+                replacement := "&gt;"
+            if: value = 34
+                replacement := "&quot;"
+            if: length(replacement) = 0
+                MapBytes\append(result; value)
+            else:
+                int: j 0
+                while: j < length(replacement)
+                    MapBytes\append(result; replacement[j])
+                    j += 1
+            ---
+            i += 1
+        return: result
+
+MapBytesReplaceEntities:
+    @: bytes
+    @: names
+    @: replacements
+    int: opening 38
+    int: closing 59
+    int: fallback 63
+    required: bytes names replacements
+    return: int
+    replaceEntities:
+        throws: copy(MapThrows)
+        if: length(names) != length(replacements)
+            throw: MapFailure("entity table lengths")
+        @: source MapBytes\snapshot(bytes)
+        @: result MapBytes\allocate()
+        int: at 0
+        int: changes 0
+        while: at < source\count
+            int: value MapBytes\get(source; at)
+            if: value != opening
+                MapBytes\append(result; value)
+                at += 1
+            else:
+                int: end MapBytes\find(source; closing; at + 1)
+                if: end < 0
+                    while: at < source\count
+                        MapBytes\append(result; MapBytes\get(source; at))
+                        at += 1
+                ---
+                else:
+                    @: key MapBytes\slice(source; at + 1; end)
+                    int: index 0
+                    int: found -1
+                    while: index < length(names)
+                        if: MapBytes\equal(key; names[index])
+                            found := index
+                            break
+                        index += 1
+                    if: found < 0
+                        MapBytes\append(result; fallback)
+                    else:
+                        MapBytes\append(result; \replacements[found])
+                    changes += 1
+                    at := end + 1
+        ---
+        MapBytes\retarget(bytes; result)
+        return: changes
+
+
+# Compatibility split: the receiver keeps the prefix; result is the suffix.
+# Both views are trimmed. An absent/leading/final separator has no suffix.
+MapBytesDivideAt:
+    @: bytes
+    int: at
+    required: bytes at
+    return: @
+    divideAt:
+        throws: copy(MapThrows)
+        if: at <= 0 || at >= bytes\count
+            return: MapNil
+        @: result MapBytes\slice(bytes; at + 1; bytes\count)
+        bytes\count := at
+        MapBytes\trim(bytes)
+        MapBytes\trim(result)
+        return: result
+
+MapBytesTakeWord:
+    @: bytes
+    @: separators
+    int: consume 1
+    required: bytes separators
+    return: @
+    takeWord:
+        throws: copy(MapThrows)
+        if: bytes\count = 0
+            return: MapNil
+        int: at MapBytes\findSet(bytes; separators)
+        if: at = 0
+            return: MapNil
+        int: skip consume != 0
+        if: at < 0
+            at := bytes\count
+            skip := 0
+        @: result MapBytes\takePrefix(bytes; at; skip)
+        MapBytes\trim(result)
+        if: result\count = 0
+            return: MapNil
+        return: result
+
+MapBytesHtmlFind:
+    @: bytes
+    int: value
+    int: begin 0
+    int: end -1
+    required: bytes value
+    return: int
+    htmlFind:
+        throws: copy(MapThrows)
+        if: end < 0
+            end := bytes\count
+        if: begin < 0 || end < begin || end > bytes\count
+            throw: MapFailure("HTML search range")
+        @: names MapVector\create()
+        MapVector\push(names; MapBytes\fromText("nbsp"))
+        MapVector\push(names; MapBytes\fromText("amp"))
+        MapVector\push(names; MapBytes\fromText("lt"))
+        MapVector\push(names; MapBytes\fromText("gt"))
+        MapVector\push(names; MapBytes\fromText("quot"))
+        @: replacements (copy(()))
+        MapVector\push(replacements; (32 record))
+        MapVector\push(replacements; (38 record))
+        MapVector\push(replacements; (60 record))
+        MapVector\push(replacements; (62 record))
+        MapVector\push(replacements; (34 record))
+        @: part MapBytes\snapshot(MapBytes\slice(bytes; begin; end))
+        MapBytes\replaceEntities(part; names; replacements; fallback := 32)
+        int: found MapBytes\find(part; value)
+        MapBytes\splice(bytes; begin; end; part)
+        if: found < 0
+            return: -1
+        return: begin + found
+
+MapBytes:
+    @: indexIn MapBytesIndexIn\indexIn
+    @: divideAt MapBytesDivideAt\divideAt
+    @: takeWord MapBytesTakeWord\takeWord
+    @: htmlFind MapBytesHtmlFind\htmlFind
+    @: view MapBytesView\view
+    @: allocate MapBytesAllocate\allocate
+    @: fromText MapBytesFromText\fromText
+    @: get MapBytesGet\get
+    @: getSigned MapBytesGetSigned\getSigned
+    @: set MapBytesSet\set
+    @: slice MapBytesSlice\slice
+    @: clone MapBytesClone\clone
+    @: snapshot MapBytesSnapshot\snapshot
+    @: clear MapBytesClear\clear
+    @: retarget MapBytesRetarget\retarget
+    @: setLength MapBytesSetLength\setLength
+    @: setOffset MapBytesSetOffset\setOffset
+    @: shift MapBytesShift\shift
+    @: append MapBytesAppend\append
+    @: copyFrom MapBytesCopyFrom\copyFrom
+    @: foldAscii MapBytesFoldAscii\foldAscii
+    @: matches MapBytesMatches\matches
+    @: equal MapBytesEqual\equal
+    @: wordMatches MapBytesWordMatches\wordMatches
+    @: findSequence MapBytesFindSequence\findSequence
+    @: findSet MapBytesFindSet\findSet
+    @: find MapBytesFind\find
+    @: findClass MapBytesFindClass\findClass
+    @: allInSet MapBytesAllInSet\allInSet
+    @: collapse MapBytesCollapse\collapse
+    @: splice MapBytesSplice\splice
+    @: replaceAll MapBytesReplaceAll\replaceAll
+    @: trim MapBytesTrim\trim
+    @: takePrefix MapBytesTakePrefix\takePrefix
+    @: divide MapBytesDivide\divide
+    @: removeFirstLine MapBytesRemoveFirstLine\removeFirstLine
+    @: removeWord MapBytesRemoveWord\removeWord
+    @: parseInt MapBytesParseInt\parseInt
+    @: parseText MapBytesParseText\parseText
+    @: parseLittleEndian MapBytesParseLittleEndian\parseLittleEndian
+    @: hash MapBytesHash\hash
+    @: appendScalar MapBytesAppendScalar\appendScalar
+    @: encodeUtf8 MapBytesEncodeUtf8\encodeUtf8
+    @: decodeUtf8 MapBytesDecodeUtf8\decodeUtf8
+    @: appendLegacyUnit MapBytesAppendLegacyUnit\appendLegacyUnit
+    @: decodeLegacy MapBytesDecodeLegacy\decodeLegacy
+    @: toText MapBytesToText\toText
+    @: escapeHtml MapBytesEscapeHtml\escapeHtml
+    @: replaceEntities MapBytesReplaceEntities\replaceEntities
+
+MapBytesIndexIn:
+    @: bytes
+    @: candidates
+    int: fold 1
+    required: bytes candidates
+    return: int
+    indexIn:
+        throws: copy(MapThrows)
+        int: i 0
+        while: i < length(candidates)
+            if: MapBytes\equal(bytes; candidates[i]; fold)
+                return: i
+            i += 1
+        return: -1

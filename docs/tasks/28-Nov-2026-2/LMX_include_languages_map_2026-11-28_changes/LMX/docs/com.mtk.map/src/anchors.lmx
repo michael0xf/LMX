@@ -1,0 +1,342 @@
+# DRAFT. Var marks -> paired Tag intervals in one Cursor pass.
+# Normative basis: docs/spec/LMX_semantics.en.md section 29.
+# Pairing is not XML nesting and does not invoke the LMX parser.
+# payload is an admitted pure DATA projection; native P0 nodes/context/bindings
+# stay on their owner and never become portable mark payload.
+# Each bounded MIX document, including a mark payload or string overlay,
+# has its own scan state. No mandatory literal "LMX"/"MIX" keyword is added.
+
+MapAnchorModel:
+    copy(MapItemModel)
+    @: scope MapNil
+    int: role 1
+    @: headKey MapNil
+    @: closeKey MapNil
+    @: payload MapNil
+    @: childDocument MapNil
+    int: scanPosition 0
+    int: sourceOrdinal 0
+    int: explicitPairId 0
+    int: pairId 0
+    @: partner MapNil
+    @: span MapNil
+    int: rawByteOffset 0
+    int: sourceTokenChar 0
+    int: coordinateKind 0
+
+MapActiveMarkModel:
+    @: anchor
+    @: previous MapNil
+    @: next MapNil
+    @: previousSame MapNil
+    @: nextSame MapNil
+    @: bucket MapNil
+
+MapMarkBucketModel:
+    @: key
+    @: latest MapNil
+
+MapMarkScanModel:
+    @: document
+    @: scope MapNil
+    @: first MapNil
+    @: latest MapNil
+    @: buckets
+    @: intervals
+    @: unmatchedCloses
+    @: unclosed
+    int: revision 0
+    int: scannedPositions 0
+
+MapAnchorCreate:
+    @: document
+    int: position
+    int: role
+    @: headKey MapNil
+    @: closeKey MapNil
+    @: payload MapNil
+    @: childDocument MapNil
+    int: sourceOrdinal 0
+    int: explicitPairId 0
+    int: rawByteOffset 0
+    int: sourceTokenChar 0
+    int: coordinateKind 0
+    int: origin 2
+    @: scope MapNil
+    @: atCursor MapNil
+    required: document position role
+    return: @
+    create:
+        throws: copy(MapThrows)
+        if: role != 1 && role != 2 && role != 3
+            throw: MapFailure("mark role")
+        private: @: mark (copy(MapAnchorModel))
+        mark\id := MapTree\allocateId(document)
+        mark\kind := 3
+        mark\document := document
+        mark\scope := scope
+        mark\headKey := headKey
+        mark\key := headKey
+        mark\closeKey := closeKey
+        mark\role := role
+        mark\payload := payload
+        mark\value := payload
+        mark\childDocument := childDocument
+        mark\sourceOrdinal := sourceOrdinal
+        mark\explicitPairId := explicitPairId
+        mark\rawByteOffset := rawByteOffset
+        mark\sourceTokenChar := sourceTokenChar
+        mark\coordinateKind := coordinateKind
+        if: atCursor = MapNil
+            mark\cursor := MapCursor\create(document; position; 1)
+        ---
+        else:
+            if: atCursor\document != document
+                throw: MapFailure("foreign mark anchor")
+            mark\cursor := MapCursor\cloneAt(atCursor; 1)
+        mark\tail := mark\cursor
+        if: mark\cursor\attributes = MapNil
+            mark\cursor\attributes := MapVector\create()
+        MapVector\push(mark\cursor\attributes; mark)
+        MapTree\begin(document; origin)
+        MapVector\push(document\entries; mark)
+        MapTree\touch(document; position; position; kind := 2; itemId := mark\id)
+        MapTree\commit(document)
+        return: mark
+
+MapAnchorRemove:
+    @: mark
+    int: origin 2
+    required: mark
+    return: @
+    remove:
+        throws: copy(MapThrows)
+        if: mark\deleted != 0
+            return: mark
+        private: @: document mark\document
+        private: int: position MapCursor\position(mark\cursor)
+        MapTree\begin(document; origin)
+        if: mark\span != MapNil && mark\span\deleted = 0
+            MapTag\remove(mark\span; origin)
+        if: mark\partner != MapNil
+            mark\partner\partner := MapNil
+            mark\partner\span := MapNil
+            mark\partner\pairId := 0
+        private: int: index MapVector\indexOf(document\entries; mark)
+        if: index >= 0
+            MapVector\remove(document\entries; index)
+        mark\deleted := 1
+        MapCursor\release(mark\cursor)
+        MapTree\touch(document; position; position; kind := 2; itemId := mark\id)
+        MapTree\commit(document)
+        return: mark
+
+MapMarkBucket:
+    @: state
+    @: key
+    required: state key
+    return: @
+    get:
+        throws: copy(MapThrows)
+        private: int: i 0
+        while: i < MapVector\size(state\buckets)
+            private: @: bucket MapVector\get(state\buckets; i)
+            if: bucket\key = key
+                return: bucket
+            i += 1
+        private: @: bucket (copy(MapMarkBucketModel))
+        bucket\key := key
+        MapVector\push(state\buckets; bucket)
+        return: bucket
+
+MapMarkOpen:
+    @: state
+    @: mark
+    required: state mark
+    return: @
+    open:
+        throws: copy(MapThrows)
+        private: @: active (copy(MapActiveMarkModel))
+        active\anchor := mark
+        active\previous := state\latest
+        if: state\latest != MapNil
+            state\latest\next := active
+        ---
+        else:
+            state\first := active
+        state\latest := active
+        active\bucket := MapMarkBucket\get(state; mark\closeKey)
+        active\previousSame := active\bucket\latest
+        if: active\previousSame != MapNil
+            active\previousSame\nextSame := active
+        active\bucket\latest := active
+        return: active
+
+MapMarkFindOpen:
+    @: state
+    @: mark
+    required: state mark
+    return: @
+    find:
+        throws: copy(MapThrows)
+        if: mark\explicitPairId != 0
+            private: @: active state\latest
+            while: active != MapNil
+                if: active\anchor\explicitPairId = mark\explicitPairId
+                    return: active
+                active := active\previous
+            return: MapNil
+        if: mark\closeKey = MapNil
+            return: state\latest
+        private: @: bucket MapMarkBucket\get(state; mark\closeKey)
+        return: bucket\latest
+
+MapMarkUnlink:
+    @: state
+    @: active
+    required: state active
+    unlink:
+        throws: copy(MapThrows)
+        if: active\previous != MapNil
+            active\previous\next := active\next
+        ---
+        else:
+            state\first := active\next
+        if: active\next != MapNil
+            active\next\previous := active\previous
+        ---
+        else:
+            state\latest := active\previous
+        if: active\previousSame != MapNil
+            active\previousSame\nextSame := active\nextSame
+        if: active\nextSame != MapNil
+            active\nextSame\previousSame := active\previousSame
+        ---
+        else:
+            active\bucket\latest := active\previousSame
+
+MapMarkClose:
+    @: state
+    @: mark
+    required: state mark
+    return: @
+    close:
+        throws: copy(MapThrows)
+        private: @: active MapMarkFindOpen\find(state; mark)
+        if: active = MapNil
+            MapVector\push(state\unmatchedCloses; mark)
+            return: MapNil
+        private: @: beginMark active\anchor
+        private: @: key beginMark\headKey
+        if: key = MapNil
+            key := MapKeys\intern(state\document; "mark")
+        private: @: tag MapTag\createAt(state\document; key; beginMark\scanPosition; mark\scanPosition; beginMark\payload; beginBias := 1; endBias := 1; origin := 2; beginCursor := beginMark\cursor; endCursor := mark\cursor)
+        tag\scope := state\scope
+        tag\beginVar := beginMark
+        tag\endVar := mark
+        beginMark\partner := mark
+        mark\partner := beginMark
+        beginMark\span := tag
+        mark\span := tag
+        beginMark\pairId := tag\id
+        mark\pairId := tag\id
+        MapVector\push(state\intervals; tag)
+        MapMarkUnlink\unlink(state; active)
+        return: tag
+
+MapMarkOrder:
+    @: marks
+    @: document
+    @: scope MapNil
+    required: marks document
+    return: @
+    ordered:
+        throws: copy(MapThrows)
+        private: @: result MapVector\create()
+        private: int: i 0
+        while: i < MapVector\size(marks)
+            private: @: mark MapVector\get(marks; i)
+            i += 1
+            # Cursor.attributes may contain unrelated user annotations. Only
+            # registered Var records in this document are interpreted as marks.
+            if: MapVector\indexOf(document\entries; mark) < 0
+                continue
+            if: mark\deleted != 0 || mark\scope != scope
+                continue
+            private: int: position 0
+            while: position < MapVector\size(result)
+                private: @: previous MapVector\get(result; position)
+                if: previous\sourceOrdinal > mark\sourceOrdinal || (previous\sourceOrdinal = mark\sourceOrdinal && previous\id > mark\id)
+                    break
+                position += 1
+            MapVector\insert(result; position; mark)
+        return: result
+
+MapMarkScan:
+    @: document
+    @: scope MapNil
+    required: document
+    return: @
+    scan:
+        throws: copy(MapThrows)
+        private: @: state (copy(MapMarkScanModel))
+        state\document := document
+        state\scope := scope
+        state\revision := document\revision
+        state\buckets := MapVector\create()
+        state\intervals := MapVector\create()
+        state\unmatchedCloses := MapVector\create()
+        state\unclosed := MapVector\create()
+        private: int: begin 0
+        private: int: end MapTree\length(document)
+        if: scope != MapNil
+            MapSpan\bounds(scope)
+            if: scope\document != document
+                throw: MapFailure("foreign MIX scope")
+            begin := MapCursor\position(scope\head)
+            end := MapCursor\position(scope\tail)
+        # Old derived pairings are discarded, not the original Var anchors.
+        MapTree\begin(document; 2)
+        private: int: i 0
+        while: i < MapVector\size(document\entries)
+            private: @: mark MapVector\get(document\entries; i)
+            if: mark\scope = scope
+                if: mark\span != MapNil && mark\span\deleted = 0
+                    MapTag\remove(mark\span; 2)
+                mark\span := MapNil
+                mark\partner := MapNil
+                mark\pairId := 0
+            i += 1
+        private: @: cursor MapCursor\create(document; begin; 0)
+        private: int: position begin
+        while: 1
+            private: @: marks MapMarkOrder\ordered(MapCursor\annotationsAt(cursor); document; scope)
+            i := 0
+            while: i < MapVector\size(marks)
+                private: @: mark MapVector\get(marks; i)
+                mark\scanPosition := position
+                if: mark\role = 1
+                    MapMarkOpen\open(state; mark)
+                if: mark\role = 2
+                    MapMarkClose\close(state; mark)
+                # role3 is a standalone nested-document Var; it stays a direct
+                # anchor for a later consumer without inventing an interval.
+                i += 1
+            state\scannedPositions += 1
+            if: position = end
+                break
+            if: MapCursor\next(cursor) = 0
+                break
+            position += 1
+        MapCursor\release(cursor)
+        private: @: active state\first
+        while: active != MapNil
+            MapVector\push(state\unclosed; active\anchor)
+            active := active\next
+        MapTree\commit(document)
+        return: state
+
+MapAnchors:
+    @: create MapAnchorCreate\create
+    @: remove MapAnchorRemove\remove
+    @: scan MapMarkScan\scan

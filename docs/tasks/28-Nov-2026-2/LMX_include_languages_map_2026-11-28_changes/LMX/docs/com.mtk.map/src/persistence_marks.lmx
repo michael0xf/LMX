@@ -1,0 +1,158 @@
+# DRAFT. Portable records for Var anchors and bounded child MIX documents.
+# Optional values use presence bits; MapNil's process address is never wire ABI.
+
+MapSavedScope:
+    int: id
+    int: begin
+    int: end
+    int: anchorId 0
+
+MapSavedAnchor:
+    int: id
+    int: position
+    int: role
+    int: headPresent 0
+    []char: head ""
+    int: closePresent 0
+    []char: close ""
+    int: payloadPresent 0
+    @: payload MapNil
+    int: scopeId 0
+    int: childId 0
+    int: sourceOrdinal
+    int: explicitPairId
+    int: rawByteOffset
+    int: sourceTokenChar
+    int: coordinateKind
+    int: partnerId 0
+    int: spanId 0
+
+MapSaveScope:
+    @: snapshot
+    @: scope
+    int: base
+    int: end
+    required: snapshot scope base end
+    add:
+        throws: copy(MapThrows)
+        if: scope = MapNil
+            return
+        private: int: i 0
+        while: i < MapVector\size(snapshot\scopes)
+            if: snapshot\scopes[i]\id = scope\id
+                return
+            i += 1
+        private: int: a MapCursor\position(scope\head)
+        private: int: b MapCursor\position(scope\tail)
+        if: a < base || b > end
+            throw: MapFailure("snapshot crosses a child MIX scope")
+        private: @: row (copy(MapSavedScope))
+        row\id := scope\id
+        row\begin := a - base
+        row\end := b - base
+        if: scope\anchor != MapNil
+            row\anchorId := scope\anchor\id
+        MapVector\push(snapshot\scopes; row)
+
+MapSaveAnchors:
+    @: document
+    @: snapshot
+    int: begin
+    int: end
+    required: document snapshot begin end
+    save:
+        throws: copy(MapThrows)
+        private: int: i 0
+        while: i < MapVector\size(document\entries)
+            private: @: mark MapVector\get(document\entries; i)
+            private: int: position MapCursor\position(mark\cursor)
+            if: position >= begin && position <= end
+                private: @: row (copy(MapSavedAnchor))
+                row\id := mark\id
+                row\position := position - begin
+                row\role := mark\role
+                row\headPresent := mark\headKey != MapNil
+                if: row\headPresent != 0
+                    row\head := mark\headKey\text
+                row\closePresent := mark\closeKey != MapNil
+                if: row\closePresent != 0
+                    row\close := mark\closeKey\text
+                row\payloadPresent := mark\payload != MapNil
+                if: row\payloadPresent != 0
+                    row\payload := mark\payload
+                if: mark\scope != MapNil
+                    MapSaveScope\add(snapshot; mark\scope; begin; end)
+                    row\scopeId := mark\scope\id
+                if: mark\childDocument != MapNil
+                    MapSaveScope\add(snapshot; mark\childDocument; begin; end)
+                    row\childId := mark\childDocument\id
+                row\sourceOrdinal := mark\sourceOrdinal
+                row\explicitPairId := mark\explicitPairId
+                row\rawByteOffset := mark\rawByteOffset
+                row\sourceTokenChar := mark\sourceTokenChar
+                row\coordinateKind := mark\coordinateKind
+                if: mark\partner != MapNil
+                    row\partnerId := mark\partner\id
+                if: mark\span != MapNil
+                    row\spanId := mark\span\id
+                MapVector\push(snapshot\anchors; row)
+            i += 1
+
+MapRestoreScopes:
+    @: document
+    @: snapshot
+    int: position
+    @: mapping
+    required: document snapshot position mapping
+    restore:
+        throws: copy(MapThrows)
+        private: int: i 0
+        while: i < MapVector\size(snapshot\scopes)
+            private: @: row MapVector\get(snapshot\scopes; i)
+            private: @: scope MapSpan\create(document; position + row\begin; position + row\end)
+            MapTable\putInt(mapping; row\id; scope)
+            i += 1
+
+MapRestoreAnchors:
+    @: document
+    @: snapshot
+    int: position
+    @: mapping
+    required: document snapshot position mapping
+    restore:
+        throws: copy(MapThrows)
+        private: int: i 0
+        while: i < MapVector\size(snapshot\anchors)
+            private: @: row MapVector\get(snapshot\anchors; i)
+            private: @: head MapNil
+            private: @: close MapNil
+            private: @: payload MapNil
+            if: row\headPresent != 0
+                head := MapKeys\intern(document; row\head)
+            if: row\closePresent != 0
+                close := MapKeys\intern(document; row\close)
+            if: row\payloadPresent != 0
+                payload := row\payload
+            private: @: mark MapAnchors\create(document; position + row\position; row\role; headKey := head; closeKey := close; payload := payload; childDocument := MapTable\getInt(mapping; row\childId); sourceOrdinal := row\sourceOrdinal; explicitPairId := row\explicitPairId; rawByteOffset := row\rawByteOffset; sourceTokenChar := row\sourceTokenChar; coordinateKind := row\coordinateKind; scope := MapTable\getInt(mapping; row\scopeId))
+            MapTable\putInt(mapping; row\id; mark)
+            i += 1
+        i := 0
+        while: i < MapVector\size(snapshot\anchors)
+            private: @: row MapVector\get(snapshot\anchors; i)
+            private: @: mark MapTable\getInt(mapping; row\id)
+            mark\partner := MapTable\getInt(mapping; row\partnerId)
+            mark\span := MapTable\getInt(mapping; row\spanId)
+            if: mark\span != MapNil
+                mark\pairId := mark\span\id
+                if: mark\role = 1
+                    mark\span\beginVar := mark
+                if: mark\role = 2
+                    mark\span\endVar := mark
+            ---
+            i += 1
+        i := 0
+        while: i < MapVector\size(snapshot\scopes)
+            private: @: row MapVector\get(snapshot\scopes; i)
+            private: @: scope MapTable\getInt(mapping; row\id)
+            scope\anchor := MapTable\getInt(mapping; row\anchorId)
+            i += 1

@@ -1,0 +1,188 @@
+# DRAFT. MapThreads.load/mirror via ordinary post and owner-local pending jobs.
+# No request transmits a live destination Cursor or reads another owner graph.
+
+MapTransferEnvelope:
+    int: requestId
+    int: rootId 0
+    []char: text
+
+MapTransferPending:
+    int: id
+    int: baseRevision
+    @: cursor
+    @: listener MapNil
+
+MapTransferReceipt:
+    int: requestId
+    int: documentId
+    int: revision
+    int: rootId 0
+
+MapTransferStart:
+    @: owner
+    @: source
+    @: cursor
+    []char: path ""
+    int: sourceTagId 0
+    @: listener MapNil
+    required: owner source cursor
+    return: int
+    start:
+        throws: copy(MapThrows)
+        if: owner\healthy = 0 || owner\document\txDepth != 0 || cursor\document != owner\document
+            throw: MapFailure("transfer destination owner")
+        private: @: pending (copy(MapTransferPending))
+        pending\id := MapTree\allocateId(owner\document)
+        pending\baseRevision := owner\document\revision
+        pending\cursor := MapCursor\cloneAt(cursor)
+        pending\listener := listener
+        MapTable\putInt(owner\pendingTransfers; pending\id; pending)
+        if: sourceTagId = 0
+            post:
+                ask:
+                    source\readSnapshot(path := path; requestId := pending\id)
+                answer:
+                    owner\loaded
+        ---
+        else:
+            post:
+                ask:
+                    source\exportTag(tagId := sourceTagId; requestId := pending\id)
+                answer:
+                    owner\loaded
+        return: pending\id
+
+MapTransferAccept:
+    @: owner
+    @: envelope
+    required: owner envelope
+    return: @
+    accept:
+        throws: copy(MapThrows)
+        private: @: pending MapTable\getInt(owner\pendingTransfers; envelope\requestId)
+        if: pending = MapNil
+            throw: MapFailure("unknown or already completed transfer")
+        if: owner\healthy = 0 || owner\document\txDepth != 0
+            throw: MapFailure("transfer owner recovery required")
+        # Strict baseline admission. The live anchor is kept locally for precise
+        # placement, but concurrent source edits do not silently rebase a load.
+        if: pending\baseRevision != owner\document\revision
+            MapCursor\release(pending\cursor)
+            MapTable\removeInt(owner\pendingTransfers; pending\id)
+            throw: MapFailure("transfer destination changed; issue a new load")
+        private: @: snapshot sys\fromLmx(envelope\text)
+        MapSnapshot\validate(snapshot)
+        private: int: position MapCursor\position(pending\cursor)
+        MapSize\sum(MapTree\length(owner\document); MapVector\size(snapshot\body); owner\document\scope\limit)
+        private: @: receipt (copy(MapTransferReceipt))
+        owner\healthy := 0
+        private: @: mapping MapSnapshot\import(owner\document; position; snapshot)
+        receipt\requestId := pending\id
+        receipt\documentId := owner\document\id
+        receipt\revision := owner\document\revision
+        if: envelope\rootId != 0
+            private: @: root MapTable\getInt(mapping; envelope\rootId)
+            if: root != MapNil
+                receipt\rootId := root\id
+        ---
+        MapCursor\release(pending\cursor)
+        MapTable\removeInt(owner\pendingTransfers; pending\id)
+        owner\healthy := 1
+        MapOwnerPublish\publish(owner)
+        if: pending\listener != MapNil
+            post:
+                ask:
+                    pending\listener\complete(text := sys\toLmx(receipt))
+        return: receipt
+
+MapTransferCancel:
+    @: owner
+    int: requestId
+    required: owner requestId
+    return: int
+    cancel:
+        throws: copy(MapThrows)
+        private: @: pending MapTable\getInt(owner\pendingTransfers; requestId)
+        if: pending = MapNil
+            return: 0
+        MapCursor\release(pending\cursor)
+        MapTable\removeInt(owner\pendingTransfers; requestId)
+        return: 1
+
+MapTransferExport:
+    @: owner
+    int: tagId
+    int: requestId
+    required: owner tagId requestId
+    return: @
+    export:
+        throws: copy(MapThrows)
+        if: owner\healthy = 0 || owner\document\txDepth != 0
+            throw: MapFailure("transfer source owner")
+        private: int: i 0
+        while: i < MapVector\size(owner\document\tags)
+            private: @: tag MapVector\get(owner\document\tags; i)
+            if: tag\id = tagId
+                private: @: snapshot MapSnapshot\export(owner\document; MapCursor\position(tag\cursor); MapCursor\position(tag\tail))
+                private: @: envelope (copy(MapTransferEnvelope))
+                envelope\requestId := requestId
+                envelope\rootId := tagId
+                envelope\text := sys\toLmx(snapshot)
+                return: envelope
+            i += 1
+        throw: MapFailure("unknown source tag")
+
+# The OS filesystem implementation is the already declared MapFilePort.
+# This Message reads the canonical LMX snapshot, not arbitrary source code.
+MapFileMessage:
+    @: files
+    []char: path
+    int: requestId
+    return: @
+    readSnapshot:
+        throws: copy(MapThrows)
+        private: @: envelope (copy(MapTransferEnvelope))
+        envelope\requestId := requestId
+        envelope\text := node\files\readText(path)
+        private: @: snapshot sys\fromLmx(envelope\text)
+        MapSnapshot\validate(snapshot)
+        if: MapVector\size(snapshot\items) > 0
+            envelope\rootId := snapshot\items[0]\id
+        return: envelope
+
+MapOwnerAddressEntry:
+    []char: name
+    @: address
+
+MapOwnerRegistry:
+    @: entries
+    []char: name
+    @: address
+    return: @
+    get:
+        throws: copy(MapThrows)
+        private: int: i 0
+        while: i < MapVector\size(node\entries)
+            private: @: entry MapVector\get(node\entries; i)
+            if: MapText\equal(entry\name; name) != 0
+                return: entry\address
+            i += 1
+        return: MapNil
+    register:
+        throws: copy(MapThrows)
+        private: @: existing get(name := name)
+        if: existing != MapNil
+            if: existing != address
+                throw: MapFailure("owner name already registered")
+            return: existing
+        private: @: entry (copy(MapOwnerAddressEntry))
+        entry\name := MapText\slice(name; end := length(name))
+        entry\address := address
+        MapVector\push(node\entries; entry)
+        return: address
+
+MapTransfer:
+    @: start MapTransferStart\start
+    @: accept MapTransferAccept\accept
+    @: cancel MapTransferCancel\cancel
+    @: export MapTransferExport\export

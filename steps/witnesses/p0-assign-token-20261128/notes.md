@@ -79,6 +79,21 @@
 | Реестр ограниченных форм (588 случаев) | строки 578 случаев равны базе; 10 иных — случаи перехода | `light/bounds-diff.out` |
 | lmx-dev, связка `depth-removal-depth02`, `check:syntax` двух изменённых модулей | passed, achievedPhase `P0 syntax`; runId `20261128-062730-bbfe90a26b72` (`p0_parser.lm2`), `20261128-062733-7c1e28614db9` (`l2_graph_build.lm2`) | `build2/lmx_dev/runs/` |
 
+Проверки после публикации среза (`1ae7083cf`), по приказу `SOL-CODER-V3-RESUME-20261129`; набор тот же,
+`coder-assign01`.
+
+| Проверка | Результат | Расписка (`build2/coder-grammar-20261127/assign-01/`) |
+| --- | --- | --- |
+| Размещённый frontend, контрольная пара Sol `hosted-minimal` (07:12–07:14), через сервис `check:translate`, связка `assign-token-assign01` | `control.lm2` отвергнут — «the program has no source table `primitive.description`» на 9:5 (обычное присваивание); `group.lm2` отвергнут — «unsupported body» на 9:13. Сервис переводит один файл без закреплённых частей, поэтому положительной половины через сервис нет | `build2/lmx_dev/runs/20261128-071233-a122fce0779e`, `20261128-071235-2f171dcdb2fe` |
+| Та же пара вручную frontend `coder-assign01` с закреплёнными частями (`l2trans 0 entry 0 -- SOURCE l2src/convert.lm2 l2src/primitive.lm2 OUT.lm1`, cwd `stage-assign-01/src`) | `control.lm2` → rc 0, L1 из 1473 строк: `l2_m0` — `assign_probe_value` (литерал 7 в результат), `l2_m1` — `assign_probe_eval` с местами `l2_q0_a`, `l2_q1_b`, `l2_q2_c`, строкой присваивания `l2_bind_row44` и двумя сложениями возвращаемого. `group.lm2` → rc 1, L1 нет: «l2trans error: …group.lm2:9:13: unsupported body», «l2trans detail: atom=:=» | `hosted-minimal/run/` |
+| Вывод: немого пропуска нет | Размещённый путь отвергает групповую форму на самом токене и называет атом; L1 не выдаётся; ничего не исправлялось. Отказ общий: `lm_p0_lower_types_node` (`p0_parser.lm2:7195–7208`) отказывает явно разделителю среза, `?` и форме глубины, а для атома `:=` строки нет — сообщение даёт ядро frontend (`l2_frontend_core.lm2:4910–4913`). Вариант `--primitive-profile` программный файл не переводит (одинаковые 1234 строки на оба файла, без функций пробы) | — |
+| `emit … forced`, `builder_group_assign.lmx` (06:32) | `build answered 2`, «bare := requires its Expression projection» на 17:9, файла выдачи нет — как native | `extra/` |
+| Полный список (`tests/full-suite.tsv`), 07:15–07:35 | SUITE 237 rows, 48 failures (EXIT 30, L2 16, RUN 2) — те же 48 строк, что у набора `coder-depth02`: нормализованные списки равны | `accept/full/failures.tsv` |
+| Самопроверки ядра (07:36–07:39) | SUITE 17 rows, 0 failures | `accept/selftests/` |
+| Набор графа (07:39–07:57) | 665 вердиктов, равны базе 665, изменённых 0 (зелёные с обеих сторон 502, красные с обеих 163) | `accept/graph/graph-compare.tsv` |
+| Самосборка: `bootstrap quick` от набора кандидата на чистой стадии `stage-g12-1h` (07:57–08:20) | BOOTSTRAP quick 0 failures; дым 10 rows, 0 failures; два поколения целиком | `accept/g12/bootstrap-quick.log` |
+| Фиксированная точка G1 = G2 | SAME ×5, EXE-SAME ×3 (PE без двух меток времени: 0 различающихся байт); потреблённые входы 363 = 363, манифесты равны | `accept/g12/fixedpoint.log`, `accept/g12-compare.out` |
+
 Источники `docs`, принятые теперь (46): 18 живых — `docs/spec/examples/array_expressions/place_rotation.lm3` и его
 копия в `doc_examples`, `assignment_forms/004_place_rotation`, `009_returned_array`, `010_sibling_groups` и три
 копии, `expression_slices/006_group_rotation` и копия, `operator_depth/002_assignment_levels` и копия,
@@ -91,10 +106,11 @@
 
 ## Что этим не заявлено
 
-- Широкие проверки набора (полный список, самопроверки ядра, набор графа, `bootstrap quick`) в этом окне не
-  запускались: они должны следующему сеансу, прежде чем набор станет базой широких заявлений.
+- Широкие проверки набора (вторая таблица) пущены после публикации среза, 07:15–08:20, и записаны отдельным
+  коммитом документации — тот же порядок, что у срезов 1c и глубины.
 - Контексты корня, индекса и вызова вне случаев набора — пробы (`assign-01/check/assign-check.out`); смысл этих
   записей определит механизм Expression.
-- Путь размещённого frontend (P0 → `lm_p0_lower_types` → L1) на этой форме не измерялся.
+- Положительная половина размещённого пути показана только вручную, с закреплёнными частями (`convert.lm2`,
+  `primitive.lm2`); через сервис `check:translate` один файл их не получает.
 - `check:translate` через связку lmx-dev для машинного модуля не заявляется: фаза переводит файл как программу.
   Перевод подтверждён ручной трансляцией frontend `coder-depth02` (exit 0) и сборкой цепочки из него.

@@ -5672,9 +5672,41 @@ sub: lm_p0_blank_after_open_pair (c.LmP0Document@: document; const: (char@: sour
     c.snprintf(document\diagnostic\message, 256U, "blank line inside an unclosed form (the opening delimiter is at %zu:%zu)", opener_line, opener_column)
 
 # Original: parser.lm1:3677 lm_p0_parse_stream
-fn: lm_p0_parse_stream (c.LmP0Document@: document) int
-    const: (char@: source)
-    size_t: byte_count
+# The state of the stream automaton at a returned boundary (the slice P0/MIX A1): what were the locals of
+# lm_p0_parse_stream. One step is one iteration of the stream (lm_p0_parse_stream_step); the record is
+# made and freed by the owner of the run. With the buffer input the automaton runs every step to the end, as
+# it did before the record existed. The ten values are loaded into the locals of a step at its start and stored
+# back at every exit; a member of the record is read and written by its name, never passed on as an argument.
+sub: lm_p0_parse_stream_load (c.LmP0StreamState@: state; size_t@: offset; size_t@: line; c.LmP0IndentStack@@: indent_stack; c.LmP0Stack@@: stack; c.LmP0PendingDelimiter@@: pending; c.LmP0PendingMix@@: pending_mix; c.LmP0StreamEvent@@: event; int@: has_last_physical_level; int@: group_base_set; size_t@: last_physical_level)
+    offset[0] := state\offset
+    line[0] := state\line
+    indent_stack[0] := (cast: (c.LmP0IndentStack@) state\indent_stack)
+    stack[0] := (cast: (c.LmP0Stack@) state\stack)
+    pending[0] := (cast: (c.LmP0PendingDelimiter@) state\pending)
+    pending_mix[0] := (cast: (c.LmP0PendingMix@) state\pending_mix)
+    event[0] := (cast: (c.LmP0StreamEvent@) state\event)
+    has_last_physical_level[0] := state\has_last_physical_level
+    group_base_set[0] := state\group_base_set
+    last_physical_level[0] := state\last_physical_level
+end: lm_p0_parse_stream_load
+
+# Stores the ten values of a step into the state and answers the exit of the step.
+fn: lm_p0_parse_stream_leave (c.LmP0StreamState@: state; size_t: offset; size_t: line; c.LmP0IndentStack@: indent_stack; c.LmP0Stack@: stack; c.LmP0PendingDelimiter@: pending; c.LmP0PendingMix@: pending_mix; c.LmP0StreamEvent@: event; int: has_last_physical_level; int: group_base_set; size_t: last_physical_level; int: answer) int
+    state\offset := offset
+    state\line := line
+    state\indent_stack := indent_stack
+    state\stack := stack
+    state\pending := pending
+    state\pending_mix := pending_mix
+    state\event := event
+    state\has_last_physical_level := has_last_physical_level
+    state\group_base_set := group_base_set
+    state\last_physical_level := last_physical_level
+    return: answer
+end: lm_p0_parse_stream_leave
+
+fn: lm_p0_stream_state_new (c.LmP0Document@: document) c.LmP0StreamState@
+    c.LmP0StreamState@: state 0
     size_t: offset
     size_t: line
     c.LmP0IndentStack@: indent_stack
@@ -5682,26 +5714,24 @@ fn: lm_p0_parse_stream (c.LmP0Document@: document) int
     c.LmP0PendingDelimiter@: pending
     c.LmP0PendingMix@: pending_mix
     c.LmP0StreamEvent@: event
-    int: status
     int: has_last_physical_level
     int: group_base_set
     size_t: last_physical_level
-    source := document\source
-    byte_count := document\source_length
+    state := (cast: (c.LmP0StreamState@) c.lm_own_new_zero(c.sizeof(state[0])))
+    if: state = 0
+        lm_p0_set_diagnostic(document, 1, 0U, 0U, "out of memory while creating the stream state")
+        return: 0
+    ---
     offset := 0U
     line := 1U
-    status := 1
     group_base_set := 0
     has_last_physical_level := 0
     last_physical_level := 0U
-    indent_stack := 0
-    stack := 0
-    pending := 0
-    pending_mix := 0
-    event := 0
     document\root := lm_p0_new_node(document, c.LM_P0_NODE_STRUCTURE)
     if: (document\root = 0)
+        c.lm_own_delete(state, 0)
         return: 0
+    ---
     document\root\span\offset := 0U
     document\root\span\length := document\source_length
     indent_stack := lm_p0_indent_stack_new(document)
@@ -5716,7 +5746,9 @@ fn: lm_p0_parse_stream (c.LmP0Document@: document) int
         lm_p0_stack_delete(stack)
         lm_p0_pending_delimiter_delete(pending)
         lm_p0_pending_mix_delete(pending_mix)
+        c.lm_own_delete(state, 0)
         return: 0
+    ---
     stack\parents[0] := document\root\as\structure
     stack\owners[0] := document\root
     event := lm_p0_stream_event_new()
@@ -5726,271 +5758,326 @@ fn: lm_p0_parse_stream (c.LmP0Document@: document) int
         lm_p0_stack_delete(stack)
         lm_p0_pending_delimiter_delete(pending)
         lm_p0_pending_mix_delete(pending_mix)
+        c.lm_own_delete(state, 0)
         return: 0
-    while: (offset <= byte_count)
-        size_t: line_start
-        size_t: line_end
-        size_t: raw_length
-        size_t: p
-        size_t: level
-        int: dotted_level
-        const: (char@: text)
-        size_t: text_length
-        unsigned: node_flags
-        int: has_leading_mix_prefix
-        int: group_tail
-        size_t: mix_prefix_start
-        size_t: mix_prefix_end
-        line_start := offset
-        if: lm_p0_scan_raw_comment_block(document, source, byte_count, line_start, line, @ offset, @ line)
-            continue
-        if: (document\diagnostic\code != 0)
-            status := 0
-            break
-        if: lm_p0_scan_block_string_event(document, source, byte_count, line_start, line, event, @ offset, @ line)
-            event\level := lm_p0_stream_block_string_level(stack, pending)
-            if: (lm_p0_pending_mix_flush(document, stack, pending, pending_mix, (cast: (size_t) event\level)) = 0)
-                status := 0
-                break
-            if: (lm_p0_stream_apply_event(document, stack, pending, event) = 0)
-                status := 0
-                break
-            continue
-        if: (document\diagnostic\code != 0)
-            status := 0
-            break
-        # The first line of a bracket group's document is the rest of the line the bracket stands on: it has no
-        # indent of its own, its dots are text, and a bracket opened on it is continued as that whole line is.
-        group_tail := ((document\group != 0) && (line_start = 0U))
-        line_end := lm_p0_find_layout_line_end_from(source, byte_count, offset, group_tail, (cast: (size_t) document\group_indent), (cast: (size_t) document\group_dots))
-        raw_length := (line_end - line_start)
-        if: ((raw_length > 0U) && (source[((line_start + raw_length) - 1U)] = '\r'))
-            raw_length := raw_length - 1U
-        ---
-        if: (raw_length = 0U)
-            if: (line_end = byte_count)
-                break
-            if: (group_tail = 0)
-                if: (lm_p0_stream_apply_blank(document, stack, pending, pending_mix, indent_stack) = 0)
-                    status := 0
-                    break
-                has_last_physical_level := 0
-                last_physical_level := 0U
-            lm_p0_advance_layout_line(source, byte_count, line_start, line_end, @ offset, @ line)
-            continue
-        p := line_start
-        level := 0U
-        dotted_level := 0
-        has_leading_mix_prefix := 0
-        mix_prefix_start := 0U
-        mix_prefix_end := 0U
-        if: (((((line = 1U) && (raw_length >= 3U)) && ((cast: (c.uchar) source[p]) = 0xEFU)) && ((cast: (c.uchar) source[(p + 1U)]) = 0xBBU)) && ((cast: (c.uchar) source[(p + 2U)]) = 0xBFU))
-            p := p + 3U
-        ---
-        if: (((p = line_start) && (raw_length > 0U)) && (source[p] = '{'))
-            int: standalone_mix
-            standalone_mix := 0
-            if: (lm_p0_line_is_standalone_mix_run(document, (source + p), ((line_start + raw_length) - p), line, ((cast: (size_t) (p - line_start)) + 1U), @ standalone_mix) = 0)
-                status := 0
-                break
-            if: standalone_mix
-                c.memset(event, 0, c.sizeof(event[0]))
-                event\kind := c.LM_P0_STREAM_EVENT_MIX
-                event\text := (source + p)
-                event\text_length := ((line_start + raw_length) - p)
-                event\line := line
-                event\column := ((cast: (size_t) (p - line_start)) + 1U)
-                event\offset := p
-                if: (lm_p0_pending_mix_push(document, pending_mix, event) = 0)
-                    status := 0
-                    break
-                if: (line_end = byte_count)
-                    break
-                lm_p0_advance_layout_line(source, byte_count, line_start, line_end, @ offset, @ line)
-                continue
-            ---
-        size_t: prefix_start
-        size_t: prefix_end
-        size_t: prefix_anchor
-        prefix_start := 0U
-        prefix_end := 0U
-        prefix_anchor := 0U
-        if: (lm_p0_scan_leading_mix_prefix(document, (source + p), ((line_start + raw_length) - p), line, ((cast: (size_t) (p - line_start)) + 1U), @ prefix_start, @ prefix_end, @ prefix_anchor) = 0)
-            status := 0
-            break
-        if: (prefix_end > prefix_start)
-            has_leading_mix_prefix := 1
-            mix_prefix_start := (p + prefix_start)
-            mix_prefix_end := (p + prefix_end)
-            p := p + prefix_anchor
-        ---
-        if: ((group_tail = 0) && lm_p0_level_dot_at(source, line_start + raw_length, p) != 0)
-            dotted_level := 1
-            while: lm_p0_level_dot_at(source, line_start + raw_length, p) != 0
-                level := level + 1U
-                p := p + 1U
-                while: ((p < (line_start + raw_length)) && c.lm_p0_is_horizontal_space(source[p]))
-                    p := p + 1U
-                ---
-            ---
-            if: (lm_p0_stream_dot_level(document, level, line, ((cast: (size_t) (p - line_start)) + 1U), @ level) = 0)
-                status := 0
-                break
-            ---
-        else:
-            size_t: indent_column
-            if: has_leading_mix_prefix
-                indent_column := lm_p0_visual_column_between(source, line_start, p)
-            else:
-                lm_p0_scan_indent_column(source, p, (line_start + raw_length), @ p, @ indent_column)
-            ---
-            text := (source + p)
-            text_length := ((line_start + raw_length) - p)
-            lm_p0_trim_right(@ text, @ text_length)
-            if: ((text_length = 0U) || (text[0] = '#'))
-                if: (line_end = byte_count)
-                    break
-                if: ((text_length = 0U) && (group_tail = 0) && (has_leading_mix_prefix = 0))
-                    if: (lm_p0_stream_apply_blank(document, stack, pending, pending_mix, indent_stack) = 0)
-                        status := 0
-                        break
-                    has_last_physical_level := 0
-                    last_physical_level := 0U
-                lm_p0_advance_layout_line(source, byte_count, line_start, line_end, @ offset, @ line)
-                continue
-            if: (lm_p0_stream_indent_level(document, indent_stack, group_tail, @ group_base_set, indent_column, line, ((cast: (size_t) (text - (source + line_start))) + 1U), @ level) = 0)
-                status := 0
-                break
-            ---
-        text := (source + p)
-        text_length := ((line_start + raw_length) - p)
-        lm_p0_trim_right(@ text, @ text_length)
-        node_flags := 0U
-        if: ((text_length = 0U) && (level = 0U))
-            if: (line_end = byte_count)
-                break
-            lm_p0_advance_layout_line(source, byte_count, line_start, line_end, @ offset, @ line)
-            continue
-        if: ((text_length > 0U) && (text[0] = '#'))
-            if: (dotted_level && (level > 0U))
-                text_length := 0U
-            else:
-                if: (line_end = byte_count)
-                    break
-                lm_p0_advance_layout_line(source, byte_count, line_start, line_end, @ offset, @ line)
-                continue
-            ---
-        if: ((text_length > 0U) && (text[0] = '%'))
-            size_t: marker_column
-            size_t: header_column
-            size_t: next_offset
-            size_t: next_line
-            size_t: disabled_next_offset
-            size_t: disabled_next_line
-            size_t: skip
-            node_flags := node_flags | c.LM_P0_NODE_INACTIVE
-            marker_column := ((cast: (size_t) (text - (source + line_start))) + 1U)
-            skip := 1U
-            while: ((skip < text_length) && c.lm_p0_is_horizontal_space(text[skip]))
-                skip := skip + 1U
-            ---
-            text := text + skip
-            text_length := text_length - skip
-            lm_p0_trim_trailing_line_comment(@ text, @ text_length)
-            if: ((text_length = 0U) || (text[0] = '#'))
-                lm_p0_set_diagnostic(document, 21, line, marker_column, "disabled marker must be followed by a source item")
-                status := 0
-                break
-            header_column := ((cast: (size_t) (text - (source + line_start))) + 1U)
-            next_offset := line_start
-            next_line := line
-            lm_p0_advance_layout_line(source, byte_count, line_start, line_end, @ next_offset, @ next_line)
-            if: (lm_p0_validate_disabled_block(document, indent_stack, group_base_set, next_offset, next_line, level, text, text_length, line, header_column, @ disabled_next_offset, @ disabled_next_line) = 0)
-                status := 0
-                break
-            c.memset(event, 0, c.sizeof(event[0]))
-            event\kind := c.LM_P0_STREAM_EVENT_DISABLED_BLOCK
-            event\level := level
-            event\node_flags := node_flags
-            event\text := text
-            event\text_length := text_length
-            event\line := line
-            event\column := header_column
-            event\offset := (cast: (size_t) (text - source))
-            if: (lm_p0_stream_apply_event(document, stack, pending, event) = 0)
-                status := 0
-                break
-            offset := disabled_next_offset
-            line := disabled_next_line
-            continue
-        c.memset(event, 0, c.sizeof(event[0]))
-        event\level := level
-        event\node_flags := node_flags
-        event\text := text
-        event\text_length := text_length
-        event\line := line
-        event\column := ((cast: (size_t) (text - (source + line_start))) + 1U)
-        event\offset := (cast: (size_t) (text - source))
-        if: ((text_length = 0U) && (level > 0U))
-            event\kind := c.LM_P0_STREAM_EVENT_DELIM
-        else:
-            event\kind := c.LM_P0_STREAM_EVENT_ITEM
-        ---
-        if: has_last_physical_level
-            if: (level > (last_physical_level + 1U))
-                lm_p0_set_diagnostic(document, 13, line, (cast: (size_t) event\column), "source level increase must be one step")
-                status := 0
-                break
-            if: (((level + 1U) < last_physical_level) && (lm_p0_stream_event_is_tail_cutter(event) = 0))
-                lm_p0_set_diagnostic(document, 13, line, (cast: (size_t) event\column), "source level decrease must be one step unless a tail cutter is used")
-                status := 0
-                break
-            ---
-        if: (lm_p0_pending_mix_flush(document, stack, pending, pending_mix, level) = 0)
-            status := 0
-            break
-        if: has_leading_mix_prefix
-            c.LmP0StreamEvent@: mix_event
-            mix_event := lm_p0_stream_event_new()
-            if: (mix_event = 0)
-                lm_p0_set_diagnostic(document, 1, line, ((cast: (size_t) (mix_prefix_start - line_start)) + 1U), "out of memory while creating leading MIX event")
-                status := 0
-                break
-            mix_event\kind := c.LM_P0_STREAM_EVENT_MIX
-            mix_event\level := level
-            mix_event\text := (source + mix_prefix_start)
-            mix_event\text_length := (mix_prefix_end - mix_prefix_start)
-            mix_event\line := line
-            mix_event\column := ((cast: (size_t) (mix_prefix_start - line_start)) + 1U)
-            mix_event\offset := mix_prefix_start
-            if: (lm_p0_stream_apply_event(document, stack, pending, mix_event) = 0)
-                lm_p0_stream_event_delete(mix_event)
-                status := 0
-                break
-            lm_p0_stream_event_delete(mix_event)
-        ---
-        if: (lm_p0_stream_apply_event(document, stack, pending, event) = 0)
-            lm_p0_blank_after_open_pair(document, source, byte_count, line, line_start, line_end)
-            status := 0
-            break
-        has_last_physical_level := 1
-        last_physical_level := level
-        if: (line_end = byte_count)
-            break
-        lm_p0_advance_layout_line(source, byte_count, line_start, line_end, @ offset, @ line)
     ---
-    if: (status && (lm_p0_pending_mix_flush(document, stack, pending, pending_mix, lm_p0_stream_block_string_level(stack, pending)) = 0))
-        status := 0
-    ---
-    if: (status && (lm_p0_stream_resolve_pending_delimiter(document, stack, pending, (cast: (size_t) -1)) = 0))
-        status := 0
-    ---
+    state\offset := offset
+    state\line := line
+    state\indent_stack := indent_stack
+    state\stack := stack
+    state\pending := pending
+    state\pending_mix := pending_mix
+    state\event := event
+    state\has_last_physical_level := has_last_physical_level
+    state\group_base_set := group_base_set
+    state\last_physical_level := last_physical_level
+    return: state
+end: lm_p0_stream_state_new
+
+sub: lm_p0_stream_state_delete (c.LmP0StreamState@: state)
+    size_t: offset
+    size_t: line
+    c.LmP0IndentStack@: indent_stack
+    c.LmP0Stack@: stack
+    c.LmP0PendingDelimiter@: pending
+    c.LmP0PendingMix@: pending_mix
+    c.LmP0StreamEvent@: event
+    int: has_last_physical_level
+    int: group_base_set
+    size_t: last_physical_level
+    lm_p0_parse_stream_load(state, @ offset, @ line, @ indent_stack, @ stack, @ pending, @ pending_mix, @ event, @ has_last_physical_level, @ group_base_set, @ last_physical_level)
     lm_p0_stream_event_delete(event)
     lm_p0_indent_stack_delete(indent_stack)
     lm_p0_stack_delete(stack)
     lm_p0_pending_delimiter_delete(pending)
     lm_p0_pending_mix_delete(pending_mix)
-    return: (status && (document\diagnostic\code = 0))
+    c.lm_own_delete(state, 0)
+end: lm_p0_stream_state_delete
+
+# One step of the stream: 1 to go on, 0 with the diagnostic set, 2 at the end of the source.
+fn: lm_p0_parse_stream_step (c.LmP0Document@: document; c.LmP0StreamState@: state) int
+    const: (char@: source)
+    size_t: byte_count
+    size_t: offset
+    size_t: line
+    c.LmP0IndentStack@: indent_stack
+    c.LmP0Stack@: stack
+    c.LmP0PendingDelimiter@: pending
+    c.LmP0PendingMix@: pending_mix
+    c.LmP0StreamEvent@: event
+    int: has_last_physical_level
+    int: group_base_set
+    size_t: last_physical_level
+    lm_p0_parse_stream_load(state, @ offset, @ line, @ indent_stack, @ stack, @ pending, @ pending_mix, @ event, @ has_last_physical_level, @ group_base_set, @ last_physical_level)
+    source := document\source
+    byte_count := document\source_length
+    if: offset > byte_count
+        return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 2)
+    ---
+    size_t: line_start
+    size_t: line_end
+    size_t: raw_length
+    size_t: p
+    size_t: level
+    int: dotted_level
+    const: (char@: text)
+    size_t: text_length
+    unsigned: node_flags
+    int: has_leading_mix_prefix
+    int: group_tail
+    size_t: mix_prefix_start
+    size_t: mix_prefix_end
+    line_start := offset
+    if: lm_p0_scan_raw_comment_block(document, source, byte_count, line_start, line, @ offset, @ line)
+        return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 1)
+    if: (document\diagnostic\code != 0)
+        return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 0)
+    if: lm_p0_scan_block_string_event(document, source, byte_count, line_start, line, event, @ offset, @ line)
+        event\level := lm_p0_stream_block_string_level(stack, pending)
+        if: (lm_p0_pending_mix_flush(document, stack, pending, pending_mix, (cast: (size_t) event\level)) = 0)
+            return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 0)
+        if: (lm_p0_stream_apply_event(document, stack, pending, event) = 0)
+            return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 0)
+        return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 1)
+    if: (document\diagnostic\code != 0)
+        return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 0)
+    # The first line of a bracket group's document is the rest of the line the bracket stands on: it has no
+    # indent of its own, its dots are text, and a bracket opened on it is continued as that whole line is.
+    group_tail := ((document\group != 0) && (line_start = 0U))
+    line_end := lm_p0_find_layout_line_end_from(source, byte_count, offset, group_tail, (cast: (size_t) document\group_indent), (cast: (size_t) document\group_dots))
+    raw_length := (line_end - line_start)
+    if: ((raw_length > 0U) && (source[((line_start + raw_length) - 1U)] = '\r'))
+        raw_length := raw_length - 1U
+    ---
+    if: (raw_length = 0U)
+        if: (line_end = byte_count)
+            return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 2)
+        if: (group_tail = 0)
+            if: (lm_p0_stream_apply_blank(document, stack, pending, pending_mix, indent_stack) = 0)
+                return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 0)
+            has_last_physical_level := 0
+            last_physical_level := 0U
+        lm_p0_advance_layout_line(source, byte_count, line_start, line_end, @ offset, @ line)
+        return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 1)
+    p := line_start
+    level := 0U
+    dotted_level := 0
+    has_leading_mix_prefix := 0
+    mix_prefix_start := 0U
+    mix_prefix_end := 0U
+    if: (((((line = 1U) && (raw_length >= 3U)) && ((cast: (c.uchar) source[p]) = 0xEFU)) && ((cast: (c.uchar) source[(p + 1U)]) = 0xBBU)) && ((cast: (c.uchar) source[(p + 2U)]) = 0xBFU))
+        p := p + 3U
+    ---
+    if: (((p = line_start) && (raw_length > 0U)) && (source[p] = '{'))
+        int: standalone_mix
+        standalone_mix := 0
+        if: (lm_p0_line_is_standalone_mix_run(document, (source + p), ((line_start + raw_length) - p), line, ((cast: (size_t) (p - line_start)) + 1U), @ standalone_mix) = 0)
+            return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 0)
+        if: standalone_mix
+            c.memset(event, 0, c.sizeof(event[0]))
+            event\kind := c.LM_P0_STREAM_EVENT_MIX
+            event\text := (source + p)
+            event\text_length := ((line_start + raw_length) - p)
+            event\line := line
+            event\column := ((cast: (size_t) (p - line_start)) + 1U)
+            event\offset := p
+            if: (lm_p0_pending_mix_push(document, pending_mix, event) = 0)
+                return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 0)
+            if: (line_end = byte_count)
+                return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 2)
+            lm_p0_advance_layout_line(source, byte_count, line_start, line_end, @ offset, @ line)
+            return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 1)
+        ---
+    size_t: prefix_start
+    size_t: prefix_end
+    size_t: prefix_anchor
+    prefix_start := 0U
+    prefix_end := 0U
+    prefix_anchor := 0U
+    if: (lm_p0_scan_leading_mix_prefix(document, (source + p), ((line_start + raw_length) - p), line, ((cast: (size_t) (p - line_start)) + 1U), @ prefix_start, @ prefix_end, @ prefix_anchor) = 0)
+        return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 0)
+    if: (prefix_end > prefix_start)
+        has_leading_mix_prefix := 1
+        mix_prefix_start := (p + prefix_start)
+        mix_prefix_end := (p + prefix_end)
+        p := p + prefix_anchor
+    ---
+    if: ((group_tail = 0) && lm_p0_level_dot_at(source, line_start + raw_length, p) != 0)
+        dotted_level := 1
+        while: lm_p0_level_dot_at(source, line_start + raw_length, p) != 0
+            level := level + 1U
+            p := p + 1U
+            while: ((p < (line_start + raw_length)) && c.lm_p0_is_horizontal_space(source[p]))
+                p := p + 1U
+            ---
+        ---
+        if: (lm_p0_stream_dot_level(document, level, line, ((cast: (size_t) (p - line_start)) + 1U), @ level) = 0)
+            return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 0)
+        ---
+    else:
+        size_t: indent_column
+        if: has_leading_mix_prefix
+            indent_column := lm_p0_visual_column_between(source, line_start, p)
+        else:
+            lm_p0_scan_indent_column(source, p, (line_start + raw_length), @ p, @ indent_column)
+        ---
+        text := (source + p)
+        text_length := ((line_start + raw_length) - p)
+        lm_p0_trim_right(@ text, @ text_length)
+        if: ((text_length = 0U) || (text[0] = '#'))
+            if: (line_end = byte_count)
+                return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 2)
+            if: ((text_length = 0U) && (group_tail = 0) && (has_leading_mix_prefix = 0))
+                if: (lm_p0_stream_apply_blank(document, stack, pending, pending_mix, indent_stack) = 0)
+                    return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 0)
+                has_last_physical_level := 0
+                last_physical_level := 0U
+            lm_p0_advance_layout_line(source, byte_count, line_start, line_end, @ offset, @ line)
+            return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 1)
+        if: (lm_p0_stream_indent_level(document, indent_stack, group_tail, @ group_base_set, indent_column, line, ((cast: (size_t) (text - (source + line_start))) + 1U), @ level) = 0)
+            return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 0)
+        ---
+    text := (source + p)
+    text_length := ((line_start + raw_length) - p)
+    lm_p0_trim_right(@ text, @ text_length)
+    node_flags := 0U
+    if: ((text_length = 0U) && (level = 0U))
+        if: (line_end = byte_count)
+            return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 2)
+        lm_p0_advance_layout_line(source, byte_count, line_start, line_end, @ offset, @ line)
+        return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 1)
+    if: ((text_length > 0U) && (text[0] = '#'))
+        if: (dotted_level && (level > 0U))
+            text_length := 0U
+        else:
+            if: (line_end = byte_count)
+                return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 2)
+            lm_p0_advance_layout_line(source, byte_count, line_start, line_end, @ offset, @ line)
+            return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 1)
+        ---
+    if: ((text_length > 0U) && (text[0] = '%'))
+        size_t: marker_column
+        size_t: header_column
+        size_t: next_offset
+        size_t: next_line
+        size_t: disabled_next_offset
+        size_t: disabled_next_line
+        size_t: skip
+        node_flags := node_flags | c.LM_P0_NODE_INACTIVE
+        marker_column := ((cast: (size_t) (text - (source + line_start))) + 1U)
+        skip := 1U
+        while: ((skip < text_length) && c.lm_p0_is_horizontal_space(text[skip]))
+            skip := skip + 1U
+        ---
+        text := text + skip
+        text_length := text_length - skip
+        lm_p0_trim_trailing_line_comment(@ text, @ text_length)
+        if: ((text_length = 0U) || (text[0] = '#'))
+            lm_p0_set_diagnostic(document, 21, line, marker_column, "disabled marker must be followed by a source item")
+            return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 0)
+        header_column := ((cast: (size_t) (text - (source + line_start))) + 1U)
+        next_offset := line_start
+        next_line := line
+        lm_p0_advance_layout_line(source, byte_count, line_start, line_end, @ next_offset, @ next_line)
+        if: (lm_p0_validate_disabled_block(document, indent_stack, group_base_set, next_offset, next_line, level, text, text_length, line, header_column, @ disabled_next_offset, @ disabled_next_line) = 0)
+            return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 0)
+        c.memset(event, 0, c.sizeof(event[0]))
+        event\kind := c.LM_P0_STREAM_EVENT_DISABLED_BLOCK
+        event\level := level
+        event\node_flags := node_flags
+        event\text := text
+        event\text_length := text_length
+        event\line := line
+        event\column := header_column
+        event\offset := (cast: (size_t) (text - source))
+        if: (lm_p0_stream_apply_event(document, stack, pending, event) = 0)
+            return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 0)
+        offset := disabled_next_offset
+        line := disabled_next_line
+        return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 1)
+    c.memset(event, 0, c.sizeof(event[0]))
+    event\level := level
+    event\node_flags := node_flags
+    event\text := text
+    event\text_length := text_length
+    event\line := line
+    event\column := ((cast: (size_t) (text - (source + line_start))) + 1U)
+    event\offset := (cast: (size_t) (text - source))
+    if: ((text_length = 0U) && (level > 0U))
+        event\kind := c.LM_P0_STREAM_EVENT_DELIM
+    else:
+        event\kind := c.LM_P0_STREAM_EVENT_ITEM
+    ---
+    if: has_last_physical_level
+        if: (level > (last_physical_level + 1U))
+            lm_p0_set_diagnostic(document, 13, line, (cast: (size_t) event\column), "source level increase must be one step")
+            return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 0)
+        if: (((level + 1U) < last_physical_level) && (lm_p0_stream_event_is_tail_cutter(event) = 0))
+            lm_p0_set_diagnostic(document, 13, line, (cast: (size_t) event\column), "source level decrease must be one step unless a tail cutter is used")
+            return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 0)
+        ---
+    if: (lm_p0_pending_mix_flush(document, stack, pending, pending_mix, level) = 0)
+        return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 0)
+    if: has_leading_mix_prefix
+        c.LmP0StreamEvent@: mix_event
+        mix_event := lm_p0_stream_event_new()
+        if: (mix_event = 0)
+            lm_p0_set_diagnostic(document, 1, line, ((cast: (size_t) (mix_prefix_start - line_start)) + 1U), "out of memory while creating leading MIX event")
+            return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 0)
+        mix_event\kind := c.LM_P0_STREAM_EVENT_MIX
+        mix_event\level := level
+        mix_event\text := (source + mix_prefix_start)
+        mix_event\text_length := (mix_prefix_end - mix_prefix_start)
+        mix_event\line := line
+        mix_event\column := ((cast: (size_t) (mix_prefix_start - line_start)) + 1U)
+        mix_event\offset := mix_prefix_start
+        if: (lm_p0_stream_apply_event(document, stack, pending, mix_event) = 0)
+            lm_p0_stream_event_delete(mix_event)
+            return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 0)
+        lm_p0_stream_event_delete(mix_event)
+    ---
+    if: (lm_p0_stream_apply_event(document, stack, pending, event) = 0)
+        lm_p0_blank_after_open_pair(document, source, byte_count, line, line_start, line_end)
+        return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 0)
+    has_last_physical_level := 1
+    last_physical_level := level
+    if: (line_end = byte_count)
+        return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 2)
+    lm_p0_advance_layout_line(source, byte_count, line_start, line_end, @ offset, @ line)
+    return: lm_p0_parse_stream_leave(state, offset, line, indent_stack, stack, pending, pending_mix, event, has_last_physical_level, group_base_set, last_physical_level, 1)
+end: lm_p0_parse_stream_step
+
+# The whole stream from its start, as before the record existed: the initial state, every step to the end of the
+# source, then what stands at the end (the pending MIX, the pending delimiter), and the state is freed.
+fn: lm_p0_parse_stream (c.LmP0Document@: document) int
+    c.LmP0StreamState@: state 0
+    int: step 1
+    size_t: offset
+    size_t: line
+    c.LmP0IndentStack@: indent_stack
+    c.LmP0Stack@: stack
+    c.LmP0PendingDelimiter@: pending
+    c.LmP0PendingMix@: pending_mix
+    c.LmP0StreamEvent@: event
+    int: has_last_physical_level
+    int: group_base_set
+    size_t: last_physical_level
+    state := lm_p0_stream_state_new(document)
+    if: state = 0
+        return: 0
+    ---
+    while: step = 1
+        step := lm_p0_parse_stream_step(document, state)
+    ---
+    lm_p0_parse_stream_load(state, @ offset, @ line, @ indent_stack, @ stack, @ pending, @ pending_mix, @ event, @ has_last_physical_level, @ group_base_set, @ last_physical_level)
+    if: (step != 0 && (lm_p0_pending_mix_flush(document, stack, pending, pending_mix, lm_p0_stream_block_string_level(stack, pending)) = 0))
+        step := 0
+    ---
+    if: (step != 0 && (lm_p0_stream_resolve_pending_delimiter(document, stack, pending, (cast: (size_t) -1)) = 0))
+        step := 0
+    ---
+    lm_p0_stream_state_delete(state)
+    return: (step != 0 && (document\diagnostic\code = 0))
 end: lm_p0_parse_stream
 
 # Original: parser.lm1:3964 lm_p0_structure_recount

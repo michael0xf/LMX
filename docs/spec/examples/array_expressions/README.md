@@ -187,3 +187,118 @@ InlineSingletonMismatch:
         @: arr2 [100 200]
         return: arr0 + arr1 + [arr2]
 ```
+
+### Целая степень, отрицательный показатель и пустая матрица
+
+[Полный исходник](integer_matrix_power.lm3).
+
+Публичный [**] использует один FxMatrixPower\power в ../../patterns/LMX_Fn_Receivers/src/array_expression_ops.lmx после общего square/type/exponent admission. Нулевая степень создаёт identity без проверки обратимости; первая возвращает fresh VALUE. Отрицательная степень выполняет одно решение A X = I и тот же binary order; signed q/2 и q%2!=0 не вычисляют -MIN_INT. Нет лишнего I*A или последнего неиспользуемого квадрата. MinimumIntegerMatrixPower получает минимальный int от target harness; число бит не зафиксировано. Эти ожидания не являются отчётом о запуске LMX.
+
+- `MatrixPowerValues\run()`: [{"shape": [2, 2], "flat": [1, 0, 0, 1], "fresh_value": true}, {"shape": [2, 2], "flat": [2, 1, 0, 3], "fresh_value": true}, {"shape": [2, 2], "flat": [4, 5, 0, 9], "fresh_value": true}, {"shape": [2, 2], "flat": [8, 19, 0, 27], "fresh_value": true}, {"shape": [2, 2], "flat": [32, 211, 0, 243], "fresh_value": true}].
+- `NegativeMatrixPowers\run()`: [{"shape": [2, 2], "flat": [0.5, 0, 0, 0.25]}, {"shape": [2, 2], "flat": [0.125, 0, 0, 0.015625]}].
+- `MinimumIntegerMatrixPower\run(exponent)`: {"input": "exponent is target machine int minimum", "shape": [2, 2], "flat": [1, 0, 0, 1], "negates_exponent": false}.
+- `EmptyMatrixPower\run()`: [{"shape": [0, 0], "flat": [], "fresh_value": true}, {"shape": [0, 0], "flat": [], "fresh_value": true}, {"shape": [0, 0], "flat": [], "fresh_value": true}].
+
+```lmx
+# Whole integer powers use one shared binary order and preserve the input.
+# The production LMX parser, translator and runtime have not executed this file.
+# MatrixPowerValues returns I, A, A^2, A^3 and A^5, each as a fresh VALUE.
+MatrixPowerValues:
+    return: @
+    run:
+        throws: copy(`[**]`\throws)
+        [2][2]int: a [2 1; 0 3]
+        return: (a [**] 0; a [**] 1; a [**] 2; a [**] 3; a [**] 5)
+
+# A negative exponent uses one solve against identity before binary powers.
+# The admitted machine-double profile returns exact binary fractions here.
+NegativeMatrixPowers:
+    return: @
+    run:
+        throws: copy(`[**]`\throws)
+        [2][2]double: a [2 0; 0 4]
+        return: (a [**] (-1); a [**] (-3))
+
+# The harness supplies the target int minimum; no hard-coded width or negation.
+# Identity stays identity for every admitted exponent, including MIN_INT.
+MinimumIntegerMatrixPower:
+    int: exponent
+    return: @
+    run:
+        throws: copy(`[**]`\throws)
+        [2][2]double: a [1 0; 0 1]
+        return: a [**] exponent
+
+# Complete empty shape is supplied by TYPE, not inferred from absent elements.
+EmptyMatrixPower:
+    return: @
+    run:
+        throws: copy(`[**]`\throws)
+        [0][0]double: a []
+        return: (a [**] 0; a [**] 1; a [**] (-1))
+```
+
+### Общие bridge-модели: reverse view, complex и sparse
+
+[Полный исходник](matrix_bridge_models.lm3).
+
+Обычные Structures из ../../../core_catalog/types/common_models.lmx описывают данные; сами конструкторы не выполняют native admission или pack. Tensor.strides имеет signed i64 element units. ComplexBuffer planar удаляет ведущую ось компонентов длины2; SparseMatrix CSR имеет zero-based indices и explicit nnz. Адаптер проверяет source-view bounds, actual type, owner, native widths, aliasing и duplicate policy. Нет hidden handles/TypeRef или нового парсера. Production runtime NOT_RUN.
+
+- `ReverseMatrixView\make()`: {"model": "BridgeData\\Tensor", "shape": [2, 3], "strides": [3, -1], "offset": 2, "logical_flat": [3, 2, 1, 6, 5, 4], "reachable_range": [0, 5], "native_admission": "REQUIRE_IMPLEMENTATION"}.
+- `PlanarComplexVector\make()`: {"model": "BridgeData\\ComplexBuffer", "layout": "planar", "profile": "double", "component_shape": [2, 3], "logical_shape": [3], "real": [1, 2, 3], "imaginary": [10, 20, 30]}.
+- `SparseMatrixData\make()`: {"model": "BridgeData\\SparseMatrix", "format": "csr", "shape": [2, 3], "nnz": 3, "values": [10, 20, 30], "indices": [0, 2, 1], "pointers": [0, 2, 3], "dense_allocation": false}.
+
+```lmx
+# Ordinary DATA construction examples using core_catalog/types/common_models.lmx.
+# These methods construct descriptions; they do not claim native admission,
+# numerical conversion, backend calls or a production runtime test.
+# The Array references retain actual storage; no C pointers or handles appear.
+ReverseMatrixView:
+    return: @
+    make:
+        [6]double: values [1 2 3 4 5 6]
+        private: @: view (copy(BridgeData\Tensor))
+        view\array := values
+        view\shape := ([]size_t: [2 3])
+        view\strides := ([]i64: [3 (-1)])
+        view\offset := 2
+        view\layout := "strided"
+        return: view
+
+# Components are two contiguous planes: real=[1,2,3], imaginary=[10,20,30].
+# The logical complex shape is (3); the component Tensor has shape (2,3).
+PlanarComplexVector:
+    return: @
+    make:
+        [2][3]double: values [1 2 3; 10 20 30]
+        private: @: view (copy(BridgeData\Tensor))
+        view\array := values
+        view\shape := ([]size_t: [2 3])
+        view\strides := ([]i64: [3 1])
+        view\offset := 0
+        view\layout := "row-major"
+        private: @: result (copy(BridgeData\ComplexBuffer))
+        result\components := view
+        result\layout := "planar"
+        result\profile := "double"
+        return: result
+
+# CSR represents rows [10,0,20] and [0,30,0]; no dense array is allocated.
+# Indices are zero-based, nnz=3, outer pointers=[0,2,3].
+SparseMatrixData:
+    return: @
+    make:
+        [3]double: values [10 20 30]
+        private: @: entries (copy(BridgeData\Buffer))
+        entries\array := values
+        entries\offset := 0
+        entries\count := 3
+        entries\writable := 0
+        private: @: result (copy(BridgeData\SparseMatrix))
+        result\format := "csr"
+        result\shape := ([2]size_t: [2 3])
+        result\values := entries
+        result\indices := ([]size_t: [0 2 1])
+        result\pointers := ([]size_t: [0 2 3])
+        return: result
+```

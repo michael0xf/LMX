@@ -115,20 +115,15 @@ Integer and floating literal forms follow ANSI C/C99: decimal, octal, and hexade
 
 ## 5. Bare and exact identifiers
 
-A bare name and the same admissible name written in backticks have one canonical
-identity. Exact identifier content is decoded once and remains atomic in every
-receiver or Expression position. For example, `` `@name` `` is one name, and
-`` `++counter` `` is one name; neither is re-tokenized by the translator.
-The existing `@` receiver needs no quoting. P0 already admits every receiver
-in Expression through its common structural rules; the translator preserves
-the receiver's argument roles. [Operation forms](OPERATION_FORMS.md) specifies
-the shared semantic handling without another scanner or a quotation flag.
+The graph name of a written identifier consists of every byte of its token. Both enclosing backticks and both bytes of every internal pair belong to an exact identifier's name. The tokens `x` and `` `x` `` denote distinct names. For `` `@name` `` and `` `++counter` `` the same one-token boundaries apply in Frames and Expression. The ordinary `@` receiver retains its bare spelling. [Names and paths](LMX_semantics.en.md#fields) · [Operation forms](OPERATION_FORMS.md).
 
-Sources: §§3.4.2–3.4.3.
+Sources: §§3.4.2–3.4.3, November 28, 2026 revision.
 
-A portable bare identifier has the form `[A-Za-z_][A-Za-z0-9_]*`. It contains no spaces. An exact identifier is delimited by backticks; a doubled backtick inside denotes one literal backtick. Other bytes, spaces, punctuation, line breaks, and indentation are preserved. An empty name is allowed; NUL before the closing delimiter is an error. Backslash introduces no separate escape mechanism here.
+A portable bare identifier has the form `[A-Za-z_][A-Za-z0-9_]*`. Backticks (U+0060) delimit an exact token. The scanner passes a doubled internal backtick as part of the token. Spaces, operator characters, brackets, punctuation, line breaks, indentation and backslashes inside it are preserved. A backslash introduces no additional escape and shielded contents are not parsed again. An unclosed token or NUL within it produces a source diagnostic. A token consisting of two backticks gives a two-byte name.
 
-The identifier value is its content after delimiter removal and doubled-backtick unescaping. If that value is valid unquoted, both spellings denote the same name. An exact token is atomic in head, argument, and expression positions; operators, comments, and levels are not recognized inside it. Quoting does not escape semantic name reservation: in the language profile, `node` and `` `node` `` are equally reserved (the norm of 2026-11-19 keeps `node`, decision R08; the name `data` has no special meaning -- [what is withdrawn](LMX_semantics.en.md#removed-builtins)). The general grammar itself does not prescribe that name's runtime meaning.
+Where a consumer explicitly accepts a name as a string, the key is the length and bytes of the `[]char` value. Double quotes delimit a literal. The string contents are passed as one key even if they contain a path separator. NUL is rejected at the name boundary. An admitted empty string supplies a zero-length name. Name absence has a separate representation. In an ordinary value position the string remains data. Syntax for creating and selecting arbitrary fields by string is specified separately under the [named place contract](LMX_semantics.en.md#field-name-keys).
+
+The reserved context meaning belongs to bare `node`. The token `` `node` `` gives a distinct key that resolves under the ordinary rules in a user-name position. Admitted names retain exact length-and-byte comparison, case, and their original Unicode form. Service names, fields, formals, named actuals, `end` targets and method references follow one rule.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 2224–2224.
 
@@ -795,8 +790,7 @@ Expression uses the ordinary source graph plus a semantic grouper for both prior
 
 The existing attached-unary class has a side, left or right, and exactly one atom. It applies generally, rather than being hardcoded to `++` and `--`. Ordinary infix/prefix operands, including `:=`, receive no parser exception by name or PLACE/NAME role. The common analysis retains each left occurrence and its value context; role consumption belongs to the resolved method. `(:= a 1)` is delivered as absent left, depth absent and right [a,1], while `(a := 1)` is delivered as left a, depth absent and right [1]. Only the assignment method makes their effects equivalent; the parser and binder never transpose these actuals. [Method consumption](LMX_semantics.en.md#operand-left-view).
 
-Receiver spelling can use the same canonical symbolic name in backticks,
-for example `` `+`(a; b) ``. Colon is the existing structural delimiter and
+A receiver call uses the published key. For example, `` `+`(a; b) `` calls a method declared under that exact name. The bare operator `+` has its own key. Colon is the existing structural delimiter and
 is not appended to an operator name. One-argument attached applications select
 the complete variants `++var`, `var++`, `--var` and `var--` from their already
 parsed placement. `var` denotes the one argument position, not a variable name
@@ -1402,7 +1396,7 @@ values[:] := 0
 matrix[:][:] .: row
 ```
 
-Exact identifiers in backticks preserve one name. `` `+` `` and bare `+` address the same canonical operation where that name is admitted; `` `[* 1:0]` `` is literally that name, not a parsed configuration. Depth decoration is not appended inside an exact name. Quoting does not choose VALUE/TYPE/RAW/PLACE or make a Structure callable. [Operation forms](OPERATION_FORMS.md).
+Backticks preserve one exact token with all its bytes. The bare operation `+` has a one-byte name, and `` `+` `` gives a different name. Exact `` `[* 1:0]` `` remains a literal name. The depth decoration is not added to the name. Backticks do not choose VALUE/TYPE/RAW/PLACE or make a Structure callable. [Operation forms](OPERATION_FORMS.md).
 
 ### Square whole and indexed operations
 
@@ -1427,7 +1421,7 @@ Outside protected lexical modes, the immediate pair `.(` always starts a modifie
 
 Decimals `1.5`, `.5`, `1.` and `1.+2` retain their numeric reading; the last contains `1.` followed by +, not a dotted operation. Strings, comments and exact names are protected. Type prefixes `[](N)int`/`@(N)int`, square values and index/slice suffixes keep their distinct contexts.
 
-The square helper owns only its current-level separators and closing `]`. On `{`, `(`, nested `[` or a literal it delegates the complete region to the common parser and resumes from the returned `nextPosition`; it does not search for nested closers, particularly `}`. Its successful result points immediately after its own `]`. Source grouping is finished before the pure-graph Expression grouper runs. The full interface, slice/axis boundary policies and pseudocode are in [BRACKET_SUBPARSER](BRACKET_SUBPARSER.en.md).
+The square helper owns only its current-level separators and closing `]`. On `{`, `(`, nested `[` or a literal it delegates the complete region to the common parser and resumes from the returned `nextPosition`; it does not search for nested closers, particularly `}`. Its successful result points immediately after its own `]`. Source grouping is finished before the pure-graph Expression grouper runs. The full interface, slice/axis boundary policies and phase contracts are in [BRACKET_SUBPARSER](BRACKET_SUBPARSER.en.md).
 
 `fuse(expression)` is an ordinary RAW receiver. The source parser does not decide eligibility. The required initial executor profile is Scalar/Map with a fresh result; reductions, contractions and merged stores require explicitly supported additional profiles.
 

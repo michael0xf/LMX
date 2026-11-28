@@ -170,125 +170,106 @@ For `[]int: nums [0 1 2 3 4 5 6]`:
 <a id="receiver-algorithms"></a>
 ## 8. Receiver bodies and implementation boundaries
 
-The following is algorithmic pseudocode, not new LMX syntax. `obtainValue`,
-`admitIfCondition`, `readElement` and `allocateLike` denote integration points
-for existing namespace, `if` admission, Array access and allocation with the
-complete storage profile. They are not invented system functions or kernel
-stubs. Executable host-model bodies are in
-[`ternary_slices_reference.py`](tools/ternary_slices_reference.py).
+This section specifies the phases shared by the existing namespace, `if`
+admission, Array access and storage mechanisms. It does not introduce a second
+evaluator or new public system functions. LMX examples are in
+[expression_slices](examples/expression_slices/README.md); the executable
+**host verification model** is separately kept in
+[ternary_slices_reference.py](tools/ternary_slices_reference.py). A passing
+host test is not evidence that these receiver contracts run in production LMX.
 
 ### One conditional body
 
-```text
-conditionalMethod(conditionOccurrence, yesOccurrence, noOccurrence):
-    condition = obtainValue(conditionOccurrence, its original context)
-    admitIfCondition(condition)
-    selected = yesOccurrence if condition != 0, otherwise noOccurrence
-    return obtainValue(selected, its original context)
+```lmx
+condition ? yes : no
+`?:`(condition; yes; no)
 ```
 
-The inputs are RAW occurrences, not ready values. In `a ? b : c`, the method
-receives its condition through one `left` and its arms through two `right`
-items; the `` `?:` `` receiver supplies the same three roles. Neither the
-grouper nor adaptation obtains an unused arm. The selected value keeps its
-identity. Static contract checks do not execute either arm's body.
+The method receives RAW occurrences: one condition through `left` and two
+arms through `right` in the infix form; the receiver supplies the same roles.
+It obtains the condition once in its original context, admits it under the
+ordinary `if` contract, then obtains only the selected arm in that arm's
+original context. The selected value keeps its identity. Neither grouping,
+adaptation nor static contract checking executes an unused arm.
 
 ### Obtaining the descriptor and sharing selection
 
-```text
-prepareSliceSuffix(sourceOccurrence, boundOccurrences, receivingRole):
-    source = obtainValue(sourceOccurrence, its original context)
-    for each of start, stop, step in that order:
-        if absent: retain absence without reading payload
-        otherwise:
-            value = obtainValue(bound occurrence, its original context)
-            immediately admit its integer type
-            retain presence and value
-    shape = actual shape(source)  # after all bound-expression effects
-    plan = normalizeSlice(selected axis length, explicit bound descriptor)
-    return consumeSelection(source, shape, plan, receivingRole)
+| Entry | Ordered preparation |
+| --- | --- |
+| Slice suffix | Obtain the source once. Visit present `start`, `stop`, then `step` expressions, obtaining and immediately admitting each integer before visiting the next. Preserve absence without reading payload. Only after all bound effects, obtain the actual source shape and normalize the selected axis. |
+| Call with an explicit slice descriptor | Ordinary argument handling obtains the source and present descriptor fields; then obtain the actual shape and use the same normalization and VALUE selection. |
+| Strict `slice(source; begin; end)` | Admit integer bounds and `0 <= begin <= end <= N`; use start `begin`, stop `end`, step `1`, count `end - begin`, then the same VALUE selection. This profile does not clip bounds. |
 
-slice(source, explicitSpec):
-    # Ordinary argument handling has obtained source and present fields.
-    shape = actual shape(source)
-    plan = normalizeSlice(selected axis length, explicitSpec)
-    return consumeSelection(source, shape, plan, VALUE)
+Presence belongs to the explicit descriptor; another dynamic scope cannot
+supply an omitted field. A bad early bound stops later bound effects. Backing
+storage is not captured before those effects. Call and suffix share selection
+after their argument descriptors are obtained.
 
-slice(source, begin, end):
-    N = actual length(source)
-    admit integer begin/end and 0 <= begin <= end <= N
-    plan = (start=begin, stop=end, step=1, count=end-begin)
-    return consumeSelection(source, actual shape(source), plan, VALUE)
+```lmx
+values[1:5:2]
+values[::-1]
+values[:-1:-1]
 ```
 
-Presence is checked in the explicit descriptor, without requesting a matching
-field from another dynamic scope. A bad early bound stops later bound effects.
-Backing storage is not captured before bound effects. A call and a suffix
-share selection after their argument descriptors have been obtained.
+The last two forms deliberately differ: omitted reverse stop and written `-1`
+are distinct descriptors.
 
 ### Normalizing the Python-like profile
 
-```text
-normalizeSlice(N, spec):
-    admit N >= 0
-    s = spec.step if present, otherwise 1
-    if s = 0: fail SequenceStep
-    (low, high) = (0, N) if s > 0, otherwise (-1, N-1)
+Length `N` must be nonnegative. An absent step means `1`; zero step fails
+`SequenceStep`. Normalization uses exact signed intermediate arithmetic.
 
-    normalizeBound(present, value, default):
-        if not present: return default
-        if value < 0: value = N + value
-        return min(high, max(low, value))
+| Rule | Positive step `s` | Negative step `s` |
+| --- | --- | --- |
+| Admitted clipped interval | `[0, N]` | `[-1, N - 1]` |
+| Absent start | `0` | `N - 1` |
+| Absent stop | `N` | `-1`, retained as the default sentinel |
+| Present bound | Add `N` if negative, then clip to the interval. | Add `N` if negative, then clip to the interval. |
+| Empty selection | `a >= b` | `a <= b` |
+| Nonempty count | `1 + (b - a - 1) div s` | `1 + (a - b - 1) div (-s)` |
 
-    a = normalizeBound(spec.hasStart, spec.start, 0 if s > 0, otherwise N-1)
-    b = normalizeBound(spec.hasStop, spec.stop, N if s > 0, otherwise -1)
-    if s > 0:
-        count = 0 if a >= b, otherwise 1 + (b-a-1) div s
-    otherwise:
-        count = 0 if a <= b, otherwise 1 + (a-b-1) div (-s)
-    admit count and result storage size before allocating
-    return (start=a, stop=b, step=s, count=count)
-```
-
-Intermediate arithmetic is exact and signed. In particular, `-s` must not
-overflow for the minimum machine integer. Conditional `spec.start` notation
-does not authorize reading absent payload: presence is tested before reading.
-An omitted stop returns default `-1` before explicit-negative adjustment,
-which preserves its distinction from written `-1`.
+Here `a` and `b` are the normalized start and stop. Presence is tested before
+accessing payload. In particular, omitted negative-step stop returns default
+`-1` **before** the explicit-negative adjustment. The mathematical `-s` in
+the count formula must not overflow when `s` is the minimum machine integer;
+use checked/widened or magnitude-safe arithmetic. Admit count and result
+storage size before allocation. The table defines arithmetic, not additional
+LMX receivers or a hidden second slice implementation.
 
 ### Shared collection and stores
 
-```text
-consumeSelection(source, sourceShape, plan, VALUE):
-    result = allocateLike(source, shape with selected axis length plan.count)
-    index = plan.start
-    for position from 0 through plan.count-1:
-        result[position] = readElement(source, index)
-        if position+1 < plan.count: index = index + plan.step
-    return result
+VALUE allocates one independent outer Array with the source's complete
+storage profile and the selected axis length. Common Array traversal reads
+each selected element in order, preserving reference targets and their
+`parent`. It performs no read for an empty selection and no index increment
+after the final read. Multiple axes compose under §4 and the common shape
+traversal; a matrix is not flattened.
 
-consumeSelection(source, sourceShape, plan, PLACE):
-    return operation-local original-place selection (source, sourceShape, plan)
+PLACE retains an operation-local selection of original places, the source
+and checked geometry; it does not allocate a user-visible Array copy.
+Assignment obtains each required RHS actual once. `:=` admits scalar fill or
+exact Array shape correspondence; `.:` requires a slice destination and
+constructs the explicit right-aligned broadcast map. All destination
+geometry, store admission and required source values are stabilized before
+the first write.
 
-assignSelected(selectedPlaces, incoming, selectedMethod):
-    obtain and retain the required RHS actual once
-    if selectedMethod is :=:
-        use scalar fill or exact Array shape correspondence
-    otherwise if selectedMethod is `.:`:
-        require a slice destination and construct right-aligned broadcast map
-    verify unchanged destination geometry and store admission
-    stabilize all required source values before the first write
-    write through the shared selected-place traversal and coordinate map
-    return under the selected method's ordinary result contract
+```lmx
+values[::-1] := values
+matrix[:][:] .: bias
 ```
 
-The loop never reads an empty result and never increments after its final
-read. Multiple axes use the composition in §4 and the common shape traversal;
-this one-dimensional body does not flatten a matrix. `readElement` preserves
-references and `parent`; VALUE produces an independent outer Array. PLACE
-does not allocate a user-visible Array copy. When one RHS value is a returned
-Array, `:=` admits its corresponding elements under the destination contract; three sibling Arrays remain three
-source elements. The grouper does not execute or expand a returned value.
+One RHS Array is consumed under the destination method's element contract;
+three sibling Arrays remain three source elements. The grouper neither
+executes nor expands a returned value. Common prepared assignment uses the
+existing LMX body [FxArrayAssignPrepared](patterns/LMX_Fn_Receivers/src/array_expression_ops.lmx):
+
+```lmx
+FxArrayAssignPrepared\assign(context; source)
+```
+
+This body snapshots the source, admits every mapped RHS value, then writes
+through the prepared common accessors. Its presence does not establish
+production support for extended slice descriptors or PLACE preparation.
 
 ### Source/instance context and fusion
 

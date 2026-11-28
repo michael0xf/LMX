@@ -1,0 +1,39 @@
+# Real LMX orchestration over admitted CODE references. Required providers are
+# in ports.lmx; candidate profile DATA is in backend_profiles.lmx.
+# Concrete c.lmx_bridge_* calls already have one body in ../bindings/*.lm3.
+# Reuse those bodies; do not duplicate C lowering or choose a symbol by string.
+MatrixBackendCall:
+    @MatrixBackendPort: port
+    @: profile
+    []@: operands
+    @: context
+    required: port profile operands context
+    return: @BridgeData\CallResult
+    run:
+        throws: copy(MatrixBackendThrows)
+        private: @MatrixPreparedCall: prepared port\prepare(profile := profile; operands := operands; context := context)
+        private: @MatrixNativeCallAPI: selected prepared\call
+        private: @BridgeData\CallResult: result selected(request := prepared\request)
+        return: port\finish(prepared := prepared; result := result)
+
+# The following named facade has no native algorithm or success stub.
+# The caller supplies a managed request for the exact catalogue entry.
+MatrixNativePrepared:
+    @BridgeData\CallRequest: request
+    required: request
+    return: @BridgeData\CallResult
+    liquidFloatMul:
+        throws: BridgeLowerError
+        return: C99Calls_acoustic_liquid_dsp\capi_87521c170ed40a54(request := request)
+    liquidComplexFloatTranspose:
+        throws: BridgeLowerError
+        return: C99Calls_acoustic_liquid_dsp\capi_d8dd7fe3c46e2d91(request := request)
+    liquidComplexFloatAdjoint:
+        throws: BridgeLowerError
+        return: C99Calls_acoustic_liquid_dsp\capi_e7fb3578f2bf1f43(request := request)
+    fixedPointMul:
+        throws: BridgeLowerError
+        return: C99Calls_numeric_extra_libfixmatrix\capi_6cf9b89544559a6a(request := request)
+    qrHouseholder:
+        throws: BridgeLowerError
+        return: C99Calls_numeric_extra_cminpack\capi_a50d792843e5bdbb(request := request)

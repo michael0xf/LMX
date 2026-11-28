@@ -79,7 +79,8 @@ class TranslatorChecks(unittest.TestCase):
         self.runVariant("--", False, "var--", 7, 6)
 
     def test_exact_names_are_opaque(self):
-        for name in ("@", "@name", "++counter", "counter++", "a+b", "a`b", "++var",
+        for name in ("@", "`@name`", "`++counter`", "`counter++`", "a+b", "`a+b`",
+                     "`a``b`", "``", "++var", "+", "`+`", "node", "`node`",
                      ".+", "..+", ".(10)+", ".:"):
             use = self.site(name)
             self.assertIs(normalizeUse(use), use)

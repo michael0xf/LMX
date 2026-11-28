@@ -1,0 +1,36 @@
+# Whole integer powers use one shared binary order and preserve the input.
+# The production LMX parser, translator and runtime have not executed this file.
+# MatrixPowerValues returns I, A, A^2, A^3 and A^5, each as a fresh VALUE.
+MatrixPowerValues:
+    return: @
+    run:
+        throws: copy(`[**]`\throws)
+        [2][2]int: a [2 1; 0 3]
+        return: (a [**] 0; a [**] 1; a [**] 2; a [**] 3; a [**] 5)
+
+# A negative exponent uses one solve against identity before binary powers.
+# The admitted machine-double profile returns exact binary fractions here.
+NegativeMatrixPowers:
+    return: @
+    run:
+        throws: copy(`[**]`\throws)
+        [2][2]double: a [2 0; 0 4]
+        return: (a [**] (-1); a [**] (-3))
+
+# The harness supplies the target int minimum; no hard-coded width or negation.
+# Identity stays identity for every admitted exponent, including MIN_INT.
+MinimumIntegerMatrixPower:
+    int: exponent
+    return: @
+    run:
+        throws: copy(`[**]`\throws)
+        [2][2]double: a [1 0; 0 1]
+        return: a [**] exponent
+
+# Complete empty shape is supplied by TYPE, not inferred from absent elements.
+EmptyMatrixPower:
+    return: @
+    run:
+        throws: copy(`[**]`\throws)
+        [0][0]double: a []
+        return: (a [**] 0; a [**] 1; a [**] (-1))

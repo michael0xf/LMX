@@ -38,27 +38,18 @@
 
 ## 1. Роль вхождения и структурные связи
 
-VALUE, TYPE, DATA, NAME, PLACE и RAW сохраняют собственные договоры. Для атома-ссылки на Structure в Expression трансляция определяет роль обычным `satisfies` по [шаблону операнда](LMX_semantics.ru.md#operand-receiver). Установленная `1` выбирает операнд, установленный `0` сохраняет один целый Array ссылок (`[]@`). Возможность обоих ответов для неизвестной ссылки даёт ошибку до вычисления, как и другие конкурирующие чтения. Псевдокод получает уже установленный результат проверки. При известной цели, связывании и подготовленном native-входе транслятор генерирует прямой вызов по выбранному плану.
+VALUE, TYPE, DATA, NAME, PLACE и RAW сохраняют собственные договоры. Для атома-ссылки на Structure в Expression трансляция определяет роль обычным `satisfies` по [шаблону операнда](LMX_semantics.ru.md#operand-receiver). Установленная `1` выбирает операнд, установленный `0` сохраняет один целый Array ссылок (`[]@`). Возможность обоих ответов для неизвестной ссылки даёт ошибку до вычисления, как и другие конкурирующие чтения. Группировка использует уже установленный результат проверки. При известной цели, связывании и подготовленном native-входе транслятор генерирует прямой вызов по выбранному плану.
 
-```python
-def classify_expression_item(item, context, operand_match):
-    node = resolve_reference(item)       # без вызова и изменения parent
-    if not is_structure(node):
-        return AtomPlan(node, context)
+| Установленная роль вхождения | Единица плана |
+| --- | --- |
+| Цель не является Structure | Один атом с исходным контекстом. |
+| Атом-ссылка на Structure, `satisfies = 1` | Операнд с исходным вхождением и разрешённой целью. |
+| Атом-ссылка на Structure, `satisfies = 0` | Одно целое значение Array, без обхода полей как CODE. |
+| Непосредственная безымянная Structure | Expression-группа. |
+| Непосредственная именованная Structure с другим фактическим `parent` | Expression-группа. |
+| Непосредственная именованная Structure с текущим лексическим владельцем | Обычный ресивер или вызов по его договору. |
 
-    if is_graph_reference_atom(item):
-        if operand_match == 1:
-            return OperandPlan(item, node, context)
-        return ArrayValuePlan(item, node, context)
-
-    if is_anonymous(node):
-        return GroupPlan(node, context)
-
-    if parent(node) is not context.lexical_parent:
-        return GroupPlan(node, context)
-
-    return ReceiverPlan(node, context)
-```
+Разрешение ссылки не вызывает цель и не меняет её `parent`. Неопределённая роль атома-ссылки отклоняется до этой развилки и до эффектов.
 
 Развилка по имени и фактическому `parent` относится к Structure вне случая атома-ссылки. Безымянная Structure и именованная Structure с другим родителем образуют группы. Именованная Structure с текущим лексическим владельцем в качестве родителя проходит обычное разрешение ресивера или вызова.
 
@@ -106,12 +97,12 @@ arg0 operand arg1 arg2 arg3
 
 Разбор однозначен:
 
-```text
-operation = op
-left      = ABSENT
-depth     = ABSENT
-right     = [1, 2, 3]
-```
+| Позиция | Материал |
+| --- | --- |
+| Операция | Разрешённое вхождение `op`. |
+| `left` | Отсутствует. |
+| `depth` | Отсутствует. |
+| `right` | Три исходных вхождения `1`, `2`, `3` в этом порядке. |
 
 Первый правый элемент не переносится в `left`; отсутствующая позиция не подменяется пустой Structure или нулём. Если договор операции требует `left`, обычный допуск отвергает это применение. Если допускает отсутствие, используются его обычные defaults/правила связывания. Синтаксическая однозначность не означает, что любой ресивер принимает любые аргументы.
 
@@ -138,10 +129,8 @@ right     = [1, 2, 3]
 
 В редакции 27 ноября 2026 года для стандартной степени установлено **`sys\priority("**") = 131`**. Больший числовой приоритет связывает сильнее. Значение выбрано как минимальное целое, строго превышающее и уровень умножения `110`, и существующий порог аргумента унарных `+`/`-`, равный `130`:
 
-```text
-p(**) = max(110, 130) + 1 = 131
-110 < 130 < 131 < 140
-```
+Из потребностей следует `p(**) = max(110, 130) + 1 = 131`, то есть
+`110 < 130 < 131 < 140`.
 
 Здесь `140` — существующий порог аргумента `!`, а не приоритет самой степени или всех унарных операций. Вызов, индекс и доступ к полю по-прежнему формируют атом до инфиксного связывания. Отношения остальных префиксных и постфиксных форм сохраняются; эта правка не помещает степень выше любого префикса.
 
@@ -179,12 +168,10 @@ p(**) = max(110, 130) + 1 = 131
 
 У каждой обычной операции есть отсутствующий либо один левый атом. Группа занимает ту же одну позицию. Для **каждой** операции группировщик сохраняет одинаковый внутренний вид этой позиции: исходное вхождение, область значения по приоритетам и ещё не потреблённый окружающий вычислительный контекст. Никакой проверки имени `:=`, роли PLACE/NAME или особого флага присваивания в разборе нет.
 
-```python
-@dataclass(frozen=True)
-class LeftView:
-    occurrence: object   # один выбранный атом/структурная единица
-    region: object       # область значения и ещё не потреблённый контекст
-```
+| Состав внутреннего представления `LeftView` | Назначение |
+| --- | --- |
+| Исходное вхождение | Один выбранный атом или структурная единица; идентичность сохраняется. |
+| Область | План полного значения и ещё не потреблённый окружающий контекст. |
 
 Это временная информация namespace, не новый аргумент или новый публичный тип LMX. Парсер не решает, какая часть будет потреблена как PLACE, NAME, RAW или значение. Этот смысл задаёт сам метод операнда через свой обычный договор.
 
@@ -223,119 +210,40 @@ class LeftView:
 
 ## 6. Основной цикл разбора
 
-В следующем фрагменте методов `Planner` функция `_binding()` читает готовые описания операций, `classify()` выполняет развилку из раздела 1, а курсор идёт по вхождениям **графа**. У порога есть отношение порядка и правило равенства; прибавлять единицу к реальному `PRIORITY` не требуется.
+Общий проход работает по вхождениям **графа**, читает готовые описания операций и строит временный план без исполнения. У порога есть отношение порядка и правило равенства; прибавлять единицу к реальному `PRIORITY` не требуется.
 
-```python
-def _binding(self, cursor, context):
-    if not cursor.more():
-        return None
-    node = self.view.resolve(cursor.peek(), context)
-    if isinstance(node, DecoratedOperation):
-        node = self.view.resolve(node.operation, context)
-    return self.view.binding(node, context)
+| Фаза | Точное правило |
+| --- | --- |
+| Получение связывания | Разрешить текущее вхождение и готовое описание операции. Для `.(expression)op` приоритет берётся у базовой `op`; исходное выражение depth и его контекст сохраняются без получения значения. |
+| Начало единицы с обычного атома | Применить развилку раздела 1. |
+| Начало единицы с операнда | Сохранить отсутствие `left`. Обычный префикс получает правый хвост по своему префиксному порогу. Прижатая слева операция получает ровно один следующий атом с цепочкой прижатых форм. Прижатая справа операция без предшествующего атома даёт ошибку. |
+| Продолжение единицы | Пока следующая операция допускается текущим порогом, присоединять её к общему левому представлению. Обычный инфикс получает правый хвост по собственному правому порогу; прижатая справа операция не получает нового правого хвоста. Неоперанд, прижатая слева форма или недопустимый порог заканчивают это продолжение. |
+| Правый хвост | Последовательно выбирать единицы того же структурного уровня. В **первой** позиции хвоста операнд допускается как префикс без левого атома, включая `2 ** -2`. После первой единицы операция, не принятая порогом хвоста, заканчивает хвост; прижатая слева форма начинает следующую единицу. |
+| Один прижатый атом | Взять обычный атом либо рекурсивную цепочку прижатых слева операций, затем присоединить непосредственно следующие прижатые справа операции. Отсутствующий атом или обычный неприжатый операнд вместо него — ошибка. Широкий n-арный хвост здесь не потребляется. |
+| Фиксация применения | Сохранить конкретное вхождение операции, исходный диапазон графа, контекст, один `left` либо его отсутствие, описание depth и выбранный `right`. |
+| Завершение уровня | Повторять выбор единиц до конца уровня. Несколько единиц остаются последовательностью. Вложенные Expression-группы рекурсивно проходят этот же механизм и сохраняют одну внешнюю позицию. |
 
-def _depth(self, occurrence, context):
-    node = self.view.resolve(occurrence, context)
-    return node.depth if isinstance(node, DecoratedOperation) else ABSENT
+Например, эти формы используют обычную грамматику LMX:
 
-def _unit(self, cursor, limit, context):
-    start = cursor.index
-    def application(operation, operation_raw, left, right):
-        return Apply(operation, operation_raw, left,
-                     self._depth(operation_raw, context), right, context,
-                     GraphRange(cursor.owner, start, cursor.index))
-    first = self._binding(cursor, context)
-    if first is not None:
-        # An operand in the first position has no left occurrence.
-        operation_raw = cursor.take()
-        if first.attached == "right":
-            raise ValueError("right-attached unary operation needs an atom")
-        if first.attached == "left":
-            if not cursor.more():
-                raise ValueError("left-attached unary operation needs an atom")
-            right = (self._attached_atom(cursor, context),)
-        else:
-            right = self._tail(cursor, first.prefix_limit(), context)
-        left = application(first, operation_raw, ABSENT, right)
-    else:
-        left = self.classify(cursor.take(), context)
-
-    while cursor.more():
-        operation = self._binding(cursor, context)
-        if (operation is None or operation.attached == "left"
-                or not limit.accepts(operation)):
-            break
-        operation_raw = cursor.take()
-        right = (() if operation.attached == "right" else
-                 self._tail(cursor, operation.right_limit(), context))
-        left = application(operation, operation_raw, left_view(left), right)
-    return left
-
-def _tail(self, cursor, limit, context):
-    result = []
-    while cursor.more():
-        next_operation = self._binding(cursor, context)
-        if (result and next_operation is not None
-                and next_operation.attached != "left"
-                and not limit.accepts(next_operation)):
-            break
-        # At the first RHS position, an operand starts a prefix unit;
-        # there is no preceding RHS atom to supply its left argument.
-        result.append(self._unit(cursor, limit, context))
-    return tuple(result)
-
-def _attached_atom(self, cursor, context):
-    """Exactly one atom plus its attachment chain, never an n-ary tail."""
-    start = cursor.index
-    operation = self._binding(cursor, context)
-    if operation is None:
-        unit = self.classify(cursor.take(), context)
-    elif operation.attached == "left":
-        raw = cursor.take()
-        if not cursor.more():
-            raise ValueError("left-attached unary operation needs an atom")
-        target = self._attached_atom(cursor, context)
-        unit = Apply(operation, raw, ABSENT, self._depth(raw, context), (target,), context,
-                     GraphRange(cursor.owner, start, cursor.index))
-    else:
-        raise ValueError("an attached unary operation requires one atom")
-    while cursor.more():
-        operation = self._binding(cursor, context)
-        if operation is None or operation.attached != "right":
-            break
-        raw = cursor.take()
-        unit = Apply(operation, raw, left_view(unit), self._depth(raw, context), (), context,
-                     GraphRange(cursor.owner, start, cursor.index))
-    return unit
+```lmx
+2 * (3 + 4)
+2 ** 3 ** 2
+2 ** -2
+(op 1 2 3)
 ```
 
-Вызов `_unit` в первой позиции не требует фиктивного левого элемента. Цикл верхнего уровня повторяет его до конца выбранного структурного уровня; несколько результатов остаются последовательностью. Этот проход строит зависимости на одном уровне. Затем `normalize_expression` рекурсивно подготавливает вложенные Expression-группы, сохраняя каждую как один внешний атом и не перенося её токены через границу приоритетов. Оба шага относятся к общему группировщику; ни один не выполняет тело операнда.
-
-Полный код, включая `Limit`, `Cursor`, `LeftView`, разрешение graph view, общий вызов метода с присутствующим числовым depth либо его отсутствием без изменения сторон входного вектора и порядок группового присваивания: [expression_grouping_reference.py](tools/expression_grouping_reference.py).
+Второй независимый группировщик для Array, квадратных операций, интерпретатора или native-перевода не вводится. Тела операций во время этого прохода не выполняются. Исполняемая **host-модель** этих правил, включая `Limit`, `Cursor`, `LeftView` и `GraphView`, остаётся в отдельном проверочном файле [expression_grouping_reference.py](tools/expression_grouping_reference.py); это Python-инструмент проверки, не код реализации LMX.
 
 ## 7. Рекурсивный план и упаковка атомов
 
 Уровень разбирается обычным `Planner.plan`; найденные вложенные Expression-группы проходят тот же алгоритм рекурсивно. После обработки содержимого группы применяется общий принцип **одна внешняя позиция**:
 
-```text
-normalizeUnit(unit):
-    если это группа в допущенной позиции Expression:
-        children = normalizeExpression(planLevel(unit.graph, unit.context))
-        если children содержит одну единицу:
-            payload = единственная единица
-        иначе:
-            payload = Group(children)  # включая присутствующую пустую группу
-        вернуть один AtomView(payload, исходное вхождение и контекст)
-    если это полная операция:
-        рекурсивно нормализовать её Expression-аргументы
-        сохранить границы, приоритетный план, исходные вхождения, left/right и описание depth
-    иначе:
-        сохранить единицу по её принимающему договору
-
-normalizeExpression(sequence):
-    вернуть последовательность normalizeUnit(item) для каждого item
-    # не соединять поля соседних результатов-Group
-```
+| Единица после разбора уровня | Рекурсивная нормализация |
+| --- | --- |
+| Группа в допущенной позиции Expression | Тем же алгоритмом обработать содержимое. Одна внутренняя единица становится содержимым одного внешнего атома; ноль или несколько единиц образуют одну материальную подгруппу. Присутствующая пустая группа не означает отсутствие аргумента. |
+| Полная операция | Рекурсивно нормализовать только её Expression-аргументы, сохранив границы, приоритетный план, вхождения, стороны и описание depth. |
+| TYPE, DATA, RAW или другая собственная роль | Сохранить материал по принимающему договору, без обхода как нового CODE. |
+| Последовательность единиц | Применить эти правила к каждой единице. Не объединять поля соседних групп. |
 
 Это внутренние представления, не новые поля исходного графа или системные функции. Необязательный actual depth входит в общий `OPERANDS_TEMPLATE`; описание его ещё не полученного выражения — временная информация применения, а не дополнительный публичный вход. В проверочном коде тонкая обёртка называется `PreparedAtom`, а материальная подгруппа — `PreparedGroup`. У единственного вложенного группового результата нормализуется его представление, поэтому `(((5 6)))` не сохраняет три контейнера в готовом плане: это один внешний атом с подгруппой `(5 6)`. Исходные узлы и контексты остаются доступны через представление.
 
@@ -355,10 +263,10 @@ normalizeExpression(sequence):
 
 Для `(a b c) := (a c b)` обе группы содержат по три единицы. Последовательностный договор получает `a, b, c` и `a, c, b`; отдельная подготовка применения передаёт всю левую последовательность одним `left`, а три правые единицы — массивом ссылок. Для `(a b c) := (f g h) (f g h) (f g h)` справа уже три нормализованные подгруппы: их поля не сливаются в девять аргументов.
 
-```text
-План последовательностей:   a b c  :=  a c b
-Подготовленное применение: := {left: (a b c), depth: ABSENT, right: [a c b]}
-```
+| Представление | Сохранённая форма |
+| --- | --- |
+| Выбранные последовательности | Слева `a, b, c`, справа `a, c, b`. |
+| Применение `:=` | Вся левая последовательность занимает один `left`; depth отсутствует; `right` содержит три ссылки в порядке `a, c, b`. |
 
 `(a b) := (((x y)))` после нормализации единственной группы получает две правые единицы `x`, `y`. `(a b) := (((x y))) z` получает две единицы `(x y)` и `z`. `(a b c) := (((x y)))` отклоняется по количеству до первой записи. Утверждение прежней редакции, что дополнительные singleton-оболочки обязательно сохраняют внутреннюю группу как единственный элемент выбранной последовательности, заменено этим правилом.
 
@@ -403,42 +311,11 @@ normalizeExpression(sequence):
 4. Сохраняет исходные вхождения и контекст, необходимые собственному договору метода для NAME/TYPE/DATA/PLACE/BODY/RAW. RAW должен ссылаться на исходную целую единицу графа или её диапазон в текущем уровне; заменять её заново собранной строкой нельзя.
 5. Передаёт методу выбранную форму **left, depth, right** без переноса первого right в left. Метод сам потребляет аргументы по своему договору; общий namespace затем возобновляет непотреблённый контекст. Полное внутреннее выражение не исполняется во время планирования.
 
-Следующий фрагмент относится к **уже востребованному** применению. До его вызова production namespace должен определить востребованность и сохранить ранее полученные значения окружающего контекста. Сам фрагмент не является планировщиком эффектов, не обходит все применения подряд и не проверяет имя операции или роль её входов:
+Передача выполняется только для **уже востребованного** применения. Обычный namespace устанавливает востребованность и сохраняет ранее полученные значения окружающего контекста; последовательный запуск всех найденных синтаксических применений недопустим.
 
-```python
-def receive_application(application, method, namespace, evaluate, obtain_depth=None):
-    """Receive an ALREADY DEMANDED application, outside the grouper.
+Метод получает неизменные `left`/его отсутствие и выбранную последовательность `right`. Только его собственный договор выбирает VALUE/PLACE/NAME/RAW и эквивалентную обработку префиксной и инфиксной форм. После выполнения namespace подставляет результат в конкретное потреблённое **вхождение**, затем возобновляет непотреблённую область по прежнему порядку эффектов и короткого замыкания. Если левого вхождения нет либо метод потребил всю левую область, результат этого применения уже является её результатом.
 
-    Precondition: the production executor has established demand and retained
-    previously obtained surrounding values. This helper is not a scheduler:
-    evaluate must resume the existing context, preserving its effect order and
-    short-circuit rules. Calling every syntactic Apply eagerly is incorrect.
-
-    The method receives the unchanged left view/absence and unchanged right
-    sequence. Only *inside that method* may it choose equivalent handling of
-    prefix/infix forms or a PLACE/NAME/RAW/value consumption contract. Neither
-    the grouper nor this dispatcher moves right[0] to left. MethodOutcome is
-    model bookkeeping for the existing namespace dependency mechanism, not a
-    new public LMX result type or an extra return field required of methods.
-    evaluate(plan, replacements) substitutes by occurrence identity, never by
-    identifier spelling. A production executor retains its demand/effect rules.
-    """
-    def missing_depth_integration(expression, context):
-        raise NotImplementedError("dynamic depth needs the ordinary namespace value request")
-    actuals = prepare_operand_arguments(application.left, application.depth,
-                                       application.right,
-                                       obtain_depth or missing_depth_integration)
-    outcome = method.invoke(actuals.left, actuals.depth, actuals.right,
-                            namespace, evaluate)
-    if application.left is ABSENT:
-        return outcome.value
-    region = application.left.region
-    if outcome.consumed_left_region is region:
-        return outcome.value
-    return evaluate(region, {id(outcome.consumed_left_region): outcome.value})
-```
-
-`MethodOutcome` здесь — учёт потребления в проверочной модели namespace. Это не новый публичный возвращаемый тип, скрытый параметр или обязательное поле LMX-метода. Заменяется конкретное вхождение графового плана, а не все совпадающие имена.
+В host-модели учёт потребления называется `MethodOutcome`; это не новый публичный тип, скрытый параметр или обязательное поле LMX-метода. Замена определяется идентичностью вхождения графового плана, а не совпадением написанных имён. Для динамического depth требуется обычный запрос значения из namespace; отсутствие такого подключения не заменяется выдуманным числом или пробным запуском.
 
 План сохраняет не только имя и готовый приоритет, но и конкретное вхождение операции (`operation_raw` в проверочном коде). Обработчик выбирается по разрешённой операции и её контексту, а не заново по строке имени. `GraphRange` удерживает исходный графовый диапазон целого выражения для RAW; текстовая реконструкция не требуется.
 
@@ -446,18 +323,19 @@ def receive_application(application, method, namespace, evaluate, obtain_depth=N
 
 Для группового присваивания порядок выглядит так:
 
-```python
-values = [read_once(item) for item in right_items]
-validate_all(targets, values)  # арность, места и типы до первой записи
-for target, value in zip(targets, values):
-    write(target, value)
+Общее тело [FxArrayAssignPrepared](patterns/LMX_Fn_Receivers/src/array_expression_ops.lmx) сначала получает снимок RHS, затем допускает все значения и лишь после этого начинает записи. Вызов уже подготовленного контекста записывается на LMX:
+
+```lmx
+FxArrayAssignPrepared\assign(context; source)
 ```
+
+`context` здесь — подготовленные реальные места и проверенная геометрия назначения, `source` — уже выбранный источник. Подготовка не выдумывает отдельный цикл записи для каждого оператора.
 
 Таким образом, перестановка не читает уже изменённую левую часть. Ошибка количества или допуска не оставляет частично выполненной записи. Предыдущие побочные эффекты самих RHS при этом не получают новой транзакционной отмены.
 
 ## 10. Контракт depth и одного Array-подъёма
 
-Полный договор находится в [OPERATOR_DEPTH](OPERATOR_DEPTH.ru.md). `DecoratedOperation` в псевдокоде — представление уже разобранного вхождения `.(expression)op`, не новый тип LMX. `_binding()` получает приоритет базовой операции; `_depth()` сохраняет выражение/готовое значение либо ABSENT. Отсутствие actual проверяется у данного применения; одноимённое поле другого динамического контекста модификатора не создаёт.
+Полный договор находится в [OPERATOR_DEPTH](OPERATOR_DEPTH.ru.md). Временное представление уже разобранного вхождения `.(expression)op` сохраняет базовую операцию, её готовый приоритет и выражение/готовое значение depth либо его отсутствие; это не новый тип LMX. Отсутствие actual проверяется у данного применения; одноимённое поле другого динамического контекста модификатора не создаёт.
 
 Общий transport передаёт одно целое, включая отрицательное; custom-метод волен использовать его иначе и не включать Map. Ни группировщик, ни общий transport не проверяют d<=rank. Дальнейшие правила относятся только к выбранному стандартному Array-профилю.
 
@@ -465,27 +343,23 @@ Rank — число осей Array. В этом профиле явный depth=
 
 Отсутствие depth не подменяется числом. Default обычного Map — максимальный обход; default целостного `[op]` или потребителя DATA/TYPE/RAW — его собственный договор. После выбора ячеек выполняется **один вызов базового тела на ячейку без повторного автоматического Map**. Например, скалярный базовый `+` отказывается принимать строки матрицы при depth=1; depth=2 либо 0 подаёт её скалярные элементы. Пользовательский kernel может явно иметь договор целой строки.
 
-```text
-invokeArrayProfile(method, actuals, context):
-    select the declared method/profile without trial execution
-    retain depth absence or obtain its explicit nonnegative integer once
-    obtain VALUE actuals under their demand/role contracts
-    retain held actuals ($x) whole; exclude them from the external frame
-    choose the method's default plan if depth is absent
-    otherwise for each iterated Array of rank K:
-        traversed = K if depth == 0 else depth
-        require traversed <= K
-        frame = first traversed axes
-        cell = remaining axes
-    require all iterated frames to match exactly
-    establish result type/shape without probing a kernel on an empty frame
-    for each frame coordinate in declared order:
-        invoke the base body once on selected cells and held/scalar actuals
-        # Do not invoke this automatic lifting layer again on those cells.
-    assemble the declared result without rewriting the source graph
+| Фаза стандартного Array-профиля | Обязательный результат |
+| --- | --- |
+| Выбор | Метод и профиль выбраны по договору без пробного исполнения. Получение VALUE и явного depth подчиняется востребованности; пропуск depth сохраняется. |
+| Внешний frame | Удержанные `$x` исключены из обхода; скаляры не создают осей. При явном d у каждого итерируемого Array обходятся все K осей при d=0 либо первые d при d>0. Значения d<0 и d>K отвергаются **этим профилем**. Остаток составляет ячейку. |
+| Совместимость | Итерируемые frame совпадают точно. Тип, форма и размер результата известны до выделения памяти, включая пустой frame; kernel для определения типа не вызывается. |
+| Исполнение | Для каждой координаты в объявленном порядке базовое тело получает выбранные ячейки и целые удержанные/скалярные actual ровно один раз. Автоматический Map на полученных ячейках повторно не включается. |
+| Результат | Общая сборка сохраняет объявленную форму, тип и профиль хранения; исходный граф не переписывается. |
+
+Для явного depth существующее тело вызывается на LMX:
+
+```lmx
+FxArrayDepth\apply(context; depth; inputs)
 ```
 
-Это псевдокод выбранного профиля, не новая системная функция LMX. Выбранный метод может вызвать обычную Array-операцию в собственном теле; это следующее явное применение. Structure `[]@` участвует в том же механизме по фактическим типам элементов и не получает исключения. Нельзя автоматически считать все достижимые ссылки, служебный parent или дескриптор типа дополнительными осями.
+[FxOperandValueEngine](patterns/LMX_Fn_Receivers/src/coreStandardLisp.lmx) сначала проверяет присутствие depth в actual frame. При отсутствии он вызывает исходное тело по его договору; при наличии получает depth один раз, запрашивает общий `operandDepthContext` и вызывает `FxArrayDepth`. Этот исходник не доказывает реализации kernel-порта подготовки контекста.
+
+Выбранный метод может вызвать обычную Array-операцию в собственном теле; это следующее явное применение. Structure `[]@` участвует в том же механизме по фактическим типам элементов и не получает исключения. Нельзя автоматически считать все достижимые ссылки, служебный parent или дескриптор типа дополнительными осями.
 
 Удержание не выбирает скрыто `bias[j]` и не делает объект immutable. Численная точность, эффекты, допуск Array, пустые frame и сборка результата остаются условиями [общей спецификации](TENSOR_EXPRESSIONS.md).
 
@@ -501,13 +375,12 @@ invokeArrayProfile(method, actuals, context):
 
 Условный метод получает RAW-области условия и обеих ветвей, затем вызывает существующее получение значения только для востребованных частей:
 
-```python
-def evaluate_conditional(condition_occurrence, yes_occurrence, no_occurrence):
-    condition = obtain_once(condition_occurrence)
-    require_int_truth(condition)
-    selected = yes_occurrence if condition != 0 else no_occurrence
-    return obtain_once(selected)
+```lmx
+condition ? yes : no
+`?:`(condition; yes; no)
 ```
+
+Обе формы передают исходные RAW-вхождения. Метод получает условие один раз, допускает его по договору `if` и получает значение только выбранной ветви в её исходном контексте. Тело другой ветви не запускается, а тождество выбранного результата сохраняется.
 
 Это один договор для `a ? b : c` и `` `?:`(a; b; c) ``; вызов receiver не получает заранее три значения. Приоритет между `||` и присваиваниями, вложение справа. Парсер защищает вложенные двоеточия; группировщик потребляет готовые области. Отсутствующий depth условного метода не подменяется 0.
 

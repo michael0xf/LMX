@@ -405,7 +405,14 @@ The [independent qualifier](#qualification) cuts the external lexical parent at 
 
 @@ fields | Имена и пути | Names and paths | 2.3; 13.1; 14.1; 21.1-2; 21.11
 [RU]
-Простая и точная (в обратных кавычках) записи одного и того же идентификатора разрешаются в одно каноническое имя через существующую таблицу имён. Обратные кавычки снимаются, удвоенные внутренние обратные кавычки декодируются один раз; полученное содержимое никогда не разбирается как другое выражение. Поэтому `` `@name` `` и `` `a+b` `` — целые имена. Та же идентичность действует для полей, import, перегрузок, ссылок на методы, `sys\name`, `sys\priority` и сериализации. Не вводятся ни приведение регистра, ни нормализация Unicode, ни диспетчеризация по способу записи в кавычках, ни дополнительный реестр операторов. Обычный ресивер `@` сохраняет свою существующую запись без кавычек.
+Ключ написанного идентификатора — длина и все байты токена. Внешние обратные кавычки и удвоенные внутренние кавычки входят в имя. Например, `x` имеет ключ `78`, а `` `x` `` — ключ `60 78 60`. Защищённый токен `` `a+b` `` хранит пять байтов и остаётся одним именем. Встроенные, пользовательские и импортированные имена проходят через ту же таблицу. Сравнение сохраняет регистр и исходные байты Unicode. Внутри одного контекста интернированные строки по-прежнему допускают сравнение по каноническим адресам.
+
+<a id="field-name-keys"></a>
+### Написанное имя и строковый ключ
+
+В позиции явного именования строкой берутся байты значения `[]char`. `"a+b"` может выбрать внешнее поле с ключом из трёх байтов `61 2B 62`. `"A\\B"` выбирает имя с разделителем как один ключ. Значение ключа вычисляется один раз. В позиции данных строка сохраняет свой тип. NUL на границе имени даёт отказ до поиска или публикации. Допустимый пустой строковый ключ, ключ из двух обратных кавычек и отсутствие имени различаются.
+
+Создание именованного поля получает владельца и точные байты. Выбор получает того же владельца, ключ и при необходимости номер вхождения. Результат — обычное именованное место графа, доступное для последующей записи и чтения. Общую исходную запись этой пары предстоит закрепить в грамматике. Для двух полей `x` и `` `x` `` можно использовать отдельные ссылки через соответствующие написанные сегменты пути. Дубликат того же ключа в DATA разрешается по правилам вхождений, а затенение в CODE — по действующему лексическому договору. В роли цели вызова применяются обычные проверки неоднозначности до эффектов. Для однозначной статической цели сохраняется прямой вызов готового нативного тела.
 
 Имена исходных сущностей не хранятся в самих ячейках графа. Имя примитива или Lmx получается из таблицы «адрес → name»; name — адрес единственной канонической строки этого написания в типизированной арене. Идентификаторы, служебные операторы и ресиверы сравниваются по адресам этих строк, без отдельных числовых кодов. «Атом» относится к парсеру; физические элементы графа включают и Lmx Structure, и непосредственно закодированные примитивы. Обходчик распознаёт простую словесную голову по каноническому указателю, а составную разрешает общим путём выражения и головы; транслятор потребляет тот же чистый граф и выпускает native. Таблица имён не хранит разрешение переменных или состояние прошлого обхода: namespace текущего обхода создаётся заново и уничтожается при его завершении. Копирование графа переносит имена копируемых адресов, интернируя написания на принимающей границе. Анонимные и позиционные значения не требуют синтетических имён. Физическая модель определена в [спецификации реализации](kernel-implementation.ru.md), вывод текущего графа — в [контракте sys\toLmx](#source-codec).
 
@@ -420,7 +427,7 @@ The [independent qualifier](#qualification) cuts the external lexical parent at 
 <a id="primitive-declaration-is-the-element"></a>
 Шага для ресивера, объявляющего примитив, в пути нет: при `S: int: x 10` поле читается путём `S\x`, а не `S\int\x`. Это не особое правило пути, а устройство памяти Structure. Structure хранит свои элементы массивом, и каждый элемент указывает на запись значения: тип и сразу за ним значение ([L2, §3](L2_spec_ru.md#value-record)); имя элемента держит строка «адрес → имя». Полное терминальное объявление `int: x 10` поэтому присутствует как запись этого элемента: «тип `int`, значение 10» с именем `x`. Это его непосредственное физическое кодирование, а не удаление объявления из графа. Потери при этом нет: текст объявления однозначно восстанавливается по типу, значению и имени, так его и печатает `sys\toLmx`. Объявление без значения содержит только TypeRef `uninit:T`, при нулевом размере значения и без зарезервированной ячейки T, и так же восстанавливается как `int: x`. Это компактное типизированное листовое представление входит в полный буквальный исходный граф, а не выпадает из него. Запись модификатора, ресивера управления или вызова по типу и значению не восстановить, поэтому она лежит в графе как записана — Structure, названной своей головой, — и путь идёт через неё: `S\private\x`, `D\if\y`. Вычисляемое объявление `int: x f()` готовым значением тоже не является: путь `S\x` даёт его запись ([явный путь](#path-reads-no-execution)) (уточнения автора 2026-11-11; 2026-11-17; 2026-11-18).
 
-`node` зарезервирован: его нельзя объявить, затенить, перепривязать или передать динамически, в том числе через точное написание идентификатора. Он обозначает установленное лексическое пространство над выбранным методом и остаётся фиксированным на время этой активации, включая вложенные тела управления. Это **не** общий запрос к непосредственному родителю текущей посещаемой формы или к текущему получателю потока. Понижение передаёт соответствующую физическую лексическую ссылку как обязательный параметр `Lmx *node`; никакое новое пользовательское замыкание или объект namespace не вставляется. Обычные структурные связи с родителем сохраняют исходную вложенность и контракт копирования, но цепочка родителей inline-тела не перепривязывает node. Отношение DATA `D = parent(C)` и лексическая операция node сохраняют свои контракты.
+`node` зарезервирован: голый ключ нельзя объявить, затенить, перепривязать или передать динамически. Токен `` `node` `` задаёт свой ключ в допустимой пользовательской позиции. Он обозначает установленное лексическое пространство над выбранным методом и остаётся фиксированным на время этой активации, включая вложенные тела управления. Это **не** общий запрос к непосредственному родителю текущей посещаемой формы или к текущему получателю потока. Понижение передаёт соответствующую физическую лексическую ссылку как обязательный параметр `Lmx *node`; никакое новое пользовательское замыкание или объект namespace не вставляется. Обычные структурные связи с родителем сохраняют исходную вложенность и контракт копирования, но цепочка родителей inline-тела не перепривязывает node. Отношение DATA `D = parent(C)` и лексическая операция node сохраняют свои контракты.
 
 `parent(S)` — обычный ресивер, который читает структурную связь, а не зарезервированное имя или псевдополе пути. Скрытое голое поле использует место, выбранное связыванием: явные фактические аргументы, автозаполнение и сохранённый запасной вариант имеют собственные рабочие места; прозрачное связывание вызывающего обозначает настоящее место вызывающего. Присваивание этому имени не создаёт ни исходного поля, ни постоянного состояния метода. Достигнутые объявления CODE работают в namespace, тогда как явные пути адресуют граф. Граф полностью отражает записанный исходник: каждый ресивер остаётся как записан, а терминальные примитивные листья присутствуют в собственном представлении `{type value}` по адресу, который хранит ячейка Lmx. Неинициализированный лист имеет только TypeRef и значение нулевого размера.
 
@@ -443,14 +450,14 @@ The [independent qualifier](#qualification) cuts the external lexical parent at 
 Начальные число и порядок полей Structure задаются построением и лексическим порядком; порядок выдачи native не разрешает переставлять поля графа. Обновление существующего поля заменяет содержащуюся в нём ссылку, не добавляя вхождение. Structure и Array<@> используют общее явное изменение размера через sys\resize и sys\reserve; length меняется только явной операцией размера или записью заголовка, не автоматически при записи элемента. См. [переменные массивы](#array-capacity).
 
 [EN]
-Bare and exact spellings of the same identifier resolve to one canonical name
-through the existing name table. Backticks are removed and doubled internal
-backticks decoded once; the resulting content is never parsed as another
-expression. Thus `` `@name` `` and `` `a+b` `` are whole names. The same
-identity governs fields, imports, overloads, method references, `sys\name`,
-`sys\priority` and serialization. No case folding, Unicode normalization,
-quotation-specific dispatch or extra operator registry is introduced.
-The ordinary `@` receiver retains its existing unquoted form.
+A written identifier's key is the length and every byte of its token. Enclosing backticks and doubled internal backticks belong to the name. For example, `x` has the key `78`, and `` `x` `` has the key `60 78 60`. The shielded token `` `a+b` `` retains five bytes and remains one name. Built-ins, user names and imported names pass through the same table. Comparison preserves case and the original Unicode bytes. Within a context, interned strings still support comparison by canonical address.
+
+<a id="field-name-keys"></a>
+### Written names and string keys
+
+A position that explicitly accepts a name as a string uses the bytes of the `[]char` value. `"a+b"` can select an external field whose three-byte key is `61 2B 62`. `"A\\B"` selects a name containing a separator as one key. The key expression runs once. In a data position the string retains its type. NUL at the name boundary is rejected before lookup or publication. An admitted empty string key, a key consisting of two backticks and name absence are distinct.
+
+Creating a named field receives its owner and its exact name bytes. Selection receives that owner, the key and an occurrence index when needed. It returns the ordinary named graph place for later writes and reads. The grammar still needs to specify common source notation for this pair. The fields `x` and `` `x` `` can be referenced separately through corresponding written path segments. A duplicate of the same key in DATA follows the occurrence rules, and shadowing in CODE follows the existing lexical contract. As a call target, the place follows ordinary ambiguity checks before effects. A statically unambiguous target retains a direct call to its prepared native body.
 
 Source entity names are not stored inside graph cells. A primitive or Lmx name comes from the address → name table; name is the address of the one canonical string for that spelling in the typed arena. Identifiers, service operators and receivers are compared by those string addresses, without separate numeric codes. Atom is a parser term; physical graph elements include both Lmx Structures and directly encoded primitives. The walker recognizes a simple word head by its canonical pointer and resolves a composed head through the common expression/head path; the translator consumes that same clean graph and emits native. The name table stores neither variable resolution nor prior traversal state: each traversal creates and discards its own namespace. Graph copying transfers names for copied addresses, interning spellings at the receiving boundary. Anonymous and positional values need no synthetic names. The physical model is specified in the [implementation specification](kernel-implementation.en.md); current-graph serialization is defined by the [sys\toLmx contract](#source-codec).
 
@@ -465,7 +472,7 @@ The source forms of a DATA Structure D retain their written nesting: a root `if:
 <a id="primitive-declaration-is-the-element"></a>
 A path has no step for a receiver that declares a primitive: with `S: int: x 10` the field is read by the path `S\x`, not `S\int\x`. This is not a special rule of paths but the way the memory of a Structure is arranged. A Structure keeps its elements as an array, and each element refers to a value record: a type and, right after it, a value ([L2, section 3](L2_spec_en.md#value-record)); the name of the element is held by an «address -> name» row. The complete terminal declaration `int: x 10` is therefore present as that element's record «type `int`, value 10» with the name `x`. This is its direct physical encoding, not removal of the declaration from the graph. Nothing is lost: the text of the declaration is recovered unambiguously from the type, the value and the name, and that is how `sys\toLmx` prints it. A declaration without a value contains only the TypeRef `uninit:T`, with zero value bytes and no reserved T cell, and is recovered as `int: x` in the same way. This compact typed-leaf representation is part of the full literal source graph, not an omission from it. The record of a modifier, of a control receiver or of a call cannot be recovered from a type and a value, so it lies in the graph as it is written -- a Structure named by its head -- and the path goes through it: `S\private\x`, `D\if\y`. A computed declaration `int: x f()` is not a ready value either: the path `S\x` gives its record ([explicit path](#path-reads-no-execution)) (the author's clarifications of 2026-11-11; 2026-11-17; 2026-11-18).
 
-`node` is reserved and cannot be declared, shadowed, rebound or dynamically supplied, including through exact-identifier spelling. It denotes the established lexical space above the selected method and remains fixed during that activation, including nested control bodies. It is **not** a generic query for the immediate parent of the currently visited form or for the current stream recipient. Lowering carries the corresponding physical lexical reference as the required `Lmx *node` parameter; no new user closure or namespace object is inserted. Ordinary structural parent links retain the source nesting and the copying contract, but an inline body's parent chain does not rebind node. The DATA relation `D = parent(C)` and the lexical node operation keep their respective contracts.
+Bare `node` is reserved and cannot be declared, shadowed, rebound or dynamically supplied. The token `` `node` `` supplies its own key in an admitted user-name position. It denotes the established lexical space above the selected method and remains fixed during that activation, including nested control bodies. It is **not** a generic query for the immediate parent of the currently visited form or for the current stream recipient. Lowering carries the corresponding physical lexical reference as the required `Lmx *node` parameter; no new user closure or namespace object is inserted. Ordinary structural parent links retain the source nesting and the copying contract, but an inline body's parent chain does not rebind node. The DATA relation `D = parent(C)` and the lexical node operation keep their respective contracts.
 
 `parent(S)` is an ordinary receiver that reads a structural link, not a reserved name or path pseudo-field. A hidden bare field uses the place selected by binding: explicit actuals, autofill and retained fallback have their own working places; a transparent caller binding denotes the caller's real place. Assigning that name creates neither a source field nor persistent method state. Reached CODE declarations work in the namespace, while explicit paths address the graph. The graph fully reflects the written source: every receiver remains as written, and terminal primitive leaves are present in their own `{type value}` representation at the address held by the Lmx cell. An uninitialized leaf has its TypeRef only and a zero-size value.
 
@@ -1277,41 +1284,30 @@ Expression только из-за охватывающей операции в C
 собственного исполнителя RHS у `::` нет. Сохраняются [DATA-контракт
 сигнатуры](#signature-description-consumption) и [общий механизм чтения полей](#receiver-structure-sequences).
 
-Следующий псевдокод называет шаги анализа, **не новые публичные API или поля графа**:
+Следующие фазы относятся к общей реализации и не добавляют публичных
+API или полей графа.
 
-```text
-groupTree(graph, receivingContext):
-    retain graph identity, structural levels and evaluation context
-    retain whole VALUE/TYPE/DATA contracts before CODE classification
-    resolve graph references without changing their actual parent
-    resolve admissible operand roles and ready priorities without evaluation
-    reject ambiguous interpretations during translation using ordinary call selection
-    in Expression: graph reference atom to a Structure with established satisfies = 0 -> one Array value
-    in Expression: graph reference atom in the operand role -> selected operand
-    for other CODE/Expression Structures: apply the name/actual-parent rule
-    recursively group dependencies and complete units in the admitted Expression graph
-    represent a group result: one unit is transparent; zero or several units form one subgroup
-    retain one enclosing atom boundary, original occurrences and contexts
-    retain DATA/model material and declared field-stream collectors
-    select elements of a sole normalized group when the receiver consumes a sequence
-    otherwise retain neighboring normalized items without splicing subgroup fields
-    retain the same LeftView(focus, valuePlan, context) for every present left
-    return structured operation/sequence plan with original occurrences
+| Фаза | Сохраняемый договор |
+| --- | --- |
+| Граф и роли | Сохранить идентичность, уровни, контекст и целые VALUE/TYPE/DATA. Разрешить ссылки без изменения фактического `parent`; получить готовые роли операндов и приоритеты без исполнения, отклонить неоднозначность обычным выбором при трансляции. |
+| Единицы | Атом-ссылка Expression с установленным `satisfies = 0` остаётся одним Array; установленная роль операнда выбирает этот операнд. Остальные CODE/Expression Structures следуют правилу имени и фактического родителя. |
+| Рекурсивная группировка | Обработать зависимости и целые единицы только в допущенном Expression. Одна единица группы прозрачна; ноль или несколько образуют одну подгруппу. Каждая группа сохраняет одну внешнюю границу атома, исходные вхождения и контекст. DATA/модели и объявленные коллекторы потока полей сохраняются. |
+| Потребление последовательности | Последовательностный ресивер выбирает элементы единственной нормализованной группы; иначе сохраняет соседние элементы, не объединяя поля подгрупп. Каждый присутствующий left хранит одинаковое представление вхождения, плана значения и непотреблённого контекста. |
+| Применение | Упаковать выбранный левый материал одной ссылкой/пакетом либо сохранить отсутствие. Сохранить присутствие actual depth и его ещё не выполненное вхождение/контекст. Подготовить Array ссылок на правые элементы в исходном порядке. Не переносить префиксный `right[0]` в left. |
+| Разрешённый метод | Обычный namespace потребляет left и right по выбранному договору, получает востребованные значения один раз либо сохраняет RAW, выполняет допуск и договор результата, затем возобновляет непотреблённый контекст. Явный depth получается один раз только при востребованности применения; пропуск остаётся пропуском. |
 
-prepareOperandApplication(applicationPlan, receivingContract):
-    leftPlan  = the plan's selected left sequence, or absence
-    rightPlan = the plan's selected current-level right sequence
-    leftActual = retain/package leftPlan as one reference or bundle, if present
-    rightActual = Array of references to the rightPlan items in source order
-    preserve the delivered positions; do not move prefix right[0] into left
-    retain role/mode information and return the delivered actuals
+Настоящие формы LMX, иллюстрирующие эти различия:
 
-insideResolvedOperandMethod(deliveredActuals):
-    use the common namespace to consume LeftView and right items by this contract
-    obtain demanded values once or retain RAW occurrences
-    apply ordinary admission and this method's declared result contract
-    resume any unconsumed context with that result
+```lmx
+(op 1 2 3)
+a op b
+a .(depth)op b
 ```
+
+[EXPRESSION_ALGORITHM](EXPRESSION_ALGORITHM.md) задаёт полный договор фаз
+и ссылается на существующие LMX-тела применения/Array. Отдельная
+исполняемая host-модель является инструментом проверки и не заменяет
+production-парсер или общий группировщик.
 
 Следующего прохода «если left безымянный, снова раскрыть right» нет.
 Привычные результаты правой последовательности объясняются
@@ -1388,29 +1384,17 @@ PLACE-контракт. Отдельная подготовка применен
 Обычные правила пропуска/default/required сохраняются; метод, допускающий
 префиксную форму, сам обрабатывает её по своему договору.
 
-Иллюстративные внутренние шаги, не новые публичные API:
+| Потребитель | Смысл одного и того же переданного представления left |
+| --- | --- |
+| Любая операция | Сохранить отсутствие либо одно исходное вхождение с полным планом значения и непотреблённым контекстом. Передать исходный right Array без изменений. |
+| VALUE-метод | Потребить полный план значения. |
+| PLACE/NAME-метод | Потребить выбранное исходное вхождение. |
+| Завершение | Выполнить допуск/договор результата метода и возобновить непотреблённый контекст с результатом. |
+| Метод присваивания, left отсутствует | Сам метод выбирает первый правый элемент как назначение, оставшиеся — как материал значений. |
+| Метод присваивания, left присутствует | Сам метод выбирает left как назначение, неизменные правые элементы — как материал значений. |
 
-```text
-for every operation:
-    leftView = ABSENT or (focusOccurrence, completeValuePlan, pendingContext)
-    deliver exactly one left actual if present, and the original right Array
-
-inside the resolved operand method:
-    choose consumption by this method's ordinary contract
-    VALUE: consume completeValuePlan
-    PLACE/NAME: consume focusOccurrence
-    apply the method to its consumed arguments
-    resume any unconsumed context with its declared result
-
-inside the assignment method's own prefix handling:
-    if left is ABSENT:
-        destinationView = right[0]
-        valueViews = right[1:]
-    else:
-        destinationView = left
-        valueViews = right
-    perform ordinary assignment consumption and admission
-```
+Это договоры существующих методов и общего namespace, без новых
+публичных API. Вектор actuals вызывающего не переписывается.
 
 Присоединённые унарные формы — существующие **общие классы**
 «прижатый слева к одному атому» и «прижатый справа к одному атому».
@@ -1548,12 +1532,14 @@ raw_operands:
 <a id="string-identifier"></a>
 ### `sys\name`: написание идентификатора
 
-`sys\name(identificator)` потребляет один записанный идентификатор и возвращает его написание как обычный LMX `Array<char>` переменной длины. Он не разрешает переменную, не читает её значение, не выполняет её инициализатор и не вызывает одноимённый метод. Допустимый идентификатор не обязан быть объявлен. Кавычки точного идентификатора снимаются, а удвоенная обратная кавычка становится одной буквальной обратной кавычкой: ``sys\name(`long name`)`` даёт `"long name"`; пустой точный идентификатор даёт пустую строку. `sys\name(ptr)` даёт `"ptr"`, а не имя своей цели.
+`sys\name(identificator)` потребляет один записанный идентификатор и возвращает все байты его токена как обычный LMX `[]char` переменной длины. Идентификатор может быть необъявленным. Значение переменной, её инициализатор и одноимённый метод не исполняются. `sys\name(x)` возвращает байт `78`, `` sys\name(`x`) `` — `60 78 60`, а точный токен из двух кавычек даёт два байта. Внутренние пары сохраняются. `sys\name(ptr)` даёт написание `ptr`.
 
 Существующее каноническое представление имени и таблица служебных имён дают написание. Таблица регистрации, новая кодировка, обязательное выделение памяти на каждый вызов или гарантия тождества адресов не вводятся. Результат — обычный символьный Array Lmx без завершающего NUL. `f(sys\name(foo))` и `f(a := sys\name(foo))` каждый передаёт по одному целому Array; символы не раскрываются в фактические аргументы. Интерпретатор и подготовленный нативный код получают одно и то же содержимое, а при трансляции не требуется исполнять обозначенную сущность ради получения её имени. Это получение написания из существующего представления, а не сериализация значения переменной или повторный разбор исходного текста; оно не вводит универсального преобразования произвольных значений в текст, а несоответствующий аргумент обрабатывается по существующим правилам недопустимой формы.
 
 <a id="expression-priority"></a>
 ### `sys\priority`: приоритет по строковому имени
+
+Запрос сравнивает длину и байты ключа. `sys\priority("+")` выбирает ключ голой операции. Строка из трёх байтов `60 2B 60` запрашивает отдельное имя по обычному разрешению.
 
 Именованная сигнатура запроса — `PrioritySignature :: ([]char: name; return: int)`. Она описывает вызов и не создаёт реализацию; её полное имя реализации — `sys\priority`. Она принимает одну строку LMX и возвращает приоритет доступного встроенного или структурно обнаруженного пользовательского операнда с этим именем, используя те же сведения о видимости и свойствах, что и анализ выражений. `sys\priority("+")` запрашивает сложение, `"-"` — вычитание и `"*"` — умножение; контекстные унарные и постфиксные употребления произвольным образом не меняют результат этого запроса.
 
@@ -1663,10 +1649,10 @@ raw_operands:
 | S03 | `sys\name(foo)`, где `foo` — метод со счётчиком вызовов                            | `"foo"`; метод не вызывается                                                            |
 | S04 | `sys\name(x)`, где получение значения `x` потребовало бы инициализатора с эффектом | `"x"`; инициализатор не исполняется                                                     |
 | S05 | `sys\name(foo)`, где `foo` соответствует шаблону операнда                       | `"foo"`; метод не исполняется                                                        |
-| S06 | Первые два вызова из примеров написания идентификатора: один с bare identifier, другой с exact identifier         | Одинаковое содержимое `"foo"`                                                           |
-| S07 | Exact identifier с пробелами и пунктуацией                                           | Содержимое имени сохраняется без внешних кавычек                                        |
-| S08 | Exact identifier с удвоенной обратной кавычкой                                       | В результате одна буквальная обратная кавычка                                           |
-| S09 | Пустой exact identifier                                                              | Пустой массив символов, длина `0`                                                       |
+| S06 | `sys\name(foo)` и `` sys\name(`foo`) `` | Байты `66 6F 6F` и `60 66 6F 6F 60` различаются |
+| S07 | Точный идентификатор с пробелами и пунктуацией | Сохранены пробелы, пунктуация и обе внешние кавычки |
+| S08 | Точный идентификатор с удвоенной обратной кавычкой | Сохранены обе внешние кавычки и оба байта внутренней пары |
+| S09 | Точный токен из двух обратных кавычек | Массив двух байтов `60 60` |
 | S10 | `sys\name(ptr)`, где `ptr` указывает на `Target`                                   | `"ptr"`                                                                                 |
 | S11 | Получение имени в интерпретаторе и подготовленном native-коде                        | Одинаковое содержимое; обычный Lmx char Array переменной длины, без добавочного NUL     |
 | S12 | `f(sys\name(foo))` и `f(a := sys\name(foo))`                                     | В обоих случаях передаётся целый Array; символы не становятся цепочкой actual arguments |
@@ -2381,42 +2367,30 @@ nested operation in Expression follows the common grouping and demand policy;
 contract](#signature-description-consumption) and [common field reader](#receiver-structure-sequences)
 remain in force.
 
-The following pseudocode names analysis steps, **not new public APIs or graph
-fields**:
+The phases below belong to the common implementation; they add no public
+API or graph fields.
 
-```text
-groupTree(graph, receivingContext):
-    retain graph identity, structural levels and evaluation context
-    retain whole VALUE/TYPE/DATA contracts before CODE classification
-    resolve graph references without changing their actual parent
-    resolve admissible operand roles and ready priorities without evaluation
-    reject ambiguous interpretations during translation using ordinary call selection
-    in Expression: graph reference atom to a Structure with established satisfies = 0 -> one Array value
-    in Expression: graph reference atom in the operand role -> selected operand
-    for other CODE/Expression Structures: apply the name/actual-parent rule
-    recursively group dependencies and complete units in the admitted Expression graph
-    represent a group result: one unit is transparent; zero or several units form one subgroup
-    retain one enclosing atom boundary, original occurrences and contexts
-    retain DATA/model material and declared field-stream collectors
-    select elements of a sole normalized group when the receiver consumes a sequence
-    otherwise retain neighboring normalized items without splicing subgroup fields
-    retain the same LeftView(focus, valuePlan, context) for every present left
-    return structured operation/sequence plan with original occurrences
+| Phase | Preserved contract |
+| --- | --- |
+| Graph and roles | Retain identity, structural levels, context and whole VALUE/TYPE/DATA contracts. Resolve references without changing actual `parent`; obtain ready operand roles and priorities without evaluation and reject ambiguity during ordinary translation-time selection. |
+| Units | An Expression graph-reference atom with established `satisfies = 0` is one Array value; an established operand role selects that operand. Other CODE/Expression Structures follow the name/actual-parent rule. |
+| Recursive grouping | Group dependencies and complete units only in admitted Expression. A group containing one unit is transparent; zero or several units form one subgroup. Every group keeps one enclosing atom boundary, original occurrences and context. Retain DATA/model material and declared field-stream collectors. |
+| Sequence consumption | A sequence receiver selects elements of its sole normalized group; otherwise it retains neighboring items without splicing subgroup fields. Every present left keeps the same occurrence/value-plan/pending-context view. |
+| Application | Package the selected left material as one reference or bundle, or retain absence. Preserve actual depth presence and its unevaluated occurrence/context. Prepare an Array of references to selected right items in source order. Do not move prefix `right[0]` into left. |
+| Resolved method | The ordinary namespace consumes left and right under the selected contract, obtains demanded values once or retains RAW, applies admission and the declared result contract, then resumes unconsumed context. Explicit depth is obtained once only when the application is demanded; omission remains omission. |
 
-prepareOperandApplication(applicationPlan, receivingContract):
-    leftPlan  = the plan's selected left sequence, or absence
-    rightPlan = the plan's selected current-level right sequence
-    leftActual = retain/package leftPlan as one reference or bundle, if present
-    rightActual = Array of references to the rightPlan items in source order
-    preserve the delivered positions; do not move prefix right[0] into left
-    retain role/mode information and return the delivered actuals
+Actual LMX forms illustrating these distinctions:
 
-insideResolvedOperandMethod(deliveredActuals):
-    use the common namespace to consume LeftView and right items by this contract
-    obtain demanded values once or retain RAW occurrences
-    apply ordinary admission and this method's declared result contract
-    resume any unconsumed context with that result
+```lmx
+(op 1 2 3)
+a op b
+a .(depth)op b
 ```
+
+[EXPRESSION_ALGORITHM](EXPRESSION_ALGORITHM.md) defines the complete common
+phase contract and links the existing LMX application/Array bodies. The
+separate executable host model is a verification tool, not a replacement
+production parser or a second grouper.
 
 There is no subsequent “if left is anonymous, open right again” pass.
 The familiar right-hand sequence results are explained
@@ -2491,29 +2465,17 @@ reject absent left or interpret its right sequence differently. Ordinary
 omission/default/required rules still apply; a method that admits the prefix
 form handles it under its own contract.
 
-Illustrative internal steps, not new public APIs:
+| Consumer | Interpretation of the same delivered left view |
+| --- | --- |
+| Every operation | Retain absence or one original occurrence with its complete value plan and pending context. Deliver the original right Array unchanged. |
+| VALUE method | Consume the complete value plan. |
+| PLACE/NAME method | Consume the selected original occurrence. |
+| Completion | Apply the method's admission/result contract and resume any unconsumed context with its result. |
+| Assignment method, absent left | The method itself selects the first right item as destination and the remaining right items as value material. |
+| Assignment method, present left | The method itself selects left as destination and the unchanged right items as value material. |
 
-```text
-for every operation:
-    leftView = ABSENT or (focusOccurrence, completeValuePlan, pendingContext)
-    deliver exactly one left actual if present, and the original right Array
-
-inside the resolved operand method:
-    choose consumption by this method's ordinary contract
-    VALUE: consume completeValuePlan
-    PLACE/NAME: consume focusOccurrence
-    apply the method to its consumed arguments
-    resume any unconsumed context with its declared result
-
-inside the assignment method's own prefix handling:
-    if left is ABSENT:
-        destinationView = right[0]
-        valueViews = right[1:]
-    else:
-        destinationView = left
-        valueViews = right
-    perform ordinary assignment consumption and admission
-```
+These are contracts of existing methods and the common namespace, not new
+public APIs. The caller's actual vector remains unchanged.
 
 Attached unary forms are the existing **general classes** “attached to the
 left of one atom” and “attached to the right of one atom”. Each has exactly
@@ -2648,12 +2610,14 @@ Before effectful operand arguments run, grouping and consumption mode must be un
 <a id="string-identifier"></a>
 ### `sys\name`: an identifier's spelling
 
-`sys\name(identificator)` consumes one written identifier and returns its spelling as an ordinary variable-length LMX `Array<char>`. It does not resolve a variable, read its value, execute its initializer or call a same-named method. A valid identifier need not be declared. Exact-identifier quoting is removed and a doubled backtick becomes one literal backtick: ``sys\name(`long name`)`` yields `"long name"`; an empty exact identifier yields an empty string. `sys\name(ptr)` yields `"ptr"`, not the name of its target.
+`sys\name(identificator)` consumes one written identifier and returns every byte of its token as an ordinary variable-length LMX `[]char`. The identifier may be undeclared. It does not read a variable's value, execute its initializer or call a same-named method. `sys\name(x)` returns the byte `78`, `` sys\name(`x`) `` returns `60 78 60`, and an exact token of two backticks gives two bytes. Internal pairs are preserved. `sys\name(ptr)` returns the spelling `ptr`.
 
 The existing canonical-name representation and service name table supply the spelling. No registration table, new encoding, mandatory per-call allocation or address-identity guarantee is introduced. The result is an ordinary Lmx character Array with no trailing NUL. `f(sys\name(foo))` and `f(a := sys\name(foo))` each pass one complete Array; characters are not expanded into actuals. The interpreter and prepared native code obtain the same content, and translation needs no execution of the designated entity to obtain its name. This is obtaining the spelling from the existing representation, not serialization of a variable's value or reparsing of source text; it introduces no universal conversion of arbitrary values to text, and an inappropriate argument is handled by the existing rules of an invalid form.
 
 <a id="expression-priority"></a>
 ### `sys\priority`: a priority by string name
+
+The query compares the key length and bytes. `sys\priority("+")` selects the bare operation key. The three-byte string `60 2B 60` queries a separate name under ordinary resolution.
 
 The query's named signature is `PrioritySignature :: ([]char: name; return: int)`. This describes a call and does not create the implementation; its full implementation name is `sys\priority`. It accepts one LMX string and returns the priority of the available built-in or structurally discovered user operand with that name, using the same visibility and property information as expression analysis. `sys\priority("+")` queries addition, `"-"` subtraction and `"*"` multiplication; contextual unary/postfix uses do not arbitrarily change that query result.
 
@@ -2763,10 +2727,10 @@ In the examples a result in quotes denotes the character content of an ordinary 
 | S03 | `sys\name(foo)`, where `foo` is a method with a call counter | `"foo"`; the method is not called |
 | S04 | `sys\name(x)`, where obtaining the value of `x` would require an initializer with an effect | `"x"`; the initializer is not executed |
 | S05 | `sys\name(foo)`, where `foo` matches the operand template | `"foo"`; the method is not executed |
-| S06 | The first two calls of the examples of identifier spelling: one with a bare identifier, the other with an exact identifier | The same content `"foo"` |
-| S07 | An exact identifier with spaces and punctuation | The content of the name is kept without the outer quotes |
-| S08 | An exact identifier with a doubled backtick | One literal backtick in the result |
-| S09 | An empty exact identifier | An empty array of characters, length `0` |
+| S06 | `sys\name(foo)` and `` sys\name(`foo`) `` | The bytes `66 6F 6F` and `60 66 6F 6F 60` differ |
+| S07 | An exact identifier with spaces and punctuation | Spaces, punctuation and both enclosing backticks are preserved |
+| S08 | An exact identifier with a doubled backtick | Both enclosing backticks and both bytes of the internal pair are preserved |
+| S09 | An exact token made of two backticks | Array of the two bytes `60 60` |
 | S10 | `sys\name(ptr)`, where `ptr` points to `Target` | `"ptr"` |
 | S11 | Obtaining the name in the interpreter and in prepared native code | The same content; an ordinary variable-length Lmx char Array, without an added NUL |
 | S12 | `f(sys\name(foo))` and `f(a := sys\name(foo))` | In both cases the whole Array is passed; the characters do not become a chain of actual arguments |
@@ -6064,6 +6028,8 @@ Registry, Table, RegistryView, схема и политика — роли об�
 
 В табличном профиле первый столбец — ключ строки; `columns` задаёт имена и явные метаданные. Число ячеек плотных строк кратно числу столбцов, отсутствующая ячейка выражается явно; выравнивание текста полей не добавляет. Необязательное `source` запрашивает проекцию профиля транслятора, а не объявляет runtime-имена из ячеек. Ячейка может ссылаться на данные, ключ, описание, политику, диагностику, свидетельство, провайдера или вызываемое выражение.
 
+Название таблицы, внешнее имя столбца и текстовый ключ строки могут быть строковыми значениями по схеме. Ключи сравниваются по длине и байтам. Правило совпадения строк и обработка дублей задаются профилем таблицы. Остальные типизированные ячейки сохраняют свой тип.
+
 Текстовый динамический запрос начинает с переданного корня и имён его упорядоченных детей; он не заменяет уже разрешённые структурные ссылки. Правила запроса, переменные, унификация, продолжения, приоритеты и конфликты принадлежат явно выбранным данным и политике потребителя, не общему правилу поиска поля Structure. Сохранённый результат проверки содержит явные зависимости и не даёт бессрочного разрешения будущим вызовам. Выбор кандидата проходит [общий допуск](#admission); ранжирование и публикация результата — отдельные явные действия.
 
 Связывание модуля разрешает явно выбранные операции и рецепты построения в физические ссылки. Провайдер, кодек или правило понижения выбираются выраженной ссылкой, конфигурацией либо переданной Table; смена провайдера явна. Автоматического сканирования каталогов, процесс-глобального поиска или неявной публикации имён запросом нет. `import` предоставляет допустимые константные объявления по ссылке через текущий namespace; `copy` и `merge` копируют или составляют явные источники. Хранение таблиц и ранжирование неоднозначных запросов остаются политиками выбранного профиля. [Примеры таблиц и провайдеров](LMX_semantics_guide.ru.md#tables-and-registries) приводят примеры применения.
@@ -6124,6 +6090,8 @@ Use:
 <a id="source-codec"></a>
 ### Вывод текущего графа: sys\toLmx
 
+`sys\toLmx` выбирает запись, восстанавливающую в `sys\fromLmx` исходные байты имени. Написанный идентификатор подходит, когда его токен уже равен ключу. Внешнее `a+b` из трёх байтов требует явного строкового названия; добавление обратных кавычек дало бы другой ключ. Допустимое пустое имя, имя из двух кавычек и безымянное место сохраняются раздельно. Старый граф хранит только уже интернированные байты. Прежнее написание можно восстановить из сохранившегося исходника.
+
 `sys\toLmx` выводит текущий граф любой Structure и любого L3Thread как текст LMX с каноническими именами и сохранёнными комментариями. Все записи ресиверов и записанные границы группировки сохраняются; расширение потока namespace не заменяет исходные записи import/copy/merge. Терминальные примитивные объявления восстанавливаются из типа, значения и имени. Форматирование вставляет пустые строки только на задуманных границах полного корня документа, чтобы повторный разбор сохранял структуру. Явно перезаписанная конструкция выводится в своём текущем виде; ни история, ни native не восстанавливают более ранний исходный текст. Локальное выполнение не публикует свой frame и не заменяет инициализатор в исходных данных. Эта сериализация отличается от `sys\translate`, который возвращает текст L1 для последующей компиляции и ошибок понижения.
 
 Аргумент `sys\toLmx(S)` задаёт сохраняемую структуру. Для L3 Thread сохраняются также все таблицы его арены, включая таблицы call и native-дескрипторы. Таблицами владеет арена: они не являются полями R0, и R0 — не единственный подходящий Thread. К произвольной S внешние таблицы арены скрыто не добавляются. Сохраняются порядок и пустые позиции, общие ссылки, циклы, имена и типизированные значения: это восстанавливаемый текущий граф, не только печать похожего исходника. Скрытых данных в чистом графе нет: все данные лежат в `void *`-хранилище его Structure и отображаются `toLmx` элементарно, а `length` и `parent` выводятся из сформированного им текста (решение автора 2026-11-17). Таблицу имён `fromLmx` восстанавливает из текста; она и остальные таблицы ядра — данные самого ядра, которое собирает само себя и написано на L2 и L3, то есть такие же Structure чистого графа, а не скрытые данные рядом с ним. Весь программный материал, включая эти таблицы, лежит в чистом графе LMX. Отдельный бинарник содержит скомпилированные методы, включая R0 и интерпретатор; R0 обращается к своему графу через локальный указатель. Переносимый C генерируется для реализаций этих методов по пути L3/L2 → L1 → C и не поставляет скрытого зеркала статических данных графа. Транслятор написан на L2 и L3, и вставки L1 в итоге тоже убираются.
@@ -6134,6 +6102,8 @@ Use:
 Registry, Table, RegistryView, schema, and policy are roles of ordinary values, not additional categories or namespaces. An operation obtains a registry root explicitly or through an expressed reference. Merely having a Table or a row keyed `class`, `type`, `provides`, or `satisfies` triggers no lookup and changes no language rule.
 
 In the table profile, the first column is the row key; `columns` supplies names and explicit metadata. Dense-row cell counts are divisible by column count, absent cells are expressed explicitly, and text alignment adds no fields. Optional `source` requests a translator-profile projection rather than declaring runtime names from cells. A cell may refer to data, a key, description, policy, diagnostic, evidence, provider, or callable expression.
+
+The table name, external column name and a row key that the schema defines as text may be string values. Their keys compare by length and bytes. Row matching and duplicate handling follow the table profile. Other typed cells retain their types.
 
 A dynamic textual query begins at its supplied root and its ordered children's names; it does not replace already resolved structural references. Query rules, variables, unification, continuations, priorities, and conflicts belong to explicitly selected data and the consumer's policy, not to the general Structure-field rule. A saved check result carries explicit dependencies and grants no indefinite permission for future calls. Candidate selection uses [ordinary admission](#admission); ranking and publishing a result are separate explicit actions.
 
@@ -6194,6 +6164,8 @@ Repeated names follow the receiving context's ordinary redeclaration rules. Impo
 
 <a id="source-codec"></a>
 ### Current-graph serialization: sys\toLmx
+
+`sys\toLmx` chooses a spelling that restores the original name bytes in `sys\fromLmx`. A written identifier works when its token already equals the key. The three-byte external name `a+b` requires an explicit string name; adding backticks would produce a different key. An admitted empty name, the name made of two backticks and an unnamed place are preserved separately. An old graph retains only its already interned bytes. Recovering the former spelling requires retained source text.
 
 `sys\toLmx` emits the current graph of any Structure or L3Thread as LMX text with canonical names and retained comments. All receiver records and written grouping boundaries are preserved; namespace stream expansion does not replace source import/copy/merge records. Terminal primitive declarations are reconstructed from type, value and name. Formatting inserts blank lines only at intended full document-root boundaries so reparsing retains structure. An explicitly overwritten construct is emitted in its current form; neither history nor native reconstructs earlier source. Local execution does not publish its frame or replace the initializer in source data. This serialization differs from `sys\translate`, which returns L1 text for subsequent compilation and lowering errors.
 
@@ -7304,7 +7276,7 @@ LMX — динамический язык. Требования и описан�
 <a id="signature-arrow"></a>
 Форма с токенами типов использует стандартный контракт операнда и каноническое имя `->`. `` `->`(A0; A1; R) `` и `A0 -> A1 R` строят одну и ту же сигнатуру: последний полный токен ТИПА — требование результата, а предшествующие токены — упорядоченные требования входов. `` `->`(R) `` строит нульарную сигнатуру. Токен потребляется целиком; вложенная модель или сигнатура не раскрывается в поля. `A -> (B -> C)` сохраняет явный вложенный результат. Общий построитель описания не меняется. `Name :: DATA` остаётся именованным объявлением сигнатуры, а `signature(C)` отражает существующее вызываемое. `type(x)`, напротив, захватывает одно значение и возвращает каноническую TypeRef значения через `sys\typeof`; Array сохраняет полное нормализованное требование своего конструктора; `x type` использует того же потребителя. Ни одно из этих значений не заменяет `return` в DATA/CODE. Прежние написания конструктора не сохраняются как псевдонимы вызываемых.
 
-Ресиверная запись использует точное имя: например, `` `->`(int; int; int) ``. В квалифицированной ссылке кавычки окружают только символьную часть пути: например, `` FxToTokens\`->` ``. Описание остаётся плоским: `int -> int int` имеет два входа и один результат, без неявного каррирования. Результат, который сам является callable, задаётся явно: `int -> (int -> int)`. Прежнее имя конструктора `to` не имеет исполняемого совместимого алиаса.
+Ресиверный вызов использует ключ фактически опубликованного метода. В черновиках `` `->`(int; int; int) `` и `` FxToTokens\`->` `` выбирают написанное точное имя. Ссылка на ключ голой операции выбирается как этот ключ по общему договору имён. Описание остаётся плоским: `int -> int int` имеет два входа и один результат, без неявного каррирования. Результат, который сам является callable, задаётся явно: `int -> (int -> int)`. Прежнее имя конструктора `to` не имеет исполняемого совместимого алиаса.
 
 <a id="signature-grouping"></a>
 #### Выражения сигнатур и границы аргументов
@@ -7814,9 +7786,7 @@ the normalized full requirement used by its constructor. `x type` uses the same
 consumer. Directed compatibility is not the same as TypeRef identity. None of these meanings replaces DATA/CODE `return`. Superseded
 constructor spellings are not retained as callable aliases.
 
-The receiver spelling uses the exact identifier, for example `` `->`(int; int; int) ``;
-a qualified reference quotes only the symbolic path segment, for example
-`` FxToTokens\`->` ``. The descriptor is flat: `int -> int int` has two input
+A receiver call uses the key of the method actually published. In the drafts, `` `->`(int; int; int) `` and `` FxToTokens\`->` `` select the written exact name. A reference to the bare operation uses that key under the common name contract. The descriptor is flat: `int -> int int` has two input
 positions and one result, not an implicitly curried chain. A callable result is
 written explicitly as `int -> (int -> int)`. The former constructor name `to`
 has no executable compatibility alias.

@@ -1,6 +1,6 @@
 # Square-form subparser of the common LMX parser
 
-**Normative implementation design, 27 November 2026. Production implementation and execution: NOT_RUN.** This document specifies the additional source-parsing component; it does not supply or claim an implemented production parser. The semantic contracts are [tensor expressions](TENSOR_EXPRESSIONS.md), [operation depth](OPERATOR_DEPTH.en.md), [slices](TERNARY_AND_SLICES.en.md), and [type forms](TYPE_DECLARATION_FORMS.md).
+**Normative implementation design, reviewed 28 November 2026. Production implementation and execution: NOT_RUN.** This document specifies the additional source-parsing component; it does not supply or claim an implemented production parser. The semantic contracts are [tensor expressions](TENSOR_EXPRESSIONS.md), [operation depth](OPERATOR_DEPTH.en.md), [slices](TERNARY_AND_SLICES.en.md), and [type forms](TYPE_DECLARATION_FORMS.md).
 
 ## 1. Responsibility and stage boundary
 
@@ -31,23 +31,20 @@ The enclosing grammar first supplies the prefix, suffix, value or operation cont
 
 ## 3. Interface and cursor ownership
 
-These names are pseudocode integration interfaces, not proposed LMX system functions:
+The integration contract has two entries of one parser. Their concrete native binding has not been supplied; the table defines data and responsibility, not new public `sys` functions.
 
-```text
-parseSquare(source, openPosition, context, commonParser)
-    -> SquareResult(graph, nextPosition, sourceSpan)
+| Entry | Receives | Returns |
+| --- | --- | --- |
+| Square subparser | Source, `openPosition`, established INDEX/OPERATION context and the actual common parser | Ordinary square-form graph, `nextPosition` after its closer and source span |
+| Common region parser | The same source, start position, receiving context and structural boundary policy | Ordinary region graph when present, exact `nextPosition` and recognized current-level boundary; absence of a region is retained separately from a present empty graph |
 
-commonParser.parseRegion(source, position, receivingContext, boundaryPolicy)
-    -> RegionResult(graph, nextPosition, boundary, consumedNoRegion)
-```
+`openPosition` points to the `[` owned by this invocation. A successful square-subparser entry returns `nextPosition` **immediately after its matching `]`**. It never consumes a following operator, TYPE base, adjacent suffix or caller delimiter. The caller resumes from that exact position. A missing closer is an error with its source location, not successful EOF completion.
 
-`openPosition` points to the `[` owned by this invocation. Successful `parseSquare` returns `nextPosition` **immediately after its matching `]`**. It never consumes a following operator, TYPE base, adjacent suffix or caller delimiter. The caller resumes from that exact position. A missing closer is an error with its source location, not successful EOF completion.
-
-`parseRegion` returns before an **unconsumed current-level boundary** belonging to the caller. It consumes all nested regions completely and returns their graphs. Its boundary policy is structural, not “stop at any matching character”. Strings, exact identifiers, comments, nested groups, nested square forms, complete Mix regions and conditional arms shield their internal delimiters. A bounded expression can contain a complete declaration, call or any other form admitted by its normal receiving role. The helper passes the start position directly; it does not pre-scan for an expression end or a matching delimiter before calling the common parser.
+The common region parser returns before an **unconsumed current-level boundary** belonging to the caller. It consumes all nested regions completely and returns their graphs. Its boundary policy is structural, not “stop at any matching character”. Strings, exact identifiers, comments, nested groups, nested square forms, complete Mix regions and conditional arms shield their internal delimiters. A bounded expression can contain a complete declaration, call or any other form admitted by its normal receiving role. The helper passes the start position directly; it does not pre-scan for an expression end or a matching delimiter before calling the common parser.
 
 In particular, when the next region begins with `{`, the square helper passes that position to the **common parser**. The common parser owns the whole Mix form, its local source context and matching `}`. A separately delegated Mix region returns `nextPosition` after that `}`; if it is part of a larger delegated expression, the common parser also consumes the rest of that expression up to the caller boundary. The helper resumes only from the returned position. The helper must not scan ahead for `}`, count its nested braces, inspect its contents, or discard its graph. The same delegation applies to `(`, nested `[`, and protected lexical forms.
 
-`ABSENT` in the pseudocode denotes the ordinary absence of a field. It is not a new LMX value, sentinel integer, required boolean field, or a request for dynamic autofill. An explicitly supplied empty expression has a present graph and must not be confused with an omitted slice field or absent axis list.
+An omitted field remains an ordinary absent field. This does not introduce a new LMX value, sentinel integer, required boolean field, or a request for dynamic autofill. An explicitly supplied empty expression has a present graph and must not be confused with an omitted slice field or absent axis list.
 
 <a id="bracket-boundaries"></a>
 ## 4. Boundary policies
@@ -66,30 +63,15 @@ The common lexer/parser recognizes complete tokens before testing a current-leve
 
 The rule grammar owns a relation token only in the position where that relation is expected. To use a relation token as part of an axis expression, enclose that expression in an ordinary group: `A [* (axis * 2):(other + 1)] B`. The group is parsed by the full common parser; no special arithmetic evaluator is introduced. Options such as `reduce := min` are ordinary named arguments, so their `:=` is not an axis colon.
 
-`a[flag ? 1 : 2:6]` has start expression `flag ? 1 : 2` and stop expression `6`. `a[(f :: int -> int):end]` preserves the nested signature syntax if its receiving contract admits the resulting value; parsing alone does not make it a valid integer bound. `a[{ ... }:end]` similarly delegates the complete Mix region. More than two top-level slice colons is a slice syntax error.
+`a[flag ? 1 : 2:6]` has start expression `flag ? 1 : 2` and stop expression `6`. `a[(f :: int -> int):end]` preserves the nested signature syntax if its receiving contract admits the resulting value; parsing alone does not make it a valid integer bound. A bound expression beginning with `{` similarly delegates the complete Mix region; its type is checked by the receiving contract after parsing. More than two top-level slice colons is a slice syntax error.
 
 ## 5. Slice algorithm
 
-```text
-parseIndexBody(cursor, context):
-    fields = []
-    separators = 0
-    repeat:
-        # The common parser identifies an immediate caller boundary as well.
-        part = common.parseRegion(cursor, INDEX_FIELD, sliceBoundaryPolicy)
-        fields.append(ABSENT if part.consumedNoRegion else part.graph)
-        cursor = part.nextPosition
-        if part.boundary is RBRACKET:
-            if separators == 0:
-                require fields[0] is present
-                return Index(fields[0]), cursor
-            pad omitted trailing fields to three without reading their values
-            return Slice(fields.start, fields.stop, fields.step), cursor
-        require part.boundary is SLICE_COLON
-        require separators < 2
-        cursor = consumeOneBoundaryToken(cursor, SLICE_COLON)
-        separators += 1
-```
+1. Start the first field with no value and no slice separators. Pass its current position to the common parser with the INDEX-field receiving context and slice boundary policy; the common parser also recognizes an immediate boundary.
+2. Retain the returned field graph when a region is present. If the parser returns at an immediate boundary without a region, retain an absent field. Continue strictly from its returned `nextPosition`.
+3. On a current-level slice colon, require fewer than two prior separators, consume exactly that one token and start the next field. A third colon is a slice syntax error.
+4. On the owned `]`, finish the body without consuming the closer. With no colons, require one present index expression. With colons, retain start/stop/step including omitted trailing fields; do not obtain their values.
+5. Any other returned boundary in that position is a source-located syntax error. Only the shared outer wrapper in §7 consumes the final `]`.
 
 `Index` and `Slice` here name ordinary graph descriptions passed to the existing consumers. They do not allocate a View, read an Array or normalize a numeric bound during parsing. `a[::]` keeps three omitted fields; `a[()]` keeps one present expression. On INDEX entry the common lexer can deliver the two colon events in `::` separately, preserving their positions; the helper does not split raw strings itself.
 
@@ -97,30 +79,17 @@ The outer wrapper consumes the returned `]` once and returns after it. Normalizi
 
 ## 6. Operation configuration algorithm
 
-```text
-parseOperationBody(cursor, context):
-    method, cursor = common.parseDesignator(cursor, ordinary designator rules)
-    config = ordinary empty configuration Structure
-    # No axisRules field is supplied yet.
-    while next current-level boundary is not RBRACKET:
-        if next form is the explicit empty rule list ():
-            require no previous axisRules list
-            config.axisRules = present empty ordinary list
-            cursor = common.parseRegion(cursor, DATA, completeGroupPolicy).nextPosition
-        else if next form is an axis rule:
-            parse its left/right expression regions through common.parseRegion
-            retain relation and expressions in an ordinary rule Structure
-            append rule to the present config.axisRules list
-        else if next token is output arrow:
-            consume arrow and delegate the complete output-order region
-            retain its graph in the ordinary permutation field
-        else:
-            delegate the ordinary named option/argument region
-            retain it in config without computing it
-    return operation occurrence(method, config), cursor
-```
+The common parser first consumes the ordinary operation designator. The subparser starts an ordinary empty configuration Structure **without an `axisRules` field**. It then handles only forms at its own current level:
 
-The common parser supplies form/token recognition at the current level. This pseudocode is not permission for textual lookahead to balance nested regions. Both absent-list and explicit-list variants are parsed without executing methods. Complete axis rules and options obey [the indexed-family contract](TENSOR_EXPRESSIONS.md#indexed-family).
+| Next form | Action |
+| --- | --- |
+| Explicit empty list `()` | The common parser consumes the complete group; retain a present empty rule list. Do not silently replace a previously supplied list |
+| Axis rule | Delegate each expression region to the common parser; retain the relation and returned graphs in an ordinary rule Structure appended to the present list |
+| Output-order arrow | Consume the owned arrow and delegate the complete permutation region; retain its graph in the configuration |
+| Named option/actual | The common parser consumes the complete ordinary region; retain its result without evaluating it |
+| Owned `]` | Finish the body and return the closer's position to the shared outer wrapper |
+
+The common parser supplies recognition of current-level forms/tokens. This does not authorize textual lookahead to balance nested regions. Both absent-list and explicit-list variants are parsed without executing methods. Complete axis rules and options obey [the indexed-family contract](TENSOR_EXPRESSIONS.md#indexed-family).
 
 The following distinctions must survive graph construction:
 
@@ -140,21 +109,24 @@ An arrow or named options alone do not manufacture an axis list. Presence is an 
 
 ## 7. Shared outer wrapper
 
-```text
-parseSquare(source, openPosition, context, common):
-    require common.tokenAt(openPosition, context) is LBRACKET
-    require context is INDEX or OPERATION
-    cursor = common.positionAfterToken(openPosition)
-    if context is OPERATION:
-        require operation designator starts exactly at cursor, without whitespace
-    body, closePosition = dispatchBySuppliedContext(cursor, context, common)
-    require common.tokenAt(closePosition, context) is RBRACKET
-    return SquareResult(body,
-                        common.positionAfterToken(closePosition),
-                        span(openPosition, closePosition))
+The wrapper checks its opening `[` token and the supplied INDEX/OPERATION context. In OPERATION, the designator starts immediately after `[`, without whitespace. The body selected by that context from §5 or §6 receives the position after the opening token and returns its graph with the position of its own closing boundary. The wrapper validates the returned `]`, consumes it exactly once and returns the graph, source span and position after the closing token. Another token or EOF instead of that `]` is an error.
+
+TYPE and VALUE regions stay with the common parser and its existing bounded-region algorithms. When a delegated expression contains another square region, the common parser selects its role again and can recursively invoke this component for a nested INDEX or compact operation. No helper searches for the “next `]`”; only its own returned top-level closer is accepted. Blank-line closure still cannot synthesize a missing bounded delimiter.
+
+Actual LMX forms accepted by this contract:
+
+```lmx
+[8]int: a [0 1 2 3 4 5 6 7]
+int: flag 1
+@: selected a[flag ? 1 : 2:6]
+# [1 2 3 4 5]
+@: alternating a[::2]
+# [0 2 4 6]
+@: reversed a[::-1]
+# [7 6 5 4 3 2 1 0]
 ```
 
-`dispatchBySuppliedContext` selects the INDEX or operation algorithm above. TYPE and VALUE regions stay with the common parser and its existing bounded-region algorithms. When a delegated expression contains another square region, the common parser selects its role again and can recursively invoke this component for a nested INDEX or compact operation. No helper searches for the “next `]`”; only its own returned top-level closer is accepted. Blank-line closure still cannot synthesize a missing bounded delimiter.
+This is LMX source for project acceptance. The documentation does not create a second parser: subsequent indexed operations use the [shared LMX bodies](patterns/LMX_Fn_Receivers/src/array_expression_ops.lmx), while concrete source-to-clean-graph integration is not claimed as completed.
 
 ## 8. Required acceptance observations
 

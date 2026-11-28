@@ -1,0 +1,235 @@
+# Ordinary LMX DATA: selected existing CODE references, not a registry of names.
+# Presence does not admit a build, implement a converter, or promise runtime support.
+# Source-specific limits and arithmetic admission are normative in README.ru.md.
+# C IDs/signatures and all concrete c.* bodies remain in the existing catalogue.
+MatrixBackendProfiles:
+    liquidFloatMul:
+        @MatrixNativeCallAPI: call C99Calls_acoustic_liquid_dsp\capi_87521c170ed40a54
+        @: catalog C99Catalog_acoustic_liquid_dsp
+        @: entry C99Catalog_acoustic_liquid_dsp\Entries\capi_87521c170ed40a54
+        []char: operation "M004 dense matrix product"
+        []char: limits "float; rank2; contiguous row-major; disjoint output"
+        []char: converters "tensorLayout tensorBackend numericNarrow"
+        []char: status "UPSTREAM_REVIEWED_BRIDGE_UNBOUND"
+        []char: runtime "NOT_RUN"
+#
+    liquidDoubleMul:
+        @MatrixNativeCallAPI: call C99Calls_acoustic_liquid_dsp\capi_f7da86d9a23845db
+        @: catalog C99Catalog_acoustic_liquid_dsp
+        @: entry C99Catalog_acoustic_liquid_dsp\Entries\capi_f7da86d9a23845db
+        []char: operation "M004 dense matrix product"
+        []char: limits "double; rank2; contiguous row-major; disjoint output"
+        []char: converters "tensorLayout tensorBackend numericNarrow"
+        []char: status "UPSTREAM_REVIEWED_BRIDGE_UNBOUND"
+        []char: runtime "NOT_RUN"
+#
+    liquidComplexFloatMul:
+        @MatrixNativeCallAPI: call C99Calls_acoustic_liquid_dsp\capi_edcdcde08c9ff7da
+        @: catalog C99Catalog_acoustic_liquid_dsp
+        @: entry C99Catalog_acoustic_liquid_dsp\Entries\capi_edcdcde08c9ff7da
+        []char: operation "M004 bilinear complex matrix product; no implicit conjugation"
+        []char: limits "float complex; rank2; row-major; complex ABI conversion; disjoint output"
+        []char: converters "tensorLayout tensorBackend complexBackend numericNarrow"
+        []char: status "UPSTREAM_REVIEWED_BRIDGE_UNBOUND"
+        []char: runtime "NOT_RUN"
+#
+    liquidComplexDoubleMul:
+        @MatrixNativeCallAPI: call C99Calls_acoustic_liquid_dsp\capi_67d2368662684c08
+        @: catalog C99Catalog_acoustic_liquid_dsp
+        @: entry C99Catalog_acoustic_liquid_dsp\Entries\capi_67d2368662684c08
+        []char: operation "M004 bilinear complex matrix product; no implicit conjugation"
+        []char: limits "double complex; rank2; row-major; complex ABI conversion; disjoint output"
+        []char: converters "tensorLayout tensorBackend complexBackend numericNarrow"
+        []char: status "UPSTREAM_REVIEWED_BRIDGE_UNBOUND"
+        []char: runtime "NOT_RUN"
+#
+    liquidComplexFloatTranspose:
+        @MatrixNativeCallAPI: call C99Calls_acoustic_liquid_dsp\capi_d8dd7fe3c46e2d91
+        @: catalog C99Catalog_acoustic_liquid_dsp
+        @: entry C99Catalog_acoustic_liquid_dsp\Entries\capi_d8dd7fe3c46e2d91
+        []char: operation "M011 transpose WITHOUT conjugation; pinned upstream naming differs"
+        []char: limits "float complex; rank2; row-major; mutable native scratch; shape swaps"
+        []char: converters "tensorLayout tensorBackend complexBackend"
+        []char: status "UPSTREAM_REVIEWED_BRIDGE_UNBOUND"
+        []char: runtime "NOT_RUN"
+#
+    liquidComplexFloatAdjoint:
+        @MatrixNativeCallAPI: call C99Calls_acoustic_liquid_dsp\capi_e7fb3578f2bf1f43
+        @: catalog C99Catalog_acoustic_liquid_dsp
+        @: entry C99Catalog_acoustic_liquid_dsp\Entries\capi_e7fb3578f2bf1f43
+        []char: operation "M012 conjugate transpose; pinned upstream naming differs"
+        []char: limits "float complex; rank2; row-major; mutable native scratch; shape swaps"
+        []char: converters "tensorLayout tensorBackend complexBackend"
+        []char: status "UPSTREAM_REVIEWED_BRIDGE_UNBOUND"
+        []char: runtime "NOT_RUN"
+#
+    linmathMul4:
+        @MatrixNativeCallAPI: call C99Calls_base_linmath\capi_7597625fb04e8871
+        @: catalog C99Catalog_base_linmath
+        @: entry C99Catalog_base_linmath\Entries\capi_7597625fb04e8871
+        []char: operation "M004 fixed matrix product"
+        []char: limits "float; 4x4; column-major; exact alias accepted by native temp"
+        []char: converters "tensorLayout tensorBackend numericNarrow"
+        []char: status "UPSTREAM_REVIEWED_BRIDGE_UNBOUND"
+        []char: runtime "NOT_RUN"
+#
+    linmathTranspose4:
+        @MatrixNativeCallAPI: call C99Calls_base_linmath\capi_8468552a2a3fa44b
+        @: catalog C99Catalog_base_linmath
+        @: entry C99Catalog_base_linmath\Entries\capi_8468552a2a3fa44b
+        []char: operation "M011 fixed transpose"
+        []char: limits "float; 4x4; column-major; source and destination disjoint"
+        []char: converters "tensorLayout tensorBackend"
+        []char: status "UPSTREAM_REVIEWED_BRIDGE_UNBOUND"
+        []char: runtime "NOT_RUN"
+#
+    cglmMul4:
+        @MatrixNativeCallAPI: call C99Calls_extras_cglm\capi_a4cc7e27221a3f88
+        @: catalog C99Catalog_extras_cglm
+        @: entry C99Catalog_extras_cglm\Entries\capi_a4cc7e27221a3f88
+        []char: operation "M004 fixed matrix product"
+        []char: limits "float; 4x4; column-major; build-specific alignment and SIMD profile"
+        []char: converters "tensorLayout tensorBackend numericNarrow"
+        []char: status "UPSTREAM_REVIEWED_BRIDGE_UNBOUND"
+        []char: runtime "NOT_RUN"
+#
+    fixedMul:
+        @MatrixNativeCallAPI: call C99Calls_numeric_extra_libfixmatrix\capi_6cf9b89544559a6a
+        @: catalog C99Catalog_numeric_extra_libfixmatrix
+        @: entry C99Catalog_numeric_extra_libfixmatrix\Entries\capi_6cf9b89544559a6a
+        []char: operation "M004 bounded fixed-point matrix product"
+        []char: limits "Q16.16; rank2; mf16 padded row-major; inspect errors"
+        []char: converters "tensorLayout tensorBackend fixedPoint"
+        []char: status "UPSTREAM_REVIEWED_BRIDGE_UNBOUND"
+        []char: runtime "NOT_RUN"
+#
+    fixedQr:
+        @MatrixNativeCallAPI: call C99Calls_numeric_extra_libfixmatrix\capi_430c6b6cd34a0b11
+        @: catalog C99Catalog_numeric_extra_libfixmatrix
+        @: entry C99Catalog_numeric_extra_libfixmatrix\Entries\capi_430c6b6cd34a0b11
+        []char: operation "M034 bounded full-column-rank economy QR"
+        []char: limits "Q16.16; m>=n>0; explicit reorthogonalize; inspect BOTH Q/R errors"
+        []char: converters "tensorLayout tensorBackend fixedPoint"
+        []char: status "LIMITED_BRIDGE_UNBOUND"
+        []char: runtime "NOT_RUN"
+#
+    fixedSolveQr:
+        @MatrixNativeCallAPI: call C99Calls_numeric_extra_libfixmatrix\capi_3ad3cbe1f15c479f
+        @: catalog C99Catalog_numeric_extra_libfixmatrix
+        @: entry C99Catalog_numeric_extra_libfixmatrix\Entries\capi_3ad3cbe1f15c479f
+        []char: operation "Solve using existing Q,R,B; not raw A,B"
+        []char: limits "Q16.16; QR contract; multiple RHS; output must not alias R"
+        []char: converters "tensorLayout tensorBackend fixedPoint"
+        []char: status "LIMITED_BRIDGE_UNBOUND"
+        []char: runtime "NOT_RUN"
+#
+    fixedCholesky:
+        @MatrixNativeCallAPI: call C99Calls_numeric_extra_libfixmatrix\capi_eeddb47ff9c38534
+        @: catalog C99Catalog_numeric_extra_libfixmatrix
+        @: entry C99Catalog_numeric_extra_libfixmatrix\Entries\capi_eeddb47ff9c38534
+        []char: operation "cholesky bounded fixed-point candidate"
+        []char: limits "Q16.16; square; validate symmetry/SPD and diagonal; inspect errors"
+        []char: converters "tensorLayout tensorBackend fixedPoint"
+        []char: status "LIMITED_BRIDGE_UNBOUND"
+        []char: runtime "NOT_RUN"
+#
+    mintMatmul2:
+        @MatrixNativeCallAPI: call C99Calls_tensors_mint\capi_0a4443a4477ca02f
+        @: catalog C99Catalog_tensors_mint
+        @: entry C99Catalog_tensors_mint\Entries\capi_0a4443a4477ca02f
+        []char: operation "M004 rank2 dense product only"
+        []char: limits "verified mt_float=float build; row-major; native output mt_tensor_free"
+        []char: converters "tensorLayout tensorBackend numericNarrow resource"
+        []char: status "LIMITED_BRIDGE_UNBOUND"
+        []char: runtime "NOT_RUN"
+#
+    utensilMatmul2:
+        @MatrixNativeCallAPI: call C99Calls_tensors_utensil\capi_e277d14a04d4b4e4
+        @: catalog C99Catalog_tensors_utensil
+        @: entry C99Catalog_tensors_utensil\Entries\capi_e277d14a04d4b4e4
+        []char: operation "M004 rank2 dense product"
+        []char: limits "float; row-major; explicit CPU/device policy; ut_free ownership"
+        []char: converters "tensorLayout tensorBackend numericNarrow resource"
+        []char: status "LIMITED_BRIDGE_UNBOUND"
+        []char: runtime "NOT_RUN"
+#
+    utensilMatmul3:
+        @MatrixNativeCallAPI: call C99Calls_tensors_utensil\capi_e277d14a04d4b4e4
+        @: catalog C99Catalog_tensors_utensil
+        @: entry C99Catalog_tensors_utensil\Entries\capi_e277d14a04d4b4e4
+        []char: operation "M004 equal-batch rank3 product; no broadcasting"
+        []char: limits "float; [B,M,K] and [B,K,N]; contiguous; int products checked; ut_free"
+        []char: converters "tensorLayout tensorBackend numericNarrow resource"
+        []char: status "LIMITED_BRIDGE_UNBOUND"
+        []char: runtime "NOT_RUN"
+#
+    cminpackQr:
+        @MatrixNativeCallAPI: call C99Calls_numeric_extra_cminpack\capi_a50d792843e5bdbb
+        @: catalog C99Catalog_numeric_extra_cminpack
+        @: entry C99Catalog_numeric_extra_cminpack\Entries\capi_a50d792843e5bdbb
+        []char: operation "M034 compact Householder QR with optional column pivoting"
+        []char: limits "catalogued double profile; column-major lda>=m; native int; 1-based ipvt"
+        []char: converters "tensorLayout tensorBackend numericNarrow"
+        []char: status "LIMITED_BRIDGE_UNBOUND"
+        []char: runtime "NOT_RUN"
+#
+    cminpackQform:
+        @MatrixNativeCallAPI: call C99Calls_numeric_extra_cminpack\capi_c2c36b97ffc4f9f5
+        @: catalog C99Catalog_numeric_extra_cminpack
+        @: entry C99Catalog_numeric_extra_cminpack\Entries\capi_c2c36b97ffc4f9f5
+        []char: operation "Form Q from MINPACK Householder representation"
+        []char: limits "catalogued double; column-major; ldq and storage for requested full Q"
+        []char: converters "tensorLayout tensorBackend numericNarrow"
+        []char: status "LIMITED_BRIDGE_UNBOUND"
+        []char: runtime "NOT_RUN"
+#
+    cminpackQrSolve:
+        @MatrixNativeCallAPI: call C99Calls_numeric_extra_cminpack\capi_1c4b0c1a60bf29d9
+        @: catalog C99Catalog_numeric_extra_cminpack
+        @: entry C99Catalog_numeric_extra_cminpack\Entries\capi_1c4b0c1a60bf29d9
+        []char: operation "Least squares with diagonal regularizer using R,P,Qtb"
+        []char: limits "catalogued double; n>0; not general A,B solve; modifies lower R"
+        []char: converters "tensorLayout tensorBackend numericNarrow"
+        []char: status "LIMITED_BRIDGE_UNBOUND"
+        []char: runtime "NOT_RUN"
+#
+    cminpackEuclideanNorm:
+        @MatrixNativeCallAPI: call C99Calls_numeric_extra_cminpack\capi_a3b86c2a6774e584
+        @: catalog C99Catalog_numeric_extra_cminpack
+        @: entry C99Catalog_numeric_extra_cminpack\Entries\capi_a3b86c2a6774e584
+        []char: operation "M016 vector Euclidean norm; not matrix spectral norm"
+        []char: limits "catalogued double; contiguous vector; native int count"
+        []char: converters "tensorLayout tensorBackend numericNarrow"
+        []char: status "UPSTREAM_REVIEWED_BRIDGE_UNBOUND"
+        []char: runtime "NOT_RUN"
+#
+    liquidSparseFloatMul:
+        @MatrixNativeCallAPI: call C99Calls_acoustic_liquid_dsp\capi_5beb434ac33243f9
+        @: catalog C99Catalog_acoustic_liquid_dsp
+        @: entry C99Catalog_acoustic_liquid_dsp\Entries\capi_5beb434ac33243f9
+        []char: operation "M004 sparse float matrix product candidate"
+        []char: limits "opaque native handles; ushort coordinate range; fresh output; no CSR cast"
+        []char: converters "sparseMatrixBackend numericNarrow resource"
+        []char: status "LIMITED_BRIDGE_UNBOUND"
+        []char: runtime "NOT_RUN"
+#
+    liquidSparseFloatMatvec:
+        @MatrixNativeCallAPI: call C99Calls_acoustic_liquid_dsp\capi_4e5f89fc45fc3e7f
+        @: catalog C99Catalog_acoustic_liquid_dsp
+        @: entry C99Catalog_acoustic_liquid_dsp\Entries\capi_4e5f89fc45fc3e7f
+        []char: operation "M004 sparse float matrix-vector product candidate"
+        []char: limits "opaque matrix; dense contiguous float vectors; disjoint output"
+        []char: converters "sparseMatrixBackend tensorLayout tensorBackend resource"
+        []char: status "LIMITED_BRIDGE_UNBOUND"
+        []char: runtime "NOT_RUN"
+#
+    klibSymmetricEigen:
+        @MatrixNativeCallAPI: call C99Calls_base_klib\capi_dfbe229775c63c57
+        @: catalog C99Catalog_base_klib
+        @: entry C99Catalog_base_klib\Entries\capi_dfbe229775c63c57
+        []char: operation "eig real symmetric candidate; not general complex eig"
+        []char: limits "double; square n>0; row-major scratch; finite eps and iteration limit"
+        []char: converters "tensorLayout tensorBackend numericNarrow"
+        []char: status "LIMITED_BRIDGE_UNBOUND"
+        []char: runtime "NOT_RUN"
+#

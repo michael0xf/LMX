@@ -2,7 +2,7 @@
 
 Парсер автоматически допускает все ресиверы в Expression. Транслятор направляет уже разобранные ресиверные и операндные применения в существующую семантику операции, сохраняя роли, типы, порядок эффектов и исходный контекст.
 
-Символьное имя можно указать точным идентификатором, например `` `+`(a; b) ``. Существующий ресивер `@` кавычек не требует. Одноаргументные варианты изменения имеют имена `++var` / `var++` и `--var` / `var--`.
+Вызов `` `+`(a; b) `` выбирает метод, объявленный с точным трёхбайтовым именем. У голой операции `+` собственный ключ. Существующий ресивер `@` кавычек не требует. Одноаргументные варианты изменения имеют имена `++var` / `var++` и `--var` / `var--`.
 
 Ниже находятся нормативные договоры и исполняемый Python-эталон трансляции. Его 26 проверок относятся к модели; LMX runtime, production-транслятор и нативная интеграция — **NOT_RUN**. Связанные разделы: [общие операции](GENERIC_OPERATIONS.md), [монадические операции](MONADIC_OPERATIONS.md).
 
@@ -17,51 +17,29 @@
 7. `@` — существующий ресивер. `` `@name` `` — одно точное имя; его содержимое не разбирается как применение `@`.
 8. `++var`, `var++`, `--var`, `var--` — четыре имени двух форм для двух операций. У каждой формы ровно один PLACE-аргумент; `var` обозначает позицию аргумента, а не конкретную переменную.
 
-Для символьного имени любой допустимой длины используется существующий точный идентификатор. Суффикс двоеточия к имени не добавляется; грамматика не получает ограничения длиной в три или четыре символа. Значение конкретного символьного имени определяется его действительным объявлением.
+Символьный точный токен допускает любую разрешённую длину и сохраняет все записанные байты. Голая символическая операция использует свой лексически распознанный ключ. Явный строковый поиск разрешает передать его как текст в позиции имени. Значение имени определяется его действительным объявлением.
 
 ## 2. Общая норма имён — на базовом уровне
 
-### 2.1. Одно имя после декодирования
 
-Эти правила уже относятся к базовому уровню языка. Их сохраняют и проверяют при подключении транслятора; новый scanner, второй decoder или специальный режим кавычек не требуются. Связать в документации существующие положения:
+### 2.1. Полный токен как ключ имени
 
-- [Грамматика, точные идентификаторы](LMX_grammar.en.md#identifiers): обратные кавычки ограничивают одно атомарное имя; удвоенная внутренняя кавычка даёт одну; допустимое без кавычек имя обозначает то же имя в кавычках.
-- [Имена и пути](LMX_semantics.en.md#fields): идентификаторы, сервисные операторы и ресиверы используют существующее каноническое представление имени.
-- [Имя без вычисления](LMX_semantics.en.md#string-identifier): `sys\name` снимает кавычки и удвоения, не читает значение и не вызывает метод.
+Граф интернирует длину и все байты токена. Обе внешние обратные кавычки и оба байта каждой внутренней пары входят в ключ. Сравнение внутри таблицы имён использует её обычные канонические адреса. Выбор роли следует договору потребителя.
 
-**Базовое правило:**
+| Написание | Ключ |
+| --- | --- |
+| `print` / `` `print` `` | Два разных ключа. |
+| `+` / `` `+` `` | Имя голой операции и отдельное точное имя. |
+| `::` / `` `::` `` | Два ключа. Лексическая роль голого `::` по-прежнему зависит от контекста. |
+| `->` / `` `->` `` | Имя голой операции и отдельно объявляемое точное имя. |
+| `` `a``b` `` | Шесть байтов `60 61 60 60 62 60`. |
+| Токен из двух обратных кавычек | Два байта `60 60`, независимо от пустого строкового ключа. |
 
-> После декодирования идентификатора его содержимое поступает в единую существующую таблицу канонических имён. Равное содержимое означает одно имя независимо от допустимого написания. Имя уже распознанного символьного оператора канонизируется тем же путём. Кавычки влияют на выделение атома в исходнике, но не создают отдельное пространство имён и не выбирают другую реализацию операции.
-
-```text
-print       и `print`       — одно имя print
-+           и `+`           — одно имя операции +
-::          и `::`          — одно имя операции ::
-->          и `->`          — одно имя операции ->
-`a``b`                     — имя a`b
-`two words`                — одно имя с пробелом
-``                         — пустое имя
-```
-
-Строка с `+` относится к **имени уже распознанной операции**. Знак `+` не становится bare-identifier по лексической грамматике.
-
-Правило одинаково работает для lookup, перегрузок, импортов, ссылок на методы, `sys\name`, `sys\priority`, сериализации и имён полей. Нельзя чинить только вызов `` `+`(a; b) ``.
+`sys\name` выдаёт все байты написанного токена без вычисления значения. При явном строковом поиске `sys\priority("+")` адресует голую операцию. Ключ из трёх байтов `60 2B 60` адресует другое имя. Ссылки в старых примерах, которые использовали прежнее равенство, проверяются при миграции. [Грамматика](LMX_grammar.en.md#identifiers) · [Имена и пути](LMX_semantics.en.md#fields) · [Строковый выбор](LMX_semantics.en.md#field-name-keys).
 
 ### 2.2. Разрешённые символы
 
-Текущая норма допускает внутри точного имени пробелы, переводы строк, знаки операций, `#`, `:`, скобки, backslash и другое содержимое. Оно не открывает комментарий, путь, оператор или уровень отступа.
-
-Обратная кавычка U+0060 записывается **двумя подряд**. Backslash не вводит escape-последовательность. Разрешено пустое имя.
-
-**Байт NUL / U+0000 сейчас запрещён:** это прямо записано в разделе 5 доступной грамматики. Цифра `0` разрешена. Backslash и цифра ноль внутри имени — два символа, а не NUL.
-
-```text
-`a``b`     → a`b
-`\0`       → backslash и цифра 0
-`# : ()`   → одно имя; содержимое не разбирается повторно
-```
-
-Сохранять исходные byte spans и написание для roundtrip/диагностики. Декодированное содержимое не заменяет исходный буфер.
+Точный токен сохраняет пробелы, переводы строк, знаки операций, `#`, `:`, скобки и обратную косую черту. Пара обратных кавычек внутри проходит как два байта одного токена. Пунктуация внутри него сохраняется как часть имени. NUL и незакрытый токен дают исходную диагностику. Исходные диапазоны используются для печати и диагностики.
 
 ### 2.3. Подмножество SQLite
 
@@ -69,14 +47,14 @@ print       и `print`       — одно имя print
 
 Не требуется импортировать все остальные SQL-кавычки, keywords и SQL lookup. В LMX двойные кавычки уже обозначают строки, квадратные скобки участвуют в типах, индексировании и явных инициализаторах Arrays. Подмножество не меняет этих ролей и не вводит превращение строки в имя в зависимости от успеха lookup.
 
-Не добавлять case folding или Unicode normalization. Снятие кавычек и удвоений — не переименование `Print` в `print`.
+Сохранять регистр и исходные байты Unicode.
 
 ### 2.4. Имя отличается от составного выражения
 
 | Запись | Значение |
 | --- | --- |
 | `@` | Существующий ресивер; кавычки для его обычного применения не требуются. |
-| `` `@name` `` | Одно имя `@name`, без выделения `@` и `name`. |
+| `` `@name` `` | Одно полное имя вместе с обратными кавычками. |
 | `ns\op` | Путь. |
 | `` `ns\op` `` | Одно буквальное имя с backslash. |
 | `@Model` | Составное TYPE-выражение. |
@@ -84,9 +62,9 @@ print       и `print`       — одно имя print
 | `a+b` | Выражение из нескольких токенов. |
 | `` `a+b` `` | Одно имя. |
 | `` ns\`+`(a; b) `` | Вызов точного имени `+` через путь `ns`. |
-| `` FxToTokens\`->` `` | Квалифицированная ссылка на конструктор сигнатуры; кавычки охватывают только имя `->`. |
+| `` FxToTokens\`->` `` | Квалифицированная ссылка на точное имя конструктора. Ключ этого сегмента включает обе кавычки. |
 
-Содержимое кавычек не разбирается повторно. Кавычки не отменяют семантическое резервирование: `` `node` `` обозначает то же имя `node` с его установленной ролью.
+Содержимое кавычек не разбирается повторно. Ключ `node` сохраняет служебную роль. Токен `` `node` `` даёт отдельный пользовательский ключ там, где он допустим.
 
 ## 3. Формы обращения
 
@@ -126,7 +104,7 @@ Name :: (int: x; return: int)
 
 `int -> (int int)` имеет один правый аргумент, а `int -> int int` — два. У `int -> (int -> int)` один вложенный результат-сигнатура. Форма `` `->`(int) `` нульарная; `int -> ()` содержит одну пустую Structure, допуск которой как TYPE проверяется отдельно. [Границы аргументов](LMX_semantics.ru.md#signature-grouping) следуют структурному группировщику и целому TYPE-договору; форма левой группы сама по себе не разрешает раскрыть модель. Ни локального DATA/value-селектора, ни дополнительного раскрытия или автоматического каррирования нет.
 
-**Кавычки не являются признаком вызова.** `` `+` `` само по себе — имя. Вызов задаёт обычный Frame, например `` `+`(a; b) ``. В Expression то же имя разрешается по общему операндному контракту. Флаг «было в кавычках» не выбирает реализацию.
+**Кавычки не являются признаком вызова.** `` `+` `` само по себе — имя. Вызов задаёт обычный Frame, например `` `+`(a; b) ``. В Expression написанное точное имя разрешается по общему операндному контракту кандидата с таким ключом. Потребители сравнивают ключи и выбирают роль без отдельного флага кавычек.
 
 При существующем `head: body` двоеточие остаётся структурным разделителем, не частью имени. Новые имена `+:`, `<<<:` или `bind:` не вводятся. Основная запись символьных ресиверов в этом разделе — компактная:
 
@@ -235,12 +213,12 @@ Resize:
 
 1. Существующий P0 сохраняет Frames, Expression, группировку, имена и исходные spans.
 2. Транслятор получает уже разобранную форму и канонические имена. Для прижатого одноаргументного применения использует уже определённую связь оператора с атомом.
-3. Обе записи разрешаются обычным resolver в ту же операцию и её контракт.
+3. Один resolver разрешает каждую запись по её ключу. Ресиверная и операндная формы выбранного семейства используют его общий контракт.
 4. Общий обработчик определяет роли и отображение actuals до соответствующих эффектов.
 5. Транслятор сохраняет прежнюю последовательность приёма и исполнения каждого достигнутого actual.
 6. Существующий исполнитель или его нативная трансляция выполняет операцию в установленном контексте.
 
-Исходное написание сохраняется для roundtrip, но не служит runtime-признаком «было в кавычках, значит другая операция».
+Исходное написание определяет ключ и сохраняется для roundtrip. При разрешении и выборе роли используется общий механизм без отдельного флага кавычек.
 
 ### 6.1. Сохранять не только VALUE и R
 
@@ -320,126 +298,13 @@ items[next()]++
 
 ### 8.1. Исполняемый эталон
 
-Ниже полный Python-эталон участка транслятора, использующий [общий helper depth](tools/operand_depth_reference.py). Python выбран для проверяемого описания алгоритма; язык production-реализации остаётся прежним. Файл эталона: [translator_reference.py](reference/operation_forms/translator_reference.py).
+Отдельный Python host-эталон участка транслятора использует [общий helper depth](tools/operand_depth_reference.py). Он проверяет ограниченную модель уже разобранного графа; документационные примеры операций и общие тела ниже записаны на LMX. Файл эталона: [translator_reference.py](reference/operation_forms/translator_reference.py).
 
 `OperationUse`, `AttachedUpdate` и `Actual` — небольшие представления данных для эталона, получаемые из существующего графа. Это не новые типы операндов LMX и не предложение менять P0. В частности, `operatorBeforeAtom` читается из уже определённого положения операции в графе.
 
 `resolveExistingOperation` и `lowerExistingOperation` обозначают интеграцию с существующими механизмами выбора и трансляции. Названия этих двух Python-методов иллюстративны: документ не утверждает наличие такого API в доступном архиве.
 
-```python
-"""Executable specification model; consumes views of ALREADY parsed LMX.
-
-The dataclasses are test views, not additions to the P0 graph format.
-Canonical names, operation resolution and role consumption already exist.
-"""
-
-from dataclasses import dataclass, replace
-from pathlib import Path
-import sys
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
-from operand_depth_reference import ABSENT, admit_depth, resolve_depth
-
-
-class FormError(ValueError):
-    pass
-
-
-@dataclass(frozen=True)
-class Actual:
-    node: object
-    context: object
-
-
-@dataclass(frozen=True)
-class OperationUse:
-    name: str
-    actuals: tuple[Actual, ...]
-    context: object
-    depth: object = ABSENT
-
-
-@dataclass(frozen=True)
-class AttachedUpdate:
-    # A view of an already grouped unary occurrence, not a name scanner.
-    operator: str
-    operatorBeforeAtom: bool
-    atom: Actual
-    context: object
-    depth: object = ABSENT
-
-
-def normalizeUse(use):
-    if isinstance(use, OperationUse):
-        # Includes @, @name, ++counter and ++var as exact whole names.
-        # No startswith(), splitting, unquoting or wildcard matching here.
-        return use
-    if not isinstance(use, AttachedUpdate):
-        raise FormError("expected an already parsed operation use")
-    if use.operator not in ("++", "--"):
-        raise FormError("not an update pattern")
-    if type(use.operatorBeforeAtom) is not bool:
-        raise FormError("missing parsed placement")
-    name = (use.operator + "var" if use.operatorBeforeAtom
-            else "var" + use.operator)
-    return OperationUse(name, (use.atom,), use.context, use.depth)
-
-
-def translateOperation(use, core):
-    site = normalizeUse(use)
-    selected = core.resolveExistingOperation(site)
-    # The existing lowering owns roles, argument admission, effects and scope.
-    # There is no eager VALUE conversion or additional call activation here.
-    return core.lowerExistingOperation(selected, site)
-
-
-def prepareInvocation(use, obtainDepth):
-    """After demand, obtain the named/common depth input without moving actuals.
-
-    This is not called by translation or grouping. OperationUse.actuals holds
-    the receiver's ordinary user arguments unchanged; the descriptor's depth
-    represents its ordinary named `depth` input after name mapping. The
-    operand adapter separately supplies the ABI order left, depth, right.
-    """
-    site = normalizeUse(use)
-    return replace(site, depth=resolve_depth(site.depth, obtainDepth))
-
-
-@dataclass(frozen=True)
-class UpdateRule:
-    direction: int
-    returnPrevious: bool
-
-
-# Reference descriptions of the four declared variants. In production these
-# are properties of the selected operation, NOT a second runtime registry.
-UPDATE_RULES = {
-    "++var": UpdateRule(+1, False),
-    "var++": UpdateRule(+1, True),
-    "--var": UpdateRule(-1, False),
-    "var--": UpdateRule(-1, True),
-}
-
-
-def lowerUpdate(rule, site, backend):
-    # The scalar leaf body, called after operation/PLACE selection.
-    # Shared Map prepares scalar places before invoking this body.
-    if site.depth is not ABSENT and admit_depth(site.depth) != 0:
-        raise FormError("nonzero depth requires the shared lifting boundary")
-    if len(site.actuals) != 1:
-        raise FormError("update expects one PLACE argument")
-    place = backend.resolvePlace(site.actuals[0], site.context)
-    previous = backend.readValue(place)
-    following = backend.stepValue(previous, rule.direction)
-    stored = backend.storeValue(place, following)
-    return previous if rule.returnPrevious else stored
-
-
-# The real interpreter/native backend provides the four operations above.
-# readValue saves a value, not a live alias of the place. stepValue uses the
-# selected numeric/type profile. storeValue preserves admission and returns
-# the stored typed value without reading the place again. Exceptions propagate.
-```
+Полный исполняемый host-инструмент сохранён отдельно: [translator_reference.py](reference/operation_forms/translator_reference.py). Его язык и статус указаны явно; это вспомогательная проверка, а не LMX-тело ядра.
 
 ### 8.2. Обязательства общего обработчика
 
@@ -534,7 +399,7 @@ return: bind(bind(some(x); half); half)
 2. Сопоставить уже разбираемые ресиверные и Expression-формы с этими обработчиками.
 3. Подключить отсутствующие формы к общему пути с сохранением аргументных ролей и исходного контекста.
 4. Для прижатых одноаргументных вариантов закрепить имена `++var` / `var++`, `--var` / `var--` и аналогичные имена существующих шаблонов.
-5. Проверить базовое тождество имён и непрозрачность точных идентификаторов как регрессионные свойства существующего P0; не вводить повторный разбор в трансляторе.
+5. Проверить буквальные ключи и границы точных токенов через P0 и потребителей. Граф и транслятор получают полные байты без повторного разбора.
 6. Устранить только реально обнаруженные пробелы общей трансляции. Конфликт конкретных определений документировать с именами и источниками, а не объявлять все формы неоднозначными заранее.
 7. Обновить каталог, нормативные главы, короткие примеры и генераторы LMX. Сохранить полные `throws`.
 8. Исполнить runtime-приёмку на обеих формах и на интерпретируемом/нативном пути.
@@ -547,13 +412,13 @@ return: bind(bind(some(x); half); half)
 
 - P0 передаёт все ресиверы в Expression прежним общим способом.
 - `@` переводится как существующий ресивер, без требования кавычек.
-- `print` и точное написание того же имени имеют одну идентичность.
+- Обычное и точное написания имеют разные ключи и выбирают разные места.
 - Точные имена `@name`, `++counter`, `counter++` и `a+b` не делятся на токены при трансляции.
 - Удвоенная кавычка, пустое имя, пробел, newline, punctuation, backslash и Unicode сохраняют базовый договор.
 - NUL отвергается; цифра `0` принимается.
 - Имя не обрезается по пределу 3/4 символа.
 - Qualified exact segment отличается от одного exact name с backslash.
-- Reserved/contextual имена сохраняют договор независимо от написания.
+- Служебное имя определяется полным ключом. Проверить `node` и токен `` `node` `` в допустимых ролях.
 - Для созданного программой графа отсутствие исходных текстовых spans не препятствует выбору готовой формы.
 
 ### 12.2. Операции
@@ -578,313 +443,7 @@ return: bind(bind(some(x); half); half)
 
 Проверки находятся также в [test_translator_reference.py](reference/operation_forms/test_translator_reference.py). В директории `reference/operation_forms` выполняется `python3 -m unittest -v test_translator_reference.py`.
 
-```python
-"""Limited checks of the specification model, not of an LMX implementation."""
-
-from dataclasses import dataclass
-from decimal import Decimal
-import unittest
-
-from translator_reference import (
-    Actual, AttachedUpdate, FormError, OperationUse, UPDATE_RULES,
-    lowerUpdate, normalizeUse, prepareInvocation, translateOperation,
-)
-from operand_depth_reference import DepthError, DepthExpression, ABSENT
-
-
-@dataclass
-class Cell:
-    value: object
-
-
-class Backend:
-    def __init__(self, step=None, admit=None):
-        self.events = []
-        self.step = step or (lambda value, direction: value + direction)
-        self.admit = admit or (lambda value: value)
-
-    def resolvePlace(self, actual, context):
-        self.events.append("place")
-        self.actual = actual
-        self.context = context
-        return actual.node()
-
-    def readValue(self, place):
-        self.events.append("read")
-        return place.value
-
-    def stepValue(self, previous, direction):
-        self.events.append("step")
-        return self.step(previous, direction)
-
-    def storeValue(self, place, value):
-        self.events.append("admit")
-        accepted = self.admit(value)
-        self.events.append("write")
-        place.value = accepted
-        return accepted
-
-
-class TranslatorChecks(unittest.TestCase):
-    def setUp(self):
-        self.context = object()
-        self.cell = Cell(7)
-        self.actual = Actual(lambda: self.cell, self.context)
-
-    def site(self, name):
-        return OperationUse(name, (self.actual,), self.context)
-
-    def runVariant(self, operator, before, name, result, stored):
-        form = AttachedUpdate(operator, before, self.actual, self.context)
-        normalized = normalizeUse(form)
-        self.assertEqual(normalized, self.site(name))
-        for use in (normalized, self.site(name)):
-            self.cell.value = 7
-            backend = Backend()
-            self.assertEqual(lowerUpdate(UPDATE_RULES[name], use, backend), result)
-            self.assertEqual(self.cell.value, stored)
-            self.assertEqual(backend.events, ["place", "read", "step", "admit", "write"])
-            self.assertIs(backend.actual, self.actual)
-            self.assertIs(backend.context, self.context)
-
-    def test_increment_before(self):
-        self.runVariant("++", True, "++var", 8, 8)
-
-    def test_increment_after(self):
-        self.runVariant("++", False, "var++", 7, 8)
-
-    def test_decrement_before(self):
-        self.runVariant("--", True, "--var", 6, 6)
-
-    def test_decrement_after(self):
-        self.runVariant("--", False, "var--", 7, 6)
-
-    def test_exact_names_are_opaque(self):
-        for name in ("@", "@name", "++counter", "counter++", "a+b", "a`b", "++var",
-                     ".+", "..+", ".(10)+", ".:"):
-            use = self.site(name)
-            self.assertIs(normalizeUse(use), use)
-            self.assertEqual(normalizeUse(use).name, name)
-
-    def test_named_depth_does_not_shift_receiver_positionals(self):
-        actuals = (Actual(2, self.context), Actual(3, self.context))
-        site = OperationUse("+", actuals, self.context, depth=2)
-        ready = prepareInvocation(site, lambda *args: self.fail("ready depth was evaluated"))
-        self.assertEqual(ready.name, "+")
-        self.assertEqual(ready.depth, 2)
-        self.assertIs(ready.actuals, actuals)
-
-    def test_absent_named_depth_is_not_zero(self):
-        site = self.site("+")
-        ready = prepareInvocation(site, lambda *args: self.fail("default depth read caller data"))
-        self.assertIs(ready.depth, ABSENT)
-        self.assertIs(ready.actuals, site.actuals)
-
-    def test_depth_expression_is_not_executed_during_translation(self):
-        expression = object()
-        source = DepthExpression(expression, self.context)
-        site = OperationUse("+", (self.actual,), self.context, source)
-        seen = []
-        class Core:
-            def resolveExistingOperation(self, use):
-                self.assert_base = use.name
-                return "+"
-            def lowerExistingOperation(self, selected, use):
-                seen.append((selected, use.depth))
-                return use
-        self.assertIs(translateOperation(site, Core()), site)
-        self.assertEqual(seen, [("+", source)])
-
-    def test_dynamic_named_depth_obtained_once_in_original_scope(self):
-        expression, context = object(), {"n": 1}
-        site = OperationUse("+", (self.actual,), self.context,
-                            DepthExpression(expression, context))
-        calls = []
-        def obtain(node, source_context):
-            self.assertIs(node, expression)
-            self.assertIs(source_context, context)
-            calls.append(node)
-            return source_context["n"] + 9
-        ready = prepareInvocation(site, obtain)
-        self.assertEqual(ready.depth, 10)
-        self.assertEqual(calls, [expression])
-        self.assertIs(ready.actuals, site.actuals)
-        self.assertIsInstance(site.depth, DepthExpression)
-
-    def test_attached_depth_does_not_become_a_dot_name(self):
-        form = AttachedUpdate("++", True, self.actual, self.context, depth=3)
-        normalized = normalizeUse(form)
-        self.assertEqual(normalized.name, "++var")
-        self.assertEqual(normalized.depth, 3)
-        self.assertEqual(normalized.actuals, (self.actual,))
-
-    def test_invalid_depth_does_not_read_place(self):
-        for bad in (-1, 1.5, True, (1, 2)):
-            site = OperationUse("++var", (self.actual,), self.context, bad)
-            with self.assertRaises(DepthError):
-                prepareInvocation(site, lambda *args: self.fail("ready value has no evaluator"))
-            self.assertEqual(self.cell.value, 7)
-
-    def test_assignment_receiver_uses_base_name_and_named_depth(self):
-        actuals = (Actual("places", self.context), Actual("values", self.context))
-        site = OperationUse(":=", actuals, self.context, 1)
-        ready = prepareInvocation(site, lambda *args: self.fail("literal depth"))
-        self.assertEqual((ready.name, ready.depth), (":=", 1))
-        self.assertIs(ready.actuals, actuals)
-
-    def test_leaf_formal_named_depth_keeps_its_owner_and_value(self):
-        outer_scope, leaf_scope = {"depth": 2}, {"depth": 7}
-        leaf_argument = Actual({"name": "depth", "value": 7}, leaf_scope)
-        site = OperationUse("adaptedFunction", (leaf_argument,), outer_scope,
-                            DepthExpression("depth", outer_scope))
-        ready = prepareInvocation(site, lambda name, scope: scope[name])
-        self.assertEqual(ready.depth, 2)
-        self.assertIs(ready.actuals[0], leaf_argument)
-        self.assertIs(ready.actuals[0].context, leaf_scope)
-        self.assertEqual(ready.actuals[0].node, {"name": "depth", "value": 7})
-
-    def test_parameter_name_is_not_part_of_pattern_name(self):
-        for actualName in ("x", "counter", "var", "@name"):
-            actual = Actual(actualName, self.context)
-            use = AttachedUpdate("++", True, actual, self.context)
-            normalized = normalizeUse(use)
-            self.assertEqual(normalized.name, "++var")
-            self.assertIs(normalized.actuals[0], actual)
-
-    def test_complete_compound_place_is_resolved_once(self):
-        calls = []
-        cells = [Cell(3), Cell(11)]
-        def indexedPlace():
-            calls.append("nextIndex")
-            return cells[1]
-        actual = Actual(indexedPlace, self.context)
-        site = normalizeUse(AttachedUpdate("++", False, actual, self.context))
-        backend = Backend()
-        self.assertEqual(lowerUpdate(UPDATE_RULES[site.name], site, backend), 11)
-        self.assertEqual([cell.value for cell in cells], [3, 12])
-        self.assertEqual(calls, ["nextIndex"])
-
-    def test_decimal_keeps_its_type(self):
-        self.cell.value = Decimal("7.25")
-        result = lowerUpdate(UPDATE_RULES["++var"], self.site("++var"), Backend())
-        self.assertEqual(result, Decimal("8.25"))
-        self.assertIs(type(result), Decimal)
-
-    def test_original_actual_context_survives_forwarding(self):
-        source = {"counter": Cell(7)}
-        receiver = {"counter": Cell(100)}
-        actual = Actual("counter", source)
-        site = OperationUse("++var", (actual,), receiver)
-        class ContextBackend(Backend):
-            def resolvePlace(self, actual, context):
-                self.events.append("place")
-                self.receivingContext = context
-                return actual.context[actual.node]
-        backend = ContextBackend()
-        self.assertEqual(lowerUpdate(UPDATE_RULES[site.name], site, backend), 8)
-        self.assertEqual(source["counter"].value, 8)
-        self.assertEqual(receiver["counter"].value, 100)
-        self.assertIs(backend.receivingContext, receiver)
-
-    def test_custom_profile_uses_same_algorithm(self):
-        @dataclass(frozen=True)
-        class Quantity:
-            magnitude: int
-        self.cell.value = Quantity(7)
-        backend = Backend(step=lambda value, direction: Quantity(value.magnitude + direction))
-        result = lowerUpdate(UPDATE_RULES["var--"], self.site("var--"), backend)
-        self.assertEqual(result, Quantity(7))
-        self.assertEqual(self.cell.value, Quantity(6))
-
-    def test_invalid_arity_has_no_effects(self):
-        for actuals in ((), (self.actual, self.actual)):
-            backend = Backend()
-            with self.assertRaises(FormError):
-                lowerUpdate(UPDATE_RULES["++var"], OperationUse("++var", actuals, self.context), backend)
-            self.assertEqual(backend.events, [])
-
-    def test_step_failure_propagates_without_write(self):
-        error = OverflowError("profile overflow")
-        def fail(value, direction):
-            raise error
-        backend = Backend(step=fail)
-        with self.assertRaises(OverflowError) as caught:
-            lowerUpdate(UPDATE_RULES["++var"], self.site("++var"), backend)
-        self.assertIs(caught.exception, error)
-        self.assertEqual(self.cell.value, 7)
-        self.assertEqual(backend.events, ["place", "read", "step"])
-
-    def test_store_admission_failure_propagates(self):
-        error = TypeError("destination requirement")
-        def fail(value):
-            raise error
-        backend = Backend(admit=fail)
-        with self.assertRaises(TypeError) as caught:
-            lowerUpdate(UPDATE_RULES["var++"], self.site("var++"), backend)
-        self.assertIs(caught.exception, error)
-        self.assertEqual(self.cell.value, 7)
-        self.assertEqual(backend.events, ["place", "read", "step", "admit"])
-
-    def test_place_failure_has_no_read_or_write(self):
-        error = IndexError("bad destination")
-        def fail():
-            raise error
-        backend = Backend()
-        site = OperationUse("++var", (Actual(fail, self.context),), self.context)
-        with self.assertRaises(IndexError) as caught:
-            lowerUpdate(UPDATE_RULES[site.name], site, backend)
-        self.assertIs(caught.exception, error)
-        self.assertEqual(backend.events, ["place"])
-
-    def test_every_receiver_reaches_existing_lowering(self):
-        selected = object()
-        for name in ("@", "return", "finally", "copy", "some", "print", "++counter"):
-            calls = []
-            class Core:
-                def resolveExistingOperation(self, site):
-                    calls.append(("resolve", site))
-                    return selected
-                def lowerExistingOperation(self, operation, site):
-                    calls.append(("lower", operation, site))
-                    return site.context
-            site = self.site(name)
-            self.assertIs(translateOperation(site, Core()), self.context)
-            self.assertEqual(calls, [("resolve", site), ("lower", selected, site)])
-
-    def test_attached_and_receiver_use_one_resolver(self):
-        seen = []
-        class Core:
-            def resolveExistingOperation(self, site):
-                seen.append(site)
-                return UPDATE_RULES[site.name]
-            def lowerExistingOperation(self, rule, site):
-                return lowerUpdate(rule, site, Backend())
-        form = AttachedUpdate("++", True, self.actual, self.context)
-        self.assertEqual(translateOperation(form, Core()), 8)
-        self.cell.value = 7
-        self.assertEqual(translateOperation(self.site("++var"), Core()), 8)
-        self.assertEqual(seen[0], seen[1])
-
-    def test_resolution_failure_does_not_lower(self):
-        error = LookupError("unavailable operation")
-        class Core:
-            def resolveExistingOperation(self, site):
-                raise error
-            def lowerExistingOperation(self, selected, site):
-                raise AssertionError("lowering must not be reached")
-        with self.assertRaises(LookupError) as caught:
-            translateOperation(self.site("++counter"), Core())
-        self.assertIs(caught.exception, error)
-
-    def test_missing_placement_is_not_guessed(self):
-        use = AttachedUpdate("++", None, self.actual, self.context)
-        with self.assertRaises(FormError):
-            normalizeUse(use)
-
-
-if __name__ == "__main__":
-    unittest.main()
-```
+Полный исполняемый host-инструмент сохранён отдельно: [test_translator_reference.py](reference/operation_forms/test_translator_reference.py). Его язык и статус указаны явно; это вспомогательная проверка, а не LMX-тело ядра.
 
 При подготовке этой редакции выполнены **26 тестов — OK**: четыре унарных варианта, непрозрачность имён, независимость имени шаблона от имени переменной, сложное место с эффектом, сохранение исходного контекста, Decimal и отдельный тип Quantity, арность, отказы, единый resolver/обработчик и сохранение готовой стороны применения. Дополнительно проверены готовый depth=0, именованный depth без сдвига actuals, отсутствие вычисления при трансляции, получение ровно один раз в исходном контексте, прижатая форма с отдельной глубиной, диагностика неверного depth до эффектов места, canonical `:=` при depth=1 и разные владельцы одноимённых формалов depth.
 

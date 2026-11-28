@@ -64,9 +64,9 @@ The service actual is 2. Original scalars have no missing Array axes to diagnose
 @: rowProducts `[*]`(A; B; depth := 1)
 ```
 
-The receiver uses the base name and the same named depth actual; the second example supplies corresponding rows for rank-two A and B. This is its declared logical-argument interface, not a positional call to the three-field operand transport. A custom method exposing that transport directly names left/depth/right.
+The receiver uses the key of the actual declared method and the same named depth actual. In the listing the keys include their enclosing backticks. Bare operations `*` and `[*]` have their own keys. References that depended on the old equality migrate under the [name contract](LMX_semantics.en.md#field-name-keys). The second example supplies corresponding rows for rank-two A and B. This is its declared logical-argument interface, not a positional call to the three-field operand transport. A custom method exposing that transport directly names left/depth/right.
 
-Backticks retain exact identifiers. Decoration does not become part of a standard callable name, nor does quoting decode a name. There are no historical dotted aliases. Errors are copied from actual base methods, for example ``copy(`*`\throws)``. A wrapper's service depth and an unrelated function's own argument have different owners; no blanket interception of every argument named depth is introduced.
+Backticks retain exact identifiers. Decoration does not become part of a standard callable name, nor does quoting decode a name. There are no historical dotted aliases. Errors are copied from the actual selected base methods. A wrapper's service depth and an unrelated function's own argument have different owners; no blanket interception of every argument named depth is introduced.
 
 <a id="evaluation"></a>
 ## 4. One traversal, then the selected base handler

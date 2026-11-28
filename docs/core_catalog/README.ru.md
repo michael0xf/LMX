@@ -16,6 +16,14 @@ Markdown и поисковые JSON-файлы являются их справ�
 точная область каждого результата приведена в
 [сводке проверок](validation/README.ru.md).
 
+**Обзор 2026-11-28:** [матричные backend и альтернативы](matrix/README.ru.md)
+сверены с неизменённым `third_party.tar.gz` пользователя. Добавлены точные
+связи `[op]` с существующими C entry, ограничения численного профиля и
+реального CMake-подключения. Общие модели дополнены signed strides, CSR/CSC,
+комплексным ABI и разделением fixed-point и binary floating преобразований.
+Общие LMX-тела и native host-проверки имеют отдельные границы подтверждения;
+полный production LMX→C путь остаётся **NOT_RUN**.
+
 ## Где что лежит
 
 | Первичный источник | Содержание |
@@ -26,9 +34,10 @@ Markdown и поисковые JSON-файлы являются их справ�
 | [catalog/schema.lmx](catalog/schema.lmx) и `catalog/*.lmx` | Опись C API; общие таблицы типов, аргументов, исходников и профилей |
 | `bindings/*.lm3` | LMX-контексты и CODE с конкретными вызовами `c.*` внутри `L2:` |
 | [publication.lmx](publication.lmx) | План публикации C-обёрток и разрешение коллизий имён |
-| [types/common_models.lmx](types/common_models.lmx) | 37 общих моделей данных |
-| [types/converters.lmx](types/converters.lmx) | 26 договоров преобразования данных |
+| [types/common_models.lmx](types/common_models.lmx) | 38 общих моделей данных |
+| [types/converters.lmx](types/converters.lmx) | 30 договоров преобразования данных |
 | [types/backend_models.lmx](types/backend_models.lmx) | Соответствие всех компонентов моделям и конвертерам |
+| [matrix/README.ru.md](matrix/README.ru.md) | Матрица альтернатив, проверенные C entry и реальные LMX-тела адаптеров |
 | [types/scientific_profiles.lmx](types/scientific_profiles.lmx) | Форматы HDF5/MAT/netCDF, включая явное имя netCDF-5 / CDF-5; MPI отдельно от числовых примитивов |
 | [new_primitives/profiles.lmx](new_primitives/profiles.lmx) | Новые числовые примитивы и допустимые профили реализаций |
 | [bridge/lowering_contract.lmx](bridge/lowering_contract.lmx) | Явные требования к L3/L2-границе, которую предстоит связать с ядром |
@@ -46,7 +55,8 @@ Markdown и поисковые JSON-файлы являются их справ�
 вызываемый API** и **1 592 исходных поверхностей заголовков**.
 Сравнение с загруженным снимком находится в
 [api_census_delta.json](validation/api_census_delta.json), сверка состава
-LMX-плана и моделей — в [catalog_scope_check.json](validation/catalog_scope_check.json).
+LMX-плана и текущих моделей — в [matrix_types_scope_20261128.json](validation/matrix_types_scope_20261128.json).
+Прежний [catalog_scope_check.json](validation/catalog_scope_check.json) сохранён как историческая проверка.
 
 Сохранены все прежние идентичности публичных callable. Исправлены 47
 ошибочных исторических callback-идентичностей: декларации с calling convention

@@ -1,4 +1,4 @@
-# Все исходные 112 компонента и 20 дополнений получают общую модель данных.
+# Все 180 компонентов текущего SOURCES.json сопоставлены общим моделям данных.
 # Это план адаптации; он не утверждает, что каждый API уже прошёл L3 приёмку.
 # Наличие модели не заменяет точную сигнатуру, ownership и проверки конкретного API.
 BackendModels:
@@ -95,18 +95,18 @@ BackendModels:
     component_011:
         []char: component "base:linmath"
         []char: profile "numeric"
-        []char: models "Tensor Complex NumericStatus Callback Error"
-        []char: converters "tensorLayout tensorBackend numericNarrow callback"
-        []char: policy "Keep scalar profile and precision explicit; callback returns/error protocol exactly typed. Small float vectors/matrices are explicit views/conversions of Tensor."
+        []char: models "Tensor NumericStatus Error"
+        []char: converters "tensorLayout tensorBackend numericNarrow"
+        []char: policy "Small fixed-size float vectors/matrices share Tensor; verify native row/column order and alignment, exact dimensions, input/output aliasing and numeric narrowing. Signed/broadcast views require admitted pack or explicit rejection; fixed-size routines do not implement general matrix functions."
         []char: source "third_party/lmx_c99_compact/SOURCES.json"
         []char: status "DESIGN_REQUIRES_PER_API_REVIEW"
 #
     component_012:
         []char: component "base:kissfft"
         []char: profile "numeric"
-        []char: models "Tensor Complex NumericStatus Callback Error"
-        []char: converters "tensorLayout tensorBackend numericNarrow callback"
-        []char: policy "Keep scalar profile and precision explicit; callback returns/error protocol exactly typed. Complex pair conversion preserves float/double build selection; no cast of arbitrary Complex Structure."
+        []char: models "Tensor Complex ComplexBuffer NumericStatus Resource Error"
+        []char: converters "tensorLayout tensorBackend complexBackend numericNarrow resource"
+        []char: policy "Complex component conversion preserves the exact float/double/fixed-point build and transform normalization. No cast of arbitrary Complex Structure; setup lifetime, input/output overlap, alignment and lengths follow the selected FFT API."
         []char: source "third_party/lmx_c99_compact/SOURCES.json"
         []char: status "DESIGN_REQUIRES_PER_API_REVIEW"
 #
@@ -779,9 +779,9 @@ BackendModels:
     component_087:
         []char: component "extras:cglm"
         []char: profile "numeric"
-        []char: models "Tensor Complex NumericStatus Callback Error"
-        []char: converters "tensorLayout tensorBackend numericNarrow callback"
-        []char: policy "Keep scalar profile and precision explicit; callback returns/error protocol exactly typed. Keep call, inline and struct API forms separate in ABI metadata; semantic matrix model is shared."
+        []char: models "Tensor NumericStatus Error"
+        []char: converters "tensorLayout tensorBackend numericNarrow"
+        []char: policy "Call, inline and struct forms stay distinct in ABI metadata. Fixed-size float matrices share Tensor with checked column/row order, alignment, aliasing and actual dimensions; no unchecked double-to-float cast, reverse-stride borrow or general-shape solver claim."
         []char: source "third_party/lmx_c99_compact/SOURCES.json"
         []char: status "DESIGN_REQUIRES_PER_API_REVIEW"
 #
@@ -895,10 +895,10 @@ BackendModels:
 #
     component_100:
         []char: component "acoustic:liquid_dsp"
-        []char: profile "audio"
-        []char: models "Audio Encoded Buffer Resource Callback Time Error"
-        []char: converters "pcmToFloat floatToPcm tensorLayout span resource callback time"
-        []char: policy "Sample representation/rate/channel layout explicit; async device callback cannot access foreign arena."
+        []char: profile "audio_and_linear_algebra"
+        []char: models "Audio Encoded Tensor SparseMatrix ComplexBuffer NumericStatus Buffer Resource Callback Time Error"
+        []char: converters "pcmToFloat floatToPcm tensorLayout tensorBackend complexBackend sparseMatrixBackend numericNarrow span resource callback time"
+        []char: policy "Audio and matrix capabilities are separately admitted. Dense real/complex variants retain native precision, row order and exact transpose/adjoint behavior. Sparse handles use constructor/fill/owner/destroy, never a CSR struct cast; check unsigned-short coordinate widths and duplicate replacement policy before packing. Sparse multiply outputs must not alias inputs; smatrixb uses GF(2), not Boolean OR/AND reduction."
         []char: source "third_party/lmx_c99_compact/SOURCES.json"
         []char: status "DESIGN_REQUIRES_PER_API_REVIEW"
 #
@@ -932,18 +932,18 @@ BackendModels:
     component_104:
         []char: component "tensors:utensil"
         []char: profile "tensor"
-        []char: models "Tensor Resource Callback Quantization Error"
-        []char: converters "tensorLayout tensorBackend numericNarrow resource callback"
-        []char: policy "Map dtype/rank/layout/stride/retention; quantized types need explicit scale and rounding."
+        []char: models "Tensor Resource NumericStatus Quantization Error"
+        []char: converters "tensorLayout tensorBackend numericNarrow resource"
+        []char: policy "Admit actual dtype/rank/shape, signed element strides, owner/refcount and CPU/GPU location. Native stride/index widths are checked; unsupported reverse/broadcast views pack explicitly. A native data field does not prove CPU accessibility, nonaliasing, or safe retention."
         []char: source "third_party/lmx_c99_compact/SOURCES.json"
         []char: status "DESIGN_REQUIRES_PER_API_REVIEW"
 #
     component_105:
         []char: component "tensors:mint"
         []char: profile "tensor"
-        []char: models "Tensor Resource Callback Quantization Error"
-        []char: converters "tensorLayout tensorBackend numericNarrow resource callback"
-        []char: policy "Map dtype/rank/layout/stride/retention; quantized types need explicit scale and rounding."
+        []char: models "Tensor Resource NumericStatus Quantization Error"
+        []char: converters "tensorLayout tensorBackend numericNarrow resource"
+        []char: policy "Check native maximum rank, every dimension and dimension product, exact mt_float build and contiguous layout. Arbitrary strided/reverse/broadcast views require explicit packing. Retain owner through native work and publish output only after successful typed unpack."
         []char: source "third_party/lmx_c99_compact/SOURCES.json"
         []char: status "DESIGN_REQUIRES_PER_API_REVIEW"
 #
@@ -1023,8 +1023,8 @@ BackendModels:
         []char: component "numeric_extra:softfloat"
         []char: profile "ieee_arithmetic"
         []char: models "ScalarCell Buffer Tensor RealContext NumericStatus"
-        []char: converters "span tensorLayout numericNarrow fixedPoint"
-        []char: policy "Fixed IEEE format words. Upstream global rounding/status must be serialized and restored by owner-side L3 adapter; no promise of arbitrary precision."
+        []char: converters "span tensorLayout numericNarrow binaryFloatFormat"
+        []char: policy "Fixed IEEE formats, not Quantization scaling. Admit exact format words, rounding/tininess modes, nonfinite payload policy and build options. Upstream global or thread-local status must be saved, mapped and restored under owner-side synchronization; no arbitrary-precision or per-call context claim."
         []char: source "third_party/lmx_c99_compact/SOURCES.json"
         []char: status "DESIGN_REQUIRES_PER_API_REVIEW"
 #
@@ -1040,27 +1040,27 @@ BackendModels:
     component_116:
         []char: component "numeric_extra:libfixmatrix"
         []char: profile "fixed_matrix"
-        []char: models "Tensor Complex Vector3 Quantization NumericStatus"
-        []char: converters "fixedPoint tensorLayout tensorBackend"
-        []char: policy "Shared Tensor with bounded native matrix dimensions; pack/unpack fixed point and inspect backend error flags."
+        []char: models "Tensor Quantization NumericStatus Error"
+        []char: converters "fixedPoint tensorLayout tensorBackend numericNarrow"
+        []char: policy "Shared Tensor with bounded native matrix dimensions. Pack Q16.16 using explicit range/rounding/saturation policy, inspect native error bits and avoid reserved sentinels. The native arithmetic does not saturate; conversion saturation does not change that. Check transpose/order, output aliasing and precision before native work; integer storage is not an unscaled integer matrix."
         []char: source "third_party/lmx_c99_compact/SOURCES.json"
         []char: status "DESIGN_REQUIRES_PER_API_REVIEW"
 #
     component_117:
         []char: component "numeric_extra:fp16"
         []char: profile "half_formats"
-        []char: models "ScalarCell Buffer Tensor Quantization NumericStatus"
-        []char: converters "fixedPoint numericNarrow span"
-        []char: policy "IEEE half versus ARM alternate encoding explicit; format bits not mathematical integer values."
+        []char: models "ScalarCell Buffer Tensor RealContext NumericStatus"
+        []char: converters "binaryFloatFormat numericNarrow tensorLayout span"
+        []char: policy "IEEE half versus ARM alternative half must be explicit: identical words can denote different values. Preserve signed zero, subnormal and NaN/Inf policies and only supported rounding. Format bits are not scaled Q-format integers; this converter is not a half-precision matrix arithmetic backend."
         []char: source "third_party/lmx_c99_compact/SOURCES.json"
         []char: status "DESIGN_REQUIRES_PER_API_REVIEW"
 #
     component_118:
         []char: component "numeric_extra:cminpack"
         []char: profile "nonlinear_solver"
-        []char: models "Tensor Callback ScalarCell Error"
+        []char: models "Tensor Callback ScalarCell NumericStatus Error"
         []char: converters "tensorLayout tensorBackend callback numericNarrow"
-        []char: policy "Residual/Jacobian callbacks are synchronous exact C signatures; work-array dimensions and convergence/error status explicit."
+        []char: policy "Residual/Jacobian callbacks are synchronous exact C signatures. Check all work-array lengths, leading dimensions and native int products; preserve input/output roles, convergence status and callback failure. Internal QR does not itself provide a public general LU/SVD/Schur backend."
         []char: source "third_party/lmx_c99_compact/SOURCES.json"
         []char: status "DESIGN_REQUIRES_PER_API_REVIEW"
 #
@@ -1077,8 +1077,8 @@ BackendModels:
         []char: component "numeric_extra:pffft"
         []char: profile "fft"
         []char: models "Tensor ComplexBuffer Audio Resource Error"
-        []char: converters "tensorLayout tensorBackend resource"
-        []char: policy "Independent FFT backend with float/double; explicit transform length, complex layout, alignment and inverse normalization; setup lifetime owned."
+        []char: converters "tensorLayout tensorBackend complexBackend numericNarrow resource"
+        []char: policy "Independent FFT backend with selected float/double ABI; explicit transform length, packed or ordered complex layout, required alignment and inverse normalization. Setup lifetime owned; pack unsupported views and respect input/output overlap rules."
         []char: source "third_party/lmx_c99_compact/SOURCES.json"
         []char: status "DESIGN_REQUIRES_PER_API_REVIEW"
 #
@@ -1364,9 +1364,9 @@ BackendModels:
     component_152:
         []char: component "knowledge_extra:matio"
         []char: profile "scientific_container"
-        []char: models "Tensor Hyperslab ComplexBuffer DbValue Resource Buffer Error"
-        []char: converters "scientificSelection tensorLayout tensorBackend database span resource"
-        []char: policy "MAT4/5 arrays and the configured MAT7.3/HDF5 profile preserve sparse/complex layout, dimension products and native allocation. Format support follows the actual target; no native struct cast to shared Tensor."
+        []char: models "Tensor SparseMatrix Hyperslab ComplexBuffer DbValue Resource Buffer Error"
+        []char: converters "scientificSelection tensorLayout tensorBackend complexBackend sparseMatrixBackend numericNarrow database span resource"
+        []char: policy "MAT4/5 arrays and configured MAT7.3/HDF5 retain full shape and native allocations. Map compressed sparse pointer/index arrays with checked mat_uint32_t widths and active nnz distinct from nzmax/nir/ndata capacity; explicit duplicate/zero policy; split complex values require component conversion. No implicit densification or native struct cast; cell/struct data keeps its own model."
         []char: source "third_party/lmx_c99_compact/SOURCES.json"
         []char: status "DESIGN_REQUIRES_PER_API_REVIEW"
 #

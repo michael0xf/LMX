@@ -21,7 +21,7 @@ for n in '+= -= *= /= %= **= &= |= ^= <<= >>= ++var var++ --var var--'.split():
 add(':=','pointwise-assignment',['PLACE','VALUE'],r'FxArrayAssignPrepared\assign')
 add('.:','slice-broadcast-assignment',['PLACE','VALUE'],r'broadcast RHS map -> FxArrayAssignPrepared\assign')
 for n in ['+','-','*','/','\\','**','=','!=']:
-    add(n,'whole-linear-algebra',['VALUE'],r'FxArrayProduct\multiply -> FxArrayIndexed\apply' if n=='*' else 'selected declared whole profile',surface='['+n+']')
+    add(n,'whole-linear-algebra',['VALUE'],r'FxArrayProduct\multiply -> FxArrayIndexed\apply' if n=='*' else (r'FxMatrixPower\power (integer exponent)' if n=='**' else 'selected declared whole profile'),surface='['+n+']')
 add('op','explicit-indexed-profile',['VALUE'],r'FxArrayIndexed\apply + FxArrayIndexedCell\at',surface='[op axisRules; options -> outputOrder]')
 for surface,family in [('[+ 1:]','unary-sum'),('[* 1:]','unary-product'),('[+ 0:1]','trace-sum'),('[* 0=1]','diagonal-view'),('[* -> 1,0]','permutation-view')]:
     add(surface[1],family,['VALUE'],'ordinary selected index/geometry profile',surface=surface)
@@ -30,9 +30,9 @@ add('?:','lazy-conditional',['VALUE','RAW','RAW'],'existing conditional demand',
 add('slice','signed-strided-slice',['VALUE','VALUE'],'shared slice normalization',contract='spec/TERNARY_AND_SLICES.en.md#slice-receiver')
 def build():
     OUT.mkdir(parents=True,exist_ok=True)
-    data=dict(edition='2026-11-27',scope='Documentation profiles, not runtime registration.',source_sha256=hashlib.sha256((ROOT/SOURCE).read_bytes()).hexdigest(),canonical_spec='spec/TENSOR_EXPRESSIONS.md',forms=ROWS,note='Ordinary LMX configuration; absent depth and axisRules remain absent; exact names are opaque.')
+    data=dict(edition='2026-11-28',scope='Documentation profiles, not runtime registration.',source_sha256=hashlib.sha256((ROOT/SOURCE).read_bytes()).hexdigest(),canonical_spec='spec/TENSOR_EXPRESSIONS.md',forms=ROWS,note='Ordinary LMX configuration; absent depth and axisRules remain absent; exact names are opaque.')
     (OUT/'array_expression_forms.json').write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
-    lines=['# Tensor/RAW/PLACE profile inventory, 2026-11-27.','# DATA only; production binding and LMX execution: NOT_RUN.','','ArrayExpressionForms:']
+    lines=['# Tensor/RAW/PLACE profile inventory, 2026-11-28.','# DATA only; production binding and LMX execution: NOT_RUN.','','ArrayExpressionForms:']
     for i,row in enumerate(ROWS,1):
         lines.append(f'    entry{i:03}:')
         for key in ['name','family','receiver','expression_form','depth_input','depth_syntax','depth_default','implementation','source','contract','status','production_binding']:
@@ -41,7 +41,7 @@ def build():
     (OUT/'array_expression_forms.lmx').write_text('\n'.join(lines)+'\n')
     text=r'''# Массивные, индексные и матричные профили
 
-Редакция 2026-11-27. [LMX-опись](array_expression_forms.lmx) и
+Редакция 2026-11-28. [LMX-опись](array_expression_forms.lmx) и
 [JSON-проекция](array_expression_forms.json) описывают канонические операции и
 профили; это не второй runtime-диспетчер.
 
@@ -69,6 +69,10 @@ Arrays: применимость определяется типами ячее�
 [Полная норма и каталог](../../spec/TENSOR_EXPRESSIONS.md),
 [depth](../../spec/OPERATOR_DEPTH.ru.md), [подпарсер](../../spec/BRACKET_SUBPARSER.ru.md),
 [общие LMX-тела](../../spec/patterns/LMX_Fn_Receivers/src/array_expression_ops.lmx).
+[Матричные backend и альтернативы](../matrix/README.ru.md) задают допуск
+конкретных C entry, численного профиля, layout, ошибок и владения.
+`[**]` с целым показателем использует одно общее `FxMatrixPower\power`;
+другие matrix functions этим не реализуются.
 Production parser/translator/runtime: **NOT_RUN**.
 
 | Имя | Expression | Профиль | Роли | Общее тело/граница |

@@ -1273,8 +1273,7 @@ execution through the same mechanism.
 
 `sys\name(identificator)` consumes one written identifier, not its value. It uses the existing
 canonical name and name table to return an ordinary variable-length Lmx char Array, without a
-trailing NUL or a required per-call allocation. The identifier need not be declared. Exact-name
-quoting is removed and doubled backticks become one; the empty exact name gives length zero.
+trailing NUL or a required per-call allocation. The identifier need not be declared. The result retains every byte of the token, including the enclosing backticks and both bytes of an internal pair. A token made of two backticks gives two bytes.
 `sys\name(ptr)` gives the spelling “ptr”, not a pointee's name. It executes neither a method
 nor a computed initializer, and does not stringify arbitrary expressions. The resulting string
 remains one Array in a call.
@@ -1283,7 +1282,7 @@ remains one Array in a call.
 operand's ordinary int priority, without executing its body or operand arguments. Its descriptive
 signature is `PrioritySignature :: ([]char: name; return: int)`. It uses the same visibility and
 properties as expression analysis, rather than restricting lookup to fields of sys. Equal string
-contents give equal lookup behavior even at different addresses; canonical identifier comparisons
+contents give equal lookup behavior even at different addresses. Bare and exact tokens have distinct keys, so the three-byte string `60 2B 60` queries a different name from `"+"`. Canonical identifier comparisons
 remain pointer comparisons after this explicit name-resolution boundary. Unknown or ambiguous
 operands produce ordinary resolution errors, never an invented priority. For `"+"`/`"-"` this
 query describes addition/subtraction, for `"*"` multiplication; contextual unary roles do not

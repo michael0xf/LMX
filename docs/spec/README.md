@@ -1,5 +1,7 @@
 # Lingvamyxa — current specification and examples
 
+**28 November.** [Literal identifiers and string keys](LMX_grammar.en.md#identifiers) update names from source to graph. The [migration and checks](../IDENTIFIER_BYTES_AND_STRING_KEYS.md) enter the grammar queue before the remaining parser work. The [matrix review](../MATRIX_REVIEW_2026-11-28.md) supplies the updated [matrix contracts](TENSOR_EXPRESSIONS.md), LMX drafts and [backend integration](../core_catalog/matrix/README.ru.md).
+
 **Tensor revision, 27 November.** The [complete specification](TENSOR_EXPRESSIONS.md) defines Array, depth, square operations, writes and fuse. The [square subparser](BRACKET_SUBPARSER.en.md) and [notation operators](LMX_grammar.en.md#expression-notation) belong to the first implementation stage. The [technical proposal](../TENSOR_IMPLEMENTATION_PLAN.md#integration-v3) maps the operator inventory to the active implementation stages.
 
 

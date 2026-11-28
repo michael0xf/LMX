@@ -1,5 +1,5 @@
 {
-  "revision": "2026-11-27",
+  "revision": "2026-11-28",
   "production_execution": "NOT_RUN",
   "cases": [
     {
@@ -193,6 +193,250 @@
           "expected": {
             "diagnostic": "translator if known, otherwise interpreter when reached",
             "catchable_lmx_exception": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "array_expressions__007_integer_matrix_power",
+      "source": "integer_matrix_power.lm3",
+      "title": "Целая степень, отрицательный показатель и пустая матрица",
+      "negative": false,
+      "note": "Публичный [**] использует один FxMatrixPower\\power в ../../patterns/LMX_Fn_Receivers/src/array_expression_ops.lmx после общего square/type/exponent admission. Нулевая степень создаёт identity без проверки обратимости; первая возвращает fresh VALUE. Отрицательная степень выполняет одно решение A X = I и тот же binary order; signed q/2 и q%2!=0 не вычисляют -MIN_INT. Нет лишнего I*A или последнего неиспользуемого квадрата. MinimumIntegerMatrixPower получает минимальный int от target harness; число бит не зафиксировано. Эти ожидания не являются отчётом о запуске LMX.",
+      "entries": [
+        {
+          "call": "MatrixPowerValues\\run()",
+          "expected": [
+            {
+              "shape": [
+                2,
+                2
+              ],
+              "flat": [
+                1,
+                0,
+                0,
+                1
+              ],
+              "fresh_value": true
+            },
+            {
+              "shape": [
+                2,
+                2
+              ],
+              "flat": [
+                2,
+                1,
+                0,
+                3
+              ],
+              "fresh_value": true
+            },
+            {
+              "shape": [
+                2,
+                2
+              ],
+              "flat": [
+                4,
+                5,
+                0,
+                9
+              ],
+              "fresh_value": true
+            },
+            {
+              "shape": [
+                2,
+                2
+              ],
+              "flat": [
+                8,
+                19,
+                0,
+                27
+              ],
+              "fresh_value": true
+            },
+            {
+              "shape": [
+                2,
+                2
+              ],
+              "flat": [
+                32,
+                211,
+                0,
+                243
+              ],
+              "fresh_value": true
+            }
+          ]
+        },
+        {
+          "call": "NegativeMatrixPowers\\run()",
+          "expected": [
+            {
+              "shape": [
+                2,
+                2
+              ],
+              "flat": [
+                0.5,
+                0,
+                0,
+                0.25
+              ]
+            },
+            {
+              "shape": [
+                2,
+                2
+              ],
+              "flat": [
+                0.125,
+                0,
+                0,
+                0.015625
+              ]
+            }
+          ]
+        },
+        {
+          "call": "MinimumIntegerMatrixPower\\run(exponent)",
+          "expected": {
+            "input": "exponent is target machine int minimum",
+            "shape": [
+              2,
+              2
+            ],
+            "flat": [
+              1,
+              0,
+              0,
+              1
+            ],
+            "negates_exponent": false
+          }
+        },
+        {
+          "call": "EmptyMatrixPower\\run()",
+          "expected": [
+            {
+              "shape": [
+                0,
+                0
+              ],
+              "flat": [],
+              "fresh_value": true
+            },
+            {
+              "shape": [
+                0,
+                0
+              ],
+              "flat": [],
+              "fresh_value": true
+            },
+            {
+              "shape": [
+                0,
+                0
+              ],
+              "flat": [],
+              "fresh_value": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "array_expressions__008_matrix_bridge_models",
+      "source": "matrix_bridge_models.lm3",
+      "title": "Общие bridge-модели: reverse view, complex и sparse",
+      "negative": false,
+      "note": "Обычные Structures из ../../../core_catalog/types/common_models.lmx описывают данные; сами конструкторы не выполняют native admission или pack. Tensor.strides имеет signed i64 element units. ComplexBuffer planar удаляет ведущую ось компонентов длины2; SparseMatrix CSR имеет zero-based indices и explicit nnz. Адаптер проверяет source-view bounds, actual type, owner, native widths, aliasing и duplicate policy. Нет hidden handles/TypeRef или нового парсера. Production runtime NOT_RUN.",
+      "entries": [
+        {
+          "call": "ReverseMatrixView\\make()",
+          "expected": {
+            "model": "BridgeData\\Tensor",
+            "shape": [
+              2,
+              3
+            ],
+            "strides": [
+              3,
+              -1
+            ],
+            "offset": 2,
+            "logical_flat": [
+              3,
+              2,
+              1,
+              6,
+              5,
+              4
+            ],
+            "reachable_range": [
+              0,
+              5
+            ],
+            "native_admission": "REQUIRE_IMPLEMENTATION"
+          }
+        },
+        {
+          "call": "PlanarComplexVector\\make()",
+          "expected": {
+            "model": "BridgeData\\ComplexBuffer",
+            "layout": "planar",
+            "profile": "double",
+            "component_shape": [
+              2,
+              3
+            ],
+            "logical_shape": [
+              3
+            ],
+            "real": [
+              1,
+              2,
+              3
+            ],
+            "imaginary": [
+              10,
+              20,
+              30
+            ]
+          }
+        },
+        {
+          "call": "SparseMatrixData\\make()",
+          "expected": {
+            "model": "BridgeData\\SparseMatrix",
+            "format": "csr",
+            "shape": [
+              2,
+              3
+            ],
+            "nnz": 3,
+            "values": [
+              10,
+              20,
+              30
+            ],
+            "indices": [
+              0,
+              2,
+              1
+            ],
+            "pointers": [
+              0,
+              2,
+              3
+            ],
+            "dense_allocation": false
           }
         }
       ]

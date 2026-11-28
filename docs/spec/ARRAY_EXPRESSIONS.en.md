@@ -148,12 +148,26 @@ The numeric contracts preserve separate kernel output, accumulator state and fin
 | `[**]` | Integer matrix power under its numerical contract |
 | `[=]`, `[!=]` | One whole-matrix equality/inequality result |
 | `inv`, `transpose`, `adjoint` | Inverse, transpose, conjugate transpose |
-| `det`, `trace`, `rank`, `norm`, `cond` | Whole-object characteristics with declared conventions |
+| `det`, `slogdet`, `trace`, `rank`, `norm`, `cond` | Whole-object characteristics with declared conventions |
 | `lu`, `qr`, `cholesky`, `eig`, `svd`, `schur` | Structured factorizations and spectral results |
 | `pinv`, `nullspace`, `leastSquares`, `kron` | Explicit generalized inverse, kernel basis, least squares and Kronecker product |
 | `math\linear\exp`, `log`, `sqrt`, `sin`, `cos` | Matrix functions in the stated namespace |
 
 No inverse is inferred from scalar `/`, `~` or `!`. Solve is not an indexed reduction of scalar divisions. Real/complex domains, rectangular or singular inputs, tolerance, empty shapes, branches, mutation and failure contracts are specified individually in [the full matrix chapter](TENSOR_EXPRESSIONS.md#matrix-contracts). The complete 529-entry operation catalogue is in the same normative document; catalogued or future-imported capability does not imply a completed implementation.
+
+### 4.2. Shape and numerical admission
+
+Automatic `[*]` contracts the last axis of A with the penultimate axis of B. Earlier batch shapes match exactly; absent or singleton batch axes do not broadcast. A vector is temporarily a row on the left or a column on the right, and only those temporary axes are removed. Explicit index rules select a different coordinate plan and disable automatic batch inference. Complex multiplication never adds conjugation; use the declared scalar conjugation or `adjoint` explicitly.
+
+Left solve accepts a square nonsingular coefficient matrix with RHS `(n,k)` or a column-vector `(n)` and retains that RHS shape. Right solve satisfies `X B=A`; its vector actual has row meaning. Rectangular or singular problems use separately declared `leastSquares` or `pinv`, not a silent fallback. Integer inputs require an appropriate declared result type; solve never substitutes truncated integer division.
+
+Initial approximate solvers, factorizations, spectral/SVD methods and matrix functions require finite inputs before a reached backend call. This is not a ban on IEEE NaN/infinities in pointwise arithmetic, indexed products or geometry; exact algebra keeps its own domain. The SVD cutoff `atol+rtol*σmax` uses a declared comparison type and checked arithmetic. Overflow to infinity or NaN cannot silently produce rank zero. Empty singular-value lists do not require a maximum. Full rules are in the [numerical contract](TENSOR_EXPRESSIONS.md#matrix-numeric-contract).
+
+The strict indexed profile preserves reduction order, intermediate types, rounding and permitted demand. A GEMM name or matching matrix formula does not prove those properties. A backend must preserve them, or be selected under an explicit numerical profile permitting its reassociation/FMA/precision and publishing the scope of its reproducibility. Whole numerical algorithms retain their own declared residual/accuracy contract.
+
+[slogdet](TENSOR_EXPRESSIONS.md#matrix-slogdet-contract) returns ordinary `sign` and `logAbsDet` fields without first forming a potentially overflowing determinant. Singular input yields `(0,-∞)` in a supporting profile; `0×0` yields `(1,0)`. A [factorization result](TENSOR_EXPRESSIONS.md#matrix-factor-reuse) can expose an ordinary solve method over its retained factors, so repeated RHS do not repeat factorization. These profiles add no mandatory Array fields or new square-operator names.
+
+The actual shared LMX [matrix-power body](patterns/LMX_Fn_Receivers/src/array_expression_ops.lmx) handles the minimum signed exponent without taking its absolute value and preserves the specified multiplication order. [Backend admission](../core_catalog/matrix/README.ru.md) separately records native layout, rank, status and transpose/adjoint restrictions. Source code and declared contracts do not imply completed production execution.
 
 <a id="assignment"></a>
 ## 5. Assignment, slices and overlap

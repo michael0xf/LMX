@@ -36,6 +36,7 @@ loop is generated into the public library.
 | Explicit traversal depth | `FxArrayDepth` | Zero = all logical axes; positive d = d leading axes, identical outer frames, selected whole cells, full result requirement |
 | Explicit indexed operations | `FxArrayIndexed` | Coordinate maps, pair/unary term, independent reducer and state contract |
 | Automatic `[*]` | `FxArrayProduct` → `FxArrayIndexed` | Vector/matrix/batch auto-axis rules, without implicit broadcast |
+| Integer `[**]` | `FxMatrixPower` | Admitted square matrix, machine int exponent, real identity/copy/solve/multiply methods and one numeric context |
 | `:=` and slice `.:` | `FxArrayAssignPrepared` | Real places, captured RHS, RHS index map, admission and store |
 | Minimal `fuse` | `FxFusePrepared` → `FxArrayBuild` | Confirmed Scalar/Map plan, one expression template, fresh final result |
 | All output traversals | `FxArrayExpressionFill` | Output count, one callback and one write contract |
@@ -239,3 +240,67 @@ real prototypes, TYPE/VALUE conversion, errors and ownership, then implement
 VALUE adapters. Reconcile existing identity/select/minMax/rank/sign/polar
 contracts before publication; do not declare C surface entries ready by name.
 Source inventory and reference-plan checks here do not replace that acceptance.
+
+## Shared integer matrix power
+
+`FxMatrixPower\power(context; matrix; exponent)` in
+[src/array_expression_ops.lmx](src/array_expression_ops.lmx) is the one binary
+power loop. The exponent is the admitted machine `int` of this entry; a larger
+integer requires a separately admitted exponent profile, never silent
+narrowing. Before entry, the common operation preparation establishes square
+shape, actual input and result types, exponent domain and the chosen numeric
+profile. This prepared helper does not replace those admissions.
+
+The ordinary `context` supplies **actual method references**, with the same
+owner, parent and reachable numeric settings as the selected operations:
+
+| Field | Arguments | Required result and behavior |
+| --- | --- | --- |
+| `identity` | context, matrix | Fresh square identity with the declared result type, including 0×0; does not inspect scalar values merely to decide exponent zero |
+| `copyValue` | context, matrix | Fresh VALUE copy preserving shape, actual type and elements; returning the original reference is invalid |
+| `solve` | context, matrix, identity | One solve of `matrix X = identity` in the selected inversion profile; fresh output; preserves both inputs |
+| `multiply` | context, left, right | The same admitted whole `[*]` contract, precision, reduction order and result type; fresh output even when inputs alias |
+
+These are provider obligations, not declarations that backend bridges already
+exist. A provider must be implemented and its contracts admitted before the
+public `[**]` entry uses it. The source uses existing `FxApply\apply`; a failure
+keeps that common callable boundary and never fabricates `ok=1` or substitutes
+an identity after a numerical error. An optimized backend may replace the
+computation only under the numeric/effect contract established for the call.
+
+The zero case calls only `identity`; the one case calls only `copyValue`.
+A negative exponent constructs one identity and solves once, then reuses the
+same binary order as the positive magnitude. The signed quotient variable
+is repeatedly divided by two with the C99 integer profile's truncation toward
+zero; oddness is `q % 2 != 0`. No step negates the exponent or evaluates its
+absolute value, so the minimum representable machine int is supported without
+signed overflow. The existing
+[integer helpers](src/coreStandardNumeric.lmx) use the same truncating
+division profile and explicitly distinguish it from their floor `divMod`.
+
+The first selected power initializes the accumulator directly. There is no
+extra `I [*] A`, and no unused final squaring. For a nonzero magnitude with b
+binary digits and k set bits, the loop performs `b-1` squarings and `k-1`
+accumulator multiplications; negative powers additionally perform the one
+solve. This count describes the selected evaluation order, not permission to
+reassociate approximate arithmetic. All paths preserve the source matrix.
+For exponent one the explicit copy also preserves ordinary VALUE freshness.
+
+A genuine LMX integration call is:
+
+```lmx
+PreparedMatrixPower:
+    @: context
+    @: matrix
+    int: exponent
+    return: @
+    run:
+        throws: copy(FxMatrixPower\power\throws)
+        return: FxMatrixPower\power(context; matrix; exponent)
+```
+
+The body of the algorithm is stored only in the linked source. Canonical
+public examples are in
+[integer_matrix_power.lm3](../../examples/array_expressions/integer_matrix_power.lm3).
+Static source checks and host-side algorithm checks, where reported, are not
+execution by the production LMX parser, translator or runtime.

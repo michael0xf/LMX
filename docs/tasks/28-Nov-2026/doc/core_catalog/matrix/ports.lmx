@@ -1,0 +1,41 @@
+# LMX integration contracts; declarations do not implement these providers.
+# No new parser, method-name dispatcher, TypeID, raw pointer or hidden registry.
+# Actual CODE admission must check the full signature, finite throws and owner.
+MatrixBackendThrows:
+    BridgeLowerError
+
+MatrixNativeCallAPI :: (@BridgeData\CallRequest: request; return: @BridgeData\CallResult; throws: BridgeLowerError)
+
+# A prepared call retains ordinary DATA only. Native frames and leases live
+# exclusively inside the existing C99Calls / BridgeLower open-finish-release.
+MatrixPreparedCall:
+    @MatrixNativeCallAPI: call
+    @BridgeData\CallRequest: request
+    @: profile
+    @: context
+
+MatrixPrepareAPI :: (@: profile; []@: operands; @: context; return: @MatrixPreparedCall; throws: copy(MatrixBackendThrows))
+MatrixFinishAPI :: (@MatrixPreparedCall: prepared; @BridgeData\CallResult: result; return: @BridgeData\CallResult; throws: copy(MatrixBackendThrows))
+
+MatrixBackendPort:
+    @MatrixPrepareAPI: prepare
+    @MatrixFinishAPI: finish
+
+# prepare: admit the concrete selected CODE, entry, native build and operation;
+# normalize the already parsed axis plan, validate types, shapes, signed bounds,
+# status/ownership/alias/numeric policy and resource budgets; construct the exact
+# CallRequest argument order for that entry; do not allocate a native frame.
+# Reject unsupported profiles through the existing BridgeLowerError before
+# any input mutation. Numeric result failures use failed CallResult in finish.
+# Return the SAME
+# admitted CODE reference in prepared.call, with its concrete request/context.
+#
+# finish: preserve a failed native CallResult; inspect the actual backend
+# status/flags, result shape, finite/tolerance/residual policy as applicable;
+# publish only admitted ordinary results. It must not turn REVIEW_REQUIRED,
+# NULL, singular/overflow/convergence failure into ok=1 or invent zero outputs.
+# Output resources acquired by the native gate remain under managed ownership.
+# Untransferred native outputs and leases are released by BridgeLower itself.
+#
+# Both slots intentionally stay uninit:T until real providers are supplied.
+# This is not a completed [op] backend and is not runtime-tested.

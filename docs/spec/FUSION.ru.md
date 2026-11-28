@@ -112,20 +112,25 @@ Inline `[items]` — явный источник с обычной иденти�
 
 Шаги ниже описывают интеграцию, а не новые экспортируемые `sys`-функции:
 
-```text
-prepareFuse(rawOccurrence, actualContext):
-    inspect roles and supported method capabilities without running bodies
-    obtain the reached demanded inputs and dynamic parameters once
-    derive compatible output coordinates and complete result requirement
-    validate input access maps, scalar numeric boundaries and demand/failure order
-    reject any unsupported operation or guarantee
-    allocate only the final result and allowed compact access metadata
-    for each output coordinate in canonical order:
-        obtain required scalar inputs through their checked access maps
-        evaluate the original scalar tree, including intermediate admission
-        store into the unpublished fresh result
-    publish the result under its complete type and parent-context contract
+| Фаза | Обязанность общего исполнителя |
+| --- | --- |
+| Подготовка | Проверить роли и объявленные возможности без запуска тел; получить достигнутые востребованные входы и динамические параметры один раз. |
+| Допуск | Определить совместимые координаты выхода и полное требование результата. Проверить карты доступа, каждую скалярную численную границу и порядок востребованности/отказов. Отвергнуть неподдержанные операции или гарантии. |
+| Выделение | Выделить только окончательный результат и разрешённые компактные метаданные доступа. |
+| Обход | В каноническом порядке выходных координат прочитать нужные скаляры через проверенные карты, выполнить исходное скалярное дерево с промежуточным допуском и записать в ещё не опубликованный свежий результат. |
+| Публикация | Предоставить результат только по полному договору типа и parent-контекста. |
+
+Существующее общее тело LMX [FxFusePrepared](patterns/LMX_Fn_Receivers/src/array_expression_ops.lmx) получает допущенный контекст:
+
+```lmx
+FxFusePrepared\run(context)
 ```
+
+Его `context\singleResult` выбирает одну ячейку либо общий сборщик результата;
+`context\cell` выполняет допущенное скалярное дерево. Array-путь использует
+проверенные `layout`, `allocate`, `count` и `write` из `FxArrayBuild`.
+Подготовка контекста — отдельная обязанность интеграции; метаданные сами
+по себе не реализуют доступ и скалярные методы.
 
 Scalar-only использует выбранное обычное скалярное вычисление. Map→Map разделяет одно дерево и карты доступа, а не выделяет дерево или Array-строки для каждой координаты. Настройки — обычные данные; исполнитель должен содержать reader, скалярный генератор и сборщик результата. Договоры скаляров, ленивость и полные типы не заменяются декларацией метаданных.
 

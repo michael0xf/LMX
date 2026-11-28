@@ -1382,10 +1382,10 @@ Source: [precedence and associativity](../LMX_semantics.en.md#assignment-inside-
 |---|---|---|
 | `sys\name(not_declared_here)` with no declaration | `not_declared_here` | No lookup failure |
 | `sys\name(sample)` with `sample = 52` | `sample` | No integer-to-string conversion |
-| Exact identifier `sample` (see source below) | `sample` | Same contents as the bare identifier |
-| Exact identifier with a space (see source below) | `two words` | No case/whitespace normalization |
-| Exact identifier containing a backtick (see source below) | `a` followed by one backtick and `b` | Exact-identifier unescaping only |
-| Empty exact identifier (see source below) | empty string | Length 0 |
+| Exact identifier `` `sample` `` (see source below) | `60 73 61 6D 70 6C 65 60` (hex) | Full written token |
+| Exact identifier with a space (see source below) | `` `two words` `` | Both enclosing backticks and the space are retained |
+| Exact identifier containing a backtick pair (see source below) | `60 61 60 60 62 60` (hex) | Both bytes of the internal pair are retained |
+| Exact token consisting of two backticks (see source below) | `60 60` (hex) | Length 2 |
 | `sys\name(selected)` where selected points to `actions\next` | `selected` | No invocation and no lookup of the target's name |
 
 The actual LMX spellings for the exact-identifier cases are:
@@ -1415,9 +1415,7 @@ With OP01's `numeric_ops` imported:
 ```lmx
 sys\priority("subtract") = sys\priority("+")
 ```
-Expected **1**. Repeat the right query as
-``sys\priority(sys\name(`+`))``; the result must be the addition priority, not a
-unary-plus priority guessed from query context.
+Expected **1**. The query `` sys\priority(sys\name(`+`)) `` supplies the distinct three-byte key `60 2B 60`. It resolves an admitted operation of that name or produces a normal lookup refusal.
 
 Create a separate `Array<char>` with the content `subtract` and use it as the
 query argument: the result must be identical even though its address differs

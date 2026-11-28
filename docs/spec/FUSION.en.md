@@ -112,20 +112,25 @@ An inline `[items]` is an explicit input value with ordinary identity, not a gro
 
 The following steps describe integration, not newly exported `sys` functions:
 
-```text
-prepareFuse(rawOccurrence, actualContext):
-    inspect roles and supported method capabilities without running bodies
-    obtain the reached demanded inputs and dynamic parameters once
-    derive compatible output coordinates and complete result requirement
-    validate input access maps, scalar numeric boundaries and demand/failure order
-    reject any unsupported operation or guarantee
-    allocate only the final result and allowed compact access metadata
-    for each output coordinate in canonical order:
-        obtain required scalar inputs through their checked access maps
-        evaluate the original scalar tree, including intermediate admission
-        store into the unpublished fresh result
-    publish the result under its complete type and parent-context contract
+| Phase | Obligation of the shared executor |
+| --- | --- |
+| Prepare | Inspect roles and declared capabilities without running bodies; obtain reached demanded inputs and dynamic parameters once. |
+| Admit | Derive compatible output coordinates and the complete result requirement. Validate access maps, every scalar numeric boundary, and demand/failure order. Reject unsupported operations or guarantees. |
+| Allocate | Allocate only the final result and permitted compact access metadata. |
+| Traverse | In canonical output-coordinate order, read required scalar inputs through checked maps, evaluate the original scalar tree including intermediate admission, and write the unpublished fresh result. |
+| Publish | Expose the result only under its complete type and parent-context contract. |
+
+The existing common LMX body [FxFusePrepared](patterns/LMX_Fn_Receivers/src/array_expression_ops.lmx) consumes the admitted context:
+
+```lmx
+FxFusePrepared\run(context)
 ```
+
+Its `context\singleResult` selects a single cell or the common result builder;
+`context\cell` evaluates the admitted scalar tree. The Array path uses checked
+`layout`, `allocate`, `count` and `write` from `FxArrayBuild`. Preparing that
+context is a separate integration obligation; metadata alone does not implement
+the access or scalar methods.
 
 Scalar-only work uses the selected ordinary scalar evaluation. A Map→Map plan shares one scalar tree and access maps rather than allocating a tree or row storage per coordinate. Settings are ordinary data; the executor must contain the actual reader, scalar emitter and result builder. The selected scalar rules, lazy demand and complete result types are not replaced by metadata declarations.
 

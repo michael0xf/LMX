@@ -1,6 +1,6 @@
 # Массивные, индексные и матричные профили
 
-Редакция 2026-11-27. [LMX-опись](array_expression_forms.lmx) и
+Редакция 2026-11-28. [LMX-опись](array_expression_forms.lmx) и
 [JSON-проекция](array_expression_forms.json) описывают канонические операции и
 профили; это не второй runtime-диспетчер.
 
@@ -28,6 +28,10 @@ Arrays: применимость определяется типами ячее�
 [Полная норма и каталог](../../spec/TENSOR_EXPRESSIONS.md),
 [depth](../../spec/OPERATOR_DEPTH.ru.md), [подпарсер](../../spec/BRACKET_SUBPARSER.ru.md),
 [общие LMX-тела](../../spec/patterns/LMX_Fn_Receivers/src/array_expression_ops.lmx).
+[Матричные backend и альтернативы](../matrix/README.ru.md) задают допуск
+конкретных C entry, численного профиля, layout, ошибок и владения.
+`[**]` с целым показателем использует одно общее `FxMatrixPower\power`;
+другие matrix functions этим не реализуются.
 Production parser/translator/runtime: **NOT_RUN**.
 
 | Имя | Expression | Профиль | Роли | Общее тело/граница |
@@ -73,7 +77,7 @@ Production parser/translator/runtime: **NOT_RUN**.
 | `*` | `[*]` | whole-linear-algebra | VALUE | `FxArrayProduct\multiply -> FxArrayIndexed\apply` |
 | `/` | `[/]` | whole-linear-algebra | VALUE | `selected declared whole profile` |
 | `\` | `[\]` | whole-linear-algebra | VALUE | `selected declared whole profile` |
-| `**` | `[**]` | whole-linear-algebra | VALUE | `selected declared whole profile` |
+| `**` | `[**]` | whole-linear-algebra | VALUE | `FxMatrixPower\power (integer exponent)` |
 | `=` | `[=]` | whole-linear-algebra | VALUE | `selected declared whole profile` |
 | `!=` | `[!=]` | whole-linear-algebra | VALUE | `selected declared whole profile` |
 | `op` | `[op axisRules; options -> outputOrder]` | explicit-indexed-profile | VALUE | `FxArrayIndexed\apply + FxArrayIndexedCell\at` |

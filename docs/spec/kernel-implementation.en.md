@@ -772,7 +772,7 @@ pointer valid in a later process, so a loaded unit normalizes spellings once to 
 canonical addresses. After that, identifier comparisons use pointers; no numeric spelling codes
 or string comparisons are inserted into normal resolved-name execution.
 
-A bare/exact identifier of equal decoded spelling uses the same canonical name. User string
+A source identifier is interned from every byte of its token. Bare `x` and the token `` `x` `` get distinct canonical addresses in the same context. User string
 values are ordinary char Arrays and are not universally interned. The explicit `sys\priority`
 string-to-name boundary resolves equal contents through the existing mechanism; it does not
 require pointer identity from a caller's arbitrary string. `sys\name` uses existing canonical

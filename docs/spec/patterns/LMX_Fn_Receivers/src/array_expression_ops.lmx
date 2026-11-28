@@ -326,7 +326,9 @@ FxArrayAssignPrepared:
 # Minimal fuse accepts only a confirmed Scalar/Map plan with a fresh result.
 # The RAW graph retains original demand, errors, types and operation order.
 # It has no intermediate Array results; the final result and compact access
-# contexts are allowed. Context.plan/run is not a promise of all optimizations.
+# contexts are allowed. The prepared context supplies singleResult and cell;
+# FxArrayBuild also consumes layout, allocate, count and write. These fields
+# describe the admitted execution, not a promise of all optimizations.
 # Reduce, contraction, effects, callbacks and in-place stores require separately
 # implemented capabilities. No implicit streaming/partial-write entry exists.
 FxFusePrepared:
@@ -342,3 +344,48 @@ FxFusePrepared:
 # destination := fuse(expr) and slice .: fuse(expr) obtain the final fresh value
 # first, then use FxArrayAssignPrepared. Combining the external store with fuse
 # is NOT part of the initial profile and must never change late-error behavior.
+
+# Shared integer matrix power after ordinary square/type/exponent admission.
+# The provider is one ordinary context with real identity/copyValue/solve/
+# multiply method references; no operation lookup by string is performed.
+# Every provider call receives context first, keeps input values unchanged and
+# returns a fresh VALUE with the admitted result type and numerical profile.
+# identity(context,A), copyValue(context,A), solve(context,A,I),
+# multiply(context,left,right) are integration contracts, not hidden helpers.
+# They reuse admitted matrix operations; this source does not implement their
+# numerical backends. FxApply retains their ordinary callable failure boundary.
+# C99-profile int / 2 truncates toward zero, including negative odd values.
+# q is never negated and abs(MIN_INT) is never evaluated.
+FxMatrixPower:
+    private:
+        @: context
+        @: matrix
+        int: exponent
+    required: context matrix exponent
+    return: @
+    power:
+        throws: copy(FxApply\apply\throws)
+        if: exponent = 0
+            return: FxApply\apply(operation := context\identity; args := (context; matrix))
+        if: exponent = 1
+            return: FxApply\apply(operation := context\copyValue; args := (context; matrix))
+        private: @: base matrix
+        if: exponent < 0
+            private: @: unit FxApply\apply(operation := context\identity; args := (context; matrix))
+            base := FxApply\apply(operation := context\solve; args := (context; matrix; unit))
+        private: int: q exponent
+        private: int: present 0
+        private: @: result
+        while: q != 0
+            if: q % 2 != 0
+                if: present = 0
+                    result := base
+                    present := 1
+                else:
+                    result := FxApply\apply(operation := context\multiply; args := (context; result; base))
+            ---
+            q := q / 2
+            if: q != 0
+                base := FxApply\apply(operation := context\multiply; args := (context; base; base))
+        ---
+        return: result

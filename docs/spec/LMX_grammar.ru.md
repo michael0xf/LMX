@@ -1048,11 +1048,11 @@ P0 никогда не раскрывает единственную анони�
     head                ::= { type_prefix } head_base
                           | common_composed_head
 
-    head_base           ::= bare_identifier | exact_identifier | python_gate
+    head_base           ::= bare_identifier | exact_identifier | foreign_head
                           | symbolic_head | square_form(DECLARATION_HEAD)
                           | bounded_structure
 
-    python_gate         ::= "py." compact_foreign_tail
+    foreign_head        ::= ("c." | "py.") compact_foreign_tail
     compact_foreign_tail ::= ? nonempty foreign spelling up to the common LMX boundary in §23 ?
 
     type_prefix         ::= array_axis_prefix | dynamic_array_rank_prefix

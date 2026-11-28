@@ -1148,6 +1148,8 @@ A `c.*` token is an explicit C door. A language Array remains an `Lmx`-based gra
 <a id="lowlevel-abi"></a>
 ## 20. External types and ABI
 
+The common P0 reads compact foreign heads using one rule for `c.` and `py.`. In L2, names following `c.` address the C surface. A target following `py.` is resolved at execution in the selected Python session and is also available in L3. A user-defined Python function requires no LMX registration. [Foreign head grammar](LMX_grammar.en.md#foreign) · [Session management](../../include_languages/python/API.md).
+
 `cast: (T) value` is a machine cast, not a checked L3 conversion or proof of range, alignment, or lifetime. `c.name` selects a foreign C symbol; its adapter defines arguments, result, and ownership. `c.sizeof` means C `sizeof`, not Array length or Structure field count. `include` and `os` select explicit dependencies and a platform branch, not runtime module discovery. The action of `include:` and `predef:` needs one argument, the name of a dependency, so several arguments may be written and each is taken in turn, in the written order, as with the receivers of [qualification](LMX_semantics.en.md#qualification).
 
 `os` selects a target-platform branch but introduces no separate comparison of branches for equal method sets, signatures, or serialized contracts. Differences between branches are not errors in themselves. Selected declarations and bodies use the ordinary L2 mechanisms; wherever a receiving site requires compatibility, the ordinary `satisfies` admission and its address map apply, as outside `os`. Selecting a branch creates neither an additional common interface nor a private `os` admission mechanism. Author clarification, 2026-10-23 (repository provenance: `../LMX_blog/2026-10-23.md`).

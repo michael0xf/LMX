@@ -1429,6 +1429,29 @@ right и не получает безусловного default 0.
 третий вход операнда — Array ссылок, второй — необязательный actual depth. Бинарная реализация проверяет один
 правый элемент обычным допуском; ABI не подразумевает свёртки.
 
+<a id="heterogeneous-user-operands"></a>
+##### Пользовательские операторы с разнородными аргументами
+
+Пусть расширение объявило два метода, `mipMax` и `cutBetween`, с `PASS_ARGS_AS_IS 0`. В первом вызове нужно выбрать, сколько партий выпустить и сколько сырья продать. Слева передаётся вектор доходов. Справа матрица расхода, вектор запасов, строка типов переменных и лимит времени в миллисекундах занимают по одному месту в `right`.
+
+```lmx
+[3]double: margin [12 9 2]
+[2][3]double: usage [4 3 1; 2 3 0]
+[2]double: stock [10.5 6]
+@: plan (margin mipMax usage stock "IIC" 2500)
+```
+
+Первые две колонки требуют целого количества партий (`I`), третья допускает продажу сырья на вес (`C`). GNU GLPK получает оптимум 29 при количествах `[2 0 2.5]`. Если заменить только строку на `"III"`, лучший план даёт 28 при `[2 0 2]`.
+
+Во втором вызове `network` — структура направленной сети с вершинами «порт», «север», «юг», «завод». Номер источника, имя цели и вектор пропускных способностей рёбер передаются как три отдельных значения. Строку имени разрешает сам метод.
+
+```lmx
+[5]double: capacity [5 4 2 3 1]
+@: cut (network cutBetween 0 "завод" capacity)
+```
+
+Если рёбра идут из порта на север и юг, далее с севера и юга на завод, затем с севера на юг, igraph возвращает минимальный разрез по рёбрам 2 и 3 суммарной ёмкости 5. В обоих примерах общий группировщик сохраняет порядок и типы аргументов. Библиотеки вызывает пользовательское расширение. [Объявление методов и воспроизведение](examples/external_gpl_operators/README.md) · [Проверка на модели Expression](examples/external_gpl_operators/run.py).
+
 <a id="operand-right-only-opening"></a>
 #### Последовательность текущего уровня и один левый actual
 
@@ -2507,6 +2530,29 @@ adaptation performs no second group-opening pass and does not duplicate left
 in right. `a foo b` cannot be textually replaced by `foo(a; b)`: the operand's
 third input is an Array of references; its second input is the optional depth actual. A binary implementation checks its one
 right item under ordinary admission; the ABI does not imply a fold.
+
+<a id="heterogeneous-user-operands"></a>
+##### User-defined operators with heterogeneous arguments
+
+Suppose an extension declares two methods, `mipMax` and `cutBetween`, with `PASS_ARGS_AS_IS 0`. The first call chooses how many batches to produce and how much raw material to sell. The profit vector is the left argument. The resource-use matrix, the stock vector, the variable-kind string and the time limit in milliseconds each occupy one position in `right`.
+
+```lmx
+[3]double: margin [12 9 2]
+[2][3]double: usage [4 3 1; 2 3 0]
+[2]double: stock [10.5 6]
+@: plan (margin mipMax usage stock "IIC" 2500)
+```
+
+The first two columns require whole batches (`I`), and the third permits material to be sold by weight (`C`). GNU GLPK finds an optimum of 29 with quantities `[2 0 2.5]`. Changing only the string to `"III"` gives an optimum of 28 with `[2 0 2]`.
+
+In the second call, `network` is a directed network Structure with vertices named порт (port), север (north), юг (south) and завод (plant). The source index, target name and vector of edge capacities arrive as three distinct values. The method resolves the vertex name.
+
+```lmx
+[5]double: capacity [5 4 2 3 1]
+@: cut (network cutBetween 0 "завод" capacity)
+```
+
+With edges from port to north and south, then from north and south to plant, and finally from north to south, igraph returns edges 2 and 3 as a minimum cut of total capacity 5. Both examples use the common grouper, which preserves argument order and types. The user extension calls the libraries. [Method declarations and reproduction steps](examples/external_gpl_operators/README.md) · [Expression model check](examples/external_gpl_operators/run.py).
 
 <a id="operand-right-only-opening"></a>
 #### Current-level sequences and the one-left-actual contract

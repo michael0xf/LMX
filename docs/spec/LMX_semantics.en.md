@@ -1191,6 +1191,29 @@ in right. `a foo b` cannot be textually replaced by `foo(a; b)`: the operand's
 third input is an Array of references; its second input is the optional depth actual. A binary implementation checks its one
 right item under ordinary admission; the ABI does not imply a fold.
 
+<a id="heterogeneous-user-operands"></a>
+##### User-defined operators with heterogeneous arguments
+
+Suppose an extension declares two methods, `mipMax` and `cutBetween`, with `PASS_ARGS_AS_IS 0`. The first call chooses how many batches to produce and how much raw material to sell. The profit vector is the left argument. The resource-use matrix, the stock vector, the variable-kind string and the time limit in milliseconds each occupy one position in `right`.
+
+```lmx
+[3]double: margin [12 9 2]
+[2][3]double: usage [4 3 1; 2 3 0]
+[2]double: stock [10.5 6]
+@: plan (margin mipMax usage stock "IIC" 2500)
+```
+
+The first two columns require whole batches (`I`), and the third permits material to be sold by weight (`C`). GNU GLPK finds an optimum of 29 with quantities `[2 0 2.5]`. Changing only the string to `"III"` gives an optimum of 28 with `[2 0 2]`.
+
+In the second call, `network` is a directed network Structure with vertices named порт (port), север (north), юг (south) and завод (plant). The source index, target name and vector of edge capacities arrive as three distinct values. The method resolves the vertex name.
+
+```lmx
+[5]double: capacity [5 4 2 3 1]
+@: cut (network cutBetween 0 "завод" capacity)
+```
+
+With edges from port to north and south, then from north and south to plant, and finally from north to south, igraph returns edges 2 and 3 as a minimum cut of total capacity 5. Both examples use the common grouper, which preserves argument order and types. The user extension calls the libraries. [Method declarations and reproduction steps](examples/external_gpl_operators/README.md) · [Expression model check](examples/external_gpl_operators/run.py).
+
 <a id="operand-right-only-opening"></a>
 #### Current-level sequences and the one-left-actual contract
 

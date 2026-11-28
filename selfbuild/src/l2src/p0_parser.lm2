@@ -7279,6 +7279,16 @@ fn: lm_p0_lower_types_node (c.LmP0Document@: document; c.LmP0Node@: p0_node) int
         lm_p0_set_diagnostic(document, 6, p0_node\span\line, p0_node\span\column, "conditional operator requires its expression projection")
         return: 0
     ---
+    # The token `:=` in the place of a value -- the left side of a group assignment, or the bare token
+    # (LMX_grammar.ru.md:61, :424): P0 keeps the form, and its role belongs to the general Expression mechanism, which
+    # this lowering has none of. Refused at its coordinate, as the conditional question is; the builder of the graph
+    # refuses the same atom with the same words (lm_graph_build_node). The text is compared as written: an exact name
+    # keeps its backquotes, and the Frame of an assignment or of a named actual (`a := b`, `f(x := y)`) is a Frame,
+    # not this atom.
+    if: p0_node\kind = c.LM_P0_NODE_ATOM && p0_node\as\atom\length = 2U && p0_node\as\atom\data[0] = ':' && p0_node\as\atom\data[1] = '='
+        lm_p0_set_diagnostic(document, 6, p0_node\span\line, p0_node\span\column, "bare := requires its Expression projection")
+        return: 0
+    ---
     if: p0_node\kind != c.LM_P0_NODE_FRAME || p0_node\as\frame = 0
         return: 1
     frame := p0_node\as\frame

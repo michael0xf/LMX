@@ -200,7 +200,7 @@ def remote_control_default():
     return os.environ.get('LMX_UDS_REMOTE_CONTROL', '') not in ('', '0', 'false', 'no')
 
 
-def cmd_serve(name, remote_control=False, append_system_prompt=None):
+def cmd_serve(name, remote_control=False, append_system_prompt=None, resume=None):
     """Run the session in THIS window instead of --bg.
 
     A background session forces the fullscreen renderer before it ever looks at
@@ -218,6 +218,8 @@ def cmd_serve(name, remote_control=False, append_system_prompt=None):
             '--messaging-socket-path', pipe,
             '--debug-file', str(debug),
             *remote_control_args(name, remote_control)]
+    if resume:
+        args.extend(['--resume', resume])
     if append_system_prompt:
         args.extend(['--append-system-prompt', append_system_prompt])
     # Inherit stdio: the child owns this console, and nothing may be printed
@@ -333,6 +335,8 @@ def cmd_stop(name):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--name', default='lmx_uds', help='Independent session name (not an L1 name).')
+    parser.add_argument('--resume', metavar='SESSION_ID',
+                        help='Resume this local Claude session when using serve.')
     parser.add_argument('--remote-control', '--rc', action='store_true', default=remote_control_default(),
                         help='Also register the session with claude.ai (claude --remote-control <name>), so the '
                              'cloud sessions can SendMessage it by name; the named pipe stays. Default from '
@@ -352,7 +356,7 @@ def main():
     if args.command == 'start':
         return cmd_start(args.name, args.remote_control)
     if args.command == 'serve':
-        return cmd_serve(args.name, args.remote_control, args.append_system_prompt)
+        return cmd_serve(args.name, args.remote_control, args.append_system_prompt, args.resume)
     if args.command == 'status':
         return cmd_status(args.name)
     if args.command == 'attach':

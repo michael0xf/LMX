@@ -1976,9 +1976,10 @@
   },
   {
     "path": "tests/parser/current/t233_g05_empty_group_assign.lmx",
-    "exit": 1,
-    "authority": "Р156 G1: a colon followed by `=` is the token `:=`, never the colon of a head (the author, 2026-11-07); `():= 5` is no longer the head `()` with the body `= 5` (it was one by the old special case of the empty group): the group stays a group and `:=` after it is refused as `(a) := 5` is today.",
-    "diagnostic": "6@1:3"
+    "flags": true,
+    "exit": 0,
+    "authority": "Р156 G1: a colon followed by `=` is the token `:=`, never the colon of a head (the author, 2026-11-07); `():= 5` is no longer the head `()` with the body `= 5` (it was one by the old special case of the empty group). LMX_grammar.ru.md:61 and :424 (section 14 for `(): value`): the group stays a group, the token is the atom `:=`, the value follows; P0 stores the form as written and has no condition on the emptiness of the group -- an empty group is not an allowed left side of a write, which the consumer refuses (Sol, Request ID SOL-CODER-P0-DEPTH-V3-20261128, DESIGN-ASSIGN-1)",
+    "stdout_exact": "structure fields=3 ##\n  structure fields=0 ##\n  atom \":=\" ##\n  atom \"5\" ##\n"
   },
   {
     "path": "tests/parser/current/t233_g06_square_then_postfix.lmx",
@@ -3595,5 +3596,158 @@
     "exit": 0,
     "authority": "LMX_grammar.ru.md:746 (section 19): an incorrect mark in a string gives no tree and does not drop the string; the correct marks on both sides of it keep their trees and places (the example `x: \"text{)}text{mix}\"` keeps the tree of `{mix}`); the middle mark `{b.c}` is incorrect after the depth removal (Sol, Request ID SOL-CODER-P0-DEPTH-V3-20261128, question 3; the form with neighbours was asked by Astra)",
     "stdout_exact": "structure fields=1 ##\n  frame head=\"x\" body=structure fields=1 ## {COLON INLINE}\n    atom \"\"a {left} {b.c} {right} d\"\" ##\n      MIX at 3 structure fields=1 ## [MIX STRMARK]\n        atom \"left\" ## [DOCUMENT]\n      MIX at 16 structure fields=1 ## [MIX STRMARK]\n        atom \"right\" ## [DOCUMENT]\n"
+  },
+  {
+    "path": "tests/parser/current/assign_group_call_spaced.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "`:=` at the start of a field (coder, 2026-11-28; DESIGN-ASSIGN-1 D1; Sol, Request ID SOL-CODER-P0-DEPTH-V3-20261128): LMX_grammar.ru.md:61 and :424 keep a non-empty bounded group before `:=` and leave the role to the consumer; a field with an empty head that starts with the two bytes `:=` is the atom `:=`, read as the atom `::` is (the tree of the `::` twin with the text of the atom changed)",
+    "stdout_exact": "structure fields=3 ##\n  structure fields=3 ##\n    atom \"a\" ##\n    atom \"b\" ##\n    atom \"c\" ##\n  atom \":=\" ##\n  frame head=\"f\" body=structure fields=0 ## {COMPACT}\n"
+  },
+  {
+    "path": "tests/parser/current/assign_group_call_glued.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "`:=` at the start of a field (coder, 2026-11-28; DESIGN-ASSIGN-1 D1; Sol, Request ID SOL-CODER-P0-DEPTH-V3-20261128): LMX_grammar.ru.md:61 and :424 keep a non-empty bounded group before `:=` and leave the role to the consumer; a field with an empty head that starts with the two bytes `:=` is the atom `:=`, read as the atom `::` is (the tree of the `::` twin with the text of the atom changed)",
+    "stdout_exact": "structure fields=3 ##\n  structure fields=3 ##\n    atom \"a\" ##\n    atom \"b\" ##\n    atom \"c\" ##\n  atom \":=\" ##\n  frame head=\"f\" body=structure fields=0 ## {COMPACT}\n"
+  },
+  {
+    "path": "tests/parser/current/assign_group_two_groups.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "`:=` at the start of a field (coder, 2026-11-28; DESIGN-ASSIGN-1 D1; Sol, Request ID SOL-CODER-P0-DEPTH-V3-20261128): LMX_grammar.ru.md:61 and :424 keep a non-empty bounded group before `:=` and leave the role to the consumer; a field with an empty head that starts with the two bytes `:=` is the atom `:=`, read as the atom `::` is (the tree of the `::` twin with the text of the atom changed)",
+    "stdout_exact": "structure fields=3 ##\n  structure fields=2 ##\n    atom \"a\" ##\n    atom \"b\" ##\n  atom \":=\" ##\n  structure fields=1 ##\n    frame head=\"copy\" body=structure fields=1 ## {COMPACT}\n      atom \"Pair\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/assign_group_call_semicolon.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "`:=` at the start of a field (coder, 2026-11-28; DESIGN-ASSIGN-1 D1; Sol, Request ID SOL-CODER-P0-DEPTH-V3-20261128): LMX_grammar.ru.md:61 and :424 keep a non-empty bounded group before `:=` and leave the role to the consumer; a field with an empty head that starts with the two bytes `:=` is the atom `:=`, read as the atom `::` is (the tree of the `::` twin with the text of the atom changed)",
+    "stdout_exact": "structure fields=4 ##\n  structure fields=3 ##\n    atom \"a\" ##\n    atom \"b\" ##\n    atom \"c\" ##\n  atom \":=\" ##\n  frame head=\"f\" body=structure fields=0 ## [SEP SEMICOLON] {COMPACT}\n  frame head=\"g\" body=structure fields=0 ## {COMPACT}\n"
+  },
+  {
+    "path": "tests/parser/current/assign_token_first_in_group.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "`:=` at the start of a field (coder, 2026-11-28; DESIGN-ASSIGN-1 D1; Sol, Request ID SOL-CODER-P0-DEPTH-V3-20261128): LMX_grammar.ru.md:61 and :424 keep a non-empty bounded group before `:=` and leave the role to the consumer; a field with an empty head that starts with the two bytes `:=` is the atom `:=`, read as the atom `::` is (the tree of the `::` twin with the text of the atom changed)",
+    "stdout_exact": "structure fields=1 ##\n  structure fields=3 ##\n    atom \":=\" ##\n    atom \"a\" ##\n    atom \"b\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/assign_token_bare.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "`:=` at the start of a field (coder, 2026-11-28; DESIGN-ASSIGN-1 D1; Sol, Request ID SOL-CODER-P0-DEPTH-V3-20261128): LMX_grammar.ru.md:61 and :424 keep a non-empty bounded group before `:=` and leave the role to the consumer; a field with an empty head that starts with the two bytes `:=` is the atom `:=`, read as the atom `::` is (the tree of the `::` twin with the text of the atom changed)",
+    "stdout_exact": "structure fields=2 ##\n  atom \":=\" ##\n  atom \"a\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/assign_group_in_field.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "`:=` at the start of a field (coder, 2026-11-28; DESIGN-ASSIGN-1 D1; Sol, Request ID SOL-CODER-P0-DEPTH-V3-20261128): LMX_grammar.ru.md:61 and :424 keep a non-empty bounded group before `:=` and leave the role to the consumer; a field with an empty head that starts with the two bytes `:=` is the atom `:=`, read as the atom `::` is (the tree of the `::` twin with the text of the atom changed)",
+    "stdout_exact": "structure fields=1 ##\n  frame head=\"x\" body=structure fields=3 ## {COLON INLINE}\n    structure fields=3 ##\n      atom \"a\" ##\n      atom \"b\" ##\n      atom \"c\" ##\n    atom \":=\" ##\n    frame head=\"f\" body=structure fields=0 ## {COMPACT}\n"
+  },
+  {
+    "path": "tests/parser/current/assign_group_after_indent.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "`:=` at the start of a field (coder, 2026-11-28; DESIGN-ASSIGN-1 D1; Sol, Request ID SOL-CODER-P0-DEPTH-V3-20261128): LMX_grammar.ru.md:61 and :424 keep a non-empty bounded group before `:=` and leave the role to the consumer; a field with an empty head that starts with the two bytes `:=` is the atom `:=`, read as the atom `::` is (the tree of the `::` twin with the text of the atom changed)",
+    "stdout_exact": "structure fields=1 ##\n  frame head=\"y\" body=structure fields=3 ## {COLON}\n    structure fields=2 ##\n      atom \"a\" ##\n      atom \"b\" ##\n    atom \":=\" ##\n    frame head=\"f\" body=structure fields=0 ## {COMPACT}\n"
+  },
+  {
+    "path": "tests/parser/current/assign_group_token_end.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "`:=` at the start of a field (coder, 2026-11-28; DESIGN-ASSIGN-1 D1; Sol, Request ID SOL-CODER-P0-DEPTH-V3-20261128): LMX_grammar.ru.md:61 and :424 keep a non-empty bounded group before `:=` and leave the role to the consumer; a field with an empty head that starts with the two bytes `:=` is the atom `:=`, read as the atom `::` is (the tree of the `::` twin with the text of the atom changed)",
+    "stdout_exact": "structure fields=2 ##\n  structure fields=3 ##\n    atom \"a\" ##\n    atom \"b\" ##\n    atom \"c\" ##\n  atom \":=\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/assign_kept_frame_spaced.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "`:=` at the start of a field (coder, 2026-11-28; DESIGN-ASSIGN-1 D2): the form is outside the condition (the ASSIGN Frame with a non-empty head, the separators of a slice, the token `::`, the head of a colon Frame) and keeps the tree of the accepted P0 before the slice (coder-depth02), reviewed against the input",
+    "stdout_exact": "structure fields=1 ##\n  frame head=\"a\" body=structure fields=1 ## {INLINE ASSIGN}\n    atom \"b\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/assign_kept_frame_glued.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "`:=` at the start of a field (coder, 2026-11-28; DESIGN-ASSIGN-1 D2): the form is outside the condition (the ASSIGN Frame with a non-empty head, the separators of a slice, the token `::`, the head of a colon Frame) and keeps the tree of the accepted P0 before the slice (coder-depth02), reviewed against the input",
+    "stdout_exact": "structure fields=1 ##\n  frame head=\"a\" body=structure fields=1 ## {INLINE ASSIGN}\n    atom \"b\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/assign_kept_in_call.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "`:=` at the start of a field (coder, 2026-11-28; DESIGN-ASSIGN-1 D2): the form is outside the condition (the ASSIGN Frame with a non-empty head, the separators of a slice, the token `::`, the head of a colon Frame) and keeps the tree of the accepted P0 before the slice (coder-depth02), reviewed against the input",
+    "stdout_exact": "structure fields=1 ##\n  frame head=\"f\" body=structure fields=1 ## {COMPACT}\n    frame head=\"x\" body=structure fields=1 ## {INLINE ASSIGN}\n      atom \"y\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/assign_kept_in_group.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "`:=` at the start of a field (coder, 2026-11-28; DESIGN-ASSIGN-1 D2): the form is outside the condition (the ASSIGN Frame with a non-empty head, the separators of a slice, the token `::`, the head of a colon Frame) and keeps the tree of the accepted P0 before the slice (coder-depth02), reviewed against the input",
+    "stdout_exact": "structure fields=1 ##\n  structure fields=1 ##\n    frame head=\"a\" body=structure fields=1 ## {INLINE ASSIGN}\n      atom \"b\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/assign_kept_in_index.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "`:=` at the start of a field (coder, 2026-11-28; DESIGN-ASSIGN-1 D2): the form is outside the condition (the ASSIGN Frame with a non-empty head, the separators of a slice, the token `::`, the head of a colon Frame) and keeps the tree of the accepted P0 before the slice (coder-depth02), reviewed against the input",
+    "stdout_exact": "structure fields=4 ##\n  atom \"x\" ##\n  atom \"[\" ##\n  structure fields=1 ##\n    frame head=\"a\" body=structure fields=1 ## {INLINE ASSIGN}\n      atom \"b\" ##\n  atom \"]\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/assign_kept_two_names.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "`:=` at the start of a field (coder, 2026-11-28; DESIGN-ASSIGN-1 D2): the form is outside the condition (the ASSIGN Frame with a non-empty head, the separators of a slice, the token `::`, the head of a colon Frame) and keeps the tree of the accepted P0 before the slice (coder-depth02), reviewed against the input",
+    "stdout_exact": "structure fields=2 ##\n  atom \"a\" ##\n  frame head=\"b\" body=structure fields=1 ## {INLINE ASSIGN}\n    atom \"c\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/assign_kept_no_value.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "`:=` at the start of a field (coder, 2026-11-28; DESIGN-ASSIGN-1 D2): the form is outside the condition (the ASSIGN Frame with a non-empty head, the separators of a slice, the token `::`, the head of a colon Frame) and keeps the tree of the accepted P0 before the slice (coder-depth02), reviewed against the input",
+    "stdout_exact": "structure fields=1 ##\n  frame head=\"a\" body=structure fields=0 ## {ASSIGN}\n"
+  },
+  {
+    "path": "tests/parser/current/assign_kept_head_group_colon.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "`:=` at the start of a field (coder, 2026-11-28; DESIGN-ASSIGN-1 D2): the form is outside the condition (the ASSIGN Frame with a non-empty head, the separators of a slice, the token `::`, the head of a colon Frame) and keeps the tree of the accepted P0 before the slice (coder-depth02), reviewed against the input",
+    "stdout_exact": "structure fields=1 ##\n  frame head=\"(Model)\" body=structure fields=1 ## {COLON INLINE}\n    atom \"p\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/assign_kept_double_colon_call.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "`:=` at the start of a field (coder, 2026-11-28; DESIGN-ASSIGN-1 D2): the form is outside the condition (the ASSIGN Frame with a non-empty head, the separators of a slice, the token `::`, the head of a colon Frame) and keeps the tree of the accepted P0 before the slice (coder-depth02), reviewed against the input",
+    "stdout_exact": "structure fields=3 ##\n  structure fields=3 ##\n    atom \"a\" ##\n    atom \"b\" ##\n    atom \"c\" ##\n  atom \"::\" ##\n  frame head=\"f\" body=structure fields=0 ## {COMPACT}\n"
+  },
+  {
+    "path": "tests/parser/current/assign_kept_head_double_colon.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "`:=` at the start of a field (coder, 2026-11-28; DESIGN-ASSIGN-1 D2): the form is outside the condition (the ASSIGN Frame with a non-empty head, the separators of a slice, the token `::`, the head of a colon Frame) and keeps the tree of the accepted P0 before the slice (coder-depth02), reviewed against the input",
+    "stdout_exact": "structure fields=3 ##\n  structure fields=1 ##\n    atom \"Model\" ##\n  atom \"::\" ##\n  atom \"p\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/assign_kept_slice.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "`:=` at the start of a field (coder, 2026-11-28; DESIGN-ASSIGN-1 D2): the form is outside the condition (the ASSIGN Frame with a non-empty head, the separators of a slice, the token `::`, the head of a colon Frame) and keeps the tree of the accepted P0 before the slice (coder-depth02), reviewed against the input",
+    "stdout_exact": "structure fields=4 ##\n  atom \"x\" ##\n  atom \"[\" ##\n  structure fields=3 ##\n    atom \"a\" ##\n    SliceSeparator atom \":\" ## [SLICE_SEPARATOR]\n    atom \"b\" ##\n  atom \"]\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/assign_kept_index_group_assign.lmx",
+    "flags": true,
+    "exit": 0,
+    "authority": "`:=` at the start of a field (coder, 2026-11-28; DESIGN-ASSIGN-1 D2): the form is outside the condition (the ASSIGN Frame with a non-empty head, the separators of a slice, the token `::`, the head of a colon Frame) and keeps the tree of the accepted P0 before the slice (coder-depth02), reviewed against the input",
+    "stdout_exact": "structure fields=4 ##\n  atom \"x\" ##\n  atom \"[\" ##\n  structure fields=3 ##\n    structure fields=1 ##\n      frame head=\"a\" body=structure fields=1 ## {INLINE ASSIGN}\n        atom \"b\" ##\n    SliceSeparator atom \":\" ## [SLICE_SEPARATOR]\n    atom \"c\" ##\n  atom \"]\" ##\n"
+  },
+  {
+    "path": "tests/parser/current/assign_colon_space_equal_refused.lmx",
+    "exit": 1,
+    "authority": "`:=` at the start of a field (coder, 2026-11-28; DESIGN-ASSIGN-1 section 4): a single colon followed by `=` is no token of the grammar (p0_scan.lm2:32-34: `:=` is one token); the reading of the base stays: code 6",
+    "diagnostic": "6@1:9"
   }
 ]

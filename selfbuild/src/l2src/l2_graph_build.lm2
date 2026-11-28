@@ -1201,6 +1201,15 @@ fn: lm_graph_build_node (c.LmxGraph@: g; c.Lmx@: parent; c.Lmx@: scope; c.LmP0No
         if: lm_graph_p0_length(text) = 1U && text\data[0] = '?'
             c.fprintf(c.stderr, "graph: %zu:%zu: conditional expression requires its Expression projection\n", (cast: (size_t) nd\span\line), (cast: (size_t) nd\span\column))
             return: 2
+        # The token `:=` in the place of a value: the left side of a group assignment or the bare token
+        # (LMX_grammar.ru.md:61, :424). P0 keeps the form; its role belongs to the general Expression mechanism, which this
+        # builder does not have, so the build refuses it where it stands. The fields before it may be built already; the
+        # program is not handed to an executor or a generator, so nothing runs -- the refusal of the conditional question
+        # above and of the depth modifier below works the same way. The text is compared as written: an exact name keeps
+        # its backquotes and is not this text.
+        if: lm_graph_p0_length(text) = 2U && text\data[0] = ':' && text\data[1] = '='
+            c.fprintf(c.stderr, "graph: %zu:%zu: bare := requires its Expression projection\n", (cast: (size_t) nd\span\line), (cast: (size_t) nd\span\column))
+            return: 2
         if: lm_graph_int_literal(text, @ number) != 0
             value := c.lmx_graph_int(g, number)
         else:

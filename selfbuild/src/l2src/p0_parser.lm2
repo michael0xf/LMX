@@ -4137,6 +4137,12 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                             # The token `::` (Р143): a field that starts with two colons, not three, is the atom `::`.
                             if: ((head_end = start) && ((start + 1U) < byte_count) && (text[start] = ':') && (text[(start + 1U)] = ':') && (((start + 2U) >= byte_count) || (text[(start + 2U)] != ':')))
                                 head_end := (start + 2U)
+                            # The token `:=` at the start of a field (LMX_grammar.ru.md:61, :424: a non-empty group before `:=` is the left
+                            # side of a write and P0 keeps the group; the role is chosen by the consumer): a field with an empty head that
+                            # starts with the two bytes is the atom `:=`, read as the atom `::` is. With a non-empty head the same bytes made
+                            # the Frame of an assignment above.
+                            if: ((head_end = start) && ((start + 1U) < byte_count) && (text[start] = ':') && (text[(start + 1U)] = '='))
+                                head_end := (start + 2U)
                             # An ordinary `?` at a field start is the conditional question (LMX_grammar section 30): one atom; the head scan
                             # stops before it, so the question is counted only among the fields already parsed.
                             if: ((head_end = start) && (start < byte_count) && (text[start] = '?'))

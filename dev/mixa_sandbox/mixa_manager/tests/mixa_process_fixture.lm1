@@ -15,9 +15,9 @@ fn: main (int: argc; @: @(char) argv) int
     ulong: got
     int: ok
     ulong: gle
-
+#
     c.setvbuf(c.stdout, 0, c._IONBF, 0)
-
+#
     if: argc >= 2 && c.strcmp(argv[1], "echo") = 0
         while: c.fgets(line, 4096, c.stdin) != 0
             n: c.strlen(line)
@@ -32,11 +32,11 @@ fn: main (int: argc; @: @(char) argv) int
         ---
         return: 0
     ---
-
+#
     if: argc >= 3 && c.strcmp(argv[1], "exit") = 0
         return: c.atoi(argv[2])
     ---
-
+#
     if: argc >= 2 && c.strcmp(argv[1], "stdincheck") = 0
         hstdin: c.GetStdHandle(c.STD_INPUT_HANDLE)
         got: 0
@@ -57,5 +57,5 @@ fn: main (int: argc; @: @(char) argv) int
         ---
         return: 0
     ---
-
+#
     return: 0

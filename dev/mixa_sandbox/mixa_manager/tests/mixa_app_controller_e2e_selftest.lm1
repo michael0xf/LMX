@@ -98,7 +98,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.system(mkcmd)
     c.snprintf(console_path, 600U, "%s\\mixa-console.log", base)
     c.remove(console_path)
-
+#
     vt: mixa_backend_headless_table()
     checks: checks + 1
     if: vt = 0
@@ -106,7 +106,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("e2e: headless table unavailable\n")
         return: 1
     ---
-
+#
     # --- Argument negatives / failure injection via the EXISTING seam
     # (a null vtable, no invented private fault mechanism).
     checks: checks + 1
@@ -119,7 +119,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("e2e: open(...,0,...) not ERR_ARG\n")
     ---
-
+#
     # --- Scenario 1: open() with a real headless backend and a real
     # temp root. Initial empty file, cursor at top -- FIRST_VERSION.txt
     # 5's own "the file is empty, so the cursor is at the TOP" -- proven
@@ -145,7 +145,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("e2e: controller backend is null\n")
         return: 1
     ---
-
+#
     # --- Scenario 2: type a command, one keystroke per step() tick --
     # PENDING content and cursor render in the TEXT layer as it is typed,
     # proven by inspecting the controller's own text_rect directly (the
@@ -172,7 +172,7 @@ fn: main (int: argc; @: @(char) argv) int
             ---
         ---
     ---
-
+#
     # --- Scenario 2b: a non-ASCII (Unicode) codepoint in the pending
     # line, typed then removed with backspace before Enter -- proves
     # Unicode rendering of the PENDING half specifically without risking
@@ -191,7 +191,7 @@ fn: main (int: argc; @: @(char) argv) int
     ---
     t_push_key_code(backend, MIXA_KEY_BACKSPACE)
     mixa_app_controller_step(c, @ had_error)
-
+#
     # --- Scenario 3: Enter echoes the EXACT bytes and spawns a real
     # command -- the command text must be in the file immediately, and
     # the controller must report a command running.
@@ -214,7 +214,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("e2e: a real command should be reported running right after Enter\n")
     ---
-
+#
     # --- Scenario 4: UI/F1 remains RESPONSIVE while the command runs --
     # pushing F1 and typing more characters both work immediately,
     # WITHOUT waiting for the running command, proving step() never
@@ -237,7 +237,7 @@ fn: main (int: argc; @: @(char) argv) int
             c.printf("e2e: text_rect unavailable while a command was running\n")
         ---
     ---
-
+#
     # --- Scenario 5: drain output until the command completes -- never
     # more than one non-blocking poll per tick, exactly mixa_cmd_
     # dispatch_poll's own contract, matching PROCESS_SEAM 3.
@@ -252,7 +252,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("e2e: command did not complete within the bounded wait\n")
     ---
-
+#
     # --- Scenario 6: completion marker hidden, status/cwd recovered.
     checks: checks + 1
     if: mixa_app_controller_last_exit_code(c) != 0
@@ -286,7 +286,7 @@ fn: main (int: argc; @: @(char) argv) int
             c.printf("e2e: the still-pending line must NOT have been committed to the file: [%s]\n", readbuf)
         ---
     ---
-
+#
     # --- Scenario 7: final render -- history (the completed command's
     # own real output) plus a NEW pending line, together, in the TEXT
     # layer. mixa_app_controller_cursor_row/col report the FILE's own
@@ -310,7 +310,7 @@ fn: main (int: argc; @: @(char) argv) int
             c.printf("e2e: final pending 'Z' not found at the history's own end position (row=%zu col=%zu)\n", pend_row, pend_col)
         ---
     ---
-
+#
     # --- Scenario 8: cleanup while a command is still running does not
     # hang -- a fresh command started and the controller closed almost
     # immediately (PROCESS_SEAM's own "kill and mean it", proven through
@@ -334,9 +334,9 @@ fn: main (int: argc; @: @(char) argv) int
         checks: checks + 1
         c.printf("e2e: scenario8 close() on a running command returned (checked by reaching this line, not a 30-second wait)\n")
     ---
-
+#
     mixa_app_controller_close(c)
-
+#
     if: failures = 0
         c.printf("app controller e2e selftest: %d checks, 0 failures\n", checks)
     else:

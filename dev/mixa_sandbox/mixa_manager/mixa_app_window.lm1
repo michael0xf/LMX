@@ -274,7 +274,7 @@ fn: mixa_app_window_open (@: MixaAppWindowStack stack; @: MixaTextRect rect; siz
     win\nrows: nrows
     win\ncols: ncols
     win\hb: hb
-
+#
     # Preflight: the message and the single dismiss button must physically fit
     # in the window's interior (ncols - 2U). mixa_draw_text walks the WHOLE
     # message across the parent rect and mixa_button_panel_draw clips only to
@@ -291,7 +291,7 @@ fn: mixa_app_window_open (@: MixaAppWindowStack stack; @: MixaTextRect rect; siz
         mixa_app_window_close_partial(stack, top_idx)
         return: MIXA_APP_WINDOW_ERR
     ---
-
+#
     # background: translucent fill (alpha on backgrounds only)
     if: mixa_draw_fill(rect, window_row, window_col, nrows, ncols, 0U, MIXA_APP_WINDOW_FRAME_FG, MIXA_APP_WINDOW_WIN_BG, 0U, MIXA_APP_WINDOW_WIN_ALPHA) != MIXA_DRAW_OK
         mixa_app_window_open_fail(stack, rect, top_idx)
@@ -461,7 +461,7 @@ fn: mixa_app_window_open2 (@: MixaAppWindowStack stack; @: MixaTextRect rect; si
     win\nrows: nrows
     win\ncols: ncols
     win\hb: hb
-
+#
     # Same preflight discipline as open(): reject before any pixel is
     # painted so opening either renders the complete window or changes
     # nothing.
@@ -474,7 +474,7 @@ fn: mixa_app_window_open2 (@: MixaAppWindowStack stack; @: MixaTextRect rect; si
         mixa_app_window_close_partial(stack, top_idx)
         return: MIXA_APP_WINDOW_ERR
     ---
-
+#
     if: mixa_draw_fill(rect, window_row, window_col, nrows, ncols, 0U, MIXA_APP_WINDOW_FRAME_FG, MIXA_APP_WINDOW_WIN_BG, 0U, MIXA_APP_WINDOW_WIN_ALPHA) != MIXA_DRAW_OK
         mixa_app_window_open_fail(stack, rect, top_idx)
         return: MIXA_APP_WINDOW_ERR

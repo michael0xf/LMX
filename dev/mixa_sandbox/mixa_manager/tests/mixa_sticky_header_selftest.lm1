@@ -165,7 +165,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.setbuf((cast: (@: void) c.stdout), 0)
     failures: 0
     checks: 0
-
+#
     if: argc >= 2
         c.snprintf(base, 520U, "%s", argv[1])
     else:
@@ -183,7 +183,7 @@ fn: main (int: argc; @: @(char) argv) int
         t_touch(path_buf, "x")
         i: i + 1
     ---
-
+#
     vt: mixa_backend_headless_table()
     checks: checks + 1
     if: vt = 0
@@ -235,7 +235,7 @@ fn: main (int: argc; @: @(char) argv) int
         return: 1
     ---
     entry_index: (cast: (size_t) entry_row)
-
+#
     cells: upper\cols
     bytes: cells * c.sizeof(c.MixaCell)
     header_before: (cast: (@: MixaCell) c.calloc(cells, c.sizeof(c.MixaCell)))
@@ -259,7 +259,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_mouse_move(backend, ctrl, 0U, 0U)
     t_snap_row(upper, list_row, header_before, cells)
     t_snap_row(upper, entry_index, entry_before, cells)
-
+#
     # Прокрутка клавишами: 25 нажатий вниз -- подсветка уходит за видимое окно (21 строка),
     # и вид обязан поехать (5.7.1: вид следует за подсветкой, только когда та ушла).
     i: 0
@@ -273,7 +273,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("sticky_header: the list did not scroll at all -- nothing to measure\n")
     ---
-
+#
     t_snap_row(upper, list_row, header_after, cells)
     t_snap_row(upper, entry_index, entry_after, cells)
     header_same: c.memcmp(header_before, header_after, bytes)
@@ -295,7 +295,7 @@ fn: main (int: argc; @: @(char) argv) int
         i: i + 1
     ---
     c.printf("---")
-
+#
     checks: checks + 1
     if: header_same != 0
         failures: failures + 1
@@ -306,7 +306,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("sticky_header: an entry row did NOT change -- the list did not scroll\n")
     ---
-
+#
     # header_moved=0 -- байты строки заголовка те же (ЛИПКИЙ); entry_diff=1 -- строка записи
     # стала другой, то есть список ДЕЙСТВИТЕЛЬНО поехал.  Оба числа печатаются рядом нарочно:
     # «заголовок не сдвинулся» без второго числа неотличимо от «кадр не нарисовался».

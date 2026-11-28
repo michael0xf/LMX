@@ -116,7 +116,7 @@ fn: main (int: argc; @: @(char) argv) int
     int: status
     []: (@: void) fh 1
     c.setbuf((cast: (@: void) c.stdout), 0)
-
+#
     if: argc >= 2
         c.snprintf(base, 520U, "%s", argv[1])
     else:
@@ -126,7 +126,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(p_b, 1040U, "%s\\b.txt", base)
     c.snprintf(p_missing, 1040U, "%s\\no_such.txt", base)
     c.snprintf(p_dir, 1040U, "%s\\dir\\sub", base)
-
+#
     c.snprintf(mkcmd, 2200U, "cmd /c mkdir \"%s\" 2>nul", base)
     c.system(mkcmd)
     fh[0]: c.fopen(p_a, "wb")
@@ -139,7 +139,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.fputs("B", fh[0])
         c.fclose(fh[0])
     ---
-
+#
     # --- Scenario 1: 2 real files + 1 individually-selected "directory".
     sel: (cast: (@: MixaSelection) c.calloc(1U, c.sizeof(c.MixaSelection)))
     if: sel = 0
@@ -150,7 +150,7 @@ fn: main (int: argc; @: @(char) argv) int
     mixa_selection_select(sel, p_a)
     mixa_selection_select(sel, p_dir)
     mixa_selection_select(sel, p_b)
-
+#
     sent_count[0]: 999U
     skipped_dirs[0]: 999U
     st: mixa_share_action_send(sel, fake_table(), "test message", @ r, @ sent_count[0], @ skipped_dirs[0])
@@ -170,7 +170,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("S1 n_destroys", g_fake_n_destroys, 1)
     mixa_selection_release(sel)
     c.free(sel)
-
+#
     # --- Scenario 2: nothing selected -- a real text-only share (0 files).
     sel: (cast: (@: MixaSelection) c.calloc(1U, c.sizeof(c.MixaSelection)))
     mixa_selection_init(sel)
@@ -184,7 +184,7 @@ fn: main (int: argc; @: @(char) argv) int
     mixa_share_destroy(r)
     mixa_selection_release(sel)
     c.free(sel)
-
+#
     # --- Scenario 3: a selected file that has since disappeared aborts
     # the whole call with the real probe status, selection untouched.
     sel: (cast: (@: MixaSelection) c.calloc(1U, c.sizeof(c.MixaSelection)))
@@ -200,7 +200,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("S3 selection untouched", (cast: (int) sel\selected_count), 2)
     mixa_selection_release(sel)
     c.free(sel)
-
+#
     if: g_failures[0] != 0
         c.printf("mixa share action parity harness FAILED checks=%d\n", g_failures[0])
         return: 1

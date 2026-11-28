@@ -180,7 +180,7 @@ fn: main (int: argc; @: @(char) argv) int
     g_alloc_fail_at: 0
     g_alloc_seq: 0
     g_alloc_live: 0
-
+#
     if: argc >= 2
         c.snprintf(base, 520U, "%s", argv[1])
     else:
@@ -191,7 +191,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(sub_b, 1040U, "%s\\sub_b", root)
     c.snprintf(empty_dir, 1040U, "%s\\empty_dir", root)
     c.snprintf(gone_dir, 1040U, "%s\\gone_dir", root)
-
+#
     c.snprintf(cmd, 2400U, "cmd /c mkdir \"%s\" 2>nul", root)
     c.system(cmd)
     c.snprintf(cmd, 2400U, "cmd /c mkdir \"%s\" 2>nul", sub_a)
@@ -202,7 +202,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.system(cmd)
     c.snprintf(cmd, 2400U, "cmd /c mkdir \"%s\" 2>nul", gone_dir)
     c.system(cmd)
-
+#
     nm_uni[0]: (cast: (char) 0xD1)
     nm_uni[1]: (cast: (char) 0x84)
     nm_uni[2]: (cast: (char) 0xD0)
@@ -212,14 +212,14 @@ fn: main (int: argc; @: @(char) argv) int
     nm_uni[6]: (cast: (char) 0xD0)
     nm_uni[7]: (cast: (char) 0xBB)
     nm_uni[8]: 0
-
+#
     c.snprintf(p1, 1200U, "%s\\readme.txt", root)
     t_touch(p1)
     c.snprintf(p1, 1200U, "%s\\%s.txt", root, nm_uni)
     t_touch(p1)
     c.snprintf(p1, 1200U, "%s\\inner.txt", sub_a)
     t_touch(p1)
-
+#
     # --- Path-helper unit checks, before any navigation.
     st: mixa_fm_normalize("C:\\foo\\", norm, 1200U)
     t_check_int("H1 normalize trailing sep rc", st, MIXA_FM_OK)
@@ -237,13 +237,13 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_str("H6 parent_of depth1", up, "C:\\")
     t_check_int("H7 parent_of drive root", mixa_fm_parent_of("C:\\", up, 1200U), MIXA_FM_ERR_ROOT)
     t_check_int("H8 parent_of separatorless", mixa_fm_parent_of("lonely", up, 1200U), MIXA_FM_ERR_ROOT)
-
+#
     t_check_int("H9 map OK", mixa_fm_map_dir_status(MIXA_DIR_OK), MIXA_FM_OK)
     t_check_int("H10 map MISSING", mixa_fm_map_dir_status(MIXA_DIR_ERR_MISSING), MIXA_FM_ERR_MISSING)
     t_check_int("H11 map IO->ACCESS", mixa_fm_map_dir_status(MIXA_DIR_ERR_IO), MIXA_FM_ERR_ACCESS)
     t_check_int("H12 map NOMEM", mixa_fm_map_dir_status(MIXA_DIR_ERR_NOMEM), MIXA_FM_ERR_NOMEM)
     t_check_int("H13 map ARG", mixa_fm_map_dir_status(MIXA_DIR_ERR_ARG), MIXA_FM_ERR_ARG)
-
+#
     fm: (cast: (@: MixaFm) c.calloc(1U, c.sizeof(c.MixaFm)))
     e: (cast: (@: MixaDirEntry) c.calloc(1U, c.sizeof(c.MixaDirEntry)))
     sel: (cast: (@: MixaSelection) c.calloc(1U, c.sizeof(c.MixaSelection)))
@@ -252,7 +252,7 @@ fn: main (int: argc; @: @(char) argv) int
         return: 1
     ---
     t_check_int("S0 selection init", mixa_selection_init(sel), MIXA_SEL_OK)
-
+#
     # --- Scenario 1: open at the root.
     st: mixa_fm_init(fm, root, sel, t_table())
     t_check_int("S1 init rc", st, MIXA_FM_OK)
@@ -262,7 +262,7 @@ fn: main (int: argc; @: @(char) argv) int
     ---
     t_check_str("S1 cur_dir", mixa_fm_cur_dir(fm), root)
     t_check_int("S1 at_root", mixa_fm_at_root(fm), 1)
-
+#
     # --- Scenario 2: the snapshot matches an INDEPENDENT mixa_dir walk,
     # entry for entry, in the seam's own observed order.
     st: mixa_dir_list_open(@ d, root)
@@ -294,14 +294,14 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(p1, 1200U, "%s.txt", nm_uni)
     idx_uni: t_index_of(fm, p1)
     t_check_int("S2 utf8 entry found", (cast: (int) (idx_uni >= 0)), 1)
-
+#
     # --- Scenario 3: parent navigation refuses at the root and changes
     # nothing.
     saved_count: (cast: (int) mixa_fm_count(fm))
     t_check_int("S3 parent at root", mixa_fm_parent(fm), MIXA_FM_ERR_ROOT)
     t_check_str("S3 cur_dir unchanged", mixa_fm_cur_dir(fm), root)
     t_check_int("S3 count unchanged", (cast: (int) mixa_fm_count(fm)), saved_count)
-
+#
     # --- Scenario 4: entering a file is refused; an out-of-range index
     # is refused; neither disturbs the list.
     idx: t_index_of(fm, "readme.txt")
@@ -309,7 +309,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("S4 enter file", mixa_fm_enter(fm, (cast: (size_t) idx)), MIXA_FM_ERR_NOTDIR)
     t_check_int("S4 enter oob", mixa_fm_enter(fm, 9999U), MIXA_FM_ERR_RANGE)
     t_check_int("S4 count unchanged", (cast: (int) mixa_fm_count(fm)), saved_count)
-
+#
     # --- Scenario 5: selection survives a refresh for a still-present
     # entry, and is dropped for one that disappeared.
     t_check_int("S5 select rc", mixa_fm_select(fm, (cast: (size_t) idx), 1), MIXA_FM_OK)
@@ -329,7 +329,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("S5 refresh after remove", mixa_fm_refresh(fm), MIXA_FM_OK)
     t_check_int("S5 removed entry gone", (cast: (int) (t_index_of(fm, "readme.txt") < 0)), 1)
     t_check_int("S5 selection dropped with entry", t_selected_count(fm), 0)
-
+#
     # --- Scenario 6: entering a child directory, and coming back up.
     idx: t_index_of(fm, "added.txt")
     mixa_fm_select(fm, (cast: (size_t) idx), 1)
@@ -345,7 +345,7 @@ fn: main (int: argc; @: @(char) argv) int
     idx: t_index_of(fm, "added.txt")
     t_check_int("S6 selection survives roundtrip", (cast: (int) (idx >= 0 && mixa_fm_is_selected(fm, (cast: (size_t) idx)) = 1)), 1)
     t_check_int("S6 selected count after return", t_selected_count(fm), 1)
-
+#
     # --- Selecting a DIRECTORY then entering it: everything inside is
     # selected by inheritance, with nothing inside ever touched.
     idx: t_index_of(fm, "sub_a")
@@ -368,13 +368,13 @@ fn: main (int: argc; @: @(char) argv) int
     idx: t_index_of(fm, "sub_a")
     mixa_fm_select(fm, (cast: (size_t) idx), 0)
     t_check_int("S6b sub_a deselected", mixa_fm_is_selected(fm, (cast: (size_t) idx)), 0)
-
+#
     # --- Scenario 7: an empty directory lists cleanly as empty.
     idx: t_index_of(fm, "empty_dir")
     t_check_int("S7 enter empty_dir rc", (cast: (int) (idx >= 0 && mixa_fm_enter(fm, (cast: (size_t) idx)) = MIXA_FM_OK)), 1)
     t_check_int("S7 empty dir count", (cast: (int) mixa_fm_count(fm)), 0)
     t_check_int("S7 goto_root rc", (cast: (int) (mixa_fm_goto_root(fm) = MIXA_FM_OK && mixa_fm_at_root(fm) = 1)), 1)
-
+#
     # --- Scenario 8: a failed navigation preserves the prior visible
     # state exactly (the module's own deliberate divergence from the
     # reference, which instead walks up to the nearest surviving
@@ -394,7 +394,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_str("S8 cur_dir unmoved", mixa_fm_cur_dir(fm), gone_dir)
     t_check_int("S8 list/selection preserved", (cast: (int) ((cast: (int) mixa_fm_count(fm)) = saved_count && t_selected_count(fm) = 1)), 1)
     t_check_int("S8 goto_root after failure rc", mixa_fm_goto_root(fm), MIXA_FM_OK)
-
+#
     # --- Scenario 9: out-of-memory at EVERY owned allocation step of a
     # refresh.
     idx: t_index_of(fm, "added.txt")
@@ -417,7 +417,7 @@ fn: main (int: argc; @: @(char) argv) int
     ---
     t_check_int("S9 refresh healthy after sweep", mixa_fm_refresh(fm), MIXA_FM_OK)
     t_check_int("S9 post-sweep view unchanged", (cast: (int) ((cast: (int) mixa_fm_count(fm)) = saved_count && t_selected_count(fm) = 1)), 1)
-
+#
     # --- Scenario 10: OOM during init leaves nothing behind.
     live_before: g_alloc_live
     g_alloc_seq: 0
@@ -426,7 +426,7 @@ fn: main (int: argc; @: @(char) argv) int
     g_alloc_fail_at: 0
     t_check_int("S10 init under OOM rc", st, MIXA_FM_ERR_NOMEM)
     t_check_int("S10 init under OOM no leak", g_alloc_live, live_before)
-
+#
     # --- Scenario 11: a missing root is refused by init with the exact
     # status and allocates nothing.
     live_before: g_alloc_live
@@ -434,7 +434,7 @@ fn: main (int: argc; @: @(char) argv) int
     st: mixa_fm_init((cast: (@: MixaFm) c.calloc(1U, c.sizeof(c.MixaFm))), p1, sel, t_table())
     t_check_int("S11 init on missing root rc", st, MIXA_FM_ERR_MISSING)
     t_check_int("S11 init on missing root no leak", g_alloc_live, live_before)
-
+#
     # --- Scenario 12: argument negatives.
     t_check_int("S12 null fm init", mixa_fm_init(0, root, sel, t_table()), MIXA_FM_ERR_ARG)
     t_check_int("S12 null fm refresh", mixa_fm_refresh(0), MIXA_FM_ERR_ARG)
@@ -444,7 +444,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("S12 oob select", mixa_fm_select(fm, 9999U, 1), MIXA_FM_ERR_RANGE)
     t_check_int("S12 null accessors neutral", (cast: (int) (mixa_fm_count(0) = 0U && mixa_fm_name(0, 0U) = 0 && mixa_fm_cur_dir(0) = 0)), 1)
     t_check_int("S12 oob accessors null", (cast: (int) (mixa_fm_name(fm, 9999U) = 0 && mixa_fm_path(fm, 9999U) = 0)), 1)
-
+#
     # --- Scenario 13: release disposes of everything this instance owns.
     mixa_fm_release(fm)
     t_check_int("S13 release cleared state", (cast: (int) (mixa_fm_count(fm) = 0U && mixa_fm_cur_dir(fm) = 0 && mixa_fm_root_dir(fm) = 0)), 1)
@@ -457,7 +457,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.free(sel)
     c.free(fm)
     c.free(e)
-
+#
     if: g_failures[0] != 0
         c.printf("mixa file manager parity harness FAILED checks=%d\n", g_failures[0])
         return: 1

@@ -5,59 +5,59 @@ predef: "mixa_manager/mixa_composite.h.lm1"
 predef: "mixa_manager/mixa_composite_glyphs.h.lm1"
 predef: "mixa_manager/mixa_file.h.lm1"
 include: "<stdlib.h>"
-fn: mixa_console_read_window (@: MixaFile file; size_t: offset; @(unsigned char dest); size_t: capacity; @: size_t got) int
+fn: mixa_console_read_window (@: MixaFile file; size_t: offset; @: unsigned char dest; size_t: capacity; @: size_t got) int
     size_t: accumulated
     size_t: chunk_read
     size_t: remaining
     int: rc
-
+#
     # Validate output parameter
     if: got = 0
         return: MIXA_FILE_ERR_ARG
-
+#
     # Initialize caller's got to 0
     got[0]: 0
     accumulated: 0
-
+#
     # Null file is error (even if capacity is 0)
     if: file = 0
         return: MIXA_FILE_ERR_ARG
-
+#
     # Capacity 0 succeeds with got=0, no seek/read required
     if: capacity = 0
         return: MIXA_FILE_OK
-
+#
     # Null dest with nonzero capacity is error
     if: dest = 0
         return: MIXA_FILE_ERR_ARG
-
+#
     # Seek to absolute offset
     rc: mixa_file_seek(file, offset)
     if: rc != MIXA_FILE_OK
         got[0]: accumulated
         return: rc
-
+#
     # Read up to capacity bytes, accumulate until full/EOF/error
     remaining: capacity
     while: remaining > 0
         chunk_read: 0
         rc: mixa_file_read(file, dest + accumulated, remaining, @ chunk_read)
-
+#
         # Accumulate bytes transferred
         accumulated: accumulated + chunk_read
         got[0]: accumulated
-
+#
         # On error, return with accumulated bytes
         if: rc != MIXA_FILE_OK
             return: rc
-
+#
         # Zero-byte read indicates EOF (success)
         if: chunk_read = 0
             return: MIXA_FILE_OK
-
+#
         # Advance for next read
         remaining: remaining - chunk_read
-
+#
     # Full capacity read succeeded
     return: MIXA_FILE_OK
 
@@ -84,7 +84,7 @@ return: (cast: (int) (b & 0xF8U)) = 240
 # end (because the chunk boundary landed inside it) is excluded, so the
 # caller re-reads those bytes as part of the NEXT chunk instead of feeding
 # a truncated sequence to mixa_draw_utf8_next.
-fn: mixa_console_chunk_trim (@(unsigned char buf); size_t: n) size_t
+fn: mixa_console_chunk_trim (@: unsigned char buf; size_t: n) size_t
     unsigned: b1
     unsigned: b2
     unsigned: b3
@@ -354,7 +354,7 @@ fn: mixa_console_view_render (const: @(MixaConsoleView view); @: MixaTextRect re
     cursor_disp_row: row
     cursor_disp_col: col
     cursor_disp_valid: 1
-
+#
     # Pending line (ticket 20260913-004717): drawn immediately after
     # committed content, continuing from the SAME row/col the committed
     # pass ended at, with the identical by-character wrap rule. Only
@@ -406,7 +406,7 @@ fn: mixa_console_view_render (const: @(MixaConsoleView view); @: MixaTextRect re
             ---
         ---
     ---
-
+#
     if: cursor_disp_valid != 0 && cursor_disp_row < rows_to_draw && cursor_disp_col < cols_to_draw
         cell: mixa_cell_at(rect, dest_row + cursor_disp_row, dest_col + cursor_disp_col)
         if: cell != 0

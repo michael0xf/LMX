@@ -129,14 +129,14 @@ fn: mixa_process_spawn (@@: MixaProcess out; const: @(char command_line_utf8); c
     if: c.strlen(command_line_utf8) = 0U
         return: MIXA_PROC_ERR_ARG
     ---
-
+#
     shell_cmd_slot[0]: 0
     st: mixa_process_build_shell_cmdline(command_line_utf8, shell_cmd_slot)
     if: st != MIXA_PROC_OK
         return: st
     ---
     shell_cmd: shell_cmd_slot[0]
-
+#
     wcmd_slot[0]: 0
     st: mixa_process_mutable_cmdline(shell_cmd, wcmd_slot)
     c.free(shell_cmd)
@@ -151,7 +151,7 @@ fn: mixa_process_spawn (@@: MixaProcess out; const: @(char command_line_utf8); c
         return: st
     ---
     wcwd: wcwd_slot[0]
-
+#
     sa: (cast: (@: SECURITY_ATTRIBUTES) c.calloc(1U, c.sizeof(c.SECURITY_ATTRIBUTES)))
     if: sa = 0
         c.free(wcmd)
@@ -161,7 +161,7 @@ fn: mixa_process_spawn (@@: MixaProcess out; const: @(char command_line_utf8); c
     sa\nLength: (cast: (unsigned) c.sizeof(c.SECURITY_ATTRIBUTES))
     sa\lpSecurityDescriptor: 0
     sa\bInheritHandle: 1
-
+#
     out_read: 0
     out_write: 0
     if: c.CreatePipe(@ out_read, @ out_write, sa, 0U) = 0
@@ -171,7 +171,7 @@ fn: mixa_process_spawn (@@: MixaProcess out; const: @(char command_line_utf8); c
         return: MIXA_PROC_ERR_SPAWN
     ---
     c.SetHandleInformation(out_read, 1U, 0U)
-
+#
     # A real stdin pipe in BOTH modes (correction 3) -- the child always
     # inherits a genuine pipe read end.
     in_read: 0
@@ -186,7 +186,7 @@ fn: mixa_process_spawn (@@: MixaProcess out; const: @(char command_line_utf8); c
     ---
     c.SetHandleInformation(in_write, 1U, 0U)
     c.free(sa)
-
+#
     si: (cast: (@: STARTUPINFOW) c.calloc(1U, c.sizeof(c.STARTUPINFOW)))
     pi: (cast: (@: PROCESS_INFORMATION) c.calloc(1U, c.sizeof(c.PROCESS_INFORMATION)))
     if: si = 0 || pi = 0
@@ -204,7 +204,7 @@ fn: mixa_process_spawn (@@: MixaProcess out; const: @(char command_line_utf8); c
     si\hStdOutput: out_write
     si\hStdError: out_write
     si\hStdInput: in_read
-
+#
     ok: c.CreateProcessW(0, wcmd, 0, 0, 1, 33554436U, 0, wcwd, si, pi)
     c.free(wcmd)
     c.free(wcwd)
@@ -219,7 +219,7 @@ fn: mixa_process_spawn (@@: MixaProcess out; const: @(char command_line_utf8); c
         c.free(pi)
         return: MIXA_PROC_ERR_SPAWN
     ---
-
+#
     # Stdin disabled: close our own write end now that the child (which
     # already has its own copy of the read end) is confirmed started, so
     # its first read sees ordinary pipe EOF.
@@ -227,7 +227,7 @@ fn: mixa_process_spawn (@@: MixaProcess out; const: @(char command_line_utf8); c
         mixa_process_close_h(in_write)
         in_write: 0
     ---
-
+#
     job: c.CreateJobObjectW(0, 0)
     if: job = 0
         c.TerminateProcess(pi\hProcess, 1U)
@@ -279,7 +279,7 @@ fn: mixa_process_spawn (@@: MixaProcess out; const: @(char command_line_utf8); c
     ---
     c.ResumeThread(pi\hThread)
     c.free(si)
-
+#
     p: (cast: (@: MixaProcess) c.calloc(1U, c.sizeof(c.MixaProcess)))
     if: p = 0
         c.CloseHandle(job)

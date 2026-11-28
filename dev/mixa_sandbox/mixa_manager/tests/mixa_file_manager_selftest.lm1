@@ -121,7 +121,7 @@ fn: main (int: argc; @: @(char) argv) int
     g_alloc_fail_at: 0
     g_alloc_seq: 0
     g_alloc_live: 0
-
+#
     if: argc >= 2
         c.snprintf(base, 520U, "%s", argv[1])
     ---
@@ -135,7 +135,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(sub_b, 1040U, "%s\\sub_b", root)
     c.snprintf(empty_dir, 1040U, "%s\\empty_dir", root)
     c.snprintf(gone_dir, 1040U, "%s\\gone_dir", root)
-
+#
     # --- Fixtures: a real tree with nested directories, plain files, a
     # UTF-8 (Cyrillic) name, an empty directory, and a directory that
     # will be removed from underneath the model later.
@@ -149,7 +149,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.system(cmd)
     c.snprintf(cmd, 2400U, "cmd /c mkdir \"%s\" 2>nul", gone_dir)
     c.system(cmd)
-
+#
     nm_uni[0]: (cast: (char) 0xD1)
     nm_uni[1]: (cast: (char) 0x84)
     nm_uni[2]: (cast: (char) 0xD0)
@@ -159,14 +159,14 @@ fn: main (int: argc; @: @(char) argv) int
     nm_uni[6]: (cast: (char) 0xD0)
     nm_uni[7]: (cast: (char) 0xBB)
     nm_uni[8]: 0
-
+#
     c.snprintf(p1, 1200U, "%s\\readme.txt", root)
     t_touch(p1)
     c.snprintf(p1, 1200U, "%s\\%s.txt", root, nm_uni)
     t_touch(p1)
     c.snprintf(p1, 1200U, "%s\\inner.txt", sub_a)
     t_touch(p1)
-
+#
     # --- Unit checks on the path helpers, before any navigation.
     checks: checks + 1
     if: mixa_fm_normalize("C:\\foo\\", norm, 1200U) != MIXA_FM_OK || c.strcmp(norm, "C:\\foo") != 0
@@ -208,7 +208,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm: parent_of separatorless not ERR_ROOT\n")
     ---
-
+#
     # --- Exact status mapping from the accepted dir seam.
     checks: checks + 1
     if: mixa_fm_map_dir_status(MIXA_DIR_OK) != MIXA_FM_OK
@@ -235,7 +235,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm: map ARG\n")
     ---
-
+#
     fm: (cast: (@: MixaFm) c.calloc(1U, c.sizeof(c.MixaFm)))
     e: (cast: (@: MixaDirEntry) c.calloc(1U, c.sizeof(c.MixaDirEntry)))
     sel: (cast: (@: MixaSelection) c.calloc(1U, c.sizeof(c.MixaSelection)))
@@ -251,7 +251,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("fm: selection init failed\n")
         return: 1
     ---
-
+#
     # --- Scenario 1: open at the root.
     st: mixa_fm_init(fm, root, sel, t_table())
     checks: checks + 1
@@ -270,7 +270,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm: not at root after init\n")
     ---
-
+#
     # --- Scenario 2: the snapshot matches an INDEPENDENT mixa_dir walk,
     # entry for entry, in the seam's own observed order.
     st: mixa_dir_list_open(@ d, root)
@@ -331,7 +331,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm: UTF-8 entry not found\n")
     ---
-
+#
     # --- Scenario 3: parent navigation refuses at the root and changes
     # nothing.
     saved_count: (cast: (int) mixa_fm_count(fm))
@@ -345,7 +345,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm: root-refusal disturbed state\n")
     ---
-
+#
     # --- Scenario 4: entering a file is refused; an out-of-range index
     # is refused; neither disturbs the list.
     idx: t_index_of(fm, "readme.txt")
@@ -369,7 +369,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm: refused enter disturbed the list\n")
     ---
-
+#
     # --- Scenario 5: selection survives a refresh for a still-present
     # entry, and is dropped for one that disappeared.
     checks: checks + 1
@@ -440,7 +440,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm: a deleted entry still shows as selected\n")
     ---
-
+#
     # --- Scenario 6: entering a child directory, and coming back up.
     idx: t_index_of(fm, "added.txt")
     mixa_fm_select(fm, (cast: (size_t) idx), 1)
@@ -500,7 +500,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm: selected count after return=%d want 1\n", t_selected_count(fm))
     ---
-
+#
     # --- Selecting a DIRECTORY then entering it: everything inside is
     # selected by inheritance, with nothing inside ever touched. This is
     # the whole point of the lazy model, and the view gets it for free by
@@ -574,7 +574,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm: sub_a still selected after deselect\n")
     ---
-
+#
     # --- Scenario 7: an empty directory lists cleanly as empty.
     idx: t_index_of(fm, "empty_dir")
     checks: checks + 1
@@ -592,7 +592,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm: goto_root failed\n")
     ---
-
+#
     # --- Scenario 8: a failed navigation preserves the prior visible
     # state exactly. The model is standing in gone_dir when the
     # directory is removed underneath it; the refresh must report the
@@ -638,7 +638,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm: goto_root after failure failed\n")
     ---
-
+#
     # --- Scenario 9: out-of-memory at EVERY owned allocation step of a
     # refresh. Each k fails the k-th allocation; the refresh must refuse
     # with ERR_NOMEM, leave the visible directory, list and selection
@@ -693,7 +693,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm: post-sweep refresh changed the view\n")
     ---
-
+#
     # --- Scenario 10: OOM during init leaves nothing behind.
     live_before: g_alloc_live
     g_alloc_seq: 0
@@ -710,7 +710,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm: init under OOM leaked %d allocations\n", g_alloc_live - live_before)
     ---
-
+#
     # --- Scenario 11: a missing root is refused by init with the exact
     # status and allocates nothing.
     live_before: g_alloc_live
@@ -726,7 +726,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm: init on missing root leaked %d allocations\n", g_alloc_live - live_before)
     ---
-
+#
     # --- Scenario 12: argument negatives.
     checks: checks + 1
     if: mixa_fm_init(0, root, sel, t_table()) != MIXA_FM_ERR_ARG
@@ -768,7 +768,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm: out-of-range accessors not null\n")
     ---
-
+#
     # --- Scenario 13: release disposes of everything this instance owns
     # -- entries, their strings, the snapshot array and both directory
     # strings -- returning the live allocation count to the value it had
@@ -788,7 +788,7 @@ fn: main (int: argc; @: @(char) argv) int
     mixa_fm_release(fm)
     mixa_fm_release(0)
     checks: checks + 1
-
+#
     # The model borrowed the selection and must not have released it:
     # it is still usable here, and releasing it is the caller's job.
     checks: checks + 1
@@ -800,7 +800,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.free(sel)
     c.free(fm)
     c.free(e)
-
+#
     if: failures = 0
         c.printf("file manager selftest: %d checks, 0 failures\n", checks)
     else:

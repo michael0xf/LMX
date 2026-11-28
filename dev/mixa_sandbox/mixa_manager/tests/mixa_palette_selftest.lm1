@@ -105,13 +105,13 @@ fn: main () int
     pal_expect(counts, MIXA_PAL_SEL, 255U, 255U, 255U, 64U, 255U, 0U, 0U, 96U)
     pal_expect(counts, MIXA_PAL_SEL1, 240U, 0U, 0U, 96U, 96U, 255U, 255U, 64U)
     pal_expect(counts, MIXA_PAL_C0, 240U, 32U, 32U, 0U, 96U, 255U, 255U, 192U)
-
+#
     # Псевдонимы 5.4: «Off, Error and Text are aliases of Gray, Red and Gray».
     pal_check(counts, MIXA_PAL_OFF = MIXA_PAL_GRAY, "Off is not Gray")
     pal_check(counts, MIXA_PAL_ERROR = MIXA_PAL_RED, "Error is not Red")
     pal_check(counts, MIXA_PAL_TEXT = MIXA_PAL_GRAY, "Text is not Gray")
     pal_check(counts, MIXA_PAL_CONSOLE = MIXA_PAL_BLACK, "the console is not dressed in the black pair")
-
+#
     # Дыр в таблице нет: каждый индекс отвечает, и ничего за COUNT -- нет.
     i: 0U
     while: i < MIXA_PAL_COUNT
@@ -128,13 +128,13 @@ fn: main () int
     pal_check(counts, mixa_palette_pair(MIXA_PAL_GREEN, 0, 0) = MIXA_PALETTE_ERR_ARG, "a null out-parameter was accepted")
     pal_check(counts, mixa_palette_bg_alpha(1000U) = 0U, "an index past the table has an alpha")
     pal_check(counts, pal_unique_names() != 0, "the name table repeats itself")
-
+#
     # Альфы источника: обычный фон 96, bPleaseWait 64, Selected 255 -- «alpha varies BY
     # ELEMENT» (UI_MODEL 3).  Так видно и то, что 64 в таблице -- не опечатка.
     pal_check(counts, mixa_palette_bg_alpha(MIXA_PAL_GREEN) = 96U, "an ordinary background is not 96")
     pal_check(counts, mixa_palette_bg_alpha(MIXA_PAL_PLEASE_WAIT) = 64U, "bPleaseWait is not 64")
     pal_check(counts, mixa_palette_bg_alpha(MIXA_PAL_SEL) = 255U, "Selected is not opaque")
-
+#
     failures: counts[1]
     c.printf("MIXA_PALETTE pairs=%u checks=%d failures=%d\n", MIXA_PAL_COUNT, counts[0], failures)
     c.fflush(0)

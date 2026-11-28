@@ -89,7 +89,7 @@ fn: main (int: argc; @: @(char) argv) int
     int: found_output
     int: found_marker
     c.setbuf((cast: (@: void) c.stdout), 0)
-
+#
     if: argc >= 2
         c.snprintf(base, 520U, "%s", argv[1])
     else:
@@ -97,15 +97,15 @@ fn: main (int: argc; @: @(char) argv) int
     ---
     c.snprintf(console_path, 600U, "%s\\mixa-console.log", base)
     c.remove(console_path)
-
+#
     vt: mixa_backend_headless_table()
     t_check_int("headless table available", (cast: (int) (vt != 0)), 1)
-
+#
     # --- argument validation ---
     t_check_int("open null out", mixa_app_controller_open(0, vt, base), MIXA_APP_CONTROLLER_ERR_ARG)
     c: (cast: (@: MixaAppController) 1)
     t_check_int("open null vt", mixa_app_controller_open(@ c, 0, base), MIXA_APP_CONTROLLER_ERR_ARG)
-
+#
     # --- real open with a real headless backend and a real temp root ---
     c: 0
     rc: mixa_app_controller_open(@ c, vt, base)
@@ -120,7 +120,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("running() nonzero after open", (cast: (int) (mixa_app_controller_running(c) != 0)), 1)
     t_check_int("fm() nonnull", (cast: (int) (mixa_app_controller_fm(c) != 0)), 1)
     t_check_int("fmpanel() nonnull", (cast: (int) (mixa_app_controller_fmpanel(c) != 0)), 1)
-
+#
     # --- real command dispatch: type, Enter, drain, check exit code/cwd/
     # output -- the same real spawned-child path every prior process-
     # seam module this segment already exercises, now through the FULL
@@ -130,7 +130,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_push_key_code(backend, MIXA_KEY_ENTER)
     mixa_app_controller_step(c, @ had_error)
     t_check_int("command running right after Enter", (cast: (int) (mixa_app_controller_command_running(c) != 0)), 1)
-
+#
     i: 0
     while: i < 500 && mixa_app_controller_command_running(c) != 0
         mixa_app_controller_step(c, @ had_error)
@@ -140,7 +140,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("command completed within bounded wait", mixa_app_controller_command_running(c), 0)
     t_check_int("last_exit_code", mixa_app_controller_last_exit_code(c), 0)
     t_check_int("cwd recovered", (cast: (int) (mixa_app_controller_cwd(c) != 0)), 1)
-
+#
     got_len[0]: 0U
     found_output: 0
     found_marker: 0
@@ -155,7 +155,7 @@ fn: main (int: argc; @: @(char) argv) int
     ---
     t_check_int("real command output present", found_output, 1)
     t_check_int("completion marker hidden from history", found_marker, 0)
-
+#
     # --- F1 Help: real key event through the full integrated stack --
     # merely completing this tick without hanging or erroring is the
     # real proof (Help's own visible-text/render coverage already lives
@@ -163,12 +163,12 @@ fn: main (int: argc; @: @(char) argv) int
     t_push_key_code(backend, MIXA_KEY_F1)
     mixa_app_controller_step(c, @ had_error)
     t_check_int("no error flag after F1", had_error, 0)
-
+#
     # --- text_rect/upper_rect introspection: both present after a real
     # render pass. ---
     t_check_int("text_rect available", (cast: (int) (mixa_app_controller_text_rect(c) != 0)), 1)
     t_check_int("upper_rect available", (cast: (int) (mixa_app_controller_upper_rect(c) != 0)), 1)
-
+#
     # --- cleanup while a DIFFERENT command is still running does not
     # hang (PROCESS_SEAM's own "kill and mean it", through the full
     # controller stack). ---
@@ -185,7 +185,7 @@ fn: main (int: argc; @: @(char) argv) int
         mixa_app_controller_close(c2)
         c.printf("CHK running-close returned PASS\n")
     ---
-
+#
     # --- null-safety ---
     t_check_int("running(0)", mixa_app_controller_running(0), 0)
     t_check_int("command_running(0)", mixa_app_controller_command_running(0), 0)
@@ -196,9 +196,9 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("fmpanel(0)", (cast: (int) (mixa_app_controller_fmpanel(0) != 0)), 0)
     mixa_app_controller_close(0)
     c.printf("CHK close(0) no-crash PASS\n")
-
+#
     mixa_app_controller_close(c)
-
+#
     if: g_failures[0] != 0
         c.printf("mixa app controller parity harness FAILED checks=%d\n", g_failures[0])
         return: 1

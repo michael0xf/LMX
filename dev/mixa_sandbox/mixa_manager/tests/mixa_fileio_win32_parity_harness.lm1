@@ -105,7 +105,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.setbuf((cast: (@: void) c.stdout), 0)
     g_fault_at: -1
     g_fault_calls: 0
-
+#
     if: argc >= 2
         c.snprintf(base, 520U, "%s", argv[1])
     else:
@@ -118,7 +118,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(missing, 1040U, "%s\\no_such.txt", dir)
     c.snprintf(buf, 2000U, "cmd /c mkdir \"%s\" 2>nul", dir)
     c.system(buf)
-
+#
     # Scenario 1: write then read gives back the exact content; a
     # second read at real EOF returns OK with 0 bytes.
     st: mixa_fio_open_write_new(@ fw, src)
@@ -138,15 +138,15 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("S1 EOF read rc", st, MIXA_FIO_OK)
     t_check_int("S1 EOF read n", (cast: (int) n), 0)
     mixa_fio_close(fr)
-
+#
     # Scenario 2: existing destination refused (no overwrite).
     st: mixa_fio_open_write_new(@ fw, src)
     t_check_int("S2 overwrite refusal", st, MIXA_FIO_ERR_EXISTS)
-
+#
     # Scenario 3: a missing source reports ERR_MISSING.
     st: mixa_fio_open_read(@ fr, missing)
     t_check_int("S3 missing source", st, MIXA_FIO_ERR_MISSING)
-
+#
     # Scenario 4: chunked read/write content equality over a buffer
     # smaller than the file.
     total: 0U
@@ -177,7 +177,7 @@ fn: main (int: argc; @: @(char) argv) int
     mixa_fio_close(fr)
     t_check_int("S4 chunked total", (cast: (int) total), 4000)
     t_check_int("S4 chunked content match", (cast: (int) (c.memcmp(buf, longcontent, 4000U) = 0)), 1)
-
+#
     # Scenario 5: the write fault hook fires BEFORE each real I/O call
     # with the real byte offset; its refusal is returned verbatim with
     # no real I/O for that call; bytes written before the fault are
@@ -199,7 +199,7 @@ fn: main (int: argc; @: @(char) argv) int
     buf[n]: 0
     mixa_fio_close(fr)
     t_check_str("S5 partial content on disk", buf, "abc")
-
+#
     # Scenario 6: the read fault hook, same shape, on a real file.
     st: mixa_fio_open_read(@ fr, src)
     g_fault_at: 0
@@ -208,7 +208,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("S6 faulted read rc", st, MIXA_FIO_ERR_IO)
     t_check_int("S6 faulted read call count", g_fault_calls, 1)
     mixa_fio_close(fr)
-
+#
     # Scenario 7: argument negatives; close(0) and double-close are
     # harmless.
     t_check_int("S7 null out open_read", mixa_fio_open_read(0, src), MIXA_FIO_ERR_ARG)
@@ -218,7 +218,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("S7 null handle write", mixa_fio_write(0, "x", 1U, 0, 0U), MIXA_FIO_ERR_ARG)
     mixa_fio_close(0)
     c.printf("CHK S7 close(0) no-crash PASS\n")
-
+#
     if: g_failures[0] != 0
         c.printf("mixa fileio win32 parity harness FAILED checks=%d\n", g_failures[0])
         return: 1

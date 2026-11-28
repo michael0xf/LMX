@@ -191,7 +191,7 @@ fn: main (int: argc; @: @(char) argv) int
     int: ev
     int: status
     c.setbuf((cast: (@: void) c.stdout), 0)
-
+#
     nm_sp[0]: (cast: (char) 0x73)
     nm_sp[1]: (cast: (char) 0x70)
     nm_sp[2]: (cast: (char) 0x20)
@@ -208,7 +208,7 @@ fn: main (int: argc; @: @(char) argv) int
     nm_sp[13]: (cast: (char) 0xD0)
     nm_sp[14]: (cast: (char) 0xBB)
     nm_sp[15]: 0
-
+#
     if: argc >= 2
         c.snprintf(base, 520U, "%s", argv[1])
     else:
@@ -218,7 +218,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(p_b, 1040U, "%s\\b.txt", base)
     c.snprintf(p_missing, 1040U, "%s\\no_such.txt", base)
     c.snprintf(p_space, 1040U, "%s\\%s'quote.txt", base, nm_sp)
-
+#
     # --- Title derivation.
     st: mixa_share_create(@ r, fake_table_full())
     t_check_int("T1 create rc", st, MIXA_SHARE_OK)
@@ -237,7 +237,7 @@ fn: main (int: argc; @: @(char) argv) int
     mixa_share_set_title(r, "explicit override")
     t_check_str("T1 explicit title override", mixa_share_title(r), "explicit override")
     mixa_share_destroy(r)
-
+#
     # --- Fixture files on disk.
     c.snprintf(mkcmd, 2200U, "cmd /c mkdir \"%s\" 2>nul", base)
     c.system(mkcmd)
@@ -259,7 +259,7 @@ fn: main (int: argc; @: @(char) argv) int
             c.fclose(fh[0])
         ---
     ---
-
+#
     # --- T: single file, begin/poll to completion.
     mixa_share_create(@ r, fake_table_full())
     mixa_share_set_text(r, "single file share")
@@ -279,7 +279,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("T2 poll#2 event", ev, MIXA_SHARE_EVENT_HANDED_OFF)
     t_check_int("T2 poll#2 status", status, MIXA_SHARE_OK)
     mixa_share_destroy(r)
-
+#
     # --- T: multiple files (Unicode + space + quote path).
     mixa_share_create(@ r, fake_table_full())
     mixa_share_set_text(r, "two files")
@@ -297,7 +297,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("T3 fake cancel invoked", g_fake_n_cancels, 1)
     mixa_share_destroy(r)
     t_check_int("T3 destroy after cancel no stale pending", (cast: (int) (g_fake_pending = 0)), 1)
-
+#
     # --- T: no-selection, text-only share.
     mixa_share_create(@ r, fake_table_full())
     mixa_share_set_text(r, "just text, no files")
@@ -308,7 +308,7 @@ fn: main (int: argc; @: @(char) argv) int
     mixa_share_poll(r, @ ev, @ status)
     t_check_int("T4 text-only completed", ev, MIXA_SHARE_EVENT_HANDED_OFF)
     mixa_share_destroy(r)
-
+#
     # --- T: text-only against a restricted backend; multi-file refused.
     mixa_share_create(@ r, fake_table_full())
     mixa_share_destroy(r)
@@ -325,13 +325,13 @@ fn: main (int: argc; @: @(char) argv) int
     st: mixa_share_begin(r)
     t_check_int("T5 multi-file on non-MULTIPLE backend rc", st, MIXA_SHARE_ERR_UNSUPPORTED)
     mixa_share_destroy(r)
-
+#
     # --- T: incomplete vtable rejected at create.
     r: 0
     st: mixa_share_create(@ r, g_fake_vtable_incomplete)
     t_check_int("T6 incomplete vtable rc", st, MIXA_SHARE_ERR_ARG)
     t_check_int("T6 incomplete vtable out nulled", (cast: (int) (r = 0)), 1)
-
+#
     # --- T: missing file hard error; directory soft-skipped.
     st: mixa_share_create(@ r, fake_table_full())
     one_file[0]: p_missing
@@ -346,7 +346,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("T7 dir-in-selection skipped", (cast: (int) skipped), 1)
     t_check_int("T7 dir-in-selection count", (cast: (int) mixa_share_file_count(r)), 1)
     mixa_share_destroy(r)
-
+#
     # --- T: invalid platform context rejected by backend at begin().
     st: mixa_share_create(@ r, fake_table_full())
     mixa_share_set_text(r, "needs context")
@@ -356,7 +356,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("T8 begin without required context event", mixa_share_event(r), MIXA_SHARE_EVENT_FAILED)
     g_fake_require_ctx: 0
     mixa_share_destroy(r)
-
+#
     # --- T: destroy before completion frees the pending registration.
     st: mixa_share_create(@ r, fake_table_full())
     mixa_share_set_text(r, "abandoned mid-flight")
@@ -374,7 +374,7 @@ fn: main (int: argc; @: @(char) argv) int
     mixa_share_poll(r2, @ ev, @ status)
     t_check_int("T9 second request completed", ev, MIXA_SHARE_EVENT_HANDED_OFF)
     mixa_share_destroy(r2)
-
+#
     # --- T: a second begin() on an already-PENDING request is rejected.
     st: mixa_share_create(@ r, fake_table_full())
     mixa_share_set_text(r, "double begin")
@@ -383,7 +383,7 @@ fn: main (int: argc; @: @(char) argv) int
     st: mixa_share_begin(r)
     t_check_int("T10 second begin on pending rc", st, MIXA_SHARE_ERR_STATE)
     mixa_share_destroy(r)
-
+#
     # --- T: begin() rejected on every TERMINAL event.
     st: mixa_share_create(@ r, fake_table_full())
     mixa_share_set_text(r, "terminal after HANDED_OFF")
@@ -395,7 +395,7 @@ fn: main (int: argc; @: @(char) argv) int
     st: mixa_share_begin(r)
     t_check_int("T11 begin after HANDED_OFF rc", st, MIXA_SHARE_ERR_STATE)
     mixa_share_destroy(r)
-
+#
     st: mixa_share_create(@ r, fake_table_full())
     mixa_share_set_text(r, "terminal after CANCELLED")
     mixa_share_set_context(r, (cast: (@: void) r))
@@ -406,7 +406,7 @@ fn: main (int: argc; @: @(char) argv) int
     st: mixa_share_begin(r)
     t_check_int("T11 begin after CANCELLED rc", st, MIXA_SHARE_ERR_STATE)
     mixa_share_destroy(r)
-
+#
     st: mixa_share_create(@ r, fake_table_full())
     mixa_share_set_text(r, "terminal after FAILED")
     g_fake_require_ctx: 1
@@ -417,7 +417,7 @@ fn: main (int: argc; @: @(char) argv) int
     st: mixa_share_begin(r)
     t_check_int("T11 begin after FAILED rc", st, MIXA_SHARE_ERR_STATE)
     mixa_share_destroy(r)
-
+#
     st: mixa_share_create(@ r, fake_table_full())
     mixa_share_set_text(r, "first begin from NONE")
     mixa_share_set_context(r, (cast: (@: void) r))
@@ -425,7 +425,7 @@ fn: main (int: argc; @: @(char) argv) int
     st: mixa_share_begin(r)
     t_check_int("T11 first begin from NONE rc", st, MIXA_SHARE_OK)
     mixa_share_destroy(r)
-
+#
     # --- T: null-argument negatives.
     t_check_int("T12 create(out=NULL)", mixa_share_create(0, fake_table_full()), MIXA_SHARE_ERR_ARG)
     t_check_int("T12 set_text(NULL req)", mixa_share_set_text(0, "x"), MIXA_SHARE_ERR_ARG)
@@ -433,7 +433,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("T12 file_at(NULL)", (cast: (int) (mixa_share_file_at(0, 0U) = 0)), 1)
     mixa_share_destroy(0)
     c.printf("CHK T12 destroy(0) no-crash PASS\n")
-
+#
     if: g_failures[0] != 0
         c.printf("mixa share parity harness FAILED checks=%d\n", g_failures[0])
         return: 1

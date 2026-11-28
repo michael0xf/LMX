@@ -73,10 +73,10 @@ fn: main (int: argc; @: @(char) argv) int
     int: failures
     int: checks
     []: (@: void) fh 1
-
+#
     failures: 0
     checks: 0
-
+#
     if: argc >= 2
         c.snprintf(base, 520U, "%s", argv[1])
     ---
@@ -87,7 +87,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(p_b, 1040U, "%s\\b.txt", base)
     c.snprintf(p_missing, 1040U, "%s\\no_such.txt", base)
     c.snprintf(p_dir, 1040U, "%s\\dir\\sub", base)
-
+#
     c.system((cast: (@(char)) 0))
     []: char mkcmd 2200
     c.snprintf(mkcmd, 2200U, "cmd /c mkdir \"%s\" 2>nul", base)
@@ -102,7 +102,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.fputs("B", fh[0])
         c.fclose(fh[0])
     ---
-
+#
     # --- Scenario 1: 2 real files + 1 individually-selected "directory"
     # (fake_probe_file treats any \dir\ path as unsupported), selected in
     # the order [p_a, p_dir, p_b]. Expect: p_dir stays selected, p_a/p_b
@@ -119,7 +119,7 @@ fn: main (int: argc; @: @(char) argv) int
     mixa_selection_select(sel, p_a)
     mixa_selection_select(sel, p_dir)
     mixa_selection_select(sel, p_b)
-
+#
     sent_count[0]: 999U
     skipped_dirs[0]: 999U
     st: mixa_share_action_send(sel, fake_table(), "test message", @ r, @ sent_count[0], @ skipped_dirs[0])
@@ -167,7 +167,7 @@ fn: main (int: argc; @: @(char) argv) int
     ---
     mixa_selection_release(sel)
     c.free(sel)
-
+#
     # --- Scenario 2: nothing selected. Matches the reference's own
     # disabled empty-selection dialog (ClearShell.java sendEmail's count==0
     # branch is commented out in the shipped source): proceed anyway, with
@@ -194,7 +194,7 @@ fn: main (int: argc; @: @(char) argv) int
     mixa_share_destroy(r)
     mixa_selection_release(sel)
     c.free(sel)
-
+#
     # --- Scenario 3: a selected file that has since disappeared. Hard
     # probe error must abort the whole call (propagating the real status,
     # matching mixa_share_set_files' own established contract) without
@@ -231,7 +231,7 @@ fn: main (int: argc; @: @(char) argv) int
     ---
     mixa_selection_release(sel)
     c.free(sel)
-
+#
     if: failures = 0
         c.printf("share action selftest: %d checks, 0 failures\n", checks)
     else:

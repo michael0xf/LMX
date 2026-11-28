@@ -138,7 +138,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.setbuf((cast: (@: void) c.stdout), 0)
     failures: 0
     checks: 0
-
+#
     if: argc >= 2
         c.snprintf(base, 520U, "%s", argv[1])
     ---
@@ -149,7 +149,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(dir2, 1040U, "%s\\dir2", base)
     c.snprintf(missing_dir, 1040U, "%s\\no_such_dir", base)
     c.snprintf(emptydir, 1040U, "%s\\emptydir", base)
-
+#
     e: (cast: (@: MixaDirEntry) c.calloc(1U, c.sizeof(c.MixaDirEntry)))
     res: (cast: (@: MixaAudioScanResult) c.calloc(1U, c.sizeof(c.MixaAudioScanResult)))
     if: e = 0 || res = 0
@@ -163,7 +163,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("audio scan: audio_create rc=%d\n", st)
         return: 1
     ---
-
+#
     # --- Fixtures: dir1 holds a subdirectory (must be skipped), a
     # non-audio file (must be filtered out), and two real audio files --
     # one plain ASCII, one UTF-8 (Cyrillic) named.
@@ -175,7 +175,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.system(mkcmd)
     c.snprintf(mkcmd, 2200U, "cmd /c mkdir \"%s\" 2>nul", emptydir)
     c.system(mkcmd)
-
+#
     nm_uni[0]: (cast: (char) 0xD0)
     nm_uni[1]: (cast: (char) 0xBC)
     nm_uni[2]: (cast: (char) 0xD1)
@@ -189,7 +189,7 @@ fn: main (int: argc; @: @(char) argv) int
     nm_uni[10]: (cast: (char) 0xD0)
     nm_uni[11]: (cast: (char) 0xB0)
     nm_uni[12]: 0
-
+#
     c.snprintf(p1, 1200U, "%s\\a_track.mp3", dir1)
     c.snprintf(p2, 1200U, "%s\\%s.mp3", dir1, nm_uni)
     fh[0]: c.fopen(p1, "wb")
@@ -214,7 +214,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.fputs("x", fh[0])
         c.fclose(fh[0])
     ---
-
+#
     # An over-long directory path, built by padding dir1 with "\."
     # segments that resolve back to dir1. Measured behaviour on this
     # platform: Windows refuses the path at open time (see the scenario
@@ -228,7 +228,7 @@ fn: main (int: argc; @: @(char) argv) int
         lk: lk + 2U
     ---
     longpath[lk]: 0
-
+#
     # --- Independent oracle over dir1: raw mixa_dir calls, this test's
     # own filter, bypassing mixa_audio_scan_directory entirely.
     st: mixa_dir_list_open(@ d, dir1)
@@ -266,7 +266,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("audio scan: oracle count=%d want 2\n", (cast: (int) oracle_count))
     ---
-
+#
     # --- Scenario 1: dir1 scans to exactly the oracle's own sequence --
     # both audio files, in the order mixa_dir observed them, as full
     # paths, with the subdirectory and the non-audio file left out.
@@ -294,7 +294,7 @@ fn: main (int: argc; @: @(char) argv) int
         ---
     ---
     mixa_audio_scan_free_items(res\items, res\count)
-
+#
     # --- Scenario 2: a different directory yields only its own content,
     # with no entry or count carried over from the previous scan.
     st: mixa_audio_scan_directory(a, dir2, res)
@@ -312,7 +312,7 @@ fn: main (int: argc; @: @(char) argv) int
         ---
     ---
     mixa_audio_scan_free_items(res\items, res\count)
-
+#
     # --- Scenario 3: a directory with no supported audio succeeds with
     # an empty snapshot -- that is a real outcome, not a failure.
     res\count: 99U
@@ -322,7 +322,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("audio scan: emptydir rc=%d count=%d items=%p\n", st, (cast: (int) res\count), (cast: (@: void) res\items))
     ---
-
+#
     # --- Scenario 4: a missing directory reports mixa_dir's own exact
     # status and hands back nothing.
     res\count: 99U
@@ -332,7 +332,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("audio scan: missing rc=%d want ERR_MISSING count=%d items=%p\n", st, (cast: (int) res\count), (cast: (@: void) res\items))
     ---
-
+#
     # --- Scenario 5: an over-long directory path is refused through the
     # accepted dir seam's own status, with nothing handed back.
     #
@@ -353,7 +353,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("audio scan: longpath rc=%d want ERR_MISSING count=%d items=%p\n", st, (cast: (int) res\count), (cast: (@: void) res\items))
     ---
-
+#
     # --- Scenario 6: argument negatives.
     checks: checks + 1
     if: mixa_audio_scan_directory(0, dir1, res) != MIXA_DIR_ERR_ARG
@@ -373,11 +373,11 @@ fn: main (int: argc; @: @(char) argv) int
     # Releasing an empty snapshot is a no-op, not a crash.
     mixa_audio_scan_free_items(0, 0U)
     checks: checks + 1
-
+#
     mixa_audio_destroy(a)
     c.free(e)
     c.free(res)
-
+#
     if: failures = 0
         c.printf("audio scan selftest: %d checks, 0 failures\n", checks)
     else:

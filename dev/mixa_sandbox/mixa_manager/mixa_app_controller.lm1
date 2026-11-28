@@ -168,7 +168,7 @@ fn: mixa_app_controller_open (@@: MixaAppController out; const: @(MixaBackendVTa
     ---
     c\vt: vt
     ok: 1
-
+#
     # Stage 1: root. An exact copy of root_utf8's own bytes -- join with
     # an empty suffix, no normalization, no length policy, no truncation.
     root_slot[0]: 0
@@ -179,7 +179,7 @@ fn: mixa_app_controller_open (@@: MixaAppController out; const: @(MixaBackendVTa
     else:
         c\root: root_slot[0]
     ---
-
+#
     # Stage 2: the four simple structs.
     if: ok != 0
         c\m: (cast: (@: MixaCellMetrics) c.calloc(1U, c.sizeof(c.MixaCellMetrics)))
@@ -201,7 +201,7 @@ fn: mixa_app_controller_open (@@: MixaAppController out; const: @(MixaBackendVTa
             c\av\free: main_free
         ---
     ---
-
+#
     # Stage 3: open the loop (self-cleaning on its own failure per its
     # own header contract -- close() afterward is always safe regardless).
     # c\copy_sink (a real, allocated, all-zero-callback MixaCopySink) is
@@ -216,7 +216,7 @@ fn: mixa_app_controller_open (@@: MixaAppController out; const: @(MixaBackendVTa
             ok: 0
         ---
     ---
-
+#
     # First visible file-manager panel (ticket 20260913-032000): path +
     # entry listing in the upper rect's own rows 0-21, Delete/Copy Here
     # action row at 22 -- one row above F1 Help's own row 23, never
@@ -234,7 +234,7 @@ fn: mixa_app_controller_open (@@: MixaAppController out; const: @(MixaBackendVTa
             ok: 0
         ---
     ---
-
+#
     # Stage 4: the console's own scrollback file path (FILE_SEAM 2.1
     # naming without the generation hex tail -- a single fixed name is
     # enough for this milestone; a real session-id generator is out of
@@ -249,7 +249,7 @@ fn: mixa_app_controller_open (@@: MixaAppController out; const: @(MixaBackendVTa
             c\console_path: console_path_slot[0]
         ---
     ---
-
+#
     # Stage 5: TWO handles on the SAME file, exactly the shape every
     # focused selftest (mixa_help/mixa_cmdline_dispatch) already proved
     # correct in isolation -- a REAL bug this ticket's own end-to-end
@@ -280,7 +280,7 @@ fn: mixa_app_controller_open (@@: MixaAppController out; const: @(MixaBackendVTa
             ---
         ---
     ---
-
+#
     # F1 Help writes through the APPEND handle (FIRST_VERSION: "the
     # child gets a command and a place to write, and that is all" --
     # Help writes to that same place, like a real child's output would).
@@ -293,7 +293,7 @@ fn: mixa_app_controller_open (@@: MixaAppController out; const: @(MixaBackendVTa
             c\help_ctx\console_file: c\console_file_append
         ---
     ---
-
+#
     # Editable command line (FIRST_VERSION.txt section 2/4: "edits
     # lines, wrapping BY CHARACTER... Enter takes the line from its
     # start UP TO THE CURSOR, sends it plus a newline to the OS"). cwd_
@@ -311,7 +311,7 @@ fn: mixa_app_controller_open (@@: MixaAppController out; const: @(MixaBackendVTa
             c\cwd_cur: c\root
         ---
     ---
-
+#
     # Stage 6: the console view's own three pieces.
     if: ok != 0
         c\view: (cast: (@: MixaConsoleView) c.calloc(1U, c.sizeof(c.MixaConsoleView)))
@@ -322,14 +322,14 @@ fn: mixa_app_controller_open (@@: MixaAppController out; const: @(MixaBackendVTa
             ok: 0
         ---
     ---
-
+#
     if: ok != 0
         if: mixa_console_view_init(c\view, c\console_file, 24U, 80U) != MIXA_CONSOLE_OK
             c.printf("mixa_app_controller: console view init failed\n")
             ok: 0
         ---
     ---
-
+#
     # mixa_rect_open/_release have no header unit of their own, so the
     # two-field alloc mixa_rect_open itself performs is inlined here
     # directly, exactly as mixa_app_main.lm1 always did.
@@ -405,7 +405,7 @@ fn: mixa_app_controller_open (@@: MixaAppController out; const: @(MixaBackendVTa
             ---
         ---
     ---
-
+#
     if: ok != 0
         c\width_px: 80U * c\m\text_cell_width
         c\height_px: 24U * c\m\text_cell_height
@@ -416,12 +416,12 @@ fn: mixa_app_controller_open (@@: MixaAppController out; const: @(MixaBackendVTa
             ok: 0
         ---
     ---
-
+#
     if: ok = 0
         mixa_app_controller_close(c)
         return: MIXA_APP_CONTROLLER_ERR_OPEN
     ---
-
+#
     # One real frame on startup, then again after every event/command
     # tick that actually changed something -- the render hook ticket
     # item 3 asked for, reusing the SAME text_rect/upper_rect/rgba every
@@ -437,7 +437,7 @@ fn: mixa_app_controller_open (@@: MixaAppController out; const: @(MixaBackendVTa
     # is what makes the console line under it legible (FIRST_VERSION section 5).
     mixa_app_fmpanel_render(c\fmpanel, c\upper_rect)
     mixa_console_window_present_glyphs(c\view, c\text_rect, 0U, 0U, MIXA_PAL_CONSOLE, MIXA_PAL_CONSOLE, 0U, 255U, c\upper_rect, c\m\text_cell_width, c\m\text_cell_height, c\m\upper_cell_width, c\m\upper_cell_height, c\loop\backend, c\rgba, c\rgba_size, c\width_px, c\height_px, c\pending_view)
-
+#
     out[0]: c
 return: MIXA_APP_CONTROLLER_OK
 
@@ -476,7 +476,7 @@ fn: mixa_app_controller_step (@: MixaAppController c; @: int out_had_error) int
             mixa_pointer_nudge(pp, (cast: (i32) ptr_row) - (cast: (i32) pp\row), (cast: (i32) ptr_col) - (cast: (i32) pp\col))
         ---
     ---
-
+#
     # Copy Here's own visible result (ticket 20260913-041656), keyboard
     # route: MIXA_COPY_HERE_HIT_ACTION is mixa_app_loop_step's own real
     # return value exactly when the Ctrl+V/V key path just ran the
@@ -487,7 +487,7 @@ fn: mixa_app_controller_step (@: MixaAppController c; @: int out_had_error) int
     if: rc = MIXA_COPY_HERE_HIT_ACTION
         mixa_app_fmpanel_report_copy_result(c\fmpanel, c\loop\ctx\last_status)
     ---
-
+#
     # A live command (if any) is polled EVERY tick, regardless of
     # whether a UI event arrived this tick -- PROCESS_SEAM 3's own
     # "never blocks" plus "must not block UI event handling": output
@@ -513,7 +513,7 @@ fn: mixa_app_controller_step (@: MixaAppController c; @: int out_had_error) int
             c\dispatch: 0
         ---
     ---
-
+#
     if: rc = MIXA_COPY_HERE_PUMP_ERR_ARG
         c.printf("mixa_app_controller: step reported an error -- terminating cleanly instead of spinning on it\n")
         if: out_had_error != 0
@@ -560,7 +560,7 @@ fn: mixa_app_controller_step (@: MixaAppController c; @: int out_had_error) int
                     ---
                 ---
             ---
-
+#
             # Real mouse wheel (ticket 20260913-053000): the SAME half-
             # cell -> upper-cell conversion the click branch above already
             # uses, routed straight to the panel's own wheel handler --
@@ -576,7 +576,7 @@ fn: mixa_app_controller_step (@: MixaAppController c; @: int out_had_error) int
                     mixa_app_fmpanel_wheel(c\fmpanel, mouse_upper_row, mouse_upper_col, c\ev\wheel_delta)
                 ---
             ---
-
+#
             # Scrollbar-drag release (ticket 20260913-060000): any mouse
             # event where the left button is NOT held -- a real button-up,
             # or an ordinary hover-move with no button at all -- ends an
@@ -588,7 +588,7 @@ fn: mixa_app_controller_step (@: MixaAppController c; @: int out_had_error) int
             if: c\ev\kind = MIXA_EVENT_MOUSE && (c\ev\buttons & (cast: (unsigned) MIXA_BUTTON_LEFT)) = 0U
                 mixa_app_fmpanel_release(c\fmpanel)
             ---
-
+#
             # Editable command line: character insertion, cursor
             # movement/editing and Enter dispatch, layered the same way
             # on the SAME popped event -- never a second pump consumer.
@@ -654,7 +654,7 @@ fn: mixa_app_controller_step (@: MixaAppController c; @: int out_had_error) int
                     ---
                 ---
             ---
-
+#
             mixa_console_view_recompute(c\view)
             c\pending_view\cps: c\cmdline\cps
             c\pending_view\len: c\cmdline\len

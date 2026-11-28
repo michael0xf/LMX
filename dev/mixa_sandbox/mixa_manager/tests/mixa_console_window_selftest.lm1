@@ -59,7 +59,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.setbuf((cast: (@: void) c.stdout), 0)
     failures: 0
     checks: 0
-
+#
     if: argc >= 2
         c.snprintf(base, 520U, "%s", argv[1])
     ---
@@ -80,14 +80,14 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(p_pend_wrap, 1040U, "%s\\pend_wrap.log", base)
     c.snprintf(p_pend_hist, 1040U, "%s\\pend_hist.log", base)
     c.snprintf(p_pend_bottom, 1040U, "%s\\pend_bottom.log", base)
-
+#
     view: (cast: (@: MixaConsoleView) c.calloc(1U, c.sizeof(c.MixaConsoleView)))
     rect: (cast: (@: MixaTextRect) c.calloc(1U, c.sizeof(c.MixaTextRect)))
     if: view = 0 || rect = 0
         c.printf("console_window: alloc failed\n")
         return: 1
     ---
-
+#
     # --- Scenario 1: argument negatives -- checked first, before any real
     # file exists, so a later success cannot mask a broken null path.
     checks: checks + 1
@@ -118,7 +118,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("console_window: cols=0 not ERR_ARG\n")
     ---
-
+#
     # --- Scenario 2: allocation failure -- an absurdly large rows count
     # that calloc(rows, sizeof(size_t)) genuinely cannot satisfy on any
     # real machine (rows * 8 bytes vastly exceeds available memory), a
@@ -128,7 +128,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("console_window: absurd rows did not report NOMEM\n")
     ---
-
+#
     # --- Scenario 3: empty file. Cursor at top-left, exactly as
     # FIRST_VERSION.txt 5 settles it ("the file is empty, so the cursor is
     # at the TOP").
@@ -161,7 +161,7 @@ fn: main (int: argc; @: @(char) argv) int
     ---
     mixa_rect_release(rect)
     mixa_file_close(f)
-
+#
     # --- Scenario 4: short file, fewer wrapped rows than the viewport,
     # WITH a trailing newline -- the cursor's own row is a fresh empty row
     # after the last real line, not the last line itself.
@@ -187,7 +187,7 @@ fn: main (int: argc; @: @(char) argv) int
     ---
     mixa_rect_release(rect)
     mixa_file_close(f)
-
+#
     # --- Scenario 5: final line WITHOUT a trailing newline -- the cursor
     # lands mid-row, at the exact column count of the last (in-progress)
     # line, not on a fresh row.
@@ -204,7 +204,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("console_window: no-trailing-newline cursor row=%zu col=%zu want 1/3\n", view\cursor_row, view\cursor_col)
     ---
     mixa_file_close(f)
-
+#
     # --- Scenario 6: character-wrap boundary -- content wraps EXACTLY at
     # `cols`, never by word, and the boundary case (content length is an
     # exact multiple of cols) must push a fresh empty row for the cursor,
@@ -231,7 +231,7 @@ fn: main (int: argc; @: @(char) argv) int
     ---
     mixa_rect_release(rect)
     mixa_file_close(f)
-
+#
     # --- Scenario 7: UTF-8 -- wrapping counts CODEPOINTS, not bytes.
     # "\xD0\xBF\xD1\x80\xD0\xB8\xD0\xB2\xD0\xB5\xD1\x82" is Cyrillic
     # "привет" (6 codepoints, 12 bytes) followed by a newline (13 bytes).
@@ -273,7 +273,7 @@ fn: main (int: argc; @: @(char) argv) int
     ---
     mixa_rect_release(rect)
     mixa_file_close(f)
-
+#
     # --- Scenario 8: long file -- more than 128 wrapped rows, so no
     # hidden cap survives. 300 lines "L<idx>\n", cols wide enough that
     # each line is exactly one row, rows=20 viewport. Only the LAST 20
@@ -324,7 +324,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("console_window: long-file view does not show the last real line L299\n")
     ---
     mixa_rect_release(rect)
-
+#
     # --- Scenario 9: resize recomputation. Same file, shrink cols so the
     # SAME lines now wrap into more rows, and shrink rows so fewer of them
     # fit -- both must be reflected by a fresh recompute, not a stale
@@ -345,7 +345,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("console_window: resize cursor_col=%zu out of the new 2-wide bound\n", view\cursor_col)
     ---
     mixa_file_close(f)
-
+#
     # --- Scenario 10: one real presented headless frame -- the render
     # hook (ticket requirement 3), through the real composite + present
     # pipeline, not a stand-in.
@@ -410,14 +410,14 @@ fn: main (int: argc; @: @(char) argv) int
         mixa_rect_release(rect)
     ---
     mixa_file_close(f)
-
+#
     # --- Scenario 11: present() argument negatives.
     checks: checks + 1
     if: mixa_console_window_present(0, 0, 0U, 0U, 0U, 0U, 0U, 0U, 0, 0U, 0U, 0U, 0U, 0, 0, 0U, 0U, 0U, 0) != MIXA_CONSOLE_ERR_ARG
         failures: failures + 1
         c.printf("console_window: present null-args not ERR_ARG\n")
     ---
-
+#
     # --- Scenario 12 (ticket 20260913-004717): an EMPTY pending line
     # (len=0, cursor=0) over an otherwise-empty file. Must be visually
     # IDENTICAL to the legacy null-pending case: the cursor is a reversed
@@ -448,7 +448,7 @@ fn: main (int: argc; @: @(char) argv) int
     ---
     mixa_rect_release(rect)
     mixa_file_close(f)
-
+#
     # --- Scenario 13: pending line WITH content, cursor in the MIDDLE
     # ("ab|cd", cursor at index 2 -- between 'b' and 'c'). The reversed
     # cell must land ON the character the cursor is AT ('c'), not on a
@@ -498,7 +498,7 @@ fn: main (int: argc; @: @(char) argv) int
     ---
     mixa_rect_release(rect)
     mixa_file_close(f)
-
+#
     # --- Scenario 14: cursor at the pending line's own END (cursor ==
     # len) -- the reversed cell is a blank ONE PAST the last real
     # character, matching the file's own end-of-content convention
@@ -534,7 +534,7 @@ fn: main (int: argc; @: @(char) argv) int
     ---
     mixa_rect_release(rect)
     mixa_file_close(f)
-
+#
     # --- Scenario 15: pending content WRAPS across rows, BY CHARACTER
     # (never by word) -- a 6-character pending line on a 4-column
     # viewport wraps exactly like committed content already does
@@ -586,7 +586,7 @@ fn: main (int: argc; @: @(char) argv) int
     ---
     mixa_rect_release(rect)
     mixa_file_close(f)
-
+#
     # --- Scenario 16: real committed HISTORY plus a pending line
     # together -- pending must start EXACTLY where the committed content
     # left off (continuing the SAME row/col the file's own cursor would
@@ -645,7 +645,7 @@ fn: main (int: argc; @: @(char) argv) int
     ---
     mixa_rect_release(rect)
     mixa_file_close(f)
-
+#
     # --- Scenario 17: BOTTOM BOUNDARY -- a pending line long enough that
     # some of its own characters (and its own cursor) would land AT OR
     # PAST the viewport's last row. Those characters are not drawn, and
@@ -704,7 +704,7 @@ fn: main (int: argc; @: @(char) argv) int
     ---
     mixa_rect_release(rect)
     mixa_file_close(f)
-
+#
     # --- Scenario 18: legacy equivalence, EXPLICIT A/B -- null pending
     # and an explicit len=0 pending struct over real committed history
     # must render IDENTICAL rects, byte for byte.
@@ -741,10 +741,10 @@ fn: main (int: argc; @: @(char) argv) int
         c.free(rect_b)
     ---
     mixa_file_close(f)
-
+#
     c.free(view)
     c.free(rect)
-
+#
     if: failures = 0
         c.printf("console window selftest: %d checks, 0 failures\n", checks)
     else:

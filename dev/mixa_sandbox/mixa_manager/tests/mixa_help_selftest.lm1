@@ -53,7 +53,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.system(cmd)
     c.snprintf(console_path, 600U, "%s\\help_console.log", base)
     c.remove(console_path)
-
+#
     # Expected bytes: mixa_help_text() verbatim + CRLF, computed once from
     # the real function under test (not retyped by hand), so a future edit
     # to the text still passes as long as the CRLF-append contract holds.
@@ -63,13 +63,13 @@ fn: main (int: argc; @: @(char) argv) int
     expected[expected_len]: (cast: (char) 13)
     expected[expected_len + 1U]: (cast: (char) 10)
     expected_len: expected_len + 2U
-
+#
     checks: checks + 1
     if: c.strlen(text) = 0U
         failures: failures + 1
         c.printf("help: mixa_help_text() returned empty\n")
     ---
-
+#
     # --- Scenario 1: keyboard F1 appends the exact bytes to a fresh file.
     if: mixa_file_open(@ cf, console_path, MIXA_FILE_MODE_APPEND) != MIXA_FILE_OK
         c.printf("help: scenario1 could not create fixture file\n")
@@ -114,7 +114,7 @@ fn: main (int: argc; @: @(char) argv) int
         ---
     ---
     c.free(ctx)
-
+#
     # --- Scenario 2: a button-rect hit on a FRESH file produces
     # BYTE-IDENTICAL output to scenario 1's own keyboard path.
     c.remove(console_path)
@@ -150,7 +150,7 @@ fn: main (int: argc; @: @(char) argv) int
         ---
     ---
     c.free(ctx)
-
+#
     # --- Scenario 3: a hit OUTSIDE the rect touches nothing -- no bytes
     # appended, HIT_NONE returned.
     c.remove(console_path)
@@ -192,7 +192,7 @@ fn: main (int: argc; @: @(char) argv) int
         ---
     ---
     c.free(ctx)
-
+#
     # --- Scenario 4: a non-F1 key touches nothing.
     c.remove(console_path)
     if: mixa_file_open(@ cf, console_path, MIXA_FILE_MODE_APPEND) != MIXA_FILE_OK
@@ -237,7 +237,7 @@ fn: main (int: argc; @: @(char) argv) int
         ---
     ---
     c.free(ctx)
-
+#
     # --- Scenario 5 (failure / no-partial-publication, via the EXISTING
     # mixa_file seam -- no invented fault injection): open the SAME
     # console file in READ mode and try to append through it. mixa_file_
@@ -285,7 +285,7 @@ fn: main (int: argc; @: @(char) argv) int
         ---
     ---
     c.free(ctx)
-
+#
     # --- Scenario 6: argument negatives -- every entry point is null-safe
     # and touches nothing.
     checks: checks + 1
@@ -314,7 +314,7 @@ fn: main (int: argc; @: @(char) argv) int
         ---
         c.free(ctx3)
     ---
-
+#
     if: failures = 0
         c.printf("help selftest: %d checks, 0 failures\n", checks)
     else:

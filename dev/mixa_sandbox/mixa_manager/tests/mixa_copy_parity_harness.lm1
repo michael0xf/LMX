@@ -218,7 +218,7 @@ fn: main (int: argc; @: @(char) argv) int
     int: st
     c.setbuf((cast: (@: void) c.stdout), 0)
     g_fault_at: -1
-
+#
     if: argc >= 2
         c.snprintf(base, 520U, "%s", argv[1])
     else:
@@ -231,7 +231,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(dest1, 1040U, "%s\\dest1", base)
     c.snprintf(dest2, 1040U, "%s\\dest2", base)
     c.snprintf(dest3, 1040U, "%s\\dest3", base)
-
+#
     c.snprintf(cmd, 2400U, "cmd /c mkdir \"%s\" 2>nul", src_root)
     c.system(cmd)
     c.snprintf(cmd, 2400U, "cmd /c mkdir \"%s\" 2>nul", dira)
@@ -251,7 +251,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(p1, 1200U, "%s\\b1.txt", dirb)
     t_touch(p1, "content-b1")
     t_touch(single_file, "top-level-content")
-
+#
     sel: (cast: (@: MixaSelection) c.calloc(1U, c.sizeof(c.MixaSelection)))
     if: sel = 0
         c.printf("copy parity: alloc failed\n")
@@ -259,7 +259,7 @@ fn: main (int: argc; @: @(char) argv) int
     ---
     t_check_int("S0 selection init", mixa_selection_init(sel), MIXA_SEL_OK)
     sink: t_sink()
-
+#
     # --- Scenario 1: content equality.
     mixa_selection_select(sel, src_root)
     t_reset()
@@ -277,7 +277,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_str("S1 b1 content", readbuf, "content-b1")
     t_check_int("S1 dir event coverage", (cast: (int) (t_count("D:a:0|") = 1 && t_count("D:b:0|") = 1 && t_count("E:a:0|") = 1 && t_count("E:b:0|") = 1)), 1)
     t_check_int("S1 root deselected", mixa_selection_query(sel, src_root), 0)
-
+#
     # --- Scenario 2: existing-destination preservation.
     mixa_selection_select(sel, src_root)
     t_reset()
@@ -289,7 +289,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_str("S2 existing content undisturbed", readbuf, "content-a1")
     t_check_int("S2 root stays selected", mixa_selection_query(sel, src_root), 1)
     mixa_selection_deselect(sel, src_root)
-
+#
     # --- Scenario 3: merge into an existing destination directory.
     c.snprintf(p1, 1200U, "%s\\b", dest1)
     c.snprintf(cmd, 2400U, "cmd /c mkdir \"%s\" 2>nul", p1)
@@ -308,7 +308,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("S3 merge event once", t_count("D:b:0|"), 1)
     t_check_int("S3 dirb stays selected", mixa_selection_query(sel, dirb), 1)
     mixa_selection_deselect(sel, dirb)
-
+#
     # --- Scenario 4: cancellation and retry.
     t_check_int("S4 reselect src_root", mixa_selection_select(sel, src_root), MIXA_SEL_OK)
     t_reset()
@@ -325,7 +325,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(p1, 1200U, "%s\\src\\b\\b1.txt", dest2)
     t_check_int("S4 retry completed b1", t_exists(p1), 1)
     t_check_int("S4 root deselected after finish", mixa_selection_query(sel, src_root), 0)
-
+#
     # --- Scenario 5: a real mid-file I/O fault.
     mixa_selection_select(sel, single_file)
     t_reset()
@@ -344,7 +344,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("S5 retry after IO rc", rc, MIXA_COPY_OK)
     st: t_read_all(p1, readbuf, 4100U)
     t_check_str("S5 retried content", readbuf, "top-level-content")
-
+#
     # --- Scenario 6: nested-destination termination.
     c.snprintf(nested_dest, 1040U, "%s\\nested_inside", dira)
     mixa_selection_select(sel, dira)
@@ -357,7 +357,7 @@ fn: main (int: argc; @: @(char) argv) int
     rc: mixa_copy_run(sel, dira, sink, 0)
     t_check_int("S6 dest==source rc", rc, MIXA_COPY_ERR_NESTED)
     mixa_selection_deselect(sel, dira)
-
+#
     # --- Scenario 7: a sibling destination sharing a string prefix.
     c.snprintf(dest1x, 1040U, "%sx", dest1)
     c.snprintf(cmd, 2400U, "cmd /c mkdir \"%s\" 2>nul", dest1x)
@@ -366,7 +366,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_reset()
     rc: mixa_copy_run(sel, dest1x, sink, 0)
     t_check_int("S7 prefix-sharing sibling rc", rc, MIXA_COPY_OK)
-
+#
     # --- Scenario 8: argument negatives; empty selection is a trivial
     # success.
     t_check_int("S8 null sel", mixa_copy_run(0, dest1, sink, 0), MIXA_COPY_ERR_ARG)
@@ -378,10 +378,10 @@ fn: main (int: argc; @: @(char) argv) int
     rc: mixa_copy_run(sel, dest1, sink, 0)
     t_check_int("S8 empty selection rc", rc, MIXA_COPY_OK)
     t_check_int("S8 empty selection no calls", g_calls, 0)
-
+#
     mixa_selection_release(sel)
     c.free(sel)
-
+#
     if: g_failures[0] != 0
         c.printf("mixa copy parity harness FAILED checks=%d\n", g_failures[0])
         return: 1

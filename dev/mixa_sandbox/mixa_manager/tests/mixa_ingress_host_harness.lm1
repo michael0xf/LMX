@@ -66,7 +66,7 @@ fn: join_checked (@: void thp; const: @(char label)) int
 fn: main (int: argc; @: @(char) argv) int
     @: void th
     int: rc
-
+#
     g_checks: 0
     g_failures: 0
     g_rt: c.lmx_msg_runtime_new()
@@ -74,23 +74,23 @@ fn: main (int: argc; @: @(char) argv) int
         c.fprintf(c.stderr, "host_post: runtime_new failed")
         return: 1
     ---
-
+#
     g_posted_event: c.CreateEventA(0, 0, 0, 0)
     if: g_posted_event = 0
         c.fprintf(c.stderr, "CreateEvent failed")
         c.lmx_msg_runtime_delete(g_rt)
         return: 1
     ---
-
+#
     th: c.CreateThread(0, 0, (cast: (@: void) foreign_poster), 0, 0, 0)
     if: th = 0
         c.fprintf(c.stderr, "CreateThread failed")
         return: 1
     ---
-
+#
     join_checked(th, "foreign_poster join")
     check(g_foreign_posted != 0, "foreign posted")
-
+#
     c.lmx_msg_runtime_delete(g_rt)
     c.CloseHandle(g_posted_event)
     c.printf("ingress_host_harness: checks")

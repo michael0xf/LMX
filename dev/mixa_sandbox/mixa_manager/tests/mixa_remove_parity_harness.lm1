@@ -207,13 +207,13 @@ fn: main (int: argc; @: @(char) argv) int
     int: a_gone
     int: b_gone
     c.setbuf((cast: (@: void) c.stdout), 0)
-
+#
     if: argc >= 2
         c.snprintf(base, 520U, "%s", argv[1])
     else:
         c.snprintf(base, 520U, "build/mixa/claude/remove_parity/tmp")
     ---
-
+#
     sel: (cast: (@: MixaSelection) c.calloc(1U, c.sizeof(c.MixaSelection)))
     if: sel = 0
         c.printf("remove parity: alloc failed\n")
@@ -221,7 +221,7 @@ fn: main (int: argc; @: @(char) argv) int
     ---
     t_check_int("selection init", mixa_selection_init(sel), MIXA_SEL_OK)
     sink: t_sink()
-
+#
     # --- Scenario 1: real nested tree, postorder proof. ---
     c.snprintf(root1, 1040U, "%s\\root1", base)
     c.snprintf(suba, 1040U, "%s\\a", root1)
@@ -239,7 +239,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(p1, 1200U, "%s\\deep.txt", subb_nested)
     t_touch(p1, "deep")
     t_touch(sibling, "sibling-content")
-
+#
     mixa_selection_select(sel, root1)
     t_reset()
     rc: mixa_remove_selected_run(sel, sink, 0)
@@ -256,7 +256,7 @@ fn: main (int: argc; @: @(char) argv) int
         t_check_int("s1 postorder", (cast: (int) (p_nested != 0 && p_b != 0 && p_root1 != 0 && p_nested < p_b && p_b < p_root1)), 1)
     ---
     t_check_int("s1 root1 deselected", mixa_selection_query(sel, root1), 0)
-
+#
     # --- Scenario 2: explicit exception survives; root's own rmdir fails
     # with a real ERROR_DIR_NOT_EMPTY; root stays selected for retry. ---
     c.snprintf(root2, 1040U, "%s\\root2", base)
@@ -284,7 +284,7 @@ fn: main (int: argc; @: @(char) argv) int
     mixa_selection_deselect(sel, root2)
     c.snprintf(cmd, 2400U, "cmd /c rmdir /s /q \"%s\" 2>nul", root2)
     c.system(cmd)
-
+#
     # --- Scenario 3: nested selected roots consolidated, processed once. ---
     c.snprintf(root3, 1040U, "%s\\root3", base)
     c.snprintf(root3sub, 1040U, "%s\\sub", root3)
@@ -300,7 +300,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("s3 root3 gone", t_dir_exists(root3), 0)
     t_check_int("s3 root3 deselected", (cast: (int) (mixa_selection_query(sel, root3) != 0 || mixa_selection_query(sel, root3sub) != 0)), 0)
     t_check_int("s3 root3 visited once", t_count("E:root3:0|"), 1)
-
+#
     # --- Scenario 4: a REAL read-only file removal fault. ---
     c.snprintf(root4, 1040U, "%s\\root4", base)
     c.snprintf(root4_ro, 1040U, "%s\\locked.txt", root4)
@@ -326,7 +326,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("s4 retry rc", rc, MIXA_REMOVE_OK)
     t_check_int("s4 retry root4 gone", t_dir_exists(root4), 0)
     t_check_int("s4 retry root4 deselected", mixa_selection_query(sel, root4), 0)
-
+#
     # --- Scenario 5: a REAL enumeration fault (icacls deny). Best-effort:
     # the deny may be ineffective in some CI environments, so this is
     # reported either way, not hard-failed on the negative branch. ---
@@ -350,7 +350,7 @@ fn: main (int: argc; @: @(char) argv) int
     mixa_selection_deselect(sel, root5)
     c.snprintf(cmd, 2400U, "cmd /c rmdir /s /q \"%s\" 2>nul", root5)
     c.system(cmd)
-
+#
     # --- Scenario 6: a deterministic allocation fault via the walk's own
     # optional MixaSelWalkAllocVTable. ---
     c.snprintf(rootc1, 1040U, "%s\\rootc1", base)
@@ -371,7 +371,7 @@ fn: main (int: argc; @: @(char) argv) int
     rc: mixa_remove_selected_run(sel, sink, t_av())
     t_check_int("s6 retry rc", rc, MIXA_REMOVE_OK)
     t_check_int("s6 retry rootc1 gone", t_dir_exists(rootc1), 0)
-
+#
     # --- Scenario 7: cancellation between two independent roots. ---
     c.snprintf(rootc1, 1040U, "%s\\cancelA", base)
     c.snprintf(rootc2, 1040U, "%s\\cancelB", base)
@@ -412,7 +412,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.system(cmd)
     c.snprintf(cmd, 2400U, "cmd /c rmdir /s /q \"%s\" 2>nul", rootc2)
     c.system(cmd)
-
+#
     # --- Scenario 8: a real Unicode (Cyrillic) file name. ---
     c.snprintf(root1, 1040U, "%s\\root_uni", base)
     c.snprintf(cmd, 2400U, "cmd /c mkdir \"%s\" 2>nul", root1)
@@ -424,7 +424,7 @@ fn: main (int: argc; @: @(char) argv) int
     rc: mixa_remove_selected_run(sel, sink, 0)
     t_check_int("s8 rc", rc, MIXA_REMOVE_OK)
     t_check_int("s8 unicode-named removed", t_dir_exists(root1), 0)
-
+#
     # --- Scenario 9: argument negatives; empty selection no-op. ---
     t_check_int("s9 null selection", mixa_remove_selected_run(0, sink, 0), MIXA_REMOVE_ERR_ARG)
     t_check_int("s9 null sink", mixa_remove_selected_run(sel, 0, 0), MIXA_REMOVE_ERR_ARG)
@@ -434,10 +434,10 @@ fn: main (int: argc; @: @(char) argv) int
     rc: mixa_remove_selected_run(sel, sink, 0)
     t_check_int("s9 empty selection rc", rc, MIXA_REMOVE_OK)
     t_check_int("s9 empty selection no calls", g_calls, 0)
-
+#
     mixa_selection_release(sel)
     c.free(sel)
-
+#
     if: g_failures[0] != 0
         c.printf("mixa remove parity harness FAILED checks=%d\n", g_failures[0])
         return: 1

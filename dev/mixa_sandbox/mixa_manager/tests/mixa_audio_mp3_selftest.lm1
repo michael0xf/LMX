@@ -160,7 +160,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.setbuf((cast: (@: void) c.stdout), 0)
     failures: 0
     checks: 0
-
+#
     if: argc >= 2
         c.snprintf(base, 520U, "%s", argv[1])
     ---
@@ -171,7 +171,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(dir2, 1040U, "%s\\dir2", base)
     c.snprintf(emptydir, 1040U, "%s\\emptydir", base)
     c.snprintf(missing, 1040U, "%s\\no_such_dir", base)
-
+#
     c.snprintf(cmd, 2400U, "cmd /c mkdir \"%s\" 2>nul", dir1)
     c.system(cmd)
     c.snprintf(cmd, 2400U, "cmd /c mkdir \"%s\\sub\" 2>nul", dir1)
@@ -180,7 +180,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.system(cmd)
     c.snprintf(cmd, 2400U, "cmd /c mkdir \"%s\" 2>nul", emptydir)
     c.system(cmd)
-
+#
     nm_uni[0]: (cast: (char) 0xD0)
     nm_uni[1]: (cast: (char) 0xBC)
     nm_uni[2]: (cast: (char) 0xD1)
@@ -194,7 +194,7 @@ fn: main (int: argc; @: @(char) argv) int
     nm_uni[10]: (cast: (char) 0xD0)
     nm_uni[11]: (cast: (char) 0xB0)
     nm_uni[12]: 0
-
+#
     # dir1: a subdirectory to skip, a non-audio file to filter out, and
     # two real audio files -- one ASCII, one UTF-8 named.
     c.snprintf(p1, 1200U, "%s\\a_track.mp3", dir1)
@@ -205,7 +205,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_touch(p1)
     c.snprintf(p1, 1200U, "%s\\other.mp3", dir2)
     t_touch(p1)
-
+#
     rect: (cast: (@: MixaTextRect) c.calloc(1U, c.sizeof(c.MixaTextRect)))
     ctx: (cast: (@: MixaAudioLaunchCtx) c.calloc(1U, c.sizeof(c.MixaAudioLaunchCtx)))
     toolbar: (cast: (@: MixaButtonPanel) c.calloc(1U, c.sizeof(c.MixaButtonPanel)))
@@ -216,7 +216,7 @@ fn: main (int: argc; @: @(char) argv) int
         return: 1
     ---
     c.memset((cast: (@: void) stack), 0, c.sizeof(c.MixaAppWindowStack))
-
+#
     checks: checks + 1
     if: mixa_rect_open(rect, 20U, 70U) != 0
         failures: failures + 1
@@ -243,7 +243,7 @@ fn: main (int: argc; @: @(char) argv) int
     toolbar\origin_col: 0U
     toolbar\view_w: toolbar\panel_w
     toolbar\scroll_x: 0U
-
+#
     st: mixa_audio_launch_init(ctx, fake_table(), stack, rect, 0U, 0U, 14U, 60U, 4U)
     checks: checks + 1
     if: st != MIXA_AUDIO_OK
@@ -251,7 +251,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("mp3: launch_init rc=%d\n", st)
         return: 1
     ---
-
+#
     # --- Independent oracle over dir1: raw mixa_dir calls with this
     # test's own filter, so the expected order comes from what the seam
     # actually observed rather than an assumed sort.
@@ -290,7 +290,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("mp3: oracle count=%d want 2\n", (cast: (int) oracle_count))
     ---
-
+#
     # --- Scenario 1: ONE real top-level hit does the whole composed
     # path: scan dir1, feed the playlist, start, open the panel once.
     #
@@ -337,7 +337,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("mp3: not playing after the hit\n")
     ---
-
+#
     # --- Scenario 2: the opened panel is real. Drive its own controls
     # through real hits: nextFile lands on the oracle's second entry.
     rc: mixa_audio_panel_hit(mixa_audio_launch_panel(ctx), stack, rect, 2U, 25U, @ action_status)
@@ -364,7 +364,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("mp3: dismiss rc=%d count=%d\n", rc, (cast: (int) mixa_app_window_count(stack)))
     ---
-
+#
     # --- Scenario 3: pressing the button again re-scans and reopens
     # from the top, with none of the torn-down session's state.
     rc: mixa_mp3_hit(ctx, toolbar, 15U, 0U, dir1, @ action_status, @ scan_status)
@@ -384,7 +384,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("mp3: reopen window count=%d want 1\n", (cast: (int) mixa_app_window_count(stack)))
     ---
     mixa_audio_panel_hit(mixa_audio_launch_panel(ctx), stack, rect, 9U, 28U, @ action_status)
-
+#
     # --- Scenario 4: a changed directory is really re-scanned -- dir2's
     # single different track only, no stale dir1 entry or count.
     rc: mixa_mp3_hit(ctx, toolbar, 15U, 0U, dir2, @ action_status, @ scan_status)
@@ -405,7 +405,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("mp3: dir2 item0=%s want %s\n", mixa_audio_cur_file(ctx\a), p1)
     ---
     mixa_audio_panel_hit(mixa_audio_launch_panel(ctx), stack, rect, 9U, 28U, @ action_status)
-
+#
     # --- Scenario 5: a missing directory reports the seam's own scan
     # status and changes NOTHING. The scan runs before any teardown, so
     # a directory that has gone missing cannot blank what the context
@@ -439,7 +439,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("mp3: error window open failed\n")
     ---
     mixa_app_window_dismiss(stack, rect)
-
+#
     # --- Scenario 6: a directory with no supported audio scans cleanly
     # and is refused at the playlist stage, with its own distinct status
     # and nothing left behind.
@@ -454,7 +454,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("mp3: empty dir left list=%d a=%p windows=%d\n", ctx\list_status, (cast: (@: void) ctx\a), (cast: (int) mixa_app_window_count(stack)))
     ---
-
+#
     # --- Scenario 7: a miss on the toolbar takes no action, opens
     # nothing, and does not even scan.
     g_open_count: 0
@@ -469,7 +469,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("mp3: miss opened a window or scanned (devices=%d)\n", g_open_count)
     ---
-
+#
     # --- Scenario 8: argument negatives.
     checks: checks + 1
     if: mixa_mp3_open_dir(0, dir1, @ scan_status) != MIXA_AUDIO_ERR_ARG
@@ -504,7 +504,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("mp3: open_dir without out_scan_status rc=%d\n", rc)
     ---
     mixa_audio_panel_hit(mixa_audio_launch_panel(ctx), stack, rect, 9U, 28U, @ action_status)
-
+#
     mixa_audio_launch_release(ctx)
     mixa_button_panel_release(toolbar)
     mixa_app_window_stack_release(stack)
@@ -512,7 +512,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.free(rect)
     c.free(ctx)
     c.free(e)
-
+#
     if: failures = 0
         c.printf("mp3 composition selftest: %d checks, 0 failures\n", checks)
     else:

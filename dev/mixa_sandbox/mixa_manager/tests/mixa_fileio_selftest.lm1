@@ -76,7 +76,7 @@ fn: main (int: argc; @: @(char) argv) int
     checks: 0
     g_fault_at: -1
     g_fault_calls: 0
-
+#
     if: argc >= 2
         c.snprintf(base, 520U, "%s", argv[1])
     ---
@@ -92,13 +92,13 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(missing, 1040U, "%s\\no_such.txt", dir)
     c.snprintf(buf, 2000U, "cmd /c mkdir \"%s\" 2>nul", dir)
     c.system(buf)
-
+#
     e: (cast: (@: MixaDirEntry) c.calloc(1U, c.sizeof(c.MixaDirEntry)))
     if: e = 0
         c.printf("fio: alloc failed\n")
         return: 1
     ---
-
+#
     # --- Scenario 1: write then read gives back exact content.
     st: mixa_fio_open_write_new(@ fw, src)
     checks: checks + 1
@@ -145,7 +145,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("fio: EOF read rc=%d n=%d\n", st, (cast: (int) n))
     ---
     mixa_fio_close(fr)
-
+#
     # --- Scenario 2: existing destination is refused (no overwrite).
     st: mixa_fio_open_write_new(@ fw, src)
     checks: checks + 1
@@ -153,7 +153,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fio: overwrite refusal rc=%d want ERR_EXISTS\n", st)
     ---
-
+#
     # --- Scenario 3: a missing source is a real, distinct status.
     st: mixa_fio_open_read(@ fr, missing)
     checks: checks + 1
@@ -161,7 +161,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fio: missing source rc=%d want ERR_MISSING\n", st)
     ---
-
+#
     # --- Scenario 4: content equality over a buffer smaller than the
     # file, proving multiple real chunked reads reassemble correctly --
     # not just a single-shot read.
@@ -202,7 +202,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fio: chunked content mismatch, total=%d\n", (cast: (int) total))
     ---
-
+#
     # --- Scenario 5: the fault hook is asked with the real byte offset
     # BEFORE each real I/O call, and its refusal is returned verbatim
     # with no real I/O attempted for that call.
@@ -251,7 +251,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fio: cleanup of partial write failed\n")
     ---
-
+#
     # --- Scenario 6: the read fault hook, same shape, on a real file.
     st: mixa_fio_open_read(@ fr, src)
     g_fault_at: 0
@@ -263,7 +263,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("fio: faulted read rc=%d calls=%d\n", st, g_fault_calls)
     ---
     mixa_fio_close(fr)
-
+#
     # --- Scenario 7: argument negatives.
     checks: checks + 1
     if: mixa_fio_open_read(0, src) != MIXA_FIO_ERR_ARG
@@ -293,9 +293,9 @@ fn: main (int: argc; @: @(char) argv) int
     # Closing null and closing twice are both harmless.
     mixa_fio_close(0)
     checks: checks + 1
-
+#
     c.free(e)
-
+#
     if: failures = 0
         c.printf("fileio selftest: %d checks, 0 failures\n", checks)
     else:

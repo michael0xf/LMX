@@ -151,7 +151,7 @@ fn: main (int: argc; @: @(char) argv) int
     sink: t_sink()
     fsink: t_failing_sink()
     marker: "MIXA_MARK_00000000_00000000cafef00d"
-
+#
     # --- Scenario 1: basic record, byte-wise AND whole-buffer, both agree.
     input: "line one\nline two\nMIXA_MARK_00000000_00000000cafef00d\t0\t/tmp/dir\n"
     sc: (cast: (@: MixaProcessMarkerScanner) c.calloc(1U, c.sizeof(c.MixaProcessMarkerScanner)))
@@ -193,7 +193,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("marker: scenario1 whole-buffer consumed=%zu want %zu (record ends exactly at input end)\n", consumed[0], c.strlen(input))
     ---
-
+#
     # --- Scenario 2: nonzero status.
     input: "MIXA_MARK_00000000_00000000cafef00d\t42\t/a\n"
     mixa_process_marker_scanner_release(sc)
@@ -205,7 +205,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("marker: scenario2 exit=%d want 42\n", sc\exit_code)
     ---
-
+#
     # --- Scenario 3: negative status.
     input: "MIXA_MARK_00000000_00000000cafef00d\t-7\t/a\n"
     mixa_process_marker_scanner_release(sc)
@@ -217,7 +217,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("marker: scenario3 exit=%d want -7\n", sc\exit_code)
     ---
-
+#
     # --- Scenario 4: spaces in the final directory.
     input: "MIXA_MARK_00000000_00000000cafef00d\t0\tC:\\Program Files\\x\n"
     mixa_process_marker_scanner_release(sc)
@@ -229,7 +229,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("marker: scenario4 cwd=[%.*s]\n", (cast: (int) sc\cwd_len), sc\cwd)
     ---
-
+#
     # --- Scenario 5: non-ASCII (UTF-8 Cyrillic) in the final directory.
     input: "MIXA_MARK_00000000_00000000cafef00d\t0\tC:\\\xD0\xBF\xD0\xB0\xD0\xBF\xD0\xBA\xD0\xB0\n"
     mixa_process_marker_scanner_release(sc)
@@ -241,7 +241,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("marker: scenario5 cwd_len=%zu want 13\n", sc\cwd_len)
     ---
-
+#
     # --- Scenario 6: quotes in the final directory.
     input: "MIXA_MARK_00000000_00000000cafef00d\t0\t\"C:\\a b\"\n"
     mixa_process_marker_scanner_release(sc)
@@ -253,7 +253,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("marker: scenario6 cwd=[%.*s]\n", (cast: (int) sc\cwd_len), sc\cwd)
     ---
-
+#
     # --- Scenario 7: a DECEPTIVE marker-like string -- same prefix, WRONG
     # identity (different tail) -- must be ordinary output, never matched.
     input: "before MIXA_MARK_00000000_00000000deadbeef\t0\t/x\n after\nMIXA_MARK_00000000_00000000cafef00d\t0\t/real\n"
@@ -276,7 +276,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("marker: scenario7 surrounding ordinary text missing: [%s]\n", g_out)
     ---
-
+#
     # --- Scenario 8: an INCOMPLETE marker occurrence (a genuine prefix
     # that breaks mid-way, right after a line start) followed later by the
     # real marker -- proves recovery via the flush-whole-buffer-on-
@@ -296,7 +296,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("marker: scenario8 the broken partial match was not flushed as ordinary: [%s]\n", g_out)
     ---
-
+#
     # --- Scenario 9: the marker text EMBEDDED but NOT at a real record
     # boundary (no tab immediately after it) -- malformed, ordinary.
     input: "MIXA_MARK_00000000_00000000cafef00d is just a word here\nMIXA_MARK_00000000_00000000cafef00d\t0\t/q\n"
@@ -314,7 +314,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("marker: scenario9 embedded occurrence not flushed as ordinary: [%s]\n", g_out)
     ---
-
+#
     # --- Scenario 9b (review item 2): an EXACT, otherwise fully valid
     # marker/status/cwd record appearing immediately after a NON-newline
     # byte (mid-line, not a real record start) -- must remain entirely
@@ -335,7 +335,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("marker: scenario9b ordinary=[%s] want the whole line verbatim (marker not at a line start)\n", g_out)
     ---
-
+#
     # --- Scenario 9c (review item 2): the SAME exact record, but now
     # genuinely AT a line start (right after LF) -- must be recognized,
     # proving the gating is about position, not content.
@@ -349,7 +349,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("marker: scenario9c a genuine post-LF record was wrongly rejected, done=%d\n", mixa_process_marker_scanner_done(sc))
     ---
-
+#
     # --- Scenario 10: malformed integer (a letter where a digit is
     # expected) -- the whole tentative record is ordinary output.
     input: "MIXA_MARK_00000000_00000000cafef00d\tXY\t/r\nMIXA_MARK_00000000_00000000cafef00d\t5\t/s\n"
@@ -367,7 +367,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("marker: scenario10 malformed record not flushed verbatim: [%s]\n", g_out)
     ---
-
+#
     # --- Scenario 11: overflow integer (far beyond i32 range).
     input: "MIXA_MARK_00000000_00000000cafef00d\t99999999999999\t/t\nMIXA_MARK_00000000_00000000cafef00d\t6\t/u\n"
     mixa_process_marker_scanner_release(sc)
@@ -379,7 +379,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("marker: scenario11 overflow integer not rejected, exit=%d\n", sc\exit_code)
     ---
-
+#
     # --- Scenario 12: CRLF line ending on the record itself.
     input: "MIXA_MARK_00000000_00000000cafef00d\t0\t/crlf\r\n"
     mixa_process_marker_scanner_release(sc)
@@ -391,7 +391,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("marker: scenario12 CRLF cwd_len=%zu cwd=[%.*s] want 5/[/crlf] (CR must be stripped)\n", sc\cwd_len, (cast: (int) sc\cwd_len), sc\cwd)
     ---
-
+#
     # --- Scenario 13: EOF without any marker at all -- "no status",
     # everything buffered flushed as ordinary, done stays false.
     input: "just some output with no marker ever\nmore output\n"
@@ -410,7 +410,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("marker: scenario13 ordinary=[%s] want the whole input verbatim\n", g_out)
     ---
-
+#
     # --- Scenario 14: EOF exactly MID-MARKER (a genuine partial prefix,
     # stream ends before it can be confirmed either way) -- flushed as
     # ordinary, no status invented.
@@ -435,7 +435,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("marker: scenario14 ordinary=[%s] want the whole partial input verbatim\n", g_out)
     ---
-
+#
     # --- Scenario 15: eof() after an ALREADY-complete record is a no-op
     # (does not re-flush or corrupt the already-recognized result).
     input: "MIXA_MARK_00000000_00000000cafef00d\t0\t/done\n"
@@ -459,7 +459,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("marker: scenario15 eof() after done wrongly flushed something: [%s]\n", g_out)
     ---
-
+#
     # --- Scenario 16: embedded NUL inside the cwd field -- explicitly
     # rejected, not silently truncated at the NUL.
     if: 1
@@ -480,7 +480,7 @@ fn: main (int: argc; @: @(char) argv) int
             c.printf("marker: scenario16 embedded NUL should NOT yield a completed record\n")
         ---
     ---
-
+#
     # --- Scenario 17: identity generation is unique across calls.
     if: 1
         @: MixaProcessMarkerGen gen
@@ -531,7 +531,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("marker: scanner_done(0) not 0\n")
     ---
-
+#
     # --- Scenario 20 (review item 1): sink failure inside feed()'s own
     # direct-emit fast path, deterministically after a CHOSEN byte. The
     # exact propagated status and *consumed (bytes processed, failing
@@ -560,7 +560,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("marker: scenario20 ordinary before failure=[%s] want [ab]\n", g_out)
     ---
     g_sink_fail_target: 0
-
+#
     # --- Scenario 21 (review item 1): sink failure during eof()'s own
     # flush of buffered (partial-match) bytes.
     input: "MIXA_MARK_00000000_0000"
@@ -578,7 +578,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("marker: scenario21 eof sink failure rc=%d want 7\n", rc)
     ---
     g_sink_fail_target: 0
-
+#
     # --- Scenario 22 (review item 8): bytes AFTER a complete record in
     # the SAME feed() call are NOT examined at all -- consumed stops
     # exactly at the record's own end, and a later feed() call on the
@@ -611,7 +611,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("marker: scenario22 feed after done should be OK no-op, rc=%d\n", rc)
     ---
-
+#
     # --- Scenario 23 (review item 7): deterministic allocation failure
     # at the scanner's own FIRST pending-buffer growth (the moment a
     # tentative match begins), proving ERR_NOMEM is returned, nothing is
@@ -639,7 +639,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.free(scf)
         c.free(fv)
     ---
-
+#
     # --- Scenario 24 (review item 7): deterministic allocation failure
     # inside build_wrapper's own FIRST allocation (GetTempPathW's own
     # required-size buffer) -- proves a clean ERR_NOMEM with both out
@@ -664,7 +664,7 @@ fn: main (int: argc; @: @(char) argv) int
         ---
         c.free(fv2)
     ---
-
+#
     # --- Scenario 25 (review item 5): a real build_wrapper call succeeds,
     # produces BOTH a quoted command and an unquoted path, and
     # cleanup_wrapper on that path (simulating a spawn() failure) removes
@@ -708,7 +708,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.free(wcmd2)
         c.free(wpath2)
     ---
-
+#
     # --- Scenario 26 (review item 4, collision-proofing): repeated rapid
     # build_wrapper calls each produce a DISTINCT wrapper path. This is
     # indirect evidence of the CREATE_NEW-atomic, retry-on-collision
@@ -762,7 +762,7 @@ fn: main (int: argc; @: @(char) argv) int
             pi: pi + 1
         ---
     ---
-
+#
     # --- Scenario 27 (ticket 20260912-153000 item 2): a deterministic
     # allocation failure on mixa_process_marker_generate's own single
     # allocation -- proves the fault seam now sweeps this site too (the
@@ -788,7 +788,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.free(genf)
         c.free(fv3)
     ---
-
+#
     # --- Scenario 28 (ticket 20260912-153000 item 1): the CREATE_NEW
     # retry loop survives 65 CONSECUTIVE forced collisions and still
     # succeeds on the 66th attempt -- proving there is no coded cap
@@ -825,7 +825,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.free(wp4_slot[0])
         c.free(fv4)
     ---
-
+#
     # --- Scenario 18: real end-to-end -- spawn a real shell wrapper
     # child, read its real merged output through the real process seam,
     # feed a real live byte stream through the scanner.
@@ -916,7 +916,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.free(marker2)
         c.free(gen2)
     ---
-
+#
     # --- Scenario 19: real end-to-end with a real nonzero exit code.
     if: 1
         @: MixaProcessMarkerGen gen3
@@ -985,12 +985,12 @@ fn: main (int: argc; @: @(char) argv) int
         c.free(marker3)
         c.free(gen3)
     ---
-
+#
     mixa_process_marker_scanner_release(sc)
     c.free(sc)
     c.free(sink)
     c.free(fsink)
-
+#
     if: failures = 0
         c.printf("process marker selftest: %d checks, 0 failures\n", checks)
     else:

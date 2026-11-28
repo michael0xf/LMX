@@ -147,7 +147,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.setbuf((cast: (@: void) c.stdout), 0)
     failures: 0
     checks: 0
-
+#
     if: argc >= 2
         c.snprintf(base, 520U, "%s", argv[1])
     else:
@@ -160,7 +160,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_touch(file_a, "a-content")
     c.snprintf(cmd, 2400U, "cmd /c mkdir \"%s\" 2>nul", subdir)
     c.system(cmd)
-
+#
     vt: mixa_backend_headless_table()
     checks: checks + 1
     if: vt = 0
@@ -193,7 +193,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("fmpanel_copyresult_e2e: fixture entries not both visible\n")
         return: 1
     ---
-
+#
     # --- Scenario 0: no result shown before anything runs.
     t_read_copy_result(upper, result, 64U)
     checks: checks + 1
@@ -201,7 +201,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fmpanel_copyresult_e2e: a result is shown before Copy Here ever ran: [%s]\n", result)
     ---
-
+#
     # --- Scenario 1: keyboard route (Ctrl+V). Copy Here targets fm's own
     # CURRENT directory (root), which is ALSO a.txt's own parent -- a
     # real, natural "copy onto its own directory" conflict, the exact
@@ -237,7 +237,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fmpanel_copyresult_e2e: a.txt's own selection was disturbed by the real copy failure\n")
     ---
-
+#
     # --- Scenario 2: requirement 5 -- an UNRELATED event (a click on a
     # blank area of the list, well away from any hit region) must not
     # change the displayed result.
@@ -248,7 +248,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fmpanel_copyresult_e2e: an unrelated click changed/cleared the displayed result: [%s]\n", result)
     ---
-
+#
     # --- Scenario 3: requirement 4 -- dismiss via the minimal, distinct
     # click region (action_row, action_col+20..+39), not overlapping
     # Delete (cols 0-6), Copy Here (cols 8-17), any entry row, or F1
@@ -267,7 +267,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fmpanel_copyresult_e2e: dismissing the result disturbed a.txt's own selection\n")
     ---
-
+#
     # --- Scenario 4: mouse route feeds the SAME visible-result path --
     # click Copy Here directly (same real conflict, same real status).
     t_click_upper(backend, ctrl, 21U, 10U)
@@ -277,7 +277,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fmpanel_copyresult_e2e: mouse route did not show the same real FAIL result: [%s]\n", result)
     ---
-
+#
     # --- Scenario 5: a genuinely successful Copy Here IS distinguishable
     # from a failure. Enter subdir (a real, different current directory
     # from a.txt's own parent) -- a.txt's own selection (tracked by path,
@@ -325,9 +325,9 @@ fn: main (int: argc; @: @(char) argv) int
             c.fclose(fh[0])
         ---
     ---
-
+#
     mixa_app_controller_close(ctrl)
-
+#
     if: failures = 0
         c.printf("fmpanel copyresult e2e selftest: %d checks, 0 failures\n", checks)
     else:

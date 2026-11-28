@@ -62,9 +62,9 @@ fn: main () int
     []: unsigned cp 1
     @: char s
     []: char buf 32
-
+#
     c.memset(rect, 0, c.sizeof(c.MixaTextRect))
-
+#
     c.printf("=== SCN 1 utf8_next: ascii, 2/3/4-byte, invalid, truncated ===\n")
     s: "A"
     s: mixa_draw_utf8_next(s, cp)
@@ -119,7 +119,7 @@ fn: main () int
     s: mixa_draw_utf8_next(s, cp)
     t_check_hex("s1_empty_cp0", cp[0], 0U)
     t_check_int("s1_empty_still_at_terminator", (cast: (int) (s[0] = 0)), 1)
-
+#
     c.printf("=== SCN 2 draw_text: writes, clips at edge, KEEP_BG, refusals ===\n")
     t_check_int("s2_open", mixa_rect_open(rect, 2U, 4U), 0)
     t_check_int("s2_text_ok", mixa_draw_text(rect, 0U, 0U, "AB", 1U, 2U, 0U, 255U), 0)
@@ -148,7 +148,7 @@ fn: main () int
     t_check_int("s2_text_row_oob_refused", mixa_draw_text(rect, 5U, 0U, "x", 0U, 0U, 0U, 0U), 1)
     t_check_int("s2_text_col_oob_refused", mixa_draw_text(rect, 0U, 5U, "x", 0U, 0U, 0U, 0U), 1)
     mixa_rect_release(rect)
-
+#
     c.printf("=== SCN 3 draw_fill: sub-rect fill, refusals ===\n")
     t_check_int("s3_open", mixa_rect_open(rect, 3U, 3U), 0)
     # fg=1, bg=200 (>=128, exercises the same signed-char reinterpretation
@@ -165,7 +165,7 @@ fn: main () int
     t_check_int("s3_fill_overrun_refused", mixa_draw_fill(rect, 2U, 2U, 2U, 2U, 0U, 0U, 0U, 0U, 0U), 1)
     t_check_int("s3_fill_null_rect_refused", mixa_draw_fill(0, 0U, 0U, 1U, 1U, 0U, 0U, 0U, 0U, 0U), 1)
     mixa_rect_release(rect)
-
+#
     c.printf("=== SCN 4 draw_line: horiz/vert, single/double, refusals ===\n")
     t_check_int("s4_open", mixa_rect_open(rect, 5U, 5U), 0)
     t_check_int("s4_hline_ok", mixa_draw_line(rect, 0U, 0U, 3U, MIXA_DRAW_HORIZ_LOCAL, MIXA_DRAW_SINGLE_LOCAL, 0U, 0U, 0U, 255U), 0)
@@ -181,7 +181,7 @@ fn: main () int
     t_check_int("s4_line_bad_orient_refused", mixa_draw_line(rect, 0U, 0U, 1U, 99, MIXA_DRAW_SINGLE_LOCAL, 0U, 0U, 0U, 0U), 1)
     t_check_int("s4_line_overrun_refused", mixa_draw_line(rect, 0U, 3U, 5U, MIXA_DRAW_HORIZ_LOCAL, MIXA_DRAW_SINGLE_LOCAL, 0U, 0U, 0U, 0U), 1)
     mixa_rect_release(rect)
-
+#
     c.printf("=== SCN 5 draw_frame: corners/edges, refusals ===\n")
     t_check_int("s5_open", mixa_rect_open(rect, 4U, 5U), 0)
     t_check_int("s5_frame_ok", mixa_draw_frame(rect, 0U, 0U, 4U, 5U, MIXA_DRAW_SINGLE_LOCAL, 0U, 0U, 0U, 255U), 0)
@@ -202,7 +202,7 @@ fn: main () int
     t_check_int("s5_frame_nrows_lt2_refused", mixa_draw_frame(rect, 0U, 0U, 1U, 5U, MIXA_DRAW_SINGLE_LOCAL, 0U, 0U, 0U, 0U), 1)
     t_check_int("s5_frame_overrun_refused", mixa_draw_frame(rect, 2U, 2U, 4U, 4U, MIXA_DRAW_SINGLE_LOCAL, 0U, 0U, 0U, 0U), 1)
     mixa_rect_release(rect)
-
+#
     c.printf("=== SCN 6 box merge: a crossing line produces real junction glyphs ===\n")
     t_check_int("s6_open", mixa_rect_open(rect, 5U, 5U), 0)
     # Frame FIRST: its top/bottom edge cells hold a plain L+R (mask 12)
@@ -226,7 +226,7 @@ fn: main () int
     p: mixa_cell_at(rect, 2U, 2U)
     t_check_hex("s6_interior_plain_vertical", p\codepoint, 0x2502U)
     mixa_rect_release(rect)
-
+#
     if: g_failures[0] != 0
         c.printf("mixa draw parity harness FAILED checks=%d\n", g_failures[0])
         return: 1

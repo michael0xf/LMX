@@ -32,7 +32,7 @@ fn: main (int: argc; @: @(char) argv) int
         return: 1
     ---
     mixa_cmdline_init(cl)
-
+#
     # --- Scenario 1: type "cd" -- insert grows the line and moves the
     # cursor to the end; extract_to_cursor returns exactly what was typed.
     mixa_cmdline_insert(cl, 0, 99U)
@@ -53,7 +53,7 @@ fn: main (int: argc; @: @(char) argv) int
     if: got != 0
         c.free(got)
     ---
-
+#
     # --- Scenario 2: cursor movement + insert-in-the-middle. "cd" ->
     # move home -> insert 'x' -> "xcd", cursor after x.
     mixa_cmdline_move_home(cl)
@@ -80,7 +80,7 @@ fn: main (int: argc; @: @(char) argv) int
     if: got != 0
         c.free(got)
     ---
-
+#
     # --- Scenario 3: extract-to-cursor stops at the cursor, NOT at the
     # line's end -- FIRST_VERSION's own "start UP TO THE CURSOR", proven
     # with characters still present AFTER the cursor.
@@ -102,7 +102,7 @@ fn: main (int: argc; @: @(char) argv) int
     if: got != 0
         c.free(got)
     ---
-
+#
     # --- Scenario 4: backspace and delete-forward, including the no-op
     # edges (cursor at 0 / cursor at end).
     mixa_cmdline_move_home(cl)
@@ -144,7 +144,7 @@ fn: main (int: argc; @: @(char) argv) int
     if: got != 0
         c.free(got)
     ---
-
+#
     # --- Scenario 5: clear resets len/cursor to 0 without changing the
     # allocated capacity (cheap reuse), and a fresh insert afterward works.
     mixa_cmdline_clear(cl)
@@ -165,7 +165,7 @@ fn: main (int: argc; @: @(char) argv) int
     if: got != 0
         c.free(got)
     ---
-
+#
     # --- Scenario 6: a real UTF-8 multi-byte codepoint (Cyrillic, U+043F
     # 'п') round-trips through insert->extract exactly.
     mixa_cmdline_clear(cl)
@@ -186,7 +186,7 @@ fn: main (int: argc; @: @(char) argv) int
     if: got != 0
         c.free(got)
     ---
-
+#
     # --- Scenario 7: extract on an EMPTY line returns an empty string,
     # not null and not an error.
     mixa_cmdline_clear(cl)
@@ -201,7 +201,7 @@ fn: main (int: argc; @: @(char) argv) int
     if: got != 0
         c.free(got)
     ---
-
+#
     # --- Scenario 8: argument negatives.
     checks: checks + 1
     if: mixa_cmdline_insert(0, 0, 65U) != MIXA_CMDLINE_ERR_ARG
@@ -229,7 +229,7 @@ fn: main (int: argc; @: @(char) argv) int
     mixa_cmdline_clear(0)
     checks: checks + 1
     c.printf("cmdline: null-safe editing calls did not crash (checked by reaching this line)\n")
-
+#
     # --- Scenario 9: deterministic allocation failure on the FIRST
     # growth -- ERR_NOMEM, the line untouched (still whatever it was
     # before the failed insert).
@@ -258,7 +258,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.free(cl2)
         c.free(fv)
     ---
-
+#
     # --- Scenario 10: by-character wrap arithmetic (pure). A line
     # starting at (row=2, col=78) on an 80-column, 24-row screen wraps
     # its 3rd character (index 2) onto the next row.
@@ -297,10 +297,10 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("cmdline: scenario10 null out_row should be ERR_ARG\n")
     ---
-
+#
     mixa_cmdline_release(cl)
     c.free(cl)
-
+#
     if: failures = 0
         c.printf("cmdline selftest: %d checks, 0 failures\n", checks)
     else:

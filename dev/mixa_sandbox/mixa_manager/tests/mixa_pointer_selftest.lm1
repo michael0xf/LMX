@@ -32,7 +32,7 @@ fn: main () int
     size_t: max_sz
     failures: 0
     max_sz: (cast: (size_t) -1)
-
+#
     p: (cast: (@: MixaPointer) c.calloc(1U, c.sizeof(c.MixaPointer)))
     if: p = 0
         c.printf("mixa pointer: alloc failed\n")
@@ -40,11 +40,11 @@ fn: main () int
     if: mixa_pointer_init(p) != MIXA_POINTER_OK
         c.printf("mixa pointer: init failed\n")
         return: 1
-
+#
     # Initial octant before any move: down-right U+2B0A
     expect_oct(p\octant, MIXA_POINTER_DOWN_RIGHT, "initial octant", @ failures)
     expect_cp(mixa_pointer_codepoint(p), MIXA_POINTER_CP_DOWN_RIGHT, "initial cp", @ failures)
-
+#
     # Zero displacement leaves octant unchanged
     oc: mixa_pointer_octant_from_delta((cast: (i32) 0), (cast: (i32) 0), MIXA_POINTER_DOWN_RIGHT)
     expect_oct(oc, MIXA_POINTER_DOWN_RIGHT, "zero keeps prev", @ failures)
@@ -55,7 +55,7 @@ fn: main () int
     if: p\row != 0U || p\col != 0U
         c.printf("mixa pointer: zero nudge moved position\n")
         failures: failures + 1
-
+#
     # All eight octants (both signs)
     expect_oct(mixa_pointer_octant_from_delta((cast: (i32) 0), (cast: (i32) -10), 0), MIXA_POINTER_UP, "up", @ failures)
     expect_oct(mixa_pointer_octant_from_delta((cast: (i32) 10), (cast: (i32) -10), 0), MIXA_POINTER_UP_RIGHT, "up-right", @ failures)
@@ -65,7 +65,7 @@ fn: main () int
     expect_oct(mixa_pointer_octant_from_delta((cast: (i32) -10), (cast: (i32) 10), 0), MIXA_POINTER_DOWN_LEFT, "down-left", @ failures)
     expect_oct(mixa_pointer_octant_from_delta((cast: (i32) -10), (cast: (i32) 0), 0), MIXA_POINTER_LEFT, "left", @ failures)
     expect_oct(mixa_pointer_octant_from_delta((cast: (i32) -10), (cast: (i32) -10), 0), MIXA_POINTER_UP_LEFT, "up-left", @ failures)
-
+#
     # Codepoints for each octant
     expect_cp(mixa_pointer_codepoint_for_octant(MIXA_POINTER_UP), MIXA_POINTER_CP_UP, "cp up", @ failures)
     expect_cp(mixa_pointer_codepoint_for_octant(MIXA_POINTER_UP_RIGHT), MIXA_POINTER_CP_UP_RIGHT, "cp ur", @ failures)
@@ -75,7 +75,7 @@ fn: main () int
     expect_cp(mixa_pointer_codepoint_for_octant(MIXA_POINTER_DOWN_LEFT), MIXA_POINTER_CP_DOWN_LEFT, "cp dl", @ failures)
     expect_cp(mixa_pointer_codepoint_for_octant(MIXA_POINTER_LEFT), MIXA_POINTER_CP_LEFT, "cp left", @ failures)
     expect_cp(mixa_pointer_codepoint_for_octant(MIXA_POINTER_UP_LEFT), MIXA_POINTER_CP_UP_LEFT, "cp ul", @ failures)
-
+#
     # Boundary 5/12: just inside / just outside (strict <)
     expect_oct(mixa_pointer_octant_from_delta((cast: (i32) 12), (cast: (i32) 4), 0), MIXA_POINTER_RIGHT, "horiz inside +", @ failures)
     expect_oct(mixa_pointer_octant_from_delta((cast: (i32) -12), (cast: (i32) 4), 0), MIXA_POINTER_LEFT, "horiz inside -", @ failures)
@@ -83,21 +83,21 @@ fn: main () int
     expect_oct(mixa_pointer_octant_from_delta((cast: (i32) 12), (cast: (i32) 5), 0), MIXA_POINTER_DOWN_RIGHT, "horiz outside +", @ failures)
     expect_oct(mixa_pointer_octant_from_delta((cast: (i32) -12), (cast: (i32) 5), 0), MIXA_POINTER_DOWN_LEFT, "horiz outside -", @ failures)
     expect_oct(mixa_pointer_octant_from_delta((cast: (i32) 12), (cast: (i32) -5), 0), MIXA_POINTER_UP_RIGHT, "horiz outside dy-", @ failures)
-
+#
     expect_oct(mixa_pointer_octant_from_delta((cast: (i32) 4), (cast: (i32) 12), 0), MIXA_POINTER_DOWN, "vert inside +", @ failures)
     expect_oct(mixa_pointer_octant_from_delta((cast: (i32) 4), (cast: (i32) -12), 0), MIXA_POINTER_UP, "vert inside -", @ failures)
     expect_oct(mixa_pointer_octant_from_delta((cast: (i32) -4), (cast: (i32) 12), 0), MIXA_POINTER_DOWN, "vert inside dx-", @ failures)
     expect_oct(mixa_pointer_octant_from_delta((cast: (i32) 5), (cast: (i32) 12), 0), MIXA_POINTER_DOWN_RIGHT, "vert outside +", @ failures)
     expect_oct(mixa_pointer_octant_from_delta((cast: (i32) -5), (cast: (i32) 12), 0), MIXA_POINTER_DOWN_LEFT, "vert outside -", @ failures)
     expect_oct(mixa_pointer_octant_from_delta((cast: (i32) 5), (cast: (i32) -12), 0), MIXA_POINTER_UP_RIGHT, "vert outside dy-", @ failures)
-
+#
     # Underflow position refused; octant must stay unchanged on failed nudge
     rc: mixa_pointer_nudge(p, (cast: (i32) 0), (cast: (i32) -1))
     if: rc == MIXA_POINTER_OK
         c.printf("mixa pointer: nudge up from row0 should fail\n")
         failures: failures + 1
     expect_unchanged(p, MIXA_POINTER_DOWN_RIGHT, 0U, 0U, "failed pure-up nudge", @ failures)
-
+#
     # Mixed-axis underflow: dx would succeed, dy underflows — ALL state unchanged
     # (review: prior code wrote col before validating dy)
     rc: mixa_pointer_nudge(p, (cast: (i32) 1), (cast: (i32) -1))
@@ -105,7 +105,7 @@ fn: main () int
         c.printf("mixa pointer: mixed under dx+ dy- from origin should fail\n")
         failures: failures + 1
     expect_unchanged(p, MIXA_POINTER_DOWN_RIGHT, 0U, 0U, "mixed under dx+dy-", @ failures)
-
+#
     # Mixed-axis underflow other order: park col>0 row=0; dx- ok then dy- fails
     p\row: 0U
     p\col: 10U
@@ -115,7 +115,7 @@ fn: main () int
         c.printf("mixa pointer: mixed under dx- dy- from row0 should fail\n")
         failures: failures + 1
     expect_unchanged(p, MIXA_POINTER_LEFT, 0U, 10U, "mixed under dx-dy-", @ failures)
-
+#
     # Mixed-axis overflow: col at max; dx+ overflows, dy- would succeed
     p\row: 10U
     p\col: max_sz
@@ -125,7 +125,7 @@ fn: main () int
         c.printf("mixa pointer: mixed over dx+ dy- at colmax should fail\n")
         failures: failures + 1
     expect_unchanged(p, MIXA_POINTER_UP, 10U, max_sz, "mixed over dx+dy-", @ failures)
-
+#
     # Mixed-axis overflow: row at max; dx+ would succeed, dy+ overflows
     p\row: max_sz
     p\col: 10U
@@ -135,12 +135,12 @@ fn: main () int
         c.printf("mixa pointer: mixed over dx+ dy+ at rowmax should fail\n")
         failures: failures + 1
     expect_unchanged(p, MIXA_POINTER_RIGHT, max_sz, 10U, "mixed over dx+dy+", @ failures)
-
+#
     # Reset to origin for remaining park tests
     p\row: 0U
     p\col: 0U
     p\octant: MIXA_POINTER_DOWN_RIGHT
-
+#
     # Park away from origin; move_to and nudge update octant + position
     if: mixa_pointer_move_to(p, 20U, 20U) != MIXA_POINTER_OK
         c.printf("mixa pointer: move_to park failed\n")
@@ -158,18 +158,18 @@ fn: main () int
         failures: failures + 1
     expect_oct(p\octant, MIXA_POINTER_UP, "zero keeps up", @ failures)
     expect_cp(mixa_pointer_codepoint(p), MIXA_POINTER_CP_UP, "zero keeps up cp", @ failures)
-
+#
     if: mixa_pointer_move_to(p, p\row, p\col) != MIXA_POINTER_OK
         c.printf("mixa pointer: move_to same failed\n")
         failures: failures + 1
     expect_oct(p\octant, MIXA_POINTER_UP, "move_to same keeps up", @ failures)
-
+#
     # INT32_MIN abs path: pure left (horizontal)
     expect_oct(mixa_pointer_octant_from_delta((cast: (i32) -2147483647) - (cast: (i32) 1), (cast: (i32) 0), MIXA_POINTER_UP), MIXA_POINTER_LEFT, "INT_MIN left", @ failures)
-
+#
     mixa_pointer_release(p)
     c.free(p)
-
+#
     if: failures != 0
         c.printf("mixa pointer selftest FAILED checks=%d\n", failures)
         return: 1

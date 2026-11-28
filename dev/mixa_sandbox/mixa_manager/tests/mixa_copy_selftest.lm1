@@ -169,7 +169,7 @@ fn: main (int: argc; @: @(char) argv) int
     failures: 0
     checks: 0
     g_fault_at: -1
-
+#
     if: argc >= 2
         c.snprintf(base, 520U, "%s", argv[1])
     ---
@@ -185,7 +185,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(dest1, 1040U, "%s\\dest1", base)
     c.snprintf(dest2, 1040U, "%s\\dest2", base)
     c.snprintf(dest3, 1040U, "%s\\dest3", base)
-
+#
     c.snprintf(cmd, 2400U, "cmd /c mkdir \"%s\" 2>nul", src_root)
     c.system(cmd)
     c.snprintf(cmd, 2400U, "cmd /c mkdir \"%s\" 2>nul", dira)
@@ -205,7 +205,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(p1, 1200U, "%s\\b1.txt", dirb)
     t_touch(p1, "content-b1")
     t_touch(single_file, "top-level-content")
-
+#
     sel: (cast: (@: MixaSelection) c.calloc(1U, c.sizeof(c.MixaSelection)))
     if: sel = 0
         c.printf("copy: alloc failed\n")
@@ -218,7 +218,7 @@ fn: main (int: argc; @: @(char) argv) int
         return: 1
     ---
     sink: t_sink()
-
+#
     # --- Scenario 1: content equality. Select the whole tree, copy into
     # dest1, verify every real byte round-trips and the structure is
     # rebuilt correctly.
@@ -261,7 +261,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("copy: fully-copied root was not deselected\n")
     ---
-
+#
     # --- Scenario 2: existing-destination preservation. Copying the same
     # tree again refuses EVERY file with the real Win32 status (no
     # overwrite). A per-file conflict does not abort the whole copy --
@@ -297,7 +297,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("copy: root wrongly deselected when every file conflicted\n")
     ---
     mixa_selection_deselect(sel, src_root)
-
+#
     # --- Scenario 3: a directory that already exists at the destination
     # is MERGED into (not an error) -- only files respect no-overwrite.
     # Fresh, isolated selection: select ONLY dirb (src_root is NOT
@@ -351,7 +351,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("copy: dirb wrongly deselected while b1.txt still conflicts\n")
     ---
     mixa_selection_deselect(sel, dirb)
-
+#
     # --- Scenario 4: cancellation and retry. Fresh selection (src_root
     # only). Cancel a copy partway (on the 2nd event), leaving whatever
     # finished on disk and the source root still selected; running again
@@ -399,7 +399,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("copy: root not deselected once retry actually finished it\n")
     ---
-
+#
     # --- Scenario 5: an I/O failure mid-file. The fault hook forces a
     # real write failure after 4 real bytes; the partial destination file
     # is cleaned up (removed), the file event reports the exact status,
@@ -450,7 +450,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("copy: retried file content=[%s]\n", readbuf)
     ---
-
+#
     # --- Scenario 6: nested-destination termination. Copying dira into a
     # destination that is INSIDE dira itself is refused up front, with no
     # descent and no directory created.
@@ -483,7 +483,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("copy: dest==source rc=%d want ERR_NESTED\n", rc)
     ---
     mixa_selection_deselect(sel, dira)
-
+#
     # --- Scenario 7: a resolved destination that is NOT inside the
     # source is unaffected by the nested check -- ordinary unrelated
     # copies still work (already exercised above, reconfirmed with a
@@ -501,7 +501,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("copy: prefix-sharing sibling dest rc=%d want OK\n", rc)
     ---
-
+#
     # --- Scenario 8: argument negatives.
     checks: checks + 1
     if: mixa_copy_run(0, dest1, sink, 0) != MIXA_COPY_ERR_ARG
@@ -528,10 +528,10 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("copy: empty selection rc=%d calls=%d\n", rc, g_calls)
     ---
-
+#
     mixa_selection_release(sel)
     c.free(sel)
-
+#
     if: failures = 0
         c.printf("copy selftest: %d checks, 0 failures\n", checks)
     else:

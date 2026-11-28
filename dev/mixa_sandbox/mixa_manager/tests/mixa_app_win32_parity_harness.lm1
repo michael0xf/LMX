@@ -90,7 +90,7 @@ fn: main (int: argc; @: @(char) argv) int
     seen[1]: 0
     seen[2]: 0
     seen[3]: 0
-
+#
     nm_sp[0]: (cast: (char) 0x73)
     nm_sp[1]: (cast: (char) 0x70)
     nm_sp[2]: (cast: (char) 0x20)
@@ -107,7 +107,7 @@ fn: main (int: argc; @: @(char) argv) int
     nm_sp[13]: (cast: (char) 0xD0)
     nm_sp[14]: (cast: (char) 0xBB)
     nm_sp[15]: 0
-
+#
     if: argc >= 2
         c.snprintf(base, 520U, "%s", argv[1])
     ---
@@ -132,7 +132,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(e_url, 1040U, "%s\\c_url.link", appdir)
     c.snprintf(e_broken, 1040U, "%s\\d_broken.link", appdir)
     c.snprintf(e_missing, 1040U, "%s\\no_entry.link", appdir)
-
+#
     # H1: inspect does not launch and never executes anything.
     mf[0]: c.fopen(marker, "rb")
     checks: checks + 1
@@ -143,7 +143,7 @@ fn: main (int: argc; @: @(char) argv) int
     if: mf[0] != 0
         c.fclose(mf[0])
     ---
-
+#
     # H2: inspect negatives.
     st: mixa_app_inspect(0, @ e1[0])
     checks: checks + 1
@@ -163,7 +163,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("app: inspect missing rc=%d\n", st)
     ---
-
+#
     # H3: real .lnk (WScript.Shell fixture) is a SHELL_LINK launcher.
     st: mixa_app_inspect(p_valid, @ e1[0])
     checks: checks + 1
@@ -186,7 +186,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("app: valid ref=%s\n", mixa_app_entry_launch_ref(@ e1[0]))
     ---
-
+#
     # H4: unicode + space .lnk name round trip (UTF-8 bytes).
     st: mixa_app_inspect(p_space, @ e1[0])
     checks: checks + 1
@@ -204,7 +204,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("app: space ref mismatch\n")
     ---
-
+#
     # H5: .url is a URL_LINK launcher (never invoked -> no browser).
     st: mixa_app_inspect(p_url, @ e1[0])
     checks: checks + 1
@@ -212,7 +212,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("app: url kind=%d rc=%d\n", mixa_app_entry_kind(@ e1[0]), st)
     ---
-
+#
     # H6: unrelated files/directories are UNSUPPORTED; junction is FS_LINK.
     st: mixa_app_inspect(p_plain, @ e1[0])
     checks: checks + 1
@@ -226,7 +226,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("app: junc kind=%d rc=%d\n", mixa_app_entry_kind(@ e1[0]), st)
     ---
-
+#
     # H7: create only accepts real launcher kinds.
     st: mixa_app_entry_create(p_plain, e_valid, @ e1[0])
     checks: checks + 1
@@ -240,7 +240,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("app: create missing rc=%d\n", st)
     ---
-
+#
     # H8: create + read-back round trip.
     st: mixa_app_entry_create(p_valid, e_valid, @ e1[0])
     checks: checks + 1
@@ -283,7 +283,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("app: read missing rc=%d\n", st)
     ---
-
+#
     # H9: list our own *.link entries in appdir (4 expected).
     st: mixa_app_list_open(@ h[0], appdir)
     checks: checks + 1
@@ -340,7 +340,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("app: list next-after-end rc=%d\n", st)
     ---
     mixa_app_list_close(h[0])
-
+#
     # H10: empty dir list.
     st: mixa_app_list_open(@ h[0], emptydir)
     checks: checks + 1
@@ -355,7 +355,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("app: empty next rc=%d\n", st)
     ---
     mixa_app_list_close(h[0])
-
+#
     # H11: corrupt entry file -> ERR_IO.
     st: mixa_app_list_open(@ h[0], corruptdir)
     checks: checks + 1
@@ -370,7 +370,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("app: corrupt rc=%d want ERR_IO\n", st)
     ---
     mixa_app_list_close(h[0])
-
+#
     # H12: list negatives.
     st: mixa_app_list_open(0, appdir)
     checks: checks + 1
@@ -397,7 +397,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("app: list_next(out=NULL) rc=%d\n", st)
     ---
     mixa_app_list_close(0)
-
+#
     # H13: invoke negatives.
     st: mixa_app_invoke(0)
     checks: checks + 1
@@ -411,7 +411,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("app: invoke missing rc=%d\n", st)
     ---
-
+#
     # H14: invoke broken .lnk target -> ERR_LAUNCH (no UI shown).
     st: mixa_app_invoke(e_broken)
     checks: checks + 1
@@ -419,7 +419,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("app: invoke broken rc=%d want ERR_LAUNCH\n", st)
     ---
-
+#
     # H15: real invoke launches the fixture exe and it writes the marker.
     # Same already-accepted, already-automated real-invoke pattern as
     # mixa_app_selftest.lm1's own T15: a harmless test-owned fixture exe
@@ -448,7 +448,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("app: marker never appeared after invoke\n")
     ---
-
+#
     # H16: remove + re-remove.
     st: mixa_app_entry_remove(e_valid)
     checks: checks + 1
@@ -474,12 +474,12 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("app: remove(NULL) rc=%d\n", st)
     ---
-
+#
     c.snprintf(e_long, 1040U, "%s\\e_long.link", base)
     c.snprintf(p_tiny_empty, 1040U, "%s\\tinyfiles\\empty.link", base)
     c.snprintf(p_tiny_one, 1040U, "%s\\tinyfiles\\onebyte.link", base)
     c.snprintf(p_tiny_short, 1040U, "%s\\tinyfiles\\sixteen.link", base)
-
+#
     # H17: entry_to_text preserves launch_ref > 127 bytes without
     # truncation. Each step is reserved as its own unconditionally-
     # counted check (never silently skipped by an earlier failure),
@@ -542,7 +542,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("app: long_ref not preserved after round-trip, or skipped\n")
     ---
-
+#
     # H18: list_next with a corrupted (invalid) handle returns ERR_IO, not
     # END. A purpose-made fake object (never a real find-handle from an
     # actual list_open), same reasoning as mixa_app_selftest.lm1's own
@@ -571,7 +571,7 @@ fn: main (int: argc; @: @(char) argv) int
         ---
         mixa_app_list_close(bad)
     ---
-
+#
     # H19: entry_read on empty, 1-byte, and 16-byte (truncated header)
     # inputs returns ERR_IO.
     st: mixa_app_entry_read(p_tiny_empty, @ e1[0])
@@ -592,7 +592,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("app: 16-byte entry_read rc=%d want ERR_IO\n", st)
     ---
-
+#
     c.printf("mixa app win32 parity harness: %d checks, %d failures\n", checks, failures)
     if: failures != 0
         return: 1

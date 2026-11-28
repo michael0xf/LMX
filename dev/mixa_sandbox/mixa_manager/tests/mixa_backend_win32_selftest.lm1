@@ -92,7 +92,7 @@ fn: main () int
     th: 0U
     uw: 0U
     uh: 0U
-
+#
     be: 0
     rect: (cast: (@: MixaTextRect) c.calloc(1U, c.sizeof(c.MixaTextRect)))
     upper: (cast: (@: MixaTextRect) c.calloc(1U, c.sizeof(c.MixaTextRect)))
@@ -102,12 +102,12 @@ fn: main () int
     if: rect = 0 || upper = 0 || got = 0 || pump = 0 || m = 0
         c.printf("mixa win32: alloc failed\n")
         return: 1
-
+#
     vt: mixa_backend_win32_hidden_table()
     if: vt = 0 || mixa_backend_table_valid(vt) = 0
         c.printf("mixa win32: table missing/invalid\n")
         return: 1
-
+#
     # --- open refusals ---
     if: mixa_backend_open(vt, @ be, 3U, 2U, 0) = 0
         c.printf("mixa win32: open accepted null metrics\n")
@@ -156,7 +156,7 @@ fn: main () int
     if: mixa_backend_open(vt, @ be, ((cast: (size_t) -1) / 2U) + 1U, 1U, m) = 0
         c.printf("mixa win32: open accepted overflow dims\n")
         failures: failures + 1
-
+#
     # Request absurd cells; Win32 must overwrite with the font's native metrics.
     m\text_cell_width: 4U
     m\text_cell_height: 6U
@@ -278,12 +278,12 @@ fn: main () int
     if: w\hwnd = 0
         c.printf("mixa win32: open left hwnd null\n")
         failures: failures + 1
-
+#
     # Drain create-time WM_SIZE and friends.
     if: mixa_win32_drain(be, got, 64) != 0
         c.printf("mixa win32: drain after open stuck\n")
         failures: failures + 1
-
+#
     w: (cast: (@: MixaWin32) be)
     first_bits: w\bits
     be2: 0
@@ -309,7 +309,7 @@ fn: main () int
         failures: failures + 1
     mixa_backend_close(be2)
     be2: 0
-
+#
     # present short refused
     i: 0U
     while: i < 4U
@@ -340,7 +340,7 @@ fn: main () int
     if: mixa_win32_frame_at(be, 0U, 0U, pix) != 0 || pix[0] != 1
         c.printf("mixa win32: short present still mutated frame\n")
         failures: failures + 1
-
+#
     i: 0U
     while: i < n
         out[i]: (cast: (MixaU8) 2)
@@ -352,7 +352,7 @@ fn: main () int
     if: mixa_win32_frame_at(be, 0U, 0U, pix) != 0 || pix[0] != 2
         c.printf("mixa win32: second present did not replace\n")
         failures: failures + 1
-
+#
     # poll empty
     if: mixa_backend_poll(be, got) != 0
         c.printf("mixa win32: poll empty returned error\n")
@@ -364,7 +364,7 @@ fn: main () int
     if: mixa_backend_poll(be, got) != 0 || got\kind != MIXA_EVENT_NONE
         c.printf("mixa win32: second empty poll stale or error\n")
         failures: failures + 1
-
+#
     # clipboard UTF-8 round-trip
     if: mixa_backend_clipboard_set(be, "ok\xD0\xA9") != 0
         c.printf("mixa win32: clipboard_set failed\n")
@@ -398,7 +398,7 @@ fn: main () int
     if: clip_out[0] != (cast: (char) 0)
         c.printf("mixa win32: empty clipboard did not write NUL\n")
         failures: failures + 1
-
+#
     # --- e2e composite + present (STUB path: mixa_composite, no backend glyphs) ---
     mixa_backend_close(be)
     be: 0
@@ -453,7 +453,7 @@ fn: main () int
     if: pix[0] != 255 || pix[1] != 255 || pix[2] != 255 || pix[3] != 255
         c.printf("mixa win32: e2e glyph not palette[fg]\n")
         failures: failures + 1
-
+#
     # фон пары PleaseWait = {128,192,255} (в клетке -- индекс, RGB живёт в палитре)
     c.memset(upper\cells, 0, upper\rows * upper\cols * c.sizeof(c.MixaCell))
     ucell: mixa_cell_at(upper, 0U, 1U)
@@ -475,7 +475,7 @@ fn: main () int
     if: pix[0] != 128 || pix[1] != 192 || pix[2] != 255 || pix[3] != 255
         c.printf("mixa win32: opaque overlay did not cover glyph\n")
         failures: failures + 1
-
+#
     # --- input via PostMessage ---
     # WM_CHAR 258 with codepoint 1041 (Cyrillic Be)
     w: (cast: (@: MixaWin32) be)
@@ -486,7 +486,7 @@ fn: main () int
     if: got\kind != MIXA_EVENT_KEY || got\codepoint != 1041U || got\keycode != MIXA_KEY_NONE
         c.printf("mixa win32: text key fields wrong kind=%d cp=%u kc=%d\n", got\kind, got\codepoint, got\keycode)
         failures: failures + 1
-
+#
     # WM_KEYDOWN 256 VK_F5=116
     w: (cast: (@: MixaWin32) be)
     c.PostMessageA(w\hwnd, 256U, 116U, 0)
@@ -496,7 +496,7 @@ fn: main () int
     if: got\kind != MIXA_EVENT_KEY || got\codepoint != 0U || got\keycode != MIXA_KEY_F5
         c.printf("mixa win32: F5 fields wrong\n")
         failures: failures + 1
-
+#
     # mouse: pixels -> HALF-cells; pixel(tw,0) => half-col 2. WM_LBUTTONDOWN=513
     w: (cast: (@: MixaWin32) be)
     c.PostMessageA(w\hwnd, 513U, 5U, 0)
@@ -512,7 +512,7 @@ fn: main () int
     if: (got\modifiers & MIXA_MOD_SHIFT) = 0U
         c.printf("mixa win32: mouse0 missing SHIFT from MK_SHIFT\n")
         failures: failures + 1
-
+#
     px: tw
     py: 0U
     w: (cast: (@: MixaWin32) be)
@@ -523,7 +523,7 @@ fn: main () int
     if: got\kind != MIXA_EVENT_MOUSE || got\col != 2U || got\row != 0U
         c.printf("mixa win32: mouse1 half-cell wrong (expected col 2)\n")
         failures: failures + 1
-
+#
     # --- resize grow 3x2 -> 5x4 via WM_SIZE (client = 5*tw x 4*th) ---
     grow_cols: 5U
     grow_rows: 4U
@@ -581,7 +581,7 @@ fn: main () int
     if: mixa_backend_present(be, out, old_bytes) = 0
         c.printf("mixa win32: present OLD size after grow accepted\n")
         failures: failures + 1
-
+#
     # --- shrink 5x4 -> 2x1 (client = 2*tw x 1*th) ---
     shrink_cols: 2U
     shrink_rows: 1U
@@ -632,7 +632,7 @@ fn: main () int
     if: mixa_win32_frame_at(be, shrink_px_w, 0U, pix) = 0
         c.printf("mixa win32: frame_at outside shrink w accepted\n")
         failures: failures + 1
-
+#
     # --- adopt failure: WM_SIZE with client smaller than one cell (cols=0) ---
     # SIZE_MAX overflow cannot be injected: WM_SIZE packs cx/cy into 16-bit LOWORD/HIWORD.
     w: (cast: (@: MixaWin32) be)
@@ -665,7 +665,7 @@ fn: main () int
     if: mixa_win32_frame_at(be, 0U, 0U, pix) != 0 || pix[0] != 11
         c.printf("mixa win32: old pixels lost after zero-cell resize\n")
         failures: failures + 1
-
+#
     # --- pump driven from Win32: burst PostMessage, single drain, turn boundary ---
     # Geometry here is 2x1 cell 4x5 after shrink + failed zero-cell adopt.
     # Clear any leftover queue noise before the burst.
@@ -676,7 +676,7 @@ fn: main () int
     if: mixa_pump_open(pump) != 0
         c.printf("mixa win32: pump open failed\n")
         failures: failures + 1
-
+#
     # Burst: WM_CHAR, WM_KEYDOWN F5, WM_LBUTTONDOWN, WM_SIZE grow 2x1 -> 5x4
     grow_cols: 5U
     grow_rows: 4U
@@ -690,7 +690,7 @@ fn: main () int
     c.PostMessageA(w\hwnd, 513U, 1U, 0)
     w: (cast: (@: MixaWin32) be)
     c.PostMessageA(w\hwnd, 5U, 0U, (cast: (LPARAM) (grow_px_w | (grow_px_h << 16U))))
-
+#
     # Single drain only -- do not loop drain-until-empty if the burst fragments.
     if: mixa_pump_drain(pump, be) != 0
         c.printf("mixa win32: pump drain burst failed\n")
@@ -702,7 +702,7 @@ fn: main () int
     if: mixa_backend_poll(be, got) != 0 || got\kind != MIXA_EVENT_NONE
         c.printf("mixa win32: backend not empty after pump drain\n")
         failures: failures + 1
-
+#
     if: mixa_pump_next(pump, got) != 0 || got\kind != MIXA_EVENT_KEY || got\codepoint != 1041U || got\keycode != MIXA_KEY_NONE
         c.printf("mixa win32: pump next burst[0] CHAR wrong\n")
         failures: failures + 1
@@ -726,7 +726,7 @@ fn: main () int
     if: mixa_pump_next(pump, got) = 0
         c.printf("mixa win32: pump next after burst still had events\n")
         failures: failures + 1
-
+#
     # Turn boundary against real Win32 source: post AFTER drain; not in this inbox.
     w: (cast: (@: MixaWin32) be)
     c.PostMessageA(w\hwnd, 258U, 66U, 0)
@@ -761,10 +761,9 @@ fn: main () int
     if: mixa_pump_next(pump, got) != 0 || got\codepoint != 99U
         c.printf("mixa win32: mid-turn event not taken by next drain\n")
         failures: failures + 1
-
+#
     mixa_pump_release(pump)
-
-
+#
     # --- TASK23: glyph rasterization ---
     g1: (cast: (@: MixaGlyph) c.calloc(1U, c.sizeof(c.MixaGlyph)))
     g2: (cast: (@: MixaGlyph) c.calloc(1U, c.sizeof(c.MixaGlyph)))
@@ -816,7 +815,7 @@ fn: main () int
             failures: failures + 1
         ---
     ---
-
+#
     # DWORD GDI_ERROR must be tested before widening to size_t (Windows LLP64: DWORD32 vs size_t64).
     gdi_err: 0xFFFFFFFFU
     gdi_wide: (cast: (size_t) gdi_err)
@@ -853,7 +852,7 @@ fn: main () int
         failures: failures + 1
     ---
     mixa_win32_test_set_force_ggo_error(be, 0)
-
+#
     # Injectable GetGlyphIndicesW GDI_ERROR: hard-fail + reselect; distinct from 0xFFFF missing.
     mixa_win32_test_set_force_ggo_error(be, 4)
     c.memset(g1, 0, c.sizeof(c.MixaGlyph))
@@ -873,7 +872,7 @@ fn: main () int
             failures: failures + 1
         ---
     ---
-
+#
     # Missing codepoint: unassigned BMP U+0378 must not be blank-substituted.
     c.memset(g1, 0, c.sizeof(c.MixaGlyph))
     if: mixa_backend_glyph(be, MIXA_LAYER_TEXT, 0x0378U, g1) != 0
@@ -889,7 +888,7 @@ fn: main () int
             failures: failures + 1
         ---
     ---
-
+#
     # Wide: fullwidth A U+FF21 should advance two cells on MS Gothic / NSimSun.
     c.memset(g1, 0, c.sizeof(c.MixaGlyph))
     if: mixa_backend_glyph(be, MIXA_LAYER_TEXT, 0xFF21U, g1) != 0
@@ -905,7 +904,7 @@ fn: main () int
             failures: failures + 1
         ---
     ---
-
+#
     # Real-glyph composite: non-bg pixels inside the cell, none outside it.
     mixa_rect_release(rect)
     mixa_rect_release(upper)
@@ -996,7 +995,7 @@ fn: main () int
     ---
     c.free(g1)
     c.free(g2)
-
+#
     # WM_CLOSE
     w: (cast: (@: MixaWin32) be)
     c.PostMessageA(w\hwnd, 16U, 0U, 0)
@@ -1006,7 +1005,7 @@ fn: main () int
     if: got\kind != MIXA_EVENT_CLOSE
         c.printf("mixa win32: close event missing\n")
         failures: failures + 1
-
+#
     # close frees; null ops refused
     mixa_backend_close(be)
     be: 0
@@ -1030,7 +1029,7 @@ fn: main () int
     if: got\kind != MIXA_EVENT_NONE
         c.printf("mixa win32: poll on null did not write NONE\n")
         failures: failures + 1
-
+#
     c.free(out)
     mixa_rect_release(upper)
     mixa_rect_release(rect)
@@ -1040,7 +1039,7 @@ fn: main () int
     c.free(pump)
     c.free(m)
     # be freed by close
-
+#
     if: failures != 0
         c.printf("mixa win32 backend selftest FAILED checks=%d\n", failures)
         return: 1

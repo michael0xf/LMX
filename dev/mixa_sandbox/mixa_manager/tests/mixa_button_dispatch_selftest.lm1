@@ -35,11 +35,11 @@ fn: main () int
     int: checks
     const: @(MixaCell cq)
     int: sentinel_ctx
-
+#
     failures: 0
     checks: 0
     sentinel_ctx: 7
-
+#
     rect: (cast: (@: MixaTextRect) c.calloc(1U, c.sizeof(c.MixaTextRect)))
     panel: (cast: (@: MixaButtonPanel) c.calloc(1U, c.sizeof(c.MixaButtonPanel)))
     actions: (cast: (@: MixaButtonAction) c.calloc(1U, c.sizeof(c.MixaButtonAction)))
@@ -48,7 +48,7 @@ fn: main () int
         c.printf("button dispatch: alloc failed\n")
         return: 1
     ---
-
+#
     # "нет функции" as UTF-8 (NUL-terminated) -- same bytes as
     # mixa_app_window_selftest.lm1's own fixture, reused verbatim so a
     # transcription slip here can't silently diverge from the already-
@@ -75,7 +75,7 @@ fn: main () int
     msg[19]: (cast: (char 0xD0))
     msg[20]: (cast: (char 0xB8))
     msg[21]: (cast: (char 0x00))
-
+#
     exp_msg[0]: 0x043DU
     exp_msg[1]: 0x0435U
     exp_msg[2]: 0x0442U
@@ -87,7 +87,7 @@ fn: main () int
     exp_msg[8]: 0x0446U
     exp_msg[9]: 0x0438U
     exp_msg[10]: 0x0438U
-
+#
     checks: checks + 1
     if: mixa_rect_open(rect, 20U, 40U) != 0
         failures: failures + 1
@@ -98,7 +98,7 @@ fn: main () int
         failures: failures + 1
         c.printf("button dispatch: stack init failed\n")
     ---
-
+#
     # Main (outer) toolbar: two square hb=4 buttons, "Send" (idx0, wired)
     # and "Foo" (idx1, deliberately unwired). Same layout math as
     # mixa_buttons_selftest.lm1: margin=hb>>5=0, so with both labels short
@@ -123,11 +123,11 @@ fn: main () int
     panel\origin_col: 0U
     panel\view_w: panel\panel_w
     panel\scroll_x: 0U
-
+#
     actions\btn_idx: 0
     actions\fn: test_send_action
     actions\ctx: (cast: (@: void) @ sentinel_ctx)
-
+#
     # --- Scenario A: hit "Send" (wired) -- action runs, no fallback window ---
     action_result: -1
     rc: mixa_button_dispatch_hit(panel, 10U, 0U, actions, 1U, stack, rect, 0U, 0U, 6U, 24U, 3U, msg, @ action_result)
@@ -151,7 +151,7 @@ fn: main () int
         failures: failures + 1
         c.printf("button dispatch: scenarioA opened a window count=%d\n", (cast: (int) mixa_app_window_count(stack)))
     ---
-
+#
     # --- Scenario B: hit "Foo" (unwired) -- real нет функции window opens ---
     # "Send" is 4 chars, at/above mixa_button_width's own "len<4 -> square"
     # threshold, so it is NOT square: width = wb-(wb>>2) = 6 for hb=4. "Foo"
@@ -189,7 +189,7 @@ fn: main () int
         ---
         checks: checks + 1
     ---
-
+#
     # Dismiss the real fallback window (its own single OK button, drawn at
     # the bottom padding row of the window this call opened). "OK" is 2
     # chars (<4), always square at width=hb=3 for this window's own hb=3 --
@@ -206,7 +206,7 @@ fn: main () int
         failures: failures + 1
         c.printf("button dispatch: scenarioB window not dismissed count=%d\n", (cast: (int) mixa_app_window_count(stack)))
     ---
-
+#
     # --- Scenario C: hit empty space -- neither an action nor a window ---
     rc: mixa_button_dispatch_hit(panel, 10U, 100U, actions, 1U, stack, rect, 0U, 0U, 6U, 24U, 3U, msg, @ action_result)
     checks: checks + 1
@@ -219,7 +219,7 @@ fn: main () int
         failures: failures + 1
         c.printf("button dispatch: scenarioC side effects calls=%d windows=%d\n", g_action_calls, (cast: (int) mixa_app_window_count(stack)))
     ---
-
+#
     # --- Scenario D: null action table on a real hit -- falls back safely ---
     rc: mixa_button_dispatch_hit(panel, 10U, 0U, 0, 0U, stack, rect, 0U, 0U, 6U, 24U, 3U, msg, @ action_result)
     checks: checks + 1
@@ -233,7 +233,7 @@ fn: main () int
         c.printf("button dispatch: scenarioD window count=%d\n", (cast: (int) mixa_app_window_count(stack)))
     ---
     mixa_app_window_dismiss(stack, rect)
-
+#
     if: failures = 0
         c.printf("button dispatch selftest: %d checks, 0 failures\n", checks)
     else:

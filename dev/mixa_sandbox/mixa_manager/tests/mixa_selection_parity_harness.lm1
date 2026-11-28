@@ -61,7 +61,7 @@ fn: main () int
     @: MixaSelection sel
     []: char buf 16
     int: rc
-
+#
     c.printf("=== SCN 1 empty selection ===\n")
     sel: (cast: (@: MixaSelection) c.calloc(1U, c.sizeof(c.MixaSelection)))
     if: sel = 0
@@ -75,7 +75,7 @@ fn: main () int
     t_check_uint("s1_exc_count", sel\exc_count, 0U)
     t_check_uint("s1_rev_count", sel\rev_count, 0U)
     mixa_selection_release(sel)
-
+#
     c.printf("=== SCN 2 select/query ===\n")
     if: mixa_selection_init(sel) != MIXA_SEL_OK
         c.printf("mixa selection parity harness: s2 init failed\n")
@@ -85,7 +85,7 @@ fn: main () int
     t_check_int("s2_query_a_b_inherit", mixa_selection_query(sel, "/a/b") != 0, 1)
     t_check_int("s2_query_x_absent", mixa_selection_query(sel, "/x") != 0, 0)
     mixa_selection_release(sel)
-
+#
     c.printf("=== SCN 3 duplicate select ===\n")
     if: mixa_selection_init(sel) != MIXA_SEL_OK
         c.printf("mixa selection parity harness: s3 init failed\n")
@@ -94,7 +94,7 @@ fn: main () int
     t_check_int("s3_select_a_dup", mixa_selection_select(sel, "/a"), MIXA_SEL_CONFLICT)
     t_check_uint("s3_selected_count", sel\selected_count, 1U)
     mixa_selection_release(sel)
-
+#
     c.printf("=== SCN 4 deselect ===\n")
     if: mixa_selection_init(sel) != MIXA_SEL_OK
         c.printf("mixa selection parity harness: s4 init failed\n")
@@ -103,7 +103,7 @@ fn: main () int
     t_check_int("s4_deselect_a", mixa_selection_deselect(sel, "/a"), MIXA_SEL_OK)
     t_check_int("s4_query_a_gone", mixa_selection_query(sel, "/a") != 0, 0)
     mixa_selection_release(sel)
-
+#
     c.printf("=== SCN 5 cumulative multi-select ===\n")
     if: mixa_selection_init(sel) != MIXA_SEL_OK
         c.printf("mixa selection parity harness: s5 init failed\n")
@@ -118,7 +118,7 @@ fn: main () int
     t_check_int("s5_query_c_kept", mixa_selection_query(sel, "/c") != 0, 1)
     t_check_uint("s5_selected_count_2", sel\selected_count, 2U)
     mixa_selection_release(sel)
-
+#
     c.printf("=== SCN 6 independently owned path bytes ===\n")
     if: mixa_selection_init(sel) != MIXA_SEL_OK
         c.printf("mixa selection parity harness: s6 init failed\n")
@@ -133,7 +133,7 @@ fn: main () int
     t_check_int("s6_query_orig_survives", mixa_selection_query(sel, "/orig") != 0, 1)
     t_check_int("s6_query_mutated_not_selected", mixa_selection_query(sel, "/mutat") != 0, 0)
     mixa_selection_release(sel)
-
+#
     c.printf("=== SCN 7 index-compaction independence ===\n")
     if: mixa_selection_init(sel) != MIXA_SEL_OK
         c.printf("mixa selection parity harness: s7 init failed\n")
@@ -157,7 +157,7 @@ fn: main () int
     t_check_int("s7_query_e", mixa_selection_query(sel, "/e") != 0, 1)
     t_check_int("s7_query_a_still_ok", mixa_selection_query(sel, "/a") != 0, 1)
     mixa_selection_release(sel)
-
+#
     c.printf("=== SCN 8 traversal/consolidation order ===\n")
     if: mixa_selection_init(sel) != MIXA_SEL_OK
         c.printf("mixa selection parity harness: s8 init failed\n")
@@ -184,7 +184,7 @@ fn: main () int
     t_check_int("s8_query_c_after_deselect_a", mixa_selection_query(sel, "/a/b/c") != 0, 1)
     t_check_int("s8_query_a_gone_after_deselect_a", mixa_selection_query(sel, "/a") != 0, 0)
     mixa_selection_release(sel)
-
+#
     c.printf("=== SCN 9 allocation-failure rollback ===\n")
     if: mixa_selection_init(sel) != MIXA_SEL_OK
         c.printf("mixa selection parity harness: s9 init failed\n")
@@ -217,9 +217,9 @@ fn: main () int
     t_check_int("s9_select_w_retry_ok", mixa_selection_select(sel, "/w"), MIXA_SEL_OK)
     t_check_uint("s9_selected_count_after_retry", sel\selected_count, 2U)
     mixa_selection_release(sel)
-
+#
     c.free(sel)
-
+#
     if: g_failures[0] != 0
         c.printf("mixa selection parity harness FAILED checks=%d\n", g_failures[0])
         return: 1

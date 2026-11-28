@@ -227,7 +227,7 @@ fn: mixa_marker_create_wrapper_file (const: @(MixaProcessMarkerFaultVTable fault
         c.wcscpy(full_w, tmp_dir)
         c.wcscat(full_w, cand_w)
         c.free(cand_w)
-
+#
         is_collision: 0
         if: fault != 0 && fault\on_collide != 0 && fault\on_collide(fault\ctx) != 0
             is_collision: 1
@@ -284,14 +284,14 @@ fn: mixa_process_marker_build_wrapper (const: @(char user_command_utf8); const: 
     if: ulen = 0U || mlen = 0U
         return: MIXA_PROCESS_MARKER_ERR_ARG
     ---
-
+#
     h: 0
     full_w: 0
     st: mixa_marker_create_wrapper_file(fault, @ h, @ full_w)
     if: st != MIXA_PROCESS_MARKER_OK
         return: st
     ---
-
+#
     # Body: UTF-8 BOM, `@echo off` (suppresses cmd's own per-line command
     # echo, which would otherwise duplicate the marker text as a command
     # trace before it even runs), the user's own command verbatim, one
@@ -332,7 +332,7 @@ fn: mixa_process_marker_build_wrapper (const: @(char user_command_utf8); const: 
         c.free(full_w)
         return: MIXA_PROCESS_MARKER_ERR_ARG
     ---
-
+#
     total_written: 0U
     this_write: (cast: (unsigned long) (3U + (cast: (size_t) n8)))
     while: total_written < this_write
@@ -359,7 +359,7 @@ fn: mixa_process_marker_build_wrapper (const: @(char user_command_utf8); const: 
         c.free(full_w)
         return: MIXA_PROCESS_MARKER_ERR_IO
     ---
-
+#
     full_utf8: 0
     st: mixa_marker_wide_to_utf8(fault, full_w, @ full_utf8)
     if: st != MIXA_PROCESS_MARKER_OK
@@ -368,7 +368,7 @@ fn: mixa_process_marker_build_wrapper (const: @(char user_command_utf8); const: 
         return: st
     ---
     c.free(full_w)
-
+#
     cmdbuf: (cast: (@: char) c.malloc(c.strlen(full_utf8) + 3U))
     if: cmdbuf = 0
         c.free(full_utf8)
@@ -524,7 +524,7 @@ fn: mixa_process_marker_scanner_feed (@: MixaProcessMarkerScanner sc; const: @(M
     i: 0U
     while: i < len
         b: (cast: (unsigned) ((cast: (int) bytes[i]) & 255))
-
+#
         if: sc\state = MIXA_MARKER_STATE_SCAN
             if: sc\pending_len = 0U && (sc\at_line_start = 0 || (cast: (int) b) != (cast: (int) sc\marker[0]))
                 rc: mixa_marker_emit(sc, sink, (cast: (const: @(char)) (@ b)), 1U)

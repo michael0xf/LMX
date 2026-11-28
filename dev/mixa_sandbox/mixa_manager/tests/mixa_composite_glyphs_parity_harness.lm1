@@ -101,7 +101,7 @@ fn: main () int
     @: MixaCell p
     []: MixaU8 out 64
     size_t: i
-
+#
     c.memset(backend, 0, c.sizeof(c.MixaBackend))
     c.memset(vt, 0, c.sizeof(c.TestVTable))
     c.memset(text_rect, 0, c.sizeof(c.MixaTextRect))
@@ -112,7 +112,7 @@ fn: main () int
     g_glyph_cov[3]: (cast: (MixaU8) 255)
     vt\slot_glyph: (cast: (@: void) t_glyph_fn)
     backend\vt: (cast: (@: void) vt)
-
+#
     c.printf("=== SCN 1 combined: ordinary glyph, tile path, distinct layer sizes, byte integrity ===\n")
     t_check_int("s1_text_open", mixa_rect_open(text_rect, 1U, 1U), 0)
     p: mixa_cell_at(text_rect, 0U, 0U)
@@ -136,7 +136,7 @@ fn: main () int
     p\codepoint: 66U
     p\fg: (cast: (char) 2)
     p\alpha: (cast: (char) 0)
-
+#
     g_glyph_missing[0]: 0
     g_glyph_should_fail[0]: 0
     g_glyph_calls[0]: 0
@@ -174,7 +174,7 @@ fn: main () int
     t_check_pixel("s1_px33_upper_glyph_clipped_to_1px_cell", out, 4U, 3U, 3U, 0, 16, 16, 255)
     mixa_rect_release(text_rect)
     mixa_rect_release(upper_rect)
-
+#
     c.printf("=== SCN 2 missing glyph: no-op, pixel untouched ===\n")
     t_check_int("s2_text_open", mixa_rect_open(text_rect, 1U, 1U), 0)
     p: mixa_cell_at(text_rect, 0U, 0U)
@@ -196,7 +196,7 @@ fn: main () int
     t_check_pixel("s2_missing_glyph_leaves_base_color", out, 1U, 0U, 0U, 0, 0, 0, 255)
     mixa_rect_release(text_rect)
     mixa_rect_release(upper_rect)
-
+#
     c.printf("=== SCN 3 glyph function hard failure -> paint_glyph propagates the error, composite itself still returns 0 (best-effort compositing) ===\n")
     t_check_int("s3_text_open", mixa_rect_open(text_rect, 1U, 1U), 0)
     p: mixa_cell_at(text_rect, 0U, 0U)
@@ -218,7 +218,7 @@ fn: main () int
     g_glyph_should_fail[0]: 0
     mixa_rect_release(text_rect)
     mixa_rect_release(upper_rect)
-
+#
     c.printf("=== SCN 4 refusal / overflow paths ===\n")
     t_check_int("s4_open_text", mixa_rect_open(text_rect, 1U, 1U), 0)
     t_check_int("s4_open_upper", mixa_rect_open(upper_rect, 1U, 1U), 0)
@@ -231,7 +231,7 @@ fn: main () int
     t_check_int("s4_overflow_guard_refused", mixa_composite_glyphs(backend, text_rect, 1U, 1U, upper_rect, 1U, 1U, 0U, 0U, out, 64U, (cast: (size_t) -1), 4U), 1)
     mixa_rect_release(text_rect)
     mixa_rect_release(upper_rect)
-
+#
     if: g_failures[0] != 0
         c.printf("mixa composite glyphs parity harness FAILED checks=%d\n", g_failures[0])
         return: 1

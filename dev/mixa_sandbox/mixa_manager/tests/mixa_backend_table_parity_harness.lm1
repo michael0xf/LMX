@@ -149,7 +149,7 @@ fn: main () int
     int: rc
     c.setbuf((cast: (@: void) c.stdout), 0)
     sentinel: (cast: (@: MixaBackend) 1)
-
+#
     m: (cast: (@: MixaCellMetrics) c.calloc(1U, c.sizeof(c.MixaCellMetrics)))
     hole: (cast: (@: MixaBackendVTable) c.calloc(1U, c.sizeof(c.MixaBackendVTable)))
     complete: (cast: (@: MixaBackendVTable) c.calloc(1U, c.sizeof(c.MixaBackendVTable)))
@@ -159,15 +159,15 @@ fn: main () int
         c.printf("backend table parity: alloc failed\n")
         return: 1
     ---
-
+#
     # --- Scenario 1: valid() rejects null/all-zero/each-holed slot.
     t_check_int("S1 valid(null)", mixa_backend_table_valid(0), 0)
     c.memset(hole, 0, c.sizeof(c.MixaBackendVTable))
     t_check_int("S1 valid(all-zero)", mixa_backend_table_valid(hole), 0)
-
+#
     headless_t: mixa_backend_headless_table()
     t_check_int("S1 headless constructor valid", (cast: (int) (headless_t != 0 && mixa_backend_table_valid(headless_t) != 0)), 1)
-
+#
     c.memcpy(complete, headless_t, c.sizeof(c.MixaBackendVTable))
     t_check_int("S1 complete copy valid", mixa_backend_table_valid(complete), 1)
     c.memcpy(complete, headless_t, c.sizeof(c.MixaBackendVTable))
@@ -197,14 +197,14 @@ fn: main () int
     c.memcpy(complete, headless_t, c.sizeof(c.MixaBackendVTable))
     complete\close: 0
     t_check_int("S1 close hole rejected", mixa_backend_table_valid(complete), 0)
-
+#
     m\text_cell_width: 4U
     m\text_cell_height: 6U
     m\upper_cell_width: 8U
     m\upper_cell_height: 10U
     m\pointer_cell_width: 6U
     m\pointer_cell_height: 8U
-
+#
     # --- Scenario 2: mis-stamp -- null vt after successful concrete open.
     mistamp_null\name: "mistamp_null"
     mistamp_null\open: mixa_mistamp_open_null_vt
@@ -219,7 +219,7 @@ fn: main () int
     rc: mixa_backend_open(mistamp_null, @ be_bad, 2U, 2U, m)
     t_check_int("S2 open rejects null stamp", (cast: (int) (rc != 0)), 1)
     t_check_int("S2 null-stamp open did not mutate out", (cast: (int) (be_bad = sentinel)), 1)
-
+#
     # --- Scenario 3: mis-stamp -- wrong vt pointer.
     mistamp_wrong\name: "mistamp_wrong"
     mistamp_wrong\open: mixa_mistamp_open_wrong_vt
@@ -233,7 +233,7 @@ fn: main () int
     rc: mixa_backend_open(mistamp_wrong, @ be_bad, 2U, 2U, m)
     t_check_int("S3 open rejects wrong stamp", (cast: (int) (rc != 0)), 1)
     t_check_int("S3 wrong-stamp open did not mutate out", (cast: (int) (be_bad = sentinel)), 1)
-
+#
     # --- Scenario 4: dual headless handles live simultaneously.
     be_h: 0
     be_h2: 0
@@ -269,7 +269,7 @@ fn: main () int
     be_h2: 0
     c.free(frame)
     c.free(frame2)
-
+#
     # --- Scenario 5: registry, by_name, default_table.
     count_slot[0]: 0U
     list: mixa_backend_tables(count_slot)
@@ -284,13 +284,13 @@ fn: main () int
     def_t: mixa_backend_default_table()
     t_check_int("S5 headless-only default is headless", (cast: (int) (def_t = headless_t)), 1)
     t_check_int("S5 headless-only first entry is headless", (cast: (int) (c.strcmp(list[0]\name, "headless") = 0)), 1)
-
+#
     c.free(hole)
     c.free(complete)
     c.free(mistamp_null)
     c.free(mistamp_wrong)
     c.free(m)
-
+#
     if: g_failures[0] != 0
         c.printf("mixa backend table parity harness FAILED checks=%d\n", g_failures[0])
         return: 1

@@ -34,7 +34,7 @@ fn: main () int
     int: failures
     int: rc
     failures: 0
-
+#
     be: 0
     rect: (cast: (@: MixaTextRect) c.calloc(1U, c.sizeof(c.MixaTextRect)))
     upper: (cast: (@: MixaTextRect) c.calloc(1U, c.sizeof(c.MixaTextRect)))
@@ -44,12 +44,12 @@ fn: main () int
     if: rect = 0 || upper = 0 || ev = 0 || got = 0 || m = 0
         c.printf("mixa backend: alloc failed\n")
         return: 1
-
+#
     vt: mixa_backend_headless_table()
     if: vt = 0 || mixa_backend_table_valid(vt) = 0
         c.printf("mixa backend: headless table missing/invalid\n")
         return: 1
-
+#
     # --- seam: open refuses null metrics / zero fields / zero cols / rows / overflow ---
     if: mixa_backend_open(vt, @ be, 3U, 2U, 0) = 0
         c.printf("mixa backend: open accepted null metrics\n")
@@ -87,7 +87,7 @@ fn: main () int
     if: mixa_backend_open(vt, @ be, 2U, 0U, m) = 0
         c.printf("mixa backend: open accepted zero rows\n")
         failures: failures + 1
-    
+#
     # odd cells refused (fixture must not silently round)
     m\text_cell_width: 4U
     m\text_cell_height: 5U
@@ -104,7 +104,7 @@ fn: main () int
         c.printf("mixa backend: open accepted odd text_cell_width\n")
         return: 1
     m\text_cell_width: 4U
-
+#
 # overflow: cols * text_cell_width wraps
     m\text_cell_width: 2U
     m\text_cell_height: 2U
@@ -115,7 +115,7 @@ fn: main () int
     if: mixa_backend_open(vt, @ be, ((cast: (size_t) -1) / 2U) + 1U, 1U, m) = 0
         c.printf("mixa backend: open accepted overflow dims\n")
         failures: failures + 1
-
+#
     # successful open writes metrics (not merely reads) and derives geometry
     # from the RETURNED text cell. Seed a sentinel, then set the request; after
     # open the sentinel must be gone and frame_w == cols * returned text width.
@@ -187,7 +187,7 @@ fn: main () int
     if: h\frame_w != 12U || h\frame_h != 12U || h\frame_bytes != 576U
         c.printf("mixa backend: open frame size mismatch\n")
         failures: failures + 1
-
+#
     # second open yields a distinct handle; first remains intact
     h: (cast: (@: MixaHeadless) be)
     first_frame: h\frame
@@ -214,7 +214,7 @@ fn: main () int
         failures: failures + 1
     mixa_backend_close(be2)
     be2: 0
-
+#
     # present with short buffer refuses and copies nothing
     i: 0U
     while: i < 4U
@@ -250,7 +250,7 @@ fn: main () int
     if: mixa_headless_frame_at(be, 0U, 0U, pix) != 0 || pix[0] != 1
         c.printf("mixa backend: short present still mutated frame\n")
         failures: failures + 1
-
+#
     # present twice: second replaces first
     i: 0U
     while: i < n
@@ -263,7 +263,7 @@ fn: main () int
     if: mixa_headless_frame_at(be, 0U, 0U, pix) != 0 || pix[0] != 2
         c.printf("mixa backend: second present did not replace\n")
         failures: failures + 1
-
+#
     # poll on empty reports none, twice
     if: mixa_backend_poll(be, got) != 0
         c.printf("mixa backend: poll empty returned error\n")
@@ -275,7 +275,7 @@ fn: main () int
     if: mixa_backend_poll(be, got) != 0 || got\kind != MIXA_EVENT_NONE
         c.printf("mixa backend: second empty poll stale or error\n")
         failures: failures + 1
-
+#
     # clipboard UTF-8 round-trip including multi-byte
     if: mixa_backend_clipboard_set(be, "ok\xD0\xA9") != 0
         c.printf("mixa backend: clipboard_set failed\n")
@@ -311,7 +311,7 @@ fn: main () int
     if: clip_out[0] != (cast: (char) 0)
         c.printf("mixa backend: empty clipboard did not write NUL\n")
         failures: failures + 1
-
+#
     # --- end to end: TextRect + overlay + present + frame_at matches overlay pins ---
     mixa_backend_close(be)
     be: 0
@@ -359,7 +359,7 @@ fn: main () int
     if: pix[0] != 255 || pix[1] != 255 || pix[2] != 255 || pix[3] != 255
         c.printf("mixa backend: e2e glyph not palette[fg]\n")
         failures: failures + 1
-
+#
     # opaque upper cell covers text, verified through present
     # фон пары PleaseWait = {128,192,255} (в клетке -- индекс, RGB живёт в палитре)
     c.memset(upper\cells, 0, upper\rows * upper\cols * c.sizeof(c.MixaCell))
@@ -382,7 +382,7 @@ fn: main () int
     if: pix[0] != 128 || pix[1] != 192 || pix[2] != 255 || pix[3] != 255
         c.printf("mixa backend: opaque overlay did not cover glyph\n")
         failures: failures + 1
-
+#
     # --- input ---
     c.memset(ev, 0, c.sizeof(c.MixaEvent))
     ev\kind: MIXA_EVENT_KEY
@@ -401,7 +401,7 @@ fn: main () int
     if: got\modifiers != MIXA_MOD_SHIFT
         c.printf("mixa backend: text key modifiers lost\n")
         failures: failures + 1
-
+#
     c.memset(ev, 0, c.sizeof(c.MixaEvent))
     ev\kind: MIXA_EVENT_KEY
     ev\codepoint: 0U
@@ -419,7 +419,7 @@ fn: main () int
     if: got\modifiers != (MIXA_MOD_CTRL | MIXA_MOD_ALT)
         c.printf("mixa backend: non-text key modifiers lost\n")
         failures: failures + 1
-
+#
     # mouse: pixels -> HALF-cells. cw=4 => half step 2px; pixel(4,0)->half(2,0)
     c.memset(ev, 0, c.sizeof(c.MixaEvent))
     ev\kind: MIXA_EVENT_MOUSE
@@ -439,7 +439,7 @@ fn: main () int
     if: got\buttons != MIXA_BUTTON_LEFT || got\modifiers != MIXA_MOD_SHIFT
         c.printf("mixa backend: mouse0 buttons/mods wrong\n")
         failures: failures + 1
-
+#
     c.memset(ev, 0, c.sizeof(c.MixaEvent))
     ev\kind: MIXA_EVENT_MOUSE
     ev\col: 4U
@@ -454,8 +454,7 @@ fn: main () int
     if: got\kind != MIXA_EVENT_MOUSE || got\col != 2U || got\row != 0U
         c.printf("mixa backend: mouse1 half-cell wrong (expected col 2)\n")
         failures: failures + 1
-
-    
+#
     # four distinct half-cell positions per character (cw=4,ch=6): (0,0)(1,0)(0,1)(1,1)
     c.memset(ev, 0, c.sizeof(c.MixaEvent))
     ev\kind: MIXA_EVENT_MOUSE
@@ -499,7 +498,7 @@ fn: main () int
     if: got\kind != MIXA_EVENT_MOUSE || got\col != 1U || got\row != 1U
         c.printf("mixa backend: mouse half-xy wrong\n")
         failures: failures + 1
-
+#
 # --- resize: grow (3x2 -> 5x4), cell size fixed at open 4x5 ---
     h: (cast: (@: MixaHeadless) be)
     old_bytes: h\frame_bytes
@@ -563,7 +562,7 @@ fn: main () int
     if: mixa_backend_present(be, out, old_bytes) = 0
         c.printf("mixa backend: present OLD size after grow accepted\n")
         failures: failures + 1
-
+#
     # --- resize: shrink (5x4 -> 2x1) ---
     h: (cast: (@: MixaHeadless) be)
     old_bytes: h\frame_bytes
@@ -618,7 +617,7 @@ fn: main () int
     # After shrink, OLD byte count is larger than the new frame, so present's
     # minimum-size check still accepts it; the shrink catch is accepting NEW
     # (inert resize would have refused NEW as too small for the old geometry).
-
+#
     # --- resize overflow: poll fails, event still written, old surface intact ---
     h: (cast: (@: MixaHeadless) be)
     old_bytes: h\frame_bytes
@@ -655,7 +654,7 @@ fn: main () int
     if: mixa_headless_frame_at(be, 0U, 0U, pix) != 0 || pix[0] != 11
         c.printf("mixa backend: old pixels lost after overflow resize\n")
         failures: failures + 1
-
+#
     # close frees the handle; null ops refused
     mixa_backend_close(be)
     be: 0
@@ -690,7 +689,7 @@ fn: main () int
     c.free(ev)
     c.free(got)
     c.free(m)
-
+#
     if: failures != 0
         c.printf("mixa backend selftest FAILED checks=%d\n", failures)
         return: 1

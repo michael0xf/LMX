@@ -40,21 +40,21 @@ fn: main () int
     const: @(MixaBackendVTable headless_t)
     const: @(MixaBackendVTable hidden_t)
     c.setbuf((cast: (@: void) c.stdout), 0)
-
+#
     t_check_int("S1 count is 3", (cast: (int) mixa_backend_ctors_count()), 3)
-
+#
     win32_t: mixa_backend_win32_table()
     headless_t: mixa_backend_headless_table()
     hidden_t: mixa_backend_win32_hidden_table()
-
+#
     t_check_int("S2 get(0) is win32", (cast: (int) (mixa_backend_ctors_get(0U) = win32_t)), 1)
     t_check_int("S2 get(1) is headless", (cast: (int) (mixa_backend_ctors_get(1U) = headless_t)), 1)
     t_check_int("S2 get(2) is win32-hidden", (cast: (int) (mixa_backend_ctors_get(2U) = hidden_t)), 1)
     t_check_int("S2 three tables distinct", (cast: (int) (win32_t != headless_t && win32_t != hidden_t && headless_t != hidden_t)), 1)
-
+#
     t_check_int("S3 get(3) out of range is null", (cast: (int) (mixa_backend_ctors_get(3U) = 0)), 1)
     t_check_int("S3 get(999) out of range is null", (cast: (int) (mixa_backend_ctors_get(999U) = 0)), 1)
-
+#
     if: g_failures[0] != 0
         c.printf("mixa backend ctors win32 parity harness FAILED checks=%d\n", g_failures[0])
         return: 1

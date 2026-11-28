@@ -17,14 +17,14 @@ fn: main () int
     failures: 0U
     hb: 4U
     wb: (hb << 1U) - (hb >> 2U)
-
+#
     panel: (cast: (@: MixaButtonPanel) c.calloc(1U, c.sizeof(c.MixaButtonPanel)))
     rect: (cast: (@: MixaTextRect) c.calloc(1U, c.sizeof(c.MixaTextRect)))
     if: panel = 0 || rect = 0
         c.printf("mixa buttons: header alloc failed\n")
         return: 1
     ---
-
+#
     # --- label-driven width ---
     w: mixa_button_width(hb, wb, "F1")
     if: w != hb
@@ -51,7 +51,7 @@ fn: main () int
         c.printf("mixa buttons: label with < should stay square got %u\n", (cast: (unsigned) w))
         failures: failures + 1U
     ---
-
+#
     # --- panel height/width = maxima; separator; two lines ---
     if: mixa_button_panel_init(panel, hb) != MIXA_BUTTONS_OK
         c.printf("mixa buttons: init failed\n")
@@ -94,7 +94,7 @@ fn: main () int
         c.printf("mixa buttons: count expected 3 got %u\n", (cast: (unsigned) mixa_button_panel_count(panel)))
         failures: failures + 1U
     ---
-
+#
     # --- hit-test: in button / in gap (separator zone) / none ---
     panel\origin_row: 10U
     panel\origin_col: 0U
@@ -146,7 +146,7 @@ fn: main () int
         c.printf("mixa buttons: far right expected NONE got %d\n", hit)
         failures: failures + 1U
     ---
-
+#
     # --- draw tiles into a rect; F1 is 4x4 ALL-edge gaps on corners ---
     if: mixa_rect_open(rect, 20U, 40U) != 0
         c.printf("mixa buttons: rect open failed\n")
@@ -185,12 +185,12 @@ fn: main () int
         c.printf("mixa buttons: F1 fill expected U+%04X got U+%04X\n", MIXA_TILE_FILL, cp)
         failures: failures + 1U
     ---
-
+#
     mixa_rect_release(rect)
     mixa_button_panel_release(panel)
     c.free(rect)
     c.free(panel)
-
+#
     if: failures != 0U
         c.printf("mixa buttons: %u failure(s)\n", (cast: (unsigned) failures))
         return: 1

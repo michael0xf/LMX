@@ -74,7 +74,7 @@ fn: main (int: argc; @: @(char) argv) int
     int: n
     []: char cmd 2400
     failures: 0
-
+#
     if: argc >= 2
         c.snprintf(base, 256U, "%s", argv[1])
     ---
@@ -93,7 +93,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(empty_dir, 256U, "%s/empty", base)
     c.snprintf(nonempty_dir, 256U, "%s/nonempty", base)
     c.snprintf(sub_child, 256U, "%s/nonempty/keep.txt", base)
-
+#
     if: mixa_dir_test_mkdir_utf8(base) != 0
         c.printf("dir: mkdir base failed\n")
         return: 1
@@ -118,7 +118,7 @@ fn: main (int: argc; @: @(char) argv) int
     if: mixa_dir_test_write_file(mv_from, "move", 4U) != 0
         c.printf("dir: write mv_from failed\n")
         return: 1
-
+#
     # T1: stat missing -> ERR_MISSING
     st: mixa_dir_stat(missing, @ e1[0])
     if: st != MIXA_DIR_ERR_MISSING
@@ -358,7 +358,7 @@ fn: main (int: argc; @: @(char) argv) int
     if: st != MIXA_DIR_ERR_ARG
         c.printf("T20 remove null st=%d want 1\n", st)
         failures: failures + 1
-
+#
     # T21: test-owned invalid enumeration handle -> list_next ERR_IO (not END)
     bad[0]: (cast: (@: MixaDir) c.calloc(1U, c.sizeof(c.MixaDir)))
     if: bad[0] != 0
@@ -372,7 +372,7 @@ fn: main (int: argc; @: @(char) argv) int
             failures: failures + 1
         mixa_dir_list_close(bad[0])
     ---
-
+#
     if: failures != 0
         c.printf("mixa_dir_selftest FAIL failures=%d\n", failures)
         return: 1

@@ -12,18 +12,18 @@ fn: mixa_event_source_emit (@: LmxMsgRuntime rt; LmxMsgAddr: target; int: event_
     []: uchar buf 8
     size_t: n
     int: st
-
+#
     if: rt = 0 || target = 0U
         return: -1
-
+#
     env: (cast: (@: LmxMsgEnv) c.calloc(1U, c.sizeof(c.LmxMsgEnv)))
     if: env = 0
         return: -2
-
+#
     buf[0]: (cast: (uchar) (event_kind & 255))
     buf[1]: (cast: (uchar) (param & 255))
     n: 2U
-
+#
     env\id: (cast: (unsigned) event_kind)
     env\correlation: 0U
     env\reply_to: 0U
@@ -31,7 +31,7 @@ fn: mixa_event_source_emit (@: LmxMsgRuntime rt; LmxMsgAddr: target; int: event_
     env\number: param
     env\bytes: @ buf[0]
     env\n: n
-
+#
     st: lmx_msg_send(rt, 0U, target, env)
     c.free((cast: (@: void) env))
     if: st != c.LMX_MSG_OK

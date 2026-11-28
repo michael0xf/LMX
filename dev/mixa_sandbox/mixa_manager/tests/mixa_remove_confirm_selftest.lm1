@@ -127,7 +127,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.setbuf((cast: (@: void) c.stdout), 0)
     failures: 0
     checks: 0
-
+#
     if: argc >= 2
         c.snprintf(base, 520U, "%s", argv[1])
     ---
@@ -138,7 +138,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(subdir, 1040U, "%s\\subdir", root)
     c.snprintf(file_a, 1040U, "%s\\a.txt", root)
     c.snprintf(file_ro, 1040U, "%s\\ro.txt", root)
-
+#
     c.snprintf(cmd, 2400U, "cmd /c mkdir \"%s\" 2>nul", root)
     c.system(cmd)
     c.snprintf(cmd, 2400U, "cmd /c mkdir \"%s\" 2>nul", subdir)
@@ -146,7 +146,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_touch(file_a, "a-content")
     c.snprintf(p1, 1200U, "%s\\inner.txt", subdir)
     t_touch(p1, "inner-content")
-
+#
     sel: (cast: (@: MixaSelection) c.calloc(1U, c.sizeof(c.MixaSelection)))
     fm: (cast: (@: MixaFm) c.calloc(1U, c.sizeof(c.MixaFm)))
     rect: (cast: (@: MixaTextRect) c.calloc(1U, c.sizeof(c.MixaTextRect)))
@@ -158,7 +158,7 @@ fn: main (int: argc; @: @(char) argv) int
     ---
     c.memset((cast: (@: void) stack), 0, c.sizeof(c.MixaAppWindowStack))
     c.memset((cast: (@: void) ctx), 0, c.sizeof(c.MixaRemoveConfirmCtx))
-
+#
     checks: checks + 1
     if: mixa_selection_init(sel) != MIXA_SEL_OK
         failures: failures + 1
@@ -183,7 +183,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("remove_confirm: stack init failed\n")
         return: 1
     ---
-
+#
     # --- Scenario 0: nothing selected -> ERR_NOSEL, no window opened.
     checks: checks + 1
     if: mixa_remove_confirm_open(ctx, stack, rect, fm, 1U, 1U, 6U, 220U, 1U) != MIXA_REMOVE_CONFIRM_ERR_NOSEL
@@ -195,7 +195,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("remove_confirm: a window was opened despite nothing selected\n")
     ---
-
+#
     # --- Select a.txt and subdir through real FM indices.
     idx: t_index_of(fm, "a.txt")
     checks: checks + 1
@@ -209,7 +209,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("remove_confirm: selecting subdir failed\n")
     ---
-
+#
     # --- Scenario 1: open the confirmation -- nothing deleted, nothing
     # deselected yet, purely by opening it.
     checks: checks + 1
@@ -227,7 +227,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("remove_confirm: selection changed merely by opening the confirmation\n")
     ---
-
+#
     # --- Scenario 2: Cancel (button 0) -- dismisses, changes NOTHING.
     row: t_btn_row(stack, 0U)
     col: t_btn_col(stack, 0U)
@@ -256,7 +256,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("remove_confirm: selection changed by Cancel\n")
     ---
-
+#
     # --- Scenario 3: re-open, click OK (button 1) -- exactly one
     # invocation, real deletion, selection drained, view refreshed.
     checks: checks + 1
@@ -307,7 +307,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("remove_confirm: view was not refreshed -- deleted entries still listed\n")
     ---
-
+#
     # --- Scenario 4: a REAL partial failure (a genuine read-only-file
     # DeleteFileW refusal, matching mixa_remove_selftest.lm1's own real-
     # fault style -- no synthetic delete-fault hook exists or was
@@ -366,7 +366,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("remove_confirm: failed file's own selection was wrongly drained\n")
     ---
-
+#
     # --- Scenario 5: repeated retry. Dismiss the failure-report window
     # (its own single OK button, via the pre-existing, unmodified mixa_
     # app_window_hit), clear the real-world fault, re-confirm, and
@@ -417,7 +417,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("remove_confirm: a window is still open after the successful retry\n")
     ---
-
+#
     # --- Scenario 6: argument negatives.
     checks: checks + 1
     if: mixa_remove_confirm_open(0, stack, rect, fm, 1U, 1U, 6U, 220U, 1U) != MIXA_REMOVE_CONFIRM_ERR_ARG
@@ -429,14 +429,14 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("remove_confirm: null ctx hit not 0\n")
     ---
-
+#
     mixa_app_window_stack_release(stack)
     mixa_selection_release(sel)
     mixa_fm_release(fm)
     c.free(sel)
     c.free(fm)
     c.free(rect)
-
+#
     if: failures = 0
         c.printf("remove confirm selftest: %d checks, 0 failures\n", checks)
     else:

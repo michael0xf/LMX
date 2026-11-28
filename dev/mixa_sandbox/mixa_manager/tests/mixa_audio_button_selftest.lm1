@@ -129,14 +129,14 @@ fn: main () int
     g_fake_playing: 0
     g_fake_pos: 0U
     g_fake_dur: 100000U
-
+#
     c.snprintf(sf0, 32U, "a.mp3")
     c.snprintf(sf1, 32U, "b.mp3")
     c.snprintf(sf2, 32U, "c.mp3")
     src[0]: sf0
     src[1]: sf1
     src[2]: sf2
-
+#
     st: mixa_audio_create(@ a, fake_table())
     checks: checks + 1
     if: st != MIXA_AUDIO_OK
@@ -155,14 +155,14 @@ fn: main () int
         failures: failures + 1
         c.printf("audio button: start rc=%d\n", st)
     ---
-
+#
     ctx: (cast: (@: MixaAudioButtonCtx) c.calloc(1U, c.sizeof(c.MixaAudioButtonCtx)))
     if: ctx = 0
         c.printf("audio button: ctx alloc failed\n")
         return: 1
     ---
     ctx\a: a
-
+#
     # --- nextFile / prevFile: real track skip through the real controller.
     st: mixa_audio_action_next_file((cast: (@: void) ctx))
     checks: checks + 1
@@ -186,7 +186,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio button: prev_file pos=%lu want 0\n", mixa_audio_pos(a))
     ---
-
+#
     # --- next / prev: the reference's own +-1000ms bump, NOT track skip
     # (mixa_audio.txt's own documented distinction) -- stays on pos 0.
     st: mixa_audio_action_next((cast: (@: void) ctx))
@@ -206,7 +206,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio button: prev(bump) rc=%d\n", st)
     ---
-
+#
     # --- pause/play toggle: a real is_playing()-gated flip.
     checks: checks + 1
     if: mixa_audio_is_playing(a) != 1
@@ -225,7 +225,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio button: toggle_play(resume) rc=%d playing=%d\n", st, mixa_audio_is_playing(a))
     ---
-
+#
     # --- random / repeat: real toggles, read-then-flip via the new
     # mixa_audio_is_random/is_loop getters (added alongside this file).
     checks: checks + 1
@@ -262,7 +262,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio button: toggle_loop(off) rc=%d is_loop=%d\n", st, mixa_audio_is_loop(a))
     ---
-
+#
     # --- null-ctx negatives: all seven actions.
     checks: checks + 1
     if: mixa_audio_action_prev_file(0) != MIXA_AUDIO_ERR_ARG
@@ -299,7 +299,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio button: toggle_loop(null) not ERR_ARG\n")
     ---
-
+#
     # --- stage-1 contract correction (ticket 20260912-063130): a non-null
     # ctx whose own ctx->a is null must ALSO reject with MIXA_AUDIO_ERR_ARG
     # for all seven actions (random/repeat previously returned a false OK
@@ -342,10 +342,10 @@ fn: main () int
         c.printf("audio button: toggle_loop(a=null) not ERR_ARG\n")
     ---
     ctx\a: a
-
+#
     mixa_audio_destroy(a)
     c.free(ctx)
-
+#
     if: failures = 0
         c.printf("audio button selftest: %d checks, 0 failures\n", checks)
     else:

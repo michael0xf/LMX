@@ -120,11 +120,11 @@ fn: main (int: argc; @: @(char) argv) int
     int: checks
     size_t: i
     const: @(MixaCell cq)
-
+#
     failures: 0
     checks: 0
     c.setbuf((cast: (@: void) c.stdout), 0)
-
+#
     if: argc >= 2
         c.snprintf(base, 520U, "%s", argv[1])
     ---
@@ -135,7 +135,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(p_b, 1040U, "%s\\b.txt", base)
     c.snprintf(p_missing, 1040U, "%s\\no_such.txt", base)
     c.snprintf(p_dir, 1040U, "%s\\dir\\sub", base)
-
+#
     c.system((cast: (@(char)) 0))
     []: char mkcmd 2200
     c.snprintf(mkcmd, 2200U, "cmd /c mkdir \"%s\" 2>nul", base)
@@ -150,7 +150,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.fputs("B", fh[0])
         c.fclose(fh[0])
     ---
-
+#
     # "нет функции" as UTF-8 (NUL-terminated) -- same bytes as
     # mixa_app_window_selftest.lm1's own fixture.
     no_func_msg[0]: (cast: (char 0xD0))
@@ -175,7 +175,7 @@ fn: main (int: argc; @: @(char) argv) int
     no_func_msg[19]: (cast: (char 0xD0))
     no_func_msg[20]: (cast: (char 0xB8))
     no_func_msg[21]: (cast: (char 0x00))
-
+#
     exp_no_func_msg[0]: 0x043DU
     exp_no_func_msg[1]: 0x0435U
     exp_no_func_msg[2]: 0x0442U
@@ -187,7 +187,7 @@ fn: main (int: argc; @: @(char) argv) int
     exp_no_func_msg[8]: 0x0446U
     exp_no_func_msg[9]: 0x0438U
     exp_no_func_msg[10]: 0x0438U
-
+#
     rect: (cast: (@: MixaTextRect) c.calloc(1U, c.sizeof(c.MixaTextRect)))
     panel: (cast: (@: MixaButtonPanel) c.calloc(1U, c.sizeof(c.MixaButtonPanel)))
     actions: (cast: (@: MixaButtonAction) c.calloc(1U, c.sizeof(c.MixaButtonAction)))
@@ -207,7 +207,7 @@ fn: main (int: argc; @: @(char) argv) int
     # exact pattern happened to read as elsewhere) would otherwise silently
     # skip init and leave every other field garbage too. Zero it first.
     c.memset((cast: (@: void) stack), 0, c.sizeof(c.MixaAppWindowStack))
-
+#
     checks: checks + 1
     if: mixa_rect_open(rect, 20U, 40U) != 0
         failures: failures + 1
@@ -218,7 +218,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("share button: stack init failed\n")
     ---
-
+#
     # Main toolbar: "Send" (idx0, wired to the real adapter) + "Foo" (idx1,
     # deliberately unwired). "Send" is 4 chars (>=4 -> wide, not square per
     # mixa_button_width); "Foo" (3 chars, square hb=4) starts at col 6 --
@@ -243,7 +243,7 @@ fn: main (int: argc; @: @(char) argv) int
     panel\origin_col: 0U
     panel\view_w: panel\panel_w
     panel\scroll_x: 0U
-
+#
     mixa_selection_init(sel)
     mixa_selection_select(sel, p_a)
     mixa_selection_select(sel, p_dir)
@@ -251,11 +251,11 @@ fn: main (int: argc; @: @(char) argv) int
     ctx\sel: sel
     ctx\vt: fake_table()
     ctx\text: "test message"
-
+#
     actions\btn_idx: 0
     actions\fn: mixa_share_send_button_action
     actions\ctx: (cast: (@: void) ctx)
-
+#
     # --- Scenario 1: wired Send hit -- real files transferred in order,
     # real directory left selected, success-with-skips surfaced through a
     # warning nested window (not "нет функции" -- the action DID run) ---
@@ -316,7 +316,7 @@ fn: main (int: argc; @: @(char) argv) int
     mixa_share_destroy(ctx\out_r)
     mixa_selection_release(sel)
     c.free(sel)
-
+#
     # --- Scenario 2: wired Send hit, hard preparation failure (selected
     # file since deleted) -- routed through an ERROR window preserving the
     # exact status code, not a console-only result. ---
@@ -328,7 +328,7 @@ fn: main (int: argc; @: @(char) argv) int
     actions\btn_idx: 0
     actions\fn: mixa_share_send_button_action
     actions\ctx: (cast: (@: void) ctx2)
-
+#
     action_result: -1
     rc: mixa_button_dispatch_hit(panel, 10U, 0U, actions, 1U, stack, rect, 0U, 0U, 6U, 32U, 3U, no_func_msg, @ action_result)
     checks: checks + 1
@@ -366,7 +366,7 @@ fn: main (int: argc; @: @(char) argv) int
     ---
     mixa_selection_release(sel2)
     c.free(sel2)
-
+#
     # --- Scenario 3: unwired hit -- still shows the real "нет функции" ---
     rc: mixa_button_dispatch_hit(panel, 10U, 6U, actions, 0U, stack, rect, 0U, 0U, 6U, 32U, 3U, no_func_msg, @ action_result)
     checks: checks + 1
@@ -400,7 +400,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("share button: scenario3 not dismissed\n")
     ---
-
+#
     # --- cleanup (ticket 20260912-054054): every outstanding Share request
     # is already destroyed above (scenario1's ctx\out_r; scenario2's
     # ctx2\out_r was never non-null); sel/sel2 are already released right
@@ -415,7 +415,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.free(actions)
     c.free(ctx)
     c.free(ctx2)
-
+#
     if: failures = 0
         c.printf("share button selftest: %d checks, 0 failures\n", checks)
     else:

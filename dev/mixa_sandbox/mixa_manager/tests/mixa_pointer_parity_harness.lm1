@@ -81,16 +81,16 @@ fn: main () int
     i32: dmin
     size_t: max_sz
     size_t: lim32
-
+#
     max_sz: (cast: (size_t) -1)
     lim32: (cast: (size_t) 0x7fffffff)
-
+#
     p: (cast: (@: MixaPointer) c.calloc(1U, c.sizeof(c.MixaPointer)))
     closed: (cast: (@: MixaPointer) c.calloc(1U, c.sizeof(c.MixaPointer)))
     if: p = 0 || closed = 0
         c.printf("mixa pointer parity: alloc failed\n")
         return: 1
-
+#
     # --- init / release / null safety ---
     t_check_int("init null", mixa_pointer_init(0), MIXA_POINTER_ERR)
     t_check_int("init ok", mixa_pointer_init(p), MIXA_POINTER_OK)
@@ -98,18 +98,18 @@ fn: main () int
     t_check_sz("init row", p\row, 0U)
     t_check_sz("init col", p\col, 0U)
     t_check_int("init is_open", p\is_open, 1)
-
+#
     mixa_pointer_release(0)
     mixa_pointer_release(closed)
     t_check_int("release closed is_open", closed\is_open, 0)
     t_check_int("release closed octant", closed\octant, MIXA_POINTER_DOWN_RIGHT)
-
+#
     # --- closed-pointer refusals on every stateful call ---
     t_check_int("nudge on closed", mixa_pointer_nudge(closed, (cast: (i32) 1), (cast: (i32) 1)), MIXA_POINTER_ERR)
     t_check_int("move_to on closed", mixa_pointer_move_to(closed, 5U, 5U), MIXA_POINTER_ERR)
     t_check_int("nudge on null", mixa_pointer_nudge(0, (cast: (i32) 1), (cast: (i32) 1)), MIXA_POINTER_ERR)
     t_check_int("move_to on null", mixa_pointer_move_to(0, 5U, 5U), MIXA_POINTER_ERR)
-
+#
     # --- codepoint round trip, all 8 octants + default fallback ---
     t_check_uint("cp up", mixa_pointer_codepoint_for_octant(MIXA_POINTER_UP), MIXA_POINTER_CP_UP)
     t_check_uint("cp up_right", mixa_pointer_codepoint_for_octant(MIXA_POINTER_UP_RIGHT), MIXA_POINTER_CP_UP_RIGHT)
@@ -122,11 +122,11 @@ fn: main () int
     t_check_uint("cp out-of-range default", mixa_pointer_codepoint_for_octant((cast: (int) 99)), MIXA_POINTER_CP_DOWN_RIGHT)
     t_check_uint("cp null pointer default", mixa_pointer_codepoint(0), MIXA_POINTER_CP_DOWN_RIGHT)
     t_check_uint("cp from live pointer", mixa_pointer_codepoint(p), MIXA_POINTER_CP_DOWN_RIGHT)
-
+#
     # --- octant_from_delta: zero-delta preserves prev_octant ---
     t_check_int("zero preserves up", mixa_pointer_octant_from_delta((cast: (i32) 0), (cast: (i32) 0), MIXA_POINTER_UP), MIXA_POINTER_UP)
     t_check_int("zero preserves left", mixa_pointer_octant_from_delta((cast: (i32) 0), (cast: (i32) 0), MIXA_POINTER_LEFT), MIXA_POINTER_LEFT)
-
+#
     # --- all eight octants, comfortably inside each sector ---
     t_check_int("oct up", mixa_pointer_octant_from_delta((cast: (i32) 0), (cast: (i32) -10), 0), MIXA_POINTER_UP)
     t_check_int("oct up_right", mixa_pointer_octant_from_delta((cast: (i32) 10), (cast: (i32) -10), 0), MIXA_POINTER_UP_RIGHT)
@@ -136,7 +136,7 @@ fn: main () int
     t_check_int("oct down_left", mixa_pointer_octant_from_delta((cast: (i32) -10), (cast: (i32) 10), 0), MIXA_POINTER_DOWN_LEFT)
     t_check_int("oct left", mixa_pointer_octant_from_delta((cast: (i32) -10), (cast: (i32) 0), 0), MIXA_POINTER_LEFT)
     t_check_int("oct up_left", mixa_pointer_octant_from_delta((cast: (i32) -10), (cast: (i32) -10), 0), MIXA_POINTER_UP_LEFT)
-
+#
     # --- 5/12 boundary (strict <): 12*ady vs 5*adx, both axes, both signs ---
     t_check_int("horiz inside +dx+dy", mixa_pointer_octant_from_delta((cast: (i32) 12), (cast: (i32) 4), 0), MIXA_POINTER_RIGHT)
     t_check_int("horiz inside -dx+dy", mixa_pointer_octant_from_delta((cast: (i32) -12), (cast: (i32) 4), 0), MIXA_POINTER_LEFT)
@@ -150,14 +150,14 @@ fn: main () int
     t_check_int("vert outside +dy+dx", mixa_pointer_octant_from_delta((cast: (i32) 5), (cast: (i32) 12), 0), MIXA_POINTER_DOWN_RIGHT)
     t_check_int("vert outside +dy-dx", mixa_pointer_octant_from_delta((cast: (i32) -5), (cast: (i32) 12), 0), MIXA_POINTER_DOWN_LEFT)
     t_check_int("vert outside -dy+dx", mixa_pointer_octant_from_delta((cast: (i32) 5), (cast: (i32) -12), 0), MIXA_POINTER_UP_RIGHT)
-
+#
     # --- uabs32: INT32_MIN safe two's-complement path (no crash/overflow) ---
     dmin: (cast: (i32) -2147483647) - (cast: (i32) 1)
     t_check_uint("uabs32 INT32_MIN", mixa_pointer_uabs32(dmin), (cast: (u32) 2147483648U))
     t_check_uint("uabs32 zero", mixa_pointer_uabs32((cast: (i32) 0)), 0U)
     t_check_uint("uabs32 positive", mixa_pointer_uabs32((cast: (i32) 42)), 42U)
     t_check_int("oct INT32_MIN dx pure left", mixa_pointer_octant_from_delta(dmin, (cast: (i32) 0), MIXA_POINTER_UP), MIXA_POINTER_LEFT)
-
+#
     # --- apply_delta_pos: overflow guard (near SIZE_MAX) via nudge ---
     p\row: 10U
     p\col: max_sz
@@ -165,14 +165,14 @@ fn: main () int
     rc: mixa_pointer_nudge(p, (cast: (i32) 1), (cast: (i32) 0))
     t_check_int("nudge col-overflow rejected", rc, MIXA_POINTER_ERR)
     t_check_state("col-overflow leaves state", p, MIXA_POINTER_RIGHT, 10U, max_sz)
-
+#
     p\row: max_sz
     p\col: 10U
     p\octant: MIXA_POINTER_DOWN
     rc: mixa_pointer_nudge(p, (cast: (i32) 0), (cast: (i32) 1))
     t_check_int("nudge row-overflow rejected", rc, MIXA_POINTER_ERR)
     t_check_state("row-overflow leaves state", p, MIXA_POINTER_DOWN, max_sz, 10U)
-
+#
     # --- apply_delta_pos: underflow guard (near 0) via nudge ---
     p\row: 0U
     p\col: 0U
@@ -180,11 +180,11 @@ fn: main () int
     rc: mixa_pointer_nudge(p, (cast: (i32) 0), (cast: (i32) -1))
     t_check_int("nudge pure-up underflow rejected", rc, MIXA_POINTER_ERR)
     t_check_state("pure-up underflow leaves state", p, MIXA_POINTER_DOWN_RIGHT, 0U, 0U)
-
+#
     rc: mixa_pointer_nudge(p, (cast: (i32) -1), (cast: (i32) 0))
     t_check_int("nudge pure-left underflow rejected", rc, MIXA_POINTER_ERR)
     t_check_state("pure-left underflow leaves state", p, MIXA_POINTER_DOWN_RIGHT, 0U, 0U)
-
+#
     # --- mixed-axis: one axis ok, other axis fails -> ATOMIC refusal,
     # neither axis committed, octant unchanged (tests apply_delta_pos's
     # own "publish only on full success" contract and nudge's own
@@ -195,14 +195,14 @@ fn: main () int
     rc: mixa_pointer_nudge(p, (cast: (i32) 1), (cast: (i32) -1))
     t_check_int("mixed dx+ ok dy- fails -> rejected", rc, MIXA_POINTER_ERR)
     t_check_state("mixed dx+dy- leaves state", p, MIXA_POINTER_LEFT, 0U, 5U)
-
+#
     p\row: max_sz
     p\col: 5U
     p\octant: MIXA_POINTER_UP
     rc: mixa_pointer_nudge(p, (cast: (i32) -1), (cast: (i32) 1))
     t_check_int("mixed dx- ok dy+ fails -> rejected", rc, MIXA_POINTER_ERR)
     t_check_state("mixed dx-dy+ leaves state", p, MIXA_POINTER_UP, max_sz, 5U)
-
+#
     # --- nudge success path: octant + position both commit together ---
     p\row: 20U
     p\col: 20U
@@ -210,13 +210,13 @@ fn: main () int
     rc: mixa_pointer_nudge(p, (cast: (i32) 0), (cast: (i32) -3))
     t_check_int("nudge success rc", rc, MIXA_POINTER_OK)
     t_check_state("nudge success state", p, MIXA_POINTER_UP, 17U, 20U)
-
+#
     # zero-delta nudge after a real move: preserves the just-set octant
     rc: mixa_pointer_nudge(p, (cast: (i32) 0), (cast: (i32) 0))
     t_check_int("zero nudge after move rc", rc, MIXA_POINTER_OK)
     t_check_state("zero nudge after move state", p, MIXA_POINTER_UP, 17U, 20U)
     t_check_uint("zero nudge after move cp", mixa_pointer_codepoint(p), MIXA_POINTER_CP_UP)
-
+#
     # --- size_delta: null out refused, 0x7fffffff limit both directions ---
     t_check_int("size_delta null out", mixa_pointer_size_delta(0U, 10U, 0), MIXA_POINTER_ERR)
     dx: (cast: (i32) 12345)
@@ -229,7 +229,7 @@ fn: main () int
     t_check_int("size_delta over limit + rejected", mixa_pointer_size_delta(0U, lim32 + 1U, @ dx), MIXA_POINTER_ERR)
     t_check_int("size_delta at limit -", mixa_pointer_size_delta(lim32, 0U, @ dx), MIXA_POINTER_OK)
     t_check_int("size_delta over limit - rejected", mixa_pointer_size_delta(lim32 + 1U, 0U, @ dx), MIXA_POINTER_ERR)
-
+#
     # --- move_to: delegates through size_delta on col then row, refuses
     # on either failing, only commits octant+row+col together on success ---
     p\row: 5U
@@ -238,15 +238,15 @@ fn: main () int
     rc: mixa_pointer_move_to(p, 5U, 5U)
     t_check_int("move_to no-op rc", rc, MIXA_POINTER_OK)
     t_check_state("move_to no-op preserves octant (zero delta)", p, MIXA_POINTER_UP, 5U, 5U)
-
+#
     rc: mixa_pointer_move_to(p, 8U, 10U)
     t_check_int("move_to down-right rc", rc, MIXA_POINTER_OK)
     t_check_state("move_to down-right state", p, MIXA_POINTER_DOWN_RIGHT, 8U, 10U)
-
+#
     rc: mixa_pointer_move_to(p, 8U, 0U)
     t_check_int("move_to pure-left rc", rc, MIXA_POINTER_OK)
     t_check_state("move_to pure-left state", p, MIXA_POINTER_LEFT, 8U, 0U)
-
+#
     # move_to with a col delta exceeding the 0x7fffffff limit -> refused,
     # state untouched (real oracle checks col delta BEFORE row delta)
     p\row: 3U
@@ -255,7 +255,7 @@ fn: main () int
     rc: mixa_pointer_move_to(p, 3U, lim32 + 4U)
     t_check_int("move_to col over-limit rejected", rc, MIXA_POINTER_ERR)
     t_check_state("move_to col over-limit leaves state", p, MIXA_POINTER_UP, 3U, 3U)
-
+#
     # move_to with a valid col delta but an over-limit row delta -> the
     # whole call is refused (col must not be silently half-applied)
     p\row: 3U
@@ -264,12 +264,12 @@ fn: main () int
     rc: mixa_pointer_move_to(p, lim32 + 4U, 3U)
     t_check_int("move_to row over-limit rejected", rc, MIXA_POINTER_ERR)
     t_check_state("move_to row over-limit leaves state", p, MIXA_POINTER_UP, 3U, 3U)
-
+#
     mixa_pointer_release(p)
     t_check_int("release live is_open", p\is_open, 0)
     c.free(p)
     c.free(closed)
-
+#
     if: g_failures[0] != 0
         c.printf("mixa pointer parity harness FAILED checks=%d\n", g_failures[0])
         return: 1

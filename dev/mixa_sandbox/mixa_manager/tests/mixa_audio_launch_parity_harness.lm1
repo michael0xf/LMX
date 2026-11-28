@@ -181,7 +181,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.setbuf((cast: (@: void) c.stdout), 0)
     failures: 0
     checks: 0
-
+#
     rect: (cast: (@: MixaTextRect) c.calloc(1U, c.sizeof(c.MixaTextRect)))
     ctx: (cast: (@: MixaAudioLaunchCtx) c.calloc(1U, c.sizeof(c.MixaAudioLaunchCtx)))
     tiny: (cast: (@: MixaAudioLaunchCtx) c.calloc(1U, c.sizeof(c.MixaAudioLaunchCtx)))
@@ -192,7 +192,7 @@ fn: main (int: argc; @: @(char) argv) int
         return: 1
     ---
     c.memset((cast: (@: void) stack), 0, c.sizeof(c.MixaAppWindowStack))
-
+#
     checks: checks + 1
     if: mixa_rect_open(rect, 20U, 70U) != 0
         failures: failures + 1
@@ -203,7 +203,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("audio launch: stack init failed\n")
     ---
-
+#
     # --- Main toolbar: one real "MP3" button at row 15, col 0.
     if: mixa_button_panel_init(toolbar, 3U) != MIXA_BUTTONS_OK
         c.printf("audio launch: toolbar init failed\n")
@@ -221,14 +221,14 @@ fn: main (int: argc; @: @(char) argv) int
     toolbar\origin_col: 0U
     toolbar\view_w: toolbar\panel_w
     toolbar\scroll_x: 0U
-
+#
     st: mixa_audio_launch_init(ctx, fake_table(), stack, rect, 0U, 0U, 14U, 60U, 4U)
     checks: checks + 1
     if: st != MIXA_AUDIO_OK
         failures: failures + 1
         c.printf("audio launch: launch_init rc=%d\n", st)
     ---
-
+#
     # --- Scenario 1: a real top-level hit opens the real MP3 panel once,
     # over the handed-in snapshot, playing item 0.
     items: t_snapshot2()
@@ -268,7 +268,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("audio launch: not playing after launch\n")
     ---
-
+#
     # --- Scenario 2: all seven controls of the opened panel are live,
     # driven through real hits on the launched panel (cols 1/7/13/19/25/
     # 31/37 of the control row), each with its own observable effect.
@@ -327,7 +327,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("audio launch: control-row miss rc=%d\n", rc)
     ---
-
+#
     # --- Scenario 3: dismiss through the panel's own OK button clears
     # the window off the stack.
     rc: mixa_audio_panel_hit(mixa_audio_launch_panel(ctx), stack, rect, 9U, 28U, @ action_status)
@@ -336,7 +336,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("audio launch: dismiss rc=%d count=%d\n", rc, (cast: (int) mixa_app_window_count(stack)))
     ---
-
+#
     # --- Scenario 4: reopen over the SAME snapshot -- a fresh MixaAudio
     # and panel starting again at item 0, not the position or the random/
     # loop modes the torn-down session left behind.
@@ -362,7 +362,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("audio launch: reopen dismiss rc=%d\n", rc)
     ---
-
+#
     # --- Scenario 5: changed-snapshot refresh -- the new snapshot's own
     # single track only, with no stale entry or count from the old one.
     items: t_snapshot1()
@@ -393,7 +393,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("audio launch: refresh dismiss rc=%d count=%d\n", rc, (cast: (int) mixa_app_window_count(stack)))
     ---
-
+#
     # --- Scenario 6: an empty snapshot (the scanner's own "no supported
     # audio here" outcome) fails with its OWN status, leaves no device
     # and no window, and keeps the audio/panel statuses untouched so the
@@ -428,7 +428,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("audio launch: error window open failed\n")
     ---
     mixa_app_window_dismiss(stack, rect)
-
+#
     # --- Scenario 7: panel geometry that cannot hold the controls fails
     # at the panel stage only, destroys the device it had just created,
     # and pushes no window.
@@ -456,7 +456,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("audio launch: tiny left a=%p windows=%d\n", (cast: (@: void) tiny\a), (cast: (int) mixa_app_window_count(stack)))
     ---
-
+#
     # --- Scenario 8: a genuine miss on the toolbar takes no action and
     # opens nothing. This manual dispatch has no built-in fallback window
     # of its own, unlike mixa_button_dispatch_hit -- the caller decides
@@ -497,7 +497,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("audio launch: null action not ERR_ARG\n")
     ---
-
+#
     mixa_audio_launch_release(ctx)
     mixa_audio_launch_release(tiny)
     mixa_button_panel_release(toolbar)
@@ -506,7 +506,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.free(rect)
     c.free(ctx)
     c.free(tiny)
-
+#
     if: failures = 0
         c.printf("audio launch selftest: %d checks, 0 failures\n", checks)
     else:

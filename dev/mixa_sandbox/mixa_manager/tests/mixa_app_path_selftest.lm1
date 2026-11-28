@@ -34,7 +34,7 @@ fn: main (int: argc; @: @(char) argv) int
     failures: 0
     checks: 0
     limit: (cast: (size_t) -1)
-
+#
     # --- Scenario 1: the entrypoint's own real case -- root plus the
     # console log suffix, exactly as mixa_app_main.lm1 now builds it.
     out_slot[0]: 0
@@ -52,7 +52,7 @@ fn: main (int: argc; @: @(char) argv) int
         ---
         c.free(got)
     ---
-
+#
     # --- Scenario 2: an exact COPY is join(src, "") -- byte-for-byte,
     # same length, independently allocated.
     out_slot[0]: 0
@@ -66,7 +66,7 @@ fn: main (int: argc; @: @(char) argv) int
     if: got != 0
         c.free(got)
     ---
-
+#
     # --- Scenario 3: awkward bytes preserved exactly -- spaces, quotes,
     # a trailing separator, and non-ASCII UTF-8 (Cyrillic). No
     # normalization, no separator rewriting, no policy.
@@ -81,7 +81,7 @@ fn: main (int: argc; @: @(char) argv) int
     if: got != 0
         c.free(got)
     ---
-
+#
     # --- Scenario 4 (the point of this ticket): a root FAR longer than
     # the removed 1040-byte buffer survives with zero truncation.
     if: 1
@@ -129,7 +129,7 @@ fn: main (int: argc; @: @(char) argv) int
         ---
         c.free(big)
     ---
-
+#
     # --- Scenario 5: argument negatives. *out must stay 0 throughout.
     out_slot[0]: (cast: (@: char) 1)
     checks: checks + 1
@@ -152,7 +152,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("app_path: total null out not ERR_ARG\n")
     ---
-
+#
     # --- Scenario 6: the overflow guard, exercised for real at the
     # type's own limit rather than asserted in a comment. A real join can
     # never reach these lengths, which is exactly why the arithmetic is
@@ -203,7 +203,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("app_path: total(3,4)=%zu want 8\n", total_slot[0])
     ---
-
+#
     # --- Scenario 7: deterministic allocation failure. ERR_NOMEM, *out
     # left null, nothing acquired.
     if: 1
@@ -249,7 +249,7 @@ fn: main (int: argc; @: @(char) argv) int
         ---
         c.free(fv)
     ---
-
+#
     if: failures = 0
         c.printf("app path selftest: %d checks, 0 failures\n", checks)
     else:

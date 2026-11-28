@@ -85,9 +85,9 @@ fn: mixa_app_ui_entry (@: Lmx node; @: Lmx self) int
     @: LmxMsg t_msg
     int: had_error
     int: rc
-
+#
     t: lmx_thread_current()
-
+#
     if: ui_controller_opened = 0U
         vt: mixa_backend_win32_table()
         if: vt = 0
@@ -109,11 +109,11 @@ fn: mixa_app_ui_entry (@: Lmx node; @: Lmx self) int
         ui_controller_opened: 1U
         c.printf("mixa_app_ui: controller opened\n")
     ---
-
+#
     if: ui_controller = 0
         return: 0
     ---
-
+#
     if: mixa_app_controller_running(ui_controller) = 0
         if: ui_controller_closed = 0U
             mixa_app_controller_close(ui_controller)
@@ -131,7 +131,7 @@ fn: mixa_app_ui_entry (@: Lmx node; @: Lmx self) int
         ---
         return: 0
     ---
-
+#
     # One non-blocking pump: PeekMessageA + dispatch (never GetMessage).
     had_error: 0
     mixa_app_controller_step(ui_controller, @ had_error)
@@ -320,13 +320,13 @@ fn: mixa_app_entry (@: Lmx node) int
     @: LmxMethod proc_method
     @: void proc_turns_cell
     @: void proc_body_cell
-
+#
     if: rt_ready != 0U || rt_root = 0 || rt_source = 0 || rt_child_arena = 0
         return: 0
     ---
     rt_ready: 1U
     root_arena: lmx_root_arena(rt_root)
-
+#
     # --- UI Thread (stepped via R0 manager; PeekMessageA pump in body) ---
     lmx_arena_open(rt_ui_arena)
     ui_mail: (cast: (@: LmxPost) lmx_arena_take(rt_ui_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
@@ -373,7 +373,7 @@ fn: mixa_app_entry (@: Lmx node) int
     ---
     ui_thread: ui_t
     lmx_manager_running_add(lmx_root_manager(rt_root), ui_sched)
-
+#
     # --- File Worker Thread (stepped via R0 manager) ---
     lmx_arena_open(rt_file_arena)
     file_mail: (cast: (@: LmxPost) lmx_arena_take(rt_file_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
@@ -427,7 +427,7 @@ fn: mixa_app_entry (@: Lmx node) int
     ---
     file_thread: file_t
     lmx_manager_running_add(lmx_root_manager(rt_root), file_sched)
-
+#
     # --- Audio Worker Thread (stepped via R0 manager) ---
     lmx_arena_open(rt_audio_arena)
     audio_mail: (cast: (@: LmxPost) lmx_arena_take(rt_audio_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
@@ -481,7 +481,7 @@ fn: mixa_app_entry (@: Lmx node) int
     ---
     audio_thread: audio_t
     lmx_manager_running_add(lmx_root_manager(rt_root), audio_sched)
-
+#
     # --- Process Worker Thread (stepped via R0 manager) ---
     lmx_arena_open(rt_proc_arena)
     proc_mail: (cast: (@: LmxPost) lmx_arena_take(rt_proc_arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
@@ -535,7 +535,7 @@ fn: mixa_app_entry (@: Lmx node) int
     ---
     process_thread: proc_t
     lmx_manager_running_add(lmx_root_manager(rt_root), proc_sched)
-
+#
     c.printf("mixa_app: 4 L3 Threads created (UI + file + audio + process)\n")
     return: 0
 
@@ -566,15 +566,15 @@ fn: main (int: argc; @: @(char) argv) int
     int: had_error
     int: cycle_rc
     int: world_silent 0
-
+#
     c.memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
     c.memset((cast: (@: void) (@ child_arena)), 0, c.sizeof(c.LmxArena))
-
+#
     if: lmx_arena_open(@ child_arena) != 0
         c.printf("mixa_app: child arena open failed\n")
         return: MIXA_MAIN_FAIL
     ---
-
+#
     c.memset((cast: (@: void) (@ ui_arena)), 0, c.sizeof(c.LmxArena))
     c.memset((cast: (@: void) (@ file_arena)), 0, c.sizeof(c.LmxArena))
     c.memset((cast: (@: void) (@ audio_arena)), 0, c.sizeof(c.LmxArena))
@@ -590,7 +590,7 @@ fn: main (int: argc; @: @(char) argv) int
     else:
         rt_root_utf8: "."
     ---
-
+#
     # R0 limit = 10000 ticks (10s per Mikhail): a silence detector, not a timer. The
     # root has no parent to stamp for it, so it rings its own window via
     # lmx_root_keepalive each cycle (l1-98 stub, commit 6874f5f). Silence past the
@@ -608,7 +608,7 @@ fn: main (int: argc; @: @(char) argv) int
         return: MIXA_MAIN_FAIL
     ---
     root_arena: lmx_root_arena(@ root)
-
+#
     # Source template: 4 child slots per child graph (0=method, 1=turns, 2=body_id, 3=letter)
     source: lmx_node_new_owned(root_arena)
     if: source = 0 || lmx_arena_refs_open_owned(root_arena, source, 4U) != 0
@@ -616,7 +616,7 @@ fn: main (int: argc; @: @(char) argv) int
         return: MIXA_MAIN_FAIL
     ---
     rt_source: source
-
+#
     # Rebind R0's manager from STEPPED (lmx_root_open default) to RUNNING:
     # each child gets its own OS-thread lane (lmx_manager_running.lm1).
     # Mikhail: "многопоточно и сообщениями" — four threads, four lanes, message
@@ -626,7 +626,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("mixa_app: running manager bind failed\n")
         return: MIXA_MAIN_FAIL
     ---
-
+#
     # Watchdog thread: a plain OS thread (NOT a fifth L3 Thread).  Why: it must
     # outlive the L3 runtime's own teardown — an L3 Thread in a lane would be
     # stopped by the close cascade it is meant to report on.  It touches only
@@ -637,7 +637,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("mixa_app: watchdog thread start failed\n")
         return: MIXA_MAIN_FAIL
     ---
-
+#
     # MAIN LOOP: R0 cycle.  The manager is RUNNING so lmx_root_cycle dispatches
     # to lmx_manager_running_round — which starts/reaps OS-thread lanes for each
     # child.  The children's turns run on their OWN threads, not here.  The R0
@@ -682,22 +682,22 @@ fn: main (int: argc; @: @(char) argv) int
         # are no messages, but the R0 cycle here still busy-waits without it.
         c.Sleep(1U)
     ---
-
+#
     if: lmx_root_close(@ root) != c.LMX_ROOT_OK
         c.printf("mixa_app: root close failed\n")
         return: MIXA_MAIN_FAIL
     ---
-
+#
     # A failed cycle sets had_error but lets lmx_root_close run (it must
     # always be called).  The error is reported here -- exit non-zero so
     # probes and wrappers can see the failure.
     if: had_error != 0
         return: MIXA_MAIN_FAIL
     ---
-
+#
     # World-silence exit (watchdog died): non-zero, but NOT a graph/arena error.
     if: world_silent != 0
         return: MIXA_MAIN_FAIL
     ---
-
+#
     return: MIXA_MAIN_OK

@@ -152,11 +152,11 @@ fn: main () int
     @: WNDCLASSEXW pwc
     long: ro_hr
     int: mismatches
-
+#
     mismatches: 0
     ro_hr: c.RoInitialize(c.RO_INIT_SINGLETHREADED)
     c.printf("mixa share baseline diag: RoInitialize hr=%ld\n", ro_hr)
-
+#
     hinst: (cast: (@: void) c.GetModuleHandleW(0))
     pwc: @ wc[0]
     c.memset(pwc, 0, c.sizeof(c.WNDCLASSEXW))
@@ -167,7 +167,7 @@ fn: main () int
     if: c.RegisterClassExW(pwc) = 0
         c.printf("mixa share baseline diag: RegisterClassExW failed gle=%lu\n", c.GetLastError())
         return: 1
-
+#
     # Scenario A: the first three real invocations attempted in this
     # process, all clean (no fault injection) -- a baseline for invocation
     # ORDER within one process, not a separate fresh process.
@@ -180,9 +180,9 @@ fn: main () int
     if: mixa_share_diag_run_one("Baseline-3", hinst, 0, 0) = 0
         mismatches: mismatches + 1
     ---
-
+#
     c.printf("mixa share baseline diag: --- end baseline, start fault-then-clean (same process, continuing on) ---\n")
-
+#
     # Scenario B: same process, continuing on -- one fault-injected
     # request (GET_DATA) immediately followed by one clean request, same
     # window/pump/teardown pattern as scenario A. If this mismatches at a
@@ -195,7 +195,7 @@ fn: main () int
     if: mixa_share_diag_run_one("FaultThenClean-Clean", hinst, 0, 0) = 0
         mismatches: mismatches + 1
     ---
-
+#
     if: mismatches = 0
         c.printf("mixa share baseline diag: ok\n")
     else:

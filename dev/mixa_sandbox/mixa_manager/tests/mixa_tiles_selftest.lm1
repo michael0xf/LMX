@@ -49,14 +49,14 @@ fn: main () int
     size_t: failures
     unsigned: cp
     failures: 0U
-
+#
     text: (cast: (@: MixaTextRect) c.calloc(1U, c.sizeof(c.MixaTextRect)))
     upper: (cast: (@: MixaTextRect) c.calloc(1U, c.sizeof(c.MixaTextRect)))
     if: text = 0 || upper = 0
         c.printf("mixa tiles: header alloc failed\n")
         return: 1
     ---
-
+#
     # --- gap floor: cell_h where >>5 is 0 still yields 1 ---
     g: mixa_tile_gap_px(1U)
     if: g != 1U
@@ -78,7 +78,7 @@ fn: main () int
         c.printf("mixa tiles: gap_px(64) expected 2 got %u\n", (cast: (unsigned) g))
         failures: failures + 1U
     ---
-
+#
     # --- each of nine (+ ALL) paints interior, leaves gap sides transparent ---
     cw: 8U
     ch: 8U
@@ -98,7 +98,7 @@ fn: main () int
         c.printf("mixa tiles: out alloc failed\n")
         return: 1
     ---
-
+#
     # Helper macro-like: for a tile cp, composite one upper cell over black,
     # assert gap pixel stays black and solid is white (bg=15 alpha=255).
     # NW: gap top+left
@@ -132,7 +132,7 @@ fn: main () int
         c.printf("mixa tiles: NW far corner should be solid\n")
         failures: failures + 1U
     ---
-
+#
     # N: gap top only
     cell\codepoint: MIXA_TILE_N
     if: mixa_composite(text, cw, ch, upper, cw, ch, 0U, 0U, out, need, width, height) != 0
@@ -149,7 +149,7 @@ fn: main () int
         c.printf("mixa tiles: N left should be solid\n")
         failures: failures + 1U
     ---
-
+#
     # NE
     cell\codepoint: MIXA_TILE_NE
     if: mixa_composite(text, cw, ch, upper, cw, ch, 0U, 0U, out, need, width, height) != 0
@@ -166,7 +166,7 @@ fn: main () int
         c.printf("mixa tiles: NE interior not solid\n")
         failures: failures + 1U
     ---
-
+#
     # W
     cell\codepoint: MIXA_TILE_W
     if: mixa_composite(text, cw, ch, upper, cw, ch, 0U, 0U, out, need, width, height) != 0
@@ -183,7 +183,7 @@ fn: main () int
         c.printf("mixa tiles: W top should be solid\n")
         failures: failures + 1U
     ---
-
+#
     # FILL
     cell\codepoint: MIXA_TILE_FILL
     if: mixa_composite(text, cw, ch, upper, cw, ch, 0U, 0U, out, need, width, height) != 0
@@ -200,7 +200,7 @@ fn: main () int
         c.printf("mixa tiles: FILL far should be solid\n")
         failures: failures + 1U
     ---
-
+#
     # E
     cell\codepoint: MIXA_TILE_E
     if: mixa_composite(text, cw, ch, upper, cw, ch, 0U, 0U, out, need, width, height) != 0
@@ -212,7 +212,7 @@ fn: main () int
         c.printf("mixa tiles: E right gap not transparent\n")
         failures: failures + 1U
     ---
-
+#
     # SW
     cell\codepoint: MIXA_TILE_SW
     if: mixa_composite(text, cw, ch, upper, cw, ch, 0U, 0U, out, need, width, height) != 0
@@ -224,7 +224,7 @@ fn: main () int
         c.printf("mixa tiles: SW gap not transparent\n")
         failures: failures + 1U
     ---
-
+#
     # S
     cell\codepoint: MIXA_TILE_S
     if: mixa_composite(text, cw, ch, upper, cw, ch, 0U, 0U, out, need, width, height) != 0
@@ -236,7 +236,7 @@ fn: main () int
         c.printf("mixa tiles: S bottom gap not transparent\n")
         failures: failures + 1U
     ---
-
+#
     # SE
     cell\codepoint: MIXA_TILE_SE
     if: mixa_composite(text, cw, ch, upper, cw, ch, 0U, 0U, out, need, width, height) != 0
@@ -253,7 +253,7 @@ fn: main () int
         c.printf("mixa tiles: SE opposite corner not solid\n")
         failures: failures + 1U
     ---
-
+#
     # --- 1x1 button: all four gaps in one cell ---
     mixa_rect_release(text)
     mixa_rect_release(upper)
@@ -306,7 +306,7 @@ fn: main () int
         c.printf("mixa tiles: 1x1 interior not solid\n")
         failures: failures + 1U
     ---
-
+#
     # --- nine-slice over 3x3 cells ---
     mixa_rect_release(text)
     mixa_rect_release(upper)
@@ -378,7 +378,7 @@ fn: main () int
         c.printf("mixa tiles: 3x3 fill centre not solid\n")
         failures: failures + 1U
     ---
-
+#
     # --- two adjacent 1x1 buttons: visible gap between solid bodies ---
     mixa_rect_release(text)
     mixa_rect_release(upper)
@@ -423,13 +423,13 @@ fn: main () int
         c.printf("mixa tiles: right button solid missing at 9\n")
         failures: failures + 1U
     ---
-
+#
     mixa_rect_release(text)
     mixa_rect_release(upper)
     c.free(out)
     c.free(text)
     c.free(upper)
-
+#
     if: failures != 0U
         c.printf("mixa tiles: %u failure(s)\n", (cast: (unsigned) failures))
         return: 1

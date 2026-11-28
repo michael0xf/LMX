@@ -121,7 +121,7 @@ fn: main () int
     failures: 0
     has_win32: 0
     sentinel: (cast: (@: MixaBackend) 1)
-
+#
     m: (cast: (@: MixaCellMetrics) c.calloc(1U, c.sizeof(c.MixaCellMetrics)))
     hole: (cast: (@: MixaBackendVTable) c.calloc(1U, c.sizeof(c.MixaBackendVTable)))
     complete: (cast: (@: MixaBackendVTable) c.calloc(1U, c.sizeof(c.MixaBackendVTable)))
@@ -130,7 +130,7 @@ fn: main () int
     if: m = 0 || hole = 0 || complete = 0 || mistamp_null = 0 || mistamp_wrong = 0
         c.printf("mixa table: alloc failed\n")
         return: 1
-
+#
     # --- null / empty name / EACH required slot nulled in turn ---
     if: mixa_backend_table_valid(0) != 0
         c.printf("mixa table: valid accepted null table\n")
@@ -139,12 +139,12 @@ fn: main () int
     if: mixa_backend_table_valid(hole) != 0
         c.printf("mixa table: valid accepted all-zero table\n")
         failures: failures + 1
-
+#
     headless_t: mixa_backend_headless_table()
     if: headless_t = 0 || mixa_backend_table_valid(headless_t) = 0
         c.printf("mixa table: headless constructor/valid failed\n")
         return: 1
-
+#
     # Start from a COMPLETE valid copy, then null each slot.
     c.memcpy(complete, headless_t, c.sizeof(c.MixaBackendVTable))
     if: mixa_backend_table_valid(complete) = 0
@@ -194,7 +194,7 @@ fn: main () int
     if: mixa_backend_table_valid(complete) != 0
         c.printf("mixa table: valid accepted close hole\n")
         failures: failures + 1
-
+#
     # --- mis-stamp: null vt after successful concrete open ---
     mistamp_null\name: "mistamp_null"
     mistamp_null\open: mixa_mistamp_open_null_vt
@@ -223,7 +223,7 @@ fn: main () int
     if: be_bad != sentinel
         c.printf("mixa table: null-stamp open mutated out\n")
         failures: failures + 1
-
+#
     # --- mis-stamp: wrong vt pointer ---
     mistamp_wrong\name: "mistamp_wrong"
     mistamp_wrong\open: mixa_mistamp_open_wrong_vt
@@ -243,7 +243,7 @@ fn: main () int
     if: be_bad != sentinel
         c.printf("mixa table: wrong-stamp open mutated out\n")
         failures: failures + 1
-
+#
     # --- dual headless handles live: interleave, exact vt identity ---
     be_h: 0
     be_h2: 0
@@ -303,7 +303,7 @@ fn: main () int
     be_h2: 0
     c.free(frame)
     c.free(frame2)
-
+#
     # --- registry ---
     count_slot[0]: 0U
     list: mixa_backend_tables(count_slot)
@@ -330,7 +330,7 @@ fn: main () int
     if: mixa_backend_table_by_name("nope") != 0
         c.printf("mixa table: by_name unknown not null\n")
         failures: failures + 1
-
+#
     win32_t: mixa_backend_table_by_name("win32")
     if: win32_t != 0
         has_win32: 1
@@ -425,13 +425,13 @@ fn: main () int
             failures: failures + 1
         ---
     ---
-
+#
     c.free(hole)
     c.free(complete)
     c.free(mistamp_null)
     c.free(mistamp_wrong)
     c.free(m)
-
+#
     if: failures != 0
         c.printf("mixa table: %d failure(s)\n", failures)
         return: 1

@@ -23,7 +23,7 @@ fn: main () int
     size_t: n
     int: failures
     failures: 0
-
+#
     fifo: (cast: (@: MixaEventFifo) c.calloc(1U, c.sizeof(c.MixaEventFifo)))
     pump: (cast: (@: MixaPump) c.calloc(1U, c.sizeof(c.MixaPump)))
     be: 0
@@ -32,7 +32,7 @@ fn: main () int
     if: fifo = 0 || pump = 0 || ev = 0 || got = 0
         c.printf("mixa pump: alloc failed\n")
         return: 1
-
+#
     vt: mixa_backend_headless_table()
     if: vt = 0 || mixa_backend_table_valid(vt) = 0
         c.printf("mixa pump: headless table missing/invalid\n")
@@ -40,7 +40,7 @@ fn: main () int
     # Reference mixa_palette_rgb so -Wunused-function stays quiet in this TU
     # (overlay.h arrives via mixa_backend.h for MixaU8).
     mixa_palette_rgb(0U, pr, pg, pb)
-
+#
     # --- fifo: push then pop returns events in order, fields intact ---
     if: mixa_event_fifo_init(fifo) != 0
         c.printf("mixa fifo: init failed\n")
@@ -77,7 +77,7 @@ fn: main () int
     if: got\kind != MIXA_EVENT_KEY || got\codepoint != 0U || got\keycode != MIXA_KEY_F1 || got\modifiers != MIXA_MOD_CTRL
         c.printf("mixa fifo: pop F1 fields wrong\n")
         failures: failures + 1
-
+#
     # --- fifo: pop on empty refuses and does not invent an event ---
     got\kind: MIXA_EVENT_CLOSE
     got\codepoint: 99U
@@ -87,7 +87,7 @@ fn: main () int
     if: got\kind != MIXA_EVENT_CLOSE || got\codepoint != 99U
         c.printf("mixa fifo: pop empty invented/mutated event\n")
         failures: failures + 1
-
+#
     # --- fifo: growth across a wrap preserves order ---
     i: 0U
     while: i < 10U
@@ -145,7 +145,7 @@ fn: main () int
         ---
         i: i + 1U
     ---
-
+#
     # --- fifo: release then use refused ---
     mixa_event_fifo_release(fifo)
     c.memset(ev, 0, c.sizeof(c.MixaEvent))
@@ -160,7 +160,7 @@ fn: main () int
     if: mixa_event_fifo_count(fifo) != 0U
         c.printf("mixa fifo: count after release not 0\n")
         failures: failures + 1
-
+#
     # --- pump: drain takes every queued event and leaves backend poll empty ---
     c.memset(fifo, 0, c.sizeof(c.MixaEventFifo))
     c.memset(pump, 0, c.sizeof(c.MixaPump))
@@ -209,7 +209,7 @@ fn: main () int
     if: mixa_backend_poll(be, got) != 0 || got\kind != MIXA_EVENT_NONE
         c.printf("mixa pump: backend not empty after drain\n")
         failures: failures + 1
-
+#
     # --- pump: drain on idle backend takes nothing ---
     n: mixa_pump_pending(pump)
     if: mixa_pump_drain(pump, be) != 0
@@ -218,7 +218,7 @@ fn: main () int
     if: mixa_pump_pending(pump) != n
         c.printf("mixa pump: idle drain changed pending\n")
         failures: failures + 1
-
+#
     # --- pump: next yields them in push order ---
     if: mixa_pump_next(pump, got) != 0 || got\codepoint != 10U
         c.printf("mixa pump: next 10 wrong\n")
@@ -232,7 +232,7 @@ fn: main () int
     if: mixa_pump_next(pump, got) = 0
         c.printf("mixa pump: next on empty accepted\n")
         failures: failures + 1
-
+#
     # --- pump: event pushed DURING processing is NOT seen by current turn ---
     c.memset(ev, 0, c.sizeof(c.MixaEvent))
     ev\kind: MIXA_EVENT_KEY
@@ -279,7 +279,7 @@ fn: main () int
     if: mixa_pump_next(pump, got) != 0 || got\codepoint != 99U
         c.printf("mixa pump: mid-turn event not taken by next drain\n")
         failures: failures + 1
-
+#
     # --- pump: resize drained through pump still adopts geometry ---
     c.memset(ev, 0, c.sizeof(c.MixaEvent))
     ev\kind: MIXA_EVENT_RESIZE
@@ -304,7 +304,7 @@ fn: main () int
     if: got\kind != MIXA_EVENT_RESIZE || got\cols != 5U || got\rows != 4U
         c.printf("mixa pump: resize event fields wrong\n")
         failures: failures + 1
-
+#
     mixa_pump_release(pump)
     mixa_backend_close(be)
     be: 0
@@ -313,7 +313,7 @@ fn: main () int
     c.free(ev)
     c.free(pump)
     c.free(fifo)
-
+#
     if: failures != 0
         c.printf("mixa pump selftest FAILED checks=%d\n", failures)
         return: 1

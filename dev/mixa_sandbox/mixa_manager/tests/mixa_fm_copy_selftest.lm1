@@ -210,7 +210,7 @@ fn: main (int: argc; @: @(char) argv) int
     failures: 0
     checks: 0
     g_fault_at: -1
-
+#
     if: argc >= 2
         c.snprintf(base, 520U, "%s", argv[1])
     ---
@@ -226,7 +226,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(inner_a, 1040U, "%s\\inner.txt", srcdir)
     c.snprintf(dest_dir, 1040U, "%s\\dest", root)
     c.snprintf(dest_dir2, 1040U, "%s\\dest2", root)
-
+#
     c.snprintf(cmd, 2400U, "cmd /c mkdir \"%s\" 2>nul", root)
     c.system(cmd)
     c.snprintf(cmd, 2400U, "cmd /c mkdir \"%s\" 2>nul", srcdir)
@@ -238,7 +238,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_touch(single_file, "top-level-content")
     t_touch(iofile, "io-fault-fixture-content")
     t_touch(inner_a, "inner-content")
-
+#
     sel: (cast: (@: MixaSelection) c.calloc(1U, c.sizeof(c.MixaSelection)))
     fm: (cast: (@: MixaFm) c.calloc(1U, c.sizeof(c.MixaFm)))
     if: sel = 0 || fm = 0
@@ -258,7 +258,7 @@ fn: main (int: argc; @: @(char) argv) int
         return: 1
     ---
     sink: t_sink()
-
+#
     # --- Scenario 1: a real user-triggered action copies a selected
     # FILE and a selected DIRECTORY into a destination, driven entirely
     # through the file-manager view (indices from a real listing, not
@@ -329,7 +329,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm_copy: view was not refreshed after a same-directory copy\n")
     ---
-
+#
     # --- Scenario 2: cancellation and retry, viewed from a DIFFERENT
     # directory (dest2) than the copy's own destination -- so this also
     # exercises the "no refresh when destination is not the current
@@ -386,7 +386,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm_copy: retry did not drain the now-completed selection\n")
     ---
-
+#
     # --- Scenario 3: an injected mid-operation I/O failure while viewing
     # the destination, using iofile.txt -- a fixture never copied before
     # this scenario, so the fault hook is genuinely reached rather than
@@ -466,7 +466,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm_copy: retry after IO failure did not drain selection\n")
     ---
-
+#
     # --- Scenario 4: existing-file conflict. Copying top.txt into dest
     # again (it is already there from scenario 1) surfaces the exact
     # copy status and leaves the view usable and correctly refreshed --
@@ -509,7 +509,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("fm_copy: existing destination content disturbed: [%s]\n", readbuf)
     ---
     mixa_selection_deselect(sel, single_file)
-
+#
     # --- Scenario 5: destination-inside-source. Selecting srcdir and
     # copying into a directory inside itself is refused structurally,
     # before any descent, and the view stays exactly as it was.
@@ -543,7 +543,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm_copy: nested-destination refusal wrongly drained the selection\n")
     ---
-
+#
     # --- Scenario 6: argument negatives.
     checks: checks + 1
     if: mixa_fm_copy_selection(0, dest_dir, sink, 0) != MIXA_COPY_ERR_ARG
@@ -560,12 +560,12 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm_copy: null sink not ERR_ARG\n")
     ---
-
+#
     mixa_selection_release(sel)
     mixa_fm_release(fm)
     c.free(sel)
     c.free(fm)
-
+#
     if: failures = 0
         c.printf("fm copy selftest: %d checks, 0 failures\n", checks)
     else:

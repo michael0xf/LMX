@@ -40,14 +40,14 @@ fn: main () int
     int: failures
     int: st
     failures: 0
-
+#
     # Fixed fixture path (not an isolated per-run directory) -- cleaned
     # first so a second run never inherits appended content from a
     # previous one. Found as a real bug while re-running this test twice
     # in a row (ticket 20260912-144000): a stale, larger file from the
     # first run made the second run's own size checks fail.
     c.system("cmd /c rd /s /q build\\mixa\\tmp_file_seam 2>nul")
-
+#
     if: mixa_file_test_mkdir_utf8("build") != 0
         c.printf("mixa_file: mkdir build failed\n")
         return: 1
@@ -60,7 +60,7 @@ fn: main () int
     if: mixa_file_test_mkdir_utf8("build/mixa/logs") != 0
         c.printf("mixa_file: mkdir logs failed\n")
         return: 1
-
+#
     # Non-ASCII dir: UTF-8 Cyrillic log = D0 BB D0 BE D0 B3
     c.snprintf(path_na, 512U, "build/mixa/tmp_file_seam/")
     path_na[25]: (cast: (char) 0xD0)
@@ -74,10 +74,10 @@ fn: main () int
         c.printf("mixa_file: mkdir non-ASCII fixture failed\n")
         return: 1
     c.snprintf(path_na + 31, (cast: (size_t) (512 - 31)), "/console.log")
-
+#
     c.snprintf(path, 512U, "build/mixa/tmp_file_seam/console_ascii.log")
     c.snprintf(missing, 512U, "build/mixa/tmp_file_seam/no_such_file_xyz.log")
-
+#
     out[0]: 0
     st: mixa_file_open(out, missing, MIXA_FILE_MODE_READ)
     if: st != MIXA_FILE_ERR_MISSING
@@ -88,7 +88,7 @@ fn: main () int
         failures: failures + 1
         mixa_file_close(out[0])
     ---
-
+#
     out[0]: 0
     st: mixa_file_open(out, path, MIXA_FILE_MODE_APPEND)
     if: st != MIXA_FILE_OK || out[0] = 0
@@ -128,13 +128,13 @@ fn: main () int
     if: st != MIXA_FILE_OK || wrote[0] != 4U
         c.printf("mixa_file: append chunk_c failed\n")
         failures: failures + 1
-
+#
     sz[0]: 0U
     st: mixa_file_size(f, sz)
     if: st != MIXA_FILE_OK || sz[0] != 18U
         c.printf("mixa_file: size after append st=%d sz=%u\n", st, (cast: (unsigned) sz[0]))
         failures: failures + 1
-
+#
     mixa_file_close(f)
     f: 0
     out[0]: 0
@@ -143,7 +143,7 @@ fn: main () int
         c.printf("mixa_file: read open failed st=%d\n", st)
         return: 1
     f: out[0]
-
+#
     st: mixa_file_seek(f, 2U)
     if: st != MIXA_FILE_OK
         c.printf("mixa_file: seek 2 failed\n")
@@ -157,7 +157,7 @@ fn: main () int
     if: rbuf[0] != 0 || rbuf[1] != 67 || rbuf[2] != 13 || rbuf[3] != 10
         c.printf("mixa_file: offset bytes wrong\n")
         failures: failures + 1
-
+#
     st: mixa_file_seek(f, 0U)
     got[0]: 0U
     c.memset(rbuf, 0, 32U)
@@ -173,11 +173,11 @@ fn: main () int
     if: st != MIXA_FILE_OK || got[0] != 0U
         c.printf("mixa_file: EOF short read wrong st=%d got=%u\n", st, (cast: (unsigned) got[0]))
         failures: failures + 1
-
+#
     mixa_file_close(f)
     f: 0
     mixa_file_close(0)
-
+#
     out[0]: 0
     st: mixa_file_open(out, path_na, MIXA_FILE_MODE_APPEND)
     if: st != MIXA_FILE_OK || out[0] = 0
@@ -217,7 +217,7 @@ fn: main () int
             mixa_file_close(f2)
         ---
     ---
-
+#
     # Evidence via the seam under test (append), not stdio FILE locals.
     out[0]: 0
     st: mixa_file_open(out, "build/mixa/logs/mixa_file_selftest.evidence.txt", MIXA_FILE_MODE_APPEND)
@@ -230,7 +230,7 @@ fn: main () int
         mixa_file_append(out[0], eline, c.strlen(eline), wrote)
         mixa_file_close(out[0])
     ---
-
+#
     if: failures != 0
         c.printf("mixa_file_selftest FAIL failures=%d\n", failures)
         return: 1

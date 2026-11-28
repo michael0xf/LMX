@@ -180,7 +180,7 @@ fn: main () int
     g_fake_n_seeks: 0
     g_fake_n_unloads: 0
     g_fake_n_closes: 0
-
+#
     c.snprintf(sf0, 32U, "a.mp3")
     c.snprintf(sf1, 32U, "skip_b.mp3")
     c.snprintf(sf2, 32U, "c.mp3")
@@ -191,7 +191,7 @@ fn: main () int
     while: i < 65U
         big[i]: sf0
         i: i + 1U
-
+#
     # T1: create must validate the table (complete vs partial).
     st: mixa_audio_create(0, mixa_audio_fake_table())
     checks: checks + 1
@@ -214,7 +214,7 @@ fn: main () int
         c.printf("audio: create(partial vt) rc=%d want BACKEND\n", st)
     ---
     c.free(pvt[0])
-
+#
     # The partial table must NOT have displaced the earlier state; create the
     # real handle now (all T1 calls above failed and zeroed h[0] by contract).
     st: mixa_audio_create(@ h[0], mixa_audio_fake_table())
@@ -223,7 +223,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio: create real rc=%d\n", st)
     ---
-
+#
     # T2: set_list negative paths.
     st: mixa_audio_set_list(0, src, 3U, 0U)
     checks: checks + 1
@@ -243,7 +243,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio: set_list pos clamped rc=%d\n", st)
     ---
-
+#
     # T3: out-of-range pos clamps to the last item; set_list copies strings.
     checks: checks + 1
     if: mixa_audio_count(h[0]) != 2U
@@ -255,7 +255,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio: pos after clamp want 1 got %llu\n", mixa_audio_pos(h[0]))
     ---
-
+#
     # Playlist size is bounded only by an overflow check, not a fixed
     # cap (the review-183400 fix removing the invented MAX_LIST=64):
     # 65 real (if repeated) items must succeed, not be rejected.
@@ -270,7 +270,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio: set_list(65) count=%llu want 65\n", mixa_audio_count(h[0]))
     ---
-
+#
     st: mixa_audio_set_list(h[0], src, 3U, 0U)
     checks: checks + 1
     if: st != MIXA_AUDIO_OK
@@ -288,7 +288,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio: count want 3 got %llu\n", mixa_audio_count(h[0]))
     ---
-
+#
     # T4: start loads lazily, applies the ini seek, flips to playing, and poll
     # leaves a playing track alone.
     g_fake_pos: 0U
@@ -339,7 +339,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio: poll advanced a playing track\n")
     ---
-
+#
     # T5: stop remembers position; resume reloads and re-seeks to it.
     st: mixa_audio_stop(h[0])
     checks: checks + 1
@@ -380,7 +380,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio: resume ignored remembered pos\n")
     ---
-
+#
     # T6: seek_to forwards to the device while open; next() stays in-track as
     # long as there is room for another full second.
     g_fake_pos: 2000U
@@ -418,7 +418,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio: next advanced to another track\n")
     ---
-
+#
     # T7: next() near the end crosses to the next file; at the very end it
     # reports MIXA_AUDIO_END when there is nowhere to go.
     g_fake_pos: 99500U
@@ -450,7 +450,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio: next at very end rc=%d want END\n", st)
     ---
-
+#
     # T8: prev() while <1s into a track moves to the previous file; otherwise
     # it seeks back one second.
     g_fake_pos: 100U
@@ -477,7 +477,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio: prev -1s got %lu want 4000\n", g_fake_pos)
     ---
-
+#
     # T9: probe() skips a track while linear-scanning forward.
     g_fake_probe_skip: 1
     g_fake_pos: 0U
@@ -498,7 +498,7 @@ fn: main () int
         c.printf("audio: next_file skip track=%s\n", mixa_audio_cur_file(h[0]))
     ---
     g_fake_probe_skip: 0
-
+#
     # T10: loop wrap forward from the last item returns to the first.
     mixa_audio_set_loop(h[0], 1)
     g_fake_pos: 0U
@@ -514,7 +514,7 @@ fn: main () int
         c.printf("audio: loop wrap pos=%llu want 0\n", mixa_audio_pos(h[0]))
     ---
     mixa_audio_set_loop(h[0], 0)
-
+#
     # T11: loop wrap backward from the first item goes to the last.
     mixa_audio_set_loop(h[0], 1)
     g_fake_pos: 0U
@@ -530,7 +530,7 @@ fn: main () int
         c.printf("audio: prev loop wrap pos=%llu want 2\n", mixa_audio_pos(h[0]))
     ---
     mixa_audio_set_loop(h[0], 0)
-
+#
     # T12: random picks the deterministic LCG jump from the last item (the
     # linear next scan has no candidates at the tail): pos=2,count=3 leaks
     # (2*7+3*13+1)%%3 == 0 -> plays item 0 "a.mp3".
@@ -553,7 +553,7 @@ fn: main () int
         c.printf("audio: random jump track=%s\n", mixa_audio_cur_file(h[0]))
     ---
     mixa_audio_set_random(h[0], 0)
-
+#
     # T13: backend failures surface as typed status codes.
     mixa_audio_stop(h[0])
     g_fake_load_fail: 1
@@ -580,7 +580,7 @@ fn: main () int
         c.printf("audio: seek fail rc=%d want IO\n", st)
     ---
     g_fake_seek_fail: 0
-
+#
     # T13b: is_loop wrap must retry the CURRENT position itself once every
     # OTHER index has been exhausted (AudioServiceBinder.nextFile/prevFile's
     # own final `if (checkFile(start)) return true;` inside their isLoop
@@ -612,7 +612,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio: T13b next_file loop-retry-current pos=%lu file=%s\n", mixa_audio_pos(h[0]), mixa_audio_cur_file(h[0]))
     ---
-
+#
     # Without is_loop, the same setup must genuinely END (the retry-current
     # step is gated to the isLoop branch only, exactly like the reference).
     mixa_audio_set_loop(h[0], 0)
@@ -631,7 +631,7 @@ fn: main () int
         c.printf("audio: T13b next_file no-loop rc=%d want END\n", st)
     ---
     g_fake_probe_skip: 0
-
+#
     c.snprintf(sf5, 32U, "skip_other2.mp3")
     c.snprintf(sf6, 32U, "only2.mp3")
     src3[0]: sf5
@@ -657,7 +657,7 @@ fn: main () int
     ---
     mixa_audio_set_loop(h[0], 0)
     g_fake_probe_skip: 0
-
+#
     # Restore the original 3-item playlist for the remaining tests below.
     st: mixa_audio_set_list(h[0], src, 3U, 0U)
     checks: checks + 1
@@ -665,7 +665,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio: T13b restore src rc=%d\n", st)
     ---
-
+#
     # T14: poll auto-advances when the device leaves playing/paused.
     g_fake_pos: 0U
     g_fake_dur: 100000U
@@ -693,7 +693,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio: poll advance not playing\n")
     ---
-
+#
     # T15: is_audio_path consults the backend's ext list, case-insensitively.
     checks: checks + 1
     if: mixa_audio_is_audio_path(h[0], "song.Mp3") != 1
@@ -715,7 +715,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio: is_audio_path no_ext\n")
     ---
-
+#
     # T16: progress maps position/duration into [0,max].
     g_fake_pos: 25000U
     pr: mixa_audio_progress(h[0], 1000U)
@@ -730,7 +730,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio: progress max0=%lu\n", pr)
     ---
-
+#
     # T16b: set_list must unload a still-loaded/playing device instead of
     # abandoning it (review-183400's device-state reconciliation gap: only
     # mixa_audio_stop() used to unload the device; set_list/clear left it
@@ -769,7 +769,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio: T16b set_list did not unload the loaded device, unloads=%d want 1\n", g_fake_n_unloads)
     ---
-
+#
     # T16c: clear() (count=0) must do the same for a still-loaded device.
     st: mixa_audio_start(h[0], 0U, 0U)
     checks: checks + 1
@@ -789,7 +789,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio: T16c clear did not unload the loaded device, unloads=%d want 1\n", g_fake_n_unloads)
     ---
-
+#
     # T17: destroy tears everything down.
     mixa_audio_destroy(h[0])
     h[0]: 0
@@ -798,7 +798,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio: closes=%d want 1\n", g_fake_n_closes)
     ---
-
+#
     c.printf("audio seam selftest: %d checks, %d failures\n", checks, failures)
     if: failures != 0
         return: 1

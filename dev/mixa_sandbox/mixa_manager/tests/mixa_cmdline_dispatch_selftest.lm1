@@ -71,7 +71,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.system(cmd)
     c.snprintf(console_path, 600U, "%s\\dispatch_console.log", base)
     c.remove(console_path)
-
+#
     # --- Scenario 1: a real, fast, successful command. Exact console
     # bytes checked: the echoed command line, then the command's own
     # real output, with NO marker text ever leaking into the file (the
@@ -143,7 +143,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.free(cwd_slot[0])
     ---
     mixa_cmd_dispatch_release(d)
-
+#
     # --- Scenario 2: a real nonzero exit code, recovered exactly.
     c.remove(console_path)
     if: mixa_file_open(@ cf, console_path, MIXA_FILE_MODE_APPEND) != MIXA_FILE_OK
@@ -170,7 +170,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.free(cwd_slot[0])
     ---
     mixa_cmd_dispatch_release(d)
-
+#
     # --- Scenario 3: poll() after DONE is idempotent -- same status,
     # no re-read, no crash.
     c.remove(console_path)
@@ -201,7 +201,7 @@ fn: main (int: argc; @: @(char) argv) int
     ---
     mixa_file_close(cf)
     mixa_cmd_dispatch_release(d)
-
+#
     # --- Scenario 4: a spawn failure (invalid working directory) -- *out
     # stays null, nothing was echoed to the console (spawn never
     # succeeded, so no command is "real and running" to echo for).
@@ -234,7 +234,7 @@ fn: main (int: argc; @: @(char) argv) int
             c.printf("dispatch: scenario4 a spawn failure should echo nothing, wrote %zu bytes\n", got_len[0])
         ---
     ---
-
+#
     # --- Scenario 5: release() on a STILL-RUNNING command does not hang
     # and does not crash (PROCESS_SEAM "kill and mean it"). A real,
     # genuinely long-lived child (ping loop) started, released almost
@@ -263,7 +263,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("dispatch: scenario5 release() on a running command returned (checked by reaching this line, not a 30-second wait)\n")
     ---
     mixa_file_close(cf)
-
+#
     # --- Scenario 6: argument negatives.
     checks: checks + 1
     if: mixa_cmd_dispatch_start(0, base, cf, @ d) != MIXA_CMD_DISPATCH_ERR_ARG
@@ -283,7 +283,7 @@ fn: main (int: argc; @: @(char) argv) int
     mixa_cmd_dispatch_release(0)
     checks: checks + 1
     c.printf("dispatch: release(0) did not crash (checked by reaching this line)\n")
-
+#
     if: failures = 0
         c.printf("cmdline dispatch selftest: %d checks, 0 failures\n", checks)
     else:

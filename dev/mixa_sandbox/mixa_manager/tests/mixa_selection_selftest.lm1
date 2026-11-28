@@ -8,12 +8,12 @@ fn: main () int
     int: failures
     int: rc
     failures: 0
-
+#
     sel: (cast: (@: MixaSelection) c.calloc(1U, c.sizeof(c.MixaSelection)))
     if: sel = 0
         c.printf("mixa selection: alloc failed\n")
         return: 1
-
+#
     # --- t1: four-op; deselect top keeps prior nested selection ---
     if: mixa_selection_init(sel) != MIXA_SEL_OK
         c.printf("mixa selection: t1 init failed\n")
@@ -47,7 +47,7 @@ fn: main () int
         c.printf("mixa selection: t1 /a/z should NOT be selected\n")
         failures: failures + 1
     mixa_selection_release(sel)
-
+#
     # --- t2: four nested child-first; query consolidates to 2; deselect top ---
     c.memset(sel, 0, c.sizeof(c.MixaSelection))
     if: mixa_selection_init(sel) != MIXA_SEL_OK
@@ -90,7 +90,7 @@ fn: main () int
         c.printf("mixa selection: t2 /a/x should NOT be selected\n")
         failures: failures + 1
     mixa_selection_release(sel)
-
+#
     # --- t3: select child of already-selected directory is CONFLICT no-op ---
     c.memset(sel, 0, c.sizeof(c.MixaSelection))
     if: mixa_selection_init(sel) != MIXA_SEL_OK
@@ -110,7 +110,7 @@ fn: main () int
         c.printf("mixa selection: t3 /a/b should inherit\n")
         failures: failures + 1
     mixa_selection_release(sel)
-
+#
     # --- t4: exception then re-select inside; lower wins; deselect missing ---
     c.memset(sel, 0, c.sizeof(c.MixaSelection))
     if: mixa_selection_init(sel) != MIXA_SEL_OK
@@ -151,7 +151,7 @@ fn: main () int
         c.printf("mixa selection: t4 deselect /nope expected NOTHING got %d\n", rc)
         failures: failures + 1
     mixa_selection_release(sel)
-
+#
     # t5: Windows separators. Every case above uses '/', matching the
     # Java sample paths this model was transcribed from, so none of them
     # could see that mixa_sel_cut_parent recognised only '/'. On a '\'
@@ -213,9 +213,9 @@ fn: main () int
         c.printf("mixa selection: t5 C:\\w\\a\\b should still be excluded\n")
         failures: failures + 1
     mixa_selection_release(sel)
-
+#
     c.free(sel)
-
+#
     if: failures != 0
         c.printf("mixa selection selftest FAILED checks=%d\n", failures)
         return: 1

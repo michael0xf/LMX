@@ -77,15 +77,15 @@ fn: main () int
     size_t: n
     int: rc
     c.setbuf((cast: (@: void) c.stdout), 0)
-
+#
     vt: mixa_backend_headless_table()
     vt2: mixa_backend_headless_table()
     t_check_int("S0 singleton table identical", (cast: (int) (vt = vt2)), 1)
-
+#
     m: (cast: (@: MixaCellMetrics) c.calloc(1U, c.sizeof(c.MixaCellMetrics)))
     ev: (cast: (@: MixaEvent) c.calloc(1U, c.sizeof(c.MixaEvent)))
     got: (cast: (@: MixaEvent) c.calloc(1U, c.sizeof(c.MixaEvent)))
-
+#
     # --- Scenario 1: open() argument/odd-cell validation.
     t_check_int("S1 open null out", vt\open(0, 3U, 2U, m), 1)
     t_check_int("S1 open null metrics", vt\open(@ be, 3U, 2U, 0), 1)
@@ -107,13 +107,13 @@ fn: main () int
     m\upper_cell_height: 11U
     t_check_int("S1 odd upper_cell_height refused", vt\open(@ be, 3U, 2U, m), 1)
     m\upper_cell_height: 10U
-
+#
     # --- Scenario 2: a real successful open.
     be: 0
     rc: vt\open(@ be, 3U, 2U, m)
     t_check_int("S2 open rc", rc, 0)
     t_check_int("S2 open produced handle", (cast: (int) (be != 0)), 1)
-
+#
     # --- Scenario 3: present()/frame_at() real round trip.
     c.memset(rgba, 0, 400U);
     rgba[0]: (cast: (MixaU8) 10U)
@@ -129,7 +129,7 @@ fn: main () int
     t_check_int("S3 frame_at pixel b", (cast: (int) px[2]), 30)
     t_check_int("S3 frame_at pixel a", (cast: (int) px[3]), 255)
     t_check_int("S3 frame_at out of bounds refused", mixa_headless_frame_at(be, 999U, 999U, px), 1)
-
+#
     # --- Scenario 4: poll() on an empty inbox, then a real pushed event
     # delivered in FIFO order.
     got\kind: MIXA_EVENT_KEY
@@ -144,7 +144,7 @@ fn: main () int
     t_check_int("S4 poll delivers pushed event rc", rc, 0)
     t_check_int("S4 poll delivers pushed event kind", got\kind, MIXA_EVENT_KEY)
     t_check_int("S4 poll delivers pushed event codepoint", (cast: (int) got\codepoint), 65)
-
+#
     # --- Scenario 5: a real RESIZE event delivered through poll()
     # actually reallocates the frame buffer to the new geometry.
     c.memset(ev, 0, c.sizeof(c.MixaEvent))
@@ -161,7 +161,7 @@ fn: main () int
     t_check_int("S5 present after resize rc", vt\present(be, rgba, bytes), 0)
     t_check_int("S5 frame_at after resize rc", mixa_headless_frame_at(be, 0U, 0U, px), 0)
     t_check_int("S5 frame_at after resize value", (cast: (int) px[0]), 99)
-
+#
     # --- Scenario 6: clipboard set/get real round trip, short-buffer
     # length report, and the unset-clipboard empty case (on a FRESH
     # handle, since the round trip above will have set it).
@@ -172,9 +172,9 @@ fn: main () int
     t_check_str("S6 clipboard_get content", cbuf, "hello clip")
     n: vt\clipboard_get(be, cbuf, 3U)
     t_check_int("S6 clipboard_get short buffer reports required length", (cast: (int) n), 10)
-
+#
     vt\close(be)
-
+#
     # --- Scenario 7: unset clipboard on a fresh handle reports empty.
     be: 0
     m\text_cell_width: 4U
@@ -188,7 +188,7 @@ fn: main () int
     n: vt\clipboard_get(be, cbuf, 64U)
     t_check_int("S7 unset clipboard length", (cast: (int) n), 0)
     t_check_int("S7 unset clipboard empty string", (cast: (int) (cbuf[0] = 0)), 1)
-
+#
     # --- Scenario 8: push_event's own real pixel-to-half-cell
     # conversion for MOUSE and MOUSE_WHEEL.
     c.memset(ev, 0, c.sizeof(c.MixaEvent))
@@ -207,7 +207,7 @@ fn: main () int
     vt\poll(be, got)
     t_check_int("S8 wheel half-cell col", (cast: (int) got\col), 2)
     t_check_int("S8 wheel half-cell row", (cast: (int) got\row), 2)
-
+#
     # --- Scenario 9: glyph() reports MISSING for every valid layer,
     # refuses an invalid one.
     gl: (cast: (@: MixaGlyph) c.calloc(1U, c.sizeof(c.MixaGlyph)))
@@ -217,12 +217,12 @@ fn: main () int
     t_check_int("S9 glyph pointer layer rc", vt\glyph(be, MIXA_LAYER_POINTER, 65U, gl), 0)
     t_check_int("S9 glyph invalid layer refused", vt\glyph(be, 999, 65U, gl), 1)
     c.free(gl)
-
+#
     vt\close(be)
     c.free(m)
     c.free(ev)
     c.free(got)
-
+#
     if: g_failures[0] != 0
         c.printf("mixa backend headless parity harness FAILED checks=%d\n", g_failures[0])
         return: 1

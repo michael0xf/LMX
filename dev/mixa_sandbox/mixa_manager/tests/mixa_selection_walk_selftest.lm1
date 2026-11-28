@@ -190,7 +190,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.setbuf((cast: (@: void) c.stdout), 0)
     failures: 0
     checks: 0
-
+#
     if: argc >= 2
         c.snprintf(base, 520U, "%s", argv[1])
     ---
@@ -200,7 +200,7 @@ fn: main (int: argc; @: @(char) argv) int
     uni[0]: (cast: (char) 0xD1)
     uni[1]: (cast: (char) 0x84)
     uni[2]: 0
-
+#
     c.snprintf(root, 1040U, "%s\\root", base)
     c.snprintf(pa, 1040U, "%s\\a", root)
     c.snprintf(pb, 1040U, "%s\\b", pa)
@@ -210,7 +210,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(pe, 1040U, "%s\\e", root)
     c.snprintf(puni, 1040U, "%s\\%s", root, uni)
     c.snprintf(missing, 1040U, "%s\\no_such", root)
-
+#
     # root/a/a1.txt, root/a/b/b1.txt, root/a/b/bb/bb1.txt,
     # root/a/c/c1.txt, root/a/c/d/d1.txt, root/e (empty),
     # root/<utf8>/u1.txt, root/top.txt
@@ -244,7 +244,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_touch(p1)
     c.snprintf(p1, 1200U, "%s\\top.txt", root)
     t_touch(p1)
-
+#
     sel: (cast: (@: MixaSelection) c.calloc(1U, c.sizeof(c.MixaSelection)))
     if: sel = 0
         c.printf("walk: alloc failed\n")
@@ -256,7 +256,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("walk: selection init failed\n")
         return: 1
     ---
-
+#
     # --- Scenario 1: one selected directory is walked whole, in the
     # seam's own order, with enter/children/complete structure.
     mixa_selection_select(sel, pa)
@@ -299,7 +299,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("walk: nested directory not contained in its parent: %s\n", g_trace)
     ---
-
+#
     # --- Scenario 2: one child exception. c is excluded, so neither it
     # nor anything under it is visited, while its siblings are.
     mixa_selection_deselect(sel, pc)
@@ -320,7 +320,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("walk: exception removed unrelated entries: %s\n", g_trace)
     ---
-
+#
     # --- Scenario 3: a lower explicit selection INSIDE the excluded
     # subtree is still reached -- as a root of its own, because the
     # exception above it makes its parent unselected.
@@ -352,7 +352,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("walk: outer root lost entries: %s\n", g_trace)
     ---
-
+#
     # --- Scenario 4: nested effective roots are visited once. Selecting
     # a child of an already-selected directory is a no-op by the model's
     # own rule, so a nested explicit root only arises child-first.
@@ -382,7 +382,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("walk: outer root incomplete with a nested root: %s\n", g_trace)
     ---
-
+#
     # --- Scenario 5: the documented child-first case from
     # SELECTION_MODEL.txt section 4 -- select b, select a, select bb,
     # deselect a. The model must keep b and everything under it; the
@@ -415,7 +415,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("walk: child-first kept the deselected ancestor: %s\n", g_trace)
     ---
-
+#
     # --- Scenario 6: an empty selected directory and a UTF-8 named one.
     mixa_selection_release(sel)
     mixa_selection_init(sel)
@@ -444,7 +444,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("walk: UTF-8 directory name not reported: %s\n", g_trace)
     ---
-
+#
     # --- Scenario 7: a selected path that no longer exists is reported
     # with the seam's own status, and the selection is untouched.
     mixa_selection_release(sel)
@@ -463,7 +463,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("walk: a failed walk changed the selection\n")
     ---
-
+#
     # --- Scenario 8: cancellation and caller failure.
     mixa_selection_release(sel)
     mixa_selection_init(sel)
@@ -495,7 +495,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("walk: %d callbacks after failing on the second\n", g_calls)
     ---
-
+#
     # --- Scenario 9: laziness. The first callback must arrive before the
     # tree has been enumerated. Measured two ways: the allocation counter
     # at the moment of the first callback against the total a complete
@@ -529,7 +529,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("walk: subtrees were entered despite cancelling first: %s\n", g_trace)
     ---
-
+#
     # --- Scenario 10: out of memory at every owned allocation step.
     # Each refusal must report ERR_NOMEM, leave the selection untouched
     # and free everything that attempt had taken.
@@ -574,7 +574,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("walk: %d allocations still live after a clean walk\n", g_alloc_live)
     ---
-
+#
     # --- Scenario 11: consolidation DURING the root scan must not lose a
     # root (review 20260912-090426).
     #
@@ -628,7 +628,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("walk: %d allocations live after the consolidation walk\n", g_alloc_live)
     ---
-
+#
     # --- Scenario 12: argument negatives, and an empty selection walks
     # to nothing rather than failing.
     checks: checks + 1
@@ -654,10 +654,10 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("walk: empty selection did not walk to nothing\n")
     ---
-
+#
     mixa_selection_release(sel)
     c.free(sel)
-
+#
     if: failures = 0
         c.printf("selection walk selftest: %d checks, 0 failures\n", checks)
     else:

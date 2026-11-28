@@ -71,7 +71,7 @@ fn: main (int: argc; @: @(char) argv) int
     []: char readbuf 4096
     int: rc
     c.setbuf((cast: (@: void) c.stdout), 0)
-
+#
     if: argc >= 2
         c.snprintf(base, 520U, "%s", argv[1])
     else:
@@ -79,7 +79,7 @@ fn: main (int: argc; @: @(char) argv) int
     ---
     c.snprintf(console_path, 600U, "%s\\help_console.log", base)
     c.remove(console_path)
-
+#
     # Expected bytes: mixa_help_text() verbatim + CRLF, computed from
     # the real function under test.
     text: mixa_help_text()
@@ -89,7 +89,7 @@ fn: main (int: argc; @: @(char) argv) int
     expected[expected_len + 1U]: (cast: (char) 10)
     expected_len: expected_len + 2U
     t_check_int("help_text nonempty", (cast: (int) (c.strlen(text) > 0U)), 1)
-
+#
     # --- Scenario 1: keyboard F1 appends the exact bytes to a fresh file. ---
     if: mixa_file_open(@ cf, console_path, MIXA_FILE_MODE_APPEND) != MIXA_FILE_OK
         c.printf("help parity: scenario1 could not create fixture file\n")
@@ -123,7 +123,7 @@ fn: main (int: argc; @: @(char) argv) int
         t_check_int("scenario1 bytes match", (cast: (int) (c.memcmp(readbuf, expected, expected_len) = 0)), 1)
     ---
     c.free(ctx)
-
+#
     # --- Scenario 2: a button-rect hit on a FRESH file produces
     # byte-identical output to scenario 1's own keyboard path. ---
     c.remove(console_path)
@@ -149,7 +149,7 @@ fn: main (int: argc; @: @(char) argv) int
         t_check_int("scenario2 bytes match scenario1", (cast: (int) (c.memcmp(readbuf, expected, expected_len) = 0)), 1)
     ---
     c.free(ctx)
-
+#
     # --- Scenario 3: a hit OUTSIDE the rect touches nothing. ---
     c.remove(console_path)
     if: mixa_file_open(@ cf, console_path, MIXA_FILE_MODE_APPEND) != MIXA_FILE_OK
@@ -174,7 +174,7 @@ fn: main (int: argc; @: @(char) argv) int
         t_check_sz("scenario3 zero bytes written", got_len[0], 0U)
     ---
     c.free(ctx)
-
+#
     # --- Scenario 4: a non-F1 key, and F1's own keycode on a non-KEY
     # event, both touch nothing. ---
     c.remove(console_path)
@@ -208,7 +208,7 @@ fn: main (int: argc; @: @(char) argv) int
         t_check_sz("scenario4 zero bytes written", got_len[0], 0U)
     ---
     c.free(ctx)
-
+#
     # --- Scenario 5: real failure path -- append through a READ-mode
     # handle, an already-existing deterministic failure the real mixa_
     # file seam itself provides (no invented fault injection). Proves
@@ -241,7 +241,7 @@ fn: main (int: argc; @: @(char) argv) int
         t_check_sz("scenario5 no partial publication", got_len[0], 0U)
     ---
     c.free(ctx)
-
+#
     # --- Scenario 6: argument negatives -- every entry point is
     # null-safe and touches nothing. ---
     t_check_int("action(0)", mixa_help_action(0), MIXA_HELP_ERR_ARG)
@@ -254,7 +254,7 @@ fn: main (int: argc; @: @(char) argv) int
         t_check_int("action with null console_file", mixa_help_action((cast: (@: void) ctx3)), MIXA_HELP_ERR_ARG)
         c.free(ctx3)
     ---
-
+#
     if: g_failures[0] != 0
         c.printf("mixa help parity harness FAILED checks=%d\n", g_failures[0])
         return: 1

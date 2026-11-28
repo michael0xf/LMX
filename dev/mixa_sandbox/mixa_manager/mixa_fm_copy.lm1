@@ -152,11 +152,11 @@ fn: mixa_app_loop_open (@: MixaAppLoop loop; const: @(MixaBackendVTable vt); siz
     loop\ctx: 0
     loop\is_open: 0
     loop\running: 0
-
+#
     if: mixa_backend_open(vt, @ loop\backend, cols, rows, metrics) != 0
         return: 1
     ---
-
+#
     loop\pump: (cast: (@: MixaPump) c.calloc(1U, c.sizeof(c.MixaPump)))
     if: loop\pump = 0
         mixa_app_loop_close(loop)
@@ -166,7 +166,7 @@ fn: mixa_app_loop_open (@: MixaAppLoop loop; const: @(MixaBackendVTable vt); siz
         mixa_app_loop_close(loop)
         return: 1
     ---
-
+#
     loop\sel: (cast: (@: MixaSelection) c.calloc(1U, c.sizeof(c.MixaSelection)))
     if: loop\sel = 0
         mixa_app_loop_close(loop)
@@ -176,7 +176,7 @@ fn: mixa_app_loop_open (@: MixaAppLoop loop; const: @(MixaBackendVTable vt); siz
         mixa_app_loop_close(loop)
         return: 1
     ---
-
+#
     loop\fm: (cast: (@: MixaFm) c.calloc(1U, c.sizeof(c.MixaFm)))
     if: loop\fm = 0
         mixa_app_loop_close(loop)
@@ -186,7 +186,7 @@ fn: mixa_app_loop_open (@: MixaAppLoop loop; const: @(MixaBackendVTable vt); siz
         mixa_app_loop_close(loop)
         return: 1
     ---
-
+#
     loop\ctx: (cast: (@: MixaFmCopyHereCtx) c.calloc(1U, c.sizeof(c.MixaFmCopyHereCtx)))
     if: loop\ctx = 0
         mixa_app_loop_close(loop)
@@ -196,7 +196,7 @@ fn: mixa_app_loop_open (@: MixaAppLoop loop; const: @(MixaBackendVTable vt); siz
     loop\ctx\sink: sink
     loop\ctx\fv: fv
     loop\ctx\last_status: 0
-
+#
     loop\is_open: 1
     loop\running: 1
 return: 0

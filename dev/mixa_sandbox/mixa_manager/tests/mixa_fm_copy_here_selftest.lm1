@@ -249,7 +249,7 @@ fn: main (int: argc; @: @(char) argv) int
     failures: 0
     checks: 0
     g_fault_at: -1
-
+#
     if: argc >= 2
         c.snprintf(base, 520U, "%s", argv[1])
     ---
@@ -268,7 +268,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(dest_dir2, 1040U, "%s\\dest2", root)
     c.snprintf(dest_key, 1040U, "%s\\dest_key", root)
     c.snprintf(dest_pump, 1040U, "%s\\dest_pump", root)
-
+#
     c.snprintf(cmd, 2400U, "cmd /c mkdir \"%s\" 2>nul", root)
     c.system(cmd)
     c.snprintf(cmd, 2400U, "cmd /c mkdir \"%s\" 2>nul", srcdir)
@@ -286,7 +286,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_touch(single_file, "top-level-content")
     t_touch(iofile, "io-fault-fixture-content")
     t_touch(inner_a, "inner-content")
-
+#
     # --- Scenario 1: proving path lifetime is real, BEFORE testing the
     # real (safe) action. Enter dest_dir with a POISONING allocator, take
     # the BORROWED mixa_fm_cur_dir(fm) pointer, then call
@@ -331,7 +331,7 @@ fn: main (int: argc; @: @(char) argv) int
     mixa_fm_release(fm)
     c.free(sel)
     c.free(fm)
-
+#
     # --- Scenario 2 onward: the REAL action, always safe, via the
     # ordinary (non-poisoning) allocator plus a real poisoning check on
     # the SAFE path too, proving mixa_fm_copy_here_action's own owned
@@ -361,7 +361,7 @@ fn: main (int: argc; @: @(char) argv) int
     ---
     ctx\fm: fm
     ctx\sink: t_sink()
-
+#
     # --- Scenario 2: the empty-selection no-op is explicit and does not
     # touch the filesystem or fm's own view at all.
     t_reset()
@@ -381,7 +381,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm_copy_here: empty-selection no-op still invoked the sink\n")
     ---
-
+#
     # --- Scenario 3: a real headless button/controller event -- a hit
     # inside the button's own row/col bounds -- triggers Copy Here into
     # the CURRENT directory (root, holding top.txt and srcdir), with real
@@ -454,7 +454,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm_copy_here: view not refreshed after a same-directory Copy Here\n")
     ---
-
+#
     # --- Scenario 4: existing-file conflict, using the poisoning
     # allocator throughout -- top.txt is already at dest_dir from
     # scenario 3. Exact status surfaces, view stays usable.
@@ -481,7 +481,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("fm_copy_here: view corrupted by an existing-file conflict\n")
     ---
     mixa_selection_deselect(sel, single_file)
-
+#
     # --- Scenario 5: cancellation on srcdir's own first event (genuinely
     # mid-subtree) then a retry that completes it and drains the
     # selection.
@@ -536,7 +536,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm_copy_here: retry did not drain the now-completed selection\n")
     ---
-
+#
     # --- Scenario 6: an injected mid-operation I/O failure, using
     # iofile.txt -- a fixture never copied before this scenario -- so the
     # fault hook is genuinely reached. Unfinished selection preserved,
@@ -606,7 +606,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("fm_copy_here: retry after IO failure did not drain selection\n")
     ---
     ctx\fv: 0
-
+#
     # --- Scenario 7: Ctrl+V key-event trigger (ticket 20260912-124720),
     # driven through a REAL MixaEvent shape round-tripped through the
     # headless backend's own push/poll seam -- not a hand-filled local
@@ -636,7 +636,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm_copy_here: key-event headless backend open failed\n")
     ---
-
+#
     mixa_fm_goto_root(fm)
     idx: t_index_of(fm, "top.txt")
     checks: checks + 1
@@ -650,7 +650,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm_copy_here: entering dest_key failed\n")
     ---
-
+#
     # 7a: V pressed with NO Ctrl modifier -- must do nothing at all.
     t_reset()
     c.memset(kev, 0, c.sizeof(c.MixaEvent))
@@ -670,7 +670,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm_copy_here: V without Ctrl invoked the sink\n")
     ---
-
+#
     # 7b: Ctrl held with an unrelated codepoint ('q') -- must do nothing.
     c.memset(kev, 0, c.sizeof(c.MixaEvent))
     kev\kind: MIXA_EVENT_KEY
@@ -689,7 +689,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm_copy_here: Ctrl+q invoked the sink\n")
     ---
-
+#
     # 7c: mouse, resize, close -- none are MIXA_EVENT_KEY, must do nothing.
     c.memset(kev, 0, c.sizeof(c.MixaEvent))
     kev\kind: MIXA_EVENT_MOUSE
@@ -726,7 +726,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm_copy_here: close event was treated as a key hit (rc=%d calls=%d)\n", rc, g_calls)
     ---
-
+#
     # 7d: the real gesture -- codepoint 'V' (uppercase) WITH Ctrl set, the
     # portable text+modifier spelling. Copies top.txt into dest_key,
     # drains the selection, refreshes the view (destination == cur dir).
@@ -764,7 +764,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm_copy_here: Ctrl+V (text form) did not refresh the view\n")
     ---
-
+#
     # 7e: the real Win32-observed spelling -- codepoint 0x16 (ASCII SYN),
     # what a genuine Ctrl+V keypress actually delivers through WM_CHAR
     # (BACKEND_SEAM.txt 8.2), needing no modifier bit since the control
@@ -814,7 +814,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm_copy_here: control-code Ctrl+V did not drain the completed selection\n")
     ---
-
+#
     # --- Scenario 8: the top-level drain/dispatch unit (ticket
     # 20260912-131700), reusing the SAME headless backend as scenario 7
     # but its own real MixaPump -- proving a real headless push all the
@@ -827,7 +827,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm_copy_here: pump open failed\n")
     ---
-
+#
     # 8a: nothing pending -- EMPTY, out left untouched (checked via kind
     # still holding the sentinel this scenario primes it with).
     t_reset()
@@ -838,7 +838,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm_copy_here: dispatch on an empty pump rc=%d want PUMP_EMPTY\n", rc)
     ---
-
+#
     # 8b: a MOUSE event -- preserved verbatim for the caller, no action.
     c.memset(kev, 0, c.sizeof(c.MixaEvent))
     kev\kind: MIXA_EVENT_MOUSE
@@ -857,7 +857,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm_copy_here: mouse event through dispatch invoked the sink\n")
     ---
-
+#
     # 8c: a RESIZE event -- preserved, no action, real adoption still
     # happens inside mixa_backend_poll exactly as it would without this
     # function in the path.
@@ -877,7 +877,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm_copy_here: resize event through dispatch invoked the sink\n")
     ---
-
+#
     # 8d: CLOSE event -- preserved, no action.
     c.memset(kev, 0, c.sizeof(c.MixaEvent))
     kev\kind: MIXA_EVENT_CLOSE
@@ -893,7 +893,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm_copy_here: close event through dispatch invoked the sink\n")
     ---
-
+#
     # 8e: an unrelated key (V without Ctrl) -- preserved, no action.
     c.memset(kev, 0, c.sizeof(c.MixaEvent))
     kev\kind: MIXA_EVENT_KEY
@@ -911,7 +911,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm_copy_here: unrelated key through dispatch invoked the sink\n")
     ---
-
+#
     # 8f: the real gesture, driven all the way from a headless push
     # through drain -> next -> Copy Here filesystem result, selection
     # drain and view refresh -- into dest_pump, untouched by any earlier
@@ -964,7 +964,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm_copy_here: pump-driven Ctrl+V did not refresh the view\n")
     ---
-
+#
     # 8g: no duplicate action -- exactly ONE event was pushed for 8f, so
     # dispatching again immediately must find the queue empty (the same
     # event cannot be popped and acted on a second time), and the call
@@ -985,7 +985,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm_copy_here: single pushed Ctrl+V produced other than exactly one file event: %s\n", g_trace)
     ---
-
+#
     # 8h: argument negatives.
     checks: checks + 1
     if: mixa_fm_copy_here_pump_dispatch(0, kbe, ctx, kout) != MIXA_COPY_HERE_PUMP_ERR_ARG
@@ -1002,14 +1002,14 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm_copy_here: null out not PUMP_ERR_ARG\n")
     ---
-
+#
     mixa_pump_release(kpump)
     c.free(kpump)
     mixa_backend_close(kbe)
     c.free(km)
     c.free(kev)
     c.free(kout)
-
+#
     # --- Scenario 9: argument negatives.
     checks: checks + 1
     if: mixa_fm_copy_here_action(0) != MIXA_COPY_ERR_ARG
@@ -1031,13 +1031,13 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("fm_copy_here: null event not HIT_NONE\n")
     ---
-
+#
     mixa_selection_release(sel)
     mixa_fm_release(fm)
     c.free(sel)
     c.free(fm)
     c.free(ctx)
-
+#
     if: failures = 0
         c.printf("fm copy here selftest: %d checks, 0 failures\n", checks)
     else:

@@ -37,7 +37,7 @@ $mixa = Join-Path $PWD 'dev/mixa_sandbox/tools'
 $legacy = Join-Path $mixa 'legacy'
 $inputs = @{
     Translator = Join-Path $legacy 'l1trans.exe'
-    ExpectedTranslatorSha256 = '601D350E853CA16A35EC4B7ED7C2B5B82248A63E96B72A545329B1D8C6AA2196'
+    ExpectedTranslatorSha256 = 'E3E9B25846A11E0641B7805613BECE4203BD1A654DE45DE46311B5CBABA43B4B'
     KernelEvidenceDir = $legacy
 }
 & (Join-Path $mixa 'build_mixa.ps1') @inputs -BuildOnly
@@ -51,12 +51,22 @@ described in [REPORT.md](REPORT.md).
 
 | Saved input | Provenance |
 | --- | --- |
-| `tools/legacy/l1trans.exe` | Byte-for-byte copy of `bin/l1trans.exe` from Git commit `7bb8962fab7ad94be01efc266c725500857e696b` (2026-09-27). The SHA-256 above matches that revision's `L1_PIN.txt`. |
-| `tools/legacy/headers/l2src/` | 46 generated headers preserved from the Mixa build `20260922_004742`, recorded in Git commit `fc0dbbf11`. The build script reports the header-set digest `D3931C398E9A4469A06530BD09254C773FE016FBE3928938088DBA377A2A5B55`. |
+| `tools/legacy/l1trans.exe` | The accepted LMX producer's `l1trans.exe` (SHA-256 `E3E9B25846A11E0641B7805613BECE4203BD1A654DE45DE46311B5CBABA43B4B`), taken from the accepted stage `build2/coder-grammar-20261127/stage-assign-02b/coder-assign02-feh01/`; producer commit `bbad344aaabac8af6b6e1bbbc0ed44043c13a72a` (28 Nov 2026), stage `stage-assign-02b`, closure `hosted-assign-assign02`. Same `l1trans` name and CLI as before: `[--unit-root DIR] <source.lm1> <output>`. |
+| `tools/legacy/headers/l2src/` | 46 generated headers preserved from the Mixa build `20260922_004742`, recorded in Git commit `fc0dbbf11`. The accepted producer consumes this header set unchanged: the run `build/20261128_helper5.log` reports the header-set digest `5B983970B6A09A1F4E6C0DDDFFE0F579D1670AD8D30FAB7B7FD093B480D8407D` (Windows PowerShell 5.1 hashing of the linked set; an older pwsh 7 guard printed `D3931C398E9A4469A06530BD09254C773FE016FBE3928938088DBA377A2A5B55` over the same 46 files — the two shells order/hash the names differently). |
 
-The September 22 build recorded in `fc0dbbf11` used a different B2 executable
-with SHA-256 prefix `571fa34e`. The command above checks the current sandbox
-with the saved September 27 executable.
+The sandbox `.lm1` sources are written for this producer after two mechanical
+source templates (applied 28 Nov 2026, verified green): blank lines inside
+function bodies carry a `#` comment line, and bare named pointer parameters use
+the `@: T name` spelling (`const: @(char name)` stays as is). The September 22
+gate recorded in `fc0dbbf11` was produced by the B2 executable with SHA-256
+prefix `571fa34e`. The previous saved `l1trans.exe` (`601D350E…`, Git commit
+`7bb8962fab7ad94be01efc266c725500857e696b`, 2026-09-27) is what the 28 Nov
+verification `build/20261128_helper2.log` ran before this replacement; that old
+kit stays available in Git commit `bb3dbb7c3`. The first full run on this
+producer is `build/20261128_helper5.log` (378 targets, no failures, exit 0);
+the control run from this saved kit is `build/20261128_helper6.log`
+(`-BuildOnly` with this kit's binary and headers: 378 targets, no failures,
+exit 0).
 
 ## History
 

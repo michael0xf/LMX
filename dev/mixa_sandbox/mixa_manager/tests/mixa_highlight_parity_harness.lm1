@@ -53,11 +53,11 @@ fn: main () int
     []: MixaTextRect other_rect 1
     @: MixaCell p
     int: rc
-
+#
     c.memset(hl, 0, c.sizeof(c.MixaHighlight))
     c.memset(rect, 0, c.sizeof(c.MixaTextRect))
     c.memset(other_rect, 0, c.sizeof(c.MixaTextRect))
-
+#
     c.printf("=== SCN 1 init/release ===\n")
     t_check_int("s1_init_null_refused", mixa_highlight_init(0), MIXA_HIGHLIGHT_ERR)
     t_check_int("s1_init_ok", mixa_highlight_init(hl), MIXA_HIGHLIGHT_OK)
@@ -75,7 +75,7 @@ fn: main () int
     c.printf("s1_release_null did-not-crash PASS\n")
     mixa_highlight_release(hl)
     c.printf("s1_double_release did-not-crash PASS\n")
-
+#
     c.printf("=== SCN 2 checked perimeter overflow ===\n")
     t_check_uint("s2_perimeter_2x2", mixa_highlight_perimeter_count(2U, 2U), 4U)
     t_check_uint("s2_perimeter_3x3", mixa_highlight_perimeter_count(3U, 3U), 8U)
@@ -85,7 +85,7 @@ fn: main () int
     # Real overflow guard: nrows so large that nrows > (SIZE_MAX - ncols)
     # -- unambiguous, no real allocation is ever attempted downstream.
     t_check_uint("s2_perimeter_overflow_guard", mixa_highlight_perimeter_count((cast: (size_t) -1), 2U), 0U)
-
+#
     c.printf("=== SCN 3 target identity checks ===\n")
     t_check_int("s3_init", mixa_highlight_init(hl), MIXA_HIGHLIGHT_OK)
     t_check_int("s3_inactive_trivially_matches", mixa_highlight_target_matches(hl, rect), 1)
@@ -98,7 +98,7 @@ fn: main () int
     mixa_highlight_clear(hl, rect)
     mixa_rect_release(rect)
     mixa_rect_release(other_rect)
-
+#
     c.printf("=== SCN 4 snapshot/restore, byte fields >=128 round-trip ===\n")
     t_check_int("s4_init", mixa_highlight_init(hl), MIXA_HIGHLIGHT_OK)
     t_check_int("s4_open_rect", mixa_rect_open(rect, 5U, 5U), 0)
@@ -129,7 +129,7 @@ fn: main () int
     t_check_int("s4_restore_width", (cast: (int) p\width), 1)
     t_check_int("s4_restore_alpha_gte128", (cast: (int) (cast: (unsigned char) p\alpha)), 222)
     mixa_rect_release(rect)
-
+#
     c.printf("=== SCN 5 move: restores old perimeter, paints new one ===\n")
     t_check_int("s5_init", mixa_highlight_init(hl), MIXA_HIGHLIGHT_OK)
     t_check_int("s5_open_rect", mixa_rect_open(rect, 8U, 8U), 0)
@@ -146,7 +146,7 @@ fn: main () int
     t_check_int("s5_still_active_after_move", hl\is_active, 1)
     mixa_highlight_clear(hl, rect)
     mixa_rect_release(rect)
-
+#
     c.printf("=== SCN 6 mismatched target refusal (state left intact) ===\n")
     t_check_int("s6_init", mixa_highlight_init(hl), MIXA_HIGHLIGHT_OK)
     t_check_int("s6_open_rect", mixa_rect_open(rect, 6U, 6U), 0)
@@ -159,7 +159,7 @@ fn: main () int
     t_check_int("s6_clear_on_real_target_ok", mixa_highlight_clear(hl, rect), MIXA_HIGHLIGHT_OK)
     mixa_rect_release(rect)
     mixa_rect_release(other_rect)
-
+#
     c.printf("=== SCN 7 allocation-failure rollback ===\n")
     t_check_int("s7_init", mixa_highlight_init(hl), MIXA_HIGHLIGHT_OK)
     t_check_int("s7_open_rect", mixa_rect_open(rect, 5U, 5U), 0)
@@ -187,7 +187,7 @@ fn: main () int
     t_check_int("s7_retry_ok", mixa_highlight_set(hl, rect, 1U, 1U, 3U, 3U, 5U), MIXA_HIGHLIGHT_OK)
     mixa_highlight_clear(hl, rect)
     mixa_rect_release(rect)
-
+#
     if: g_failures[0] != 0
         c.printf("mixa highlight parity harness FAILED checks=%d\n", g_failures[0])
         return: 1

@@ -76,7 +76,7 @@ fn: main () int
     []: MixaEvent out 1
     int: i
     int: tag
-
+#
     # Runtime ABI self-check (ticket 20260913-090200): whichever struct
     # header this binary was compiled against (the real one for the
     # oracle build, the L2 predef'd one for the L2 build) must land on
@@ -93,7 +93,7 @@ fn: main () int
     c.printf("=== ABI self-check ===\n")
     t_check_uint("abi_sizeof_MixaEvent", c.sizeof(c.MixaEvent), 64U)
     t_check_uint("abi_sizeof_MixaEventFifo", c.sizeof(c.MixaEventFifo), 40U)
-
+#
     c.printf("=== SCN 1 null/refusal cases ===\n")
     t_check_int("s1_init_null", mixa_event_fifo_init(0), 1)
     t_check_int("s1_push_null_fifo", mixa_event_fifo_push(0, ev), 1)
@@ -101,7 +101,7 @@ fn: main () int
     t_check_uint("s1_count_null", mixa_event_fifo_count(0), 0U)
     mixa_event_fifo_release(0)
     c.printf("s1_release_null did-not-crash PASS\n")
-
+#
     fifo: (cast: (@: MixaEventFifo) c.calloc(1U, c.sizeof(c.MixaEventFifo)))
     if: fifo = 0
         c.printf("mixa event fifo parity harness: alloc failed\n")
@@ -112,7 +112,7 @@ fn: main () int
     t_check_int("s1_pop_empty", mixa_event_fifo_pop(fifo, out), 1)
     t_check_uint("s1_count_empty_open", mixa_event_fifo_count(fifo), 0U)
     mixa_event_fifo_release(fifo)
-
+#
     c.printf("=== SCN 2 open/release state ===\n")
     t_check_int("s2_init_first", mixa_event_fifo_init(fifo), 0)
     t_check_int("s2_init_double_refused", mixa_event_fifo_init(fifo), 1)
@@ -126,7 +126,7 @@ fn: main () int
     mixa_event_fifo_release(fifo)
     mixa_event_fifo_release(fifo)
     c.printf("s2_double_release did-not-crash PASS\n")
-
+#
     c.printf("=== SCN 3 seed growth ===\n")
     t_check_int("s3_init", mixa_event_fifo_init(fifo), 0)
     t_check_uint("s3_capacity_before_first_push", fifo\capacity, 0U)
@@ -148,7 +148,7 @@ fn: main () int
     t_check_uint("s3_capacity_doubled_to_16", fifo\capacity, 16U)
     t_check_uint("s3_count_after_ninth", mixa_event_fifo_count(fifo), 9U)
     mixa_event_fifo_release(fifo)
-
+#
     c.printf("=== SCN 4 wrapped FIFO order + linearization on growth ===\n")
     t_check_int("s4_init", mixa_event_fifo_init(fifo), 0)
     i: 1
@@ -188,7 +188,7 @@ fn: main () int
     t_check_int("s4_pop_survivor_8", mixa_event_fifo_pop(fifo, out), 0)
     t_check_event(4, 8, out)
     mixa_event_fifo_release(fifo)
-
+#
     c.printf("=== SCN 5 linearization on growth, with a wrapped head at growth time ===\n")
     # Deliberately constructed so head != 0 (and > 0 wraps past the
     # buffer end) at the EXACT moment growth fires, forcing the
@@ -257,9 +257,9 @@ fn: main () int
     t_check_uint("s5_count_zero_after_drain", mixa_event_fifo_count(fifo), 0U)
     t_check_int("s5_pop_after_drain_refused", mixa_event_fifo_pop(fifo, out), 1)
     mixa_event_fifo_release(fifo)
-
+#
     c.free(fifo)
-
+#
     if: g_failures[0] != 0
         c.printf("mixa event fifo parity harness FAILED checks=%d\n", g_failures[0])
         return: 1

@@ -37,7 +37,7 @@ fn: mixa_cmd_dispatch_start (const: @(char command_utf8); const: @(char cwd_utf8
         return: MIXA_CMD_DISPATCH_ERR_NOMEM
     ---
     d\console_file: console_file
-
+#
     gen: (cast: (@: MixaProcessMarkerGen) c.calloc(1U, c.sizeof(c.MixaProcessMarkerGen)))
     if: gen = 0
         c.free(d)
@@ -51,7 +51,7 @@ fn: mixa_cmd_dispatch_start (const: @(char command_utf8); const: @(char cwd_utf8
         return: MIXA_CMD_DISPATCH_ERR_NOMEM
     ---
     marker: marker_slot[0]
-
+#
     wrapper_cmd_slot[0]: 0
     d\wrapper_path: 0
     rc: mixa_process_marker_build_wrapper(command_utf8, marker, 0, wrapper_cmd_slot, wrapper_path_slot)
@@ -62,7 +62,7 @@ fn: mixa_cmd_dispatch_start (const: @(char command_utf8); const: @(char cwd_utf8
     ---
     wrapper_cmd: wrapper_cmd_slot[0]
     d\wrapper_path: wrapper_path_slot[0]
-
+#
     d\scanner: (cast: (@: MixaProcessMarkerScanner) c.calloc(1U, c.sizeof(c.MixaProcessMarkerScanner)))
     if: d\scanner = 0
         mixa_process_marker_cleanup_wrapper(d\wrapper_path)
@@ -82,7 +82,7 @@ fn: mixa_cmd_dispatch_start (const: @(char command_utf8); const: @(char cwd_utf8
         return: MIXA_CMD_DISPATCH_ERR_NOMEM
     ---
     c.free(marker)
-
+#
     d\proc: 0
     rc: mixa_process_spawn(@ d\proc, wrapper_cmd, cwd_utf8, 0)
     c.free(wrapper_cmd)
@@ -94,7 +94,7 @@ fn: mixa_cmd_dispatch_start (const: @(char command_utf8); const: @(char cwd_utf8
         c.free(d)
         return: MIXA_CMD_DISPATCH_ERR_SPAWN
     ---
-
+#
     # Echo the command itself into the console, visible immediately, "as
     # if the cursor were writing it" (FIRST_VERSION / PROCESS_SEAM 2).
     # Best-effort: the command already started for real; an echo
@@ -116,7 +116,7 @@ fn: mixa_cmd_dispatch_start (const: @(char command_utf8); const: @(char cwd_utf8
             c.free(echo_buf)
         ---
     ---
-
+#
     out[0]: d
 return: MIXA_CMD_DISPATCH_OK
 
@@ -143,7 +143,7 @@ fn: mixa_cmd_dispatch_poll (@: MixaCmdDispatch d; @: int out_exit_code; @@: char
     ---
     sink\on_ordinary: mixa_cmd_sink_on_ordinary
     sink\ctx: (cast: (@: void) d\console_file)
-
+#
     got: 0U
     rc: mixa_process_read(d\proc, buf, 4096U, @ got)
     if: got > 0U
@@ -154,7 +154,7 @@ fn: mixa_cmd_dispatch_poll (@: MixaCmdDispatch d; @: int out_exit_code; @@: char
         mixa_process_marker_scanner_eof(d\scanner, sink)
     ---
     c.free(sink)
-
+#
     if: mixa_process_marker_scanner_done(d\scanner) != 0 || rc = MIXA_PROC_EOF
         d\done: 1
         if: mixa_process_marker_scanner_done(d\scanner) != 0

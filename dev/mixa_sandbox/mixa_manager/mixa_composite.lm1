@@ -61,7 +61,7 @@ fn: mixa_composite (const: @(MixaTextRect text_rect); size_t: text_cw; size_t: t
     []: MixaU8 pr 1
     []: MixaU8 pg 1
     []: MixaU8 pb 1
-
+#
     if: text_rect = 0
         return: 1
     if: upper_rect = 0
@@ -89,7 +89,7 @@ fn: mixa_composite (const: @(MixaTextRect text_rect); size_t: text_cw; size_t: t
     need: width * height * 4U
     if: out_size < need
         return: 1
-
+#
     # 1. background = palette[0] opaque
     mixa_palette_bg_rgb(MIXA_PAL_BLACK, pr, pg, pb)
     i: 0U
@@ -102,13 +102,13 @@ fn: mixa_composite (const: @(MixaTextRect text_rect); size_t: text_cw; size_t: t
         p[3]: (cast: (MixaU8) 255)
         i: i + 1U
     ---
-
+#
     y: 0U
     while: y < height
         x: 0U
         while: x < width
             p: out_rgba + ((y * width + x) * 4U)
-
+#
             # 2. text layer cell
             col: x / text_cw
             row: y / text_ch
@@ -141,7 +141,7 @@ fn: mixa_composite (const: @(MixaTextRect text_rect); size_t: text_cw; size_t: t
                     ---
                 ---
             ---
-
+#
             # 3. upper layer cell -- СМЕЩЁН НА ПОЛКЛЕТКИ ТЕКСТА (UI_MODEL 7.1/7.3,
             # BACKEND_SEAM 10.5): начало верхней сетки -- +cw/2, +ch/2, и полшага считается
             # от НИЖНЕЙ клетки (7.3: «the half step is half of the LOWER cell»).  Пиксели
@@ -185,7 +185,7 @@ fn: mixa_composite (const: @(MixaTextRect text_rect); size_t: text_cw; size_t: t
                     ---
                 ---
             ---
-
+#
             x: x + 1U
         ---
         y: y + 1U

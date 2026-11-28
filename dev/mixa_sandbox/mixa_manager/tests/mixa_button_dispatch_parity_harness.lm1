@@ -52,12 +52,12 @@ fn: main () int
     int: hit_col
     int: out_result
     int: rc
-
+#
     c.memset(panel, 0, c.sizeof(c.MixaButtonPanel))
     c.memset(rect, 0, c.sizeof(c.MixaTextRect))
     c.memset(stack, 0, c.sizeof(c.MixaAppWindowStack))
     c.memset(actions, 0, 2U * c.sizeof(c.MixaButtonAction))
-
+#
     t_check_int("setup_rect_open", mixa_rect_open(rect, 20U, 40U), 0)
     t_check_int("setup_stack_init", mixa_app_window_stack_init(stack), MIXA_APP_WINDOW_OK)
     t_check_int("setup_panel_init", mixa_button_panel_init(panel, 3U), MIXA_BUTTONS_OK_LOCAL)
@@ -70,13 +70,13 @@ fn: main () int
     # discipline for anything the harness itself did not just compute.
     hit_row: (cast: (int) panel\origin_row)
     hit_col: (cast: (int) panel\origin_col)
-
+#
     c.printf("=== SCN 1 no hit -> MIXA_DISPATCH_NONE, out_action_result preserved ===\n")
     out_result: -777
     rc: mixa_button_dispatch_hit(panel, 999U, 999U, actions, 0U, stack, rect, 0U, 0U, 6U, 20U, 3U, "msg", @ out_result)
     t_check_int("s1_no_hit_none", rc, MIXA_DISPATCH_NONE)
     t_check_int("s1_out_result_preserved", out_result, -777)
-
+#
     c.printf("=== SCN 2 matching action: real indirect call + return propagation ===\n")
     actions\btn_idx: 0
     actions\fn: t_action_fn
@@ -87,7 +87,7 @@ fn: main () int
     t_check_int("s2_handled", rc, MIXA_DISPATCH_HANDLED)
     t_check_int("s2_action_really_called", g_action_calls[0], 1)
     t_check_int("s2_return_propagated", out_result, 4242)
-
+#
     c.printf("=== SCN 3 null action function: skips this entry, falls through ===\n")
     actions\btn_idx: 0
     actions\fn: 0
@@ -96,7 +96,7 @@ fn: main () int
     rc: mixa_button_dispatch_hit(panel, (cast: (size_t) hit_row), (cast: (size_t) hit_col), actions, 1U, stack, rect, 0U, 0U, 6U, 20U, 3U, "msg", @ out_result)
     t_check_int("s3_null_fn_falls_to_fallback", rc, MIXA_DISPATCH_FALLBACK_OK)
     t_check_int("s3_out_result_preserved", out_result, -1)
-
+#
     c.printf("=== SCN 4 missing action (btn_idx never matches the real hit) ===\n")
     actions\btn_idx: 99
     actions\fn: t_action_fn
@@ -107,7 +107,7 @@ fn: main () int
     t_check_int("s4_missing_action_falls_to_fallback", rc, MIXA_DISPATCH_FALLBACK_OK)
     t_check_int("s4_action_not_called", g_action_calls[0], 0)
     t_check_int("s4_out_result_preserved", out_result, -1)
-
+#
     c.printf("=== SCN 5 fallback window: success and failure ===\n")
     out_result: -1
     rc: mixa_button_dispatch_hit(panel, (cast: (size_t) hit_row), (cast: (size_t) hit_col), 0, 0U, stack, rect, 0U, 0U, 6U, 20U, 3U, "msg", @ out_result)
@@ -118,7 +118,7 @@ fn: main () int
     rc: mixa_button_dispatch_hit(panel, (cast: (size_t) hit_row), (cast: (size_t) hit_col), 0, 0U, stack, rect, 0U, 0U, 0U, 0U, 3U, "msg", @ out_result)
     t_check_int("s5_fallback_err_zero_dims", rc, MIXA_DISPATCH_FALLBACK_ERR)
     t_check_int("s5_out_result_preserved_on_fallback_err", out_result, -1)
-
+#
     c.printf("=== SCN 6 boundary cell coordinates ===\n")
     # A coordinate that is NOT on any real button (one row below the
     # button's own bottom edge, origin_row+hb) makes mixa_button_panel_
@@ -134,7 +134,7 @@ fn: main () int
     out_result: -777
     rc: mixa_button_dispatch_hit(panel, 19U, 39U, 0, 0U, stack, rect, 0U, 0U, 6U, 20U, 3U, "msg", @ out_result)
     t_check_int("s6_far_outside_is_none", rc, MIXA_DISPATCH_NONE)
-
+#
     c.printf("=== SCN 7 action_count 0 with a non-null actions pointer ===\n")
     actions\btn_idx: 0
     actions\fn: t_action_fn
@@ -144,7 +144,7 @@ fn: main () int
     rc: mixa_button_dispatch_hit(panel, (cast: (size_t) hit_row), (cast: (size_t) hit_col), actions, 0U, stack, rect, 0U, 0U, 6U, 20U, 3U, "msg", @ out_result)
     t_check_int("s7_zero_count_skips_loop_falls_to_fallback", rc, MIXA_DISPATCH_FALLBACK_OK)
     t_check_int("s7_action_not_called", g_action_calls[0], 0)
-
+#
     if: g_failures[0] != 0
         c.printf("mixa button dispatch parity harness FAILED checks=%d\n", g_failures[0])
         return: 1

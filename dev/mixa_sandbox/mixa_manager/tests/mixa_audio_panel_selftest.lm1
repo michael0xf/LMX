@@ -160,12 +160,12 @@ fn: main () int
     int: checks
     failures: 0
     checks: 0
-
+#
     c.snprintf(sf0, 32U, "a.mp3")
     c.snprintf(sf1, 32U, "b.mp3")
     src[0]: sf0
     src[1]: sf1
-
+#
     rect: (cast: (@: MixaTextRect) c.calloc(1U, c.sizeof(c.MixaTextRect)))
     panel: (cast: (@: MixaAudioPanel) c.calloc(1U, c.sizeof(c.MixaAudioPanel)))
     stack: @ stack_storage
@@ -177,7 +177,7 @@ fn: main () int
     # (the same lesson mixa_share_button_selftest.lm1 and
     # mixa_app_panel_selftest.lm1 already applied); zero explicitly.
     c.memset((cast: (@: void) stack), 0, c.sizeof(c.MixaAppWindowStack))
-
+#
     checks: checks + 1
     if: mixa_rect_open(rect, 20U, 70U) != 0
         failures: failures + 1
@@ -188,14 +188,14 @@ fn: main () int
         failures: failures + 1
         c.printf("audio panel: stack init failed\n")
     ---
-
+#
     g_fake_mode: MIXA_AUDIO_DEV_STOPPED
     g_fake_pos: 0U
     g_fake_dur: 180000U
     g_fake_position_fail: 0
     g_fake_duration_fail: 0
     g_fake_mode_fail: 0
-
+#
     st: mixa_audio_create(@ a, fake_table())
     checks: checks + 1
     if: st != MIXA_AUDIO_OK
@@ -214,7 +214,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio panel: start rc=%d\n", st)
     ---
-
+#
     # --- Scenario 1: open. hb=4 -> every one of the seven labels (none
     # under 4 chars) is "wide" width wb-(wb>>2) = 6 for hb=4
     # (wb=(4<<1)-(4>>2)=7), margin=hb>>5=0: buttons sit at cols
@@ -236,7 +236,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio panel: initial progress line mismatch\n")
     ---
-
+#
     # --- nextFile (idx4, col25) then prevFile (idx0, col1): forward then
     # back, both WITHOUT wrapping (is_loop is off by default, and neither
     # move needs to wrap -- pos 0->1 has a real next item, pos 1->0 has a
@@ -264,7 +264,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio panel: prevFile pos=%llu want 0\n", mixa_audio_pos(a))
     ---
-
+#
     # --- next/prev (idx3/idx1): +-1000ms bump, no track change.
     rc: mixa_audio_panel_hit(panel, stack, rect, 2U, 19U, @ action_status)
     checks: checks + 1
@@ -278,7 +278,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio panel: hit prev(bump) rc=%d action=%d\n", rc, action_status)
     ---
-
+#
     # --- pause/play (idx2, col13): toggles is_playing and the progress
     # line's own state word.
     checks: checks + 1
@@ -303,7 +303,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio panel: hit resume rc=%d action=%d playing=%d\n", rc, action_status, mixa_audio_is_playing(a))
     ---
-
+#
     # --- random/repeat (idx5/idx6, col31/col37): real toggles, and the
     # progress line's own R:/L: words must follow the controller state.
     rc: mixa_audio_panel_hit(panel, stack, rect, 2U, 31U, @ action_status)
@@ -326,7 +326,7 @@ fn: main () int
     # toggle back off so later scenarios start from a known state.
     mixa_audio_panel_hit(panel, stack, rect, 2U, 31U, @ action_status)
     mixa_audio_panel_hit(panel, stack, rect, 2U, 37U, @ action_status)
-
+#
     # --- a genuine miss (inside the window, on neither a control nor the
     # OK button) does neither.
     rc: mixa_audio_panel_hit(panel, stack, rect, 2U, 43U, @ action_status)
@@ -340,7 +340,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio panel: miss disturbed window state\n")
     ---
-
+#
     # --- zero/unavailable duration: progress line shows ".../--".
     g_fake_dur: 0U
     st: mixa_audio_panel_poll(panel, rect)
@@ -356,7 +356,7 @@ fn: main () int
     ---
     g_fake_dur: 180000U
     mixa_audio_panel_poll(panel, rect)
-
+#
     # --- stopped/end-of-track advance: the device reporting STOPPED
     # makes mixa_audio_poll (called inside mixa_audio_panel_poll) advance
     # to the next track, same mechanism as mixa_audio_selftest.lm1's own
@@ -380,7 +380,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio panel: post-advance progress line mismatch\n")
     ---
-
+#
     # --- exact backend/poll failure must NOT corrupt the last valid UI:
     # capture the currently-drawn line, force a position-read failure,
     # confirm the status propagates and the drawn cells are unchanged.
@@ -398,7 +398,7 @@ fn: main () int
         c.printf("audio panel: position-fail poll corrupted the progress line\n")
     ---
     g_fake_position_fail: 0
-
+#
     g_fake_duration_fail: 1
     st: mixa_audio_panel_poll(panel, rect)
     checks: checks + 1
@@ -412,7 +412,7 @@ fn: main () int
         c.printf("audio panel: duration-fail poll corrupted the progress line\n")
     ---
     g_fake_duration_fail: 0
-
+#
     g_fake_mode_fail: 1
     st: mixa_audio_panel_poll(panel, rect)
     checks: checks + 1
@@ -426,7 +426,7 @@ fn: main () int
         c.printf("audio panel: mode-fail poll corrupted the progress line\n")
     ---
     g_fake_mode_fail: 0
-
+#
     # --- Dismiss via the underlying window's own OK button. row=0+(14-
     # 4-1)=9, col=(60-4)/2=28.
     rc: mixa_audio_panel_hit(panel, stack, rect, 9U, 28U, @ action_status)
@@ -440,7 +440,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio panel: window still open after dismiss\n")
     ---
-
+#
     # --- geometry exhaustion: ncols=6 cannot fit the 7-control row
     # (panel_w=42 for hb=4). Reject before opening/painting, leave no
     # panel/actx allocation alive.
@@ -455,7 +455,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio panel: width exhaustion opened a window\n")
     ---
-
+#
     # --- vertical exhaustion: nrows=10 passes the nrows>=hb+3=7 floor
     # but ok_row=0+(10-4-1)=5 while content needs up to 0+2+4+1=7.
     rc: mixa_audio_panel_open(panel, a, stack, rect, 0U, 0U, 10U, 60U, 4U, "MP3")
@@ -469,7 +469,7 @@ fn: main () int
         failures: failures + 1
         c.printf("audio panel: height exhaustion opened a window\n")
     ---
-
+#
     # --- reopen with a DIFFERENT MixaAudio: no stale ctx/status/progress
     # from the first `a` (which had accumulated toggles/position above).
     g_fake_pos: 0U
@@ -505,12 +505,12 @@ fn: main () int
         failures: failures + 1
         c.printf("audio panel: reopen dismiss rc=%d count=%d\n", rc, (cast: (int) mixa_app_window_count(stack)))
     ---
-
+#
     mixa_audio_destroy(a)
     mixa_audio_destroy(a2)
     c.free(rect)
     c.free(panel)
-
+#
     if: failures = 0
         c.printf("audio panel selftest: %d checks, 0 failures\n", checks)
     else:

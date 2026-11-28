@@ -99,7 +99,7 @@ fn: main () int
     const: @(MixaCell cq)
     c.array: []: unsigned exp_msg 11
     c.array: []: char msg 22
-
+#
     rect: (cast: (@: MixaTextRect) c.calloc(1U, c.sizeof(c.MixaTextRect)))
     stack: @ stack_storage
     failures: 0
@@ -116,7 +116,7 @@ fn: main () int
     # it as a real crash). Zero it explicitly rather than depend on
     # whatever this file's own stack layout happens to leave behind.
     c.memset((cast: (@: void) stack), 0, c.sizeof(c.MixaAppWindowStack))
-
+#
     # "нет функции" as UTF-8 (NUL-terminated)
     msg[0]: (cast: (char 0xD0))
     msg[1]: (cast: (char 0xBD))
@@ -140,7 +140,7 @@ fn: main () int
     msg[19]: (cast: (char 0xD0))
     msg[20]: (cast: (char 0xB8))
     msg[21]: (cast: (char 0x00))
-
+#
     exp_msg[0]: 0x043DU
     exp_msg[1]: 0x0435U
     exp_msg[2]: 0x0442U
@@ -152,13 +152,13 @@ fn: main () int
     exp_msg[8]: 0x0446U
     exp_msg[9]: 0x0438U
     exp_msg[10]: 0x0438U
-
+#
     rc: mixa_rect_open(rect, 6U, 20U)
     checks: checks + 1
     if: rc != 0
         c.printf("t-rect-open: rc=%d\n", rc)
         failures: failures + 1
-
+#
     # --- negative: null stack / double init ---
     checks: checks + 1
     if: mixa_app_window_stack_init(0) != MIXA_APP_WINDOW_ERR
@@ -172,7 +172,7 @@ fn: main () int
     if: mixa_app_window_stack_init(stack) != MIXA_APP_WINDOW_ERR
         c.printf("n-init-twice: not ERR\n")
         failures: failures + 1
-
+#
     # --- empty stack reads ---
     checks: checks + 1
     if: mixa_app_window_count(stack) != 0U
@@ -190,7 +190,7 @@ fn: main () int
     if: mixa_app_window_dismiss(stack, rect) != MIXA_APP_WINDOW_OK
         c.printf("n-dismiss-empty: not OK\n")
         failures: failures + 1
-
+#
     # --- negative open cases ---
     checks: checks + 1
     if: mixa_app_window_open(stack, rect, 0U, 0U, 4U, 13U, 0U, @ msg[0]) != MIXA_APP_WINDOW_ERR
@@ -220,7 +220,7 @@ fn: main () int
     if: mixa_app_window_open(stack, rect, 0U, 0U, 1U, 13U, 1U, @ msg[0]) != MIXA_APP_WINDOW_ERR
         c.printf("n-open-too-small: not ERR\n")
         failures: failures + 1
-
+#
     # --- sentinel-parent preflight (review 163600): content that cannot fit
     # is rejected BEFORE drawing; the parent surface stays untouched. ---
     # Long message: 24 'A' (display width 24 > 13-2=11) on window (0,0).
@@ -295,7 +295,7 @@ fn: main () int
     if: pattern_region_ok(rect, 0U, 0U, 4U, 13U, 20U) = 0
         c.printf("n-open-hb-huge-sentinel: parent painted\n")
         failures: failures + 1
-
+#
     # --- clear surface, open window A at (0,0) 4x13 hb=1 ---
     seed_pattern(rect)
     checks: checks + 1
@@ -311,7 +311,7 @@ fn: main () int
     if: top = 0
         c.printf("t-top-a: null\n")
         failures: failures + 1
-
+#
     # --- rendered content: frame corners/edges ---
     checks: checks + 1
     cq: mixa_cell_at_const(rect, 0U, 0U)
@@ -343,7 +343,7 @@ fn: main () int
     if: cq\codepoint != 0x2502U
         c.printf("t-frame-v: got %x want 2502\n", cq\codepoint)
         failures: failures + 1
-
+#
     # --- background translucent (alpha on backgrounds only) ---
     checks: checks + 1
     cq: mixa_cell_at_const(rect, 1U, 6U)
@@ -355,7 +355,7 @@ fn: main () int
     if: cq\alpha != MIXA_APP_WINDOW_WIN_ALPHA
         c.printf("t-bg-alpha: got %u want %u\n", cq\alpha, MIXA_APP_WINDOW_WIN_ALPHA)
         failures: failures + 1
-
+#
     # --- message cells: 11 glyphs, centered at row 1 starts col 1 ---
     i: 0U
     while: i < 11U
@@ -381,7 +381,7 @@ fn: main () int
     if: cq\alpha != MIXA_APP_WINDOW_WIN_ALPHA
         c.printf("t-msg-alpha: got %u want %u\n", cq\alpha, MIXA_APP_WINDOW_WIN_ALPHA)
         failures: failures + 1
-
+#
     # --- dismiss button: row 2 (bottom padding), centered col 6 ---
     checks: checks + 1
     cq: mixa_cell_at_const(rect, 2U, 6U)
@@ -398,7 +398,7 @@ fn: main () int
     if: cq\alpha != MIXA_APP_WINDOW_BTN_ALPHA
         c.printf("t-btn-alpha: got %u want %u\n", cq\alpha, MIXA_APP_WINDOW_BTN_ALPHA)
         failures: failures + 1
-
+#
     # --- hit outside button (message cell) does not dismiss ---
     checks: checks + 1
     if: mixa_app_window_hit(stack, rect, 1U, 6U) != 0
@@ -408,7 +408,7 @@ fn: main () int
     if: mixa_app_window_count(stack) != 1U
         c.printf("t-hit-msg-count: got %zu want 1\n", mixa_app_window_count(stack))
         failures: failures + 1
-
+#
     # --- hit the dismiss button (2,6): window closes ---
     checks: checks + 1
     if: mixa_app_window_hit(stack, rect, 2U, 6U) != 1
@@ -418,13 +418,13 @@ fn: main () int
     if: mixa_app_window_count(stack) != 0U
         c.printf("t-count-after-dismiss: got %zu want 0\n", mixa_app_window_count(stack))
         failures: failures + 1
-
+#
     # --- parent state preserved after a single open/dismiss ---
     checks: checks + 1
     if: pattern_region_ok(rect, 0U, 0U, 4U, 13U, 20U) = 0
         c.printf("t-state-single-restore: pattern mismatch\n")
         failures: failures + 1
-
+#
     # --- layer A, then child B: nested focus targeting ---
     checks: checks + 1
     if: mixa_app_window_open(stack, rect, 0U, 0U, 4U, 13U, 1U, @ msg[0]) != MIXA_APP_WINDOW_OK
@@ -466,13 +466,13 @@ fn: main () int
     if: mixa_app_window_count(stack) != 0U
         c.printf("t-a-after-hit: got %zu want 0\n", mixa_app_window_count(stack))
         failures: failures + 1
-
+#
     # --- parent-state preservation across child overlay ---
     checks: checks + 1
     if: pattern_region_ok(rect, 0U, 0U, 4U, 13U, 20U) = 0
         c.printf("t-state-nested-restore: pattern mismatch\n")
         failures: failures + 1
-
+#
     # --- repeated open/close: 40 cycles ---
     i: 0U
     while: i < 40U
@@ -496,7 +496,7 @@ fn: main () int
     if: pattern_region_ok(rect, 0U, 0U, 4U, 13U, 20U) = 0
         c.printf("t-cycle-restore: pattern mismatch\n")
         failures: failures + 1
-
+#
     # --- no depth cap: open 9 layers (forces grow past initial cap 4) ---
     i: 0U
     while: i < 9U
@@ -538,7 +538,7 @@ fn: main () int
     if: pattern_region_ok(rect, 2U, 2U, 4U, 13U, 20U) = 0
         c.printf("t-stack-restore: pattern mismatch\n")
         failures: failures + 1
-
+#
     # --- deep open read-only geometry: opening does not mutate parent content
     # beyond its own region (background between two open windows stays). ---
     checks: checks + 1
@@ -550,7 +550,7 @@ fn: main () int
     if: cq\codepoint != pattern_cp(4U, 4U, 20U)
         c.printf("t-region-isolation: got %x\n", cq\codepoint)
         failures: failures + 1
-
+#
     # --- release frees owned buffers (does not restore cells; documented) ---
     mixa_app_window_stack_release(stack)
     checks: checks + 1
@@ -568,7 +568,7 @@ fn: main () int
         failures: failures + 1
     mixa_app_window_stack_release(stack)
     c.free(rect)
-
+#
     # ---- summary ----
     if: failures != 0
         c.printf("FAILED: %d failures out of %d checks\n", failures, checks)

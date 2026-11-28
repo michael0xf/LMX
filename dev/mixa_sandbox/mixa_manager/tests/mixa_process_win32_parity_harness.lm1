@@ -106,7 +106,7 @@ fn: main (int: argc; @: @(char) argv) int
     size_t: wrote
     size_t: total
     c.setbuf((cast: (@: void) c.stdout), 0)
-
+#
     if: argc >= 2
         c.snprintf(base, 520U, "%s", argv[1])
     else:
@@ -120,7 +120,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(cmd, 2400U, "cmd /c mkdir \"%s\" 2>nul", base)
     c.system(cmd)
     c.snprintf(marker, 1040U, "%s\\kill_marker.txt", base)
-
+#
     # --- Scenario 1: argument/null/overflow guards.
     t_check_int("S1 null out", mixa_process_spawn(0, "echo hi", base, 0), MIXA_PROC_ERR_ARG)
     p: (cast: (@: MixaProcess) 1)
@@ -135,7 +135,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("S1 kill null process", mixa_process_kill(0), MIXA_PROC_ERR_ARG)
     mixa_process_close(0)
     c.printf("CHK S1 close(0) no-crash PASS\n")
-
+#
     # --- Scenario 2: a real spawn failure (invalid cwd) is distinct;
     # repeated failures do not leak partial-spawn handles.
     p: (cast: (@: MixaProcess) 1)
@@ -152,7 +152,7 @@ fn: main (int: argc; @: @(char) argv) int
         i: i + 1
     ---
     c.printf("CHK S2 repeated spawn-failure sweep (20x) no-leak PASS\n")
-
+#
     # --- Scenario 3: an unknown command is a started child (the shell).
     p: 0
     rc: mixa_process_spawn(@ p, "this_command_does_not_exist_mixa_xyz_12345", base, 0)
@@ -164,7 +164,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("S3 unknown-command produced output", (cast: (int) (total != 0U)), 1)
     mixa_process_close(@ p)
     t_check_int("S3 close nulled slot", (cast: (int) (p = 0)), 1)
-
+#
     # --- Scenario 4: stdout+stderr merged, real arrival order preserved.
     rc: mixa_process_spawn(@ p, "echo OUT & echo ERR 1>&2", base, 0)
     t_check_int("S4 merged-stream spawn rc", rc, MIXA_PROC_OK)
@@ -173,7 +173,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("S4 merged has OUT and ERR", (cast: (int) (c.strstr(readbuf, "OUT") != 0 && c.strstr(readbuf, "ERR") != 0)), 1)
     t_check_int("S4 merged order OUT before ERR", (cast: (int) (c.strstr(readbuf, "OUT") < c.strstr(readbuf, "ERR"))), 1)
     mixa_process_close(@ p)
-
+#
     # --- Scenario 5: quiet-running immediate read is OK/0, then real
     # exit with code 0.
     rc: mixa_process_spawn(@ p, "ping -n 3 127.0.0.1 >nul", base, 0)
@@ -185,7 +185,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("S5 quiet-running exited", t_wait_exit(p, @ running, @ code, 300), 0)
     t_check_int("S5 quiet-running exit code", code, 0)
     mixa_process_close(@ p)
-
+#
     # --- Scenario 6: stdin-disabled child observes real pipe EOF, and
     # cannot be written to.
     c.snprintf(cmd, 2400U, "\"%s\" echo", fixture)
@@ -195,7 +195,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("S6 stdin-disabled exit code", code, 0)
     t_check_int("S6 write refused", mixa_process_write(p, "x", 1U, @ wrote), MIXA_PROC_ERR_ARG)
     mixa_process_close(@ p)
-
+#
     # --- Scenario 7: a real closed-pipe EOF versus an invalid/missing
     # handle -- the fixture's own raw-ReadFile probe with stdin
     # disabled must report EOF, never INVALID.
@@ -207,7 +207,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("S7 reports EOF", (cast: (int) (c.strstr(readbuf, "EOF") != 0)), 1)
     t_check_int("S7 no INVALID", (cast: (int) (c.strstr(readbuf, "INVALID") = 0)), 1)
     mixa_process_close(@ p)
-
+#
     # --- Scenario 8: stdin-enabled real echo round trip, then exit on
     # a recognized command.
     c.snprintf(cmd, 2400U, "\"%s\" echo", fixture)
@@ -235,7 +235,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("S8 QUIT write rc", rc, MIXA_PROC_OK)
     t_check_int("S8 exited after QUIT", t_wait_exit(p, @ running, @ code, 200), 0)
     mixa_process_close(@ p)
-
+#
     # --- Scenario 9: the exact native exit code is preserved verbatim.
     c.snprintf(cmd, 2400U, "\"%s\" exit 7", fixture)
     rc: mixa_process_spawn(@ p, cmd, base, 0)
@@ -243,7 +243,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("S9 exited", t_wait_exit(p, @ running, @ code, 200), 0)
     t_check_int("S9 exit code exactly 7", code, 7)
     mixa_process_close(@ p)
-
+#
     # --- Scenario 10: kill terminates the direct child AND a spawned
     # descendant (a marker the descendant would only write ~6s later
     # must never appear).
@@ -256,13 +256,13 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("S10 killed process exited", t_wait_exit(p, @ running, @ code, 200), 0)
     c.Sleep(500U)
     t_check_int("S10 no marker (descendant killed)", t_exists(marker), 0)
-
+#
     # --- Scenario 11: close is idempotent by construction.
     mixa_process_close(@ p)
     t_check_int("S11 close nulled slot", (cast: (int) (p = 0)), 1)
     mixa_process_close(@ p)
     t_check_int("S11 second close safe", (cast: (int) (p = 0)), 1)
-
+#
     # --- Scenario 12: repeated real spawn/wait/close lifecycle proves
     # no leak or double-free.
     i: 0
@@ -282,7 +282,7 @@ fn: main (int: argc; @: @(char) argv) int
         i: i + 1
     ---
     c.printf("CHK S12 lifetime-stress sweep (10x) no-leak PASS\n")
-
+#
     if: g_failures[0] != 0
         c.printf("mixa process win32 parity harness FAILED checks=%d\n", g_failures[0])
         return: 1

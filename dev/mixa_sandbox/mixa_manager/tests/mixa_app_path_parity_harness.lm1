@@ -65,7 +65,7 @@ fn: main (int: argc; @: @(char) argv) int
     int: rc
     c.setbuf((cast: (@: void) c.stdout), 0)
     limit: (cast: (size_t) -1)
-
+#
     # --- Scenario 1: the real entrypoint's own case -- root plus the
     # console log suffix. ---
     out_slot[0]: 0
@@ -74,7 +74,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("scenario1 join rc", rc, MIXA_APP_PATH_OK)
     t_check_str("scenario1 joined bytes", got, "C:\\work\\root\\mixa-console.log")
     c.free(got)
-
+#
     # --- Scenario 2: exact COPY is join(src, ""). ---
     out_slot[0]: 0
     rc: mixa_app_path_join("D:\\some\\dir", "", 0, out_slot)
@@ -82,7 +82,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("scenario2 copy rc", rc, MIXA_APP_PATH_OK)
     t_check_str("scenario2 exact copy", got, "D:\\some\\dir")
     c.free(got)
-
+#
     # --- Scenario 3: awkward bytes preserved exactly -- spaces, quotes,
     # a trailing separator, non-ASCII UTF-8 (Cyrillic). No
     # normalization, no separator rewriting, no policy. ---
@@ -92,7 +92,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("scenario3 rc", rc, MIXA_APP_PATH_OK)
     t_check_str("scenario3 awkward bytes preserved", got, "C:\\Program Files\\\"x\"\\\xD0\xBF\xD0\xB0\xD0\xBF\xD0\xBA\xD0\xB0\\\\mixa-console.log")
     c.free(got)
-
+#
     # --- Scenario 4: a root FAR longer than the removed 1040-byte
     # buffer survives with zero truncation. ---
     if: 1
@@ -123,14 +123,14 @@ fn: main (int: argc; @: @(char) argv) int
         c.free(got)
         c.free(big)
     ---
-
+#
     # --- Scenario 5: argument negatives. *out must stay 0 throughout. ---
     out_slot[0]: (cast: (@: char) 1)
     t_check_int("scenario5 null a", mixa_app_path_join(0, "x", 0, out_slot), MIXA_APP_PATH_ERR_ARG)
     t_check_int("scenario5 null b", mixa_app_path_join("x", 0, 0, out_slot), MIXA_APP_PATH_ERR_ARG)
     t_check_int("scenario5 null out", mixa_app_path_join("x", "y", 0, 0), MIXA_APP_PATH_ERR_ARG)
     t_check_int("scenario5 total null out", mixa_app_path_total(1U, 1U, 0), MIXA_APP_PATH_ERR_ARG)
-
+#
     # --- Scenario 6: the overflow guard, exercised for real at the
     # type's own limit. ---
     total_slot[0]: 12345U
@@ -154,7 +154,7 @@ fn: main (int: argc; @: @(char) argv) int
     rc: mixa_app_path_total(3U, 4U, total_slot)
     t_check_int("scenario6 total(3,4) rc", rc, MIXA_APP_PATH_OK)
     t_check_sz("scenario6 total(3,4) value", total_slot[0], 8U)
-
+#
     # --- Scenario 7: deterministic allocation failure. ---
     if: 1
         @: MixaAppPathFaultVTable fv
@@ -184,7 +184,7 @@ fn: main (int: argc; @: @(char) argv) int
         ---
         c.free(fv)
     ---
-
+#
     if: g_failures[0] != 0
         c.printf("mixa app path parity harness FAILED checks=%d\n", g_failures[0])
         return: 1

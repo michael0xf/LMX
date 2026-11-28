@@ -70,13 +70,13 @@ fn: main () int
     size_t: non_zero
     int: rc
     c.setbuf((cast: (@: void) c.stdout), 0)
-
+#
     vt: mixa_backend_win32_hidden_table()
     t_check_int("S0 hidden table valid", (cast: (int) (vt != 0 && mixa_backend_table_valid(vt) != 0)), 1)
-
+#
     m: (cast: (@: MixaCellMetrics) c.calloc(1U, c.sizeof(c.MixaCellMetrics)))
     got: (cast: (@: MixaEvent) c.calloc(1U, c.sizeof(c.MixaEvent)))
-
+#
     # --- Scenario 1: open() argument/metric validation.
     be: 0
     t_check_int("S1 open null metrics", vt\open(@ be, 3U, 2U, 0), 1)
@@ -94,7 +94,7 @@ fn: main () int
     t_check_int("S1 zero cols refused", vt\open(@ be, 0U, 2U, m), 1)
     t_check_int("S1 zero rows refused", vt\open(@ be, 2U, 0U, m), 1)
     t_check_int("S1 overflow dims refused", vt\open(@ be, ((cast: (size_t) -1) / 2U) + 1U, 1U, m), 1)
-
+#
     # --- Scenario 2: a real successful open. Win32 overwrites absurd
     # requested cells with the font's own real, even native metrics.
     m\text_cell_width: 4U
@@ -109,7 +109,7 @@ fn: main () int
     th: m\text_cell_height
     t_check_int("S2 metrics non-zero", (cast: (int) (tw != 0U && th != 0U && m\upper_cell_width != 0U && m\upper_cell_height != 0U && m\pointer_cell_width != 0U && m\pointer_cell_height != 0U)), 1)
     t_check_int("S2 metrics even", (cast: (int) ((tw & 1U) = 0U && (th & 1U) = 0U && (m\upper_cell_width & 1U) = 0U && (m\upper_cell_height & 1U) = 0U && (m\pointer_cell_width & 1U) = 0U && (m\pointer_cell_height & 1U) = 0U)), 1)
-
+#
     # --- Scenario 3: present()/frame_at() real pixel round trip. Uses
     # the real frame_bytes open() already computed (via the same
     # opaque-base-cast reached earlier) rather than a guessed size, so
@@ -132,7 +132,7 @@ fn: main () int
         t_check_int("S3 frame_at b", (cast: (int) px[2]), 60)
         c.free(rgba)
     ---
-
+#
     # --- Scenario 4: real input via PostMessage, drained through poll()
     # in real arrival order. WM_CHAR=258 'A'=65, WM_KEYDOWN=256 VK_F1=112,
     # WM_LBUTTONDOWN=513. be is the opaque MixaBackend base (vt only) --
@@ -161,7 +161,7 @@ fn: main () int
     got\kind: MIXA_EVENT_KEY
     vt\poll(be, got)
     t_check_int("S4 drained to NONE", got\kind, MIXA_EVENT_NONE)
-
+#
     # --- Scenario 5: real clipboard set/get round trip (real system
     # clipboard -- see this harness's own top comment).
     t_check_int("S5 clipboard_set rc", vt\clipboard_set(be, "win32 parity"), 0)
@@ -174,7 +174,7 @@ fn: main () int
     t_check_int("S5 clipboard_set empty rc", vt\clipboard_set(be, ""), 0)
     n: vt\clipboard_get(be, clip_out, 64U)
     t_check_int("S5 clipboard_get empty length", (cast: (int) n), 0)
-
+#
     # --- Scenario 6: real glyph rasterization and cache identity.
     g1: (cast: (@: MixaGlyph) c.calloc(1U, c.sizeof(c.MixaGlyph)))
     g2: (cast: (@: MixaGlyph) c.calloc(1U, c.sizeof(c.MixaGlyph)))
@@ -193,37 +193,37 @@ fn: main () int
     t_check_int("S6 glyph('A') coverage not all-zero", (cast: (int) (non_zero != 0U)), 1)
     t_check_int("S6 glyph('A') second call rc", vt\glyph(be, MIXA_LAYER_TEXT, 65U, g2), 0)
     t_check_int("S6 glyph cache identical pointer/data", (cast: (int) (g2\coverage = g1\coverage && g2\width = g1\width && g2\height = g1\height && g2\bearing_x = g1\bearing_x && g2\bearing_y = g1\bearing_y && g2\advance = g1\advance)), 1)
-
+#
     # --- Scenario 7: the three injectable GDI-error fault paths.
     mixa_win32_test_set_force_ggo_error(be, 1)
     t_check_int("S7 size-query GDI_ERROR rc", vt\glyph(be, MIXA_LAYER_TEXT, 0x0042U, g1), 0)
     t_check_int("S7 size-query GDI_ERROR reported missing", g1\missing, 1)
     t_check_int("S7 size-query GDI_ERROR no coverage", (cast: (int) (g1\coverage = 0)), 1)
     mixa_win32_test_set_force_ggo_error(be, 0)
-
+#
     mixa_win32_test_set_force_ggo_error(be, 2)
     t_check_int("S7 buffer-fill GDI_ERROR hard-fails", (cast: (int) (vt\glyph(be, MIXA_LAYER_TEXT, 0x0043U, g1) != 0)), 1)
     mixa_win32_test_set_force_ggo_error(be, 0)
-
+#
     mixa_win32_test_set_force_ggo_error(be, 4)
     c.memset(g1, 0, c.sizeof(c.MixaGlyph))
     t_check_int("S7 GetGlyphIndicesW GDI_ERROR hard-fails", (cast: (int) (vt\glyph(be, MIXA_LAYER_TEXT, 0x0044U, g1) != 0)), 1)
     mixa_win32_test_set_force_ggo_error(be, 0)
     c.memset(g1, 0, c.sizeof(c.MixaGlyph))
     t_check_int("S7 clean retry succeeds", vt\glyph(be, MIXA_LAYER_TEXT, 0x0044U, g1), 0)
-
+#
     c.free(g1)
     c.free(g2)
-
+#
     # --- Scenario 8: close() and null-argument safety.
     vt\close(be)
     c.printf("CHK S8 close no-crash PASS\n")
     t_check_int("S8 clipboard_set on null refused", (cast: (int) (vt\clipboard_set(0, "x") != 0)), 1)
     t_check_int("S8 clipboard_get on null returns nothing", (cast: (int) vt\clipboard_get(0, clip_out, 64U)), 0)
-
+#
     c.free(m)
     c.free(got)
-
+#
     if: g_failures[0] != 0
         c.printf("mixa backend win32 parity harness FAILED checks=%d\n", g_failures[0])
         return: 1

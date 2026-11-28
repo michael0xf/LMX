@@ -53,12 +53,12 @@ fn: main () int
     size_t: j
     unsigned: tile_fill
     unsigned: tile_all_gaps
-
+#
     c.memset(text_rect, 0, c.sizeof(c.MixaTextRect))
     c.memset(upper_rect, 0, c.sizeof(c.MixaTextRect))
     tile_fill: mixa_tile_from_gaps(0U)
     tile_all_gaps: mixa_tile_from_gaps(15U)
-
+#
     c.printf("=== SCN 1 full 4x4 composite: transparent/opaque/blended bg, ordinary glyph, tile solid/gap, two differently-sized layers, full byte integrity ===\n")
     # text_rect: 2x2 cells, 2x2 px each -> covers the full 4x4 px extent.
     t_check_int("s1_text_open", mixa_rect_open(text_rect, 2U, 2U), 0)
@@ -109,14 +109,14 @@ fn: main () int
     p\codepoint: 66U
     p\alpha: (cast: (char) 0)
     p\fg: (cast: (char) 1)
-
+#
     i: 0U
     while: i < 64U
         out[i]: (cast: (MixaU8) 77)
         i: i + 1U
     ---
     t_check_int("s1_composite_ok", mixa_composite(text_rect, 2U, 2U, upper_rect, 1U, 1U, 0U, 0U, out, 64U, 4U, 4U), 0)
-
+#
     # Hand-derived expected grid (see mixa_composite_l2_port.txt for the
     # full pixel-by-pixel derivation): text layer paints first (opaque/
     # transparent/blended backgrounds, one ordinary glyph cell), then
@@ -157,7 +157,7 @@ fn: main () int
     t_check_pixel("s1_px33_text_ordinary_glyph", out, 4U, 3U, 3U, 0, 0, 96, 255)
     mixa_rect_release(text_rect)
     mixa_rect_release(upper_rect)
-
+#
     c.printf("=== SCN 2 refusals and boundary guards ===\n")
     t_check_int("s2_null_text_refused", mixa_composite(0, 1U, 1U, 0, 1U, 1U, 0U, 0U, out, 64U, 4U, 4U), 1)
     t_check_int("s2_open_text", mixa_rect_open(text_rect, 1U, 1U), 0)
@@ -173,7 +173,7 @@ fn: main () int
     t_check_int("s2_overflow_guard_refused", mixa_composite(text_rect, 1U, 1U, upper_rect, 1U, 1U, 0U, 0U, out, 64U, (cast: (size_t) -1), 4U), 1)
     mixa_rect_release(text_rect)
     mixa_rect_release(upper_rect)
-
+#
     c.printf("=== SCN 3 a layer smaller than the pixel extent is simply skipped past its own edge ===\n")
     # text_rect covers only the left half (1 col, cw=2 -> 2px of a 4px-
     # wide output); upper_rect covers the full width. Pixels past the
@@ -202,7 +202,7 @@ fn: main () int
     t_check_pixel("s3_px30_past_text_extent_base_color", out, 4U, 3U, 0U, 0, 0, 0, 255)
     mixa_rect_release(text_rect)
     mixa_rect_release(upper_rect)
-
+#
     if: g_failures[0] != 0
         c.printf("mixa composite parity harness FAILED checks=%d\n", g_failures[0])
         return: 1

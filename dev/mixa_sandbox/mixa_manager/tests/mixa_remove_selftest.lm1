@@ -177,14 +177,14 @@ fn: main (int: argc; @: @(char) argv) int
     c.setbuf((cast: (@: void) c.stdout), 0)
     failures: 0
     checks: 0
-
+#
     if: argc >= 2
         c.snprintf(base, 520U, "%s", argv[1])
     ---
     if: argc < 2
         c.snprintf(base, 520U, "build/mixa/claude/remove/tmp")
     ---
-
+#
     sel: (cast: (@: MixaSelection) c.calloc(1U, c.sizeof(c.MixaSelection)))
     if: sel = 0
         c.printf("remove: alloc failed\n")
@@ -197,7 +197,7 @@ fn: main (int: argc; @: @(char) argv) int
         return: 1
     ---
     sink: t_sink()
-
+#
     # --- Scenario 1: real nested tree, postorder proof. root1/suba has
     # two files; root1/subb/nested has one file three levels deep; a
     # sibling OUTSIDE root1 must survive untouched.
@@ -217,7 +217,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.snprintf(p1, 1200U, "%s\\deep.txt", subb_nested)
     t_touch(p1, "deep")
     t_touch(sibling, "sibling-content")
-
+#
     mixa_selection_select(sel, root1)
     t_reset()
     rc: mixa_remove_selected_run(sel, sink, 0)
@@ -257,7 +257,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("remove: fully-removed root was not deselected\n")
     ---
-
+#
     # --- Scenario 2: an explicit exception under a selected root survives
     # completely untouched, AND the root's own rmdir genuinely fails
     # (real ERROR_DIR_NOT_EMPTY) because that excepted child is still
@@ -320,7 +320,7 @@ fn: main (int: argc; @: @(char) argv) int
     mixa_selection_deselect(sel, root2)
     c.snprintf(cmd, 2400U, "cmd /c rmdir /s /q \"%s\" 2>nul", root2)
     c.system(cmd)
-
+#
     # --- Scenario 3: nested selected roots are consolidated and processed
     # ONCE. Selecting both root3 and root3\\sub explicitly must not cause
     # sub to be walked as a second, independent root (no double-removal,
@@ -357,7 +357,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("remove: root3 was processed more than once (or not at all): %s\n", g_trace)
     ---
-
+#
     # --- Scenario 4: a REAL file-removal fault. Mark one file read-only
     # (a genuine Win32 DeleteFileW refusal, not a synthetic hook) inside
     # an otherwise-removable root; the sink continues past it (its own
@@ -422,7 +422,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("remove: root4 not deselected once the retry actually finished it\n")
     ---
-
+#
     # --- Scenario 5: a REAL enumeration fault. Deny list/read access on a
     # nested subdirectory so the walk's own real Win32 FindFirstFileW
     # call inside it genuinely fails; this module propagates that
@@ -457,7 +457,7 @@ fn: main (int: argc; @: @(char) argv) int
     mixa_selection_deselect(sel, root5)
     c.snprintf(cmd, 2400U, "cmd /c rmdir /s /q \"%s\" 2>nul", root5)
     c.system(cmd)
-
+#
     # --- Scenario 6: a deterministic ALLOCATION fault, injected through
     # the walk's own optional MixaSelWalkAllocVTable (forwarded verbatim
     # by mixa_remove_selected_run, unlike mixa_copy_run's own deliberate
@@ -502,7 +502,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("remove: rootc1 still exists after the successful retry\n")
     ---
-
+#
     # --- Scenario 7: cancellation between roots. Two independent roots
     # selected; the sink returns STOP right after the FIRST root's own
     # completion event, before the second root is ever entered. The
@@ -579,7 +579,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.system(cmd)
     c.snprintf(cmd, 2400U, "cmd /c rmdir /s /q \"%s\" 2>nul", rootc2)
     c.system(cmd)
-
+#
     # --- Scenario 8: a real, ordinary Unicode (Cyrillic) file name round-
     # trips through selection and removal using the existing seam, no
     # special-casing anywhere in this module.
@@ -601,7 +601,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("remove: unicode-named file/dir was not fully removed\n")
     ---
-
+#
     # --- Scenario 9: argument negatives.
     checks: checks + 1
     if: mixa_remove_selected_run(0, sink, 0) != MIXA_REMOVE_ERR_ARG
@@ -623,10 +623,10 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("remove: empty selection rc=%d calls=%d\n", rc, g_calls)
     ---
-
+#
     mixa_selection_release(sel)
     c.free(sel)
-
+#
     if: failures = 0
         c.printf("remove selftest: %d checks, 0 failures\n", checks)
     else:

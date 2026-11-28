@@ -29,7 +29,7 @@ fn: main (int: argc; @: @(char) argv) int
     failures: 0
     checks: 0
     h[0]: 0
-
+#
     if: argc >= 2
         c.snprintf(base, 520U, "%s", argv[1])
     ---
@@ -73,7 +73,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.fwrite(wav_data, 1U, 64000U, fh[0])
         c.fclose(fh[0])
     ---
-
+#
     # T1: create through the real backend table.
     st: mixa_audio_create(@ h[0], mixa_audio_win32_table())
     checks: checks + 1
@@ -91,7 +91,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("audio: native cur_file not empty before list\n")
     ---
-
+#
     # T2: portable classification consults the real backend's ext list.
     checks: checks + 1
     if: mixa_audio_is_audio_path(h[0], "A 01 - Track.WAV") != 1
@@ -108,7 +108,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("audio: native is_audio_path txt\n")
     ---
-
+#
     # Alias identity (review-183400/230500 fix): the alias is now the full
     # context pointer value, not truncated -- two synthetic identities that
     # would collide under the old 15-bit-masked scheme (0x1 and 0x8001
@@ -125,7 +125,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("audio: aliases for 0x1 and 0x8001 collided (full-width fix not effective)\n")
     ---
-
+#
     # T3: probing a real WAV succeeds; a missing file is reported MISSING.
     st: mixa_audio_set_list(h[0], src, 2U, 0U)
     checks: checks + 1
@@ -139,7 +139,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("audio: native start missing rc=%d want MISSING\n", st)
     ---
-
+#
     # T4: play the fixture; the device must report playing and a believable
     # duration, and poll must not advance a playing track.
     st: mixa_audio_set_list(h[0], src, 2U, 0U)
@@ -198,7 +198,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("audio: native position out of range %lu\n", ms)
     ---
-
+#
     # T5: seek while playing, then stop (remembers position) and resume.
     st: mixa_audio_seek_to(h[0], 3000U)
     checks: checks + 1
@@ -224,7 +224,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("audio: native resume rc=%d\n", st)
     ---
     mixa_audio_stop(h[0])
-
+#
     # T5b: native MCI failure coverage (audio backlog item). mixa_audio_
     # win32_dev_probe only checks existence/extension, not content (see
     # mixa_audio_win32.lm1's own probe -- GetFileAttributesW + extension
@@ -270,7 +270,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.printf("audio: native recovery not playing\n")
     ---
     mixa_audio_stop(h[0])
-
+#
     # T6: destroy frees the MCI device.
     mixa_audio_destroy(h[0])
     h[0]: 0
@@ -279,7 +279,7 @@ fn: main (int: argc; @: @(char) argv) int
         failures: failures + 1
         c.printf("audio: native destroy left handle\n")
     ---
-
+#
     c.printf("audio native selftest: %d checks, %d failures\n", checks, failures)
     # Cleanup: remove self-created fixtures.
     c.snprintf(cmd, 2400U, "cmd /c rmdir /s /q \"%s\" 2>nul", base)

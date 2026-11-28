@@ -84,22 +84,22 @@ fn: main (int: argc; @: @(char) argv) int
     const: @(char cmdline)
     const: @(char console_path)
     int: ok
-
+#
     g_checks: 0
     g_failures: 0
     if: argc < 2
         c.fprintf(c.stderr, "usage: sm")
         return: 1
     ---
-
+#
     cmdline: argv[1]
     console_path: argv[2]
-
+#
     si: (cast: (@: void) c.malloc(c.sizeof(c.STARTUPINFOW)))
     pi: (cast: (@: void) c.malloc(c.sizeof(c.PROCESS_INFORMATION)))
     c.memset(si, 0, c.sizeof(c.STARTUPINFOW))
     c.memset(pi, 0, c.sizeof(c.PROCESS_INFORMATION))
-
+#
     ok: c.CreateProcessW(0, (cast: (@: void) cmdline), 0, 0, 0, 0U, 0, 0, si, pi)
     check(ok != 0, "CreateProcess")
     if: ok = 0
@@ -107,20 +107,20 @@ fn: main (int: argc; @: @(char) argv) int
         c.free(pi)
         return: g_failures
     ---
-
+#
     c.Sleep(500U)
     hwnd: c.FindWindowA(0, 0)
     check(hwnd != 0, "FindWindow")
-
+#
     if: console_path != 0
         ok: wait_file_text(console_path, "ok:", 1, 5000U)
         check(ok != 0, "console output")
     ---
-
+#
     type_ascii(hwnd, "hello\n")
     c.PostMessageA(hwnd, WM_CLOSE, 0, 0)
     c.WaitForSingleObject((cast: (@: void) pi), 10000U)
-
+#
     c.free(si)
     c.free(pi)
     c.printf("smoke_harness: done")

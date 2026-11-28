@@ -61,14 +61,14 @@ fn: main (int: argc; @: @(char) argv) int
     int: had_error
     int: i
     c.setbuf((cast: (@: void) c.stdout), 0)
-
+#
     if: argc >= 2
         c.snprintf(base, 520U, "%s", argv[1])
     else:
         c.snprintf(base, 520U, "build/mixa/claude/app_main_parity/tmp")
     ---
     c.snprintf(base + c.strlen(base), (cast: (size_t) (520 - (cast: (int) c.strlen(base)))), "\\.")
-
+#
     # --- startup failure/usage: the SAME "vt unavailable" shape mixa_
     # app_main's own `if: vt = 0 ... return: 1` check guards, exercised
     # by passing a genuinely null vt straight to the real, unmodified
@@ -80,7 +80,7 @@ fn: main (int: argc; @: @(char) argv) int
     c2: 0
     t_check_int("controller_open null vt is ERR_ARG", mixa_app_controller_open(@ c2, 0, base), MIXA_APP_CONTROLLER_ERR_ARG)
     t_check_int("controller_open null vt leaves out null", (cast: (int) (c2 != 0)), 0)
-
+#
     # --- successful setup-to-loop boundary: open with a REAL headless
     # backend and a real temp root, exactly mirroring mixa_app_main's
     # own body (vt: mixa_backend_default_table(); ...; mixa_app_
@@ -90,7 +90,7 @@ fn: main (int: argc; @: @(char) argv) int
     t_check_int("controller_open success rc", rc, MIXA_APP_CONTROLLER_OK)
     t_check_int("controller_open success out nonnull", (cast: (int) (c != 0)), 1)
     t_check_int("running right after open", mixa_app_controller_running(c), 1)
-
+#
     # --- the step loop: mixa_app_main's own exact condition (`while:
     # mixa_app_controller_running(c) != 0 && had_error = 0`), a handful
     # of real ticks driven by real synthetic key events through the
@@ -109,7 +109,7 @@ fn: main (int: argc; @: @(char) argv) int
     ---
     t_check_int("no error across ordinary ticks", had_error, 0)
     t_check_int("still running after ordinary ticks", mixa_app_controller_running(c), 1)
-
+#
     # --- cleanup/exit propagation: close() is called unconditionally
     # on the way out in mixa_app_main's own body, whether or not an
     # error occurred -- exercised here, then proven null/double-close
@@ -120,7 +120,7 @@ fn: main (int: argc; @: @(char) argv) int
     c.printf("CHK controller_close no-crash PASS\n")
     mixa_app_controller_close(0)
     c.printf("CHK controller_close(0) no-crash PASS\n")
-
+#
     if: g_failures[0] != 0
         c.printf("mixa app main parity harness FAILED checks=%d\n", g_failures[0])
         return: 1

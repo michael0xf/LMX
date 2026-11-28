@@ -45,7 +45,7 @@ fn: main () int
     size_t: i
     unsigned: cp
     unsigned: gaps
-
+#
     c.printf("=== SCN 1 gap_px (cell_h >> 5, floored at 1) ===\n")
     t_check_uint("s1_gap_px_0", mixa_tile_gap_px(0U), 1U)
     t_check_uint("s1_gap_px_16", mixa_tile_gap_px(16U), 1U)
@@ -53,7 +53,7 @@ fn: main () int
     t_check_uint("s1_gap_px_32", mixa_tile_gap_px(32U), 1U)
     t_check_uint("s1_gap_px_64", mixa_tile_gap_px(64U), 2U)
     t_check_uint("s1_gap_px_320", mixa_tile_gap_px(320U), 10U)
-
+#
     c.printf("=== SCN 2 tile_is / tile_gaps / tile_from_gaps round trip ===\n")
     t_check_int("s2_is_base", mixa_tile_is(MIXA_TILE_BASE), 1)
     t_check_int("s2_is_last", mixa_tile_is(MIXA_TILE_LAST), 1)
@@ -67,7 +67,7 @@ fn: main () int
         t_check_int("s2_gaps_round_trip", (cast: (int) mixa_tile_gaps(cp)), (cast: (int) i))
         i: i + 1U
     ---
-
+#
     c.printf("=== SCN 3 pixel_solid: each gap flag and combinations ===\n")
     # 10x10 cell -> gap_px = 10>>5 = 0, floored to 1.
     cp: mixa_tile_from_gaps(MIXA_TILE_GAP_L | MIXA_TILE_GAP_R | MIXA_TILE_GAP_T | MIXA_TILE_GAP_B)
@@ -84,7 +84,7 @@ fn: main () int
     cp: mixa_tile_from_gaps(MIXA_TILE_GAP_L)
     t_check_int("s3_left_only_left_edge_gap", mixa_tile_pixel_solid(cp, 0U, 5U, 10U, 10U), 0)
     t_check_int("s3_left_only_right_edge_solid", mixa_tile_pixel_solid(cp, 9U, 5U, 10U, 10U), 1)
-
+#
     c.printf("=== SCN 4 paint_cell: opaque solid, gap untouched, alpha blend ===\n")
     i: 0U
     while: i < 400U
@@ -117,7 +117,7 @@ fn: main () int
     t_check_int("s4_paint_zero_alpha_noop", mixa_tile_paint_cell(cp, 1U, 0U, 0U, 0U, 10U, 10U, rgba, 10U, 10U), 0)
     t_check_int("s4_paint_null_out_refused", mixa_tile_paint_cell(cp, 1U, 255U, 0U, 0U, 10U, 10U, 0, 10U, 10U), 1)
     t_check_int("s4_paint_not_a_tile_noop", mixa_tile_paint_cell(0U, 1U, 255U, 0U, 0U, 10U, 10U, rgba, 10U, 10U), 0)
-
+#
     c.printf("=== SCN 5 fill_button: nine-slice gap assignment over a 3x3 rect ===\n")
     rect\rows: 3U
     rect\cols: 3U
@@ -177,7 +177,7 @@ fn: main () int
     p: mixa_cell_at(rect, 1U, 1U)
     gaps: mixa_tile_gaps(p\codepoint)
     t_check_int("s5_1x1_all_gaps", (cast: (int) gaps), (cast: (int) (MIXA_TILE_GAP_L | MIXA_TILE_GAP_R | MIXA_TILE_GAP_T | MIXA_TILE_GAP_B)))
-
+#
     if: g_failures[0] != 0
         c.printf("mixa tiles parity harness FAILED checks=%d\n", g_failures[0])
         return: 1

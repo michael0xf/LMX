@@ -36,17 +36,17 @@ fn: main () int
     const: @(MixaBackendVTable headless_t)
     const: @(MixaBackendVTable got0)
     c.setbuf((cast: (@: void) c.stdout), 0)
-
+#
     t_check_int("S1 count is 1", (cast: (int) mixa_backend_ctors_count()), 1)
-
+#
     headless_t: mixa_backend_headless_table()
     got0: mixa_backend_ctors_get(0U)
     t_check_int("S2 get(0) matches headless table", (cast: (int) (got0 = headless_t)), 1)
     t_check_int("S2 get(0) non-null", (cast: (int) (got0 != 0)), 1)
-
+#
     t_check_int("S3 get(1) out of range is null", (cast: (int) (mixa_backend_ctors_get(1U) = 0)), 1)
     t_check_int("S3 get(999) out of range is null", (cast: (int) (mixa_backend_ctors_get(999U) = 0)), 1)
-
+#
     if: g_failures[0] != 0
         c.printf("mixa backend ctors headless parity harness FAILED checks=%d\n", g_failures[0])
         return: 1

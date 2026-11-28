@@ -1007,7 +1007,7 @@ fn: main () int
     long: ro_hr
     int: failures
     int: checks
-
+#
     failures: 0
     checks: 0
     # stdout is fully buffered once redirected to a file (not a TTY), so
@@ -1027,7 +1027,7 @@ fn: main () int
     # instead of exercising it. Fixed to the symbolic STA constant.
     ro_hr: c.RoInitialize(c.RO_INIT_SINGLETHREADED)
     c.printf("mixa share native smoke: RoInitialize hr=%ld\n", ro_hr)
-
+#
     # Direct QueryInterface coverage (ticket 20260911-225400 item 1): an
     # unsupported riid must be refused with E_NOINTERFACE and a null ppv,
     # not silently satisfied with the wrong object. Exercises the handler's
@@ -1040,7 +1040,7 @@ fn: main () int
     @: GUID pbogus
     []: (@: void) qi_out 1
     long: qi_hr
-
+#
     phobj: @ hobj[0]
     phvt: @ hvt[0]
     phvt\QueryInterface: mixa_share_handler_query_interface
@@ -1050,7 +1050,7 @@ fn: main () int
     phobj\lpVtbl: phvt
     phobj\refcount: 1
     phobj\owner_ctx: 0
-
+#
     pbogus: @ bogus_iid[0]
     pbogus\Data1: (cast: (unsigned long) 0x11111111U)
     pbogus\Data2: (cast: (unsigned short) 0x2222U)
@@ -1063,7 +1063,7 @@ fn: main () int
     pbogus\Data4[5]: (cast: (char) 0x44)
     pbogus\Data4[6]: (cast: (char) 0x44)
     pbogus\Data4[7]: (cast: (char) 0x44)
-
+#
     qi_out[0]: (cast: (@: void) 1)
     qi_hr: mixa_share_handler_query_interface((cast: (@: void) phobj), pbogus, @ qi_out[0])
     if: qi_hr != -2147467262 || qi_out[0] != 0
@@ -1072,7 +1072,7 @@ fn: main () int
     else:
         c.printf("mixa share native smoke: QueryInterface(bogus) correctly refused (E_NOINTERFACE, ppv null)\n")
     ---
-
+#
     []: GUID unk_iid 1
     @: GUID punk
     punk: @ unk_iid[0]
@@ -1095,7 +1095,7 @@ fn: main () int
     else:
         c.printf("mixa share native smoke: QueryInterface(IUnknown) correctly accepted (refcount now %d)\n", phobj\refcount)
     ---
-
+#
     hinst: (cast: (@: void) c.GetModuleHandleW(0))
     pwc: @ wc[0]
     c.memset(pwc, 0, c.sizeof(c.WNDCLASSEXW))
@@ -1106,7 +1106,7 @@ fn: main () int
     if: c.RegisterClassExW(pwc) = 0
         c.printf("mixa share native smoke: RegisterClassExW failed gle=%lu\n", c.GetLastError())
         return: 1
-
+#
     # Sanity check only: confirms class registration actually produces a
     # working window (fails fast with a clear GLE if not) before any real
     # WinRT round trip is attempted. Not reused below -- every real
@@ -1119,7 +1119,7 @@ fn: main () int
     c.ShowWindow((cast: (HWND) hwnd), 5)
     c.UpdateWindow((cast: (HWND) hwnd))
     c.DestroyWindow((cast: (HWND) hwnd))
-
+#
     # Regression (ticket 20260912-001200 item 1, strengthened per ticket
     # 20260912-004800 item 2): destroying a request from a thread that
     # does not own it must NOT free it. Reading mixa_share_event() back as
@@ -1222,7 +1222,7 @@ fn: main () int
             c.DestroyWindow((cast: (HWND) hwnd))
         ---
     ---
-
+#
     # Regression (closes the mixa_share.txt-flagged gap: poll()/cancel()
     # share mixa_share_win32_check_thread() with destroy(), but only
     # destroy() had a dedicated cross-thread test). Same CreateThread/
@@ -1333,7 +1333,7 @@ fn: main () int
             c.DestroyWindow((cast: (HWND) hwnd))
         ---
     ---
-
+#
     # Regression (ticket 20260912-001200 item 2, strengthened per ticket
     # 20260912-004800 item 1): begin() must reject a genuinely wrong
     # apartment (MTA), not just record whatever thread happens to call
@@ -1388,7 +1388,7 @@ fn: main () int
             ---
         ---
     ---
-
+#
     # Fault-injection coverage (tickets 225400/230500 item 4 and the
     # begin/get_Data/SetText/put_Title failure paths): each forced failure
     # must surface as MIXA_SHARE_EVENT_FAILED with a non-OK status, not be
@@ -1402,7 +1402,7 @@ fn: main () int
     else:
         c.printf("mixa share native smoke: TOKEN_ALLOC fault correctly surfaced (event=%d status=%d)\n", fev[0], fst[0])
     ---
-
+#
     mixa_share_smoke_run_fault(hinst, MIXA_SHARE_TEST_FAIL_GET_DATA, @ fev[0], @ fst[0])
     checks: checks + 1
     if: fev[0] != MIXA_SHARE_EVENT_FAILED || fst[0] = MIXA_SHARE_OK
@@ -1411,7 +1411,7 @@ fn: main () int
     else:
         c.printf("mixa share native smoke: GET_DATA fault correctly surfaced (event=%d status=%d)\n", fev[0], fst[0])
     ---
-
+#
     mixa_share_smoke_run_fault(hinst, MIXA_SHARE_TEST_FAIL_SET_TEXT, @ fev[0], @ fst[0])
     checks: checks + 1
     if: fev[0] != MIXA_SHARE_EVENT_FAILED || fst[0] = MIXA_SHARE_OK
@@ -1420,7 +1420,7 @@ fn: main () int
     else:
         c.printf("mixa share native smoke: SET_TEXT fault correctly surfaced (event=%d status=%d)\n", fev[0], fst[0])
     ---
-
+#
     mixa_share_smoke_run_fault(hinst, MIXA_SHARE_TEST_FAIL_PUT_TITLE, @ fev[0], @ fst[0])
     checks: checks + 1
     if: fev[0] != MIXA_SHARE_EVENT_FAILED || fst[0] = MIXA_SHARE_OK
@@ -1429,7 +1429,7 @@ fn: main () int
     else:
         c.printf("mixa share native smoke: PUT_TITLE fault correctly surfaced (event=%d status=%d)\n", fev[0], fst[0])
     ---
-
+#
     # Clean request immediately after four failures: no leaked
     # registration/reference from any of them may block this.
     mixa_share_smoke_run_fault(hinst, 0, @ fev[0], @ fst[0])
@@ -1440,7 +1440,7 @@ fn: main () int
     else:
         c.printf("mixa share native smoke: clean request after 4 faults still succeeds (no leaked state)\n")
     ---
-
+#
     # Same-window diagnostic (ticket 234500): two consecutive real
     # invocations on ONE shared window, informational only -- not counted
     # toward `failures` since this is deliberately probing an already-
@@ -1453,7 +1453,7 @@ fn: main () int
         c.printf("mixa share native smoke: same-window diagnostic call 2: event=%d status=%d\n", fev[0], fst[0])
         c.DestroyWindow((cast: (HWND) hwnd))
     ---
-
+#
     # File attachment (ticket 20260911-210200 section 7's acceptance
     # test): share a single, harmless, TEST-OWNED file through the real
     # adapter, proving the async StorageFile.GetFileFromPathAsync +
@@ -1572,7 +1572,7 @@ fn: main () int
         ---
         c.DeleteFileA(test_file_path)
     ---
-
+#
     # Multi-file attachment (ticket 20260912-022300 item 1: stage 2's
     # chain is written for N files, not just one -- exercise N=2 against
     # the real OS, not only the fake-backend selftest). Order is not
@@ -1767,7 +1767,7 @@ fn: main () int
         c.DeleteFileA(test_file_path)
         c.DeleteFileA(test_file_path2)
     ---
-
+#
     # Mid-chain failure (ticket 20260912-022300: "missing/invalid paths...
     # must remain explicit"; also exercises the abort-after-partial-
     # success branch in mixa_file_op_handler_invoke, releasing an already-
@@ -1860,7 +1860,7 @@ fn: main () int
         ---
         c.DeleteFileA(test_file_path)
     ---
-
+#
     # Iterable/iterator lifetime contract (ticket 20260912-025800):
     # deterministic, OS-independent regression proving a retained iterator
     # stays valid after every other reference to its owning iterable --
@@ -1967,7 +1967,7 @@ fn: main () int
         ---
         c.DeleteFileA(test_file_path)
     ---
-
+#
     # File-op handler async lifetime boundaries (ticket 20260912-032000):
     # "delayed completion after destroy" and "reentrant Cancel/cleanup"
     # both rely on the SAME single mechanism -- mixa_file_op_handler_invoke
@@ -2004,7 +2004,7 @@ fn: main () int
         ---
         mixa_file_op_handler_release(handler_for_ac)
     ---
-
+#
     # Real-OS complement to the deterministic check above: begin() a real
     # file-attaching share, then call destroy() IMMEDIATELY with no
     # polling at all, racing this test against the real OS's own
@@ -2061,11 +2061,11 @@ fn: main () int
         ---
         c.DeleteFileA(test_file_path)
     ---
-
+#
     # --- fake async-op seam: the three named registration/cancellation
     # transitions a real WinRT race cannot reliably force on demand
     # (ticket 20260912-033900) --------------------------------------
-
+#
     # Scenario 1: put_Completed invokes the handler SYNCHRONOUSLY, before
     # returning. Exercises the real mixa_file_op_handler_invoke (through
     # the real SDK Invoke macro, called by our own fake put_Completed)
@@ -2118,7 +2118,7 @@ fn: main () int
             mixa_share_destroy(r_a)
         ---
     ---
-
+#
     # Scenario 2: IAsyncInfo::Cancel invokes the handler REENTRANTLY, from
     # inside destroy()'s own Cancel() call, while ctx is still mid-
     # teardown. Exercises the real mixa_share_win32_destroy (through the
@@ -2162,7 +2162,7 @@ fn: main () int
             ---
         ---
     ---
-
+#
     # Scenario 3: a completion delivered AFTER destroy() has already
     # returned and freed ctx -- the "OS's own internal scheduler still
     # holds the handler" case. An extra AddRef on the fake op (taken
@@ -2229,7 +2229,7 @@ fn: main () int
             ---
         ---
     ---
-
+#
     # Scenario 4: mid-chain resolved-item Release-balance (ticket
     # 20260912-043851 item 2). The existing real-OS mid-chain-failure
     # test (above) proves vend_count=0 -- SetStorageItems was never
@@ -2301,7 +2301,7 @@ fn: main () int
             mixa_share_destroy(r_a)
         ---
     ---
-
+#
     # Unicode-native file attachment (ticket 20260912-043851 item 1): a
     # real test-owned file whose NAME contains a genuine non-ASCII code
     # point (not just a space/apostrophe), created with CreateFileW so
@@ -2470,7 +2470,7 @@ fn: main () int
             c.free(unicode_path_wide)
         ---
     ---
-
+#
     # Final confirmation, through the same retry-protected path as every
     # other real invocation above (this used to be a standalone one-shot
     # call with no retry; observed to flake with the exact same symptom
@@ -2486,7 +2486,7 @@ fn: main () int
     else:
         c.printf("mixa share native smoke: DataRequested handed off (final confirmation)\n")
     ---
-
+#
     if: failures = 0
         c.printf("mixa share native smoke: ok\n")
     else:

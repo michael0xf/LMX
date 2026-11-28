@@ -1,5 +1,7 @@
 # LMX
 
+**Use general rules for all cases.** Treat author examples as checks of the same mechanism. If a general rule limits an example, report the decision, the reason, and the result for the original input. Explain any required grouping with the exact source and the boundary it establishes or the ambiguity it resolves.
+
 All implementation agents, including Opus when assigned, start with the
 [current first task in plan v3](next_core_tasks_v3.md#grammar-first-20261126).
 

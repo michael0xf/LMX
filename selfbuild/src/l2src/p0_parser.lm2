@@ -266,6 +266,21 @@ fn: lm_p0_count_line_breaks (const: (char@: source); size_t: start; size_t: limi
     return: count
 end: lm_p0_count_line_breaks
 
+# The first index of a text from which lm_p0_count_line_breaks counts nothing to its end: one past the last byte that
+# begins a line break, or 0 when there is none. lm_p0_count_line_breaks(source, index, byte_count) is 0 exactly from
+# index = this value on. It is the sign of a text that is one physical line from a call on; the loop of fields finds
+# it once per text and its contexts inherit it (lm_p0_parse_fields_until_with_layout), so no nested call scans the
+# tail again.
+fn: lm_p0_single_line_from (const: (char@: source); size_t: byte_count) size_t
+    size_t: i
+    i := byte_count
+    while: i > 0U
+        i := (i - 1U)
+        if: c.lm_p0_line_break_width_at(source, byte_count, i) != 0U
+            return: (i + 1U)
+        ---
+    return: 0U
+
 # Original: parser.lm1:445 lm_p0_position_in_slice
 sub: lm_p0_position_in_slice (const: (char@: text); size_t: byte_count; size_t: index; size_t: base_line; size_t: base_column; size_t@: out_line; size_t@: out_column)
     size_t: i
@@ -3333,7 +3348,7 @@ sub: lm_p0_field_parse_loop_stack_delete (c.LmOwnPtrStack@: stack)
 end: lm_p0_field_parse_loop_stack_delete
 
 # Original: parser.lm1:2181 lm_p0_field_parse_loop_push
-fn: lm_p0_field_parse_loop_push (c.LmP0Document@: document; c.LmOwnPtrStack@: stack; c.LmP0IndentStack@: indent_stack; int: indent_stack_owned; c.LmP0Structure@: structure; const: (char@: text); size_t: byte_count; size_t: line; size_t: column; size_t: offset; unsigned: flags; size_t: short_source_level; size_t: layout_base_level; size_t: i; size_t: current_source_level; int: allow_empty_fields; int: expect_field; int: headless_group_after_separator; c.LmP0FieldParseLoopContinuation: continuation; c.LmP0Node@: p0_node; size_t: start; size_t: close_index) int
+fn: lm_p0_field_parse_loop_push (c.LmP0Document@: document; c.LmOwnPtrStack@: stack; c.LmP0IndentStack@: indent_stack; int: indent_stack_owned; c.LmP0Structure@: structure; const: (char@: text); size_t: byte_count; size_t: line; size_t: column; size_t: offset; unsigned: flags; size_t: short_source_level; size_t: layout_base_level; size_t: i; size_t: current_source_level; int: allow_empty_fields; int: expect_field; int: headless_group_after_separator; c.LmP0FieldParseLoopContinuation: continuation; c.LmP0Node@: p0_node; size_t: start; size_t: close_index; size_t: single_line_from; size_t: probe_row) int
     c.LmP0FieldParseLoopFrame@: frame
     frame := (cast: (c.LmP0FieldParseLoopFrame@) c.lm_own_new_zero(c.sizeof(frame[0])))
     if: (frame = 0)
@@ -3359,6 +3374,8 @@ fn: lm_p0_field_parse_loop_push (c.LmP0Document@: document; c.LmOwnPtrStack@: st
     frame\node := p0_node
     frame\start := start
     frame\close_index := close_index
+    frame\single_line_from := single_line_from
+    frame\probe_row := probe_row
     if: (c.lm_own_ptr_stack_push(stack, frame) != 0)
         lm_p0_field_parse_loop_frame_delete_any(frame)
         lm_p0_set_diagnostic(document, 1, line, column, "out of memory while growing parser field stack")
@@ -3421,6 +3438,9 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
     int: restart_parse_context
     int: question_seen
     int: closed_on_semicolon
+    # The sign of a text that is one physical line from an index on (lm_p0_single_line_from), that of the current
+    # context: (size_t) -1 until the first call of the text looks for it. A frame holds the sign of its owner.
+    size_t: single_line_from
     parse_stack := lm_p0_field_parse_loop_stack_new(document, line, column)
     # One scan per call (child contexts are subsets of this text, so a child can only lose a question, never gain one):
     # conservative: this text has a `?` byte, or the level already holds fields (an earlier logical line may hold a question).
@@ -3444,6 +3464,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
         expect_field := lm_p0_field_expects_next((cast: (const: c.LmP0Node@) structure\last_field\value))
     headless_group_after_separator := 0
     indent_stack_owned := 0
+    single_line_from := (cast: (size_t) -1)
     restart_parse_context := 1
     while: restart_parse_context
         restart_parse_context := 0
@@ -3461,7 +3482,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                 group_node := lm_p0_new_node(document, c.LM_P0_NODE_STRUCTURE)
                 if: (group_node = 0)
                     return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
-                if: (lm_p0_field_parse_loop_push(document, parse_stack, indent_stack, indent_stack_owned, structure, text, byte_count, line, column, offset, flags, short_source_level, layout_base_level, i, current_source_level, allow_empty_fields, expect_field, headless_group_after_separator, c.LM_P0_FIELD_PARSE_LOOP_HEADLESS_GROUP, group_node, i, 0U) = 0)
+                if: (lm_p0_field_parse_loop_push(document, parse_stack, indent_stack, indent_stack_owned, structure, text, byte_count, line, column, offset, flags, short_source_level, layout_base_level, i, current_source_level, allow_empty_fields, expect_field, headless_group_after_separator, c.LM_P0_FIELD_PARSE_LOOP_HEADLESS_GROUP, group_node, i, 0U, single_line_from, 0U) = 0)
                     lm_p0_free_node(group_node)
                     return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                 structure := group_node\as\structure
@@ -3615,7 +3636,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                     if: (child_indent_stack = 0)
                         lm_p0_set_diagnostic(document, 1, line, column, "out of memory while creating indentation stack")
                         return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
-                    if: (lm_p0_field_parse_loop_push(document, parse_stack, indent_stack, indent_stack_owned, structure, text, byte_count, line, column, offset, flags, short_source_level, layout_base_level, i, current_source_level, allow_empty_fields, expect_field, headless_group_after_separator, c.LM_P0_FIELD_PARSE_LOOP_COMPACT_FRAME_BODY, p0_node, start, (depth_designator_end - 1U)) = 0)
+                    if: (lm_p0_field_parse_loop_push(document, parse_stack, indent_stack, indent_stack_owned, structure, text, byte_count, line, column, offset, flags, short_source_level, layout_base_level, i, current_source_level, allow_empty_fields, expect_field, headless_group_after_separator, c.LM_P0_FIELD_PARSE_LOOP_COMPACT_FRAME_BODY, p0_node, start, (depth_designator_end - 1U), single_line_from, 0U) = 0)
                         lm_p0_indent_stack_delete(child_indent_stack)
                         return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                     structure := p0_node\as\frame\body
@@ -3631,6 +3652,8 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                     allow_empty_fields := 1
                     expect_field := 1
                     headless_group_after_separator := 0
+                    # The text of the body was read whole up to its delimiter: it holds no line break.
+                    single_line_from := 0U
                     indent_stack := child_indent_stack
                     indent_stack_owned := 1
                     restart_parse_context := 1
@@ -3675,7 +3698,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                         p0_node\as\frame\flags := p0_node\as\frame\flags | c.LM_P0_FRAME_INLINE_BODY
                     ---
                     body_flags := ((c.LM_P0_FIELD_PARSE_STOP_ON_SEMICOLON | c.LM_P0_FIELD_PARSE_STOP_ON_SOURCE_LEVEL) | c.LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS)
-                    if: (lm_p0_field_parse_loop_push(document, parse_stack, indent_stack, indent_stack_owned, structure, text, byte_count, line, column, offset, flags, short_source_level, layout_base_level, i, current_source_level, allow_empty_fields, expect_field, headless_group_after_separator, c.LM_P0_FIELD_PARSE_LOOP_COLON_FRAME_BODY, p0_node, start, close_index) = 0)
+                    if: (lm_p0_field_parse_loop_push(document, parse_stack, indent_stack, indent_stack_owned, structure, text, byte_count, line, column, offset, flags, short_source_level, layout_base_level, i, current_source_level, allow_empty_fields, expect_field, headless_group_after_separator, c.LM_P0_FIELD_PARSE_LOOP_COLON_FRAME_BODY, p0_node, start, close_index, single_line_from, 0U) = 0)
                         return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                     structure := p0_node\as\frame\body
                     flags := body_flags
@@ -3714,7 +3737,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                     if: (child_indent_stack = 0)
                         lm_p0_set_diagnostic(document, 1, line, column, "out of memory while creating indentation stack")
                         return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
-                    if: (lm_p0_field_parse_loop_push(document, parse_stack, indent_stack, indent_stack_owned, structure, text, byte_count, line, column, offset, flags, short_source_level, layout_base_level, i, current_source_level, allow_empty_fields, expect_field, headless_group_after_separator, c.LM_P0_FIELD_PARSE_LOOP_BOUNDED_STRUCTURE, p0_node, start, close_index) = 0)
+                    if: (lm_p0_field_parse_loop_push(document, parse_stack, indent_stack, indent_stack_owned, structure, text, byte_count, line, column, offset, flags, short_source_level, layout_base_level, i, current_source_level, allow_empty_fields, expect_field, headless_group_after_separator, c.LM_P0_FIELD_PARSE_LOOP_BOUNDED_STRUCTURE, p0_node, start, close_index, single_line_from, 0U) = 0)
                         lm_p0_indent_stack_delete(child_indent_stack)
                         return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                     structure := p0_node\as\structure
@@ -3730,6 +3753,8 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                     allow_empty_fields := 1
                     expect_field := 1
                     headless_group_after_separator := 0
+                    # The text of the body was read whole up to its delimiter: it holds no line break.
+                    single_line_from := 0U
                     indent_stack := child_indent_stack
                     indent_stack_owned := 1
                     restart_parse_context := 1
@@ -3766,7 +3791,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                     if: (child_indent_stack = 0)
                         lm_p0_set_diagnostic(document, 1, line, column, "out of memory while creating indentation stack")
                         return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
-                    if: (lm_p0_field_parse_loop_push(document, parse_stack, indent_stack, indent_stack_owned, structure, text, byte_count, line, column, offset, flags, short_source_level, layout_base_level, i, current_source_level, allow_empty_fields, expect_field, headless_group_after_separator, c.LM_P0_FIELD_PARSE_LOOP_BOUNDED_STRUCTURE, p0_node, start, close_index) = 0)
+                    if: (lm_p0_field_parse_loop_push(document, parse_stack, indent_stack, indent_stack_owned, structure, text, byte_count, line, column, offset, flags, short_source_level, layout_base_level, i, current_source_level, allow_empty_fields, expect_field, headless_group_after_separator, c.LM_P0_FIELD_PARSE_LOOP_BOUNDED_STRUCTURE, p0_node, start, close_index, single_line_from, 0U) = 0)
                         lm_p0_indent_stack_delete(child_indent_stack)
                         return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                     structure := p0_node\as\structure
@@ -3782,6 +3807,8 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                     allow_empty_fields := 1
                     expect_field := 1
                     headless_group_after_separator := 0
+                    # The text of the body was read whole up to its delimiter: it holds no line break.
+                    single_line_from := 0U
                     indent_stack := child_indent_stack
                     indent_stack_owned := 1
                     restart_parse_context := 1
@@ -3832,7 +3859,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                             p0_node\as\frame\flags := p0_node\as\frame\flags | c.LM_P0_FRAME_INLINE_BODY
                         ---
                         assign_body_flags := ((c.LM_P0_FIELD_PARSE_STOP_ON_SEMICOLON | c.LM_P0_FIELD_PARSE_STOP_ON_SOURCE_LEVEL) | c.LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS)
-                        if: (lm_p0_field_parse_loop_push(document, parse_stack, indent_stack, indent_stack_owned, structure, text, byte_count, line, column, offset, flags, short_source_level, layout_base_level, i, current_source_level, allow_empty_fields, expect_field, headless_group_after_separator, c.LM_P0_FIELD_PARSE_LOOP_COLON_FRAME_BODY, p0_node, start, 0U) = 0)
+                        if: (lm_p0_field_parse_loop_push(document, parse_stack, indent_stack, indent_stack_owned, structure, text, byte_count, line, column, offset, flags, short_source_level, layout_base_level, i, current_source_level, allow_empty_fields, expect_field, headless_group_after_separator, c.LM_P0_FIELD_PARSE_LOOP_COLON_FRAME_BODY, p0_node, start, 0U, single_line_from, 0U) = 0)
                             return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                         structure := p0_node\as\frame\body
                         flags := assign_body_flags
@@ -3866,7 +3893,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                             p0_node\as\frame\flags := p0_node\as\frame\flags | c.LM_P0_FRAME_INLINE_BODY
                         ---
                         body_flags := ((c.LM_P0_FIELD_PARSE_STOP_ON_SEMICOLON | c.LM_P0_FIELD_PARSE_STOP_ON_SOURCE_LEVEL) | c.LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS)
-                        if: (lm_p0_field_parse_loop_push(document, parse_stack, indent_stack, indent_stack_owned, structure, text, byte_count, line, column, offset, flags, short_source_level, layout_base_level, i, current_source_level, allow_empty_fields, expect_field, headless_group_after_separator, c.LM_P0_FIELD_PARSE_LOOP_COLON_FRAME_BODY, p0_node, start, 0U) = 0)
+                        if: (lm_p0_field_parse_loop_push(document, parse_stack, indent_stack, indent_stack_owned, structure, text, byte_count, line, column, offset, flags, short_source_level, layout_base_level, i, current_source_level, allow_empty_fields, expect_field, headless_group_after_separator, c.LM_P0_FIELD_PARSE_LOOP_COLON_FRAME_BODY, p0_node, start, 0U, single_line_from, 0U) = 0)
                             return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                         structure := p0_node\as\frame\body
                         flags := body_flags
@@ -3920,6 +3947,43 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                             p0_node\as\frame\head\data := (text + start)
                             p0_node\as\frame\head\length := (head_end - start)
                             p0_node\as\frame\flags := c.LM_P0_FRAME_COMPACT
+                            # A call whose text is one physical line from its opening parenthesis on: the body is read in a
+                            # context of the loop that stops before its closing parenthesis and leaves it to this owner,
+                            # which consumes it once (LM_P0_FIELD_PARSE_LOOP_RETURNED_BODY). No look for the parenthesis
+                            # comes first; the row of the observation opens here and is completed when the body returns.
+                            if: (single_line_from = (cast: (size_t) -1))
+                                single_line_from := lm_p0_single_line_from(text, byte_count)
+                            if: (single_line_from <= (i + 1U))
+                                size_t: returned_row
+                                returned_row := lm_p0_probe_call_open(document, (text + i))
+                                child_indent_stack := lm_p0_indent_stack_new_empty()
+                                if: (child_indent_stack = 0)
+                                    lm_p0_set_diagnostic(document, 1, line, column, "out of memory while creating indentation stack")
+                                    return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                                if: (lm_p0_field_parse_loop_push(document, parse_stack, indent_stack, indent_stack_owned, structure, text, byte_count, line, column, offset, flags, short_source_level, layout_base_level, i, current_source_level, allow_empty_fields, expect_field, headless_group_after_separator, c.LM_P0_FIELD_PARSE_LOOP_RETURNED_BODY, p0_node, start, byte_count, single_line_from, returned_row) = 0)
+                                    lm_p0_indent_stack_delete(child_indent_stack)
+                                    return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                                structure := p0_node\as\frame\body
+                                # The text of the body starts one past the opening parenthesis and runs to the end of the owner's text.
+                                text := ((text + i) + 1U)
+                                byte_count := (byte_count - (i + 1U))
+                                column := ((column + i) + 1U)
+                                offset := ((offset + i) + 1U)
+                                flags := (c.LM_P0_FIELD_PARSE_REQUIRE_BOUNDED_SOURCE_LEVEL | c.LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS)
+                                short_source_level := (current_source_level + 1U)
+                                layout_base_level := (current_source_level + 1U)
+                                current_source_level := (current_source_level + 1U)
+                                i := 0U
+                                allow_empty_fields := 1
+                                expect_field := 1
+                                headless_group_after_separator := 0
+                                single_line_from := 0U
+                                indent_stack := child_indent_stack
+                                indent_stack_owned := 1
+                                restart_parse_context := 1
+                                break
+                            # Otherwise the closing parenthesis is looked for first: the body is a context bounded by it, or
+                            # a document of its own when a line break stands among its bytes.
                             if: (lm_p0_find_matching_paren(document, text, byte_count, i, line, column, @ close_index) = 0)
                                 return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                             lm_p0_probe_group(document, 1, text, i, close_index)
@@ -3944,7 +4008,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                             if: (child_indent_stack = 0)
                                 lm_p0_set_diagnostic(document, 1, line, column, "out of memory while creating indentation stack")
                                 return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
-                            if: (lm_p0_field_parse_loop_push(document, parse_stack, indent_stack, indent_stack_owned, structure, text, byte_count, line, column, offset, flags, short_source_level, layout_base_level, i, current_source_level, allow_empty_fields, expect_field, headless_group_after_separator, c.LM_P0_FIELD_PARSE_LOOP_COMPACT_FRAME_BODY, p0_node, start, close_index) = 0)
+                            if: (lm_p0_field_parse_loop_push(document, parse_stack, indent_stack, indent_stack_owned, structure, text, byte_count, line, column, offset, flags, short_source_level, layout_base_level, i, current_source_level, allow_empty_fields, expect_field, headless_group_after_separator, c.LM_P0_FIELD_PARSE_LOOP_COMPACT_FRAME_BODY, p0_node, start, close_index, single_line_from, 0U) = 0)
                                 lm_p0_indent_stack_delete(child_indent_stack)
                                 return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                             structure := p0_node\as\frame\body
@@ -3960,6 +4024,8 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
                             allow_empty_fields := 1
                             expect_field := 1
                             headless_group_after_separator := 0
+                            # The text of the body was read whole up to its delimiter: it holds no line break.
+                            single_line_from := 0U
                             indent_stack := child_indent_stack
                             indent_stack_owned := 1
                             restart_parse_context := 1
@@ -4110,6 +4176,7 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
         p0_node := frame\node
         start := frame\start
         close_index := frame\close_index
+        single_line_from := frame\single_line_from
         if: (frame\continuation = c.LM_P0_FIELD_PARSE_LOOP_HEADLESS_GROUP)
             if: (child_index <= start)
                 lm_p0_free_node(p0_node)
@@ -4171,10 +4238,27 @@ fn: lm_p0_parse_fields_until_with_layout (c.LmP0Document@: document; c.LmP0Inden
             c.lm_own_delete(frame, 0)
             restart_parse_context := 1
             continue
-        if: (frame\continuation = c.LM_P0_FIELD_PARSE_LOOP_COMPACT_FRAME_BODY)
-            # The owner of the body resumes after the token it kept for the observation: the closing delimiter of a
-            # call, or the last byte of the designator of a depth form (lm_p0_probe_group, lm_p0_probe_form).
-            lm_p0_probe_return(document, (text + close_index), (text + (close_index + 1U)))
+        if: (frame\continuation = c.LM_P0_FIELD_PARSE_LOOP_COMPACT_FRAME_BODY) || (frame\continuation = c.LM_P0_FIELD_PARSE_LOOP_RETURNED_BODY)
+            # The owner of the body goes on right after its closing parenthesis.
+            if: (frame\continuation = c.LM_P0_FIELD_PARSE_LOOP_RETURNED_BODY)
+                # The body left the parenthesis to this owner and is back: the byte its text -- which starts one past
+                # the opening parenthesis -- stopped at, counted from that parenthesis. A parenthesis is not there:
+                # the form was never closed, an error at its opening parenthesis (lm_p0_find_matching_paren says the
+                # same of a form whose delimiter is looked for first).
+                close_index := ((i + 1U) + child_index)
+                if: (close_index >= byte_count) || (text[close_index] != ')')
+                    size_t: diagnostic_line
+                    size_t: diagnostic_column
+                    lm_p0_position_in_slice(text, byte_count, i, line, column, @ diagnostic_line, @ diagnostic_column)
+                    lm_p0_set_diagnostic(document, 5, diagnostic_line, diagnostic_column, "unclosed parenthesized form")
+                    c.lm_own_delete(frame, 0)
+                    return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                lm_p0_probe_returned(document, frame\probe_row, (text + close_index), (text + (close_index + 1U)))
+            else:
+                # The parenthesis was looked for first: the owner resumes after the token it kept for the observation,
+                # the closing delimiter of a call or the last byte of the designator of a depth form
+                # (lm_p0_probe_group, lm_p0_probe_form).
+                lm_p0_probe_return(document, (text + close_index), (text + (close_index + 1U)))
             p0_node\span\line := line
             lm_p0_position_in_slice(text, byte_count, start, line, column, (cast: (size_t@) (@ p0_node\span\line)), (cast: (size_t@) (@ p0_node\span\column)))
             p0_node\span\offset := (offset + start)
@@ -6210,8 +6294,9 @@ fn: lm_p0_probe_root_offset (c.LmP0Document@: document; const: (char@: pointer))
 end: lm_p0_probe_root_offset
 
 # One row: a form entered at open_at whose owner met the closing delimiter at close_at and finds the row again by
-# token_at when it resumes. The index of the row, or (size_t) -1 when nothing is observed.
-fn: lm_p0_probe_row (c.LmP0Document@: document; int: kind; int: route; size_t: open_at; size_t: close_at; size_t: token_at) size_t
+# token_at when it resumes; how says where the delimiter came from: 1 from a pre-scan of the source, 2 from the region
+# that stopped before it and returned. The index of the row, or (size_t) -1 when nothing is observed.
+fn: lm_p0_probe_row (c.LmP0Document@: document; int: kind; int: route; int: how; size_t: open_at; size_t: close_at; size_t: token_at) size_t
     c.LmP0BoundaryProbe@: probe
     c.LmP0BoundaryRow@: grown
     c.LmP0BoundaryRow: row
@@ -6234,7 +6319,7 @@ fn: lm_p0_probe_row (c.LmP0Document@: document; int: kind; int: route; size_t: o
     ---
     row\kind := kind
     row\route := route
-    row\how := 1
+    row\how := how
     row\open_at := open_at
     row\close_at := close_at
     row\next_at := (cast: (size_t) -1)
@@ -6257,7 +6342,7 @@ sub: lm_p0_probe_resume (c.LmP0Document@: document; size_t: token_at; size_t: ne
     while: i > 0U
         i := (i - 1U)
         row := probe\rows[i]
-        if: (row\next_at = (cast: (size_t) -1)) && (row\token_at = token_at)
+        if: ((row\next_at = (cast: (size_t) -1)) && (row\token_at = token_at)) && (row\how != 2)
             row\next_at := next_at
             probe\rows[i] := row
             return
@@ -6268,7 +6353,7 @@ end: lm_p0_probe_resume
 # A bounded form is entered at open_pointer, its opening delimiter; its owner met the closing delimiter at
 # close_pointer and keeps token_pointer to find the row when it resumes.
 fn: lm_p0_probe_form (c.LmP0Document@: document; int: kind; int: route; const: (char@: open_pointer); const: (char@: close_pointer); const: (char@: token_pointer)) size_t
-    return: lm_p0_probe_row(document, kind, route, lm_p0_probe_root_offset(document, open_pointer), lm_p0_probe_root_offset(document, close_pointer), lm_p0_probe_root_offset(document, token_pointer))
+    return: lm_p0_probe_row(document, kind, route, 1, lm_p0_probe_root_offset(document, open_pointer), lm_p0_probe_root_offset(document, close_pointer), lm_p0_probe_root_offset(document, token_pointer))
 end: lm_p0_probe_form
 
 # A group of the loop of fields entered at text[open_index] and closed at text[close_index]: its body is read in a
@@ -6285,6 +6370,28 @@ end: lm_p0_probe_group
 sub: lm_p0_probe_return (c.LmP0Document@: document; const: (char@: token_pointer); const: (char@: next_pointer))
     lm_p0_probe_resume(document, lm_p0_probe_root_offset(document, token_pointer), lm_p0_probe_root_offset(document, next_pointer))
 end: lm_p0_probe_return
+
+# The body of a call on one line is entered at open_pointer, its opening parenthesis (LM_P0_FIELD_PARSE_LOOP_RETURNED_BODY):
+# the row opens at once, before its closing delimiter is known -- the region leaves it to its owner and returns before
+# it (lm_p0_probe_returned). The index of the row, or (size_t) -1 when nothing is observed.
+fn: lm_p0_probe_call_open (c.LmP0Document@: document; const: (char@: open_pointer)) size_t
+    return: lm_p0_probe_row(document, 1, 1, 2, lm_p0_probe_root_offset(document, open_pointer), (cast: (size_t) -1), (cast: (size_t) -1))
+
+# The region of the row probe_row stopped before its closing delimiter at close_pointer; its owner consumed it once
+# and continues from next_pointer. The row is known by its index: no token is at hand while the region runs.
+sub: lm_p0_probe_returned (c.LmP0Document@: document; size_t: probe_row; const: (char@: close_pointer); const: (char@: next_pointer))
+    c.LmP0BoundaryProbe@: probe
+    c.LmP0BoundaryRow: row
+    probe := document\probe
+    if: probe = 0 || probe\failed != 0
+        return
+    if: probe_row >= probe\count
+        return
+    row := probe\rows[probe_row]
+    row\close_at := lm_p0_probe_root_offset(document, close_pointer)
+    row\token_at := row\close_at
+    row\next_at := lm_p0_probe_root_offset(document, next_pointer)
+    probe\rows[probe_row] := row
 
 # A Mix mark passed whole (the looks of the stream) or read as a nested document (the marks the parser records): it
 # opens at open_pointer, closes with the brace before after_pointer, and the caller goes on at after_pointer at once.
@@ -6312,7 +6419,7 @@ sub: lm_p0_probe_mark (c.LmP0Document@: document; const: (char@: open_pointer); 
             return
         ---
     ---
-    lm_p0_probe_row(document, 3, route, open_at, (after_at - 1U), (after_at - 1U))
+    lm_p0_probe_row(document, 3, route, 1, open_at, (after_at - 1U), (after_at - 1U))
     lm_p0_probe_resume(document, (after_at - 1U), after_at)
 end: lm_p0_probe_mark
 

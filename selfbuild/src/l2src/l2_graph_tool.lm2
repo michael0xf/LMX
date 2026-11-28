@@ -3255,6 +3255,11 @@ fn: lm_graph_bounds_route_name (int: route) const: char@
         return: "STRING"
     return: "NONE"
 
+fn: lm_graph_bounds_how_name (int: how) const: char@
+    if: how = 2
+        return: "RETURNED"
+    return: "PRE_SCAN"
+
 # One line per row: the kind of the form, how its body was read, how its owner got its closing delimiter, and the
 # offsets in the bytes of the source: the opening delimiter, the closing one, the position the owner continued from,
 # the token the owner kept, and for a leading Mix mark the item it continues in ((size_t) -1: none).
@@ -3268,7 +3273,7 @@ sub: lm_graph_p0_boundaries (c.FILE@: out; c.LmP0Document@: doc)
         return
     while: i < probe\count
         row := probe\rows[i]
-        c.fprintf(out, "%s %s %s %zu %zu %zu %zu %zu\n", lm_graph_bounds_kind_name(row\kind), lm_graph_bounds_route_name(row\route), "PRE_SCAN", (cast: (size_t) row\open_at), (cast: (size_t) row\close_at), (cast: (size_t) row\next_at), (cast: (size_t) row\token_at), (cast: (size_t) row\anchor_at))
+        c.fprintf(out, "%s %s %s %zu %zu %zu %zu %zu\n", lm_graph_bounds_kind_name(row\kind), lm_graph_bounds_route_name(row\route), lm_graph_bounds_how_name(row\how), (cast: (size_t) row\open_at), (cast: (size_t) row\close_at), (cast: (size_t) row\next_at), (cast: (size_t) row\token_at), (cast: (size_t) row\anchor_at))
         i := i + 1U
     ---
     c.fprintf(out, "BOUNDARIES rows %zu\n", (cast: (size_t) probe\count))
